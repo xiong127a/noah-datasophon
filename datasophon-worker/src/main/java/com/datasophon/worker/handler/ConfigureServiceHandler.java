@@ -130,6 +130,18 @@ public class ConfigureServiceHandler {
                         serviceConfig.setValue("false");
                         customConfList.add(serviceConfig);
                     }
+                    if ("PrestoCoordinator".equals(serviceRoleName) && "coordinator".equals(config.getName())) {
+                        logger.info("Start config presto coordinator");
+                        config.setValue("true");
+                        ServiceConfig serviceConfig = new ServiceConfig();
+                        serviceConfig.setName("node-scheduler.include-coordinator");
+                        serviceConfig.setValue("false");
+                        ServiceConfig serviceConfig1 = new ServiceConfig();
+                        serviceConfig1.setName("discovery-server.enabled");
+                        serviceConfig1.setValue("true");
+                        customConfList.add(serviceConfig);
+                        customConfList.add(serviceConfig1);
+                    }
                     if ("fe_priority_networks".equals(config.getName())
                             || "be_priority_networks".equals(config.getName())) {
                         config.setName("priority_networks");
