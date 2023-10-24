@@ -113,6 +113,11 @@ public class LoadServiceMeta implements ApplicationRunner {
 
     private static final String HADOOP = "HADOOP";
 
+    /**
+     * 1、设置全局环境变量
+     * 2、创建各集群角色 MasterServiceActor
+     * 3、解析各角色 service_ddl.json 更新到 t_ddh_frame_service t_ddh_frame_service_role 表
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void run(ApplicationArguments args) throws Exception {

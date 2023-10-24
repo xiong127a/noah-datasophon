@@ -22,6 +22,9 @@ import java.util.List;
 
 import lombok.Data;
 
+/**
+ * 配置参数详情
+ */
 @Data
 public class ServiceConfig implements Serializable {
 
