@@ -442,6 +442,9 @@ public class ProcessUtils {
         }
     }
 
+    /**
+     * 为各集群的每个角色创建各自的 MasterServiceActor
+     */
     public static void createServiceActor(ClusterInfoEntity clusterInfo) {
         FrameServiceService frameServiceService = SpringTool.getApplicationContext().getBean(FrameServiceService.class);
 

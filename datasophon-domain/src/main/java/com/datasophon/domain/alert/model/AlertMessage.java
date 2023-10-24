@@ -22,6 +22,9 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * alertManager发送的告警json格式
+ */
 @Data
 public class AlertMessage {
 

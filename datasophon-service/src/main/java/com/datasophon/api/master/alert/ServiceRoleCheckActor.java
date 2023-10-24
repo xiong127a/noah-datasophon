@@ -36,6 +36,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 import akka.actor.UntypedActor;
 
+/**
+ * 检查指定组件健康状态
+ */
 public class ServiceRoleCheckActor extends UntypedActor {
 
     @Override

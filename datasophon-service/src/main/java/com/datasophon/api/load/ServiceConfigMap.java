@@ -22,6 +22,9 @@ import com.datasophon.common.model.ServiceConfig;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * 配置文件和对应的配置参数缓存
+ */
 public class ServiceConfigMap {
 
     private static HashMap<String, List<ServiceConfig>> map = new HashMap<String, List<ServiceConfig>>();

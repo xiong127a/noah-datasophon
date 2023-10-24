@@ -3,9 +3,12 @@ package com.datasophon.api.load;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 全局变量缓存
+ */
 public class GlobalVariables {
 
-    // cluster variable
+    // （ clusterId -> (变量名称 -> 变量值) ）
     private static Map<Integer, Map<String, String>> map = new HashMap<>();
 
     public static void put(Integer key, Map<String, String> value) {
