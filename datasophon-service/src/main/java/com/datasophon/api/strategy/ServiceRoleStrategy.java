@@ -26,14 +26,36 @@ import java.util.Map;
 
 public interface ServiceRoleStrategy {
 
+    /**
+     * 传入参数为所有master节点host
+     * 保存服务角色与主机对应关系时
+     * 添加自定义变量保存到变量表和全局变量缓存
+     * 可以在服务配置时取到对应的变量
+     */
     void handler(Integer clusterId, List<String> hosts);
 
+    /**
+     * 保存服务配置时
+     * 添加自定义配置
+     * 之后会将对应的配置添加到表和全部变量
+     */
     void handlerConfig(Integer clusterId, List<ServiceConfig> list);
 
+    /**
+     * 获取服务配置时修改配置
+     * handler之后handlerConfig之前调用
+     * 提取角色本身配置和handler中自定义的变量
+     */
     void getConfig(Integer clusterId, List<ServiceConfig> list);
 
+    /**
+     * 构建DAG时处理角色关系
+     */
     void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname);
 
+    /**
+     * 定期检查角色处理
+     */
     void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
                                  Map<String, ClusterServiceRoleInstanceEntity> map);
 }
