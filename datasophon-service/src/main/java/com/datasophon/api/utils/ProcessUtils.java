@@ -385,6 +385,9 @@ public class ProcessUtils {
         serviceRoleInstanceService.updateById(serviceRole);
     }
 
+    /**
+     * 保存到变量表和全局变量缓存
+     */
     public static void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
                                                String variableName, String value) {
         ClusterVariableService variableService =
