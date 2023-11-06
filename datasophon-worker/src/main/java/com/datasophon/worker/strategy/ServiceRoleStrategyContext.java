@@ -53,6 +53,9 @@ public class ServiceRoleStrategyContext {
 
         // clickhouse
         map.put("ClickHouse", new ClickHouseHandlerStrategy("CLICKHOUSE", "ClickHouse"));
+
+        // alluxio
+        map.put("AlluxioMaster", new AlluxioHandlerStrategy("ALLUXIO", "AlluxioMaster"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
