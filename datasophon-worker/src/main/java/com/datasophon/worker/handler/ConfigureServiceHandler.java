@@ -149,6 +149,20 @@ public class ConfigureServiceHandler {
 
                 }
 
+                if ("AlluxioMaster".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
+                    ServiceConfig serviceConfig = new ServiceConfig();
+                    serviceConfig.setName("alluxio.master.hostname");
+                    serviceConfig.setValue(hostName);
+                    customConfList.add(serviceConfig);
+                }
+                if ("AlluxioWorker".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
+                    File alluxioFile =
+                            new File(Constants.INSTALL_PATH + File.separator + decompressPackageName, "conf/alluxio-site.properties");
+                    if (alluxioFile.exists()) {
+                        continue;
+                    }
+                }
+
                 if (Objects.nonNull(myid) && StringUtils.isNotBlank(dataDir)) {
                     FileUtil.writeUtf8String(myid + "", dataDir + Constants.SLASH + "myid");
                 }
