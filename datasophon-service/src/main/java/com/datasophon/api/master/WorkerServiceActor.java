@@ -21,6 +21,7 @@ import com.datasophon.api.master.handler.service.*;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -137,6 +138,7 @@ public class WorkerServiceActor extends UntypedActor {
                                     serviceRoleInfo.getHostname(), executeServiceRoleCommand.getClusterId(),
                                     ServiceRoleState.RUNNING);
                         }
+                        RollingRestartUtils.updateStatus(serviceRoleInfo.getHostname()+serviceInstanceId,execResult.getExecResult());
                     } catch (Exception e) {
                         logger.error(ProcessUtils.getExceptionMessage(e));
                     }

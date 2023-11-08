@@ -42,6 +42,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
@@ -271,14 +272,14 @@ public class ClusterServiceCommandServiceImpl
                                               Map<Integer, List<String>> instanceIdMap) {
         Result result = null;
         for (Map.Entry<Integer, List<String>> entry : instanceIdMap.entrySet()) {
-            result = generateServiceRoleCommand(clusterId, commandType, entry.getKey(), entry.getValue());
+            result = generateServiceRoleCommand(clusterId, commandType, entry.getKey(), entry.getValue(), null);
         }
         return result;
     }
 
     @Override
     public Result generateServiceRoleCommand(Integer clusterId, CommandType commandType, Integer serviceInstanceId,
-                                             List<String> serviceRoleInstanceIds) {
+                                             List<String> serviceRoleInstanceIds, RollingRestartInfo rollingRestartInfo) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
@@ -316,9 +317,10 @@ public class ClusterServiceCommandServiceImpl
         // 通知commandActor执行命令
         ActorRef dagBuildActor =
                 ActorUtils.getLocalActor(DAGBuildActor.class, ActorUtils.getActorRefName(DAGBuildActor.class));
-        dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType), ActorRef.noSender());
+        dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType,rollingRestartInfo), ActorRef.noSender());
         return Result.success(String.join(",", commandIds));
     }
+
 
     @Override
     public void startExecuteCommand(Integer clusterId, String commandType, String commandIds) {
@@ -329,6 +331,7 @@ public class ClusterServiceCommandServiceImpl
                 ActorUtils.getLocalActor(DAGBuildActor.class, ActorUtils.getActorRefName(DAGBuildActor.class));
         dagBuildActor.tell(new StartExecuteCommandCommand(list, clusterId, command), ActorRef.noSender());
     }
+
 
     @Override
     public void cancelCommand(String commandId) {

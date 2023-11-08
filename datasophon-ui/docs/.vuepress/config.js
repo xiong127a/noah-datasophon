@@ -19,8 +19,8 @@
  */
 
 module.exports = {
-  title: 'DataSophon',
-  description: 'DataSophon',
+  title: 'Noah大数据平台',
+  description: 'Noah大数据平台',
   base: '/vue-antd-admin-docs/',
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
