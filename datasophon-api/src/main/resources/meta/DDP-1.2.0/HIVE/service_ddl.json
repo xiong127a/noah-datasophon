@@ -150,7 +150,8 @@
           "hive.merge.mapredfiles",
           "hive.merge.size.per.task",
           "hive.merge.smallfiles.avgsize",
-          "hive.exec.submit.local.task.via.child"
+          "hive.exec.submit.local.task.via.child",
+          "iceberg.engine.hive.enabled"
         ]
       },
       {
@@ -380,6 +381,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
+    },
+    {
+      "name": "iceberg.engine.hive.enabled",
+      "label": "集成iceberg",
+      "description": "默认集成iceberg",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": true
     },
     {
       "name": "hive.server2.authentication",

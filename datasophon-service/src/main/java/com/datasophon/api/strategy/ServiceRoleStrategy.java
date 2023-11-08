@@ -36,7 +36,7 @@ public interface ServiceRoleStrategy {
 
     /**
      * 保存服务配置时
-     * 添加自定义配置
+     * 添加自定义配置 或者修改其它服务配置
      * 之后会将对应的配置添加到表和全部变量
      */
     void handlerConfig(Integer clusterId, List<ServiceConfig> list);
