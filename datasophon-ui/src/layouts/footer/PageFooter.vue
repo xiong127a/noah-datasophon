@@ -26,7 +26,7 @@
 <template>
   <div class="footer">
     <div class="copyright">
-     © 2023 DataSophon
+     © 2023 Noah NDP
     </div>
   </div>
 </template>

@@ -9,7 +9,7 @@
       </div>
       <div class="login">
         <div class="login-title">账号登录</div>
-        <div class="project-name">DataSophon</div>
+        <div class="project-name">Noah大数据平台</div>
         <a-form @submit="onSubmit" :form="form">
           <a-alert type="error" :closable="true" v-show="error" :message="error" showIcon style="margin-bottom: 24px;" />
           <a-form-item>

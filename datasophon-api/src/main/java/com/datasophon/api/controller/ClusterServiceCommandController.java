@@ -21,6 +21,7 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 
@@ -85,10 +86,15 @@ public class ClusterServiceCommandController {
     @RequestMapping("/generateServiceRoleCommand")
     @UserPermission
     public Result generateServiceRoleCommand(Integer clusterId, String commandType, Integer serviceInstanceId,
-                                             String serviceRoleInstancesIds) {
+                                             String serviceRoleInstancesIds,
+                                             String rollingParam
+
+    ) {
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
         List<String> ids = Arrays.asList(serviceRoleInstancesIds.split(","));
-        return clusterServiceCommandService.generateServiceRoleCommand(clusterId, command, serviceInstanceId, ids);
+        RollingRestartInfo rollingRestartInfo = RollingRestartInfo.parse(rollingParam);
+
+        return clusterServiceCommandService.generateServiceRoleCommand(clusterId, command, serviceInstanceId, ids,rollingRestartInfo);
 
     }
 
