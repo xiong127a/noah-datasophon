@@ -26,6 +26,7 @@ import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -69,7 +70,9 @@ public class MasterServiceActor extends UntypedActor {
                             .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-            Collections.sort(serviceRoleInfoList);
+
+            serviceRoleInfoList = RollingRestartUtils.sortMasterRole(serviceRoleInfoList); //排序
+
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
                 logger.info(

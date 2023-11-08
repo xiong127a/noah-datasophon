@@ -19,6 +19,7 @@ package com.datasophon.api.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 
@@ -44,7 +45,8 @@ public interface ClusterServiceCommandService extends IService<ClusterServiceCom
                                        Map<Integer, List<String>> instanceIdMap);
 
     Result generateServiceRoleCommand(Integer clusterId, CommandType command, Integer serviceIntanceId,
-                                      List<String> ids);
+                                      List<String> ids, RollingRestartInfo rollingRestartInfo);
+
 
     void startExecuteCommand(Integer clusterId, String commandType, String commandIds);
 
