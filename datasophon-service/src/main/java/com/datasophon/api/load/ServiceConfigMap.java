@@ -27,6 +27,23 @@ import java.util.List;
  */
 public class ServiceConfigMap {
 
+    // DDP-1.2.0_HDFS_config -> List<serviceConfig>
+    /*
+     * {
+     *      "configWithHA": false,
+     *      "configWithKerberos": false,
+     *      "configWithRack": false,
+     *      "configurableInWizard": true,
+     *      "defaultValue": "hdfs://nameservice1/alluxio",
+     *      "description": "挂载到Alluxio根目录的底层存储URI",
+     *      "hidden": false,
+     *      "label": "挂载到Alluxio根目录的底层存储URI",
+     *      "name": "alluxio.master.mount.table.root.ufs",
+     *      "required": true,
+     *      "type": "input",
+     *      "value": "hdfs://nameservice1/alluxio"
+     * }
+     */
     private static HashMap<String, List<ServiceConfig>> map = new HashMap<String, List<ServiceConfig>>();
 
     public static void put(String key, List<ServiceConfig> configs) {
