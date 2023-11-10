@@ -166,6 +166,8 @@ public class FreemakerUtils {
         } else {
             String outputFile =
                     packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+//            String outputFile =
+//                    generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
             writeToTemplate(template, data, outputFile);
         }
     }

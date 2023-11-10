@@ -18,21 +18,21 @@ public class FreemarkerTest {
     public void generateCustomTemplate() throws IOException, TemplateException {
         Generators generators = new Generators();
         generators.setConfigFormat("custom");
-        generators.setFilename("alertmanager.yml");
-        generators.setTemplateName("alertmanager.yml");
-        generators.setOutputDirectory("D:\\360downloads\\test");
+        generators.setFilename("hazelcast-client.flt");
+        generators.setTemplateName("hazelcast-client.flt");
+        generators.setOutputDirectory("D:\\WorkSpaceForWork\\datasophon\\datasophon-worker\\src\\test\\com\\datasophon\\worker\\test");
 
         ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setName("apiHost");
-        serviceConfig.setValue("ddp1016");
+        serviceConfig.setName("itemList");
+        serviceConfig.setValue("hadoop1,hadoop2,hadoop3");
 
-        ServiceConfig serviceConfig2 = new ServiceConfig();
-        serviceConfig2.setName("apiPort");
-        serviceConfig2.setValue("8081");
+//        ServiceConfig serviceConfig2 = new ServiceConfig();
+//        serviceConfig2.setName("apiPort");
+//        serviceConfig2.setValue("8081");
 
         ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
         serviceConfigs.add(serviceConfig);
-        serviceConfigs.add(serviceConfig2);
+//        serviceConfigs.add(serviceConfig2);
 
         FreemakerUtils.generateConfigFile(generators,serviceConfigs,"");
     }
