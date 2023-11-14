@@ -56,6 +56,9 @@ public class ServiceRoleStrategyContext {
 
         // alluxio
         map.put("AlluxioMaster", new AlluxioHandlerStrategy("ALLUXIO", "AlluxioMaster"));
+
+        // openldap
+        map.put("OpenldapServer", new OpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

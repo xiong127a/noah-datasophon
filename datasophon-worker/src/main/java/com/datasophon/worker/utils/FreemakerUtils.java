@@ -152,35 +152,58 @@ public class FreemakerUtils {
 
     private static void processOut(Generators generators, Template template, Map<String, Object> data,
                                    String decompressPackageName) throws IOException, TemplateException {
+        // 定义输出目录的路径
         String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
+        // 获取生成文件的输出目录
         String outputDirectory = generators.getOutputDirectory();
 
         if (outputDirectory.contains(Constants.COMMA)) {
+            // 如果输出目录包含多个路径，则按照逗号分隔，并逐个处理
             for (String outPutDir : generators.getOutputDirectory().split(StrUtil.COMMA)) {
+                // 构建输出文件的路径
                 String outputFile = packagePath + outPutDir + Constants.SLASH + generators.getFilename();
+                // 调用方法将数据模板写入到输出文件中
                 writeToTemplate(template, data, outputFile);
             }
         } else if (outputDirectory.startsWith(Constants.SLASH)) {
+            // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
             String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+            // 调用方法将数据模板写入到输出文件中
             writeToTemplate(template, data, outputFile);
         } else {
-            String outputFile =
-                    packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-//            String outputFile =
-//                    generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+            // 如果输出目录不以斜杠开头也不包含逗号，则将输出目录添加到包路径之后作为输出文件的路径
+            String outputFile = packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+//            String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+            // 调用方法将数据模板写入到输出文件中
             writeToTemplate(template, data, outputFile);
         }
     }
 
+
+    /**
+     * 将数据写入模板并生成输出文件
+     *
+     * @param template 模板对象
+     * @param data 数据映射
+     * @param outputFile 输出文件路径
+     * @throws IOException 当写入文件过程中发生 I/O 错误时抛出
+     * @throws TemplateException 当模板处理过程中发生模板错误时抛出
+     */
     private static void writeToTemplate(Template template, Map<String, Object> data,
                                         String outputFile) throws IOException, TemplateException {
+        // 创建文件对象
         File file = new File(outputFile);
+        // 如果文件不存在，则创建其父目录
         if (!file.exists()) {
             FileUtil.mkParentDirs(file);
         }
+        // 创建文件写入器
         FileWriter out = new FileWriter(file);
+        // 将数据写入模板，并将结果写入文件
         template.process(data, out);
+        // 关闭文件写入器
         out.close();
     }
+
 
 }
