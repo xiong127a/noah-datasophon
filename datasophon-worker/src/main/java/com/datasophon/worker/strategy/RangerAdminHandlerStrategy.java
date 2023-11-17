@@ -21,9 +21,13 @@ import cn.hutool.core.io.FileUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
+import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
+
+import java.util.ArrayList;
 
 public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
 
@@ -33,6 +37,7 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
+        String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult = new ExecResult();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getEnableKerberos()) {
@@ -46,6 +51,20 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
                 KerberosUtils.downloadKeytabFromMaster("rangeradmin/" + hostname, "rangeradmin.keytab");
             }
         }
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
+            logger.info("setup ranger user sync");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add(workPath + "/ranger-2.1.0-usersync/setup.sh");
+            ShellUtils.execWithStatus(workPath, commands, 300L, logger);
+//            ShellUtils.exceShell("sh " + workPath + "/ranger-2.1.0-usersync/setup.sh");
+            logger.info("setup ranger user sync success");
+            ShellUtils.exceShell("sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n;s/<value>false<\\/value>/<value>true<\\/value>/}' "
+                    + workPath +
+                    "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
+            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+        }
+
         startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());
 
