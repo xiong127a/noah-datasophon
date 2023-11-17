@@ -58,6 +58,8 @@ public class ServiceRoleStrategyContext {
         map.put("KAFKA", new KafkaHandlerStrategy());
         map.put("HBASE", new HBaseHandlerStrategy());
         map.put("FLINK", new FlinkHandlerStrategy());
+        map.put("OpenldapServer", new OpenldapHandlerStrategy());
+
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
