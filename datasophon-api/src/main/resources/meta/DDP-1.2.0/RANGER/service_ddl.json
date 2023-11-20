@@ -15,6 +15,7 @@
       "cardinality": "1",
       "logFile": "/var/log/ranger/admin/ranger-admin-${host}-root.log",
       "jmxPort": 6081,
+      "sortNum": 1,
       "startRunner": {
         "timeout": "60",
         "program": "bin/ranger_admin.sh",
@@ -46,9 +47,14 @@
       "name": "RangerUsersync",
       "label": "RangerUsersync",
       "roleType": "master",
+      "runAs": {
+        "user": "root",
+        "group": "root"
+      },
       "cardinality": "1",
       "logFile": "ranger-2.1.0-usersync/logs/usersync-${host}-ranger.log",
       "jmxPort": "",
+      "sortNum": 2,
       "startRunner": {
         "timeout": "60",
         "program": "ranger-2.1.0-usersync/ranger_usersync.sh",
