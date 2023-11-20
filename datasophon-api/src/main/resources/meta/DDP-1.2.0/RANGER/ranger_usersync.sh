@@ -29,13 +29,16 @@ stop(){
 }
 
 status(){
-    echo "ranger userSync status"
-    pid=$(jps | grep -iw UnixAuthenticationService | grep -v grep | awk '{print $1}')
-    echo "pid is: $pid"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-        echo "$startStop is running"
+    process_name="UnixAuthenticationService"
+
+    # 使用 pgrep 命令检测进程是否存在
+    pgrep -f "$process_name" > /dev/null
+
+    if [ $? -eq 0 ]; then
+        echo "进程 $process_name 存在"
+        exit 0
     else
-        echo "$startStop is not running"
+        echo "进程 $process_name 不存在"
         exit 1
     fi
 }
@@ -73,4 +76,4 @@ case $startStop in
         ;;
 esac
 
-echo "End $startStop ranger"
+echo "End $startStop ranger userSync"
