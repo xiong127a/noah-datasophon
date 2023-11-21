@@ -32,4 +32,5 @@ export default {
   queryAllUser: path + '/api/user/all',
   getTenant:path + '/cluster/user/list',
   getTenantGroup:path + '/cluster/group/list',
+  downloadUserKeytab:path + '/cluster/user/keytab',
 }
