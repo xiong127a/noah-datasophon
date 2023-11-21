@@ -41,11 +41,11 @@
             </a-col>
           </a-row>
         </a-card>
-        <a-card class="card-shadow">  
+        <a-card class="card-shadow">
           <div class="table-info steps-body">
             <a-table @change="(pagination)=>{tableChange(pagination,item.key)}" :columns="item.key == 'user' ?columns : groupColumns" :loading="loading" :dataSource="dataSource" rowKey="id" :pagination="pagination"></a-table>
           </div>
-        </a-card>  
+        </a-card>
       </div>
     </a-tab-pane>
   </a-tabs>
@@ -108,7 +108,7 @@ export default {
               <span class="flex-container">
                   <a class="btn-opt" onClick={() => this.delectUser(row,'userGroup')}>
                     删除
-                  </a> 
+                  </a>
                 </span>
             );
           },
@@ -154,9 +154,9 @@ export default {
                   <a class="btn-opt" onClick={() => this.delectUser(row)}>
                     删除
                   </a>
-                  {/* <a class="btn-opt" onClick={() => this.delectUser(row)}>
-                    下载认证凭据
-                  </a> */}
+                  <a class="btn-opt" onClick={() => this.downloadUserKeytab(row)}>
+                    下载keytab
+                  </a>
                 </span>
             );
           },
@@ -234,6 +234,12 @@ export default {
           return <div />;
         },
       });
+    },
+    downloadUserKeytab(obj,key){
+      console.log(obj.id)
+      this.$axiosGet(global.API.downloadUserKeytab + '/' + obj.id).then((res) => {
+        console.log(res)
+      })
     },
     getUserList(key) {
       this.loading = true;
