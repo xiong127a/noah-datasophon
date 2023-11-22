@@ -46,7 +46,7 @@ MIN_UNIX_GROUP_ID_TO_SYNC = 0
 SYNC_INTERVAL = ${syncInterval}
 
 #User and group for the usersync process
-unix_user=ranger
+unix_user=rangerusersync
 unix_group=ranger
 
 #change password of rangerusersync user. Please note that this password should be as per rangerusersync user in ranger
