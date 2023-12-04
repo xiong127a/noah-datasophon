@@ -124,11 +124,12 @@ public class ShellUtils {
             getOutput(process);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success");
+                logger.info("script execute success --> " + String.join(" ", command));
                 result.setExecResult(true);
                 result.setExecOut("script execute success");
             } else {
-                result.setExecOut("script execute failed");
+                result.setExecOut("script execute failed --> " + String.join(" ", command));
+                logger.error(getError(process));
             }
             return result;
         } catch (Exception e) {
@@ -149,11 +150,11 @@ public class ShellUtils {
             getOutput(process, logger);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success");
+                logger.info("script execute success --> " + String.join(" ", command));
                 result.setExecResult(true);
-                result.setExecOut("script execute success");
+                result.setExecOut("script execute success --> " + String.join(" ", command));
             } else {
-                result.setExecOut("script execute failed");
+                result.setExecOut("script execute failed --> " + String.join(" ", command));
             }
             return result;
         } catch (Exception e) {

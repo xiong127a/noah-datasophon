@@ -102,7 +102,8 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         file.transferTo(new File(keytabFilePath));
     }
 
-    private void generateKeytabFile(
+    @Override
+    public void generateKeytabFile(
                                     Integer clusterId,
                                     String keytabFilePath,
                                     String principal,
@@ -121,14 +122,15 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         ExecResult execResult = null;
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            String localHostname = CacheUtils.getString(Constants.HOSTNAME);
+//            String localHostname = CacheUtils.getString(Constants.HOSTNAME);
             if (execResult.getExecResult()
-                    && !localHostname.equals(roleInstanceEntity.getHostname())) {
+                    && !hostname.equals(roleInstanceEntity.getHostname())) {
                 String keytabFileDir = KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH;
                 if (!FileUtil.exist(keytabFileDir)) {
                     FileUtil.mkdir(keytabFileDir);
                 }
                 String sshuser = GlobalVariables.get(clusterId).get(SSHUSER);
+                // scp root@hadoop1:/etc/security/keytab/hadoop3/gzf3.user.keytab /etc/security/keytab/hadoop3/
                 ShellUtils.exceShell(
                         "scp "
                                 + sshuser
@@ -138,6 +140,17 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
                                 + keytabFilePath
                                 + " "
                                 + keytabFileDir);
+                // scp /etc/security/keytab/hadoop3/ root@hadoop3:/etc/security/keytab/hadoop3/gzf3.user.keytab
+                ShellUtils.exceShell(
+                        "scp "
+                                + keytabFilePath
+                                + " "
+                                + sshuser
+                                + "@"
+                                + hostname
+                                + ":"
+                                + keytabFileDir
+                );
             }
         } catch (Exception e) {
             logger.error(
