@@ -81,14 +81,6 @@ public class RollingRestartUtils {
 
 
     /**
-     * 是否是滚动重启
-     */
-    public void isRollingRestart() {
-
-    }
-
-
-    /**
      * 对master 权限的实例进行排序
      * 从节点在前，主节点在后
      *
@@ -118,5 +110,7 @@ public class RollingRestartUtils {
         bachIdMap.clear();
         serverInstanceExecuteResultMap.clear();
     }
+
+
 
 }
