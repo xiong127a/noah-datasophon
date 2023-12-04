@@ -76,6 +76,9 @@ public class OperationLog implements Serializable {
     //返回状态码
     private Integer returnCode;
 
+    //返回状态码
+    private Integer returnMsg;
+
     //操作人
     private String operateUser;
 
