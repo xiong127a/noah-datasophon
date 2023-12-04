@@ -69,6 +69,8 @@ public class WorkerActor extends UntypedActor {
         ActorRef rMStateActor =
                 getContext().actorOf(Props.create(RMStateActor.class), getActorRefName(RMStateActor.class));
         ActorRef pingActor = getContext().actorOf(Props.create(PingActor.class), getActorRefName(PingActor.class));
+        ActorRef ldapActor = getContext().actorOf(Props.create(OpenldapActor.class), getActorRefName(OpenldapActor.class));
+        ActorRef tenantResourceActor = getContext().actorOf(Props.create(TenantResourceActor.class), getActorRefName(TenantResourceActor.class));
 
         // 添加监听服务
         getContext().watch(installServiceActor);
@@ -86,6 +88,8 @@ public class WorkerActor extends UntypedActor {
         getContext().watch(rMStateActor);
         getContext().watch(nMStateActor);
 		getContext().watch(pingActor);
+        getContext().watch(ldapActor);
+        getContext().watch(tenantResourceActor);
     }
 
     /** Get ActorRef name from Class name. */

@@ -28,4 +28,6 @@ public interface ClusterKerberosService {
                         HttpServletResponse response) throws IOException;
 
     void uploadKeytab(MultipartFile file, String hostname, String keytabFileName) throws IOException;
+
+    void generateKeytabFile(Integer clusterId, String keytabFilePath, String principal, String keytabName, String hostname);
 }
