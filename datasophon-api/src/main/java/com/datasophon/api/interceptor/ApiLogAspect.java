@@ -4,6 +4,9 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.datasophon.api.enums.Status;
+import com.datasophon.api.exceptions.BusinessException;
+import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.utils.SecurityUtils;
 import com.datasophon.common.model.OperationLogProp;
 import com.datasophon.common.utils.Result;
@@ -39,6 +42,8 @@ public class ApiLogAspect {
 
     Map<String, OperationLogProp> operationLogPropMap;
 
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
 
     @PostConstruct
     public void initialize() {
@@ -51,8 +56,8 @@ public class ApiLogAspect {
     }
 
 
-//    @Value("${common-log.api-log.enable}")
-    public boolean apiLogAutoEnable = false;
+    //    @Value("${common-log.api-log.enable}")
+    public boolean apiLogAutoEnable = true;
 
     /**
      * 以 controller 包下定义的所有请求为切入点
@@ -82,49 +87,81 @@ public class ApiLogAspect {
         return around(joinPoint);
     }
 
-    private Object around(ProceedingJoinPoint joinPoint) {
+    private Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         Object object = null;
+        boolean insertLog = false;
+        OperationLog op = null;
+
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             assert attributes != null;
             HttpServletRequest request = attributes.getRequest();
 
-            //操作用户
-            String username = SecurityUtils.getAuthUser().getUsername();
+            String requestURI = request.getRequestURI();
+            //模块URI ，匹配模块访问路径匹配
+            String moduleUri = getModuleUri(requestURI);
 
-            //构建日志对象
-            OperationLog op = OperationLog.builder()
-                    .url(request.getRequestURL().toString())
-                    .ip(request.getRemoteAddr())
-                    .startTime(DateUtil.now()) // 设置开始时间
-                    .paramAndValue(null == joinPoint.getArgs() ? null : JSONObject.toJSONString(joinPoint.getArgs()))
-                    .operateUser(username)
-                    .build();
+            //判断是否需要记录业务日志
+            if (Objects.nonNull(operationLogPropMap.get(moduleUri))) {
+                insertLog = true;
+                //操作用户
+                String username = SecurityUtils.getAuthUser().getUsername();
+                //构建日志对象
+                op = OperationLog.builder()
+                        .url(requestURI)
+                        .ip(request.getRemoteAddr())
+                        .startTime(DateUtil.now()) // 设置开始时间
+                        .paramAndValue(null == joinPoint.getArgs() ? null : JSONObject.toJSONString(joinPoint.getArgs()))
+                        .operateUser(username)
+                        .build();
 
-            setOperationType(op, request);
-            //记录时间
-            long startTime = System.currentTimeMillis();
-            object = joinPoint.proceed();
-            long endTime = System.currentTimeMillis();
-            op.setCostTime(endTime - startTime);
+                setOperationType(op, request);
+                object = joinPoint.proceed();
+                //记录返回状态
+                if (object != null && Result.class.getName().equals(object.getClass().getName())) {
+                    Result rel = (Result) object;
+                    op.setReturnCode(rel.getCode());
+                }
 
 
-            //记录返回状态
-            if (object != null && Result.class.getName().equals(object.getClass().getName())) {
-                Result rel = (Result) object;
-                op.setReturnCode(rel.getCode());
+            } else {
+                object = joinPoint.proceed();
             }
 
+
+        } catch (Throwable throwable) {
+            if (insertLog && Objects.nonNull(op)) {
+                if (throwable.getClass().equals(BusinessException.class)) {
+                    op.setReturnValue(throwable.getMessage());
+                    op.setReturnCode(-1);
+                }
+                if (throwable.getClass().equals(ServiceException.class)) {
+                    ServiceException s = ((ServiceException) throwable);
+                    op.setReturnValue(s.getMessage());
+                    op.setReturnCode(s.getCode());
+                }
+            }
+            log.warn(" auto log error :{}", throwable.getMessage());
+            throw throwable;
+
+        } finally {
+            if (insertLog && Objects.nonNull(op)) {
+                //设置结束时间
+                op.setEndTime(DateUtil.now());
+            }
             //将该对象insert到数据库中，这里使用log打印该对象数据
             log.info("api-log :{}", JSONObject.toJSONString(op));
 
-            //设置结束时间
-            op.setEndTime(DateUtil.now());
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-            log.warn(" auto log error :{}", throwable.getMessage());
         }
         return object;
+    }
+
+    private String getModuleUri(String requestURI) {
+        String moduleUri = requestURI.substring(0, requestURI.lastIndexOf("/")).replace(contextPath, "");
+        if (!moduleUri.startsWith("/")) {
+            moduleUri = "/" + moduleUri;
+        }
+        return moduleUri;
     }
 
     /**
@@ -137,22 +174,23 @@ public class ApiLogAspect {
         String requestURI = request.getRequestURI();
 
         //模块URI ，匹配模块访问路径匹配
-        String moduleUri = requestURI.substring(0, requestURI.lastIndexOf("/"));
+        String moduleUri = getModuleUri(requestURI);
 
         //设置操作模块
         OperationLogProp operationLogProp = Optional.ofNullable(operationLogPropMap.get(moduleUri)).orElse(OperationLogProp.builder().build());
         op.setOperationModule(operationLogProp.getOperationModule());
 
+        String substring = requestURI.substring(requestURI.lastIndexOf("/") + 1);
+
         //设置操作类型
         if (Objects.nonNull(operationLogProp.getOperationType())) {
-            String substring = requestURI.substring(requestURI.lastIndexOf("/"));
             String operationType = operationLogProp.getOperationType().get(substring);
             op.setOperationType(operationType);
         }
 
         //设置默认操作类型
-        if (StringUtils.isEmpty(op.getOperationType())){
-            setCommonOperationType(op, requestURI);
+        if (StringUtils.isEmpty(op.getOperationType())) {
+            setCommonOperationType(op, substring);
         }
     }
 
