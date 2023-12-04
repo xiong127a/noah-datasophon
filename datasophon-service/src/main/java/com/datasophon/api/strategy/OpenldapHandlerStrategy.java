@@ -17,6 +17,7 @@ public class OpenldapHandlerStrategy implements ServiceRoleStrategy {
         if (!globalVariables.containsKey("${openldapAddr}") || ObjUtil.isNull(globalVariables.get("${openldapAddr}"))) {
             if (!hosts.isEmpty()) {
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapAddr}", "ldap://" + hosts.get(0) + ":389");
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapIp}", hosts.get(0));
             }
         }
     }

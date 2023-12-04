@@ -48,9 +48,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service("clusterYarnQueueService")
@@ -79,6 +77,19 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             clusterYarnQueue.setMaxResources(maxResources);
         }
         return Result.success(list).put(Constants.TOTAL, count);
+    }
+
+    @Override
+    public Result saveQueue(ClusterYarnQueue clusterYarnQueue) {
+        List<ClusterYarnQueue> list = this
+                .list(new QueryWrapper<ClusterYarnQueue>().eq(Constants.QUEUE_NAME, clusterYarnQueue.getQueueName()));
+        if (Objects.nonNull(list) && list.size() == 1) {
+            return Result.error(Status.QUEUE_NAME_ALREADY_EXISTS.getMsg());
+        }
+        clusterYarnQueue.setCreateTime(new Date());
+        this.save(clusterYarnQueue);
+
+        return Result.success();
     }
 
     @Override
