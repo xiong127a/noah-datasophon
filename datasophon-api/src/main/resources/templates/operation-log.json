@@ -1,0 +1,54 @@
+[
+  {
+    "url": "login",
+    "operationModule": "用户登录"
+  },
+  {
+    "url": "signOut",
+    "operationModule": "用户退出"
+  },
+  {
+    "url": "api/user",
+    "operationModule": "用户管理"
+  },
+  {
+    "url": "cluster/node/label",
+    "operationModule": "集群管理-标签管理",
+    "operationType": {
+      "assign": "分配机架"
+    }
+  },
+  {
+    "url": "cluster/url",
+    "operationModule": "集群管理-用户组管理"
+  },
+  {
+    "url": "cluster/user",
+    "operationModule": "集群管理-用户管理"
+  },
+  {
+    "url": "cluster/rack",
+    "operationModule": "集群管理-机架管理"
+  },
+  {
+    "url": "alert/url",
+    "operationModule": "集群管理-告警组管理"
+  },
+  {
+    "url": "cluster/alert/quota",
+    "operationModule": "集群管理-告警指标管理"
+  },
+  {
+    "url": "host/install",
+    "operationModule": "集群管理-主机操作",
+    "operationType": {
+      "generateHostAgentCommand": "主机操作",
+      "reStartDispatcherHostAgent": "重新安装主机",
+      "generateHostServiceCommand": "启动主机服务"
+    }
+  },
+  {
+    "url": "cluster/host",
+    "operationModule": "集群管理-主机管理"
+  }
+]
