@@ -17,9 +17,11 @@
 
 package com.datasophon.dao.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,8 +29,9 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Map;
 
-//@TableName("t_ddh_operation_log")
+@TableName("t_ddh_operation_log")
 @Data
 @Builder
 @NoArgsConstructor
@@ -58,38 +61,52 @@ public class OperationLog implements Serializable {
      */
     private String operationModule;
 
-
     /**
      * 操作类型
      */
     private String operationType;
 
+
     /**
      * 请求数据
      */
-    private String paramAndValue;;
+    private String param;
 
 
-    //返回值
-    private String returnValue;
+    @TableField(exist = false)
+    private Map<String,Object> paramMap;
+
+    //集群id
+    private Integer clusterId;
+
+    //主机
+    private String hostIds;
 
     //返回状态码
     private Integer returnCode;
 
-    //返回状态码
-    private Integer returnMsg;
+
+    //返回说明
+    private String returnMsg;
 
     //操作人
     private String operateUser;
 
-    //操作时间
-    private String startTime;
+    //操作开始时间
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date startTime;
 
-    //结束时间
-    private String endTime;
+    //操作结束时间
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date endTime;
 
-    //操作耗时
-    private Long costTime;
+    /**
+     * 创建时间
+     */
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date createTime;
+
 
 
 }

@@ -497,6 +497,7 @@ export default {
       let params = {
         hostnames: this.hostnames.join(","),
         clusterId: this.clusterId,
+        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.reStartDispatcherHostAgent, params).then(
         (res) => {
@@ -516,6 +517,7 @@ export default {
       let params = {
         clusterHostIds: this.hostnames.join(","),
         commandType: "start",
+        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
         if (resp.code === 200) {
@@ -529,6 +531,7 @@ export default {
       let params = {
         clusterHostIds: this.hostnames.join(","),
         commandType: "stop",
+        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
         if (resp.code === 200) {
@@ -542,6 +545,7 @@ export default {
       let params = {
         clusterHostIds: this.hostnames.join(","),
         commandType: "start",
+        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.generateHostServiceCommand, params).then((resp) => {
         if (resp.code === 200) {
