@@ -181,6 +181,7 @@ export default {
       this.$destroyAll();
     },
     handleSubmit(e) {
+      console.log(this.clusterId)
       const _this = this;
       e.preventDefault();
       this.form.validateFields((err, values) => {

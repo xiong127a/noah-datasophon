@@ -73,7 +73,7 @@ export default {
       let self = this;
       e.preventDefault();
       const params  = JSON.stringify([this.detail.id])
-      this.$axiosPostUpload(global.API.deleteColony, params)
+      this.$axiosPostUpload(global.API.deleteColony+"?clusterId="+this.detail.id, params)
         .then((res) => {
           this.loading = false;
           if (res.code === 200) {

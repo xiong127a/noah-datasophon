@@ -516,6 +516,7 @@ export default {
     handStartHost() {
       let params = {
         clusterHostIds: this.hostnames.join(","),
+        clusterId:this.clusterId,
         commandType: "start",
         hostIds: this.selectedRowKeys.join(",")
       };
@@ -544,6 +545,7 @@ export default {
     handStartService() {
       let params = {
         clusterHostIds: this.hostnames.join(","),
+        clusterId:this.clusterId,
         commandType: "start",
         hostIds: this.selectedRowKeys.join(",")
       };

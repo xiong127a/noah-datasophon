@@ -9,6 +9,7 @@ axios.defaults.withCredentials= true
 axios.defaults.xsrfHeaderName= xsrfHeaderName
 axios.defaults.xsrfCookieName= xsrfHeaderName
 
+
 // 认证类型
 const AUTH_TYPE = {
   BEARER: 'Bearer',
@@ -101,6 +102,8 @@ function checkAuthorization(authType = AUTH_TYPE.BEARER) {
   return false
 }
 
+
+
 /**
  * 加载 axios 拦截器
  * @param interceptors
@@ -121,6 +124,18 @@ function loadInterceptors(interceptors, options) {
       config => onFulfilled(config, options),
       error => onRejected(error, options)
     )
+
+    // clusterId
+    axios.interceptors.request.use(function (config) {
+      // Do something before request is sent
+      let clusterId = window.localStorage.getItem("clusterId")
+      if (clusterId) {
+        config.headers.clusterId = clusterId;
+        return config;
+      }
+    }, function (error) {
+      return Promise.reject(error);
+    });
   })
   // 加载响应拦截器
   response.forEach(item => {
