@@ -41,6 +41,8 @@
   </div>
 </template>
 <script>
+import {getServiceName} from "@/utils/util";
+
 export default {
   props: {
     serviceId: {
@@ -84,13 +86,16 @@ export default {
       e.preventDefault();
       this.form.validateFields((err, values) => {
         if (!err) {
+          let serviceName = getServiceName(this.$route.params.serviceId);
           const params = {
-            "roleGroupName": values.characterGroupName, 
+            "roleGroupName": values.characterGroupName,
             "roleGroupId": values.characterGroupId,
-            serviceInstanceId: this.serviceId.id
+            serviceInstanceId: this.serviceId.id,
+            serviceName: serviceName,
           }
           this.loading = true;
-          this.$axiosPost(global.API.addRoleGroupSave, params).then((res) => {  
+          console.log(this.serviceId)
+          this.$axiosPost(global.API.addRoleGroupSave, params).then((res) => {
             this.loading = false;
             if (res.code !== 200) return
             this.$message.success('保存角色组成功')
@@ -109,12 +114,12 @@ export default {
       //   if (res.code !== 200) return
       //   this.cateList = res.data
       // }
-      // ) 
+      // )
       //角色组列表
       this.$axiosPost(global.API.getRoleGroupList, params).then((res) => {
         if (res.code !== 200) return  //this.$message.error('获取角色组列表失败')
         this.GroupList = res.data
-        
+
       })
     }
   },

@@ -33,3 +33,18 @@ export function enquireScreen(call) {
 }
 
 const _toString = Object.prototype.toString
+
+
+export function getServiceName (serviceId) {
+  let serviceName ;
+  const menuData = JSON.parse(localStorage.getItem("menuData")) || [];
+  const arr = menuData.filter((item) => item.path === "service-manage");
+  if (arr.length > 0) {
+    arr[0].children.map((item) => {
+      if (item.meta.params.serviceId == serviceId) {
+        serviceName = item.name
+      }
+    });
+  }
+  return serviceName;
+}

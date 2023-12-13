@@ -63,7 +63,30 @@
     }
   },
   {
+    "url": "cluster/tenant",
+    "operationModule": "租户管理"
+  },
+  {
+    "url": "cluster/yarn/queue",
+    "operationModule": "租户管理"
+  },
+  {
     "url": "cluster/service/instance",
     "operationModule": "服务管理"
+  },
+  {
+    "url": "cluster/service/instance/role/group",
+    "operationModule": "服务管理-角色组",
+    "operationType": {
+      "bind": "分配角色组",
+      "rename": "重命名角色组"
+    }
+  },
+  {
+    "url": "service/install",
+    "operationModule": "服务管理-配置",
+    "operationType": {
+      "saveServiceConfig": "保存配置信息"
+    }
   }
 ]

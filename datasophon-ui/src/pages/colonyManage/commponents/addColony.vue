@@ -108,14 +108,14 @@ export default {
         console.log(values);
         if (!err) {
           const params = {
-            "clusterName": values.clusterName, 
-            "clusterCode": values.clusterCode, 
+            "clusterName": values.clusterName,
+            "clusterCode": values.clusterCode,
             "clusterFrame": values.clusterFrame
           }
           if (JSON.stringify(this.detail) !== '{}') params.id = this.detail.id
           this.loading = true;
           const ajaxApi = JSON.stringify(this.detail) !== '{}' ? global.API.updateColony : global.API.saveColony
-          this.$axiosJsonPost(ajaxApi, params).then((res) => {  
+          this.$axiosJsonPost(ajaxApi+"?clusterId="+this.detail.id, params).then((res) => {
             this.loading = false;
             if (res.code === 200) {
               this.$message.success('保存成功', 2)

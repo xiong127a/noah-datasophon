@@ -622,13 +622,14 @@ CREATE TABLE `t_ddh_operation_log`  (
   `operation_type` varchar(128)  DEFAULT NULL COMMENT '操作类型',
   `cluster_id` int(10)  DEFAULT NULL COMMENT '集群id',
   `host_ids` varchar(30)  DEFAULT NULL COMMENT '主机',
+  `service_name` varchar(30)  DEFAULT NULL COMMENT '服务名称',
+  `service_role_instances_ids` varchar(30)  DEFAULT NULL COMMENT '服务实例',
   `param` text(128)  DEFAULT NULL COMMENT '请求数据',
   `return_code` int(10)  DEFAULT NULL COMMENT '返回状态码',
   `return_msg` varchar(128)  DEFAULT NULL COMMENT '返回说明',
   `operate_user` varchar(128)  DEFAULT NULL COMMENT '操作人',
   `start_time` datetime DEFAULT NULL COMMENT '操作开始时间',
   `end_time` datetime DEFAULT NULL COMMENT '操作结束时间',
-  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`)
 ) AUTO_INCREMENT = 2 DEFAULT CHARSET=utf8mb4 COMMENT = '操作日志表' ROW_FORMAT = DYNAMIC;
 
