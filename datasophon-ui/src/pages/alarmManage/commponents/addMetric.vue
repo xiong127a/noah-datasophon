@@ -71,7 +71,7 @@
       </a-form-item>
       <a-form-item label="通知组">
         <a-select v-decorator="['noticeGroupId', { rules: [{ required: true, message: '通知组不能为空!' }]}]" placeholder="请选择通知组">
-          <a-select-option :value="item.value" v-for="(item,index) in noticeList" :key="index">{{item.label}}</a-select-option>
+          <a-select-option :value="item.id" v-for="(item,index) in noticeList" :key="index">{{item.noticeGroupName}}</a-select-option>
         </a-select>
       </a-form-item>
       <a-form-item label="告警策略">
@@ -274,9 +274,22 @@ export default {
         }
       });
     },
+    getNoticeGroupList() {
+      const params = {
+        pageSize: 1000,
+        page: 1,
+        clusterId: this.clusterId || "",
+      };
+      this.$axiosPost(global.API.getNoticeGroupList, params).then((res) => {
+        this.noticeList = res.data.records;
+
+      });
+
+    },
   },
   mounted() {
     this.getAlarmGroupList();
+    this.getNoticeGroupList();
   },
 };
 </script>
