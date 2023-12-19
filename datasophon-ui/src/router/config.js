@@ -117,14 +117,23 @@ const options = {
       },
       component: PageView,
       children: [{
-        path: 'group',
+        path: 'notice',
         meta: {
           notAlive: false,
         },
-        name: '告警组管理',
-        label: '告警组管理',
-        component: () => import('@/pages/alarmManage/group'),
+        name: '通知组管理',
+        label: '通知组管理',
+        component: () => import('@/pages/alarmManage/notice'),
       },
+        {
+          path: 'group',
+          meta: {
+            notAlive: false,
+          },
+          name: '告警组管理',
+          label: '告警组管理',
+          component: () => import('@/pages/alarmManage/group'),
+        },
       {
         path: 'metric',
         meta: {

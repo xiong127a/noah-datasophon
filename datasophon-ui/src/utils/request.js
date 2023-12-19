@@ -125,17 +125,6 @@ function loadInterceptors(interceptors, options) {
       error => onRejected(error, options)
     )
 
-    // clusterId
-    axios.interceptors.request.use(function (config) {
-      // Do something before request is sent
-      let clusterId = window.localStorage.getItem("clusterId")
-      if (clusterId) {
-        config.headers.clusterId = clusterId;
-        return config;
-      }
-    }, function (error) {
-      return Promise.reject(error);
-    });
   })
   // 加载响应拦截器
   response.forEach(item => {
