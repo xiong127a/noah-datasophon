@@ -14,14 +14,14 @@
       </a-form-item>
       <a-form-item label="关联标签" >
         <a-select showSearch allowClear :disabled="type =='show'"
-          v-decorator="['nodeLabel', {rules: [{ required: true, message: '关联标签不能为空' }],
+          v-decorator="['nodeLabel', {rules: [{ required: false, message: '关联标签不能为空' }],
           initialValue:this.pageData.nodeLabel}]" placeholder="请选择关联标签"  >
           <a-select-option v-for="list in cateList" :key="list.nodeLabel" :value="list.nodeLabel"  :title="list.nodeLabel">  {{list.nodeLabel}} </a-select-option>
         </a-select>
       </a-form-item>
       <a-form-item label="允许提交用户" >
         <a-select showSearch allowClear :disabled="type =='show'" mode="multiple"
-          v-decorator="['aclUsers', {rules: [{ required: true, message: '允许提交用户不能为空' }],
+          v-decorator="['aclUsers', {rules: [{ required: false, message: '允许提交用户不能为空' }],
           initialValue:this.pageData.aclUsers?this.pageData.aclUsers.split(','):[]}]" placeholder="请选择允许提交用户"  >
           <a-select-option v-for="list in userList" :key="list.username" :value="list.username"  :title="list.username">  {{list.username}} </a-select-option>
         </a-select>

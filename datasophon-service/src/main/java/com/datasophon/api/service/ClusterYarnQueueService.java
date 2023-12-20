@@ -35,4 +35,6 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
     Result saveQueue(ClusterYarnQueue clusterYarnQueue);
 
     Result refreshQueues(Integer clusterId) throws Exception;
+
+    ClusterYarnQueue getQueueByName(Integer clusterId, String queueName);
 }

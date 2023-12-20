@@ -21,6 +21,7 @@ import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -163,5 +164,18 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             return Result.error(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
         }
         return Result.success();
+    }
+
+    @Override
+    public ClusterYarnQueue getQueueByName(Integer clusterId, String queueName) {
+        List<ClusterYarnQueue> list = this
+                .list(new QueryWrapper<ClusterYarnQueue>()
+                        .eq(Constants.QUEUE_NAME, queueName)
+                        .eq(Constants.CLUSTER_ID, clusterId));
+        if (CollUtil.isNotEmpty(list)) {
+            return list.get(0);
+        }
+
+        return null;
     }
 }

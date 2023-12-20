@@ -17,6 +17,8 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.ObjUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
@@ -46,6 +48,9 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         for (ServiceConfig config : list) {
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "KAFKA");
+            }
+            if ("zookeeper.connect".equals(config.getName())) {
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${kafkaZkAddr}", Convert.toStr(config.getValue()));
             }
         }
         String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "KAFKA" + Constants.CONFIG;

@@ -8,5 +8,6 @@ public interface ClusterTenantService extends IService<ClusterTenant> {
 
     Result listTenant(Integer clusterId, Integer page, Integer size);
 
-    Result saveTenant(ClusterTenant clusterTenant) throws Exception;
+    Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception;
+
 }
