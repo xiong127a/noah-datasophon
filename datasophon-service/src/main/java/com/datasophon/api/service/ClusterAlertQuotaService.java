@@ -24,7 +24,7 @@ import com.datasophon.dao.entity.ClusterAlertQuota;
 import java.util.List;
 
 /**
- * 集群告警指标表 
+ * 集群告警指标表
  *
  * @author gaodayu
  * @email gaodayu2022@163.com
@@ -32,7 +32,7 @@ import java.util.List;
  */
 public interface ClusterAlertQuotaService extends IService<ClusterAlertQuota> {
 
-    Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, String quotaName, Integer page, Integer pageSize);
+    Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page, Integer pageSize);
 
     void start(Integer clusterId, String alertQuotaIds);
 
@@ -41,4 +41,6 @@ public interface ClusterAlertQuotaService extends IService<ClusterAlertQuota> {
     void saveAlertQuota(ClusterAlertQuota clusterAlertQuota);
 
     List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName);
+
+    List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> list);
 }

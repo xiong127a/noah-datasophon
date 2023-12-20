@@ -20,6 +20,7 @@ package com.datasophon.api.service.impl;
 import akka.actor.ActorRef;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -68,13 +69,15 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
     AlertGroupService alertGroupService;
 
     @Override
-    public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, String quotaName, Integer page,
+    public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page,
                                     Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
 
         LambdaQueryChainWrapper<ClusterAlertQuota> wrapper = this.lambdaQuery()
                 .eq(alertGroupId != null, ClusterAlertQuota::getAlertGroupId, alertGroupId)
+                .eq(noticeGroupId != null, ClusterAlertQuota::getNoticeGroupId, noticeGroupId)
                 .like(StringUtils.isNotBlank(quotaName), ClusterAlertQuota::getAlertQuotaName, quotaName);
+
         int count = wrapper.count() == null ? 0 : wrapper.count();
         List<ClusterAlertQuota> alertQuotaList = wrapper.last("limit " + offset + "," + pageSize).list();
         if (CollectionUtils.isEmpty(alertQuotaList)) {
@@ -211,5 +214,12 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
     @Override
     public List<ClusterAlertQuota> listAlertQuotaByServiceName(String serviceName) {
         return this.list(new QueryWrapper<ClusterAlertQuota>().eq(Constants.SERVICE_CATEGORY, serviceName));
+    }
+
+    @Override
+    public List<ClusterAlertQuota> getByNoticeGroupIds(List<Integer> list) {
+        LambdaQueryWrapper<ClusterAlertQuota> query = new LambdaQueryWrapper<>();
+        query.in(ClusterAlertQuota::getNoticeGroupId, list);
+        return this.list(query);
     }
 }

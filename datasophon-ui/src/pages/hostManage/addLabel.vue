@@ -109,6 +109,7 @@ export default {
       const _this = this
       const params = {
         nodeLabelId: values.nodeLabelId,
+        clusterId:this.clusterId,
         hostIds: this.hostIds
       };
       this.loading = true;

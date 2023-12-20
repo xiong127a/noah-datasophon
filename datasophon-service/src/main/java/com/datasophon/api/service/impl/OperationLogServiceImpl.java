@@ -27,7 +27,6 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
             query.eq(OperationLog::getOperationType, param.getOperationType());
         }
 
-
         //分页查询
         return page(mPage, query);
     }

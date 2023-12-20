@@ -82,6 +82,12 @@ public class OperationLog implements Serializable {
     //主机
     private String hostIds;
 
+    //服务名称
+    private String serviceName;
+
+    //实例id
+    private String serviceRoleInstancesIds;
+
     //返回状态码
     private Integer returnCode;
 
@@ -99,14 +105,6 @@ public class OperationLog implements Serializable {
     //操作结束时间
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date endTime;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "create_time", fill = FieldFill.INSERT)
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date createTime;
-
 
 
 }
