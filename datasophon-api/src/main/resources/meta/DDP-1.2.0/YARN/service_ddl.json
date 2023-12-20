@@ -196,6 +196,7 @@
           "yarn.nodemanager.container-executor.class",
           "yarn.nodemanager.linux-container-executor.group",
           "yarn.nodemanager.linux-container-executor.path",
+          "yarn.acl.enable",
           "custom.yarn.site.xml"
         ]
       },
@@ -207,7 +208,18 @@
           "mapreduce.jobhistory.keytab",
           "mapreduce.jobhistory.principal",
           "mapreduce.cluster.local.dir",
+          "mapreduce.framework.name",
           "custom.mapred.site.xml"
+        ]
+      },
+      {
+        "filename": "install.properties",
+        "configFormat": "custom",
+        "outputDirectory": "ranger-yarn-plugin",
+        "templateName": "ranger-yarn.ftl",
+        "includeParams": [
+          "hadoopHome",
+          "rangerAdminUrl"
         ]
       }
     ]
@@ -393,7 +405,7 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
+      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"
     },
     {
       "name": "yarn.scheduler.fair.allocation.file",
@@ -697,6 +709,17 @@
       "defaultValue": "/data/mapred/local"
     },
     {
+      "name": "mapreduce.framework.name",
+      "label": "mapreduce.framework.name",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "yarn",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "yarn"
+    },
+    {
       "name": "yarn.application.classpath",
       "label": "yarn应用程序加载的classpath",
       "description": "yarn应用程序加载的classpath",
@@ -826,6 +849,17 @@
       "defaultValue": "${HADOOP_HOME}/bin/container-executor"
     },
     {
+      "name": "yarn.acl.enable",
+      "label": "开启yarn acl",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value":"",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
       "name": "yarn.node-labels.enabled",
       "label": "启用YARN标签调度",
       "description": "开启 YARN Node Labels",
@@ -869,6 +903,30 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "hadoopHome",
+      "label": "HADOOP_HOME",
+      "description": "Hadoop的安装目录",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "${HADOOP_HOME}",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "${HADOOP_HOME}"
+    },
+    {
+      "name": "rangerAdminUrl",
+      "label": "Ranger访问地址",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
       "defaultValue": ""
     }
   ]

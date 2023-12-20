@@ -1,22 +1,17 @@
 package com.datasophon.api.service.impl;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.TenantRangerActor;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.service.ClusterYarnQueueService;
 import com.datasophon.common.Constants;
-import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.TenantResource;
-import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterTenant;
@@ -25,13 +20,9 @@ import com.datasophon.dao.mapper.ClusterTenantMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.Objects;
 
 @Service("clusterTenantService")
 @Slf4j
@@ -56,10 +47,11 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     @Override
-    public Result saveTenant(ClusterTenant clusterTenant) throws Exception {
+    public Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception {
 
         if (StrUtil.isNotBlank(clusterTenant.getHdfsPath())) {
             TenantResource resource = TenantResource.builder()
+                    .id(clusterTenant.getId())
                     .hdfsPath(clusterTenant.getHdfsPath())
                     .hdfsSpaceQuota(clusterTenant.getHdfsSpaceQuota())
                     .hdfsQuota(clusterTenant.getHdfsQuota())
@@ -68,14 +60,18 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         }
 
         if (StrUtil.isNotBlank(clusterTenant.getKafkaTopicsConfig())) {
+            String zkAddr = GlobalVariables.get(clusterTenant.getClusterId()).get("${kafkaZkAddr}");
             TenantResource resource = TenantResource.builder()
+                    .id(clusterTenant.getId())
                     .kafkaTopicsConfig(clusterTenant.getKafkaTopicsConfig())
+                    .kafkaZkAddr(zkAddr)
                     .build();
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "KafkaBroker"), resource);
         }
 
         if (StrUtil.isNotBlank(clusterTenant.getHbaseNamespace())) {
             TenantResource resource = TenantResource.builder()
+                    .id(clusterTenant.getId())
                     .hbaseNamespace(clusterTenant.getHbaseNamespace())
                     .hbaseCapacity(clusterTenant.getHbaseCapacity())
                     .hbaseRegionServerNum(clusterTenant.getHbaseRegionServerNum())
@@ -86,6 +82,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         if (StrUtil.isNotBlank(clusterTenant.getHiveDatabase())) {
             String hiveMetastoreDir = GlobalVariables.get(clusterTenant.getClusterId()).get("${hive.metastore.warehouse.dir}");
             TenantResource resource = TenantResource.builder()
+                    .id(clusterTenant.getId())
                     .hiveDatabase(clusterTenant.getHiveDatabase())
                     .hiveDatabaseCapacity(clusterTenant.getHiveDatabaseCapacity())
                     .hiveMetastoreDir(hiveMetastoreDir)
@@ -93,9 +90,19 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "HiveServer2"), resource);
         }
 
-        if (StrUtil.isNotBlank(clusterTenant.getYarnMemory())) {
+        if (StrUtil.isNotBlank(clusterTenant.getYarnMemory()) && Objects.isNull(clusterTenant.getId())) {
             createTenantYarnResource(clusterTenant);
+        } else if (StrUtil.isNotBlank(clusterTenant.getYarnMemory()) && Objects.nonNull(clusterTenant.getId())) {
+            updateTenantYarnResource(clusterTenant);
         }
+
+        // 创建ranger相关策略
+        if (Objects.isNull(clusterTenant.getId())) {
+            ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
+            tenantActor.tell(clusterTenant, ActorRef.noSender());
+        }
+
+        this.saveOrUpdateTenant(clusterTenant);
 
         return Result.success();
     }
@@ -119,10 +126,23 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         clusterYarnQueue.setMinMem(1);
         clusterYarnQueue.setMaxMem(Integer.valueOf(clusterTenant.getYarnMemory()));
         clusterYarnQueue.setQueueName(clusterTenant.getTenantName());
-        clusterYarnQueue.setSchedulePolicy("fair");
+        clusterYarnQueue.setSchedulePolicy("fifo");
         clusterYarnQueue.setWeight(1);
         clusterYarnQueueService.saveQueue(clusterYarnQueue);
         clusterYarnQueueService.refreshQueues(clusterTenant.getClusterId());
+    }
+
+    /**
+     * 更新yarn队列配置
+     */
+    private void updateTenantYarnResource(ClusterTenant clusterTenant) throws Exception {
+        ClusterYarnQueue clusterYarnQueue = clusterYarnQueueService.getQueueByName(clusterTenant.getClusterId(), clusterTenant.getTenantName());
+        clusterYarnQueue.setClusterId(clusterTenant.getClusterId());
+        clusterYarnQueue.setMaxCore(Integer.valueOf(clusterTenant.getYarnCpu()));
+        clusterYarnQueue.setMaxMem(Integer.valueOf(clusterTenant.getYarnMemory()));
+        clusterYarnQueue.setQueueName(clusterTenant.getTenantName());
+        clusterYarnQueueService.updateById(clusterYarnQueue);
+        clusterYarnQueueService.refreshQueues(clusterYarnQueue.getClusterId());
     }
 
     private String getRoleHostName(Integer clusterId, String roleName) {

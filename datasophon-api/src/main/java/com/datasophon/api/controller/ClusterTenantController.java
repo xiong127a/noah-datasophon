@@ -29,16 +29,15 @@ public class ClusterTenantController {
      */
     @RequestMapping(value = "/save", method = RequestMethod.POST)
     public Result save(@RequestBody ClusterTenant clusterTenant) throws Exception {
-        return clusterTenantService.saveTenant(clusterTenant);
+        return clusterTenantService.saveOrUpdateTenant(clusterTenant);
     }
 
     /**
      * 更新
      */
     @RequestMapping("/update")
-    public Result update(@RequestBody ClusterTenant clusterTenant) {
-        clusterTenantService.saveOrUpdate(clusterTenant);
-        return Result.success();
+    public Result update(@RequestBody ClusterTenant clusterTenant) throws Exception {
+        return clusterTenantService.saveOrUpdateTenant(clusterTenant);
     }
 
     /**
