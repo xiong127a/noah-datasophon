@@ -181,6 +181,7 @@ import { mapMutations, mapState } from "vuex";
 import AddCharacter from "./addCharacter.vue";
 import AllotCharacter from "./allotCharacter.vue";
 import RollingRestart from "@/pages/serviceManage/rollingRestart.vue";
+import {getServiceName} from "@/utils/util";
 export default {
   components: { LOGS, Steps },
   name: "exampleList",
@@ -483,24 +484,7 @@ export default {
       });
     },
     addExample () {
-      let serviceName = [];
-      let frameServiceId = null;
-      const serviceId = this.$route.params.serviceId || "";
-      const menuData = JSON.parse(localStorage.getItem("menuData")) || [];
-      const arr = menuData.filter((item) => item.path === "service-manage");
-      if (arr.length > 0) {
-        arr[0].children.map((item) => {
-          if (item.meta.params.serviceId == serviceId) {
-            serviceName = [
-              {
-                serviceName: item.name,
-                serviceId: item.meta.obj.frameServiceId,
-              },
-            ];
-            frameServiceId = item.meta.obj.frameServiceId;
-          }
-        });
-      }
+      let serviceName = getServiceName(this.$route.params.serviceId);
       this.steps4Data = {
         serviceIds: [frameServiceId],
         serviceNames: serviceName,

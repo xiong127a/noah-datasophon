@@ -33,6 +33,14 @@
           <a-select placeholder="请选择告警组" class="w252 mgr12" allowClear @change="(value) => getVal(value, 'alertGroupId')">
             <a-select-option :value="item.id" v-for="(item,index) in groupList" :key="index">{{item.alertGroupName}}</a-select-option>
           </a-select>
+
+          <a-select placeholder="请选择通知组"
+                    v-model="noticeGroupId"
+                    class="w252 mgr12" allowClear>
+            <a-select-option
+                v-for="option in noticeGroupList" :key="option.id" :value="option.id*1" :aria-label="option.noticeGroupName">{{option.noticeGroupName}}</a-select-option>
+          </a-select>
+
           <a-button class type="primary" icon="search" @click="onSearch"></a-button>
         </a-col>
         <a-col :span="8" style="text-align: right">
@@ -92,6 +100,8 @@ export default {
       dataSource: [],
       selectedRowKeys: [],
       groupList: [],
+      noticeGroupList: [],
+      noticeGroupId: undefined,
       loading: false,
       columns: [
         {
@@ -321,8 +331,7 @@ export default {
     },
     getVal(val, filed) {
       if (filed === "alertGroupId") this.changeAlertFlag = true;
-      this.params[`${filed}`] =
-        filed === "alertGroupId" ? val : val.target.value;
+      this.params[`${filed}`] = filed === "alertGroupId" ? val : val.target.value;
     },
     //   查询
     onSearch() {
@@ -407,6 +416,7 @@ export default {
     },
     getAlarmMerticList() {
       this.loading = true;
+      console.log(this.noticeGroupId)
       const params = {
         pageSize: this.pagination.pageSize,
         page: this.pagination.current,
@@ -415,6 +425,7 @@ export default {
         alertGroupId: this.changeAlertFlag
           ? this.params.alertGroupId || ""
           : this.$route.query.groupId || "",
+        noticeGroupId : this.noticeGroupId==null ? ''  :this.noticeGroupId,
       };
       this.$axiosPost(global.API.getAlarmMerticList, params).then((res) => {
         this.loading = false;
@@ -431,11 +442,29 @@ export default {
       this.$axiosPost(global.API.getAlarmGroupList, params).then((res) => {
         this.groupList = res.data;
       });
+
+    },
+    getNoticeGroupList() {
+      const params = {
+        pageSize: 1000,
+        page: 1,
+        clusterId: this.clusterId || "",
+      };
+      this.$axiosPost(global.API.getNoticeGroupList, params).then((res) => {
+        this.noticeGroupList = res.data.records;
+
+      });
+
     },
   },
   mounted() {
-    this.getAlarmMerticList();
+    if ( this.$route.query.noticeGroupId){
+      this.noticeGroupId = this.$route.query.noticeGroupId*1;
+    }
     this.getAlarmGroupList();
+    this.getNoticeGroupList();
+    this.getAlarmMerticList();
+
   },
 };
 </script>

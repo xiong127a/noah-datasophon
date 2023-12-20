@@ -19,11 +19,21 @@ package com.datasophon.dao.entity;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @TableName("t_ddh_notice_group")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class NoticeGroupEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -37,9 +47,15 @@ public class NoticeGroupEntity implements Serializable {
      * 通知组名称
      */
     private String noticeGroupName;
+
+
     /**
      * 创建时间
      */
     private Date createTime;
+
+
+    @TableField(exist = false)
+    private List<UserInfoEntity> userIds;
 
 }

@@ -15,25 +15,14 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.service;
+package com.datasophon.dao.mapper;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
+import org.apache.ibatis.annotations.Mapper;
 
-import java.util.List;
+@Mapper
+public interface NoticeGroupMapper extends BaseMapper<NoticeGroupEntity> {
 
-/**
- * 通知组-用户中间表
- *
- * @author gaodayu
- * @email gaodayu2022@163.com
- * @date 2022-03-15 17:36:08
- */
-public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
-
-    boolean removeByGroupIds(List<Integer> list);
-
-    List<NoticeGroupUserEntity> listByGroupId(Integer id);
-
-    List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids);
 }

@@ -123,6 +123,8 @@ const reqCommon = {
       message.warning('认证 token 已过期，请重新登录')
     }
     config.headers['Content-Type'] = config.ContentType?config.ContentType:'application/json;charset=UTF-8'
+    config.headers.clusterId =  window.localStorage.getItem("clusterId");
+
     return config
   },
   /**

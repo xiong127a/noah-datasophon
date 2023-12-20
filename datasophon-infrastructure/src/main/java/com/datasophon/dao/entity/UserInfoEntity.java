@@ -20,13 +20,19 @@ package com.datasophon.dao.entity;
 import java.io.Serializable;
 import java.util.Date;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.NoArgsConstructor;
 
 @Data
 @TableName("t_ddh_user_info")
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
