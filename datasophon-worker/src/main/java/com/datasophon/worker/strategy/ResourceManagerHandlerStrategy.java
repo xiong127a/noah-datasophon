@@ -28,6 +28,7 @@ import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class ResourceManagerHandlerStrategy extends  AbstractHandlerStrategy implements ServiceRoleStrategy {
 
@@ -39,6 +40,7 @@ public class ResourceManagerHandlerStrategy extends  AbstractHandlerStrategy imp
     public ExecResult handler(ServiceRoleOperateCommand command) throws SQLException, ClassNotFoundException {
         ExecResult startResult = new ExecResult();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         if (command.getEnableKerberos()) {
             logger.info("start to get resourcemanager keytab file");
             String hostname = CacheUtils.getString(Constants.HOSTNAME);
@@ -52,6 +54,23 @@ public class ResourceManagerHandlerStrategy extends  AbstractHandlerStrategy imp
             // create /user/yarn
             ShellUtils.exceShell("sudo -u hdfs " + hadoopHome + "/bin/hdfs dfs -mkdir -p /user/yarn");
             ShellUtils.exceShell("sudo -u hdfs " + hadoopHome + "/bin/hdfs dfs -chown yarn:hadoop /user/yarn");
+        }
+        if (command.getEnableRangerPlugin()) {
+            logger.info("Start to enable ranger yarn plugin");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add("sh");
+            commands.add(workPath + "/ranger-yarn-plugin/enable-yarn-plugin.sh");
+            if (!FileUtil.exist(workPath + "/ranger-yarn-plugin/success.id")) {
+                ExecResult execResult = ShellUtils.execWithStatus(workPath + "/ranger-yarn-plugin", commands, 30L, logger);
+                if (execResult.getExecResult()) {
+                    logger.info("Enable ranger yarn plugin success");
+                    // 写入ranger plugin集成成功标识
+                    FileUtil.writeUtf8String("success", workPath + "/ranger-yarn-plugin/success.id");
+                } else {
+                    logger.info("Enable ranger yarn plugin failed");
+                    return execResult;
+                }
+            }
         }
         return serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());

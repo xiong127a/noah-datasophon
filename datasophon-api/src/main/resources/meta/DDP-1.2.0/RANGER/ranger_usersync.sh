@@ -8,7 +8,7 @@ usage="Usage: $0 {start|stop|status|restart}"
 
 start(){
     echo "ranger userSync start"
-    sh "$current_path/ranger-usersync" start
+    sh "/usr/bin/ranger-usersync" start
     if [ $? -eq 0 ]; then
         echo "ranger userSync start success"
     else
@@ -19,7 +19,7 @@ start(){
 
 stop(){
     echo "ranger userSync stop"
-    sh "$current_path/ranger-usersync" stop
+    sh "/usr/bin/ranger-usersync" stop
     if [ $? -eq 0 ]; then
         echo "ranger userSync stop success"
     else
@@ -45,7 +45,7 @@ status(){
 
 restart(){
     echo "ranger userSync restart"
-    sh "$current_path/ranger-usersync" restart
+    sh "/usr/bin/ranger-usersync" restart
     if [ $? -eq 0 ]; then
         echo "ranger userSync restart success"
     else
