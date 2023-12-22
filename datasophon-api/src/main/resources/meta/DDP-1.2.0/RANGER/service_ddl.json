@@ -52,7 +52,7 @@
         "group": "root"
       },
       "cardinality": "1",
-      "logFile": "ranger-2.1.0-usersync/logs/usersync-${host}-ranger.log",
+      "logFile": "ranger-2.1.0-usersync/logs/usersync-${host}-root.log",
       "jmxPort": "",
       "sortNum": 2,
       "startRunner": {
@@ -100,6 +100,7 @@
           "rangerPassword",
           "rangerAdminUrl",
           "enableHDFSPlugin",
+          "enableYARNPlugin",
           "enableHIVEPlugin",
           "enableHBASEPlugin",
           "spnegoPrincipal",
@@ -204,6 +205,17 @@
     {
       "name": "enableHDFSPlugin",
       "label": "启用HDFS Ranger插件",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "enableYARNPlugin",
+      "label": "启用YARN Ranger插件",
       "description": "",
       "required": true,
       "type": "switch",

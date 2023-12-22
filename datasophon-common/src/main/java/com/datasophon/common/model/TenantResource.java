@@ -15,6 +15,8 @@ public class TenantResource implements Serializable {
 
     private static final long serialVersionUID = 8665156195475027337L;
 
+    private Integer id;
+
     /**
      * 集群id
      */
@@ -84,5 +86,10 @@ public class TenantResource implements Serializable {
      * hbase regionserver数量
      */
     private String hbaseRegionServerNum;
+
+    /**
+     * kafka配置的zk地址
+     */
+    private String kafkaZkAddr;
 
 }
