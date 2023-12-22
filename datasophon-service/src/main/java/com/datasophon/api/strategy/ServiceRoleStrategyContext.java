@@ -48,7 +48,7 @@ public class ServiceRoleStrategyContext {
         map.put("RangerAdmin", new RangerAdminHandlerStrategy());
         map.put("ElasticSearch", new ElasticSearchHandlerStrategy());
         map.put("Prometheus", new PrometheusHandlerStrategy());
-        map.put("AlertManager", new AlertManagerHandlerStrategy());
+        map.put("ALERTMANAGER", new AlertManagerHandlerStrategy());
 
         map.put("RANGER", new RangerAdminHandlerStrategy());
         map.put("ZOOKEEPER", new ZkServerHandlerStrategy());
