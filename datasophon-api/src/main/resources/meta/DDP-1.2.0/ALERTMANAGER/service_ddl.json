@@ -66,7 +66,11 @@
         "outputDirectory": "",
         "templateName": "alertmanager.yml",
         "includeParams": [
-          "apiUrl"
+          "apiUrl",
+          "smtpSmarthost",
+          "smtpFrom",
+          "smtpAuthUsername",
+          "smtpAuthPassword"
         ]
       }
     ]
@@ -83,6 +87,66 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${apiHost}:${apiPort}"
+    },
+    {
+      "name": "emailEnable",
+      "label": "启用告警邮箱通知",
+      "description": "启用告警邮箱通知",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "smtpSmarthost",
+      "label": "邮箱SMTP服务器地址和端口",
+      "description": "配置邮箱 SMTP 服务器地址和端口",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "smtp.xxx.com:25"
+    },
+    {
+      "name": "smtpFrom",
+      "label": "发件人邮箱",
+      "description": "发件人邮箱",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "xxx@xx.com"
+    },
+    {
+      "name": "smtpAuthUsername",
+      "label": "发件人邮箱账户",
+      "description": "发件人邮箱账户",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "smtpAuthPassword",
+      "label": "发件人邮箱密码",
+      "description": "发件人邮箱密码",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1"
     }
   ]
 }

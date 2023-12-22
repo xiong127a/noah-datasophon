@@ -43,6 +43,8 @@ public class NoticeGroupEntity implements Serializable {
      */
     @TableId
     private Integer id;
+    @TableField(exist = false)
+    private Integer clusterId;
     /**
      * 通知组名称
      */

@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import akka.actor.ActorRef;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -24,14 +25,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
-import com.datasophon.api.service.ClusterAlertQuotaService;
-import com.datasophon.api.service.NoticeGroupService;
-import com.datasophon.api.service.NoticeGroupUserService;
-import com.datasophon.api.service.UserInfoService;
-import com.datasophon.dao.entity.ClusterAlertQuota;
-import com.datasophon.dao.entity.NoticeGroupEntity;
-import com.datasophon.dao.entity.NoticeGroupUserEntity;
-import com.datasophon.dao.entity.UserInfoEntity;
+import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.AlertManagersActor;
+import com.datasophon.api.service.*;
+import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.dao.entity.*;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
 import com.datasophon.dao.model.MPage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +51,14 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
     @Autowired
     private ClusterAlertQuotaService clusterAlertQuotaService;
+
+    @Autowired
+    private ServiceInstallService serviceInstallService;
+
+    @Autowired
+    private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
+    @Autowired
+    private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
 
     @Override
     public void saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup) {
@@ -82,6 +89,27 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                 )
                 .collect(Collectors.toList());
         noticeGroupUserService.saveBatch(collect);
+
+        genAlertManagerConfig();
+    }
+
+    /**
+     * 生成alertManager 配置信息
+     */
+    private void genAlertManagerConfig() {
+        /*
+         * 更新配置信息，修改了通知组之后，配置要同步变更，
+         */
+        List<ClusterServiceRoleInstanceEntity> alertManager = clusterServiceRoleInstanceService.listServiceRoleByName("AlertManager");
+        for (ClusterServiceRoleInstanceEntity roleInstanceEntity : alertManager) {
+            ClusterServiceRoleGroupConfig roleGroupConfig = clusterServiceRoleGroupConfigService.getConfigByRoleGroupId(roleInstanceEntity.getRoleGroupId());
+            List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
+            serviceInstallService.saveServiceConfig(roleInstanceEntity.getClusterId(), "ALERTMANAGER", serviceConfig, roleGroupConfig.getRoleGroupId());
+        }
+
+        //调用配置生成
+        ActorRef localActor = ActorUtils.getLocalActor(AlertManagersActor.class, ActorUtils.getActorRefName(AlertManagersActor.class));
+        localActor.tell(1, ActorRef.noSender());
     }
 
 
@@ -89,7 +117,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     @Transactional
     public void removeNoticeGroup(List<Integer> list) {
         List<ClusterAlertQuota> byNoticeGroupIds = clusterAlertQuotaService.getByNoticeGroupIds(list);
-        if (CollectionUtil.isNotEmpty(byNoticeGroupIds)){
+        if (CollectionUtil.isNotEmpty(byNoticeGroupIds)) {
             throw new ServiceException(Status.NOTICE_GROUP_USE);
         }
         removeByIds(list);
@@ -97,6 +125,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     }
 
 
+    @Override
     public IPage<NoticeGroupEntity> pageNoticeGroup(MPage<NoticeGroupEntity> mPage) {
         //获取查询参数
         NoticeGroupEntity param = Optional.ofNullable(mPage.getParam()).orElse(NoticeGroupEntity.builder().build());
@@ -112,14 +141,19 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
         //查询用户
         List<Integer> groupIds = page.getRecords().stream().map(NoticeGroupEntity::getId).collect(Collectors.toList());
-        Map<Integer, String> userinfo = userInfoService.list().stream().collect(Collectors.toMap(UserInfoEntity::getId, UserInfoEntity::getUsername));
+        Map<Integer, UserInfoEntity> userinfo = userInfoService.list().stream().collect(Collectors.toMap(UserInfoEntity::getId, v -> v));
 
-        Map<Integer, List<UserInfoEntity>> users = noticeGroupUserService
-                .listByGroupIds(groupIds).stream()
-                .map(v -> UserInfoEntity.builder().userType(v.getNoticeGroupId()).id(v.getUserId()).username(userinfo.get(v.getUserId())).build())
-                .collect(Collectors.groupingBy(UserInfoEntity::getUserType));
+        //groupid 和用户的的对应map
+        Map<Integer, List<UserInfoEntity>> users = noticeGroupUserService.listByGroupIds(groupIds).stream()
+                .filter(v-> Objects.nonNull(userinfo.get(v.getUserId())))
+                .map(v -> {
+                    UserInfoEntity userInfoEntity = userinfo.get(v.getUserId());
+                    userInfoEntity.setUserType(v.getNoticeGroupId());
+                    return userInfoEntity;
+                }).collect(Collectors.groupingBy(UserInfoEntity::getUserType));
 
         page.getRecords().forEach(record -> record.setUserIds(users.get(record.getId())));
         return page;
     }
+
 }
