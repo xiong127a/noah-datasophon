@@ -38,7 +38,7 @@
       {
         "filename": "seatunnel.yaml",
         "configFormat": "custom",
-        "templateName": "seatunnel-yml.flt",
+        "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
         "includeParams": [
           "backupCount",
@@ -48,7 +48,7 @@
       {
         "filename": "hazelcast.yaml",
         "configFormat": "custom",
-        "templateName": "hazelcast.flt",
+        "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
         "includeParams": [
           "hosts"
@@ -57,7 +57,7 @@
       {
         "filename": "hazelcast-client.yaml",
         "configFormat": "custom",
-        "templateName": "hazelcast-client.flt",
+        "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
         "includeParams": [
           "hosts"

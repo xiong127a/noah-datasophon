@@ -13,4 +13,6 @@ export HADOOP_HOME=/opt/datasophon/hadoop-3.3.3
 export HADOOP_CONF_DIR=/opt/datasophon/hadoop-3.3.3/etc/hadoop
 export PATH=$PATH:$JAVA_HOME/bin:$SPARK_HOME/bin:$HADOOP_HOME/bin:$HIVE_HOME/bin:$FLINK_HOME/bin:$KAFKA_HOME/bin:$HBASE_HOME/bin
 
-
+export TEZ_CONF_DIR=$HADOOP_CONF_DIR
+export TEZ_JARS=/opt/datasophon/tez/*:/opt/datasophon/tez/lib/*
+export HADOOP_CLASSPATH=$TEZ_CONF_DIR:$TEZ_JARS:$HADOOP_CLASSPATH

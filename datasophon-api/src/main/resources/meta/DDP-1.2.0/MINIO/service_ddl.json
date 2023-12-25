@@ -44,7 +44,7 @@
         "filename": "start.sh",
         "configFormat": "custom",
         "outputDirectory": "bin",
-        "templateName": "minio-run.flt",
+        "templateName": "minio-run.ftl",
         "includeParams": [
           "MINIO_ACCESS_KEY",
           "MINIO_SECRET_KEY",
