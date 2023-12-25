@@ -18,8 +18,8 @@ public class FreemarkerTest {
     public void generateCustomTemplate() throws IOException, TemplateException {
         Generators generators = new Generators();
         generators.setConfigFormat("custom");
-        generators.setFilename("hazelcast-client.flt");
-        generators.setTemplateName("hazelcast-client.flt");
+        generators.setFilename("hazelcast-client.ftl");
+        generators.setTemplateName("hazelcast-client.ftl");
         generators.setOutputDirectory("D:\\WorkSpaceForWork\\datasophon\\datasophon-worker\\src\\test\\com\\datasophon\\worker\\test");
 
         ServiceConfig serviceConfig = new ServiceConfig();

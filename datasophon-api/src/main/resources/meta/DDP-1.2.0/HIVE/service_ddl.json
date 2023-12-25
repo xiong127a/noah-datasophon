@@ -143,9 +143,13 @@
           "hive.zookeeper.client.port",
           "hive.server2.thrift.bind.host",
           "hive.server2.thrift.port",
+          "hive.server2.tez.wm.am.registry.timeout",
           "custom.hive.site.xml",
           "mapreduce.framework.name",
           "hive.execution.engine",
+          "hive.tez.container.size",
+          "hive.files.umask.value",
+          "tez.lib.uris",
           "hive.merge.mapfiles",
           "hive.merge.mapredfiles",
           "hive.merge.size.per.task",
@@ -235,13 +239,13 @@
     },{
       "name": "hive.metastore.schema.verification",
       "label": "是否验证schema",
-      "description": "",
+      "description": "是否验证schema",
       "required": true,
-      "type": "input",
+      "type": "switch",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "true"
+      "defaultValue": true
     },
     {
       "name": "hive.metastore.warehouse.dir",
@@ -281,11 +285,11 @@
       "label": "HiveServer2是否使用公平调度队列",
       "description": "",
       "required": true,
-      "type": "input",
+      "type": "switch",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "false"
+      "defaultValue": false
     },
     {
       "name": "enableKerberos",
@@ -321,6 +325,54 @@
       "hidden": false,
       "defaultValue": "mr",
       "selectValue" : ["mr", "tez", "spark"]
+    },
+    {
+      "name": "hive.tez.container.size",
+      "label": "HiveTez Container申请内存大小",
+      "description": "HiveTez Container申请内存大小(MB)",
+      "required": true,
+      "minValue": 512,
+      "maxValue": 8192,
+      "type": "slider",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": 1024
+    },
+    {
+      "name": "hive.files.umask.value",
+      "label": "Hive文件权限",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "0002"
+    },
+    {
+      "name": "hive.server2.tez.wm.am.registry.timeout",
+      "label": "HiveTez AM注册超时时间设置",
+      "description": "",
+      "required": true,
+      "minValue": 5000,
+      "maxValue": 65000,
+      "type": "slider",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": 30000
+    },
+    {
+      "name": "tez.lib.uris",
+      "label": "Tez Share Lib URI",
+      "description": "Tez Share Lib URI(tez jars and libs on hdfs)",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${fs.defaultFS}/user/tez/tez.tar.gz"
     },
     {
       "name": "hive.merge.mapfiles",
