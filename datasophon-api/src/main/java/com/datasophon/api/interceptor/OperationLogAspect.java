@@ -26,6 +26,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ResourceUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +35,8 @@ import javax.annotation.PostConstruct;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -63,26 +66,33 @@ public class OperationLogAspect {
     @PostConstruct
     public void initialize() {
         //读取操作日志元数据配置，
-        String tempFileName = "templates/operation-log.json";
-        String operationLogString = FileUtil.readString(tempFileName, StandardCharsets.UTF_8);
-        List<OperationLogProp> operationLogProps = JSONArray.parseArray(operationLogString, OperationLogProp.class);
+        String tempFileName = "/templates/operation-log.json";
+        try {
+            File file = ResourceUtils.getFile("classpath:templates/operation-log.json");
+            String operationLogString = FileUtil.readString(file, StandardCharsets.UTF_8);
+            List<OperationLogProp> operationLogProps = JSONArray.parseArray(operationLogString, OperationLogProp.class);
 
-        operationLogUrlMap = new HashMap<>();
-        //全部拼成url和 type 的map
-        for (OperationLogProp operationLogProp : operationLogProps) {
-            String url = contextPath + operationLogProp.getUrl();
-            String operationModule = operationLogProp.getOperationModule();
-            operationLogUrlMap.put(url, operationModule);
-            //添加通用url
-            addCommonUrl(url, operationLogUrlMap);
-            //拼接子目录
-            Map<String, String> operationType = operationLogProp.getOperationType();
-            if (MapUtil.isNotEmpty(operationType)) {
-                for (String key : operationType.keySet()) {
-                    operationLogUrlMap.put(url + "/" + key, operationType.get(key));
+            operationLogUrlMap = new HashMap<>();
+            //全部拼成url和 type 的map
+            for (OperationLogProp operationLogProp : operationLogProps) {
+                String url = contextPath + operationLogProp.getUrl();
+                String operationModule = operationLogProp.getOperationModule();
+                operationLogUrlMap.put(url, operationModule);
+                //添加通用url
+                addCommonUrl(url, operationLogUrlMap);
+                //拼接子目录
+                Map<String, String> operationType = operationLogProp.getOperationType();
+                if (MapUtil.isNotEmpty(operationType)) {
+                    for (String key : operationType.keySet()) {
+                        operationLogUrlMap.put(url + "/" + key, operationType.get(key));
+                    }
                 }
             }
+        } catch (FileNotFoundException e) {
+            log.warn("log config read error");
         }
+
+
 
     }
 
