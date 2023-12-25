@@ -45,7 +45,7 @@
         "filename": "changeDomain.ldif",
         "configFormat": "custom",
         "outputDirectory": "",
-        "templateName": "changeDomain.flt",
+        "templateName": "changeDomain.ftl",
         "includeParams": [
           "olcRootDN",
           "olcSuffix"
