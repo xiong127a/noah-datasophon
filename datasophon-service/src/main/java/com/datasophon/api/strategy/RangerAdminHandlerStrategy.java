@@ -68,31 +68,36 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         boolean enableKerberos = false;
         Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
         ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
+        TenantRangerCommand tenantRangerCommand = TenantRangerCommand.builder().clusterId(clusterId).operateType("createService").build();
         // enable ranger plugin
         for (ServiceConfig config : list) {
             if ("enableHDFSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHdfsPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHDFSPlugin}", "true");
                 enableRangerPlugin(clusterId, "HDFS", "NameNode");
-                tenantActor.tell(TenantRangerCommand.builder().clusterId(clusterId).serviceName("HDFS").operateType("createService").build(), ActorRef.noSender());
+                tenantRangerCommand.setServiceName("HDFS");
+                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
             }
             if ("enableYARNPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableYARNPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableYARNPlugin}", "true");
                 enableRangerPlugin(clusterId, "YARN", "ResourceManager");
-                tenantActor.tell(TenantRangerCommand.builder().clusterId(clusterId).serviceName("YARN").operateType("createService").build(), ActorRef.noSender());
+                tenantRangerCommand.setServiceName("YARN");
+                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
             }
             if ("enableHIVEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHivePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHIVEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HIVE", "HiveServer2");
-                tenantActor.tell(TenantRangerCommand.builder().clusterId(clusterId).serviceName("HIVE").operateType("createService").build(), ActorRef.noSender());
+                tenantRangerCommand.setServiceName("HIVE");
+                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
             }
             if ("enableHBASEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHbasePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHBASEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HBASE", "HbaseMaster");
-                tenantActor.tell(TenantRangerCommand.builder().clusterId(clusterId).serviceName("HBASE").operateType("createService").build(), ActorRef.noSender());
+                tenantRangerCommand.setServiceName("HBASE");
+                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
             }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();
