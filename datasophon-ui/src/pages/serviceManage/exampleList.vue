@@ -486,7 +486,7 @@ export default {
     addExample () {
       let serviceName = getServiceName(this.$route.params.serviceId);
       this.steps4Data = {
-        serviceIds: [frameServiceId],
+        serviceIds: [this.$route.params.serviceId || ""],
         serviceNames: serviceName,
       };
       this.visible = true;
