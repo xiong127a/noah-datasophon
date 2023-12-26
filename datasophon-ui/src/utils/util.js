@@ -48,3 +48,17 @@ export function getServiceName (serviceId) {
   }
   return serviceName;
 }
+
+export function getFrameServiceId (serviceId) {
+  let frameServiceId ;
+  const menuData = JSON.parse(localStorage.getItem("menuData")) || [];
+  const arr = menuData.filter((item) => item.path === "service-manage");
+  if (arr.length > 0) {
+    arr[0].children.map((item) => {
+      if (item.meta.params.serviceId == serviceId) {
+        frameServiceId = item.meta.obj.frameServiceId;
+      }
+    });
+  }
+  return frameServiceId;
+}
