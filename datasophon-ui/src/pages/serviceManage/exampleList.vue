@@ -484,12 +484,27 @@ export default {
       });
     },
     addExample () {
-      let serviceName = getServiceName(this.$route.params.serviceId);
+      let serviceName = [];
+      let frameServiceId = null;
       const serviceId = this.$route.params.serviceId || "";
-      let frameServiceId = getFrameServiceId(serviceId);
+      const menuData = JSON.parse(localStorage.getItem("menuData")) || [];
+      const arr = menuData.filter((item) => item.path === "service-manage");
+      if (arr.length > 0) {
+        arr[0].children.map((item) => {
+          if (item.meta.params.serviceId == serviceId) {
+            serviceName = [
+              {
+                serviceName: item.name,
+                serviceId: item.meta.obj.frameServiceId,
+              },
+            ];
+            frameServiceId = item.meta.obj.frameServiceId;
+          }
+        });
+      }
 
       this.steps4Data = {
-        serviceIds: [frameServiceId],
+        serviceIds:  [frameServiceId],
         serviceNames: serviceName,
       };
       this.visible = true;
