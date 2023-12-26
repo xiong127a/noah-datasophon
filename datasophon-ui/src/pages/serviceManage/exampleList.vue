@@ -181,7 +181,7 @@ import { mapMutations, mapState } from "vuex";
 import AddCharacter from "./addCharacter.vue";
 import AllotCharacter from "./allotCharacter.vue";
 import RollingRestart from "@/pages/serviceManage/rollingRestart.vue";
-import {getServiceName} from "@/utils/util";
+import {getFrameServiceId, getServiceName} from "@/utils/util";
 export default {
   components: { LOGS, Steps },
   name: "exampleList",
@@ -485,8 +485,11 @@ export default {
     },
     addExample () {
       let serviceName = getServiceName(this.$route.params.serviceId);
+      const serviceId = this.$route.params.serviceId || "";
+      let frameServiceId = getFrameServiceId(serviceId);
+
       this.steps4Data = {
-        serviceIds: [this.$route.params.serviceId || ""],
+        serviceIds: [frameServiceId],
         serviceNames: serviceName,
       };
       this.visible = true;
