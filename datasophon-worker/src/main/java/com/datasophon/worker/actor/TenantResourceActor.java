@@ -26,19 +26,19 @@ public class TenantResourceActor extends UntypedActor {
             TenantResource msg = (TenantResource) message;
             ExecResult execResult = new ExecResult();
 
-            if (StrUtil.isNotBlank(msg.getHdfsPath())) {
+            if ("HDFS".equals(msg.getServiceName())) {
                 execResult = operateTenantHdfsResource(msg);
             }
 
-            if (StrUtil.isNotBlank(msg.getKafkaTopicsConfig())) {
+            if ("KAFKA".equals(msg.getServiceName())) {
                 execResult = operateTenantKafkaResource(msg);
             }
 
-            if (StrUtil.isNotBlank(msg.getHbaseNamespace())) {
+            if ("HBASE".equals(msg.getServiceName())) {
                 execResult = operateTenantHbaseResource(msg);
             }
 
-            if (StrUtil.isNotBlank(msg.getHiveDatabase())) {
+            if ("HIVE".equals(msg.getServiceName())) {
                 execResult = operateTenantHiveResource(msg);
             }
 
