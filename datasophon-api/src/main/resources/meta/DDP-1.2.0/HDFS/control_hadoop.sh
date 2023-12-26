@@ -32,16 +32,19 @@ echo $SH_DIR
 ident=$SH_DIR/ident.id
 export LOG_DIR=$SH_DIR/logs
 export PID_DIR=$SH_DIR/pid
-pid=$PID_DIR/hadoop-root-$command.pid
+# pid=$PID_DIR/hadoop-root-$command.pid
 
 if [[ "$command" = "namenode"  ||  "$command" = "datanode" || "$command" = "secondarynamenode" ||  "$command" = "journalnode" || "$command" = "zkfc" ]]; then
    cmd=$SH_DIR/bin/hdfs
-elif [[ "$command" = "resourcemanager" || "$command" = "nodemanager" ]]; then
+   pid=$PID_DIR/hadoop-hdfs-$command.pid
+elif [[ "$command" = "resourcemanager" || "$command" = "nodemanager" || "$command" = "timelineserver" ]]; then
    cmd=$SH_DIR/bin/yarn
+   pid=$PID_DIR/hadoop-yarn-$command.pid
 elif [[ "$command" = "historyserver" ]]; then
    cmd=$SH_DIR/bin/mapred
+   pid=$PID_DIR/hadoop-mapred-$command.pid
 else
-  echo "Error: No command named \'$command' was found."
+  echo "Error: No command named '$command' was found."
   exit 1
 fi
 

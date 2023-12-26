@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl;
 
 import akka.actor.ActorRef;
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -49,44 +50,30 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     @Override
     public Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception {
 
+        TenantResource resource = new TenantResource();
+        BeanUtil.copyProperties(clusterTenant, resource);
+
         if (StrUtil.isNotBlank(clusterTenant.getHdfsPath())) {
-            TenantResource resource = TenantResource.builder()
-                    .id(clusterTenant.getId())
-                    .hdfsPath(clusterTenant.getHdfsPath())
-                    .hdfsSpaceQuota(clusterTenant.getHdfsSpaceQuota())
-                    .hdfsQuota(clusterTenant.getHdfsQuota())
-                    .build();
+            resource.setServiceName("HDFS");
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "NameNode"), resource);
         }
 
         if (StrUtil.isNotBlank(clusterTenant.getKafkaTopicsConfig())) {
             String zkAddr = GlobalVariables.get(clusterTenant.getClusterId()).get("${kafkaZkAddr}");
-            TenantResource resource = TenantResource.builder()
-                    .id(clusterTenant.getId())
-                    .kafkaTopicsConfig(clusterTenant.getKafkaTopicsConfig())
-                    .kafkaZkAddr(zkAddr)
-                    .build();
+            resource.setServiceName("KAFKA");
+            resource.setKafkaZkAddr(zkAddr);
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "KafkaBroker"), resource);
         }
 
         if (StrUtil.isNotBlank(clusterTenant.getHbaseNamespace())) {
-            TenantResource resource = TenantResource.builder()
-                    .id(clusterTenant.getId())
-                    .hbaseNamespace(clusterTenant.getHbaseNamespace())
-                    .hbaseCapacity(clusterTenant.getHbaseCapacity())
-                    .hbaseRegionServerNum(clusterTenant.getHbaseRegionServerNum())
-                    .build();
+            resource.setServiceName("HBASE");
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "HbaseMaster"), resource);
         }
 
         if (StrUtil.isNotBlank(clusterTenant.getHiveDatabase())) {
             String hiveMetastoreDir = GlobalVariables.get(clusterTenant.getClusterId()).get("${hive.metastore.warehouse.dir}");
-            TenantResource resource = TenantResource.builder()
-                    .id(clusterTenant.getId())
-                    .hiveDatabase(clusterTenant.getHiveDatabase())
-                    .hiveDatabaseCapacity(clusterTenant.getHiveDatabaseCapacity())
-                    .hiveMetastoreDir(hiveMetastoreDir)
-                    .build();
+            resource.setServiceName("HIVE");
+            resource.setHiveMetastoreDir(hiveMetastoreDir);
             tellTenantActor(getRoleHostName(clusterTenant.getClusterId(), "HiveServer2"), resource);
         }
 
