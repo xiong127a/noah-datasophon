@@ -149,7 +149,7 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
                 alertItem.setAlertLevel(clusterAlertQuota.getAlertLevel().getDesc());
                 alertItem.setAlertAdvice(clusterAlertQuota.getAlertAdvice());
                 alertItem.setTriggerDuration(clusterAlertQuota.getTriggerDuration());
-                alertItem.setTriggerDuration(clusterAlertQuota.getNoticeGroupId());
+                alertItem.setNoticeGroupId(clusterAlertQuota.getNoticeGroupId());
                 alertItems.add(alertItem);
             }
             configFileMap.put(generators, alertItems);
