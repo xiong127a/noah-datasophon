@@ -23,6 +23,11 @@ public class TenantResource implements Serializable {
     private Integer clusterId;
 
     /**
+     * 操作的服务名称
+     */
+    private String serviceName;
+
+    /**
      * 租户名称
      */
     private String tenantName;
