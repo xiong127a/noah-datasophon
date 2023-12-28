@@ -812,14 +812,15 @@
     },
     {
       "name": "mapreduce.framework.name",
-      "label": "mapreduce.framework.name",
-      "description": "",
+      "label": "mapreduce执行引擎",
+      "description": "mapreduce执行引擎",
       "required": true,
-      "type": "input",
+      "type": "select",
       "value": "yarn",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "yarn"
+      "defaultValue": "yarn",
+      "selectValue" : ["local", "yarn", "yarn-tez"]
     },
     {
       "name": "yarn.application.classpath",
