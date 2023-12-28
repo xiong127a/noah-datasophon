@@ -54,6 +54,12 @@ public class ResourceManagerHandlerStrategy extends  AbstractHandlerStrategy imp
             // create /user/yarn
             ShellUtils.exceShell("sudo -u hdfs " + hadoopHome + "/bin/hdfs dfs -mkdir -p /user/yarn");
             ShellUtils.exceShell("sudo -u hdfs " + hadoopHome + "/bin/hdfs dfs -chown yarn:hadoop /user/yarn");
+
+            // 存在 tez 则创建软连接
+            final String tezHomePath = Constants.INSTALL_PATH + Constants.SLASH + "tez";
+            if (FileUtil.exist(tezHomePath)) {
+                ShellUtils.exceShell("ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath + "/etc/hadoop/tez-site.xml");
+            }
         }
         if (command.getEnableRangerPlugin()) {
             logger.info("Start to enable ranger yarn plugin");

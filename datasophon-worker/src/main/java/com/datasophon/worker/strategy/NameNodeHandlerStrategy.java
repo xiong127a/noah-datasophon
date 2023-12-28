@@ -44,6 +44,9 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
                 // 执行hdfs namenode -bootstrapStandby
                 logger.info("Start to execute hdfs namenode -bootstrapStandby");
                 ArrayList<String> commands = new ArrayList<>();
+                commands.add("echo");
+                commands.add("Y");
+                commands.add("|");
                 commands.add(workPath + "/bin/hdfs");
                 commands.add("namenode");
                 commands.add("-bootstrapStandby");
@@ -57,6 +60,9 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
             } else {
                 logger.info("Start to execute format namenode");
                 ArrayList<String> commands = new ArrayList<>();
+                commands.add("echo");
+                commands.add("Y");
+                commands.add("|");
                 commands.add(workPath + "/bin/hdfs");
                 commands.add("namenode");
                 commands.add("-format");
