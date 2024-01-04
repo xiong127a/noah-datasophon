@@ -59,6 +59,7 @@ public class ServiceRoleStrategyContext {
         map.put("HBASE", new HBaseHandlerStrategy());
         map.put("FLINK", new FlinkHandlerStrategy());
         map.put("OpenldapServer", new OpenldapHandlerStrategy());
+        map.put("REDIS", new RedisHandlerStrategy());
 
     }
 

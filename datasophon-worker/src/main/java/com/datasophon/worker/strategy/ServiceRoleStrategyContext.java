@@ -60,6 +60,9 @@ public class ServiceRoleStrategyContext {
 
         // openldap
         map.put("OpenldapServer", new OpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
+
+        map.put("RedisMaster", new RedisHandlerStrategy("REDIS", "RedisMaster"));
+        map.put("RedisWorker", new RedisHandlerStrategy("REDIS", "RedisWorker"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
