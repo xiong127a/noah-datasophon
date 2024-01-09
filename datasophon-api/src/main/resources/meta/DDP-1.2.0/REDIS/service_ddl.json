@@ -1,7 +1,7 @@
 {
   "name": "REDIS",
   "label": "REDIS",
-  "description": "交互式数据分析notebook",
+  "description": "内存存储的数据结构服务器",
   "version": "7.2.3",
   "sortNum": 37,
   "dependencies": [],
