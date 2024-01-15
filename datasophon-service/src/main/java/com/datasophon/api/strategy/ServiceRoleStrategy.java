@@ -50,6 +50,8 @@ public interface ServiceRoleStrategy {
 
     /**
      * 构建DAG时处理角色关系
+     *
+     * 可以将自定义角色配置传递给worker
      */
     void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname);
 

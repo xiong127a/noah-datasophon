@@ -60,6 +60,8 @@ public class ServiceRoleStrategyContext {
         map.put("FLINK", new FlinkHandlerStrategy());
         map.put("OpenldapServer", new OpenldapHandlerStrategy());
         map.put("REDIS", new RedisHandlerStrategy());
+        map.put("PostgresqlMaster", new PostgresqlHandlerStrategy());
+        map.put("PostgresqlWorker", new PostgresqlHandlerStrategy());
 
     }
 
