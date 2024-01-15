@@ -65,6 +65,9 @@ public class ServiceRoleStrategyContext {
         map.put("RedisWorker", new RedisHandlerStrategy("REDIS", "RedisWorker"));
 
         map.put("HueMaster", new HueHandlerStrategy("HUE", "HueMaster"));
+
+        map.put("PostgresqlMaster", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
+        map.put("PostgresqlWorker", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
