@@ -1,0 +1,194 @@
+{
+  "name": "POSTGRESQL",
+  "label": "POSTGRESQL",
+  "description": "开源对象关系数据库系统",
+  "version": "16.1",
+  "sortNum": 39,
+  "dependencies": [],
+  "packageName": "postgresql-16.1.tar.gz",
+  "decompressPackageName": "postgresql-16.1",
+  "roles": [
+    {
+      "name": "PostgresqlMaster",
+      "label": "PostgresqlMaster",
+      "roleType": "master",
+      "cardinality": "1",
+      "runAs": {
+        "user": "postgres",
+        "group": "postgres"
+      },
+      "logFile": "logfile",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_postgresql.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_postgresql.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_postgresql.sh",
+        "args": [
+          "status"
+        ]
+      }
+    },
+    {
+      "name": "PostgresqlWorker",
+      "label": "PostgresqlWorker",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "runAs": {
+        "user": "postgres",
+        "group": "postgres"
+      },
+      "logFile": "logfile",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_postgresql.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_postgresql.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_postgresql.sh",
+        "args": [
+          "status"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "postgresql.conf",
+        "configFormat": "custom",
+        "outputDirectory": "data",
+        "templateName": "postgresql-conf.ftl",
+        "includeParams": [
+          "listenAddresses",
+          "maxWalSenders",
+          "minWalSize",
+          "maxWalSize",
+          "hotStandby",
+          "archiveMode",
+          "archiveCommand",
+          "custom.postgresql.conf"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "listenAddresses",
+      "label": "listenAddresses",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "*",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "maxWalSenders",
+      "label": "maxWalSenders",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "10",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "10"
+    },
+    {
+      "name": "minWalSize",
+      "label": "minWalSize",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "80MB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "80MB"
+    },
+    {
+      "name": "maxWalSize",
+      "label": "maxWalSize",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "1GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1GB"
+    },
+    {
+      "name": "hotStandby",
+      "label": "hotStandby",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "on",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "on"
+    },
+    {
+      "name": "archiveMode",
+      "label": "archiveMode",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "on",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "on"
+    },
+    {
+      "name": "archiveCommand",
+      "label": "archiveCommand",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "test ! -f /opt/datasophon/postgresql-16.1/data/%f && cp %p /opt/datasophon/postgresql-16.1/data/%f",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "test ! -f /opt/datasophon/postgresql-16.1/data/%f && cp %p /opt/datasophon/postgresql-16.1/data/%f"
+    },
+    {
+      "name": "custom.postgresql.conf",
+      "label": "自定义配置postgresql.conf",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

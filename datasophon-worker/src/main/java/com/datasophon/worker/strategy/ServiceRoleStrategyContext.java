@@ -51,6 +51,8 @@ public class ServiceRoleStrategyContext {
 
         // TEZ Server service
         map.put("TezServer", new TezServerHandlerStrategy("TEZ", "TezServer"));
+        //kyuubi
+        map.put("KyuubiServer", new KyuubiServerHandlerStrategy("KYUUBI", "KyuubiServer"));
 
         // clickhouse
         map.put("ClickHouse", new ClickHouseHandlerStrategy("CLICKHOUSE", "ClickHouse"));

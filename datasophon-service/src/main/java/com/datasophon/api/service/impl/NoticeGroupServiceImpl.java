@@ -70,7 +70,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
         List<NoticeGroupEntity> list = list(query);
         if (CollectionUtil.isNotEmpty(list)) {
-            throw new ServiceException(Status.NOTICE_GROUP_NAME_EXIST);
+//            throw new ServiceException(Status.NOTICE_GROUP_NAME_EXIST);
         }
 
         if (Objects.nonNull(noticeGroup.getId())) {
@@ -118,7 +118,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     public void removeNoticeGroup(List<Integer> list) {
         List<ClusterAlertQuota> byNoticeGroupIds = clusterAlertQuotaService.getByNoticeGroupIds(list);
         if (CollectionUtil.isNotEmpty(byNoticeGroupIds)) {
-            throw new ServiceException(Status.NOTICE_GROUP_USE);
+//            throw new ServiceException(Status.NOTICE_GROUP_USE);
         }
         removeByIds(list);
         noticeGroupUserService.removeByGroupIds(list);
