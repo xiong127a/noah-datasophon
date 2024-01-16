@@ -58,6 +58,7 @@ public class ServiceRoleStrategyContext {
         map.put("KAFKA", new KafkaHandlerStrategy());
         map.put("HBASE", new HBaseHandlerStrategy());
         map.put("FLINK", new FlinkHandlerStrategy());
+        map.put("KYUUBI",new KyuubiServerHandlerStrategy());
         map.put("OpenldapServer", new OpenldapHandlerStrategy());
         map.put("REDIS", new RedisHandlerStrategy());
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy());

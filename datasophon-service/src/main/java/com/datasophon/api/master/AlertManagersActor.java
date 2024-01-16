@@ -86,7 +86,7 @@ public class AlertManagersActor extends UntypedActor {
 
                 //准备配置参数·       ·
                 Map<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                ProcessUtils.generateConfigFileMap(configFileMap, roleGroupConfig);
+                ProcessUtils.generateConfigFileMap(configFileMap, roleGroupConfig, clusterId);
 
                 //准备调用参数
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();

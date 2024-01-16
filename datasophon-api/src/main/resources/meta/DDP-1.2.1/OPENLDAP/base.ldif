@@ -1,0 +1,17 @@
+dn: dc=ldap,dc=com
+dc: ldap
+objectClass: top
+objectClass: domain
+
+dn: cn=root,dc=ldap,dc=com
+objectClass: organizationalRole
+cn: root
+description: LDAP root
+
+dn: ou=People,dc=ldap,dc=com
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Group,dc=ldap,dc=com
+objectClass: organizationalUnit
+ou: Group
