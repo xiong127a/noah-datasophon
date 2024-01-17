@@ -16,9 +16,9 @@
       "roleType": "master",
       "runAs": {},
       "cardinality": "1+",
-      "sortNum": 2,
+      "sortNum": 1,
       "logFile": "logs/master.log",
-      "jmxPort": "",
+      "jmxPort": "19999",
       "startRunner": {
         "timeout": "600",
         "program": "control_alluxio.sh",
@@ -57,7 +57,7 @@
       "cardinality": "1+",
       "sortNum": 1,
       "logFile": "logs/worker.log",
-      "jmxPort": "",
+      "jmxPort": "30000",
       "startRunner": {
         "timeout": "60",
         "program": "control_alluxio.sh",
@@ -152,7 +152,7 @@
       "description": "参加Alluxio leading master选举的master节点集",
       "required": true,
       "type": "input",
-      "value": "${host1}:19200,${host2}:19200,${host3}:19200",
+      "value": "${master1}:19200,${master2}:19200,${master3}:19200",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
@@ -240,11 +240,11 @@
       "label": "masters",
       "description": "masters机器的IP",
       "required": true,
-      "separator":"\n",
+      "separator":",",
       "type": "multiple",
       "value": [],
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": ""
     },
     {
@@ -252,11 +252,11 @@
       "label": "workers",
       "description": "workers机器的IP",
       "required": true,
-      "separator":"\n",
+      "separator":",",
       "type": "multiple",
       "value": [],
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": ""
     }
   ]

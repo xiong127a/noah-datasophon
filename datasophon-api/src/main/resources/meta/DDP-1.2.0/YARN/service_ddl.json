@@ -126,64 +126,10 @@
         "timeout": "60",
         "program": "control_hadoop.sh",
         "args": [
-          "status",
-          "historyserver"
-        ]
-      },
-      "restartRunner": {
-        "timeout": "60",
-        "program": "control_hadoop.sh",
-        "args": [
-          "restart",
-          "historyserver"
+          "status","historyserver"
         ]
       }
-    },
-    {
-      "name": "TimelineServer",
-      "label": "TimelineServer",
-      "roleType": "master",
-      "cardinality": "1",
-      "runAs": {
-        "user": "yarn",
-        "group": "hadoop"
-      },
-      "sortNum": 4,
-      "logFile": "logs/hadoop-yarn-timelineserver-${host}.log",
-      "startRunner": {
-        "timeout": "60",
-        "program": "control_hadoop.sh",
-        "args": [
-          "start",
-          "timelineserver"
-        ]
-      },
-      "stopRunner": {
-        "timeout": "600",
-        "program": "control_hadoop.sh",
-        "args": [
-          "stop",
-          "timelineserver"
-        ]
-      },
-      "statusRunner": {
-        "timeout": "60",
-        "program": "control_hadoop.sh",
-        "args": [
-          "status",
-          "timelineserver"
-        ]
-      },
-      "restartRunner": {
-        "timeout": "60",
-        "program": "control_hadoop.sh",
-        "args": [
-          "restart",
-          "timelineserver"
-        ]
-      }
-    },
-    {
+    },{
       "name": "YarnClient",
       "label": "YarnClient",
       "roleType": "client",
@@ -233,10 +179,6 @@
           "yarn.resourcemanager.zk-address",
           "yarn.resourcemanager.recovery.enabled",
           "yarn.resourcemanager.store.class",
-          "yarn.timeline-service.enabled",
-          "yarn.timeline-service.hostname",
-          "yarn.timeline-service.http-cross-origin.enabled",
-          "yarn.resourcemanager.system-metrics-publisher.enabled",
           "yarn.application.classpath",
           "yarn.nodemanager.local-dirs",
           "yarn.nodemanager.log-dirs",
@@ -254,7 +196,6 @@
           "yarn.nodemanager.container-executor.class",
           "yarn.nodemanager.linux-container-executor.group",
           "yarn.nodemanager.linux-container-executor.path",
-          "yarn.acl.enable",
           "custom.yarn.site.xml"
         ]
       },
@@ -266,18 +207,7 @@
           "mapreduce.jobhistory.keytab",
           "mapreduce.jobhistory.principal",
           "mapreduce.cluster.local.dir",
-          "mapreduce.framework.name",
           "custom.mapred.site.xml"
-        ]
-      },
-      {
-        "filename": "install.properties",
-        "configFormat": "custom",
-        "outputDirectory": "ranger-yarn-plugin",
-        "templateName": "ranger-yarn.ftl",
-        "includeParams": [
-          "hadoopHome",
-          "rangerAdminUrl"
         ]
       }
     ]
@@ -300,10 +230,10 @@
       "description": "Node Label存储目录",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "hdfs://${dfs.nameservices}/user/yarn/nodeLabels",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://nameservice1/user/yarn/nodeLabels"
+      "defaultValue": "hdfs://${dfs.nameservices}/user/yarn/nodeLabels"
     },
     {
       "name": "yarn.nodemanager.resource.cpu-vcores",
@@ -463,7 +393,7 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"
+      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
     },
     {
       "name": "yarn.scheduler.fair.allocation.file",
@@ -486,50 +416,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
-    },
-    {
-      "name": "yarn.timeline-service.enabled",
-      "label": "是否开启 Timeline Server",
-      "description": "是否开启 Timeline Server",
-      "required": true,
-      "type": "switch",
-      "value":"",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": true
-    },
-    {
-      "name": "yarn.timeline-service.hostname",
-      "label": "Timeline Server节点",
-      "description": "Timeline Server节点",
-      "required": true,
-      "type": "input",
-      "value":"",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "${yarn_timeline_server}"
-    },
-    {
-      "name": "yarn.timeline-service.http-cross-origin.enabled",
-      "label": "开启 Timeline Server 跨域访问",
-      "description": "开启 Timeline Server 跨域访问",
-      "required": true,
-      "type": "switch",
-      "value":"",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": true
-    },
-    {
-      "name": "yarn.resourcemanager.system-metrics-publisher.enabled",
-      "label": "开启 resourcemanager 指标信息广播",
-      "description": "开启 resourcemanager 指标信息广播",
-      "required": true,
-      "type": "switch",
-      "value":"",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": true
     },
     {
       "name": "yarn.resourcemanager.ha.enabled",
@@ -765,7 +651,7 @@
       "value":"",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${fs.defaultFS}/user/yarn/yarn-logs/"
+      "defaultValue": "hdfs://${dfs.nameservices}/user/yarn/yarn-logs/"
     },
     {
       "name": "yarn.nodemanager.local-dirs",
@@ -809,18 +695,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "/data/mapred/local"
-    },
-    {
-      "name": "mapreduce.framework.name",
-      "label": "mapreduce执行引擎",
-      "description": "mapreduce执行引擎",
-      "required": true,
-      "type": "select",
-      "value": "yarn",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "yarn",
-      "selectValue" : ["local", "yarn", "yarn-tez"]
     },
     {
       "name": "yarn.application.classpath",
@@ -952,17 +826,6 @@
       "defaultValue": "${HADOOP_HOME}/bin/container-executor"
     },
     {
-      "name": "yarn.acl.enable",
-      "label": "开启yarn acl",
-      "description": "",
-      "required": true,
-      "type": "switch",
-      "value":"",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": true
-    },
-    {
       "name": "yarn.node-labels.enabled",
       "label": "启用YARN标签调度",
       "description": "开启 YARN Node Labels",
@@ -1006,30 +869,6 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
-    },
-    {
-      "name": "hadoopHome",
-      "label": "HADOOP_HOME",
-      "description": "Hadoop的安装目录",
-      "required": true,
-      "configType": "map",
-      "type": "input",
-      "value": "${HADOOP_HOME}",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "${HADOOP_HOME}"
-    },
-    {
-      "name": "rangerAdminUrl",
-      "label": "Ranger访问地址",
-      "description": "",
-      "required": false,
-      "configType": "map",
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": true,
       "defaultValue": ""
     }
   ]

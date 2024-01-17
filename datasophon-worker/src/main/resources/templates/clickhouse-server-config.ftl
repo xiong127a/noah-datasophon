@@ -958,16 +958,15 @@
         events - send data from table system.events
         asynchronous_metrics - send data from table system.asynchronous_metrics
     -->
-    <!--
+
     <prometheus>
         <endpoint>/metrics</endpoint>
         <port>9363</port>
-
         <metrics>true</metrics>
         <events>true</events>
         <asynchronous_metrics>true</asynchronous_metrics>
     </prometheus>
-    -->
+
 
     <!-- Query log. Used only for queries with setting log_queries = 1. -->
     <query_log>

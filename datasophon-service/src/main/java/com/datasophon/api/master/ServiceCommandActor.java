@@ -132,6 +132,7 @@ public class ServiceCommandActor extends UntypedActor {
                 String serviceName = command.getServiceName();
                 ClusterInfoEntity clusterInfo = clusterInfoService.getById(command.getClusterId());
 
+                // commandType : 1：安装服务 2：启动服务 3：停止服务 4：重启服务 5：更新配置后启动 6：更新配置后重启
                 if (command.getCommandType() == 4 && HDFS.equalsIgnoreCase(serviceName)) {
                     //update web ui
                     updateHDFSWebUi(clusterInfo.getId(), command.getServiceInstanceId());

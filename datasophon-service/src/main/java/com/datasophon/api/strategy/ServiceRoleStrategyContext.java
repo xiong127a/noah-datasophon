@@ -63,6 +63,7 @@ public class ServiceRoleStrategyContext {
         map.put("REDIS", new RedisHandlerStrategy());
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy());
         map.put("PostgresqlWorker", new PostgresqlHandlerStrategy());
+        map.put("ALLUXIO", new AlluxioHandlerStrategy());
 
     }
 

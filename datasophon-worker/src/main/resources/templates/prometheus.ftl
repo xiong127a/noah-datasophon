@@ -184,6 +184,21 @@ scrape_configs:
     scheme: http
     static_configs:
     - targets: ['192.168.1.54:9000','192.168.1.55:9000','192.168.1.56:9000']
-
-
-
+  - job_name: 'kyuubi'
+    file_sd_configs:
+     - files:
+       - configs/kyuubiserver.json
+  - job_name: 'clickhouse'
+    file_sd_configs:
+     - files:
+       - configs/clickhouse.json
+  - job_name: 'alluxiomaster'
+    metrics_path: /metrics/prometheus
+    file_sd_configs:
+     - files:
+       - configs/alluxiomaster.json
+  - job_name: 'alluxioworker'
+    metrics_path: /metrics/prometheus
+    file_sd_configs:
+     - files:
+       - configs/alluxioworker.json
