@@ -142,7 +142,7 @@
          (this protocol is also informally called as "the TCP protocol");
          See also 'tcp_port_secure' for secure connections.
     -->
-    <tcp_port>${tcpPort}</tcp_port>
+    <tcp_port>${ckTcpPort}</tcp_port>
 
     <!-- Compatibility with MySQL protocol.
          ClickHouse will pretend to be MySQL for applications connecting to this port.
@@ -818,11 +818,11 @@
     <remote_servers>
         <ck_cluster>
             <#list itemList as item>
-                <#if item.name == "shardAddress">
-                    <#list item.value?split(",") as shardAddress>
+                <#if item.name == "ckShardAddress">
+                    <#list item.value?split(",") as ckShardAddress>
             <shard>
                 <replica>
-                    <#assign parts = shardAddress?split(":")>
+                    <#assign parts = ckShardAddress?split(":")>
                     <host>${parts?first}</host>
                     <port>${parts?last}</port>
                 </replica>
@@ -876,10 +876,10 @@
     <!--
     <zookeeper>
         <#list itemList as item>
-            <#if item.name == "zkAddress">
-                <#list item.value?split(",") as zkAddress>
+            <#if item.name == "ckZkAddress">
+                <#list item.value?split(",") as ckZkAddress>
         <node>
-            <#assign parts = zkAddress?split(":")>
+            <#assign parts = ckZkAddress?split(":")>
             <host>${parts?first}</host>
             <port>${parts?last}</port>
         </node>
