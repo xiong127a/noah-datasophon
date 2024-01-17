@@ -106,7 +106,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "sortNum": 4,
+      "sortNum": 5,
       "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${host}.log",
       "jmxPort": "27002",
       "startRunner": {
@@ -195,8 +195,12 @@
           "hadoop.proxyuser.hive.users",
           "hadoop.proxyuser.hue.hosts",
           "hadoop.proxyuser.hue.groups",
+          "hadoop.proxyuser.kyuubi.hosts",
+          "hadoop.proxyuser.kyuubi.groups",
+          "hadoop.proxyuser.kyuubi.users",
           "hadoop.http.staticuser.user",
           "ha.zookeeper.quorum",
+          "hadoop.zk.address",
           "hadoop.tmp.dir",
           "net.topology.script.file.name",
           "hadoop.security.authentication",
@@ -232,18 +236,18 @@
           "dfs.namenode.handler.count",
           "dfs.datanode.data.dir",
           "dfs.nameservices",
-          "dfs.ha.namenodes.nameservice1",
-          "dfs.namenode.rpc-address.nameservice1.nn1",
-          "dfs.namenode.rpc-address.nameservice1.nn2",
-          "dfs.namenode.http-address.nameservice1.nn1",
-          "dfs.namenode.http-address.nameservice1.nn2",
+          "dfs.ha.namenodes.${dfs.nameservices}",
+          "dfs.namenode.rpc-address.${dfs.nameservices}.nn1",
+          "dfs.namenode.rpc-address.${dfs.nameservices}.nn2",
+          "dfs.namenode.http-address.${dfs.nameservices}.nn1",
+          "dfs.namenode.http-address.${dfs.nameservices}.nn2",
           "dfs.namenode.shared.edits.dir",
           "dfs.ha.fencing.methods",
           "dfs.ha.fencing.ssh.private-key-files",
           "dfs.journalnode.edits.dir",
           "dfs.permissions.enabled",
           "dfs.ha.automatic-failover.enabled",
-          "dfs.client.failover.proxy.provider.nameservice1",
+          "dfs.client.failover.proxy.provider.${dfs.nameservices}",
           "dfs.block.access.token.enable",
           "dfs.namenode.kerberos.principal",
           "dfs.namenode.keytab.file",
@@ -263,7 +267,8 @@
           "net.topology.table.file.name",
           "net.topology.node.switch.mapping.impl",
           "dfs.datanode.address",
-          "dfs.datanode.http.address"
+          "dfs.datanode.http.address",
+          "dfs.router.monitor.namenode"
         ]
       },
       {
@@ -280,15 +285,27 @@
   },
   "parameters": [
     {
+      "name": "dfs.nameservices",
+      "label": "集群名称",
+      "description": "集群名称",
+      "configType": "ha",
+      "required": true,
+      "type": "input",
+      "value": "nameservice1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nameservice1"
+    },
+    {
       "name": "fs.defaultFS",
       "label": "NameNode地址",
       "description": "NameNode地址",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "hdfs://${dfs.nameservices}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://nameservice1"
+      "defaultValue": "hdfs://${dfs.nameservices}"
     },
     {
       "name": "hadoop.tmp.dir",
@@ -361,6 +378,39 @@
       "name": "hadoop.proxyuser.hue.groups",
       "label": "允许通过代理用户所属组",
       "description": "配置hue允许通过代理用户所属组",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.kyuubi.hosts",
+      "label": "允许通过代理访问的主机节点",
+      "description": "配置kyuubi允许通过代理访问的主机节点",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.kyuubi.groups",
+      "label": "允许通过代理用户所属组",
+      "description": "配置kyuubi允许通过代理用户所属组",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.kyuubi.users",
+      "label": "允许通过代理的用户",
+      "description": "配置kyuubi允许通过代理的用户",
       "required": true,
       "type": "input",
       "value": "",
@@ -448,7 +498,6 @@
       "hidden": false,
       "defaultValue": ""
     },
-
     {
       "name": "namenodeHeapSize",
       "label": "NameNode堆内存大小",
@@ -492,19 +541,19 @@
       "defaultValue": "${HADOOP_HOME}/logs"
     },
     {
-      "name": "dfs.nameservices",
-      "label": "集群名称",
-      "description": "集群名称",
+      "name": "ha.zookeeper.quorum",
+      "label": "用于HA管理的zk地址",
+      "description": "zk地址",
       "configType": "ha",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "nameservice1"
+      "defaultValue": "${zkUrls}"
     },
     {
-      "name": "ha.zookeeper.quorum",
+      "name": "hadoop.zk.address",
       "label": "zk地址",
       "description": "zk地址",
       "configType": "ha",
@@ -528,63 +577,63 @@
       "defaultValue": "true"
     },
     {
-      "name": "dfs.ha.namenodes.nameservice1",
+      "name": "dfs.ha.namenodes.${dfs.nameservices}",
       "label": "NameNode节点",
       "description": "NameNode节点",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "nn1,nn2",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "nn1,nn2"
     },
     {
-      "name": "dfs.namenode.rpc-address.nameservice1.nn1",
+      "name": "dfs.namenode.rpc-address.${dfs.nameservices}.nn1",
       "label": "nn1的rpc通信地址",
       "description": "nn1的rpc通信地址",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "${nn1}:8020",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "${nn1}:8020"
     },
     {
-      "name": "dfs.namenode.rpc-address.nameservice1.nn2",
+      "name": "dfs.namenode.rpc-address.${dfs.nameservices}.nn2",
       "label": "nn2的rpc通信地址",
       "description": "nn2的rpc通信地址",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "${nn2}:8020",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "${nn2}:8020"
     },
     {
-      "name": "dfs.namenode.http-address.nameservice1.nn1",
+      "name": "dfs.namenode.http-address.${dfs.nameservices}.nn1",
       "label": "nn1的http通信地址",
       "description": "nn1的rpc通信地址",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "${nn1}:9870",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "${nn1}:9870"
     },
     {
-      "name": "dfs.namenode.http-address.nameservice1.nn2",
+      "name": "dfs.namenode.http-address.${dfs.nameservices}.nn2",
       "label": "nn2的http通信地址",
       "description": "nn2的rpc通信地址",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "${nn2}:9870",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "${nn2}:9870"
     },
     {
@@ -594,10 +643,10 @@
       "required": true,
       "configType": "ha",
       "type": "input",
-      "value": "",
+      "value": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/meta",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/nameservice1"
+      "defaultValue": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/meta"
     },
     {
       "name": "dfs.ha.fencing.methods",
@@ -694,18 +743,17 @@
       "defaultValue": false
     },
     {
-      "name": "dfs.client.failover.proxy.provider.nameservice1",
+      "name": "dfs.client.failover.proxy.provider.${dfs.nameservices}",
       "label": "容错实现类",
       "description": "容错实现类",
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value": "",
+      "value": "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider"
     },
-
     {
       "name": "dfs.permissions",
       "label": "启用Ranger权限",
@@ -810,9 +858,14 @@
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
-      "separator":"\n",
+      "separator": "\n",
       "type": "multiple",
-      "value": ["RULE:[2:$1/$2@$0]([ndj]n\\/.*@HADOOP\\.COM)s/.*/hdfs/","RULE:[2:$1/$2@$0]([rn]m\\/.*@HADOOP\\.COM)s/.*/yarn/","RULE:[2:$1/$2@$0](jhs\\/.*@HADOOP\\.COM)s/.*/mapred/","DEFAULT"],
+      "value": [
+        "RULE:[2:$1/$2@$0]([ndj]n\\/.*@HADOOP\\.COM)s/.*/hdfs/",
+        "RULE:[2:$1/$2@$0]([rn]m\\/.*@HADOOP\\.COM)s/.*/yarn/",
+        "RULE:[2:$1/$2@$0](jhs\\/.*@HADOOP\\.COM)s/.*/mapred/",
+        "DEFAULT"
+      ],
       "hidden": true,
       "defaultValue": []
     },
@@ -850,10 +903,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "nn/_HOST@HADOOP.COM",
+      "value": "nn/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "nn/_HOST@HADOOP.COM"
+      "defaultValue": "nn/_HOST@${realm}"
     },
     {
       "name": "dfs.namenode.keytab.file",
@@ -876,10 +929,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "jn/_HOST@HADOOP.COM",
+      "value": "jn/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "jn/_HOST@HADOOP.COM"
+      "defaultValue": "jn/_HOST@${realm}"
     },
     {
       "name": "dfs.journalnode.keytab.file",
@@ -894,7 +947,6 @@
       "hidden": true,
       "defaultValue": "/etc/security/keytab/jn.service.keytab"
     },
-
     {
       "name": "dfs.web.authentication.kerberos.principal",
       "label": "Hadoop Web UI服务的Kerberos主体",
@@ -903,10 +955,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "HTTP/_HOST@HADOOP.COM",
+      "value": "HTTP/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "HTTP/_HOST@HADOOP.COM"
+      "defaultValue": "HTTP/_HOST@${realm}"
     },
     {
       "name": "dfs.web.authentication.keytab.file",
@@ -921,7 +973,6 @@
       "hidden": true,
       "defaultValue": "/etc/security/keytab/spnego.service.keytab"
     },
-
     {
       "name": "dfs.datanode.kerberos.principal",
       "label": "DataNode服务的Kerberos主体",
@@ -930,10 +981,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "dn/_HOST@HADOOP.COM",
+      "value": "dn/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "dn/_HOST@HADOOP.COM"
+      "defaultValue": "dn/_HOST@${realm}"
     },
     {
       "name": "dfs.datanode.keytab.file",
@@ -950,7 +1001,7 @@
     },
     {
       "name": "dfs.data.transfer.protection",
-      "label": "配置DataNode数据传输保护策略为仅认证模式",
+      "label": "配置DataNode数据传输保护策略",
       "description": "",
       "configWithKerberos": true,
       "required": false,
@@ -963,7 +1014,7 @@
     },
     {
       "name": "dfs.http.policy",
-      "label": "配置NameNode Web UI使用HTTPS协议",
+      "label": "配置NameNode Web UI使用协议",
       "description": "",
       "configWithKerberos": true,
       "required": false,

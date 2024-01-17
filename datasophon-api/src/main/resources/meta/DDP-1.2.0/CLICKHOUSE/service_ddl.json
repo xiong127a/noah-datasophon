@@ -16,7 +16,7 @@
       "roleType": "master",
       "cardinality": "1+",
       "logFile": "/var/log/clickhouse-server/clickhouse-server.log",
-      "jmxPort": "",
+      "jmxPort": "9363",
       "startRunner": {
         "timeout": "60",
         "program": "/etc/init.d/clickhouse-server",

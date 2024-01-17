@@ -28,7 +28,7 @@ start_master() {
 
 start_worker() {
     if ! check_process "AlluxioWorker"; then
-        $alluxio_start worker
+        $alluxio_start worker SudoMount
     fi
     if ! check_process "AlluxioJobWorker"; then
         $alluxio_start job_worker
@@ -58,7 +58,7 @@ stop_worker() {
         $alluxio_stop job_worker
     fi
     if check_process "AlluxioWorker"; then
-        $alluxio_stop worker
+        $alluxio_stop worker SudoMount
     fi
 }
 
