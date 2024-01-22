@@ -202,3 +202,15 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/alluxioworker.json
+  - job_name: 'redis'
+    file_sd_configs:
+      - files:
+        - /opt/datasophon/redis/redis_exporter/redis.json
+    metrics_path: /scrape
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9121

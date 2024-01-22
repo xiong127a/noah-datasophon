@@ -1,5 +1,6 @@
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
@@ -48,12 +49,19 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         .collect(Collectors.joining(" "));
                 serviceConfig.setRequired(true);
                 serviceConfig.setValue(masterAddr);
-            } else if ("RedisSlaveAddr".equals(serviceConfig.getName())) {
+            }
+            if ("RedisSlaveAddr".equals(serviceConfig.getName())) {
                 String workerAddr = workerHostList.stream()
                         .map(t -> t + ":" + slavePort)
                         .collect(Collectors.joining(" "));
                 serviceConfig.setRequired(true);
                 serviceConfig.setValue(workerAddr);
+            }
+            if ("redisMetricHosts".equals(serviceConfig.getName())) {
+                List<String> masters = masterHostList.stream().map(t -> "\"redis://" + t + ":" + masterPort + "\"").collect(Collectors.toList());
+                List<String> workers = workerHostList.stream().map(t -> "\"redis://" + t + ":" + slavePort + "\"").collect(Collectors.toList());
+                masters.addAll(workers);
+                serviceConfig.setValue(StrUtil.join(",", masters));
             }
         }
     }
