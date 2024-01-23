@@ -13,6 +13,7 @@
       "label": "PostgresqlMaster",
       "roleType": "master",
       "cardinality": "1",
+      "jmxPort": 9187,
       "runAs": {
         "user": "postgres",
         "group": "postgres"
@@ -45,6 +46,7 @@
       "label": "PostgresqlWorker",
       "roleType": "worker",
       "cardinality": "1+",
+      "jmxPort": 9187,
       "runAs": {
         "user": "postgres",
         "group": "postgres"
@@ -69,6 +71,41 @@
         "program": "control_postgresql.sh",
         "args": [
           "status"
+        ]
+      }
+    },
+    {
+      "name": "PostgresqlExporter",
+      "label": "PostgresqlExporter",
+      "roleType": "master",
+      "cardinality": "1",
+      "runAs": {
+        "user": "postgres",
+        "group": "postgres"
+      },
+      "logFile": "postgres_exporter/logs/postgresql-${host}.out",
+      "startRunner": {
+        "timeout": "60",
+        "program": "postgres_exporter/control_postgresql_exporter.sh",
+        "args": [
+          "start",
+          "postgresql"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "postgres_exporter/control_postgresql_exporter.sh",
+        "args": [
+          "stop",
+          "postgresql"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "postgres_exporter/control_postgresql_exporter.sh",
+        "args": [
+          "status",
+          "postgresql"
         ]
       }
     }
