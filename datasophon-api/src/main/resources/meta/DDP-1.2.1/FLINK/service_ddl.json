@@ -32,8 +32,14 @@
           "high-availability.zookeeper.quorum",
           "high-availability.zookeeper.client.acl",
           "high-availability.zookeeper.path.root",
-          "custom.flink.conf.yaml",
-          "classloader.check-leaked-classloader"
+          "classloader.check-leaked-classloader",
+          "metrics.reporter.promgateway.factory.class",
+          "metrics.reporter.promgateway.hostUrl",
+          "metrics.reporter.promgateway.jobName",
+          "metrics.reporter.promgateway.randomJobNameSuffix",
+          "metrics.reporter.promgateway.deleteOnShutdown",
+          "metrics.reporter.promgateway.interval",
+          "custom.flink.conf.yaml"
         ]
       }
     ]
@@ -152,6 +158,72 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
+    },
+    {
+      "name": "metrics.reporter.promgateway.factory.class",
+      "label": "监控实现类",
+      "description": "监控实现类",
+      "required": true,
+      "type": "input",
+      "value": "org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterFactory",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporterFactory"
+    },
+    {
+      "name": "metrics.reporter.promgateway.hostUrl",
+      "label": "pushgateway地址",
+      "description": "pushgateway地址",
+      "required": true,
+      "type": "input",
+      "value": "http://${pushgatewayHost}:9091",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${pushgatewayHost}:9091"
+    },
+    {
+      "name": "metrics.reporter.promgateway.jobName",
+      "label": "Flink metric在前端展示的标签(前缀)",
+      "description": "Flink metric在前端展示的标签(前缀)",
+      "required": true,
+      "type": "input",
+      "value": "flink-metrics",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "flink-metrics"
+    },
+    {
+      "name": "metrics.reporter.promgateway.randomJobNameSuffix",
+      "label": "是否在Flink metric的标签添加随机后缀",
+      "description": "是否在Flink metric的标签添加随机后缀",
+      "required": true,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "metrics.reporter.promgateway.deleteOnShutdown",
+      "label": "Flink集群关闭时，是否删除Pushgateway中的Flink metrics",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "metrics.reporter.promgateway.interval",
+      "label": "Flink向Pushgateway推送metrics的时间间隔",
+      "description": "Flink向Pushgateway推送metrics的时间间隔",
+      "required": true,
+      "type": "input",
+      "value": "30 SECONDS",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "30 SECONDS"
     }
   ]
 }
