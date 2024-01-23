@@ -214,3 +214,23 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 127.0.0.1:9121
+  - job_name: 'postgres'
+    file_sd_configs:
+     - files:
+       - configs/postgresqlmaster.json
+       - configs/postgresqlworker.json
+    metrics_path: /metrics
+    params:
+      auth_module: [foo]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9187
+  - job_name: 'zeppelin'
+    metrics_path: /metrics
+    file_sd_configs:
+     - files:
+       - configs/zeppelinserver.json

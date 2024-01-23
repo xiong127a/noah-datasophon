@@ -65,6 +65,7 @@ public class ServiceRoleStrategyContext {
         map.put("PostgresqlWorker", new PostgresqlHandlerStrategy());
         map.put("ALLUXIO", new AlluxioHandlerStrategy());
         map.put("CLICKHOUSE", new ClickhouseHandlerStrategy());
+        map.put("Pushgateway", new PushgatewayHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
