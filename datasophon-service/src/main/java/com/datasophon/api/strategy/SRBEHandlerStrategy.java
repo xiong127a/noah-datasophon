@@ -17,13 +17,15 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.ObjUtil;
 import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ProcInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.OlapUtils;
+import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.ServiceRoleState;
@@ -32,21 +34,15 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public class FEHandlerStartegy implements ServiceRoleStrategy {
+public class SRBEHandlerStrategy implements ServiceRoleStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(FEHandlerStartegy.class);
+    private static final Logger logger = LoggerFactory.getLogger(SRBEHandlerStrategy.class);
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        // if feMaster is null, set the first host as feMaster
-        //Prevent FE Observer nodes from starting and FE Master nodes from changing
-//        if (!globalVariables.containsKey("${feMaster}") || ObjUtil.isNull(globalVariables.get("${feMaster}"))) {
-        if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.get(0));
-        }
-//        }
+
     }
 
     @Override
@@ -62,36 +58,31 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
         Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
-        String feMaster = globalVariables.get("${feMaster}");
-        if (hostname.equals(feMaster)) {
-            logger.info("fe master is {}", feMaster);
-            serviceRoleInfo.setSortNum(1);
-        } else {
-            logger.info("set fe follower master");
-            serviceRoleInfo.setMasterHost(feMaster);
-            serviceRoleInfo.setSlave(true);
-            serviceRoleInfo.setSortNum(2);
-        }
-
+        String feMaster = globalVariables.get("${srFeMaster}");
+        logger.info("fe master is {}", feMaster);
+        serviceRoleInfo.setMasterHost(feMaster);
     }
 
     @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
                                         Map<String, ClusterServiceRoleInstanceEntity> map) {
         Map<String, String> globalVariables = GlobalVariables.get(roleInstanceEntity.getClusterId());
-        String feMaster = globalVariables.get("${feMaster}");
+        Map<String, String> hostMap = getHostMap(roleInstanceEntity.getClusterId());
+        String feMaster = globalVariables.get("${srFeMaster}");
         if (roleInstanceEntity.getHostname().equals(feMaster)
                 && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
             try {
-                List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
-                resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
+                List<ProcInfo> backends = OlapUtils.showSRBackends(feMaster);
+                for (ProcInfo frontend : backends) {
+                    frontend.setHostName(hostMap.get(frontend.getHostName()));
+                }
+                resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), backends, map);
             } catch (Exception e) {
 
             }
-
-
         }
     }
+
     private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
                                       Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {
@@ -105,5 +96,11 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
                 ProcessUtils.recoverAlert(roleInstanceEntity);
             }
         }
+    }
+
+    private Map<String, String> getHostMap(Integer clusterId) {
+        ClusterHostService clusterHostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+        List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
+        return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }
 }

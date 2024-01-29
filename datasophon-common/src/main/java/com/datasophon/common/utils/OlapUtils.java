@@ -151,6 +151,12 @@ public class OlapUtils {
         return executeQueryProcInfo(feMaster, sql);
     }
 
+    public static List<ProcInfo> showSRFrontends(String feMaster) throws SQLException, ClassNotFoundException {
+        String sql = "SHOW PROC '/frontends';";
+        // logger.info("sql is {}", sql);
+        return executeQuerySRProcInfo(feMaster, sql);
+    }
+
     public static List<ProcInfo> listDeadFrontends(String feMaster) throws SQLException, ClassNotFoundException {
         String sql = "SHOW PROC '/frontends';";
         // logger.info("sql is {}", sql);
@@ -169,6 +175,12 @@ public class OlapUtils {
         return executeQueryProcInfo(feMaster, sql);
     }
 
+    public static List<ProcInfo> showSRBackends(String feMaster) throws SQLException, ClassNotFoundException {
+        String sql = "SHOW PROC '/backends';";
+        // logger.info("sql is {}",sql);
+        return executeQuerySRProcInfo(feMaster, sql);
+    }
+
     public static List<ProcInfo> executeQueryProcInfo(String feMaster,
                                                       String sql) throws SQLException, ClassNotFoundException {
         Connection connection = getConnection(feMaster);
@@ -179,6 +191,25 @@ public class OlapUtils {
             while (resultSet.next()) {
                 ProcInfo procInfo = new ProcInfo();
                 procInfo.setHostName(resultSet.getString("HostName"));
+                procInfo.setAlive(resultSet.getBoolean("Alive"));
+                procInfo.setErrMsg(resultSet.getString("ErrMsg"));
+                list.add(procInfo);
+            }
+        }
+        close(connection, statement);
+        return list;
+    }
+
+    public static List<ProcInfo> executeQuerySRProcInfo(String feMaster,
+                                                      String sql) throws SQLException, ClassNotFoundException {
+        Connection connection = getConnection(feMaster);
+        Statement statement = connection.createStatement();
+        ArrayList<ProcInfo> list = new ArrayList<>();
+        if (Objects.nonNull(connection) && Objects.nonNull(statement)) {
+            ResultSet resultSet = statement.executeQuery(sql);
+            while (resultSet.next()) {
+                ProcInfo procInfo = new ProcInfo();
+                procInfo.setHostName(resultSet.getString("IP"));
                 procInfo.setAlive(resultSet.getBoolean("Alive"));
                 procInfo.setErrMsg(resultSet.getString("ErrMsg"));
                 list.add(procInfo);
