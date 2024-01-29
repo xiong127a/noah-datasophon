@@ -78,10 +78,10 @@
       "required": true,
       "configType": "map",
       "type": "input",
-      "value": "9010",
+      "value": "9001",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9010"
+      "defaultValue": "9001"
     },
     {
       "name": "ckShardAddress",

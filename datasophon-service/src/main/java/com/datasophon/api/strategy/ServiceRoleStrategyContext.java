@@ -38,11 +38,12 @@ public class ServiceRoleStrategyContext {
         map.put("TrinoCoordinator", new TrinoHandlerStrategy());
         map.put("JournalNode", new JournalNodeHandlerStrategy());
         map.put("ZKFC", new ZKFCHandlerStrategy());
-        map.put("SRFE", new FEHandlerStartegy());
         map.put("DorisFE", new FEHandlerStartegy());
+        map.put("SRFE", new SRFEHandlerStrategy());
         map.put("DorisFEObserver", new FEObserverHandlerStartegy());
-        map.put("SRBE", new BEHandlerStartegy());
+        map.put("SRFEObserver", new SRFEObserverHandlerStrategy());
         map.put("DorisBE", new BEHandlerStartegy());
+        map.put("SRBE", new SRBEHandlerStrategy());
         map.put("Krb5Kdc", new Krb5KdcHandlerStrategy());
         map.put("KAdmin", new KAdminHandlerStrategy());
         map.put("RangerAdmin", new RangerAdminHandlerStrategy());
