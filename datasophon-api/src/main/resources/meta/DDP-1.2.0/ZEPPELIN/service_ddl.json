@@ -12,9 +12,10 @@
       "name": "ZeppelinServer",
       "label": "ZeppelinServer",
       "roleType": "master",
-      "cardinality": "1+",
+      "cardinality": "1",
       "runAs": {},
       "logFile": "logs/zeppelin-root-${host}.log",
+      "jmxPort": 8889,
       "startRunner": {
         "timeout": "60",
         "program": "control_zeppelin.sh",
