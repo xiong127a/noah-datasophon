@@ -1,0 +1,475 @@
+{
+  "name": "STARROCKS",
+  "label": "STARROCKS",
+  "description": "简单易用、高性能和统一的分析数据库",
+  "version": "3.2.1",
+  "sortNum": 41,
+  "dependencies": [],
+  "packageName": "starRocks-3.2.1.tar.gz",
+  "decompressPackageName": "starRocks-3.2.1",
+  "roles": [
+    {
+      "name": "SRFE",
+      "label": "SRFE",
+      "roleType": "master",
+      "cardinality": "1+",
+      "logFile": "fe/log/fe.log",
+      "jmxPort": 8060,
+      "startRunner": {
+        "timeout": "600",
+        "program": "fe/bin/start_fe.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "fe/bin/stop_fe.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "fe/bin/status_fe.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "externalLink": {
+        "name": "FE UI",
+        "label": "FE UI",
+        "url": "http://${host}:8060"
+      }
+    },
+    {
+      "name": "SRFEObserver",
+      "label": "SRFEObserver",
+      "roleType": "worker",
+      "logFile": "fe/log/fe.log",
+      "jmxPort": 8060,
+      "startRunner": {
+        "timeout": "60",
+        "program": "fe/bin/start_fe.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "fe/bin/stop_fe.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "fe/bin/status_fe.sh",
+        "args": [
+          "status"
+        ]
+      }
+    },
+    {
+      "name": "SRBE",
+      "label": "SRBE",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "logFile": "be/log/be.INFO",
+      "jmxPort": 8070,
+      "startRunner": {
+        "timeout": "600",
+        "program": "be/bin/start_be.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "be/bin/stop_be.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "be/bin/status_be.sh",
+        "args": [
+          "status"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "be.conf",
+        "configFormat": "properties",
+        "outputDirectory": "be/conf",
+        "templateName": "starRocks-be.ftl",
+        "includeParams": [
+          "be_port",
+          "be_http_port",
+          "heartbeat_service_port",
+          "brpc_port",
+          "priority_networks",
+          "mem_limit",
+          "starlet_port",
+          "storage_root_path",
+          "query_cache_capacity",
+          "spill_local_storage_dir",
+          "block_cache_enable",
+          "block_cache_disk_path",
+          "block_cache_mem_size",
+          "block_cache_disk_size"
+        ]
+      },
+      {
+        "filename": "fe.conf",
+        "configFormat": "custom",
+        "outputDirectory": "fe/conf",
+        "templateName": "starRocks-fe.ftl",
+        "includeParams": [
+          "meta_dir",
+          "http_port",
+          "rpc_port",
+          "query_port",
+          "edit_log_port",
+          "mysql_service_nio_enabled",
+          "priority_networks",
+          "qe_max_connection",
+          "run_mode",
+          "enable_query_cache",
+          "query_cache_entry_max_bytes",
+          "query_cache_entry_max_rows",
+          "enable_udf"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "meta_dir",
+      "label": "FE元数据的保存目录",
+      "description": "FE元数据的保存目录",
+      "configType": "path",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data/fe/metastore"
+    },
+    {
+      "name": "http_port",
+      "label": "FE节点http端口",
+      "description": "FE节点http端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8060"
+    },
+    {
+      "name": "rpc_port",
+      "label": "FE节点上Thrift服务器的端口",
+      "description": "FE 节点上 Thrift 服务器的端口。",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9020"
+    },
+    {
+      "name": "query_port",
+      "label": "FE节点上MySQL服务器的端口",
+      "description": "FE 节点上 MySQL 服务器的端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9030"
+    },
+    {
+      "name": "edit_log_port",
+      "label": "FE节点编辑日志端口",
+      "description": "FE节点编辑日志端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9010"
+    },
+    {
+      "name": "mysql_service_nio_enabled",
+      "label": "FE节点mysql nio 配置 ",
+      "description": "FE节点mysql nio 配置 ",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "priority_networks",
+      "label": "FE优先网段",
+      "description": "为那些有多个 IP 地址的服务器声明一个选择策略。\n请注意，最多应该有一个 IP 地址与此列表匹配。这是一个以分号分隔格式的列表，用 CIDR 表示法，例如 10.10.10.0/24。 如果没有匹配这条规则的ip，会随机选择一个。",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "0.0.0.0/24"
+    },
+    {
+      "name": "qe_max_connection",
+      "label": "FE节点最大连接数 ",
+      "description": "FE节点最大连接数",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "5000"
+    },
+    {
+      "name": "run_mode",
+      "label": "FE节点运行模式 ",
+      "description": "FE节点运行模式",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "shared_nothing"
+    },
+    {
+      "name": "enable_query_cache",
+      "label": "FE节点启用查询缓存 ",
+      "description": "FE节点启用查询缓存",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "query_cache_entry_max_bytes",
+      "label": "FE节点启用查询缓存最大字节 ",
+      "description": "FE节点启用查询缓存最大字节",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4194304"
+    },
+    {
+      "name": "query_cache_entry_max_rows",
+      "label": "FE节点启用查询缓存最大行数 ",
+      "description": "FE节点启用查询缓存最大行数",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "409600"
+    },
+    {
+      "name": "enable_udf",
+      "label": "FE节点启用udf ",
+      "description": "FE节点启用udf",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "be_port",
+      "label": "BE admin端口",
+      "description": "BE admin端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9060"
+    },
+    {
+      "name": "be_http_port",
+      "label": "BE WebServer端口",
+      "description": "BE WebServer端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8070"
+    },
+    {
+      "name": "heartbeat_service_port",
+      "label": "BE 心跳端口",
+      "description": "BE 心跳端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9050"
+    },
+    {
+      "name": "brpc_port",
+      "label": "BE Rpc端口",
+      "description": "BE Rpc端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8090"
+    },
+    {
+      "name": "mem_limit",
+      "label": "BE进程使用服务器最大内存百分比",
+      "description": "限制BE进程使用服务器最大内存百分比。用于防止BE内存挤占太多的机器内存，该参数必须大于0，当百分大于100%之后，该值会默认为100%。",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "80%"
+    },
+    {
+      "name": "starlet_port",
+      "label": "BE使用starlet端口",
+      "description": "BE使用starlet端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9070"
+    },
+    {
+      "name": "storage_root_path",
+      "label": "BE数据存储目录",
+      "description": "BE数据存储目录，可配置多个，按分号分隔，例如/data1,medium:HDD;/data2,medium:SSD;/data3",
+      "configType": "path",
+      "separator": ";",
+      "required": true,
+      "type": "multiple",
+      "value": [
+        "/data/be/storage"
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "query_cache_capacity",
+      "label": "BE使用查询缓存",
+      "description": "BE使用查询缓存",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1024"
+    },
+    {
+      "name": "spill_local_storage_dir",
+      "label": "BE数据存储目录",
+      "description": "BE数据存储目录，可配置多个，按分号分隔，例如/data1,medium:HDD;/data2,medium:SSD;/data3",
+      "configType": "path",
+      "separator": ";",
+      "required": true,
+      "type": "multiple",
+      "value": [
+        "/data/be/spill_storage"
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "block_cache_enable",
+      "label": "BE使用查询缓存",
+      "description": "BE使用查询缓存",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "block_cache_disk_path",
+      "label": "BE数据存储目录",
+      "description": "BE数据存储目录，可配置多个，按分号分隔，例如/data1,medium:HDD;/data2,medium:SSD;/data3",
+      "configType": "path",
+      "separator": ";",
+      "required": true,
+      "type": "multiple",
+      "value": [
+        "/data/be/cache_data/"
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "block_cache_mem_size",
+      "label": "BE使用查询缓存内存",
+      "description": "BE使用查询缓存内存",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2147483648"
+    },
+    {
+      "name": "block_cache_disk_size",
+      "label": "BE使用查询缓存内存",
+      "description": "BE使用查询缓存内存",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "429496829600"
+    },
+    {
+      "name": "custom.fe.conf",
+      "label": "自定义配置fe.conf",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.be.conf",
+      "label": "自定义配置be.conf",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}
