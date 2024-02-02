@@ -294,7 +294,7 @@
   ## rest_response_size=2000
 
   # Turn on Prometheus metrics end point /metrics.
-  ## enable_prometheus=false
+  enable_prometheus=true
 
   # Turn on the Gist snippet sharing.
   ## enable_gist=true

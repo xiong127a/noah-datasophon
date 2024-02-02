@@ -234,3 +234,8 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/zeppelinserver.json
+  - job_name: 'hue'
+    metrics_path: /metrics
+    file_sd_configs:
+     - files:
+       - configs/huemaster.json
