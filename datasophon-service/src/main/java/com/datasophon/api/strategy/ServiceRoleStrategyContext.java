@@ -67,6 +67,7 @@ public class ServiceRoleStrategyContext {
         map.put("ALLUXIO", new AlluxioHandlerStrategy());
         map.put("CLICKHOUSE", new ClickhouseHandlerStrategy());
         map.put("Pushgateway", new PushgatewayHandlerStrategy());
+        map.put("MINIO",new MinioHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

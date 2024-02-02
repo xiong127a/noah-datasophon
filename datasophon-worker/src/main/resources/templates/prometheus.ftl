@@ -179,11 +179,12 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/prestoworker.json
-  - job_name: minio_job
+  - job_name: 'minio'
     metrics_path: /minio/prometheus/metrics
     scheme: http
-    static_configs:
-    - targets: ['192.168.1.54:9000','192.168.1.55:9000','192.168.1.56:9000']
+    file_sd_configs:
+     - files:
+       - configs/minioservice.json
   - job_name: 'kyuubi'
     file_sd_configs:
      - files:
