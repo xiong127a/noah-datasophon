@@ -18,6 +18,7 @@
         "group": "hue"
       },
       "logFile": "logs/runcpserver.log",
+      "jmxPort": 8777,
       "startRunner": {
         "timeout": "60",
         "program": "control_hue.sh",
