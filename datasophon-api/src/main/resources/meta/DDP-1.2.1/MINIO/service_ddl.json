@@ -15,7 +15,7 @@
       "cardinality": "1+",
       "sortNum": 1,
       "logFile": "minio.log",
-      "jmxPort": 11111,
+      "jmxPort": 9000,
       "startRunner": {
         "timeout": "60",
         "program": "bin/start.sh",
@@ -46,18 +46,18 @@
         "outputDirectory": "bin",
         "templateName": "minio-run.ftl",
         "includeParams": [
-          "MINIO_ACCESS_KEY",
-          "MINIO_SECRET_KEY",
-          "dataPaths",
-          "apiPort",
-          "consolePort"
+          "minioAccessKey",
+          "minioSecretKey",
+          "minioDataPaths",
+          "minioApiPort",
+          "minioConsolePort"
         ]
       }
     ]
   },
   "parameters": [
     {
-      "name": "MINIO_ACCESS_KEY",
+      "name": "minioAccessKey",
       "label": "用户名",
       "description": "用户名，长度最小是5个字符",
       "required": true,
@@ -69,7 +69,7 @@
       "defaultValue": "minio"
     },
     {
-      "name": "MINIO_SECRET_KEY",
+      "name": "minioSecretKey",
       "label": "密码",
       "description": "密码不能设置过于简单，不然minio会启动失败，长度最小是8个字符",
       "required": true,
@@ -81,7 +81,7 @@
       "defaultValue": "Jd2019@123"
     },
     {
-      "name": "dataPaths",
+      "name": "minioDataPaths",
       "label": "集群配置文件目录",
       "description": "集群配置文件目录，必须根据指定格式将各部署节点配置上，按空格分隔",
       "configType": "map",
@@ -89,14 +89,14 @@
       "separator": " ",
       "type": "multiple",
       "value": [
-        "http://{host}:{apiPort}/data/minio/data"
+        "http://{host}:{apiPort}/opt/datasophon/minio/data"
       ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
     },
     {
-      "name": "apiPort",
+      "name": "minioApiPort",
       "label": "api访问端口",
       "description": "api访问端口",
       "required": true,
@@ -104,11 +104,11 @@
       "type": "input",
       "value": "9000",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "9000"
     },
     {
-      "name": "consolePort",
+      "name": "minioConsolePort",
       "label": "UI访问端口",
       "description": "UI访问端口",
       "required": true,
@@ -116,7 +116,7 @@
       "type": "input",
       "value": "9001",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "9001"
     }
   ]
