@@ -83,6 +83,40 @@
           "restart"
         ]
       }
+    },
+    {
+      "name": "RangerKms",
+      "label": "RangerKms",
+      "roleType": "master",
+      "runAs": {
+        "user": "root",
+        "group": "root"
+      },
+      "cardinality": "1",
+      "logFile": "ranger-2.1.0-kms/log/ranger-kms-${host}-root.log",
+      "jmxPort": "",
+      "sortNum": 3,
+      "startRunner": {
+        "timeout": "60",
+        "program": "ranger-2.1.0-kms/control_ranger_kms.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "ranger-2.1.0-kms/control_ranger_kms.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "ranger-2.1.0-kms/control_ranger_kms.sh",
+        "args": [
+          "status"
+        ]
+      }
     }
   ],
   "configWriter": {
@@ -127,6 +161,24 @@
           "syncLdapBindPassword",
           "syncLdapSearchBase",
           "syncLdapUserSearchBase"
+        ]
+      },
+      {
+        "filename": "install.properties2",
+        "configFormat": "custom",
+        "templateName": "ranger-kms-install.ftl",
+        "outputDirectory": "ranger-2.1.0-kms",
+        "includeParams": [
+          "rangerAdminUrl",
+          "rangerKmsJdbcJarPath",
+          "rangerKmsDbRootUser",
+          "rangerKmsDbRootPass",
+          "rangerKmsDbHost",
+          "rangerKmsDbName",
+          "rangerKmsDbUser",
+          "rangerKmsDbPass",
+          "rangerKmsHadoopConfPath",
+          "rangerKmsRepositoryName"
         ]
       }
     ]
@@ -405,6 +457,114 @@
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": "ou=People,dc=ldap,dc=com"
+    },
+    {
+      "name": "rangerKmsJdbcJarPath",
+      "label": "kms jdbc jar包路径",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "/opt/datasophon/ranger/mysql-connector-java-5.1.34.jar",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/ranger/mysql-connector-java-5.1.34.jar"
+    },
+    {
+      "name": "rangerKmsDbRootUser",
+      "label": "kms数据库超级用户",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "root",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "root"
+    },
+    {
+      "name": "rangerKmsDbRootPass",
+      "label": "kms数据库超级用户密码",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "123456",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "123456"
+    },
+    {
+      "name": "rangerKmsDbHost",
+      "label": "kms数据库地址",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "hadoop1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hadoop1"
+    },
+    {
+      "name": "rangerKmsDbName",
+      "label": "kms数据库名称",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "rangerkms",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "rangerkms"
+    },
+    {
+      "name": "rangerKmsDbUser",
+      "label": "kms数据库用户",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "rangerkms",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "rangerkms"
+    },
+    {
+      "name": "rangerKmsDbPass",
+      "label": "kms数据库密码",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "rangerkms",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "rangerkms"
+    },
+    {
+      "name": "rangerKmsHadoopConfPath",
+      "label": "hadoop配置文件路径",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "/opt/datasophon/hadoop-3.3.3/etc/hadoop",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/hadoop-3.3.3/etc/hadoop"
+    },
+    {
+      "name": "rangerKmsRepositoryName",
+      "label": "kms服务名称",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "kmsdev",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "kmsdev"
     }
   ]
 }

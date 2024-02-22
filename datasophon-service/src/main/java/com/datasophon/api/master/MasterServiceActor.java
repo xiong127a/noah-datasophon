@@ -70,8 +70,7 @@ public class MasterServiceActor extends UntypedActor {
                             .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-
-            serviceRoleInfoList = RollingRestartUtils.sortMasterRole(serviceRoleInfoList); //排序
+            Collections.sort(serviceRoleInfoList); //排序
 
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
