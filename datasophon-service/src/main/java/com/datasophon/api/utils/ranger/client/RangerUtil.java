@@ -71,6 +71,20 @@ public class RangerUtil {
                 .build();
     }
 
+    public static Service rangerKmsService(String serviceName, String rangerUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("kms")
+                .configs(MapUtil.<String, String>builder()
+                        .put("username", "keyadmin")
+                        .put("password", "admin123")
+                        .put("provider", "kms://http@" + rangerUrl + ":9292/kms")
+                        .build()
+                )
+                .build();
+    }
+
     public static Service simpleHbaseService(String serviceName, String zkUrl, String zkPort, String hbaseZNode) {
         return Service.builder()
                 .name("hbasedev")

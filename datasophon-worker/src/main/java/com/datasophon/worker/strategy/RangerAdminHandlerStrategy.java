@@ -65,19 +65,42 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
             if (execResult.getExecResult()) {
                 logger.info("setup ranger user sync success");
             } else {
-                logger.info("setup ranger user sync failed");
+                logger.error("setup ranger user sync failed");
                 return execResult;
             }
 
             ShellUtils.exceShell("sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n;s/<value>false<\\/value>/<value>true<\\/value>/}' "
                     + workPath +
                     "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
-        } else {
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
         }
+
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
+            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
+            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
+
+            logger.info("setup ranger kms");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add("sh");
+            commands.add("./setup.sh");
+            ExecResult execResult = ShellUtils.execWithStatus(workPath + "/ranger-2.1.0-kms", commands, 300L, logger);
+            if (!execResult.getExecResult()) {
+                logger.error("setup ranger kms failed, sh setup.sh error");
+                return execResult;
+            }
+            commands.clear();
+            commands.add("sh");
+            commands.add("./enable-kms-plugin.sh");
+            execResult = ShellUtils.execWithStatus(workPath + "/ranger-2.1.0-kms", commands, 300L, logger);
+            if (execResult.getExecResult()) {
+                logger.info("setup ranger kms success");
+            } else {
+                logger.error("setup ranger kms failed, sh enable-kms-plugin.sh error");
+                return execResult;
+            }
+        }
+
+        startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+                command.getDecompressPackageName(), command.getRunAs());
 
         return startResult;
     }

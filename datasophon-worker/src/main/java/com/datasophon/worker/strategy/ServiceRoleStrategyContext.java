@@ -35,6 +35,7 @@ public class ServiceRoleStrategyContext {
         map.put("NodeManager", new NodeManagerHandlerStrategy("YARN", "NodeManager"));
         map.put("RangerAdmin", new RangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
         map.put("RangerUsersync", new RangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
+        map.put("RangerKms", new RangerAdminHandlerStrategy("RANGER", "RangerKms"));
         map.put("HiveServer2", new HiveServer2HandlerStrategy("HIVE", "HiveServer2"));
         map.put("HbaseMaster", new HbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("RegionServer", new HbaseHandlerStrategy("HBASE", "RegionServer"));
