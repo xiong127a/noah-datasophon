@@ -101,6 +101,10 @@
             <outputDirectory>conf/meta</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>${basedir}/../datasophon-api/src/main/resources/templates</directory>
+            <outputDirectory>conf/templates</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>${basedir}/../jmx</directory>
             <outputDirectory>/jmx</outputDirectory>
             <directoryMode>0755</directoryMode>
