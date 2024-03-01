@@ -68,7 +68,7 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
                 commands.add("-format");
                 commands.add("smhadoop");
                 // 清空namenode元数据
-                FileUtil.del("/data/dfs/nn/current");
+//                FileUtil.del("/data/dfs/nn/current");
                 ExecResult execResult = ShellUtils.execWithStatus(workPath, commands, 180L, logger);
                 if (execResult.getExecResult()) {
                     logger.info("Namenode format success");

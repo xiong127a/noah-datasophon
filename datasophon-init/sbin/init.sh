@@ -188,9 +188,19 @@ initALL() {
   echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllPerlJSON_$(date +%Y%m%d).log
 
   #初始化安装MySQL8数据库
-  echo "installMySQL8 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
-  bash ${INIT_BIN_PATH}/init-mysql-8.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
-  echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+  #echo "installMySQL8 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+  #bash ${INIT_BIN_PATH}/init-mysql-8.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+  #echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+
+  if [ "${initOS}" == "centos7" ]; then
+    echo "installMySQL8 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+    bash ${INIT_BIN_PATH}/init-mysql-8-centos7.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+    echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+  else
+    echo "installMySQL8 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+    bash ${INIT_BIN_PATH}/init-mysql-8.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+    echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+  fi
 
   #Configure Mysql and DataSophon data(当前在项目启动时会初始化表和数据,此步骤暂时省略)
   #initMysqlDataSophon

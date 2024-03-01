@@ -4,7 +4,9 @@
   "description": "分布式资源调度与管理平台",
   "version": "3.3.3",
   "sortNum": 2,
-  "dependencies":["HDFS"],
+  "dependencies": [
+    "HDFS"
+  ],
   "packageName": "hadoop-3.3.3.tar.gz",
   "decompressPackageName": "hadoop-3.3.3",
   "roles": [
@@ -90,7 +92,8 @@
         "timeout": "60",
         "program": "control_hadoop.sh",
         "args": [
-          "status","nodemanager"
+          "status",
+          "nodemanager"
         ]
       }
     },
@@ -126,10 +129,64 @@
         "timeout": "60",
         "program": "control_hadoop.sh",
         "args": [
-          "status","historyserver"
+          "status",
+          "historyserver"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "restart",
+          "historyserver"
         ]
       }
-    },{
+    },
+    {
+      "name": "TimelineServer",
+      "label": "TimelineServer",
+      "roleType": "master",
+      "cardinality": "1",
+      "runAs": {
+        "user": "yarn",
+        "group": "hadoop"
+      },
+      "sortNum": 4,
+      "logFile": "logs/hadoop-yarn-timelineserver-${host}.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "start",
+          "timelineserver"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_hadoop.sh",
+        "args": [
+          "stop",
+          "timelineserver"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "status",
+          "timelineserver"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "restart",
+          "timelineserver"
+        ]
+      }
+    },
+    {
       "name": "YarnClient",
       "label": "YarnClient",
       "roleType": "client",
@@ -179,6 +236,10 @@
           "yarn.resourcemanager.zk-address",
           "yarn.resourcemanager.recovery.enabled",
           "yarn.resourcemanager.store.class",
+          "yarn.timeline-service.enabled",
+          "yarn.timeline-service.hostname",
+          "yarn.timeline-service.http-cross-origin.enabled",
+          "yarn.resourcemanager.system-metrics-publisher.enabled",
           "yarn.application.classpath",
           "yarn.nodemanager.local-dirs",
           "yarn.nodemanager.log-dirs",
@@ -196,6 +257,7 @@
           "yarn.nodemanager.container-executor.class",
           "yarn.nodemanager.linux-container-executor.group",
           "yarn.nodemanager.linux-container-executor.path",
+          "yarn.acl.enable",
           "custom.yarn.site.xml"
         ]
       },
@@ -207,7 +269,18 @@
           "mapreduce.jobhistory.keytab",
           "mapreduce.jobhistory.principal",
           "mapreduce.cluster.local.dir",
+          "mapreduce.framework.name",
           "custom.mapred.site.xml"
+        ]
+      },
+      {
+        "filename": "install.properties",
+        "configFormat": "custom",
+        "outputDirectory": "ranger-yarn-plugin",
+        "templateName": "ranger-yarn.ftl",
+        "includeParams": [
+          "hadoopHome",
+          "rangerAdminUrl"
         ]
       }
     ]
@@ -230,10 +303,10 @@
       "description": "Node Label存储目录",
       "required": true,
       "type": "input",
-      "value": "hdfs://${dfs.nameservices}/user/yarn/nodeLabels",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://${dfs.nameservices}/user/yarn/nodeLabels"
+      "defaultValue": "hdfs://nameservice1/user/yarn/nodeLabels"
     },
     {
       "name": "yarn.nodemanager.resource.cpu-vcores",
@@ -323,7 +396,6 @@
       "hidden": false,
       "defaultValue": "65536"
     },
-
     {
       "name": "yarn.scheduler.minimum-allocation-vcores",
       "label": "RM上每个容器请求的虚拟CPU核的最小分配数",
@@ -346,7 +418,6 @@
       "hidden": false,
       "defaultValue": "16"
     },
-
     {
       "name": "yarn.nodemanager.vmem-pmem-ratio",
       "label": "虚拟内存与物理内存之间的比率",
@@ -375,7 +446,7 @@
       "description": "开启yarn日志聚合",
       "required": true,
       "type": "switch",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
@@ -386,14 +457,14 @@
       "description": "选择资源调度器，容量调度器或公平调度器",
       "required": true,
       "type": "select",
-      "value":"",
+      "value": "",
       "selectValue": [
         "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler",
         "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
+      "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"
     },
     {
       "name": "yarn.scheduler.fair.allocation.file",
@@ -401,7 +472,7 @@
       "description": "指明公平调度器队列分配配置文件",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/fair-scheduler.xml"
@@ -412,10 +483,54 @@
       "description": "是否允许队列间资源抢占",
       "required": true,
       "type": "switch",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
+    },
+    {
+      "name": "yarn.timeline-service.enabled",
+      "label": "是否开启 Timeline Server",
+      "description": "是否开启 Timeline Server",
+      "required": true,
+      "type": "switch",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "yarn.timeline-service.hostname",
+      "label": "Timeline Server节点",
+      "description": "Timeline Server节点",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${yarn_timeline_server}"
+    },
+    {
+      "name": "yarn.timeline-service.http-cross-origin.enabled",
+      "label": "开启 Timeline Server 跨域访问",
+      "description": "开启 Timeline Server 跨域访问",
+      "required": true,
+      "type": "switch",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "yarn.resourcemanager.system-metrics-publisher.enabled",
+      "label": "开启 resourcemanager 指标信息广播",
+      "description": "开启 resourcemanager 指标信息广播",
+      "required": true,
+      "type": "switch",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
     },
     {
       "name": "yarn.resourcemanager.ha.enabled",
@@ -424,7 +539,7 @@
       "configType": "ha",
       "required": true,
       "type": "switch",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
@@ -436,7 +551,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "cluster-yarn1"
@@ -448,7 +563,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "rm1,rm2"
@@ -460,7 +575,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm1}"
@@ -472,7 +587,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm2}"
@@ -484,7 +599,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm1}:8088"
@@ -496,7 +611,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm2}:8088"
@@ -508,7 +623,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm1}:8032"
@@ -520,7 +635,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm2}:8032"
@@ -532,7 +647,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm1}:8030"
@@ -544,7 +659,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm2}:8030"
@@ -556,7 +671,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm1}:8031"
@@ -568,7 +683,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rm2}:8031"
@@ -580,7 +695,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${zkUrls}"
@@ -592,7 +707,7 @@
       "configType": "ha",
       "required": true,
       "type": "switch",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
@@ -604,7 +719,7 @@
       "configType": "ha",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore"
@@ -615,7 +730,7 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "0.0.0.0:45454"
@@ -626,7 +741,7 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://${historyserverHost}:19888/jobhistory/logs"
@@ -637,7 +752,7 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "2592000"
@@ -648,10 +763,10 @@
       "description": "",
       "required": true,
       "type": "input",
-      "value":"",
+      "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://${dfs.nameservices}/user/yarn/yarn-logs/"
+      "defaultValue": "${fs.defaultFS}/user/yarn/yarn-logs/"
     },
     {
       "name": "yarn.nodemanager.local-dirs",
@@ -697,16 +812,56 @@
       "defaultValue": "/data/mapred/local"
     },
     {
+      "name": "mapreduce.framework.name",
+      "label": "mapreduce执行引擎",
+      "description": "mapreduce执行引擎",
+      "required": true,
+      "type": "select",
+      "value": "yarn",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "yarn",
+      "selectValue": [
+        "local",
+        "yarn",
+        "yarn-tez"
+      ]
+    },
+    {
       "name": "yarn.application.classpath",
       "label": "yarn应用程序加载的classpath",
       "description": "yarn应用程序加载的classpath",
       "required": true,
       "separator": ",",
       "type": "multiple",
-      "value":["${HADOOP_HOME}/etc/hadoop","${HADOOP_HOME}/share/hadoop/common/lib/*","${HADOOP_HOME}/share/hadoop/common/*","${HADOOP_HOME}/share/hadoop/hdfs","${HADOOP_HOME}/share/hadoop/hdfs/lib/*","${HADOOP_HOME}/share/hadoop/hdfs/*","${HADOOP_HOME}/share/hadoop/mapreduce/lib/*","${HADOOP_HOME}/share/hadoop/mapreduce/*","${HADOOP_HOME}/share/hadoop/yarn","${HADOOP_HOME}/share/hadoop/yarn/lib/*","${HADOOP_HOME}/share/hadoop/yarn/*"],
+      "value": [
+        "${HADOOP_HOME}/etc/hadoop",
+        "${HADOOP_HOME}/share/hadoop/common/lib/*",
+        "${HADOOP_HOME}/share/hadoop/common/*",
+        "${HADOOP_HOME}/share/hadoop/hdfs",
+        "${HADOOP_HOME}/share/hadoop/hdfs/lib/*",
+        "${HADOOP_HOME}/share/hadoop/hdfs/*",
+        "${HADOOP_HOME}/share/hadoop/mapreduce/lib/*",
+        "${HADOOP_HOME}/share/hadoop/mapreduce/*",
+        "${HADOOP_HOME}/share/hadoop/yarn",
+        "${HADOOP_HOME}/share/hadoop/yarn/lib/*",
+        "${HADOOP_HOME}/share/hadoop/yarn/*"
+      ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ["${HADOOP_HOME}/etc/hadoop","${HADOOP_HOME}/share/hadoop/common/lib/*","${HADOOP_HOME}/share/hadoop/common/*","${HADOOP_HOME}/share/hadoop/hdfs","${HADOOP_HOME}/share/hadoop/hdfs/lib/*","${HADOOP_HOME}/share/hadoop/hdfs/*","${HADOOP_HOME}/share/hadoop/mapreduce/lib/*","${HADOOP_HOME}/share/hadoop/mapreduce/*","${HADOOP_HOME}/share/hadoop/yarn","${HADOOP_HOME}/share/hadoop/yarn/lib/*","${HADOOP_HOME}/share/hadoop/yarn/*"]
+      "defaultValue": [
+        "${HADOOP_HOME}/etc/hadoop",
+        "${HADOOP_HOME}/share/hadoop/common/lib/*",
+        "${HADOOP_HOME}/share/hadoop/common/*",
+        "${HADOOP_HOME}/share/hadoop/hdfs",
+        "${HADOOP_HOME}/share/hadoop/hdfs/lib/*",
+        "${HADOOP_HOME}/share/hadoop/hdfs/*",
+        "${HADOOP_HOME}/share/hadoop/mapreduce/lib/*",
+        "${HADOOP_HOME}/share/hadoop/mapreduce/*",
+        "${HADOOP_HOME}/share/hadoop/yarn",
+        "${HADOOP_HOME}/share/hadoop/yarn/lib/*",
+        "${HADOOP_HOME}/share/hadoop/yarn/*"
+      ]
     },
     {
       "name": "yarn.resourcemanager.principal",
@@ -826,6 +981,17 @@
       "defaultValue": "${HADOOP_HOME}/bin/container-executor"
     },
     {
+      "name": "yarn.acl.enable",
+      "label": "开启yarn acl",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
       "name": "yarn.node-labels.enabled",
       "label": "启用YARN标签调度",
       "description": "开启 YARN Node Labels",
@@ -869,6 +1035,30 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "hadoopHome",
+      "label": "HADOOP_HOME",
+      "description": "Hadoop的安装目录",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "${HADOOP_HOME}",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "${HADOOP_HOME}"
+    },
+    {
+      "name": "rangerAdminUrl",
+      "label": "Ranger访问地址",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
       "defaultValue": ""
     }
   ]

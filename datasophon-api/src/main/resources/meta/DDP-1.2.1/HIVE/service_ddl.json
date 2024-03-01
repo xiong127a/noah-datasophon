@@ -155,7 +155,8 @@
           "hive.merge.size.per.task",
           "hive.merge.smallfiles.avgsize",
           "hive.exec.submit.local.task.via.child",
-          "iceberg.engine.hive.enabled"
+          "iceberg.engine.hive.enabled",
+          "hive.security.authorization.enabled"
         ]
       },
       {
@@ -668,6 +669,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "hive.security.authorization.enabled",
+      "label": "开启hive权限",
+      "description": "开启hive权限",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
     }
   ]
 }

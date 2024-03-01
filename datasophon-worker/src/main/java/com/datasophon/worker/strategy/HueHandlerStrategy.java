@@ -22,6 +22,8 @@ public class HueHandlerStrategy extends AbstractHandlerStrategy implements Servi
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
+            ShellUtils.exceShell("yum -y install cyrus-sasl-plain  cyrus-sasl-devel  cyrus-sasl-gssapi");
+
             logger.info("init hue database");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sudo");
