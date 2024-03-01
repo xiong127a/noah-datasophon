@@ -50,7 +50,7 @@ start(){
     fi
   fi
   echo starting $command, logging to $log
-  exec_command="$SH_DIR/pushgateway --persistence.file=$DATA_FILE --persistence.interval=1m --web.listen-address=:9091"
+  exec_command="$SH_DIR/pushgateway --persistence.file=$DATA_FILE --persistence.interval=5m --web.listen-address=:9091"
   echo "nohup $exec_command > $log 2>&1 &"
   nohup $exec_command > $log 2>&1 &
   echo $! > $pid

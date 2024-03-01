@@ -91,6 +91,9 @@ public class OperationLog implements Serializable {
     //返回状态码
     private Integer returnCode;
 
+    @TableField(exist = false)
+    //返回状态中文
+    private String returnCodeMsg;
 
     //返回说明
     private String returnMsg;

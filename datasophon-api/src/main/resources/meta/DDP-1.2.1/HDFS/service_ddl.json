@@ -718,7 +718,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": false
     },
     {
       "name": "enableRack",
