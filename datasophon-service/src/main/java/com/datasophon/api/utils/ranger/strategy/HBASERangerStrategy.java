@@ -1,0 +1,83 @@
+package com.datasophon.api.utils.ranger.strategy;
+
+import cn.hutool.core.collection.CollUtil;
+import com.datasophon.api.utils.ranger.client.RangerClient;
+import com.datasophon.api.utils.ranger.client.RangerUtil;
+import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import com.datasophon.common.utils.ExecResult;
+import com.datasophon.dao.entity.ClusterTenant;
+import com.datasophon.dao.entity.tenantResource.TenantHbaseResource;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Slf4j
+public class HBASERangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
+
+    public HBASERangerStrategy(Integer clusterId) throws Exception {
+        super(clusterId);
+    }
+
+    @Override
+    public ExecResult createService() throws Exception {
+        String zkUrl = globalVariables.get("${zkUrls}");
+        String zkPort = globalVariables.get("${clientPort}");
+        String hbaseRootDir = globalVariables.get("${hbase.rootdir}");
+
+        try {
+            rangerClient.getServices()
+                    .createService(RangerUtil.simpleHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir));
+            RangerUtil.updateDefaultPolicy(rangerClient, "hbasedev");
+            log.info("config hbase ranger plugin success");
+            execResult.setExecResult(true);
+        } catch (RangerClientException e) {
+            log.error("config hbase ranger plugin failed");
+            log.error(e.getMessage());
+            execResult.setExecErrOut(e.getMessage());
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
+    @Override
+    public ExecResult operatePolicy(ClusterTenant clusterTenant) throws Exception {
+        execResult.setExecResult(true);
+        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
+            Policy policy = getHbasePolicy(clusterTenant);
+            try {
+                if (Objects.isNull(clusterTenant.getId())) {
+                    rangerClient.getPolicies().createPolicy(policy);
+                } else {
+                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hbasedev", clusterTenant.getTenantName());
+                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+                }
+                log.info("operate hbase policy success");
+            } catch (Exception e) {
+                log.error("operate hbase policy failed");
+                execResult.setExecResult(false);
+                execResult.setExecErrOut(e.getMessage());
+            }
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
+    private Policy getHbasePolicy(ClusterTenant clusterTenant) {
+        List<String> hbaseNamespaces = clusterTenant.getHbaseResourceList()
+                .stream()
+                .map(t -> (TenantHbaseResource) t)
+                .map(t -> t.getHbaseNamespace() + ":*")
+                .collect(Collectors.toList());
+        return RangerUtil.simpleHbasePolicy(
+                "hbasedev",
+                clusterTenant.getTenantName(),
+                hbaseNamespaces,
+                Collections.singletonList(clusterTenant.getTenantName())
+        );
+    }
+
+}

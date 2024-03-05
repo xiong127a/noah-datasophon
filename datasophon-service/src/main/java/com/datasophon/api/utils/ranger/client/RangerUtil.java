@@ -1,6 +1,9 @@
 package com.datasophon.api.utils.ranger.client;
 
 import cn.hutool.core.map.MapUtil;
+import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.utils.ranger.client.config.RangerAuthConfig;
+import com.datasophon.api.utils.ranger.client.config.RangerClientConfig;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
 import lombok.extern.slf4j.Slf4j;
@@ -109,7 +112,7 @@ public class RangerUtil {
     /**
      * 当前队列列表仅对给定用户有操作权限，拒绝其它所有用户
      */
-    public static Policy simpleYarnPolicy(String serviceName, String policyName, List<String> queueList, List<String> userList) {
+    public static Policy simpleYarnPolicy(String serviceName, String policyName, List<String> queueList, List<String> roleList) {
         Map<String, PolicyResource> resources = new HashMap<>();
         PolicyResource policyResource = new PolicyResource();
         policyResource.setIsExcludes(false);
@@ -126,7 +129,7 @@ public class RangerUtil {
         adminAccess.setIsAllowed(true);
         policyItem.getAccesses().add(submitAccess);
         policyItem.getAccesses().add(adminAccess);
-        policyItem.setUsers(new HashSet<>(userList));
+        policyItem.setRoles(roleList);
 
         Policy policy = new Policy();
         policy.setPolicyType(0);
@@ -329,6 +332,24 @@ public class RangerUtil {
         }
         role.setUsers(defaultRoleMembers);
         rangerClient.getRoles().addUserAndGroups(role.getId(), role);
+    }
+
+    public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterTenant);
+        String rangerAdminUrl = globalVariables.get("${rangerAdminUrl}");
+        RangerClientConfig clientConfig = RangerClientConfig.builder()
+                .connectTimeoutMillis(1000)
+                .readTimeoutMillis(1000)
+                .logLevel(feign.Logger.Level.BASIC)
+                .authConfig(RangerAuthConfig.builder()
+                        .username("admin")
+                        .password("admin123")
+                        .build())
+                .url(rangerAdminUrl)
+                .build();
+        RangerClient rangerClient = new RangerClient(clientConfig);
+        rangerClient.start();
+        return rangerClient;
     }
 
 }
