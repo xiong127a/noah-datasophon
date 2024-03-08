@@ -86,18 +86,16 @@ else
   fi
 fi
 
-MYSQL_FOLDER_NAME=mysql-community-8.0.28.el7.x86_64
-MYSQL_TAR_NAME=mysql-community-8.0.28.el7.x86_64.tar.gz
+MYSQL_FOLDER_NAME=mysql-community-5.7.16-1.el7.x86_64
+MYSQL_TAR_NAME=mysql-community-5.7.16-1.el7.x86_64.tar.gz
 
-echo "mysql start install mysql-community-8.0.28.el7.x86_64........."
+echo "mysql start install mysql-community-5.7.16-1.el7.x86_64........."
 tar -zxvf ${PACKAGES_PATH}/${MYSQL_TAR_NAME} -C ${PACKAGES_PATH}
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-common-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-client-plugins-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-libs-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-devel-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-client-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-icu-data-files-8.0.28-1.el7.x86_64.rpm
-rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/mysql-community-server-8.0.28-1.el7.x86_64.rpm
+rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/01_mysql-community-common-5.7.16-1.el7.x86_64.rpm
+rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/02_mysql-community-libs-5.7.16-1.el7.x86_64.rpm
+rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/03_mysql-community-libs-compat-5.7.16-1.el7.x86_64.rpm
+rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/04_mysql-community-client-5.7.16-1.el7.x86_64.rpm
+rpm -ivh ${PACKAGES_PATH}/${MYSQL_FOLDER_NAME}/05_mysql-community-server-5.7.16-1.el7.x86_64.rpm
 
 mysqld --initialize --user=mysql
 systemctl start mysqld
@@ -124,22 +122,24 @@ if [ $(systemctl status mysqld | grep running | wc -l) -eq 1 ]; then
   mysql -uroot -p''$num1'' -e "FLUSH PRIVILEGES;"
 
   cat >/etc/my.cnf <<EOF
-[mysqld]    
+[mysqld]
 
-character_set_server=utf8mb4
-
-collation_server=utf8mb4_general_ci
-
-default-storage-engine=INNODB 
-
-explicit_defaults_for_timestamp=true
-
-max_connections=3600
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+symbolic-links=0
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+skip_ssl
+server-id = 1
+log-bin=mysql-bin
+binlog_format=row
+binlog-do-db=financial_lease
+binlog-do-db=financial_lease_config
 
 EOF
 
   systemctl restart mysqld
-  echo "install mysql-community-8.0.28.el7.x86_64  finished........."
+  echo "install mysql-community-5.7.16-1.el7.x86_64  finished........."
 else
   echo "####################################################################"
   echo "mysql install finished & but service startup failed & checkup /var/log/mysqld.log"
