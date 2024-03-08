@@ -372,7 +372,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "65536"
+      "defaultValue": "16384"
     },
     {
       "name": "yarn.scheduler.minimum-allocation-mb",
@@ -416,7 +416,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "16"
+      "defaultValue": "4"
     },
     {
       "name": "yarn.nodemanager.vmem-pmem-ratio",
