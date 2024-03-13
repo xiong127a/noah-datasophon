@@ -5,12 +5,10 @@ import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantHdfsResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 public class HDFSResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
     private final TenantHdfsResource hdfsResource;
@@ -24,19 +22,19 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
     public ExecResult addSource() {
         execResult = createHdfsDir(hdfsResource.getHdfsPath());
         if (execResult.getExecResult()) {
-            log.info("hdfs create dir {} success", hdfsResource.getHdfsPath());
+            logger.info("hdfs create dir {} success", hdfsResource.getHdfsPath());
         } else {
-            log.error("hdfs create dir {} failed", hdfsResource.getHdfsPath());
-            log.error(execResult.getExecErrOut());
+            logger.error("hdfs create dir {} failed", hdfsResource.getHdfsPath());
+            logger.error(execResult.getExecOut());
             return execResult;
         }
 
         execResult = setHdfsQuota(convertGBToByte(hdfsResource.getHdfsSpaceQuota()), hdfsResource.getHdfsPath());
         if (execResult.getExecResult()) {
-            log.info("hdfs set dir {} quota success", hdfsResource.getHdfsPath());
+            logger.info("hdfs set dir {} quota success", hdfsResource.getHdfsPath());
         } else {
-            log.error("hdfs set dir {} quota failed", hdfsResource.getHdfsPath());
-            log.error(execResult.getExecErrOut());
+            logger.error("hdfs set dir {} quota failed", hdfsResource.getHdfsPath());
+            logger.error(execResult.getExecOut());
         }
 
         return execResult;
@@ -46,10 +44,10 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
     public ExecResult updateSource() {
         execResult = setHdfsQuota(convertGBToByte(hdfsResource.getHdfsSpaceQuota()), hdfsResource.getHdfsPath());
         if (execResult.getExecResult()) {
-            log.info("hdfs set dir {} quota success", hdfsResource.getHdfsPath());
+            logger.info("hdfs set dir {} quota success", hdfsResource.getHdfsPath());
         } else {
-            log.error("hdfs set dir {} quota failed", hdfsResource.getHdfsPath());
-            log.error(execResult.getExecErrOut());
+            logger.error("hdfs set dir {} quota failed", hdfsResource.getHdfsPath());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -58,10 +56,10 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
     public ExecResult deleteSource() {
         execResult = deleteHdfsPath(hdfsResource.getHdfsPath());
         if (execResult.getExecResult()) {
-            log.info("delete hdfs path {} success", hdfsResource.getHdfsPath());
+            logger.info("delete hdfs path {} success", hdfsResource.getHdfsPath());
         } else {
-            log.error("delete hdfs path {} success", hdfsResource.getHdfsPath());
-            log.error(execResult.getExecErrOut());
+            logger.error("delete hdfs path {} success", hdfsResource.getHdfsPath());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -76,7 +74,7 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-mkdir");
         commands.add("-p");
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, log);
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
     }
 
     /**
@@ -93,7 +91,7 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-setSpaceQuota");
         commands.add(size);
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, log);
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
     }
 
 
@@ -107,6 +105,6 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-rm");
         commands.add("-r");
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, log);
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
     }
 }

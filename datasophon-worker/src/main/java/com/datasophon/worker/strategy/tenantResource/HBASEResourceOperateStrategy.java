@@ -7,7 +7,6 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
     private final TenantHbaseResource hbaseResource;
@@ -21,10 +20,10 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult addSource() {
         execResult = createHbaseNamespace(hbaseResource.getHbaseNamespace(), hbaseResource.getHbaseCapacity());
         if (execResult.getExecResult()) {
-            log.info("create hbase namespace {} success", hbaseResource.getHbaseNamespace());
+            logger.info("create hbase namespace {} success", hbaseResource.getHbaseNamespace());
         } else {
-            log.error("create hbase namespace {} failed", hbaseResource.getHbaseNamespace());
-            log.error(execResult.getExecErrOut());
+            logger.error("create hbase namespace {} failed", hbaseResource.getHbaseNamespace());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -33,10 +32,10 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult updateSource() {
         execResult = alertHbaseNamespace(hbaseResource);
         if (execResult.getExecResult()) {
-            log.info("alter hbase namespace {} quota success", hbaseResource.getHbaseNamespace());
+            logger.info("alter hbase namespace {} quota success", hbaseResource.getHbaseNamespace());
         } else {
-            log.error("alter hbase namespace {} quota failed", hbaseResource.getHbaseNamespace());
-            log.error(execResult.getExecErrOut());
+            logger.error("alter hbase namespace {} quota failed", hbaseResource.getHbaseNamespace());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -45,10 +44,10 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult deleteSource() {
         execResult = dropHbaseNamespace(hbaseResource.getHbaseNamespace());
         if (execResult.getExecResult()) {
-            log.info("drop hbase namespace {} success", hbaseResource.getHbaseNamespace());
+            logger.info("drop hbase namespace {} success", hbaseResource.getHbaseNamespace());
         } else {
-            log.error("drop hbase namespace {} failed", hbaseResource.getHbaseNamespace());
-            log.error(execResult.getExecErrOut());
+            logger.error("drop hbase namespace {} failed", hbaseResource.getHbaseNamespace());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }

@@ -1,25 +1,23 @@
 package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ranger.client.RangerClient;
+import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
-import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import com.datasophon.common.model.TenantResource.TenantResource;
+import com.datasophon.common.model.TenantResource.TenantYarnResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.tenantResource.TenantYarnResource;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class YARNRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
     public YARNRangerStrategy(Integer clusterId) throws Exception {
         super(clusterId);
+        logger = LoggerFactory.getLogger("YarnRangerOperateLogger");
     }
 
     @Override
@@ -29,13 +27,13 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
 
         try {
             rangerClient.getServices()
-                    .createService(RangerUtil.simpleYarnService("yarndev", String.join(",", rm1Addr, rm2Addr)));
+                    .createService(simpleYarnService("yarndev", String.join(",", rm1Addr, rm2Addr)));
             RangerUtil.updateDefaultPolicy(rangerClient, "yarndev");
-            log.info("config yarn ranger plugin success");
+            logger.info("config yarn ranger plugin success");
             execResult.setExecResult(true);
         } catch (RangerClientException e) {
-            log.error("config yarn ranger plugin failed");
-            log.error(e.getMessage());
+            logger.error("config yarn ranger plugin failed");
+            logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
         rangerClient.stop();
@@ -43,20 +41,20 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(ClusterTenant clusterTenant) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
-            Policy policy = getYarnPolicy(clusterTenant);
+        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+            Policy policy = getYarnPolicy(resource);
             try {
-                if (Objects.isNull(clusterTenant.getId())) {
+                if (Objects.isNull(resource.getId())) {
                     rangerClient.getPolicies().createPolicy(policy);
                 } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", clusterTenant.getTenantName());
+                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", resource.getTenantName());
                     rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
                 }
-                log.info("operate yarn policy success");
+                logger.info("operate yarn policy success");
             } catch (Exception e) {
-                log.error("operate yarn policy failed");
+                logger.error("operate yarn policy failed");
                 execResult.setExecResult(false);
                 execResult.setExecErrOut(e.getMessage());
             }
@@ -65,18 +63,71 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
-    private Policy getYarnPolicy(ClusterTenant clusterTenant) {
-        List<String> queues = clusterTenant.getYarnResourceList()
+    private Policy getYarnPolicy(TenantResource resource) {
+        List<String> queues = resource.getYarnResourceList()
                 .stream()
                 .map(t -> (TenantYarnResource) t)
-                .map(TenantYarnResource::getYarnQueueName)
+                .map(t -> t.getParentQueueName() + "." + t.getQueueName())
                 .collect(Collectors.toList());
-        return RangerUtil.simpleYarnPolicy(
+        return simpleYarnPolicy(
                 "yarndev",
-                clusterTenant.getTenantName(),
+                resource.getTenantName(),
                 queues,
-                Collections.singletonList(clusterTenant.getTenantName())
+                Collections.singletonList(resource.getTenantName())
         );
+    }
+
+    /**
+     * 当前队列列表仅对给定用户有操作权限，拒绝其它所有用户
+     */
+    public Policy simpleYarnPolicy(String serviceName, String policyName, List<String> queueList, List<String> roleList) {
+        Map<String, PolicyResource> resources = new HashMap<>();
+        PolicyResource policyResource = new PolicyResource();
+        policyResource.setIsExcludes(false);
+        policyResource.setIsRecursive(true);
+        policyResource.setValues(queueList);
+        resources.put("queue", policyResource);
+
+        PolicyItem policyItem = new PolicyItem();
+        PolicyItemAccess submitAccess = new PolicyItemAccess();
+        submitAccess.setType("submit-app");
+        submitAccess.setIsAllowed(true);
+        PolicyItemAccess adminAccess = new PolicyItemAccess();
+        adminAccess.setType("admin-queue");
+        adminAccess.setIsAllowed(true);
+        policyItem.getAccesses().add(submitAccess);
+        policyItem.getAccesses().add(adminAccess);
+        policyItem.setRoles(roleList);
+
+        Policy policy = new Policy();
+        policy.setPolicyType(0);
+        policy.setName(policyName);
+        policy.setIsEnabled(true);
+        policy.setIsAuditEnabled(true);
+        policy.setResources(resources);
+        policy.setIsDenyAllElse(true);
+        policy.setPolicyItems(Collections.singletonList(policyItem));
+        policy.setService(serviceName);
+        policy.setPolicyPriority(1);
+
+        return policy;
+    }
+
+    public Service simpleYarnService(String serviceName, String yarnUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("yarn")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("hadoop.security.authentication", "simple")
+                                .put("yarn.url", yarnUrl)
+                                .put("username", "yarn")
+                                .put("password", "yarn")
+                                .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
     }
 
 }

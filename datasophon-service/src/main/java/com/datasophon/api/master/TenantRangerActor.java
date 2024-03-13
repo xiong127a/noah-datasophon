@@ -7,16 +7,18 @@ import com.datasophon.api.utils.ranger.client.model.Role;
 import com.datasophon.api.utils.ranger.strategy.AbstractRangerStrategy;
 import com.datasophon.api.utils.ranger.strategy.RangerStrategyFactory;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.model.TenantResource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterTenant;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 import static com.datasophon.api.utils.ranger.client.RangerUtil.getRangerClient;
 
-@Slf4j
 public class TenantRangerActor extends UntypedActor {
+
+    private static final Logger logger = LoggerFactory.getLogger(TenantRangerActor.class);
 
     @Override
     public void onReceive(Object message) throws Throwable {
@@ -28,10 +30,10 @@ public class TenantRangerActor extends UntypedActor {
             } else if ("addUser".equals(rangerCommand.getOperateType())) {
                 getSender().tell(addRoleUser(rangerCommand), getSelf());
             }
-        } else if (message instanceof ClusterTenant) {
+        } else if (message instanceof TenantResource) {
             // 创建租户对应组件策略
-            ClusterTenant clusterTenant = (ClusterTenant) message;
-            ExecResult execResult = createRangerPolicy(clusterTenant);
+            TenantResource resource = (TenantResource) message;
+            ExecResult execResult = operateRangerPolicy(resource);
             getSender().tell(execResult, getSelf());
         } else {
             unhandled(message);
@@ -46,8 +48,8 @@ public class TenantRangerActor extends UntypedActor {
             execResult.setExecResult(true);
             return execResult;
         } catch (Exception e) {
-            log.error("add ranger role user failed");
-            log.error(e.getMessage());
+            logger.error("add ranger role user failed");
+            logger.error(e.getMessage());
             return execResult;
         } finally {
             rangerClient.stop();
@@ -63,23 +65,29 @@ public class TenantRangerActor extends UntypedActor {
         return execResult;
     }
 
-    private ExecResult createRangerPolicy(ClusterTenant clusterTenant) throws Exception {
-        RangerClient rangerClient = getRangerClient(clusterTenant.getClusterId());
+    private ExecResult operateRangerPolicy(TenantResource resource) throws Exception {
+        RangerClient rangerClient = getRangerClient(resource.getClusterId());
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
 
         Role role = new Role();
-        role.setName(clusterTenant.getTenantName());
-        rangerClient.getRoles().createRole(role);
-        log.info("create ranger role {}", clusterTenant.getTenantName());
+        role.setName(resource.getTenantName());
+        try {
+            rangerClient.getRoles().createRole(role);
+            logger.info("create ranger role {} success", resource.getTenantName());
+        } catch (Exception e) {
+            logger.error("create ranger role {} failed", resource.getTenantName());
+            logger.error(e.getMessage());
+        }
 
         // 操作组件策略
         List<String> serviceList = Arrays.asList("HDFS", "HIVE", "HBASE", "YARN");
         for (String serviceName : serviceList) {
-            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, clusterTenant.getClusterId());
-            execResult = rangerStrategy.operatePolicy(clusterTenant);
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, resource.getClusterId());
+            execResult = rangerStrategy.operatePolicy(resource);
             if (!execResult.getExecResult()) {
-                return execResult;
+                logger.error("operateRangerPolicy for service {} failed", serviceName);
+                logger.error(execResult.getExecErrOut());
             }
         }
 

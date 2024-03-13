@@ -34,26 +34,26 @@ public class TenantResource implements Serializable {
     /**
      * hdfs资源列表
      */
-    private List<TenantFrameResource> hdfsResourceList;
+    private List<TenantHdfsResource> hdfsResourceList;
 
     /**
      * yarn资源列表
      */
-    private List<TenantFrameResource> yarnResourceList;
+    private List<TenantYarnResource> yarnResourceList;
 
     /**
      * hive资源列表
      */
-    private List<TenantFrameResource> hiveResourceList;
+    private List<TenantHiveResource> hiveResourceList;
 
     /**
      * hbase资源列表
      */
-    private List<TenantFrameResource> hbaseResourceList;
+    private List<TenantHbaseResource> hbaseResourceList;
 
     /**
      * kafka资源列表
      */
-    private List<TenantFrameResource> kafkaResourceList;
+    private List<TenantKafkaResource> kafkaResourceList;
 
 }

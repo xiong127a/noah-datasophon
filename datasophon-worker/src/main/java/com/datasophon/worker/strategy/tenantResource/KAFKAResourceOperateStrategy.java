@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
     private final TenantKafkaResource kafkaResource;
@@ -24,9 +23,10 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult addSource() {
         execResult = createKafkaTopic(kafkaResource.getKafkaTopicName(), kafkaResource.getKafkaReplicas(), kafkaResource.getKafkaTopicCapacity());
         if (execResult.getExecResult()) {
-            log.info("create kafka topic {} success", kafkaResource.getKafkaTopicName());
+            logger.info("create kafka topic {} success", kafkaResource.getKafkaTopicName());
         } else {
-            log.error("create kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error("create kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -35,9 +35,10 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult updateSource() {
         execResult = alertKafkaTopic(kafkaResource.getKafkaZkAddr(), kafkaResource.getKafkaTopicName(), kafkaResource.getKafkaTopicCapacity());
         if (execResult.getExecResult()) {
-            log.info("alter kafka topic {} success", kafkaResource.getKafkaTopicName());
+            logger.info("alter kafka topic {} success", kafkaResource.getKafkaTopicName());
         } else {
-            log.error("alter kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error("alter kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -46,9 +47,10 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
     public ExecResult deleteSource() {
         execResult = deleteKafkaTopic(kafkaResource.getKafkaTopicName());
         if (execResult.getExecResult()) {
-            log.info("delete kafka topic {} success", kafkaResource.getKafkaTopicName());
+            logger.info("delete kafka topic {} success", kafkaResource.getKafkaTopicName());
         } else {
-            log.error("delete kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error("delete kafka topic {} failed", kafkaResource.getKafkaTopicName());
+            logger.error(execResult.getExecOut());
         }
         return execResult;
     }
@@ -82,7 +84,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
         commands.add("--config");
         commands.add("retention.bytes=" + convertGBToByte(topicCapacity));
 
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, log);
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
     }
 
     private ExecResult deleteKafkaTopic(String topicName) {
@@ -95,7 +97,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
         commands.add("--bootstrap-server");
         commands.add("localhost:9092");
 
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, log);
+        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
     }
 
 

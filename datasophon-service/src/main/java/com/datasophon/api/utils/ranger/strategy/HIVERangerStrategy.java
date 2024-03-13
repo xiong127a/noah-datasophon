@@ -1,42 +1,40 @@
 package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ranger.client.RangerClient;
+import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
-import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import com.datasophon.common.model.TenantResource.TenantHiveResource;
+import com.datasophon.common.model.TenantResource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.tenantResource.TenantHiveResource;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class HIVERangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
     public HIVERangerStrategy(Integer clusterId) throws Exception {
         super(clusterId);
+        logger = LoggerFactory.getLogger("HiveRangerOperateLogger");
     }
 
     @Override
     public ExecResult createService() throws Exception {
-        String hiveServer2Host = globalVariables.get("${hive.server2.thrift.bind.host}");
+        String hiveServer2Host = globalVariables.get("${masterHiveServer2}");
         String hiveServer2Port = globalVariables.get("${hive.server2.thrift.port}");
         String hiveUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
 
         try {
             rangerClient.getServices()
-                    .createService(RangerUtil.simpleHiveService("hivedev", hiveUrl));
+                    .createService(simpleHiveService("hivedev", hiveUrl));
             RangerUtil.updateDefaultPolicy(rangerClient, "hivedev");
-            log.info("config hive ranger plugin success");
+            logger.info("config hive ranger plugin success");
             execResult.setExecResult(true);
         } catch (RangerClientException e) {
-            log.error("config hive ranger plugin failed");
-            log.error(e.getMessage());
+            logger.error("config hive ranger plugin failed");
+            logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
         rangerClient.stop();
@@ -44,20 +42,20 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(ClusterTenant clusterTenant) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
-            Policy policy = getHivePolicy(clusterTenant);
+        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+            Policy policy = getHivePolicy(resource);
             try {
-                if (Objects.isNull(clusterTenant.getId())) {
+                if (Objects.isNull(resource.getId())) {
                     rangerClient.getPolicies().createPolicy(policy);
                 } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", clusterTenant.getTenantName());
+                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", resource.getTenantName());
                     rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
                 }
-                log.info("operate hive policy success");
+                logger.info("operate hive policy success");
             } catch (Exception e) {
-                log.error("operate hive policy failed");
+                logger.error("operate hive policy failed");
                 execResult.setExecResult(false);
                 execResult.setExecErrOut(e.getMessage());
             }
@@ -66,18 +64,64 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
-    private Policy getHivePolicy(ClusterTenant clusterTenant) {
-        List<String> hiveDatabases = clusterTenant.getHiveResourceList()
+    private Policy getHivePolicy(TenantResource resource) {
+        List<String> hiveDatabases = resource.getHiveResourceList()
                 .stream()
                 .map(t -> (TenantHiveResource) t)
                 .map(TenantHiveResource::getHiveDatabase)
                 .collect(Collectors.toList());
-        return RangerUtil.simpleHivePolicyForDatabase(
+        return simpleHivePolicyForDatabase(
                 "hivedev",
-                clusterTenant.getTenantName(),
+                resource.getTenantName(),
                 hiveDatabases,
-                Collections.singletonList(clusterTenant.getTenantName())
+                Collections.singletonList(resource.getTenantName())
         );
+    }
+
+    public Service simpleHiveService(String serviceName, String hiveUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hive")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hive")
+                                .put("password", "hive")
+                                .put("jdbc.driverClassName", "org.apache.hive.jdbc.HiveDriver")
+                                .put("jdbc.url", hiveUrl)
+                                .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Policy simpleHivePolicyForDatabase(String serviceName, String policyName, List<String> databaseList, List<String> roleList) {
+        Map<String, PolicyResource> resources = new HashMap<>();
+        PolicyResource policyResource = new PolicyResource();
+        policyResource.setValues(databaseList);
+        policyResource.setIsRecursive(false);
+        policyResource.setIsExcludes(false);
+        resources.put("database", policyResource);
+
+        PolicyItem policyItem = new PolicyItem();
+        PolicyItemAccess policyItemAccess = new PolicyItemAccess();
+        policyItemAccess.setType("all");
+        policyItemAccess.setIsAllowed(true);
+        policyItem.getAccesses().add(policyItemAccess);
+        policyItem.setRoles(roleList);
+
+        Policy policy = new Policy();
+        policy.setIsDenyAllElse(true);
+        policy.setPolicyType(0);
+        policy.setName(policyName);
+        policy.setIsEnabled(true);
+        policy.setIsAuditEnabled(true);
+        policy.setResources(resources);
+        policy.setPolicyItems(Collections.singletonList(policyItem));
+        policy.setService(serviceName);
+        policy.setPolicyPriority(1);
+
+        return policy;
     }
 
 }
