@@ -33,7 +33,7 @@ if [[ "$?" == "0" ]]; then
   echo "exist mysql"
   echo "开始卸载已存在的 mysql..............."
   systemctl stop mysqld
-  rpm -qa | grep mysql | xargs rpm -e
+  rpm -qa | grep -i -E mysql\|mariadb | xargs -n1 sudo rpm -e --nodeps
   rm -rf /var/lib/mysql
   rm -rf /usr/sbin/mysqld
   rm -rf /usr/local/mysql

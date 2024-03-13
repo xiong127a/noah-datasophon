@@ -1,25 +1,23 @@
 package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ranger.client.RangerClient;
+import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
-import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import com.datasophon.common.model.TenantResource.TenantHbaseResource;
+import com.datasophon.common.model.TenantResource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.tenantResource.TenantHbaseResource;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class HBASERangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
     public HBASERangerStrategy(Integer clusterId) throws Exception {
         super(clusterId);
+        logger = LoggerFactory.getLogger("HbaseRangerOperateLogger");
     }
 
     @Override
@@ -30,13 +28,13 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
 
         try {
             rangerClient.getServices()
-                    .createService(RangerUtil.simpleHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir));
+                    .createService(simpleHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir));
             RangerUtil.updateDefaultPolicy(rangerClient, "hbasedev");
-            log.info("config hbase ranger plugin success");
+            logger.info("config hbase ranger plugin success");
             execResult.setExecResult(true);
         } catch (RangerClientException e) {
-            log.error("config hbase ranger plugin failed");
-            log.error(e.getMessage());
+            logger.error("config hbase ranger plugin failed");
+            logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
         rangerClient.stop();
@@ -44,20 +42,20 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
     }
 
     @Override
-    public ExecResult operatePolicy(ClusterTenant clusterTenant) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
-            Policy policy = getHbasePolicy(clusterTenant);
+        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+            Policy policy = getHbasePolicy(resource);
             try {
-                if (Objects.isNull(clusterTenant.getId())) {
+                if (Objects.isNull(resource.getId())) {
                     rangerClient.getPolicies().createPolicy(policy);
                 } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hbasedev", clusterTenant.getTenantName());
+                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hbasedev", resource.getTenantName());
                     rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
                 }
-                log.info("operate hbase policy success");
+                logger.info("operate hbase policy success");
             } catch (Exception e) {
-                log.error("operate hbase policy failed");
+                logger.error("operate hbase policy failed");
                 execResult.setExecResult(false);
                 execResult.setExecErrOut(e.getMessage());
             }
@@ -66,18 +64,81 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
         return execResult;
     }
 
-    private Policy getHbasePolicy(ClusterTenant clusterTenant) {
-        List<String> hbaseNamespaces = clusterTenant.getHbaseResourceList()
+    private Policy getHbasePolicy(TenantResource resource) {
+        List<String> hbaseNamespaces = resource.getHbaseResourceList()
                 .stream()
                 .map(t -> (TenantHbaseResource) t)
                 .map(t -> t.getHbaseNamespace() + ":*")
                 .collect(Collectors.toList());
-        return RangerUtil.simpleHbasePolicy(
+        return simpleHbasePolicy(
                 "hbasedev",
-                clusterTenant.getTenantName(),
+                resource.getTenantName(),
                 hbaseNamespaces,
-                Collections.singletonList(clusterTenant.getTenantName())
+                Collections.singletonList(resource.getTenantName())
         );
+    }
+
+    public Service simpleHbaseService(String serviceName, String zkUrl, String zkPort, String hbaseZNode) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hbase")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hbase")
+                                .put("password", "hbase")
+                                .put("hadoop.security.authentication", "simple")
+                                .put("hbase.master.kerberos.principal", "")
+                                .put("hbase.security.authentication", "simple")
+                                .put("hbase.zookeeper.property.clientPort", zkPort)
+                                .put("hbase.zookeeper.quorum", zkUrl)
+                                .put("zookeeper.znode.parent", hbaseZNode)
+                                .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Policy simpleHbasePolicy(String serviceName, String policyName, List<String> tableList, List<String> roleList) {
+        Map<String, PolicyResource> resources = new HashMap<>();
+        PolicyResource tablePolicy = new PolicyResource();
+        tablePolicy.setValues(tableList);
+        tablePolicy.setIsRecursive(false);
+        tablePolicy.setIsExcludes(false);
+        PolicyResource columnFamilyPolicy = new PolicyResource();
+        columnFamilyPolicy.setValues(Collections.singletonList("*"));
+        columnFamilyPolicy.setIsRecursive(false);
+        columnFamilyPolicy.setIsExcludes(false);
+        PolicyResource columnPolicy = new PolicyResource();
+        columnPolicy.setValues(Collections.singletonList("*"));
+        columnPolicy.setIsRecursive(false);
+        columnPolicy.setIsExcludes(false);
+        resources.put("table", tablePolicy);
+        resources.put("column-family", columnFamilyPolicy);
+        resources.put("column", columnPolicy);
+
+        PolicyItem policyItem = new PolicyItem();
+        List<String> accesses = Arrays.asList("read", "write", "create", "admin", "execute");
+        for (String access : accesses) {
+            PolicyItemAccess policyItemAccess = new PolicyItemAccess();
+            policyItemAccess.setType(access);
+            policyItemAccess.setIsAllowed(true);
+            policyItem.getAccesses().add(policyItemAccess);
+        }
+        policyItem.setRoles(roleList);
+
+        Policy policy = new Policy();
+        policy.setIsDenyAllElse(true);
+        policy.setPolicyType(0);
+        policy.setName(policyName);
+        policy.setIsEnabled(true);
+        policy.setIsAuditEnabled(true);
+        policy.setResources(resources);
+        policy.setPolicyItems(Collections.singletonList(policyItem));
+        policy.setService(serviceName);
+        policy.setPolicyPriority(1);
+
+        return policy;
     }
 
 }

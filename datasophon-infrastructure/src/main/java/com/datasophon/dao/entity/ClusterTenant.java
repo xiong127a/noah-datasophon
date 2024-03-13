@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.datasophon.dao.entity.tenantResource.*;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -36,30 +38,30 @@ public class ClusterTenant implements Serializable {
      * hdfs资源列表
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<TenantFrameResource> hdfsResourceList;
+    private List<TenantHdfsResource> hdfsResourceList;
 
     /**
      * yarn资源列表
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<TenantFrameResource> yarnResourceList;
+    private List<TenantYarnResource> yarnResourceList;
 
     /**
      * hive资源列表
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<TenantFrameResource> hiveResourceList;
+    private List<TenantHiveResource> hiveResourceList;
 
     /**
      * hbase资源列表
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<TenantFrameResource> hbaseResourceList;
+    private List<TenantHbaseResource> hbaseResourceList;
 
     /**
      * kafka资源列表
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<TenantFrameResource> kafkaResourceList;
+    private List<TenantKafkaResource> kafkaResourceList;
 }
 

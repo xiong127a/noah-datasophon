@@ -1,25 +1,23 @@
 package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
-import com.datasophon.api.utils.ranger.client.RangerClient;
+import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
-import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import com.datasophon.common.model.TenantResource.TenantHdfsResource;
+import com.datasophon.common.model.TenantResource.TenantResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterTenant;
-import com.datasophon.dao.entity.tenantResource.TenantHdfsResource;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class HDFSRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
 
     public HDFSRangerStrategy(Integer clusterId) throws Exception {
         super(clusterId);
+        logger = LoggerFactory.getLogger("HdfsRangerOperateLogger");
     }
 
     @Override
@@ -28,13 +26,13 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
         String nn2Add = "hdfs://" + globalVariables.get("${dfs.namenode.rpc-address.nameservice1.nn2}");
         try {
             rangerClient.getServices()
-                    .createService(RangerUtil.simpleHdfsService("hadoopdev", String.join(",", nn1Add, nn2Add)));
+                    .createService(simpleHdfsService("hadoopdev", String.join(",", nn1Add, nn2Add)));
             RangerUtil.updateDefaultPolicy(rangerClient, "hadoopdev");
-            log.info("config hdfs ranger plugin success");
+            logger.info("config hdfs ranger plugin success");
             execResult.setExecResult(true);
         } catch (RangerClientException e) {
-            log.error("config hdfs ranger plugin failed");
-            log.error(e.getMessage());
+            logger.error("config hdfs ranger plugin failed");
+            logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
         rangerClient.stop();
@@ -42,21 +40,20 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
     }
 
     @Override
-    public ExecResult operatePolicy(ClusterTenant clusterTenant) throws Exception {
+    public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(clusterTenant.getHdfsResourceList())) {
-            Policy policy = getHdfsPolicy(clusterTenant);
+        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+            Policy policy = getHdfsPolicy(resource);
             try {
-                if (Objects.isNull(clusterTenant.getId())) {
-                    rangerClient.getPolicies().createPolicy(policy
-                    );
+                if (Objects.isNull(resource.getId())) {
+                    rangerClient.getPolicies().createPolicy(policy);
                 } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", clusterTenant.getTenantName());
+                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
                     rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
                 }
-                log.info("operate hdfs policy success");
+                logger.info("operate hdfs policy success");
             } catch (Exception e) {
-                log.error("operate hdfs policy failed");
+                logger.error("operate hdfs policy failed");
                 execResult.setExecResult(false);
                 execResult.setExecErrOut(e.getMessage());
             }
@@ -65,17 +62,80 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
-    private Policy getHdfsPolicy(ClusterTenant clusterTenant) {
-        List<String> hdfsPaths = clusterTenant.getHdfsResourceList()
+    private Policy getHdfsPolicy(TenantResource resource) {
+        List<String> hdfsPaths = resource.getHdfsResourceList()
                 .stream()
                 .map(t -> (TenantHdfsResource) t)
                 .map(TenantHdfsResource::getHdfsPath)
                 .collect(Collectors.toList());
-        return RangerUtil.simpleHdfsPolicy(
+        return simpleHdfsPolicy(
                 "hadoopdev",
-                clusterTenant.getTenantName(),
+                resource.getTenantName(),
                 hdfsPaths,
-                Collections.singletonList(clusterTenant.getTenantName()));
+                Collections.singletonList(resource.getTenantName()));
+    }
+
+    public Service simpleHdfsService(String serviceName, String hdfsUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hdfs")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hdfs")
+                                .put("password", "hdfs")
+                                .put("fs.default.name", hdfsUrl)
+                                .put("hadoop.security.authorization", "false")
+                                .put("hadoop.security.authentication", "simple")
+                                .put("hadoop.security.auth_to_local", "")
+                                .put("dfs.datanode.kerberos.principal", "")
+                                .put("dfs.namenode.kerberos.principal", "")
+                                .put("dfs.secondary.namenode.kerberos.principal", "")
+                                .put("hadoop.rpc.protection", "authentication")
+                                .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Policy simpleHdfsPolicy(String serviceName, String policyName, List<String> pathList, List<String> roleList) {
+        Map<String, PolicyResource> resources = new HashMap<>();
+        PolicyResource policyResource = new PolicyResource();
+        policyResource.setIsRecursive(true);
+        policyResource.setValues(pathList);
+        resources.put("path", policyResource);
+
+        PolicyItem policyItem = new PolicyItem();
+        PolicyItemAccess readAccess = new PolicyItemAccess();
+        readAccess.setType("read");
+        readAccess.setIsAllowed(true);
+        PolicyItemAccess writeAccess = new PolicyItemAccess();
+        writeAccess.setType("write");
+        writeAccess.setIsAllowed(true);
+        PolicyItemAccess executeAccess = new PolicyItemAccess();
+        executeAccess.setType("execute");
+        executeAccess.setIsAllowed(true);
+        policyItem.getAccesses().add(readAccess);
+        policyItem.getAccesses().add(writeAccess);
+        policyItem.getAccesses().add(executeAccess);
+        policyItem.setRoles(roleList);
+
+        Policy policy = new Policy();
+        policy.setResources(resources);
+        policy.setPolicyItems(Collections.singletonList(policyItem));
+        policy.setPolicyType(0);
+        policy.setName(policyName);
+        policy.setIsEnabled(true);
+        policy.setPolicyPriority(1);
+        policy.setIsAuditEnabled(true);
+        policy.setIsDenyAllElse(true);
+        policy.setService(serviceName);
+        policy.setDescription("");
+        policy.setAllowExceptions(Collections.emptyList());
+        policy.setDenyPolicyItems(Collections.emptyList());
+        policy.setDenyExceptions(Collections.emptyList());
+
+        return policy;
     }
 
 }

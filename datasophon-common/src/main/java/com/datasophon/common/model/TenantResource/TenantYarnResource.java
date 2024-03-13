@@ -8,18 +8,23 @@ import lombok.EqualsAndHashCode;
 public class TenantYarnResource extends TenantFrameResource {
 
     /**
+     * 父队列名称
+     */
+    private String parentQueueName;
+
+    /**
      * 队列名称
      */
-    private String yarnQueueName;
+    private String queueName;
 
     /**
-     * yarn内存
+     * 队列容量占比
      */
-    private String yarnMemory;
+    private String capacityPercent;
 
     /**
-     * yarn cpu
+     * 标签
      */
-    private String yarnCpu;
+    private String nodeLabel;
 
 }
