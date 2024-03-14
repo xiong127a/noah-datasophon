@@ -62,6 +62,21 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
+    @Override
+    public ExecResult deletePolicy(String policyName) throws Exception {
+        try {
+            Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", policyName);
+            rangerClient.getPolicies().deletePolicy(returnPolicy.getId());
+            logger.info("delete hdfs policy {} success", policyName);
+            execResult.setExecResult(true);
+        } catch (Exception e) {
+            logger.error("delete hdfs policy {} failed", policyName);
+            execResult.setExecErrOut(e.getMessage());
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
     private Policy getHdfsPolicy(TenantResource resource) {
         List<String> hdfsPaths = resource.getHdfsResourceList()
                 .stream()

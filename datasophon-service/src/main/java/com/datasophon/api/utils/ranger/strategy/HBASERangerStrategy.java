@@ -64,6 +64,21 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
         return execResult;
     }
 
+    @Override
+    public ExecResult deletePolicy(String policyName) throws Exception {
+        try {
+            Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hbasedev", policyName);
+            rangerClient.getPolicies().deletePolicy(returnPolicy.getId());
+            logger.info("delete hbase policy {} success", policyName);
+            execResult.setExecResult(true);
+        } catch (Exception e) {
+            logger.error("delete hbase policy {} failed", policyName);
+            execResult.setExecErrOut(e.getMessage());
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
     private Policy getHbasePolicy(TenantResource resource) {
         List<String> hbaseNamespaces = resource.getHbaseResourceList()
                 .stream()

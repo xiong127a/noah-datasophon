@@ -9,4 +9,5 @@ public interface RangerStrategy {
 
     ExecResult operatePolicy(TenantResource resource) throws Exception;
 
+    ExecResult deletePolicy(String policyName) throws Exception;
 }

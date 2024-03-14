@@ -29,4 +29,7 @@ public interface PolicyFeignClient {
 
     @RequestLine("GET /service/public/v2/api/service/{serviceName}/policy")
     List<Policy> getAllPoliciesByService(@Param("serviceName") final String serviceName) throws RangerClientException;
+
+    @RequestLine("DELETE /service/public/v2/api/policy/{policyId}")
+    void deletePolicy(@Param("policyId") final int policyId) throws RangerClientException;
 }

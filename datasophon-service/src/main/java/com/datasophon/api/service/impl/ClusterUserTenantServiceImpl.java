@@ -13,6 +13,7 @@ import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterTenant;
@@ -45,7 +46,40 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     @Autowired
     private ClusterTenantService clusterTenantService;
 
+    @Override
     public Result addUserToTenant(ClusterUserTenant clusterUserTenant) {
+        Result result = operateTenantUser(clusterUserTenant);
+        if (result != null) return result;
+        this.saveOrUpdate(clusterUserTenant);
+        return Result.success();
+    }
+
+    @Override
+    public Result deleteUser(Integer clusterId, String userName, String tenantName) {
+        Integer userId = clusterUserService.lambdaQuery()
+                .eq(ClusterUser::getClusterId, clusterId)
+                .eq(ClusterUser::getUsername, userName)
+                .list()
+                .get(0)
+                .getId();
+        Integer tenantId = clusterTenantService.lambdaQuery()
+                .eq(ClusterTenant::getClusterId, clusterId)
+                .eq(ClusterTenant::getTenantName, tenantName)
+                .list()
+                .get(0)
+                .getId();
+        ClusterUserTenant clusterUserTenant = this.lambdaQuery()
+                .eq(ClusterUserTenant::getClusterId, clusterId)
+                .eq(ClusterUserTenant::getUserId, userId)
+                .eq(ClusterUserTenant::getTenantId, tenantId)
+                .list()
+                .get(0);
+        operateTenantUser(clusterUserTenant);
+        this.removeById(clusterUserTenant.getId());
+        return Result.success();
+    }
+
+    private Result operateTenantUser(ClusterUserTenant clusterUserTenant) {
         List<ClusterTenant> tenants = clusterTenantService.list(
                 new LambdaQueryWrapper<ClusterTenant>()
                         .eq(ClusterTenant::getClusterId, clusterUserTenant.getTenantId())
@@ -75,15 +109,15 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
                     .map(ClusterUser::getUsername)
                     .collect(Collectors.toList());
         }
-        String tenantName = tenants.get(0).getTenantName();
         String userName = users.get(0).getUsername();
         addUserNames.add(userName);
+        String tenantName = tenants.get(0).getTenantName();
 
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         TenantRangerCommand tenantRangerCommand = new TenantRangerCommand();
         tenantRangerCommand.setClusterId(clusterUserTenant.getClusterId());
         tenantRangerCommand.setRoleName(tenantName);
-        tenantRangerCommand.setOperateType("addUser");
+        tenantRangerCommand.setOperateType(RangerOpType.OP_USER_TO_ROLE);
         tenantRangerCommand.setUserList(addUserNames);
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> execFuture = Patterns.ask(tenantRangerActor, tenantRangerCommand, timeout);
@@ -91,18 +125,15 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
         try {
             execResult = (ExecResult) Await.result(execFuture, timeout.duration());
             if (execResult.getExecResult()) {
-                logger.info("add user to ranger role success");
+                logger.info("operate user to ranger role success");
             } else {
                 logger.error(execResult.getExecOut());
-                throw new ServiceException(500, "add user to ranger role failed");
+                throw new ServiceException(500, "operate user to ranger role failed");
             }
         } catch (Exception e) {
-            throw new ServiceException(500, "add user to ranger role failed");
+            throw new ServiceException(500, "operate user to ranger role failed");
         }
-
-        this.saveOrUpdate(clusterUserTenant);
-
-        return Result.success();
+        return null;
     }
 
 }

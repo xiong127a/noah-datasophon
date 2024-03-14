@@ -38,8 +38,8 @@ public class TenantResourceActor extends UntypedActor {
                 execResult = operateStrategy.updateSource();
                 break;
             case DELETE:
-                execResult = operateStrategy.deleteSource();
-                break;
+                // 暂时不做资源删除操作
+//                execResult = operateStrategy.deleteSource();
             case NONE:
                 execResult = new ExecResult();
                 execResult.setExecResult(true);

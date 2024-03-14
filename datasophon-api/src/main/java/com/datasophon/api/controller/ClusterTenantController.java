@@ -35,7 +35,7 @@ public class ClusterTenantController {
     /**
      * 更新
      */
-    @RequestMapping("/update")
+    @RequestMapping(value = "/update", method = RequestMethod.POST)
     public Result update(@RequestBody ClusterTenant clusterTenant) throws Exception {
         return clusterTenantService.saveOrUpdateTenant(clusterTenant);
     }
@@ -45,8 +45,7 @@ public class ClusterTenantController {
      */
     @RequestMapping("/delete")
     public Result delete(Integer id) {
-        clusterTenantService.removeById(id);
-        return Result.success();
+        return clusterTenantService.deleteTenantById(id);
     }
 
 }

@@ -32,6 +32,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -77,7 +78,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 TenantRangerCommand hdfsRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HDFS")
                         .clusterId(clusterId)
-                        .operateType("createService").build();
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hdfsRangerCommand, ActorRef.noSender());
             }
             if ("enableYARNPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
@@ -87,7 +88,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 TenantRangerCommand yarnRangerCommand = TenantRangerCommand.builder()
                         .serviceName("YARN")
                         .clusterId(clusterId)
-                        .operateType("createService").build();
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(yarnRangerCommand, ActorRef.noSender());
             }
             if ("enableHIVEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
@@ -97,7 +98,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 TenantRangerCommand hiveRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HIVE")
                         .clusterId(clusterId)
-                        .operateType("createService").build();
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hiveRangerCommand, ActorRef.noSender());
             }
             if ("enableHBASEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
@@ -107,7 +108,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 TenantRangerCommand hbaseRangerCommand = TenantRangerCommand.builder()
                         .serviceName("HBASE")
                         .clusterId(clusterId)
-                        .operateType("createService").build();
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
             }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {

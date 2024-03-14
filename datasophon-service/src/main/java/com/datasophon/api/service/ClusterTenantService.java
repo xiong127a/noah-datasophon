@@ -10,4 +10,5 @@ public interface ClusterTenantService extends IService<ClusterTenant> {
 
     Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception;
 
+    Result deleteTenantById(Integer id);
 }

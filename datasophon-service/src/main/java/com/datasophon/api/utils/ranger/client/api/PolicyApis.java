@@ -36,4 +36,8 @@ public class PolicyApis {
     public List<Policy> getAllPoliciesByService(@Param("serviceName") final String serviceName) throws RangerClientException {
         return client.getAllPoliciesByService(serviceName);
     }
+
+    public void deletePolicy(@Param("policyId") final int policyId) throws RangerClientException {
+        client.deletePolicy(policyId);
+    }
 }
