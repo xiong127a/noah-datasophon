@@ -1,5 +1,6 @@
 package com.datasophon.common.command;
 
+import com.datasophon.common.enums.RangerOpType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,12 +15,13 @@ import java.util.List;
 @NoArgsConstructor
 public class TenantRangerCommand implements Serializable {
 
-    // 操作类型 createService addUser
-    String operateType;
+    // 操作类型 createService addUser deletePolicy
+    RangerOpType operateType;
 
     Integer clusterId;
     String serviceName;
     String roleName;
     List<String> userList;
+    String tenantName;
 
 }

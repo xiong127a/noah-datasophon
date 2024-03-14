@@ -32,6 +32,11 @@ public class TenantResource implements Serializable {
     private String tenantName;
 
     /**
+     * 租户对应操作，ADD UPDATE DELETE
+     */
+    private String operateType;
+
+    /**
      * hdfs资源列表
      */
     private List<TenantHdfsResource> hdfsResourceList;

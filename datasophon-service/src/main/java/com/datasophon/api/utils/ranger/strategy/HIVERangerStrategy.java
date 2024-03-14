@@ -64,6 +64,21 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
+    @Override
+    public ExecResult deletePolicy(String policyName) throws Exception {
+        try {
+            Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", policyName);
+            rangerClient.getPolicies().deletePolicy(returnPolicy.getId());
+            logger.info("delete hive policy {} success", policyName);
+            execResult.setExecResult(true);
+        } catch (Exception e) {
+            logger.error("delete hive policy {} failed", policyName);
+            execResult.setExecErrOut(e.getMessage());
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
     private Policy getHivePolicy(TenantResource resource) {
         List<String> hiveDatabases = resource.getHiveResourceList()
                 .stream()

@@ -63,6 +63,21 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
         return execResult;
     }
 
+    @Override
+    public ExecResult deletePolicy(String policyName) throws Exception {
+        try {
+            Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", policyName);
+            rangerClient.getPolicies().deletePolicy(returnPolicy.getId());
+            logger.info("delete yarn policy {} success", policyName);
+            execResult.setExecResult(true);
+        } catch (Exception e) {
+            logger.error("delete yarn policy {} failed", policyName);
+            execResult.setExecErrOut(e.getMessage());
+        }
+        rangerClient.stop();
+        return execResult;
+    }
+
     private Policy getYarnPolicy(TenantResource resource) {
         List<String> queues = resource.getYarnResourceList()
                 .stream()

@@ -20,18 +20,29 @@ public class TenantRangerActor extends UntypedActor {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantRangerActor.class);
 
+    private static final List<String> SUPPORT_SERVICE = Arrays.asList("HDFS", "HIVE", "HBASE", "YARN");
+
     @Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof TenantRangerCommand) {
             TenantRangerCommand rangerCommand = (TenantRangerCommand) message;
-            if ("createService".equals(rangerCommand.getOperateType())) {
-                ExecResult execResult = createRangerService(rangerCommand.getClusterId(), rangerCommand.getServiceName());
-                getSender().tell(execResult, getSelf());
-            } else if ("addUser".equals(rangerCommand.getOperateType())) {
-                getSender().tell(addRoleUser(rangerCommand), getSelf());
+            ExecResult execResult;
+            switch (rangerCommand.getOperateType()) {
+                case CREATE_SERVICE:
+                    execResult = createRangerService(rangerCommand.getClusterId(), rangerCommand.getServiceName());
+                    getSender().tell(execResult, getSelf());
+                    break;
+                case OP_USER_TO_ROLE:
+                    getSender().tell(addRoleUser(rangerCommand), getSelf());
+                    break;
+                case DELETE_POLICY:
+                    execResult = deleteRangerPolicy(rangerCommand.getTenantName(), rangerCommand.getClusterId());
+                    getSender().tell(execResult, getSelf());
+                    break;
+                default:
+                    unhandled(message);
             }
         } else if (message instanceof TenantResource) {
-            // 创建租户对应组件策略
             TenantResource resource = (TenantResource) message;
             ExecResult execResult = operateRangerPolicy(resource);
             getSender().tell(execResult, getSelf());
@@ -42,8 +53,9 @@ public class TenantRangerActor extends UntypedActor {
 
     private ExecResult addRoleUser(TenantRangerCommand rangerCommand) throws Exception {
         ExecResult execResult = new ExecResult();
-        RangerClient rangerClient = getRangerClient(rangerCommand.getClusterId());
+        RangerClient rangerClient = null;
         try {
+            rangerClient = getRangerClient(rangerCommand.getClusterId());
             RangerUtil.setRoleUser(rangerClient, rangerCommand.getRoleName(), rangerCommand.getUserList());
             execResult.setExecResult(true);
             return execResult;
@@ -52,6 +64,7 @@ public class TenantRangerActor extends UntypedActor {
             logger.error(e.getMessage());
             return execResult;
         } finally {
+            assert rangerClient != null;
             rangerClient.stop();
         }
     }
@@ -81,12 +94,36 @@ public class TenantRangerActor extends UntypedActor {
         }
 
         // 操作组件策略
-        List<String> serviceList = Arrays.asList("HDFS", "HIVE", "HBASE", "YARN");
-        for (String serviceName : serviceList) {
+        for (String serviceName : SUPPORT_SERVICE) {
             AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, resource.getClusterId());
             execResult = rangerStrategy.operatePolicy(resource);
             if (!execResult.getExecResult()) {
                 logger.error("operateRangerPolicy for service {} failed", serviceName);
+                logger.error(execResult.getExecErrOut());
+            }
+        }
+
+        rangerClient.stop();
+        return execResult;
+    }
+
+    private ExecResult deleteRangerPolicy(String tenantName, Integer clusterId) throws Exception {
+        RangerClient rangerClient = getRangerClient(clusterId);
+        ExecResult execResult = new ExecResult();
+        execResult.setExecResult(true);
+
+        try {
+            rangerClient.getRoles().deleteRoleByName(tenantName);
+            logger.info("delete role {} success", tenantName);
+        } catch (Exception e) {
+            logger.error("delete role {} failed", tenantName);
+        }
+
+        for (String serviceName : SUPPORT_SERVICE) {
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, clusterId);
+            execResult = rangerStrategy.deletePolicy(tenantName);
+            if (!execResult.getExecResult()) {
+                logger.error("delete ranger policy {} for service {} failed", tenantName, serviceName);
                 logger.error(execResult.getExecErrOut());
             }
         }
