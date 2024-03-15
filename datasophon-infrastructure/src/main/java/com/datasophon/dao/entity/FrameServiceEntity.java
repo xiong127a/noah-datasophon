@@ -98,4 +98,7 @@ public class FrameServiceEntity implements Serializable {
 
     private Integer sortNum;
 
+    @TableField(exist = false)
+    private Boolean isRequired;
+
 }

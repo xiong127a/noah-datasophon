@@ -127,20 +127,6 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                 throw new ServiceException(500,
                         "create unix user " + username + " failed at " + clusterHost.getHostname());
             }
-
-            String keytabName = username + ".user.keytab";
-            String KEYTAB_PATH = "/etc/security/keytab";
-            String keytabFilePath =
-                    KEYTAB_PATH + Constants.SLASH + clusterHost.getHostname() + Constants.SLASH + keytabName;
-
-            clusterKerberosService.generateKeytabFile(
-                    clusterHost.getClusterId(),
-                    keytabFilePath,
-                    username,
-                    keytabName,
-                    clusterHost.getHostname()
-            );
-            logger.info("add kerberos principal {} success at {}", username, clusterHost.getHostname());
         }
 
         // create ldap user

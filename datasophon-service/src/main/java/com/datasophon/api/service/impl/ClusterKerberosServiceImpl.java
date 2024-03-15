@@ -34,10 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.Map;
 
 @Service("clusterKerberosService")
@@ -52,6 +49,35 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
+
+    @Override
+    public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
+        String keytabName = username + "/user";
+        String keytabFileName = username + ".user.keytab";
+        String keytabFilePath =
+                KEYTAB_PATH + Constants.SLASH + keytabFileName;
+        File file = new File(keytabFilePath);
+        if (!file.exists()) {
+            generateKeytabFile(clusterId, keytabFilePath, keytabName);
+        }
+        FileInputStream inputStream = new FileInputStream(file);
+        response.reset();
+        response.setContentType("application/octet-stream");
+        response.addHeader("Content-Length", "" + file.length());
+        response.setHeader("Content-Disposition", "attachment;filename=" + keytabFileName);
+        OutputStream out = response.getOutputStream();
+        try {
+            int length = 0;
+            byte[] buffer = new byte[1024];
+            while ((length = inputStream.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+        } finally {
+            inputStream.close();
+            out.flush();
+            out.close();
+        }
+    }
 
     @Override
     public void downloadKeytab(
@@ -92,12 +118,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         file.transferTo(new File(keytabFilePath));
     }
 
-    @Override
-    public void generateKeytabFile(Integer clusterId, String keytabFilePath, String principal, String keytabName, String hostname) {
-
-    }
-
-    public void generateKeytabFile(
+    private void generateKeytabFile(
             Integer clusterId,
             String keytabFilePath,
             String principal) {
