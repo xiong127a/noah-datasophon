@@ -27,11 +27,12 @@ echo "PACKAGES_PATH: ${PACKAGES_PATH}"
 
 echo "Depending on the performance of your machine, it may take between 15-20 minutes to initialize the private YUM source. Please do not log out."
 
-# 如果文件不存在
+# 检查是否存在/data/private-yum-library目录，如果不存在则输出提示信息。
 if [ ! -d "/data/private-yum-library" ]; then
   echo "没有发现private-yum-library 离线yum源，请确认是否正确配置离线yum源......."
 fi
 
+# 创建/etc/yum.repos.d/dataSophon.repo文件，并写入特定的yum源配置信息。
 cat >/etc/yum.repos.d/dataSophon.repo <<EOF
 [dataSophon-base]
 name=dataSophon-base
@@ -59,6 +60,7 @@ yum makecache
 echo "init-private-yum-library-centos7.sh finished."
 echo "Done."
 
+# 检查并修改httpd配置文件中的监听端口为8000，并重启httpd服务。
 cat /etc/httpd/conf/httpd.conf | grep 'Listen 8000'
 if [ $? -eq 0 ]; then
   echo "httpd port modified successfully" >>${initLogDir}/installSingle_$(date +%Y%m%d).log
@@ -76,9 +78,11 @@ else
   echo "init httpd finished."
 fi
 
+# 设置软链接/var/www/html/centos指向私有yum源的目录。
 unlink /var/www/html/centos
 ln -s /data/private-yum-library/repo/centos/ /var/www/html/
 
+# 在/etc/hosts文件中删除以"#modify yum mapping hosts start"开头、以"#modify yum mapping hosts end"结尾的行，并定义一个函数modifyYumHosts用于修改hosts文件。
 sed -i '/#modify yum mapping hosts start/,/#modify yum mapping hosts end/d' /etc/hosts
 modifyYumHosts() {
   echo "#modify yum mapping hosts start" >>/etc/hosts
@@ -92,6 +96,7 @@ modifyYumHosts
 
 rm /etc/yum.repos.d/dataSophon.repo
 
+# 删除旧的/etc/yum.repos.d/dataSophon.repo文件，并重新创建并写入新的yum源配置信息。
 cat >/etc/yum.repos.d/dataSophon.repo <<EOF
 [dataSophon-base]
 name=dataSophon-base
