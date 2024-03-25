@@ -122,6 +122,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
         removeByIds(list);
         noticeGroupUserService.removeByGroupIds(list);
+
+        genAlertManagerConfig();
     }
 
 
