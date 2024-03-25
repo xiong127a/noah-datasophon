@@ -48,7 +48,13 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
 
     @Override
     public Result addUserToTenant(ClusterUserTenant clusterUserTenant) {
-        Result result = operateTenantUser(clusterUserTenant);
+        List<ClusterUserTenant> list = this.lambdaQuery()
+                .eq(ClusterUserTenant::getClusterId, clusterUserTenant.getClusterId())
+                .eq(ClusterUserTenant::getUserId, clusterUserTenant.getUserId())
+                .eq(ClusterUserTenant::getTenantId, clusterUserTenant.getTenantId())
+                .list();
+        if (CollUtil.isNotEmpty(list)) return Result.error("当前用户授权已存在");
+        Result result = operateTenantUser(clusterUserTenant, "add");
         if (result != null) return result;
         this.saveOrUpdate(clusterUserTenant);
         return Result.success();
@@ -68,21 +74,22 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
                 .list()
                 .get(0)
                 .getId();
-        ClusterUserTenant clusterUserTenant = this.lambdaQuery()
+        List<ClusterUserTenant> list = this.lambdaQuery()
                 .eq(ClusterUserTenant::getClusterId, clusterId)
                 .eq(ClusterUserTenant::getUserId, userId)
                 .eq(ClusterUserTenant::getTenantId, tenantId)
-                .list()
-                .get(0);
-        operateTenantUser(clusterUserTenant);
+                .list();
+        if (CollUtil.isEmpty(list)) return Result.error("当前用户授权不存在");
+        ClusterUserTenant clusterUserTenant = list.get(0);
         this.removeById(clusterUserTenant.getId());
+        operateTenantUser(clusterUserTenant, "delete");
         return Result.success();
     }
 
-    private Result operateTenantUser(ClusterUserTenant clusterUserTenant) {
+    private Result operateTenantUser(ClusterUserTenant clusterUserTenant, String type) {
         List<ClusterTenant> tenants = clusterTenantService.list(
                 new LambdaQueryWrapper<ClusterTenant>()
-                        .eq(ClusterTenant::getClusterId, clusterUserTenant.getTenantId())
+                        .eq(ClusterTenant::getClusterId, clusterUserTenant.getClusterId())
                         .eq(ClusterTenant::getId, clusterUserTenant.getTenantId())
         );
         if (CollUtil.isEmpty(tenants)) return Result.error("租户不存在");
@@ -110,7 +117,9 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
                     .collect(Collectors.toList());
         }
         String userName = users.get(0).getUsername();
-        addUserNames.add(userName);
+        if ("add".equals(type)) {
+            addUserNames.add(userName);
+        }
         String tenantName = tenants.get(0).getTenantName();
 
         ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");

@@ -37,6 +37,7 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
                 Arrays.stream(Status.values()).collect(Collectors.toMap(Status::getCode, Status::getMsg, (a, b) -> a, HashMap::new));
         for (OperationLog record : records) {
             record.setReturnMsg(codeMap.get(record.getReturnCode()));
+            record.setParam(null);
         }
         page.setRecords(records);
 

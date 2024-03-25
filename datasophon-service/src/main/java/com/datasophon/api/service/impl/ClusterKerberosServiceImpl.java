@@ -61,7 +61,6 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             generateKeytabFile(clusterId, keytabFilePath, keytabName);
         }
         FileInputStream inputStream = new FileInputStream(file);
-        response.reset();
         response.setContentType("application/octet-stream");
         response.addHeader("Content-Length", "" + file.length());
         response.setHeader("Content-Disposition", "attachment;filename=" + keytabFileName);

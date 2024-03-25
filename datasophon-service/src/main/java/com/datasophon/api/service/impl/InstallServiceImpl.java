@@ -205,7 +205,7 @@ public class InstallServiceImpl implements InstallService {
         hostInfo.setHostname(HostUtils.getHostName(host));
         hostInfo.setIp(HostUtils.getIp(host));
 
-        // 判断是否受管
+        // 判断是否受管zhe'cai'shi
         ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
         if (ObjectUtil.isNotNull(hostEntity)) {
             hostInfo.setManaged(true);
