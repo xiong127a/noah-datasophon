@@ -16,14 +16,19 @@ public class ClusterUserTenantController {
     @Autowired
     private ClusterUserTenantService clusterUserTenantService;
 
-    @RequestMapping(value = "/add", method = RequestMethod.POST)
-    public Result add(@RequestBody ClusterUserTenant clusterUserTenant) {
-        return clusterUserTenantService.addUserToTenant(clusterUserTenant);
+    @RequestMapping(value = "/add", method = RequestMethod.GET)
+    public Result add(Integer clusterId, Integer userId, String tenantIds) {
+        return clusterUserTenantService.addUserToTenant(clusterId, userId, tenantIds);
     }
 
     @RequestMapping(value = "/delete", method = RequestMethod.DELETE)
-    public Result delete(Integer clusterId, String userName, String tenantName) {
-        return clusterUserTenantService.deleteUser(clusterId, userName, tenantName);
+    public Result delete(Integer clusterId, Integer userId, String tenantIds) {
+        return clusterUserTenantService.deleteUser(clusterId, userId, tenantIds);
+    }
+
+    @RequestMapping(value = "/getListByUserId")
+    public Result getListByUserId(Integer clusterId, Integer userId) {
+        return clusterUserTenantService.getListByUserId(clusterId, userId);
     }
 
 }

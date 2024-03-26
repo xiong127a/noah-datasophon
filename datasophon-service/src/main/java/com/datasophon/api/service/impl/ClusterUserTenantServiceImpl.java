@@ -4,7 +4,12 @@ import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.service.additional.query.impl.QueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
@@ -31,6 +36,7 @@ import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -47,100 +53,90 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
     private ClusterTenantService clusterTenantService;
 
     @Override
-    public Result addUserToTenant(ClusterUserTenant clusterUserTenant) {
+    public Result addUserToTenant(Integer clusterId, Integer userId, String tenantIds) {
+        List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).collect(Collectors.toList());
         List<ClusterUserTenant> list = this.lambdaQuery()
-                .eq(ClusterUserTenant::getClusterId, clusterUserTenant.getClusterId())
-                .eq(ClusterUserTenant::getUserId, clusterUserTenant.getUserId())
-                .eq(ClusterUserTenant::getTenantId, clusterUserTenant.getTenantId())
+                .eq(ClusterUserTenant::getClusterId, clusterId)
+                .eq(ClusterUserTenant::getUserId, userId)
+                .in(ClusterUserTenant::getTenantId, tenantIdList)
                 .list();
         if (CollUtil.isNotEmpty(list)) return Result.error("当前用户授权已存在");
-        Result result = operateTenantUser(clusterUserTenant, "add");
-        if (result != null) return result;
-        this.saveOrUpdate(clusterUserTenant);
+        List<ClusterUserTenant> addUserTenant = tenantIdList.stream()
+                .map(t -> ClusterUserTenant.builder().tenantId(t).clusterId(clusterId).userId(userId).build())
+                .collect(Collectors.toList());
+        this.saveOrUpdateBatch(addUserTenant);
+        operateTenantUser(clusterId, userId, tenantIdList);
         return Result.success();
     }
 
     @Override
-    public Result deleteUser(Integer clusterId, String userName, String tenantName) {
-        Integer userId = clusterUserService.lambdaQuery()
-                .eq(ClusterUser::getClusterId, clusterId)
-                .eq(ClusterUser::getUsername, userName)
-                .list()
-                .get(0)
-                .getId();
-        Integer tenantId = clusterTenantService.lambdaQuery()
-                .eq(ClusterTenant::getClusterId, clusterId)
-                .eq(ClusterTenant::getTenantName, tenantName)
-                .list()
-                .get(0)
-                .getId();
-        List<ClusterUserTenant> list = this.lambdaQuery()
-                .eq(ClusterUserTenant::getClusterId, clusterId)
-                .eq(ClusterUserTenant::getUserId, userId)
-                .eq(ClusterUserTenant::getTenantId, tenantId)
-                .list();
-        if (CollUtil.isEmpty(list)) return Result.error("当前用户授权不存在");
-        ClusterUserTenant clusterUserTenant = list.get(0);
-        this.removeById(clusterUserTenant.getId());
-        operateTenantUser(clusterUserTenant, "delete");
+    public Result deleteUser(Integer clusterId, Integer userId, String tenantIds) {
+        List<Integer> tenantIdList = StrUtil.split(tenantIds, ",").stream().map(Convert::toInt).collect(Collectors.toList());
+        QueryWrapper<ClusterUserTenant> removeQuery = new QueryWrapper<>();
+        removeQuery.eq("cluster_id", clusterId);
+        removeQuery.eq("user_id", userId);
+        removeQuery.in("tenant_id", tenantIdList);
+        this.remove(removeQuery);
+        operateTenantUser(clusterId, userId, tenantIdList);
         return Result.success();
     }
 
-    private Result operateTenantUser(ClusterUserTenant clusterUserTenant, String type) {
-        List<ClusterTenant> tenants = clusterTenantService.list(
-                new LambdaQueryWrapper<ClusterTenant>()
-                        .eq(ClusterTenant::getClusterId, clusterUserTenant.getClusterId())
-                        .eq(ClusterTenant::getId, clusterUserTenant.getTenantId())
-        );
-        if (CollUtil.isEmpty(tenants)) return Result.error("租户不存在");
-        List<ClusterUser> users = clusterUserService.list(
-                new LambdaQueryWrapper<ClusterUser>()
-                        .eq(ClusterUser::getClusterId, clusterUserTenant.getClusterId())
-                        .eq(ClusterUser::getId, clusterUserTenant.getUserId())
-        );
-        if (CollUtil.isEmpty(users)) return Result.error("用户不存在");
-        List<String> addUserNames = new ArrayList<>();
-        List<Integer> allUserIds = this
-                .list(
-                        new LambdaQueryWrapper<ClusterUserTenant>()
-                                .eq(ClusterUserTenant::getClusterId, clusterUserTenant.getClusterId())
-                                .eq(ClusterUserTenant::getTenantId, clusterUserTenant.getTenantId())
-                )
+    @Override
+    public Result getListByUserId(Integer clusterId, Integer userId) {
+        Map<Integer, String> tenantMap = clusterTenantService.list()
                 .stream()
-                .map(ClusterUserTenant::getUserId)
+                .collect(Collectors.toMap(ClusterTenant::getId, ClusterTenant::getTenantName));
+        List<ClusterUserTenant> userTenantList = this.lambdaQuery()
+                .eq(ClusterUserTenant::getClusterId, clusterId)
+                .eq(ClusterUserTenant::getUserId, userId)
+                .list();
+        userTenantList.forEach(t -> t.setTenantName(tenantMap.get(t.getTenantId())));
+        return Result.success(userTenantList);
+    }
+
+    private Result operateTenantUser(Integer clusterId, Integer userId, List<Integer> tenantIdList) {
+        List<ClusterUserTenant> allUserTenants = this.list();
+        List<ClusterUser> allUsers = clusterUserService.list();
+        List<ClusterUser> users = allUsers.stream()
+                .filter(t -> t.getClusterId().equals(clusterId) && t.getId().equals(userId))
                 .collect(Collectors.toList());
-        if (CollUtil.isNotEmpty(allUserIds)) {
-            addUserNames = clusterUserService
-                    .listByIds(allUserIds)
-                    .stream()
+        if (CollUtil.isEmpty(users)) return Result.error("用户不存在");
+        List<ClusterTenant> tenantList = clusterTenantService.lambdaQuery()
+                .eq(ClusterTenant::getClusterId, clusterId)
+                .in(ClusterTenant::getId, tenantIdList)
+                .list();
+        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
+
+        for (ClusterTenant clusterTenant : tenantList) {
+            List<Integer> exitsUserIds = allUserTenants.stream()
+                    .filter(t -> t.getClusterId().equals(clusterId) && t.getTenantId().equals(clusterTenant.getId()))
+                    .map(ClusterUserTenant::getUserId)
+                    .collect(Collectors.toList());
+            List<String> exitsUserNames = allUsers.stream()
+                    .filter(t -> exitsUserIds.contains(t.getId()))
                     .map(ClusterUser::getUsername)
                     .collect(Collectors.toList());
-        }
-        String userName = users.get(0).getUsername();
-        if ("add".equals(type)) {
-            addUserNames.add(userName);
-        }
-        String tenantName = tenants.get(0).getTenantName();
 
-        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
-        TenantRangerCommand tenantRangerCommand = new TenantRangerCommand();
-        tenantRangerCommand.setClusterId(clusterUserTenant.getClusterId());
-        tenantRangerCommand.setRoleName(tenantName);
-        tenantRangerCommand.setOperateType(RangerOpType.OP_USER_TO_ROLE);
-        tenantRangerCommand.setUserList(addUserNames);
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(tenantRangerActor, tenantRangerCommand, timeout);
-        ExecResult execResult = null;
-        try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                logger.info("operate user to ranger role success");
-            } else {
-                logger.error(execResult.getExecOut());
+            TenantRangerCommand tenantRangerCommand = new TenantRangerCommand();
+            tenantRangerCommand.setClusterId(clusterId);
+            tenantRangerCommand.setRoleName(clusterTenant.getTenantName());
+            tenantRangerCommand.setOperateType(RangerOpType.OP_USER_TO_ROLE);
+            tenantRangerCommand.setUserList(exitsUserNames);
+            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+            Future<Object> execFuture = Patterns.ask(tenantRangerActor, tenantRangerCommand, timeout);
+            ExecResult execResult = null;
+            try {
+                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+                if (execResult.getExecResult()) {
+                    logger.info("operate user to ranger role success");
+                } else {
+                    logger.error(execResult.getExecOut());
+                    throw new ServiceException(500, "operate user to ranger role failed");
+                }
+            } catch (Exception e) {
                 throw new ServiceException(500, "operate user to ranger role failed");
             }
-        } catch (Exception e) {
-            throw new ServiceException(500, "operate user to ranger role failed");
+
         }
         return null;
     }
