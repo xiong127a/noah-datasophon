@@ -202,6 +202,7 @@ export default {
       let openKeys = this.selectedKeys.filter((item) => item !== "");
       openKeys = openKeys.slice(0, openKeys.length - 1);
       this.sOpenKeys = openKeys
+      // 点击这几个模块 会展开服务管理菜单
       if(this.selectedKeys.includes('/overview') ||this.selectedKeys.includes('/host-manage') ||this.selectedKeys.includes('/alarm-manage') ){
         this.sOpenKeys.push('/service-manage')
       }
