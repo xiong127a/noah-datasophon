@@ -15,22 +15,3 @@ CREATE TABLE `t_ddh_cluster_tenant` (
   `hbase_regionServer_num` varchar(255) DEFAULT NULL COMMENT 'regionServer数量',
   PRIMARY KEY (`id`)
 ) DEFAULT CHARSET=utf8mb4 ROW_FORMAT = DYNAMIC COMMENT='租户表';
-
-CREATE TABLE `t_ddh_operation_log` (
-  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `url` varchar(128) DEFAULT NULL COMMENT '请求地址',
-  `ip` varchar(128) DEFAULT NULL COMMENT '客户端ip',
-  `operation_module` varchar(128) DEFAULT NULL COMMENT '操作模块',
-  `operation_type` varchar(128) DEFAULT NULL COMMENT '操作类型',
-  `cluster_id` int(10) DEFAULT NULL COMMENT '返回状态码',
-  `host_ids` varchar(30) DEFAULT NULL COMMENT '主机',
-  `service_name` varchar(100) DEFAULT NULL,
-  `service_role_instances_ids` varchar(100) DEFAULT NULL,
-  `return_msg` varchar(128) DEFAULT NULL COMMENT '返回说明',
-  `operate_user` varchar(128) DEFAULT NULL COMMENT '操作人',
-  `start_time` datetime DEFAULT NULL COMMENT '操作开始时间',
-  `end_time` datetime DEFAULT NULL COMMENT '操作结束时间',
-  `param` text COMMENT '请求数据',
-  `return_code` int(10) DEFAULT NULL COMMENT '返回状态码',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=432 DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='操作日志表';

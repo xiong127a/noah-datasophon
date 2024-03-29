@@ -43,7 +43,7 @@ public class HueHandlerStrategy extends AbstractHandlerStrategy implements Servi
             commands.add("hue");
             commands.add("./hue");
             commands.add("migrate");
-            execResult = ShellUtils.execWithStatus(workPath + "/build/env/bin/", commands, 60L);
+            execResult = ShellUtils.execWithStatus(workPath + "/build/env/bin/", commands, 600L);
             if (!execResult.getExecResult()) {
                 logger.error("init hue database hue migrate failed");
                 logger.error(execResult.getExecErrOut());
