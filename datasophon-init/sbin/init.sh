@@ -193,9 +193,9 @@ initALL() {
   #echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
 
   if [ "${initOS}" == "centos7" ]; then
-    echo "installMySQL57 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
-    bash ${INIT_BIN_PATH}/init-mysql-57-centos7.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
-    echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
+    echo "installMySQL57 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL57_$(date +%Y%m%d).log
+    bash ${INIT_BIN_PATH}/init-mysql-57-centos7.sh $mysqlPassword >>${initLogDir}/installMySQL57_$(date +%Y%m%d).log
+    echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL57_$(date +%Y%m%d).log
   else
     echo "installMySQL8 start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
     bash ${INIT_BIN_PATH}/init-mysql-8.sh $mysqlPassword >>${initLogDir}/installMySQL8_$(date +%Y%m%d).log
