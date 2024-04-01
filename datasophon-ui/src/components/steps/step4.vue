@@ -19,18 +19,27 @@
  */
 
 
- * @describe: step4-选择服务 
+ * @describe: step4-选择服务
  * @Date: 2022-06-13 16:35:02
  * @LastEditTime: 2022-06-28 15:34:21
- * @FilePath: \ddh-ui\src\components\steps\step4.vue
+ * @FilePath: \ddh-ui\src\components\steps\step4.vue 
 -->
 <template>
   <div class="steps4 steps">
-    <div class="steps-title flex-bewteen-container pdr30">
+    <div class="steps-title flex-bewteen-container pdr30 mgb12">
       <span>选择服务</span>
     </div>
+    <!-- 只有从集群进入(stepsType:cluster) step4才会有选择服务下拉框 同时table数据也变 -->
+    <a-row type="flex" align="middle" v-if="stepsType == 'cluster'">
+      <a-col :span="22">
+        <a-select allowClear showSearch placeholder="请选择" class="w252 mgr12" @change="(value) => getVal(value, 'type')">
+          <a-select-option v-for="(item, index) in serveList" :key="index" :value="item">{{ item }}</a-select-option>
+        </a-select></a-col>
+    </a-row>
     <div class="table-info mgt16 steps-body pdr30">
-      <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange, getCheckboxProps:getCheckboxProps}" rowKey="id"></a-table>
+      <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource"
+        :rowSelection="{ selectedRowKeys: selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
+        rowKey="id"></a-table>
     </div>
   </div>
 </template>
@@ -39,11 +48,15 @@ export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
     steps4Data: Object,
+    stepsType: String,
   },
-  data() {
+  data () {
     return {
+      params: {},
       selectedRowKeys: [],
+      selectedRowKeysArr: [],
       selectedRowNames: [],
+      selectedRowNamesArr:[],
       pagination: {
         total: 0,
         pageSize: 10,
@@ -53,6 +66,7 @@ export default {
         showTotal: (total) => `共 ${total} 条`,
       },
       dataSource: [],
+      serveList: ['custom', 'datalake'],
       loading: false,
       columns: [
         {
@@ -66,8 +80,8 @@ export default {
                   this.pagination.current === 1
                     ? index + 1
                     : index +
-                        1 +
-                        this.pagination.pageSize * (this.pagination.current - 1)
+                    1 +
+                    this.pagination.pageSize * (this.pagination.current - 1)
                 )}
               </span>
             );
@@ -88,12 +102,20 @@ export default {
     };
   },
   methods: {
-    tableChange(pagination) {
+    getVal (val, filed) {
+      this.params[`${filed}`] = val
+      this.getListWithRequired()
+    },
+    tableChange (pagination) {
       this.pagination.current = pagination.current;
       this.pagination.pageSize = pagination.pageSize
-      this.getServiceList();
+      if (this.stepsType == 'cluster') {
+        this.getListWithRequired()
+      } else {
+        this.getServiceList();
+      }
     },
-    getServiceList() {
+    getServiceList () {
       this.loading = true;
       const params = {
         clusterId: this.clusterId,
@@ -127,12 +149,12 @@ export default {
     getCheckboxProps (record) {
       return {
         props: {
-          disabled: record.installed
+          disabled: record.installed || record.isRequired
         }
       }
     },
     //表格选择
-    onSelectChange(selectedRowKeys, row) {
+    onSelectChange (selectedRowKeys, row) {
       this.selectedRowKeys = selectedRowKeys;
       let arr = [];
       row.map((item) => {
@@ -143,11 +165,45 @@ export default {
       });
       this.selectedRowNames = arr;
     },
+    getListWithRequired () {
+      const self = this;
+      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
+        this.dataSource = res.data;
+        let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
+        if (arr.length > 0) {
+          arr.map(childItem => {
+            this.selectedRowKeysArr.push(childItem.id)
+            this.selectedRowNamesArr.push({
+              serviceId: childItem.id,
+              serviceName: childItem.serviceName
+            })
+          })
+        }
+        self.steps4Data.serviceIds.map(item => {
+          this.selectedRowKeysArr.push(item)
+        })
+        
+        self.steps4Data.serviceNames.map(item => {
+          this.selectedRowNamesArr.push({
+            serviceId: item.id,
+            serviceName: item.serviceName
+          })
+        })
+      });
+    },
   },
-  mounted() {
-    this.getServiceList();
+  mounted () {
+    if (this.stepsType == 'cluster') {
+      this.getListWithRequired()
+    } else {
+      this.getServiceList();
+    }
   },
 };
 </script>
 <style lang="less" scoped>
+.edit {
+  display: flex;
+  justify-content: space-between;
+}
 </style>

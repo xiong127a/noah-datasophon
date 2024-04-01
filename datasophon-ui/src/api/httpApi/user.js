@@ -25,12 +25,13 @@ console.log(path, '请求的地址')
 export default {
   login: path + '/login',
   loginOut: path + '/signOut',
-  getUserList: path + '/api/user/list',// 用户列表
-  addUser: path + '/api/user/save',// 添加用户
-  deleteUser: path + '/api/user/delete',// 删除用户
-  updateUser: path + '/api/user/update',// 更新用户
+  getUserList: path + '/api/user/list', // 用户列表
+  addUser: path + '/api/user/save', // 添加用户
+  deleteUser: path + '/api/user/delete', // 删除用户
+  updateUser: path + '/api/user/update', // 更新用户
   queryAllUser: path + '/api/user/all',
-  getTenant:path + '/cluster/user/list',
-  getTenantGroup:path + '/cluster/group/list',
-  downloadUserKeytab:path + '/cluster/user/keytab',
+  getTenant: path + '/cluster/user/list',
+  getTenantGroup: path + '/cluster/group/list',
+  downloadUserKeytab1: path + '/cluster/user/keytab',
+  downloadUserKeytab: path + '/cluster/kerberos/downloadUserKeytab',
 }
