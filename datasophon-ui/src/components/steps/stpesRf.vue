@@ -29,7 +29,7 @@
       <Steps1 ref="steps1Ref" v-if="stepsNumber === 1" :steps1="steps1Data" />
       <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" />
       <Steps3 ref="steps3Ref" v-if="stepsNumber === 3" />
-      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" />
+      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"/>
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
       <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data" />
@@ -151,8 +151,8 @@ export default {
       }
       if (this.stepsNumber === 4) {
         //  这个地方过滤掉已经回显的服务 只传递给下一步新选的服务
-        this.steps4Data.serviceIds = _.cloneDeep(this.$refs.steps4Ref.selectedRowKeys);
-        this.steps4Data.serviceNames = _.cloneDeep(this.$refs.steps4Ref.selectedRowNames);
+        this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
+        this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
         arr.map((item, index) => {
           let curIndex = this.steps4Data.serviceIds.indexOf(item.id)

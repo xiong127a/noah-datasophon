@@ -46,7 +46,21 @@ const axiosGet = function(url, params = {}) {
     })
   })
 }
-
+const axiosDelete = function (url, params = {}) {
+  return new Promise((resolve, reject) => {
+    axios({
+      method: 'delete',
+      url: url,
+      params: params,
+    })
+      .then((res) => {
+        resolve(res.data)
+      })
+      .catch((error) => {
+        reject(error)
+      })
+  })
+}
 const axiosPost = function(url, params = {}) {
   return new Promise((resolve, reject) => {
     axios({
@@ -94,3 +108,4 @@ Vue.prototype.$axiosGet = axiosGet// get请求
 Vue.prototype.$axiosPost = axiosPost// post请求
 Vue.prototype.$axiosPostUpload = axiosPostUpload// 文件上传-post请求
 Vue.prototype.$axiosJsonPost = axiosJsonPost// jsonpost请求
+Vue.prototype.$axiosDelete = axiosDelete// delete请求
