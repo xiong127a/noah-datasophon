@@ -27,7 +27,7 @@
   <a-dropdown>
     <div class="header-avatar" style="cursor: pointer">
       <!-- <a-avatar class="avatar" size="small" shape="circle" src="../../assets/img/logo3.svg"/> -->
-      <img width="32" class="mgr6" src="@/assets/img/avatar.svg" />
+      <!-- <img width="32" class="mgr6" src="@/assets/img/avatar.svg" /> -->
       <span class="name">{{ user.username }}</span>
     </div>
     <a-menu :class="['avatar-menu']" slot="overlay">
