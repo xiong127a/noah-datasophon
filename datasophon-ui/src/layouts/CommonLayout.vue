@@ -49,7 +49,8 @@ export default {
   background-color: @layout-body-background;
   background-image: url('../assets/img/bg-new.png');
   background-repeat: no-repeat;
-  //background-size: 100% 100%;
+  background-size:100% 108%;
+  //background-size: cover;
   .content{
     padding: 32px 0;
     flex: 1;
