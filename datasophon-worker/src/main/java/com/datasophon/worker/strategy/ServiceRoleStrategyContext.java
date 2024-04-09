@@ -50,6 +50,7 @@ public class ServiceRoleStrategyContext {
         map.put("SRBE", new BEHandlerStrategy("STARROCKS", "SRBE"));
         map.put("DorisBE", new BEHandlerStrategy("DORIS", "DorisBE"));
         map.put("HistoryServer", new HistoryServerHandlerStrategy("YARN", "HistoryServer"));
+        map.put("TimelineServer", new TimelineServerHandlerStrategy("YARN", "TimelineServer"));
 
         // TEZ Server service
         map.put("TezServer", new TezServerHandlerStrategy("TEZ", "TezServer"));
