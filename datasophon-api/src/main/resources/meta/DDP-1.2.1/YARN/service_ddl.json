@@ -257,6 +257,8 @@
           "yarn.nodemanager.container-executor.class",
           "yarn.nodemanager.linux-container-executor.group",
           "yarn.nodemanager.linux-container-executor.path",
+          "yarn.timeline-service.principal",
+          "yarn.timeline-service.keytab",
           "yarn.acl.enable",
           "custom.yarn.site.xml"
         ]
@@ -979,6 +981,32 @@
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": "${HADOOP_HOME}/bin/container-executor"
+    },
+    {
+      "name": "yarn.timeline-service.principal",
+      "label": "timelineserver服务的Kerberos主体",
+      "description": "",
+      "required": false,
+      "configType": "kb",
+      "configWithKerberos": true,
+      "type": "input",
+      "value": "tls/_HOST@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "tls/_HOST@HADOOP.COM"
+    },
+    {
+      "name": "yarn.timeline-service.keytab",
+      "label": "timelineserver服务的Kerberos密钥文件路径",
+      "description": "",
+      "required": false,
+      "configType": "kb",
+      "configWithKerberos": true,
+      "type": "input",
+      "value": "/etc/security/keytab/tls.service.keytab",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "/etc/security/keytab/tls.service.keytab"
     },
     {
       "name": "yarn.acl.enable",
