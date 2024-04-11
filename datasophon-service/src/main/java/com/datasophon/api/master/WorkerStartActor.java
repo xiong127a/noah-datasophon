@@ -109,7 +109,7 @@ public class WorkerStartActor extends UntypedActor {
             prometheusActor.tell(prometheusConfigCommand, getSelf());
 
             // tell to worker what need to start
-            autoAddServiceOperatorNeeded(msg.getHostname(), cluster.getId(), CommandType.START_SERVICE,false);
+//            autoAddServiceOperatorNeeded(msg.getHostname(), cluster.getId(), CommandType.START_SERVICE,false);
         } else if(message instanceof WorkerServiceMessage) {
             WorkerServiceMessage msg = (WorkerServiceMessage) message;
             // tell to worker what need to start/stop
