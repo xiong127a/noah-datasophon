@@ -156,7 +156,9 @@
           "hive.merge.smallfiles.avgsize",
           "hive.exec.submit.local.task.via.child",
           "iceberg.engine.hive.enabled",
-          "hive.security.authorization.enabled"
+          "hive.security.authorization.enabled",
+          "hive.metastore.client.socket.timeout",
+          "hive.stats.autogather"
         ]
       },
       {
@@ -506,10 +508,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "hive/${host}@${realm}",
+      "value": "hive/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hive/${host}@${realm}"
+      "defaultValue": "hive/_HOST@${realm}"
     },
     {
       "name": "hive.metastore.kerberos.keytab.file",
@@ -674,6 +676,30 @@
       "name": "hive.security.authorization.enabled",
       "label": "开启hive权限",
       "description": "开启hive权限",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "hive.metastore.client.socket.timeout",
+      "label": "连接metastore超时时间",
+      "description": "连接metastore超时时间",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "30000",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "30000"
+    },
+    {
+      "name": "hive.stats.autogather",
+      "label": "hive.stats.autogather",
+      "description": "hive.stats.autogather",
       "required": true,
       "configType": "map",
       "type": "switch",
