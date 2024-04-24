@@ -2,11 +2,11 @@
   "name": "HBASE",
   "label": "HBase",
   "description": "分布式列式海量存储数据库",
-  "version": "2.2.7",
+  "version": "2.3.7",
   "sortNum": 8,
   "dependencies":["HDFS"],
-  "packageName": "hbase-2.2.7.tar.gz",
-  "decompressPackageName": "hbase-2.2.7",
+  "packageName": "hbase-2.3.7.tar.gz",
+  "decompressPackageName": "hbase-2.3.7",
   "runAs":"root",
   "roles": [
     {
@@ -121,7 +121,6 @@
           "hbase.master.keytab.file",
           "hbase.regionserver.kerberos.principal",
           "hbase.regionserver.keytab.file",
-          "hbase.quota.enabled",
           "custom.hbase.site.xml"
         ]
       },
@@ -178,7 +177,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${fs.defaultFS}/hbase"
+      "defaultValue": "/hbase"
     },
     {
       "name": "hbase.zookeeper.quorum",

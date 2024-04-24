@@ -79,8 +79,8 @@ ranger_kms_https_keystore_password=
 KMS_MASTER_KEY_PASSWD=Str0ngPassw0rd
 
 #------------------------- Ranger KMS Kerberos Configuration ---------------------------
-kms_principal=
-kms_keytab=
+kms_principal=<#if spnegoPrincipal??>${spnegoPrincipal}</#if>
+kms_keytab=<#if spnegoKeytab??>${spnegoKeytab}</#if>
 #hadoop_conf=/opt/datasophon/hadoop-3.3.3/etc/hadoop
 hadoop_conf=${rangerKmsHadoopConfPath}
 

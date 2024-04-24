@@ -1,8 +1,25 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 POLICY_MGR_URL=<#if rangerAdminUrl??>${rangerAdminUrl}</#if>
 REPOSITORY_NAME=hadoopdev
 COMPONENT_INSTALL_DIR_NAME=<#if hadoopHome??>${hadoopHome}</#if>
 
+# AUDIT configuration with V3 properties
+# Enable audit logs to Solr
+#Example
 #XAAUDIT.SOLR.ENABLE=true
 #XAAUDIT.SOLR.URL=http://localhost:6083/solr/ranger_audits
 #XAAUDIT.SOLR.ZOOKEEPER=
@@ -15,7 +32,8 @@ XAAUDIT.SOLR.PASSWORD=NONE
 XAAUDIT.SOLR.ZOOKEEPER=NONE
 XAAUDIT.SOLR.FILE_SPOOL_DIR=/var/log/hadoop/hdfs/audit/solr/spool
 
-
+# Enable audit logs to ElasticSearch
+#Example
 #XAAUDIT.ELASTICSEARCH.ENABLE=true
 #XAAUDIT.ELASTICSEARCH.URL=localhost
 #XAAUDIT.ELASTICSEARCH.INDEX=audit
@@ -32,7 +50,6 @@ XAAUDIT.HDFS.ENABLE=false
 XAAUDIT.HDFS.HDFS_DIR=hdfs://__REPLACE__NAME_NODE_HOST:8020/ranger/audit
 XAAUDIT.HDFS.FILE_SPOOL_DIR=/var/log/hadoop/hdfs/audit/hdfs/spool
 
-
 XAAUDIT.HDFS.AZURE_ACCOUNTNAME=__REPLACE_AZURE_ACCOUNT_NAME
 XAAUDIT.HDFS.AZURE_ACCOUNTKEY=__REPLACE_AZURE_ACCOUNT_KEY
 XAAUDIT.HDFS.AZURE_SHELL_KEY_PROVIDER=__REPLACE_AZURE_SHELL_KEY_PROVIDER
@@ -45,7 +62,37 @@ XAAUDIT.LOG4J.ASYNC.MAX.FLUSH.INTERVAL.MS=30000
 XAAUDIT.LOG4J.DESTINATION.LOG4J=true
 XAAUDIT.LOG4J.DESTINATION.LOG4J.LOGGER=xaaudit
 
+# Enable audit logs to Amazon CloudWatch Logs
+#Example
+#XAAUDIT.AMAZON_CLOUDWATCH.ENABLE=true
+#XAAUDIT.AMAZON_CLOUDWATCH.LOG_GROUP=ranger_audits
+#XAAUDIT.AMAZON_CLOUDWATCH.LOG_STREAM={instance_id}
+#XAAUDIT.AMAZON_CLOUDWATCH.FILE_SPOOL_DIR=/var/log/hive/audit/amazon_cloudwatch/spool
 
+XAAUDIT.AMAZON_CLOUDWATCH.ENABLE=false
+XAAUDIT.AMAZON_CLOUDWATCH.LOG_GROUP=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.LOG_STREAM_PREFIX=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.FILE_SPOOL_DIR=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.REGION=NONE
+
+# End of V3 properties
+
+#
+#  Audit to HDFS Configuration
+#
+# If XAAUDIT.HDFS.IS_ENABLED is set to true, please replace tokens
+# that start with __REPLACE__ with appropriate values
+#  XAAUDIT.HDFS.IS_ENABLED=true
+#  XAAUDIT.HDFS.DESTINATION_DIRECTORY=hdfs://__REPLACE__NAME_NODE_HOST:8020/ranger/audit/%app-type%/%time:yyyyMMdd%
+#  XAAUDIT.HDFS.LOCAL_BUFFER_DIRECTORY=__REPLACE__LOG_DIR/hadoop/%app-type%/audit
+#  XAAUDIT.HDFS.LOCAL_ARCHIVE_DIRECTORY=__REPLACE__LOG_DIR/hadoop/%app-type%/audit/archive
+#
+# Example:
+#  XAAUDIT.HDFS.IS_ENABLED=true
+#  XAAUDIT.HDFS.DESTINATION_DIRECTORY=hdfs://namenode.example.com:8020/ranger/audit/%app-type%/%time:yyyyMMdd%
+#  XAAUDIT.HDFS.LOCAL_BUFFER_DIRECTORY=/var/log/hadoop/%app-type%/audit
+#  XAAUDIT.HDFS.LOCAL_ARCHIVE_DIRECTORY=/var/log/hadoop/%app-type%/audit/archive
+#
 XAAUDIT.HDFS.IS_ENABLED=false
 XAAUDIT.HDFS.DESTINATION_DIRECTORY=hdfs://__REPLACE__NAME_NODE_HOST:8020/ranger/audit/%app-type%/%time:yyyyMMdd%
 XAAUDIT.HDFS.LOCAL_BUFFER_DIRECTORY=__REPLACE__LOG_DIR/hadoop/%app-type%/audit
@@ -60,15 +107,38 @@ XAAUDIT.HDFS.LOCAL_BUFFER_FLUSH_INTERVAL_SECONDS=60
 XAAUDIT.HDFS.LOCAL_BUFFER_ROLLOVER_INTERVAL_SECONDS=600
 XAAUDIT.HDFS.LOCAL_ARCHIVE_MAX_FILE_COUNT=10
 
+#Solr Audit Provider
 XAAUDIT.SOLR.IS_ENABLED=false
 XAAUDIT.SOLR.MAX_QUEUE_SIZE=1
 XAAUDIT.SOLR.MAX_FLUSH_INTERVAL_MS=1000
 XAAUDIT.SOLR.SOLR_URL=http://localhost:6083/solr/ranger_audits
 
+# End of V2 properties
+
+#
+# SSL Client Certificate Information
+#
+# Example:
+# SSL_KEYSTORE_FILE_PATH=/etc/hadoop/conf/ranger-plugin-keystore.jks
+# SSL_KEYSTORE_PASSWORD=none
+# SSL_TRUSTSTORE_FILE_PATH=/etc/hadoop/conf/ranger-plugin-truststore.jks
+# SSL_TRUSTSTORE_PASSWORD=none
+#
+# You do not need use SSL between agent and security admin tool, please leave these sample value as it is.
+#
 SSL_KEYSTORE_FILE_PATH=/etc/hadoop/conf/ranger-plugin-keystore.jks
 SSL_KEYSTORE_PASSWORD=myKeyFilePassword
 SSL_TRUSTSTORE_FILE_PATH=/etc/hadoop/conf/ranger-plugin-truststore.jks
 SSL_TRUSTSTORE_PASSWORD=changeit
 
+#
+# Custom component user
+# CUSTOM_COMPONENT_USER=<custom-user>
+# keep blank if component user is default
 CUSTOM_USER=hdfs
+
+#
+# Custom component group
+# CUSTOM_COMPONENT_GROUP=<custom-group>
+# keep blank if component group is default
 CUSTOM_GROUP=hadoop
