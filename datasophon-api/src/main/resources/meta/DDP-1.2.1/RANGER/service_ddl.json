@@ -160,7 +160,9 @@
           "syncLdapBindDn",
           "syncLdapBindPassword",
           "syncLdapSearchBase",
-          "syncLdapUserSearchBase"
+          "syncLdapUserSearchBase",
+          "spnegoPrincipal",
+          "spnegoKeytab"
         ]
       },
       {
@@ -179,6 +181,17 @@
           "rangerKmsDbPass",
           "rangerKmsHadoopConfPath",
           "rangerKmsRepositoryName"
+        ]
+      },
+      {
+        "filename": "kms-site.xml",
+        "configFormat": "custom",
+        "templateName": "kms-site.ftl",
+        "outputDirectory": "ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf",
+        "includeParams": [
+          "kmsAuthenticationType",
+          "spnegoPrincipal",
+          "spnegoKeytab"
         ]
       }
     ]
@@ -306,7 +319,7 @@
       "type": "switch",
       "value": false,
       "configurableInWizard": true,
-      "hidden": true,
+      "hidden": false,
       "defaultValue": false
     },
     {
@@ -565,6 +578,19 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "kmsdev"
+    },
+    {
+      "name": "kmsAuthenticationType",
+      "label": "kms认证类型",
+      "description": "kms认证类型",
+      "required": true,
+      "configType": "map",
+      "type": "select",
+      "value": "simple",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "simple",
+      "selectValue" : ["simple", "kerberos"]
     }
   ]
 }
