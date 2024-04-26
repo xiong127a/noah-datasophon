@@ -2,6 +2,7 @@ package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
@@ -22,12 +23,17 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
 
     @Override
     public ExecResult createService() throws Exception {
+        Service yarnService;
         String rm1Addr = "http://" + globalVariables.get("${yarn.resourcemanager.webapp.address.rm1}");
         String rm2Addr = "http://" + globalVariables.get("${yarn.resourcemanager.webapp.address.rm2}");
-
         try {
-            rangerClient.getServices()
-                    .createService(simpleYarnService("yarndev", String.join(",", rm1Addr, rm2Addr)));
+            String enableKerberos = globalVariables.get("${enableYARNKerberos}");
+            if (StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos)) {
+                yarnService = kerberosYarnService("yarndev", String.join(",", rm1Addr, rm2Addr));
+            } else {
+                yarnService = simpleYarnService("yarndev", String.join(",", rm1Addr, rm2Addr));
+            }
+            rangerClient.getServices().createService(yarnService);
             RangerUtil.updateDefaultPolicy(rangerClient, "yarndev");
             logger.info("config yarn ranger plugin success");
             execResult.setExecResult(true);
@@ -140,6 +146,26 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
                                 .put("username", "yarn")
                                 .put("password", "yarn")
                                 .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Service kerberosYarnService(String serviceName, String yarnUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("yarn")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "yarn")
+                                .put("password", "yarn")
+                                .put("yarn.url", yarnUrl)
+                                .put("hadoop.security.authentication", "kerberos")
+                                .put("commonNameForCertificate", "")
+                                .put("yarn.nodemanager.principal", globalVariables.get("${yarn.nodemanager.principal}"))
+                                .put("policy.download.auth.users", "yarn")
+                                .put("yarn.resourcemanager.principal", globalVariables.get("${yarn.resourcemanager.principal}"))
                                 .build()
                 )
                 .build();
