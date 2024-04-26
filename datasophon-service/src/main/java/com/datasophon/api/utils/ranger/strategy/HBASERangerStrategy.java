@@ -2,6 +2,7 @@ package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
@@ -22,13 +23,18 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
 
     @Override
     public ExecResult createService() throws Exception {
+        Service hbaseService;
         String zkUrl = globalVariables.get("${zkUrls}");
         String zkPort = globalVariables.get("${clientPort}");
         String hbaseRootDir = globalVariables.get("${hbase.rootdir}");
-
         try {
-            rangerClient.getServices()
-                    .createService(simpleHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir));
+            String enableKerberos = globalVariables.get("${enableHBASEKerberos}");
+            if (StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos)) {
+                hbaseService = kerberosHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir);
+            } else {
+                hbaseService = simpleHbaseService("hbasedev", zkUrl, zkPort, hbaseRootDir);
+            }
+            rangerClient.getServices().createService(hbaseService);
             RangerUtil.updateDefaultPolicy(rangerClient, "hbasedev");
             logger.info("config hbase ranger plugin success");
             execResult.setExecResult(true);
@@ -109,6 +115,28 @@ public class HBASERangerStrategy extends AbstractRangerStrategy implements Range
                                 .put("hbase.zookeeper.quorum", zkUrl)
                                 .put("zookeeper.znode.parent", hbaseZNode)
                                 .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Service kerberosHbaseService(String serviceName, String zkUrl, String zkPort, String hbaseZNode) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hbase")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hbase")
+                                .put("password", "hbase")
+                                .put("hadoop.security.authentication", "kerberos")
+                                .put("hbase.master.kerberos.principal", globalVariables.get("${hbase.master.kerberos.principal}"))
+                                .put("hbase.security.authentication", "kerberos")
+                                .put("hbase.zookeeper.property.clientPort", zkPort)
+                                .put("hbase.zookeeper.quorum", zkUrl)
+                                .put("zookeeper.znode.parent", hbaseZNode)
+                                .put("commonNameForCertificate", "")
+                                .put("policy.download.auth.users", "hbase")
                                 .build()
                 )
                 .build();
