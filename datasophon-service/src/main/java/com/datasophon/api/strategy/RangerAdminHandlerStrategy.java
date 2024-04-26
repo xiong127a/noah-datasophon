@@ -160,6 +160,9 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ClusterServiceInstanceEntity serviceInstance =
                 serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        // 判断是否存在es服务
+        Boolean hasEs =
+                serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
         // 查询角色组id
         List<ClusterServiceRoleInstanceEntity> roleList =
                 roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
@@ -198,6 +201,22 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 if (!map.containsKey(name)) {
                     logger.info("put config {} into service {}", name, serviceRoleName);
                     serviceConfigs.add(parameter);
+                }
+                // 如果存在es服务，则添加审计日志写入es配置
+                if (hasEs && "esAuditEnable".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue("true");
+                }
+                if (hasEs && "esSingleHost".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue(globalVariables.get("${esSingleHost}"));
+                }
+                if (hasEs && "esHttpPort".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue(globalVariables.get("${esHttpPort}"));
                 }
             }
             logger.info("Update hdfs enable ranger plugin");

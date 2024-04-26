@@ -142,7 +142,9 @@
           "adminPrincipal",
           "adminKeytab",
           "hadoopHome",
-          "rangerHome"
+          "rangerHome",
+          "esSingleHost",
+          "esHttpPort"
         ]
       },
       {
@@ -398,6 +400,30 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${RANGER_HOME}"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "${esSingleHost}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${esSingleHost}"
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "${esHttpPort}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${esHttpPort}"
     },
     {
       "name": "syncInterval",

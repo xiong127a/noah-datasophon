@@ -328,7 +328,10 @@
         "templateName": "ranger-hdfs.ftl",
         "includeParams": [
           "hadoopHome",
-          "rangerAdminUrl"
+          "rangerAdminUrl",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
         ]
       }
     ]
@@ -1165,6 +1168,42 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${HADOOP_HOME}"
+    },
+    {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
     },
     {
       "name": "custom.core.site.xml",

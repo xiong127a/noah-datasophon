@@ -4,10 +4,12 @@
   "description": "分布式列式海量存储数据库",
   "version": "2.2.7",
   "sortNum": 8,
-  "dependencies":["HDFS"],
+  "dependencies": [
+    "HDFS"
+  ],
   "packageName": "hbase-2.2.7.tar.gz",
   "decompressPackageName": "hbase-2.2.7",
-  "runAs":"root",
+  "runAs": "root",
   "roles": [
     {
       "name": "HbaseMaster",
@@ -89,7 +91,8 @@
         "timeout": "60",
         "program": "bin/hbase-daemon.sh",
         "args": [
-          "status","regionserver"
+          "status",
+          "regionserver"
         ]
       },
       "restartRunner": {
@@ -98,8 +101,8 @@
         "args": [
           "restart",
           "regionserver"
-      ]
-    }
+        ]
+      }
     }
   ],
   "configWriter": {
@@ -132,7 +135,10 @@
         "templateName": "ranger-hbase.ftl",
         "includeParams": [
           "rangerAdminUrl",
-          "hbaseHome"
+          "hbaseHome",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
         ]
       },
       {
@@ -407,13 +413,49 @@
       "defaultValue": "${HBASE_HOME}"
     },
     {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
       "name": "custom.hbase.site.xml",
       "label": "自定义配置hbase-site.xml",
       "description": "自定义配置",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value":[],
+      "value": [],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""

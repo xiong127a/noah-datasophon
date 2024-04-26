@@ -179,7 +179,10 @@
         "templateName": "ranger-hive.ftl",
         "includeParams": [
           "rangerAdminUrl",
-          "hiveHome"
+          "hiveHome",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
         ]
       }
     ]
@@ -647,6 +650,42 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${HIVE_HOME}"
+    },
+    {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
     },
     {
       "name": "custom.hive.site.xml",
