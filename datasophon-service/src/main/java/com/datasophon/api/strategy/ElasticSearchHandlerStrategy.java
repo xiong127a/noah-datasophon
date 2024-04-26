@@ -17,6 +17,8 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.convert.Convert;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ServiceConfig;
@@ -36,12 +38,20 @@ public class ElasticSearchHandlerStrategy implements ServiceRoleStrategy {
         String join = String.join(":9300,", hosts);
         String seedHosts = join + ":9300";
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${seedHosts}", seedHosts);
+        if (CollUtil.isNotEmpty(hosts)) {
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${esSingleHost}", hosts.get(0));
+        }
 
     }
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        for (ServiceConfig config : list) {
+            if ("http.port".equals(config.getName())) {
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${esHttpPort}", Convert.toStr(config.getValue()));
+            }
+        }
     }
 
     @Override

@@ -115,7 +115,9 @@
           "gateway.recover_after_nodes",
           "http.cors.enabled",
           "http.cors.allow-origin",
+          "http.cors.allow-headers",
           "path.data",
+          "xpack.security.enabled",
           "custom.elasticsearch.yml"
         ]
       },
@@ -141,7 +143,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "ddp_es"
-    },{
+    },
+    {
       "name": "node.name",
       "label": "节点名称",
       "description": "",
@@ -151,7 +154,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${host}"
-    },{
+    },
+    {
       "name": "node.master",
       "label": "是否竞选主节点",
       "description": "是不是有资格竞选主节点",
@@ -161,7 +165,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
-    },{
+    },
+    {
       "name": "network.host",
       "label": "节点地址",
       "description": "",
@@ -171,7 +176,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${host}"
-    },{
+    },
+    {
       "name": "http.port",
       "label": "对外服务端口",
       "description": "对外提供服务的端口",
@@ -181,7 +187,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "9200"
-    },{
+    },
+    {
       "name": "transport.tcp.port",
       "label": "集群通信端口",
       "description": "",
@@ -191,7 +198,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "9300"
-    },{
+    },
+    {
       "name": "transport.tcp.compress",
       "label": "数据传输是否压缩",
       "description": "设置是否压缩tcp传输时的数据，默认为false，不压缩",
@@ -201,7 +209,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
-    },{
+    },
+    {
       "name": "discovery.seed_hosts",
       "label": "服务发现种子主机",
       "description": "",
@@ -211,7 +220,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${seedHosts}"
-    },{
+    },
+    {
       "name": "discovery.zen.minimum_master_nodes",
       "label": "discovery.zen.minimum_master_nodes",
       "description": "",
@@ -221,7 +231,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "2"
-    },{
+    },
+    {
       "name": "cluster.initial_master_nodes",
       "label": "初始主节点",
       "description": "",
@@ -231,7 +242,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${initMasterNodes}"
-    },{
+    },
+    {
       "name": "http.cors.enabled",
       "label": "是否可跨域",
       "description": "",
@@ -241,9 +253,21 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": true
-    },{
+    },
+    {
       "name": "http.cors.allow-origin",
       "label": "支持的跨域范围",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "\"*\""
+    },
+    {
+      "name": "http.cors.allow-headers",
+      "label": "支持的header",
       "description": "",
       "required": true,
       "type": "input",
@@ -260,7 +284,9 @@
       "separator": ",",
       "required": true,
       "type": "multiple",
-      "value": ["/data/es"],
+      "value": [
+        "/data/es"
+      ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
@@ -275,6 +301,17 @@
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": "2g"
+    },
+    {
+      "name": "xpack.security.enabled",
+      "label": "启用安全选项",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
     },
     {
       "name": "custom.elasticsearch.yml",
