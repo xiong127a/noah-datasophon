@@ -45,6 +45,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         if (hosts.size() > 1) {
             CacheUtils.put("enableHiveServer2HA", true);
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId,
+                    "${masterHiveServer2Principal}", "hive/" + hosts.get(0) + "@HADOOP.COM");
         }
     }
 
