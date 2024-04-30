@@ -413,6 +413,17 @@
       "defaultValue": "${HBASE_HOME}"
     },
     {
+      "name": "hbase.quota.enabled",
+      "label": "允许配置限额",
+      "description": "hbase.quota.enabled",
+      "required": true,
+      "type": "input",
+      "value": "true",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },
+    {
       "name": "esAuditEnable",
       "label": "esAuditEnable",
       "description": "",

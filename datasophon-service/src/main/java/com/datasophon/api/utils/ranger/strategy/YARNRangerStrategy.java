@@ -42,22 +42,21 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
     @Override
     public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+        if (CollUtil.isNotEmpty(resource.getYarnResourceList())) {
             Policy policy = getYarnPolicy(resource);
             try {
-                if (Objects.isNull(resource.getId())) {
-                    rangerClient.getPolicies().createPolicy(policy);
-                } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", resource.getTenantName());
-                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
-                }
+//                if (Objects.isNull(resource.getId())) {
+                rangerClient.getPolicies().createPolicy(policy);
+//                } else {
+//                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("yarndev", resource.getTenantName());
+//                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+//                }
                 logger.info("operate yarn policy success");
             } catch (Exception e) {
                 logger.error("operate yarn policy failed");
@@ -65,7 +64,6 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
                 execResult.setExecErrOut(e.getMessage());
             }
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -80,7 +78,6 @@ public class YARNRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error("delete yarn policy {} failed", policyName);
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 

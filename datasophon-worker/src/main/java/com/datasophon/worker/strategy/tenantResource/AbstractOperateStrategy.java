@@ -1,15 +1,16 @@
 package com.datasophon.worker.strategy.tenantResource;
 
 import cn.hutool.core.convert.Convert;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.worker.utils.TaskConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Slf4j
-public abstract class AbstractOperateStrategy implements ResourceOperateStrategy{
+public abstract class AbstractOperateStrategy implements ResourceOperateStrategy {
 
     ExecResult execResult;
 
@@ -29,6 +30,10 @@ public abstract class AbstractOperateStrategy implements ResourceOperateStrategy
 
     public String convertGBToByte(String size) {
         return Convert.toStr(Long.parseLong(size) * 1024L * 1024L * 1024L);
+    }
+
+    public String kinitKbStr(String user) {
+        return "kinit -kt /etc/security/keytab/" + user + ".service.keytab " + user + "/" + Convert.toStr(CacheUtils.get(Constants.HOSTNAME)) + "@HADOOP.COM";
     }
 
 }

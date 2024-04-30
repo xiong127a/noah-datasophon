@@ -8,6 +8,7 @@ import com.datasophon.common.utils.ShellUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class HDFSResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
@@ -68,13 +69,29 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
      * 创建hdfs目录
      */
     private ExecResult createHdfsDir(String hdfsPath) {
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (hdfsResource.getEnableKerberos()) {
+            commands.add("sudo");
+            commands.add("-u");
+            commands.add("hdfs");
+            commands.add(kinitKbStr("nn"));
+            commands.add(";");
+        }
+        commands.add("sudo");
+        commands.add("-u");
+        commands.add("hdfs");
         commands.add(Constants.INSTALL_PATH + "/hadoop-3.3.3/bin/hdfs");
         commands.add("dfs");
         commands.add("-mkdir");
         commands.add("-p");
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        commands.add(";");
+        commands.add(Constants.INSTALL_PATH + "/hadoop-3.3.3/bin/hdfs");
+        commands.add("dfs");
+        commands.add("-chmod");
+        commands.add("777");
+        commands.add(hdfsPath);
+        return ShellUtils.exceShell(commands.toString());
     }
 
     /**
@@ -82,7 +99,14 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
      */
     private ExecResult setHdfsQuota(String size, String hdfsPath) {
         // /opt/datasophon/hadoop-3.3.3/bin/hdfs dfsadmin -setSpaceQuota 1024 /tenant/t1
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (hdfsResource.getEnableKerberos()) {
+            commands.add("sudo");
+            commands.add("-u");
+            commands.add("hdfs");
+            commands.add(kinitKbStr("nn"));
+            commands.add(";");
+        }
         commands.add("sudo");
         commands.add("-u");
         commands.add("hdfs");
@@ -91,12 +115,18 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-setSpaceQuota");
         commands.add(size);
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        return ShellUtils.exceShell(commands.toString());
     }
 
-
     private ExecResult deleteHdfsPath(String hdfsPath) {
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (hdfsResource.getEnableKerberos()) {
+            commands.add("sudo");
+            commands.add("-u");
+            commands.add("hdfs");
+            commands.add(kinitKbStr("nn"));
+            commands.add(";");
+        }
         commands.add("sudo");
         commands.add("-u");
         commands.add("hdfs");
@@ -105,6 +135,6 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-rm");
         commands.add("-r");
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        return ShellUtils.exceShell(commands.toString());
     }
 }
