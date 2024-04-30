@@ -1,11 +1,12 @@
 package com.datasophon.worker.strategy.tenantResource;
 
+import cn.hutool.core.convert.Convert;
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantHbaseResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
-import lombok.extern.slf4j.Slf4j;
 
 public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
@@ -56,7 +57,9 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
         ExecResult execResult;
         // echo "alter_namespace 'test4'; set_quota TYPE => SPACE, NAMESPACE => 'test4', LIMIT => '1G', POLICY => NO_INSERTS; " | hbase shell
         execResult = ShellUtils.exceShell(
-                "echo \"alter_namespace '" +
+                kinitHbaseStr(hbaseResource) +
+                        ";" +
+                        "echo \"alter_namespace '" +
                         hbaseResource.getHbaseNamespace() +
                         "'; " +
                         "set_quota TYPE => SPACE, NAMESPACE => '" +
@@ -66,14 +69,16 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
                         hbaseResource.getHbaseCapacity() +
                         "G', POLICY => NO_INSERTS;\" | " +
                         Constants.INSTALL_PATH +
-                        "/hbase-2.4.16/bin/hbase shell");
+                        "/hbase/bin/hbase shell");
         return execResult;
     }
 
     private ExecResult createHbaseNamespace(String hbaseNamespace, String hbaseCapacity) {
         // echo "create_namespace 'test4'; set_quota TYPE => SPACE, NAMESPACE => 'test4', LIMIT => '1G', POLICY => NO_INSERTS; " | hbase shell
         return ShellUtils.exceShell(
-                "echo \"create_namespace '" +
+                kinitHbaseStr(hbaseResource) +
+                        ";" +
+                        "echo \"create_namespace '" +
                         hbaseNamespace +
                         "'; " +
                         "set_quota TYPE => SPACE, NAMESPACE => '" +
@@ -83,16 +88,26 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
                         hbaseCapacity +
                         "G', POLICY => NO_INSERTS;\" | " +
                         Constants.INSTALL_PATH +
-                        "/hbase-2.4.16/bin/hbase shell");
+                        "/hbase/bin/hbase shell");
     }
 
     private ExecResult dropHbaseNamespace(String hbaseNamespace) {
         // echo "drop_namespace 'test4';" | hbase shell
         return ShellUtils.exceShell(
-                "echo \"drop_namespace '" +
+                kinitHbaseStr(hbaseResource) +
+                        ";" +
+                        "echo \"drop_namespace '" +
                         hbaseNamespace +
                         "';\" | " +
                         Constants.INSTALL_PATH +
-                        "/hbase-2.4.16/bin/hbase shell");
+                        "/hbase/bin/hbase shell");
+    }
+
+    private String kinitHbaseStr(TenantHbaseResource hbaseResource) {
+        String kbString = "";
+        if (hbaseResource.getEnableKerberos())
+            kbString =
+                    "kinit -kt /etc/security/keytab/hbase.keytab " + "hbase/" + Convert.toStr(CacheUtils.get(Constants.HOSTNAME)) + "@HADOOP.COM";
+        return kbString;
     }
 }

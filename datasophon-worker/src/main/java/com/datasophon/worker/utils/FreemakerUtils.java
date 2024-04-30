@@ -70,7 +70,7 @@ public class FreemakerUtils {
                                           String extPath) throws IOException, TemplateException {
         // 1.加载模板
         // 创建核心配置对象
-        Configuration config = new Configuration(Configuration.getVersion());
+        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
         loaderList.add(new ClassTemplateLoader(FreemakerUtils.class, "/templates"));
@@ -115,7 +115,7 @@ public class FreemakerUtils {
     public static void generatePromAlertFile(Generators generators, List<AlertItem> configs,
                                              String serviceName) throws IOException, TemplateException {
         // 创建核心配置对象
-        Configuration config = new Configuration(Configuration.getVersion());
+        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         // ""代表当前包
         config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
@@ -137,7 +137,7 @@ public class FreemakerUtils {
     public static void generatePromScrapeConfig(Generators generators, List<ServiceConfig> configs,
                                                 String serviceName) throws IOException, TemplateException {
         // 创建核心配置对象
-        Configuration config = new Configuration(Configuration.getVersion());
+        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         // ""代表当前包
         config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");

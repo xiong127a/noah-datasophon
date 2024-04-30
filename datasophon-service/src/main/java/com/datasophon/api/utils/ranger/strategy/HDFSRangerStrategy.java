@@ -43,7 +43,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -53,12 +52,12 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
         if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
             Policy policy = getHdfsPolicy(resource);
             try {
-                if (Objects.isNull(resource.getId())) {
-                    rangerClient.getPolicies().createPolicy(policy);
-                } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
-                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
-                }
+//                if (Objects.isNull(resource.getId())) {
+                rangerClient.getPolicies().createPolicy(policy);
+//                } else {
+//                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
+//                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+//                }
                 logger.info("operate hdfs policy success");
             } catch (Exception e) {
                 logger.error("operate hdfs policy failed");
@@ -66,7 +65,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
                 execResult.setExecErrOut(e.getMessage());
             }
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -81,7 +79,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error("delete hdfs policy {} failed", policyName);
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 

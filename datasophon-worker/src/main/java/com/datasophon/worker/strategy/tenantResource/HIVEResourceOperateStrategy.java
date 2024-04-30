@@ -1,13 +1,16 @@
 package com.datasophon.worker.strategy.tenantResource;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
 import com.datasophon.common.model.TenantResource.TenantHiveResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.worker.utils.KerberosUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class HIVEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
@@ -69,32 +72,28 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
 
     private ExecResult createHiveDatabase(String databaseName, String dbPathDir) {
         // /opt/datasophon/hive/bin/hive -e "CREATE DATABASE IF NOT EXISTS t1 LOCATION '/user/hive/warehouse/t1'"
-//        return ShellUtils.exceShell(
-//                Constants.INSTALL_PATH +
-//                        "/hive/bin/hive -e \"CREATE DATABASE IF NOT EXISTS " +
-//                        databaseName +
-//                        " LOCATION '" +
-//                        dbPathDir +
-//                        "'\"");
-        List<String> command = new ArrayList<>();
+        StringJoiner command = new StringJoiner(" ");
+        if (hiveResource.getEnableKerberos()) {
+            command.add(kinitKbStr("hive"));
+            command.add(";");
+        }
         command.add(Constants.INSTALL_PATH + "/hive/bin/hive");
         command.add("-e");
         command.add("\"CREATE DATABASE IF NOT EXISTS " + databaseName + " LOCATION '" + dbPathDir + "'\"");
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, command, 60L);
+        return ShellUtils.exceShell(command.toString());
     }
 
     private ExecResult dropHiveDatabase(String databaseName) {
         // /opt/datasophon/hive/bin/hive -e "DROP DATABASE IF EXISTS t1 CASCADE"
-//        return ShellUtils.exceShell(
-//                Constants.INSTALL_PATH +
-//                        "/hive/bin/hive -e \"DROP DATABASE IF EXISTS " +
-//                        databaseName +
-//                        " CASCADE\"");
-        List<String> command = new ArrayList<>();
+        StringJoiner command = new StringJoiner(" ");
+        if (hiveResource.getEnableKerberos()) {
+            command.add(kinitKbStr("hive"));
+            command.add(";");
+        }
         command.add(Constants.INSTALL_PATH + "/hive/bin/hive");
         command.add("-e");
         command.add("\"DROP DATABASE IF EXISTS " + databaseName + " CASCADE\"");
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, command, 60L);
+        return ShellUtils.exceShell(command.toString());
     }
 
     /**
@@ -102,7 +101,15 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
      */
     private ExecResult setHdfsQuota(String size, String hdfsPath) {
         // /opt/datasophon/hadoop-3.3.3/bin/hdfs dfsadmin -setSpaceQuota 1024 /tenant/t1
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (hiveResource.getEnableKerberos()) {
+            KerberosUtils.downloadKeytabFromMaster("nn" + CacheUtils.get(Constants.HOSTNAME), "nn.service.keytab");
+            commands.add("sudo");
+            commands.add("-u");
+            commands.add("hdfs");
+            commands.add(kinitKbStr("nn"));
+            commands.add(";");
+        }
         commands.add("sudo");
         commands.add("-u");
         commands.add("hdfs");
@@ -111,6 +118,6 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-setSpaceQuota");
         commands.add(size);
         commands.add(hdfsPath);
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        return ShellUtils.exceShell(commands.toString());
     }
 }

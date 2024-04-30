@@ -391,6 +391,8 @@ INSERT INTO `t_ddh_cluster_user` VALUES (3, 'yarn', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (4, 'mapred', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (5, 'elastic', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (6, 'hbase', 1);
+INSERT INTO `t_ddh_cluster_user` VALUES (7, 'hue', 1);
+INSERT INTO `t_ddh_cluster_user` VALUES (8, 'postgres', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (9, 'admin', 1);
 
 -- ----------------------------
