@@ -1,7 +1,9 @@
 package com.datasophon.worker.strategy.tenantResource;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.TenantResource.TenantFrameResource;
+import com.datasophon.common.model.TenantResource.TenantHbaseResource;
 import com.datasophon.common.model.TenantResource.TenantKafkaResource;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
@@ -9,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
@@ -59,7 +62,9 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
         // /opt/datasophon/kafka/bin/kafka-configs.sh --zookeeper hadoop2:2181,hadoop3:2181,hadoop1:2181/kafka
         // --entity-type topics --entity-name t1 --alter --add-config retention.bytes=128000
         String shell =
-                Constants.INSTALL_PATH + "/kafka/bin/kafka-configs.sh " +
+                kinitKafkaStr(kafkaResource) +
+                        ";" +
+                        Constants.INSTALL_PATH + "/kafka/bin/kafka-configs.sh " +
                         "--zookeeper " +
                         kafkaZkAddr +
                         " --entity-type topics --entity-name " +
@@ -72,33 +77,46 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
     private ExecResult createKafkaTopic(String topicName, String topicReplicas, String topicCapacity) {
         //  kafka-topics.sh --create --topic mytopi1c --bootstrap-server localhost:9092
         //  --partitions 3 --replication-factor 2 --config max.message.bytes=64000
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (kafkaResource.getEnableKerberos()) {
+            commands.add(kinitKbStr("kafka"));
+            commands.add(";");
+        }
         commands.add(Constants.INSTALL_PATH + "/kafka/bin/kafka-topics.sh");
         commands.add("--create");
         commands.add("--topic");
         commands.add(topicName);
         commands.add("--bootstrap-server");
-        commands.add("localhost:9092");
+        commands.add(CacheUtils.get(Constants.HOSTNAME) + ":9092");
         commands.add("--replication-factor");
         commands.add(topicReplicas);
         commands.add("--config");
         commands.add("retention.bytes=" + convertGBToByte(topicCapacity));
 
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        return ShellUtils.exceShell(commands.toString());
     }
 
     private ExecResult deleteKafkaTopic(String topicName) {
         // kafka-topics.sh --delete --topic mytopic --bootstrap-server localhost:9092
-        List<String> commands = new ArrayList<>();
+        StringJoiner commands = new StringJoiner(" ");
+        if (kafkaResource.getEnableKerberos()) {
+            commands.add(kinitKbStr("kafka"));
+            commands.add(";");
+        }
         commands.add(Constants.INSTALL_PATH + "/kafka/bin/kafka-topics.sh");
         commands.add("--delete");
         commands.add("--topic");
         commands.add(topicName);
         commands.add("--bootstrap-server");
-        commands.add("localhost:9092");
+        commands.add(CacheUtils.get(Constants.HOSTNAME) + ":9092");
 
-        return ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180L, logger);
+        return ShellUtils.exceShell(commands.toString());
     }
 
+    private String kinitKafkaStr(TenantKafkaResource kafkaResource) {
+        String kbString = "";
+        if (kafkaResource.getEnableKerberos()) kbString = kinitKbStr("kafka");
+        return kbString;
+    }
 
 }

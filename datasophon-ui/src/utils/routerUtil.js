@@ -219,6 +219,7 @@ function deepMergeRoutes(target, source) {
  * @param routes 路由配置
  */
 function formatRoutes(routes) {
+  console.log('route', routes)
   routes.forEach(route => {
     const {path} = route
     if (!path.startsWith('/') && path !== '*') {
@@ -284,9 +285,16 @@ function getI18nKey(path) {
 function loadGuards(guards, options) {
   const {beforeEach, afterEach} = guards
   const {router} = options
+  console.log('beforeEach', beforeEach)
+  
   beforeEach.forEach(guard => {
     if (guard && typeof guard === 'function') {
-      router.beforeEach((to, from, next) => guard(to, from, next, options))
+      router.beforeEach((to, from, next) =>{
+        console.log('to', to)
+        console.log('from', from)
+        console.log('next', next)
+         guard(to, from, next, options)
+      })
     }
   })
   afterEach.forEach(guard => {

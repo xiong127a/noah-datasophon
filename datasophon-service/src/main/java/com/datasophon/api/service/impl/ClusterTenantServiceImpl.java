@@ -1,22 +1,19 @@
 package com.datasophon.api.service.impl;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
-import cn.hutool.cache.Cache;
-import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
-import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.*;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.enums.TROperateType;
 import com.datasophon.common.model.TenantResource.*;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
@@ -26,13 +23,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
+import static com.datasophon.common.enums.RangerOpType.DELETE_TENANT;
 
 @Service("clusterTenantService")
 @Slf4j
 public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, ClusterTenant> implements ClusterTenantService {
 
-    private static final Cache<String, ActorRef> actorRefCache = CacheUtil.newFIFOCache(10);
+//    private static final Cache<String, ActorRef> actorRefCache = CacheUtil.newFIFOCache(10);
 
     @Override
     public Result listTenant(Integer clusterId, Integer page, Integer size) {
@@ -55,6 +53,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                 return Result.error(e.getMessage());
             }
         }
+
+        filterDeleteResource(clusterTenant);
+
         TenantResource resource = new TenantResource();
         BeanUtil.copyProperties(clusterTenant, resource);
         List<TenantFrameResource> allFrameResource = CollUtil.unionAll(
@@ -66,18 +67,29 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         );
 
         // 框架资源操作
-        ActorRef tenantResourceDispatcherActor = getActorRef(TenantResourceDispatcherActor.class, "tenantResourceDispatcherActor");
+        Map<String, String> globalVariables = GlobalVariables.get(clusterTenant.getClusterId());
+        ActorRef tenantResourceDispatcherActor = ActorUtils.getLocalActor(TenantResourceDispatcherActor.class, "tenantResourceDispatcherActor");
         for (TenantFrameResource tenantFrameResource : allFrameResource) {
+            String enableKerberos = globalVariables.get("${enable" + tenantFrameResource.getServiceName() + "Kerberos}");
+            tenantFrameResource.setEnableKerberos(StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos));
             tenantResourceDispatcherActor.tell(tenantFrameResource, ActorRef.noSender());
         }
 
         // ranger策略操作
-        ActorRef tenantRangerActor = getActorRef(TenantRangerActor.class, "tenantRangerActor");
+        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         tenantRangerActor.tell(resource, ActorRef.noSender());
 
         this.saveOrUpdate(clusterTenant);
 
         return Result.success();
+    }
+
+    private void filterDeleteResource(ClusterTenant clusterTenant) {
+        clusterTenant.getHdfsResourceList().removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
+        clusterTenant.getYarnResourceList().removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
+        clusterTenant.getKafkaResourceList().removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
+        clusterTenant.getHiveResourceList().removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
+        clusterTenant.getHbaseResourceList().removeIf(resource -> TROperateType.DELETE.name().equals(resource.getType()));
     }
 
     @Override
@@ -86,28 +98,16 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         TenantRangerCommand command = new TenantRangerCommand();
         command.setClusterId(tenant.getClusterId());
         command.setTenantName(tenant.getTenantName());
+        command.setOperateType(DELETE_TENANT);
 
         // 删除所有ranger相关策略及角色
-        ActorRef tenantRangerActor = getActorRef(TenantRangerActor.class, "tenantRangerActor");
+        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
         tenantRangerActor.tell(command, ActorRef.noSender());
 
         if (this.removeById(id)) {
             return Result.success();
         }
         return Result.error();
-    }
-
-    public ActorRef getActorRef(Class<?> actorClazz, String actorName) {
-        if (actorRefCache.containsKey(actorName)) {
-            return actorRefCache.get(actorName);
-        } else {
-            ActorRef actorRef = ActorUtils.actorSystem.actorOf(
-                    Props.create(actorClazz).withDispatcher("my-forkjoin-dispatcher"),
-                    actorName
-            );
-            actorRefCache.put(actorName, actorRef);
-            return actorRef;
-        }
     }
 
     private void checkTenant(ClusterTenant clusterTenant) throws Exception {
@@ -219,7 +219,8 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
     }
 
     public <T> List<LinkedHashMap<String, String>> convertToMap(List<T> list) {
-        return Convert.convert(new TypeReference<List<LinkedHashMap<String, String>>>() {}, list);
+        return Convert.convert(new TypeReference<List<LinkedHashMap<String, String>>>() {
+        }, list);
     }
 
 }

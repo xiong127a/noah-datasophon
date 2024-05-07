@@ -2,6 +2,7 @@ package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
@@ -22,13 +23,21 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
 
     @Override
     public ExecResult createService() throws Exception {
+        String hiveUrl;
+        Service hiveService;
         String hiveServer2Host = globalVariables.get("${masterHiveServer2}");
         String hiveServer2Port = globalVariables.get("${hive.server2.thrift.port}");
-        String hiveUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-
+        String enableKerberos = globalVariables.get("${enableHIVEKerberos}");
         try {
-            rangerClient.getServices()
-                    .createService(simpleHiveService("hivedev", hiveUrl));
+            if (StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos)) {
+                String hiveServer2Principal = globalVariables.get("${masterHiveServer2Principal}");
+                hiveUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port + "/;principal=" + hiveServer2Principal + ";auth=kerberos";
+                hiveService = kerberosHiveService("hivedev", hiveUrl);
+            } else {
+                hiveUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
+                hiveService = simpleHiveService("hivedev", hiveUrl);
+            }
+            rangerClient.getServices().createService(hiveService);
             RangerUtil.updateDefaultPolicy(rangerClient, "hivedev");
             logger.info("config hive ranger plugin success");
             execResult.setExecResult(true);
@@ -37,22 +46,21 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
     @Override
     public ExecResult operatePolicy(TenantResource resource) throws Exception {
         execResult.setExecResult(true);
-        if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
+        if (CollUtil.isNotEmpty(resource.getHiveResourceList())) {
             Policy policy = getHivePolicy(resource);
             try {
-                if (Objects.isNull(resource.getId())) {
-                    rangerClient.getPolicies().createPolicy(policy);
-                } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", resource.getTenantName());
-                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
-                }
+//                if (Objects.isNull(resource.getId())) {
+                rangerClient.getPolicies().createPolicy(policy);
+//                } else {
+//                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hivedev", resource.getTenantName());
+//                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+//                }
                 logger.info("operate hive policy success");
             } catch (Exception e) {
                 logger.error("operate hive policy failed");
@@ -60,7 +68,6 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
                 execResult.setExecErrOut(e.getMessage());
             }
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -75,7 +82,6 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error("delete hive policy {} failed", policyName);
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -105,6 +111,24 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
                                 .put("jdbc.driverClassName", "org.apache.hive.jdbc.HiveDriver")
                                 .put("jdbc.url", hiveUrl)
                                 .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Service kerberosHiveService(String serviceName, String hiveUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hive")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hive")
+                                .put("password", "hive")
+                                .put("jdbc.driverClassName", "org.apache.hive.jdbc.HiveDriver")
+                                .put("jdbc.url", hiveUrl)
+                                .put("commonNameForCertificate", "")
+                                .put("policy.download.auth.users", "hive")
                                 .build()
                 )
                 .build();

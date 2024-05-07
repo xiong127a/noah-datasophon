@@ -2,14 +2,12 @@
   "name": "HBASE",
   "label": "HBase",
   "description": "分布式列式海量存储数据库",
-  "version": "2.2.7",
+  "version": "2.3.7",
   "sortNum": 8,
-  "dependencies": [
-    "HDFS"
-  ],
-  "packageName": "hbase-2.2.7.tar.gz",
-  "decompressPackageName": "hbase-2.2.7",
-  "runAs": "root",
+  "dependencies":["HDFS"],
+  "packageName": "hbase-2.3.7.tar.gz",
+  "decompressPackageName": "hbase-2.3.7",
+  "runAs":"root",
   "roles": [
     {
       "name": "HbaseMaster",
@@ -91,8 +89,7 @@
         "timeout": "60",
         "program": "bin/hbase-daemon.sh",
         "args": [
-          "status",
-          "regionserver"
+          "status","regionserver"
         ]
       },
       "restartRunner": {
@@ -101,8 +98,8 @@
         "args": [
           "restart",
           "regionserver"
-        ]
-      }
+      ]
+    }
     }
   ],
   "configWriter": {
@@ -124,7 +121,6 @@
           "hbase.master.keytab.file",
           "hbase.regionserver.kerberos.principal",
           "hbase.regionserver.keytab.file",
-          "hbase.quota.enabled",
           "custom.hbase.site.xml"
         ]
       },
@@ -135,10 +131,7 @@
         "templateName": "ranger-hbase.ftl",
         "includeParams": [
           "rangerAdminUrl",
-          "hbaseHome",
-          "esAuditEnable",
-          "esSingleHost",
-          "esHttpPort"
+          "hbaseHome"
         ]
       },
       {
@@ -184,7 +177,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${fs.defaultFS}/hbase"
+      "defaultValue": "/hbase"
     },
     {
       "name": "hbase.zookeeper.quorum",
@@ -413,60 +406,13 @@
       "defaultValue": "${HBASE_HOME}"
     },
     {
-      "name": "hbase.quota.enabled",
-      "label": "允许配置限额",
-      "description": "hbase.quota.enabled",
-      "required": true,
-      "type": "input",
-      "value": "true",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "true"
-    },
-    {
-      "name": "esAuditEnable",
-      "label": "esAuditEnable",
-      "description": "",
-      "required": false,
-      "configType": "map",
-      "type": "input",
-      "value": "false",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "false"
-    },
-    {
-      "name": "esSingleHost",
-      "label": "esSingleHost",
-      "description": "",
-      "required": false,
-      "configType": "map",
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": ""
-    },
-    {
-      "name": "esHttpPort",
-      "label": "esHttpPort",
-      "description": "",
-      "required": false,
-      "configType": "map",
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": ""
-    },
-    {
       "name": "custom.hbase.site.xml",
       "label": "自定义配置hbase-site.xml",
       "description": "自定义配置",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [],
+      "value":[],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""

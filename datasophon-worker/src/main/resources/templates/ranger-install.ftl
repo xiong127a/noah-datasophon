@@ -33,15 +33,15 @@ keyadmin_password=admin123
 
 #Source for Audit Store. Currently solr and elasticsearch are supported.
 # * audit_store is solr
-#audit_store=solr
+audit_store=elasticsearch
 
 # * audit_solr_url Elasticsearch Host(s). E.g. 127.0.0.1
-audit_elasticsearch_urls=
-audit_elasticsearch_port=
-audit_elasticsearch_protocol=
+audit_elasticsearch_urls=${esSingleHost}
+audit_elasticsearch_port=${esHttpPort}
+audit_elasticsearch_protocol=http
 audit_elasticsearch_user=
 audit_elasticsearch_password=
-audit_elasticsearch_index=
+audit_elasticsearch_index=ranger_audits
 audit_elasticsearch_bootstrap_enabled=true
 
 audit_solr_urls=
@@ -144,7 +144,7 @@ admin_principal=<#if adminPrincipal??>${adminPrincipal}</#if>
 admin_keytab=<#if adminKeytab??>${adminKeytab}</#if>
 lookup_principal=<#if adminPrincipal??>${adminPrincipal}</#if>
 lookup_keytab=<#if adminKeytab??>${adminKeytab}</#if>
-hadoop_conf=<#if hadoopHome??>${hadoopHome}</#if>/etc/hadoop/conf
+hadoop_conf=<#if hadoopHome??>${hadoopHome}</#if>/etc/hadoop
 #
 #-------- SSO CONFIG - Start ------------------
 #

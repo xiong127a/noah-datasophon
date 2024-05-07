@@ -69,6 +69,7 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
 
                 // 添加基础用户
                 ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/base.ldif");
+                ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/default-user.ldif");
             } else {
                 logger.error("yum install openldap failed");
                 return execResult;
