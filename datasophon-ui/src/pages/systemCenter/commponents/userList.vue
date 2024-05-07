@@ -47,6 +47,7 @@ export default {
         size: 1000,
         page: 1,
       };
+       this.tenantList = []
       this.$axiosGet('/ddh/cluster/tenant/listTenant', params).then((res) => {
         this.tenantList = res.data;
         this.tenantList.forEach((j, index) => {

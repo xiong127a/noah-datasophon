@@ -1,26 +1,26 @@
 <template>
-  <div class="container">
+  <div>
     <div class="module">
-      <a-tabs v-model="tabType" @change="changeTab">
-        <a-tab-pane key="HDFS" tab="HDFS"></a-tab-pane>
-        <a-tab-pane key="YARN" tab="YARN"></a-tab-pane>
-        <a-tab-pane key="HBASE" tab="HBASE"></a-tab-pane>
-        <a-tab-pane key="HIVE" tab="HIVE"></a-tab-pane>
-        <a-tab-pane key="KAFKA" tab="KAFKA"></a-tab-pane>
-      </a-tabs>
-      <div class="moduleItems" v-show="tabType == 'HDFS'">
+      <div class="titleTop">
+        <span>组件名</span>
+        <span>申请项</span>
+      </div>
+      <div class="moduleItems" v-show="resourceList.hdfsResourceList.length > 0">
+        <div class="name">HDFS </div>
         <div class="right">
           <div class="title">
             <span>路径</span>
             <span>存储空间配额(GB)</span>
           </div>
           <div class="content" v-for="(item, index) in resourceList.hdfsResourceList" :key="index">
-            <span style="width:30%">{{ item.hdfsPath }}</span>
-            <span style="width:70%">{{ item.hdfsSpaceQuota }}</span>
+            <span style="width:50%">{{ item.hdfsPath }}</span>
+            <span style="width:50%">{{ item.hdfsSpaceQuota }}</span>
           </div>
         </div>
+
       </div>
-      <div class="moduleItems" v-show="tabType == 'YARN'">
+      <div class="moduleItems" v-show="resourceList.yarnResourceList.length > 0">
+        <div class="name">YARN </div>
         <div class="right">
           <div class="title">
             <span>父队列名称</span>
@@ -37,7 +37,8 @@
         </div>
 
       </div>
-      <div class="moduleItems" v-show="tabType == 'HBASE'">
+      <div class="moduleItems" v-show="resourceList.hbaseResourceList.length > 0">
+        <div class="name">HBASE </div>
         <div class="right">
           <div class="title">
             <span>命名空间</span>
@@ -52,7 +53,8 @@
         </div>
 
       </div>
-      <div class="moduleItems" v-show="tabType == 'HIVE'">
+      <div class="moduleItems" v-show="resourceList.hiveResourceList.length > 0">
+        <div class="name">HIVE </div>
         <div class="right">
           <div class="title">
             <span>数据库名</span>
@@ -64,7 +66,8 @@
           </div>
         </div>
       </div>
-      <div class="moduleItems" v-show="tabType == 'KAFKA'">
+      <div class="moduleItems" v-show="resourceList.kafkaResourceList.length > 0">
+        <div class="name">KAFKA </div>
         <div class="right">
           <div class="title">
             <span>topic名称</span>
@@ -79,6 +82,7 @@
         </div>
       </div>
     </div>
+
   </div>
 </template> 
 <script>
@@ -95,14 +99,14 @@ export default {
   data () {
     return {
       clusterId: Number(localStorage.getItem("clusterId") || -1),
-      tabType: 'HDFS',
+      tabType: 'hdfsResourceList',
       resourceList: {},
     };
   },
   methods: {
     // 点击编辑
     echoUSer () {
-      this.resourceList = { ...this.detail }
+        this.resourceList = { ...this.detail }
     },
 
   },
@@ -112,18 +116,27 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-.container {
-  text-align: start;
+.module {
+  width: 90%;
 }
 
-.module {
-  width:80%;
-  padding: 2px 30px;
-  margin-bottom: 40px;
+.module .titleTop {
+  font-weight: 900;
+  width: 100%;
+  background: #faf8f8;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
 }
+
+.titleTop span {
+  display: inline-block;
+  width: 15%;
+  text-align: center;
+}
+
 .module .moduleItems {
   display: flex;
-  border-bottom: 1px solid #f0eded;
+  border: 1px solid #ccc;
   border-top: none;
 }
 
@@ -137,14 +150,14 @@ export default {
 }
 
 .module .moduleItems .right {
-  flex: 1;
+  flex: .85;
 }
 
 .module .moduleItems .right .title {
   width: 100%;
   display: flex;
   justify-content: space-around;
-  border-bottom: 1px solid #f0eded;
+  border-bottom: 1px solid #ccc;
 }
 
 .module .moduleItems .right .title span {
@@ -152,6 +165,7 @@ export default {
   flex: .5;
   text-align: center;
   padding: 10px;
+  border-left: 1px solid #ccc;
 }
 
 .module .moduleItems .right .title .handle {
@@ -171,7 +185,8 @@ export default {
   padding: 10px;
   flex: .5;
   text-align: center;
-  border-bottom: 1px solid #f0eded;
+  border-left: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
 }
 
 .module .moduleItems .right .content:nth-last-child(1) span {
@@ -180,5 +195,35 @@ export default {
 
 .module .moduleItems .right .content .btn-opt {
   width: 5%;
+}
+
+.module .moduleItems .clearDom {
+  border-left: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+}
+
+.module .moduleItems .clearDom .clearIcon {
+  color: #db0315;
+  font-size: 18px;
+  vertical-align: middle;
+  text-align: center;
+  margin: 8px;
+
+  :hover {
+    color: @text-color;
+  }
+}
+
+.plusIcon {
+  color: #1979b9;
+  font-size: 16px;
+  vertical-align: middle;
+  text-align: center;
+  margin-left: 9px;
+
+  :hover {
+    color: @text-color;
+  }
 }
 </style>
