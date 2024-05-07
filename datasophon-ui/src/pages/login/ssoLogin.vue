@@ -17,14 +17,13 @@ export default {
   },
   created () {
     this.back = location.pathname //this.getParam('back', '/')
-    console.log('local', location.pathname);
     // this.ticket = this.getParam('ticket')
     this.ticket = ''
-    console.log('ticket', this.ticket);
+    console.log('this.ticket', this.ticket);
     if (this.ticket) {
-      // this.doLoginByTicket(this.ticket);
+      this.doLoginByTicket(this.ticket);
     } else {
-      this.goSsoAuthUrl();
+      this.goSsoAuthUrl()
     }
   },
   methods: {
@@ -35,7 +34,6 @@ export default {
       }
       this.$axiosGet('/ddh/sso/getSsoAuthUrl', param).then(res => {
         console.log(res, 'rr');
-
         if (res.code === 200) {
           location.href = res.data;
         }
@@ -47,23 +45,32 @@ export default {
       let param = {
         ticket: ticket
       }
-     this.$axiosGet('/ddh/sso/doLoginByTicket', param).then(async res => {
+      this.$axiosGet('/ddh/sso/doLoginByTicket', param).then(async res => {
         if (res.code === 200) {
           localStorage.setItem('satoken', null);
           localStorage.setItem('satoken', res.data);
-          let infodata = await this.$store.dispatch('user/getInfo')
+          // let ssotoken = localStorage.getItem('satoken')
+          let param = {
+            token: res.data
+          }
+          // this.$axiosGet('/ddh/sso/saveSsoUser', param).then((res) => {
+          //   console.log(res, 'rr')
+
+          //   if (res.code === 200) {
+          //     console.log('saveSsoUser', res.data)
+          //   }
+          // })
           let url = decodeURIComponent(this.back);
           location.href = decodeURIComponent(this.back);
-
         } else {
-          this.$message({ type: 'warning', message: res.msg });
-          this.$store.dispatch('user/loginOut')
-
+          // console.log('ss');
+          // this.$message.warning("dd", res.msg);
+          // this.$store.dispatch('user/loginOut')
         }
       })
     },
 
-    // 从url中查询到指定名称的参数值
+    // // 从url中查询到指定名称的参数值
     // getParam (name, defaultValue) {
     //   return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.href) || [, ""])[1].replace(/\+/g, '%20')) || defaultValue;
     // },
