@@ -12,32 +12,19 @@
         </a-col>
       </a-row>
     </a-card>
-    <div class="content card-shadow">
-      <div class="list" v-for="(item, index) in dataSource" :key="index">
-        <div class="top">
-          <a-icon type="user" class="icon"></a-icon> <span class="name">{{ item.tenantName }}</span>
-        </div>
-        <div class="discription">
-          <a-tooltip :title="item.desc" placement="top">{{ item.desc && item.desc.length > 52 ? item.desc.slice(0, 52) + '...' :
-            item.desc }}</a-tooltip>
-        </div>
-        <div class="tags">
-          <a-button v-for="(i, index) in item.assembly" :key="index" shape="round" size="small"
-            style="margin:0px 6px 10px 0px;font-size:12px">
-            {{ i }}
-          </a-button>
-          <!-- <a-tag color="orange" v-for="(item, index) in item.assembly" :key="index">{{ item }}</a-tag> -->
-        </div>
-        <div class="btns">
-          <a-tooltip title="详情" placement="top"><a-icon type="eye" class="icon"
-              @click="toDetail(item)"></a-icon></a-tooltip>
-          <a-tooltip title="编辑" placement="top"><a-icon type="edit" class="icon"
-              @click="createUser(item)"></a-icon></a-tooltip>
-          <a-tooltip title="删除" placement="top"><a-icon type="delete" class="icon"
-              @click="delectUser(item)"></a-icon></a-tooltip>
-        </div>
+    <a-card class="card-shadow">
+      <div class="table-info steps-body">
+        <a-table @change="(pagination) => { tableChange(pagination) }" :columns="columns" :loading="loading"
+          :dataSource="dataSource" rowKey="id" :pagination="pagination" :expandedRowRender="expandedRowRender">
+          <template slot='expandedRowRender' slot-scope="record">
+            <!-- <p style="margin: 0">
+              这是由以及{{ record.tenantName }}
+            </p> -->
+          <Detail :detail="record"></Detail>
+          </template>
+        </a-table>
       </div>
-    </div>
+    </a-card>
   </div>
 </template>
 
@@ -49,7 +36,7 @@ import { mapGetters, mapState, mapMutations } from "vuex";
 
 export default {
   name: "USER",
-  // components: { Detail },
+    components: { Detail },
   data () {
     return {
       params: {},
@@ -62,7 +49,9 @@ export default {
         showTotal: (total) => `共 ${total} 条`,
       },
       username: '',
-      dataSource: [],
+      dataSource: [{
+        username: '的时刻'
+      }],
       loading: false,
       columns: [
         {
@@ -129,22 +118,6 @@ export default {
       this.pagination.current = 1;
       this.getUserList();
     },
-    toDetail (obj) {
-      const self = this;
-      let width = '50%'
-      let content = (
-        <Detail detail={obj} />
-      );
-      this.$confirm({
-        width: width,
-        title: '租户详情',
-        content: content,
-        closable: true,
-        icon: () => {
-          return <div />;
-        },
-      });
-    },
     createUser (obj) {
       const self = this;
       let width = '70%'
@@ -204,27 +177,6 @@ export default {
       this.$axiosGet('/ddh/cluster/tenant/listTenant', params).then((res) => {
         this.loading = false;
         this.dataSource = res.data;
-        this.dataSource.forEach(e => {
-          let assembly = []
-          if (e.hdfsResourceList.length > 0) {
-            assembly.push(e.hdfsResourceList[0].serviceName)
-          }
-          if (e.hbaseResourceList.length > 0) {
-            assembly.push(e.hbaseResourceList[0].serviceName)
-          }
-          if (e.hiveResourceList.length > 0) {
-            assembly.push(e.hiveResourceList[0].serviceName)
-          }
-          if (e.kafkaResourceList.length > 0) {
-            assembly.push(e.kafkaResourceList[0].serviceName)
-          }
-          if (e.yarnResourceList.length > 0) {
-            assembly.push(e.yarnResourceList[0].serviceName)
-          }
-          e['assembly'] = assembly
-          // e['desc'] = '此租户租户是指系统中的一个独立实体它可以是一个组织、一个部门或者一个个人,拥有自己的数据、配置和权限此租户租户是指系统中的一个独立实体它可以是一个组织、一个部门或者一个个人,拥有自己的数据、配置和权限'
-          // console.log('assembly', e.assembly);
-        })
         this.pagination.total = res.total;
       });
     },
@@ -238,58 +190,6 @@ export default {
 <style lang="less" scoped>
 .user-list {
   background: #f5f7f8;
-
-  .content {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    background: #fff;
-    padding: 10px;
-
-    .list {
-      width: 24.6%;
-      margin-right: 5px;
-      border: 1px solid #e2dede;
-      padding: 10px;
-      margin-bottom: 10px;
-
-      .top {
-        margin: 10px;
-
-        .name {
-          font-weight: 700;
-          font-size: 16px;
-        }
-
-        .icon {
-          color: #2872e0;
-          font-size: 20px;
-          margin-right: 10px;
-        }
-      }
-
-      .discription {
-        font-size: 12px;
-        text-indent: 20px;
-        height: 40px;
-      }
-
-      .tags {
-        margin: 10px 0px;
-      }
-
-      .btns {
-        text-align: end;
-
-        .icon {
-          margin-right: 5px;
-          font-size: 16px;
-          cursor: pointer;
-        }
-      }
-    }
-  }
 
   .btn-opt {
     border-radius: 1px;
