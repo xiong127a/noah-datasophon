@@ -29,10 +29,9 @@ const Group = {
     )
   }
 }
-
 export default {
-  name: 'AStepItem',
   Group: Group,
+  name: 'AStepItem',
   props: ['title', 'icon', 'link', 'titleStyle', 'iconStyle'],
   methods: {
     go () {
