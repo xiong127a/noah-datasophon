@@ -1,5 +1,7 @@
 package com.datasophon.api.utils.ranger.client;
 
+import cn.hutool.cache.Cache;
+import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ranger.client.config.RangerAuthConfig;
@@ -16,6 +18,9 @@ public class RangerUtil {
     private final static String SUPER_USER = "admin";
 
     private final static String SUPER_ROLE_NAME = "admin";
+
+    // 创建一个缓存对象
+    private static final Cache<Integer, RangerClient> clientCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
 
     public static Service rangerKmsService(String serviceName, String rangerUrl) {
         return Service.builder()
@@ -110,6 +115,11 @@ public class RangerUtil {
     }
 
     public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
+        RangerClient cachedClient = clientCache.get(clusterTenant);
+        if (cachedClient != null) {
+            return cachedClient;
+        }
+
         Map<String, String> globalVariables = GlobalVariables.get(clusterTenant);
         String rangerAdminUrl = globalVariables.get("${rangerAdminUrl}");
         RangerClientConfig clientConfig = RangerClientConfig.builder()
@@ -124,6 +134,9 @@ public class RangerUtil {
                 .build();
         RangerClient rangerClient = new RangerClient(clientConfig);
         rangerClient.start();
+
+        clientCache.put(clusterTenant, rangerClient);
+
         return rangerClient;
     }
 

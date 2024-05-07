@@ -2,6 +2,8 @@ package com.datasophon.api.utils.ranger.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ranger.client.RangerUtil;
 import com.datasophon.api.utils.ranger.client.model.*;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
@@ -22,11 +24,17 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
 
     @Override
     public ExecResult createService() throws Exception {
+        Service hadoopService;
         String nn1Add = "hdfs://" + globalVariables.get("${dfs.namenode.rpc-address.nameservice1.nn1}");
         String nn2Add = "hdfs://" + globalVariables.get("${dfs.namenode.rpc-address.nameservice1.nn2}");
         try {
-            rangerClient.getServices()
-                    .createService(simpleHdfsService("hadoopdev", String.join(",", nn1Add, nn2Add)));
+            String enableKerberos = globalVariables.get("${enableHDFSKerberos}");
+            if (StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos)) {
+                hadoopService = kerberosHdfsService("hadoopdev", String.join(",", nn1Add, nn2Add));
+            } else {
+                hadoopService = simpleHdfsService("hadoopdev", String.join(",", nn1Add, nn2Add));
+            }
+            rangerClient.getServices().createService(hadoopService);
             RangerUtil.updateDefaultPolicy(rangerClient, "hadoopdev");
             logger.info("config hdfs ranger plugin success");
             execResult.setExecResult(true);
@@ -35,7 +43,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -45,12 +52,12 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
         if (CollUtil.isNotEmpty(resource.getHdfsResourceList())) {
             Policy policy = getHdfsPolicy(resource);
             try {
-                if (Objects.isNull(resource.getId())) {
-                    rangerClient.getPolicies().createPolicy(policy);
-                } else {
-                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
-                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
-                }
+//                if (Objects.isNull(resource.getId())) {
+                rangerClient.getPolicies().createPolicy(policy);
+//                } else {
+//                    Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", resource.getTenantName());
+//                    rangerClient.getPolicies().updatePolicy(returnPolicy.getId(), policy);
+//                }
                 logger.info("operate hdfs policy success");
             } catch (Exception e) {
                 logger.error("operate hdfs policy failed");
@@ -58,7 +65,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
                 execResult.setExecErrOut(e.getMessage());
             }
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -73,7 +79,6 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
             logger.error("delete hdfs policy {} failed", policyName);
             execResult.setExecErrOut(e.getMessage());
         }
-        rangerClient.stop();
         return execResult;
     }
 
@@ -108,6 +113,31 @@ public class HDFSRangerStrategy extends AbstractRangerStrategy implements Ranger
                                 .put("dfs.secondary.namenode.kerberos.principal", "")
                                 .put("hadoop.rpc.protection", "authentication")
                                 .put("commonNameForCertificate", "")
+                                .build()
+                )
+                .build();
+    }
+
+    public Service kerberosHdfsService(String serviceName, String hdfsUrl) {
+        return Service.builder()
+                .name(serviceName)
+                .isEnabled(true)
+                .type("hdfs")
+                .configs(
+                        MapUtil.<String, String>builder()
+                                .put("username", "hdfs")
+                                .put("password", "hdfs")
+                                .put("fs.default.name", hdfsUrl)
+                                .put("hadoop.security.authorization", "true")
+                                .put("hadoop.security.authentication", "kerberos")
+                                .put("hadoop.security.auth_to_local", "")
+                                .put("dfs.datanode.kerberos.principal", globalVariables.get("${dfs.datanode.kerberos.principal}"))
+                                .put("dfs.namenode.kerberos.principal", globalVariables.get("${dfs.namenode.kerberos.principal}"))
+                                .put("dfs.secondary.namenode.kerberos.principal", "")
+                                .put("hadoop.rpc.protection", "authentication")
+                                .put("commonNameForCertificate", "")
+                                .put("policy.download.auth.users", "hdfs")
+                                .put("dfs.journalnode.kerberos.principal", globalVariables.get("${dfs.journalnode.kerberos.principal}"))
                                 .build()
                 )
                 .build();

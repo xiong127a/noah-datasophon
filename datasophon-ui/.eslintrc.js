@@ -28,7 +28,7 @@ module.exports = {
     "no-console": process.env.NODE_ENV === "production" ? "warn" : "off",
     "no-debugger": process.env.NODE_ENV === "production" ? "warn" : "off",
     'space-before-function-paren': 0,
-    'indent': [1, 2],// 缩进风格
+    // 'indent': [1, 2],// 缩进风格
     'quotes': [0, 'single'],
     'quote-props': [0, 'always'],
     'prettier/prettier': 0,

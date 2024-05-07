@@ -35,8 +35,9 @@ public class TenantRangerActor extends UntypedActor {
                 case OP_USER_TO_ROLE:
                     getSender().tell(addRoleUser(rangerCommand), getSelf());
                     break;
-                case DELETE_POLICY:
+                case DELETE_TENANT:
                     execResult = deleteRangerPolicy(rangerCommand.getTenantName(), rangerCommand.getClusterId());
+                    deleteRangerRole(rangerCommand.getTenantName(), rangerCommand.getClusterId());
                     getSender().tell(execResult, getSelf());
                     break;
                 default:
@@ -63,9 +64,6 @@ public class TenantRangerActor extends UntypedActor {
             logger.error("add ranger role user failed");
             logger.error(e.getMessage());
             return execResult;
-        } finally {
-            assert rangerClient != null;
-            rangerClient.stop();
         }
     }
 
@@ -73,9 +71,7 @@ public class TenantRangerActor extends UntypedActor {
         RangerClient rangerClient = getRangerClient(clusterId);
         RangerUtil.createSuperRole(rangerClient);
         AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, clusterId);
-        ExecResult execResult = rangerStrategy.createService();
-        rangerClient.stop();
-        return execResult;
+        return rangerStrategy.createService();
     }
 
     private ExecResult operateRangerPolicy(TenantResource resource) throws Exception {
@@ -96,6 +92,7 @@ public class TenantRangerActor extends UntypedActor {
         // 操作组件策略
         for (String serviceName : SUPPORT_SERVICE) {
             AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(serviceName, resource.getClusterId());
+            rangerStrategy.deletePolicy(resource.getTenantName());
             execResult = rangerStrategy.operatePolicy(resource);
             if (!execResult.getExecResult()) {
                 logger.error("operateRangerPolicy for service {} failed", serviceName);
@@ -103,7 +100,6 @@ public class TenantRangerActor extends UntypedActor {
             }
         }
 
-        rangerClient.stop();
         return execResult;
     }
 
@@ -128,8 +124,18 @@ public class TenantRangerActor extends UntypedActor {
             }
         }
 
-        rangerClient.stop();
         return execResult;
+    }
+
+    private void deleteRangerRole(String tenantName, Integer clusterId) {
+        try {
+            RangerClient rangerClient = getRangerClient(clusterId);
+            rangerClient.getRoles().deleteRoleByName(tenantName);
+            logger.info("remove ranger role user success");
+        } catch (Exception e) {
+            logger.error("remove ranger role user failed");
+            logger.error(e.getMessage());
+        }
     }
 
 }
