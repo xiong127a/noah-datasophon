@@ -11,6 +11,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.*;
 import com.datasophon.api.service.ClusterTenantService;
+import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.service.ClusterUserTenantService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.TROperateType;
@@ -19,6 +21,7 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -32,11 +35,18 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
 //    private static final Cache<String, ActorRef> actorRefCache = CacheUtil.newFIFOCache(10);
 
+    @Autowired
+    private ClusterUserTenantService clusterUserTenantService;
+
+    @Autowired
+    private ClusterUserService clusterUserService;
+
     @Override
-    public Result listTenant(Integer clusterId, Integer page, Integer size) {
+    public Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
         int offset = (page - 1) * size;
         QueryWrapper<ClusterTenant> queryWrapper = new QueryWrapper<ClusterTenant>()
                 .eq(Constants.CLUSTER_ID, clusterId)
+                .like(StrUtil.isNotBlank(tenantName), "tenant_name", tenantName)
                 .last("limit " + offset + "," + size);
         List<ClusterTenant> list = this.list(queryWrapper);
         int total = this.count(new QueryWrapper<ClusterTenant>()
@@ -94,6 +104,21 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public Result deleteTenantById(Integer id) {
+        // 是否授权授权用户校验
+        List<ClusterUserTenant> userTenantList = clusterUserTenantService.lambdaQuery()
+                .eq(ClusterUserTenant::getTenantId, id)
+                .list();
+        if (CollUtil.isNotEmpty(userTenantList)) {
+            List<Integer> userIds = userTenantList.stream().map(ClusterUserTenant::getUserId).collect(Collectors.toList());
+            List<String> usernames = clusterUserService.lambdaQuery()
+                    .in(ClusterUser::getId, userIds)
+                    .list()
+                    .stream()
+                    .map(ClusterUser::getUsername)
+                    .collect(Collectors.toList());
+            return Result.error("当前租户已经授权给用户：" + usernames + ", 请先取消授权");
+        }
+
         ClusterTenant tenant = this.getById(id);
         TenantRangerCommand command = new TenantRangerCommand();
         command.setClusterId(tenant.getClusterId());
