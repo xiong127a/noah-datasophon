@@ -100,9 +100,9 @@ export default {
     ...mapState("setting", ["footerLinks", "copyright"]),
   },
   created () {
-      // if(this.user){
-      //   this.$router.push("/colony-manage/colony-list");
-      // }else{
+      if(localStorage.getItem('satoken')){
+        this.$router.push("/colony-manage/colony-list");
+      }else{
             this.back = location.pathname; 
             this.ticket = this.getParam('ticket');
 
@@ -117,7 +117,7 @@ export default {
                     }
                 })
             }
-      // }
+      }
   },
   methods: {
     ...mapMutations("account", ["setUser", "setPermissions", "setRoles"]),

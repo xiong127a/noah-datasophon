@@ -39,7 +39,6 @@ export default {
   },
   methods: {
     ...mapMutations("setting", ["setIsCluster", "setMenuData"]),
-    ...mapMutations("account", ["setUser"]),
     viewUserInfo() {
       let width = 400;
       let title = "个人中心";
@@ -64,7 +63,6 @@ export default {
       });
     },
     ssoLogout(){
-      this.setUser("");
       this.$axiosGet('/ddh/sso/logout', {}).then(res => {})
     },
     toCluster() {
