@@ -20,8 +20,8 @@ public class ClusterTenantController {
      * 查询租户列表
      */
     @RequestMapping("/listTenant")
-    public Result listTenant(Integer clusterId, Integer page, Integer size) {
-        return clusterTenantService.listTenant(clusterId, page, size);
+    public Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName) {
+        return clusterTenantService.listTenant(clusterId, page, size, tenantName);
     }
 
     /**
