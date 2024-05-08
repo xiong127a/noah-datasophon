@@ -25,7 +25,7 @@
       </div>
       <page-footer style="position: absolute;bottom:0;left:0;right:0;display:none" :link-list="footerLinks" :copyright="copyright"></page-footer>
     </common-layout> -->
-    <div class="container">
+    <div class="container" v-if="!isSsoLogin">
       <div class="company-logo">
         <img src="@/assets/login-img/company.png">
       </div>
@@ -76,8 +76,8 @@ import { login, getRoutesConfig } from "@/services/user";
 import { setAuthorization } from "@/utils/request";
 import { loadRoutes } from "@/utils/routerUtil";
 import { mapMutations } from "vuex";
-import { mapState } from "vuex";
-
+import { mapGetters,mapState } from "vuex";
+import { logout } from "@/services/user";
 export default {
   name: "Login",
   // components: { CommonLayout, PageFooter },
@@ -86,13 +86,38 @@ export default {
       logging: false,
       error: "",
       form: this.$form.createForm(this),
+
+      isSsoLogin:true,
+      back: '',
+      ticket: '',
     };
   },
   computed: {
     systemName () {
       return this.$store.state.setting.systemName;
     },
+    ...mapGetters("account", ["user"]),
     ...mapState("setting", ["footerLinks", "copyright"]),
+  },
+  created () {
+      // if(this.user){
+      //   this.$router.push("/colony-manage/colony-list");
+      // }else{
+            this.back = location.pathname; 
+            this.ticket = this.getParam('ticket');
+
+            if (this.ticket && this.isSsoLogin) {
+              this.doLoginByTicket(this.ticket);
+            }else{
+                this.$axiosGet('/ddh/ssoEnable').then((res) => {
+                    this.isSsoLogin = res.data?res.data:false;
+                    if(this.isSsoLogin){
+                      // true  的时候 用户管理模块隐藏
+                      this.goSsoAuthUrl()   
+                    }
+                })
+            }
+      // }
   },
   methods: {
     ...mapMutations("account", ["setUser", "setPermissions", "setRoles"]),
@@ -101,7 +126,7 @@ export default {
       this.form.validateFields((err) => {
         if (!err) {
           this.logging = true;
-          const username = this.form.getFieldValue("name");
+          const username =this.form.getFieldValue("name");
           const password = this.form.getFieldValue("password");
           this.$axiosPost(global.API.login, { username, password }).then(
             (res) => this.afterLogin(res)
@@ -121,6 +146,63 @@ export default {
         this.$message.success("登录成功", 3);
       }
     },
+
+    //sso 重定向至认证中心
+    goSsoAuthUrl () {
+      let param = {
+        clientLoginUrl: location.href
+      }
+      this.$axiosGet('/ddh/sso/getSsoAuthUrl', param).then(res => {
+        if (res.code === 200) {
+          location.href = res.data;
+        }
+      })
+    },
+
+    // 根据ticket值登录
+    doLoginByTicket (ticket) {
+      let param = {
+        ticket: ticket
+      }
+      this.$axiosGet('/ddh/sso/doLoginByTicket', param).then(async res => {
+        if (res.code === 200) {
+          localStorage.setItem('satoken', null);
+          localStorage.setItem('satoken', res.data);
+          
+          this.$axiosGet('/ddh/saveSsoUser',"").then((res) => {
+            // console.log(res, 'saveSsoUser--res:')
+
+            if (res.code === 200) {
+              const username = res.data.username;
+              const password = res.data.password;
+              this.$axiosPost(global.API.login, { username, password }).then(
+                (res) => this.afterLogin(res)
+              );
+            }
+          })
+          
+        } else {
+          this.$message.warning(res.msg);
+          localStorage.removeItem("isCluster");
+
+          this.$axiosGet('/ddh/sso/logout', {}).then(res => {})  //sso 退出
+          logout();  //基础平台 退出
+          this.$router.push('/login')
+          location.reload()
+        }
+      })
+    },
+    //获取地址栏上的 ticket参数
+    getParam (key) {
+      let url = location.href;
+      if (url.indexOf("?") != -1) {
+        let str = url.split('?')[1];
+        str = str.split("=");
+         if(str[0]==key){
+            return str[1]
+         }
+      }
+    }
   },
 };
 </script>

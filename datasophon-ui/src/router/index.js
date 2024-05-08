@@ -45,20 +45,6 @@ const loginIgnore = {
  * @returns {VueRouter}
  */
 function initRouter(isAsync) {
-  console.log('isAsync', isAsync)
-  if (!isAsync) {
-    let ssotoken = localStorage.getItem('ssotoken')
-    let param = {
-      token: ssotoken,
-    }
-    // _this.$axiosGet('/ddh/sso/saveSsoUser', param).then((res) => {
-    //   console.log(res, 'rr')
-
-    //   if (res.code === 200) {
-    //     console.log('saveSsoUser', res.data)
-    //   }
-    // })
-  }
   const options = isAsync
     ? require('./config-cluster').default
     : require('./config').default

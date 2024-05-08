@@ -21,7 +21,7 @@
 import paths from '@/api/baseUrl'// 后台服务地址
 
 let path = paths.path() + '/ddh'
-console.log(path, '请求的地址')
+
 export default {
   login: path + '/login',
   loginOut: path + '/signOut',
