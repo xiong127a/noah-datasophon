@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="module">
-      <a-tabs v-model="tabType" @change="changeTab">
+      <a-tabs v-model="tabType">
         <a-tab-pane key="HDFS" tab="HDFS"></a-tab-pane>
         <a-tab-pane key="YARN" tab="YARN"></a-tab-pane>
         <a-tab-pane key="HBASE" tab="HBASE"></a-tab-pane>
