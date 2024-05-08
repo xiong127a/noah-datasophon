@@ -139,7 +139,7 @@ function loadRoutes(routesConfig, clusterRoutes) {
       const finalRoutes = mergeRoutes(basicOptions.routes, routes)
       formatRoutes(finalRoutes)
       router.options = {...router.options, routes: finalRoutes}
-      router.matcher = new Router({...router.options, routes:[]}).matcher
+      router.matcher = new Router({...router.options, routes:[],mode:'hash'}).matcher
       router.addRoutes(finalRoutes)
     }
   }

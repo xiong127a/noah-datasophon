@@ -49,6 +49,6 @@ function initRouter(isAsync) {
     ? require('./config-cluster').default
     : require('./config').default
   formatRoutes(options.routes)
-  return new Router(options)
+  return new Router({...options,mode:'hash'})
 }
 export { loginIgnore, initRouter }
