@@ -69,7 +69,7 @@ export default {
     return {
       params: {},
       tenantList: [],
-      checkedList:[],
+      checkedList: [],
       isPopoverVisible: false,
       pagination: {
         total: 0,
@@ -165,10 +165,7 @@ export default {
                 <a class="btn-opt" onClick={() => this.downloadUserKeytab(row)}>
                   下载keytab
                 </a>
-                <a-popover placement="top" content={<UserList detail={row} checkedList={this.checkedList} callBack={() => this.handleVisibleChange1(index)} />} trigger="click" onVisibleChange={() => this.handleVisibleChange(row, index)}
-                  visible={row.visible} >
-                  <a>授权</a>
-                </a-popover>
+                <a class="btn-opt" onClick={() => this.toEmpower(row)}>授权</a>
               </span>
             );
           },
@@ -262,27 +259,30 @@ export default {
         }
       })
     },
-    handleVisibleChange (val, index) {
-      this.dataSource[index].visible = true
-      this.getUserList()
-      this.getTentant(val)
-    },
-    handleVisibleChange1 (index) {
-      this.dataSource[index]['visible'] = false
-      this.getUserList()
+    toEmpower (obj) {
+      const self = this;
+      let width = '50%';
+      let content = (
+        <UserList
+          sysTypeTxt="用户"
+          detail={obj}
+          callBack={() => self.getUserList()}
+        />
+      );
+
+      this.$confirm({
+        width: width,
+        title: '授权',
+        content,
+        closable: true,
+        icon: () => {
+          return <div />;
+        },
+      });
 
     },
-    getTentant (val) {
-      let params = {
-        clusterId: Number(localStorage.getItem("clusterId") || 1),
-        userId: val.id,
-      };
-      this.$axiosGet('/ddh/cluster/user/tenant/getListByUserId', params).then((res) => {
-        if (res.code === 200) {
-          this.checkedList = res.data
-        }
-      });
-    },
+
+  
     getUserList (key) {
       this.loading = true;
       let params = {
