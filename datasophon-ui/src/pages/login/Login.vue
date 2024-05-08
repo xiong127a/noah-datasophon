@@ -90,6 +90,7 @@ export default {
       isSsoLogin:true,
       back: '',
       ticket: '',
+      token:''
     };
   },
   computed: {
@@ -104,15 +105,17 @@ export default {
         this.$router.push("/colony-manage/colony-list");
       }else{
             this.back = location.pathname; 
-            this.ticket = this.getParam('ticket');
-
-            if (this.ticket && this.isSsoLogin) {
-              this.doLoginByTicket(this.ticket);
+            this.ticket = this.getParam('ticket');  //方舟登录
+            this.token = this.getParam('token') // hh第三方网址进来的用户token
+            let pathTicket = this.ticket?this.ticket:this.token;
+            console.log("ticket或者token",pathTicket)
+            if (pathTicket && this.isSsoLogin) {
+              this.doLoginByTicket(pathTicket);
             }else{
                 this.$axiosGet('/ddh/ssoEnable').then((res) => {
                     this.isSsoLogin = res.data?res.data:false;
                     if(this.isSsoLogin){
-                      // true  的时候 用户管理模块隐藏
+                      // true  的时候 用户管理模块隐藏（未实现2024-5-8）
                       this.goSsoAuthUrl()   
                     }
                 })
