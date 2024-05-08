@@ -1,36 +1,19 @@
 <template>
   <div>
-    <div v-if="!isShow">
-      <Login></Login>
-    </div>
-    <div v-if="isShow">
-      <ssoLogin></ssoLogin>
-    </div>
+    <Login></Login>
   </div>
 </template>
 <script>
 import Login from './Login.vue'
-import ssoLogin from './ssoLogin.vue'
 export default {
   name: "LoginMain",
-  components: { Login, ssoLogin },
+  components: { Login },
   data () {
     return {
-      isShow: '',
+      isShow: true,
       form: this.$form.createForm(this),
     };
   },
-  created () {
-    this.getInfo()
-  },
-  methods: {
-    getInfo () {
-      this.$axiosGet('/ddh/ssoEnable').then((res) => {
-        this.isShow = res.data
-      })
-    },
-
-  },
 };
-
 </script>
+

@@ -125,7 +125,6 @@ function loadRoutes(routesConfig, clusterRoutes) {
   const { store, i18n} = appOptions
   // clusterRoutes ||
   const router = clusterRoutes || appOptions.router
-  console.log(router, clusterRoutes)
   // 如果 routesConfig 有值，则更新到本地，否则从本地获取
   if (routesConfig) {
     store.commit('account/setRoutesConfig', routesConfig)
@@ -219,7 +218,6 @@ function deepMergeRoutes(target, source) {
  * @param routes 路由配置
  */
 function formatRoutes(routes) {
-  console.log('route', routes)
   routes.forEach(route => {
     const {path} = route
     if (!path.startsWith('/') && path !== '*') {
@@ -285,14 +283,10 @@ function getI18nKey(path) {
 function loadGuards(guards, options) {
   const {beforeEach, afterEach} = guards
   const {router} = options
-  console.log('beforeEach', beforeEach)
-  
+
   beforeEach.forEach(guard => {
     if (guard && typeof guard === 'function') {
       router.beforeEach((to, from, next) =>{
-        console.log('to', to)
-        console.log('from', from)
-        console.log('next', next)
          guard(to, from, next, options)
       })
     }
