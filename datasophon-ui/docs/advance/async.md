@@ -255,7 +255,7 @@ function loadRoutes(routesConfig) {
       formatAuthority(routes)
       const finalRoutes = mergeRoutes(router.options.routes, routes)
       router.options = {...router.options, routes: finalRoutes}
-      router.matcher = new Router({...router.options, routes:[]}).matcher
+      router.matcher = new Router({...router.options, routes:[],mode:'hash'}).matcher
       router.addRoutes(finalRoutes)
     }
   }
