@@ -52,11 +52,10 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
     @Override
     public Result createUser(UserInfoEntity userInfo) {
         // check all user params
-        String msg = this.checkUserParams(userInfo.getUsername(), userInfo.getPassword(), userInfo.getEmail(),
-                userInfo.getPhone());
-        if (!StringUtils.isEmpty(msg)) {
-            return Result.error(Status.REQUEST_PARAMS_NOT_VALID_ERROR.getCode(), msg);
-        }
+//        String msg = this.checkUserParams(userInfo.getUsername(), userInfo.getPassword(), userInfo.getEmail(), userInfo.getPhone());
+//        if (!StringUtils.isEmpty(msg)) {
+//            return Result.error(Status.REQUEST_PARAMS_NOT_VALID_ERROR.getCode(), msg);
+//        }
         // UserInfoEntity authUser = SecurityUtils.getAuthUser();
         // if (!SecurityUtils.isAdmin(authUser)) {
         // return Result.error(Status.USER_NO_OPERATION_PERM.getCode(), Status.USER_NO_OPERATION_PERM.getMsg());
@@ -70,6 +69,24 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfoEnt
         userInfo.setCreateTime(new Date());
         userInfo.setPassword(EncryptionUtils.getMd5(userInfo.getPassword()));
         this.save(userInfo);
+        return Result.success();
+    }
+
+    @Override
+    public Result updateUser(UserInfoEntity userInfo) {
+        // 用户名判重
+        List<UserInfoEntity> list =
+                this.list(new QueryWrapper<UserInfoEntity>().eq(Constants.USERNAME, userInfo.getUsername()));
+        if (Objects.nonNull(list) && list.size() >= 1) {
+            UserInfoEntity userInfoEntity = list.get(0);
+            if (!userInfoEntity.getId().equals(userInfo.getId())) {
+                return Result.error(Status.USER_NAME_EXIST.getCode(), Status.USER_NAME_EXIST.getMsg());
+            }
+        }
+        String password = userInfo.getPassword();
+        userInfo.setPassword(EncryptionUtils.getMd5(password));
+        this.updateById(userInfo);
+
         return Result.success();
     }
 

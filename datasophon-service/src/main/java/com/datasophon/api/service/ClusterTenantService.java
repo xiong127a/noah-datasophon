@@ -6,7 +6,7 @@ import com.datasophon.dao.entity.ClusterTenant;
 
 public interface ClusterTenantService extends IService<ClusterTenant> {
 
-    Result listTenant(Integer clusterId, Integer page, Integer size);
+    Result listTenant(Integer clusterId, Integer page, Integer size, String tenantName);
 
     Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception;
 
