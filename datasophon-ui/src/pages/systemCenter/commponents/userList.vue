@@ -6,9 +6,11 @@
           租户名称
         </div>
         <div v-for="(user, index) in tenantList" :key="user.tenantId"
-          :class="activeIndex == index ? 'activeTenant' : 'tenantItem'" @click="handleClick(user, index)">
-          <a-checkbox v-model="user.checked" @change="(value) => changeCheck(value, index)"><a>{{ user.tenantName
-          }}</a></a-checkbox>
+          :class="activeIndex == index ? 'activeTenant' : 'tenantItem'">
+          <a-checkbox v-model="user.checked" @change="(value) => changeCheck(value, index)"> <label class="checkbox-label"
+              @click.stop="handleClick(user, index)">
+              {{ user.tenantName }}
+            </label> </a-checkbox>
         </div>
       </div>
       <div class="detail">
@@ -72,13 +74,11 @@ export default {
         this.tenantList && this.tenantList.forEach((j, index) => {
           this.checkedList && this.checkedList.forEach(e => {
             if (e.tenantId == j.id) {
-              // console.log('this.checkedList', this.checkedList);
               this.tenantList[index]['checked'] = true
             }
           })
 
         })
-        console.log('this.tenantList11', this.tenantList);
       });
     },
     changeCheck (val, index) {
@@ -91,6 +91,7 @@ export default {
     },
     formCancel () {
       this.$destroyAll();
+      this.callBack();
     },
     getTentant (id) {
       let params = {
@@ -149,10 +150,10 @@ export default {
       }
       if (deleteID.length == 0 && addID.length == 0) {
         this.$message.success("授权成功");
-         this.$destroyAll();
+        this.$destroyAll();
       }
     },
-    handleClick (val, index) { 
+    handleClick (val, index) {
       this.activeIndex = index
       this.detailInfo = val
       this.key++
@@ -197,6 +198,11 @@ export default {
       border-bottom: 1px solid #e6e3e3;
       color: #fff;
       background-color: rgba(225, 239, 255, )
+    }
+
+    .checkbox-label {
+      cursor: pointer;
+      color: #2872e0;
     }
   }
 }
