@@ -1,4 +1,3 @@
-
 <template>
   <div class="Notice-group">
     <a-card class="mgb16 card-shadow ">
@@ -26,16 +25,18 @@
 import AddGroup from "./commponents/addGroup.vue";
 import { mapActions, mapState } from "vuex";
 import AddNoticeGroup from "@/pages/alarmManage/commponents/addNoticeGroup.vue";
-
 export default {
   name: "NOTICEGROUP",
-  components: {},
+
   provide() {
     return {
       handleCancel: this.handleCancel,
       onSearch: this.onSearch,
     };
   },
+
+  components: {},
+
   data() {
     return {
       noticeGroupName: '',
@@ -106,16 +107,7 @@ export default {
       ],
     };
   },
-  watch: {
-    clusterId: {
-      handler (val, oldVal) {
-        if (val !== oldVal) {
-          debugger
-          this.onSearch()
-        }
-      },
-    }
-  },
+
   computed: {
     ...mapState({
       setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
@@ -124,6 +116,21 @@ export default {
       return this.setting.clusterId
     }
   },
+
+  watch: {
+    clusterId: {
+      handler (val, oldVal) {
+        if (val !== oldVal) {
+          this.onSearch()
+        }
+      },
+    }
+  },
+
+  mounted() {
+    this.getNoticeGroupList();
+  },
+
   methods: {
     handleCancel(e) {
       this.visible = false;
@@ -242,10 +249,7 @@ export default {
         this.pagination.total = res.data.total;
       });
     },
-  },
-  mounted() {
-    this.getNoticeGroupList();
-  },
+  }
 };
 </script>
 

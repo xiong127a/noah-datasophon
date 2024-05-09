@@ -25,8 +25,8 @@ module.exports = {
     parser: "babel-eslint",
   },
   rules: {
-    "no-console": process.env.NODE_ENV === "production" ? "warn" : "off",
-    "no-debugger": process.env.NODE_ENV === "production" ? "warn" : "off",
+    "no-console": 'off', //process.env.NODE_ENV === "production" ? "warn" : "off",
+    "no-debugger": 'off', //process.env.NODE_ENV === "production" ? "warn" : "off",
     'space-before-function-paren': 0,
     // 'indent': [1, 2],// 缩进风格
     'quotes': [0, 'single'],

@@ -1,29 +1,3 @@
-<!--
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
-
- * @Date: 2022-06-09 10:11:22
- * @LastEditTime: 2023-04-13 15:19:15
- * @FilePath: \ddh-ui\src\pages\hostManage\index.vue
--->
-
 <template>
   <div class="host-manage steps">
     <a-card class="mgb16 card-shadow">
@@ -102,13 +76,16 @@ import AddLabel from "./addLabel.vue";
 import AddRack from './addRack.vue'
 export default {
   name: "HOSTMANAGE",
-  components: { Steps },
+
   provide() {
     return {
       handleCancel: this.handleCancel,
       onSearch: this.onSearch,
     };
   },
+
+  components: { Steps },
+
   data() {
     return {
       params: {},
@@ -309,6 +286,16 @@ export default {
       sortDirections: ["descend", "ascend"],
     };
   },
+
+  computed: {
+    ...mapState({
+      setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
+    }),
+    clusterId() {
+      return this.setting.clusterId;
+    },
+  },
+
   watch: {
     clusterId: {
       handler(val, oldVal) {
@@ -318,14 +305,11 @@ export default {
       },
     },
   },
-  computed: {
-    ...mapState({
-      setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
-    }),
-    clusterId() {
-      return this.setting.clusterId;
-    },
+
+  mounted() {
+    this.getHostListByPage();
   },
+
   methods: {
     seeRole(row) {
       let width = 520;
@@ -454,7 +438,6 @@ export default {
       });
     },
     refresh() {
-      debugger
       this.selectedRowKeys = []
       this.onSearch()
     },
@@ -682,10 +665,7 @@ export default {
         },
       });
     },
-  },
-  mounted() {
-    this.getHostListByPage();
-  },
+  }
 };
 </script>
 
