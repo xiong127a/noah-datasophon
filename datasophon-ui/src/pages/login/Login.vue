@@ -101,6 +101,7 @@ export default {
     ...mapState("setting", ["footerLinks", "copyright"]),
   },
   created () {
+    
       if(localStorage.getItem('satoken')){
         this.$router.push("/colony-manage/colony-list");
       }else{

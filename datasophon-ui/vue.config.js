@@ -137,6 +137,7 @@ module.exports = {
     // 		use: MonacoWebpackPlugin.loader
     // 	}]
     // }
+    config.devtool = "source-map"  // 设置debugger可以调试
   },
   chainWebpack(config) {
     // 第一步：让其他svg loader不要对路径下进行操作
