@@ -19,18 +19,26 @@ package com.datasophon.api.controller;
 
 import static com.datasophon.api.enums.Status.IP_IS_EMPTY;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.convert.Convert;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.security.Authenticator;
 import com.datasophon.api.service.SessionService;
+import com.datasophon.api.service.UserInfoService;
 import com.datasophon.api.utils.HttpUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.UserInfoEntity;
 
+import com.norinrd.interfaces.api.CommonInterface;
+import com.norinrd.interfaces.dto.UserDto;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +47,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -52,6 +61,15 @@ public class LoginController {
 
     @Autowired
     private Authenticator authenticator;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
+    private CommonInterface commonInterface;
+
+    @Autowired
+    private UserInfoService userInfoService;
 
     /**
      * login
@@ -115,5 +133,45 @@ public class LoginController {
         // clear session
         request.removeAttribute(Constants.SESSION_USER);
         return Result.success();
+    }
+
+    @GetMapping(value = "/ssoEnable")
+    public Result ssoEnable() {
+        String ssoEnable = applicationContext.getEnvironment().getProperty("sa-token.sso.active");
+        return Result.success(Convert.toBool(ssoEnable));
+    }
+
+    @GetMapping(value = "/saveSsoUser")
+    public Result saveSsoUser() {
+        // 获取单点登录用户
+        UserDto user = commonInterface.getUser();
+        if (Objects.isNull(user)) {
+            return Result.error("无法获取到单点用户");
+        }
+
+        // 同步用户信息到本地
+        List<UserInfoEntity> list = userInfoService.list(new QueryWrapper<UserInfoEntity>().eq(Constants.USERNAME, user.getUserName()));
+        UserInfoEntity userInfoEntity;
+        if (CollUtil.isEmpty(list)) {
+            userInfoEntity = new UserInfoEntity();
+            userInfoEntity.setUsername(user.getUserName());
+            userInfoEntity.setEmail(user.getEmail());
+            userInfoEntity.setPhone(user.getPhonenumber());
+            userInfoEntity.setPassword(user.getUserName());
+            userInfoService.createUser(userInfoEntity);
+        } else {
+            userInfoEntity = list.get(0);
+            userInfoEntity.setUsername(user.getUserName());
+            userInfoEntity.setEmail(user.getEmail());
+            userInfoEntity.setPhone(user.getPhonenumber());
+            userInfoEntity.setPassword(user.getUserName());
+            if ("admin".equals(user.getUserName())) {
+                userInfoEntity.setUserType(1);
+            }
+            userInfoService.updateUser(userInfoEntity);
+        }
+
+        userInfoEntity.setPassword(userInfoEntity.getUsername());
+        return Result.success(userInfoEntity);
     }
 }

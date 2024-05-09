@@ -42,6 +42,11 @@
             <artifactId>datasophon-ui</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.norinrd</groupId>
+            <artifactId>gt-sso-client-starter</artifactId>
+            <version>3.2.15-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -95,7 +100,7 @@
                     </descriptors>
                     <archive>
                         <manifest>
-                            <mainClass />
+                            <mainClass/>
                         </manifest>
                     </archive>
                 </configuration>
