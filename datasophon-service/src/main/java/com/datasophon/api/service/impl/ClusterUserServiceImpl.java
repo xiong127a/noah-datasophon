@@ -144,7 +144,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
         ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
         ldapCommand.setUserPwd(globalVariables.get("${syncLdapBindPassword}"));
-        String uid = globalVariables.get("syncLdapUidNumber");
+        String uid = globalVariables.get("${syncLdapUidNumber}");
         if (StringUtils.isBlank(uid)) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
             ldapCommand.setUidNumber("2000");
@@ -163,13 +163,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("create ldap user {} success", username);
             } else {
-                logger.info(execResult.getExecOut());
-                throw new ServiceException(500,
-                        "create ldap user " + username + " failed");
+                logger.error("create ldap user " + username + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            throw new ServiceException(500,
-                    "create ldap user " + username + " failed");
+            logger.error("create ldap user " + username + " failed");
+            logger.error(e.getMessage());
         }
 
         return Result.success();
@@ -265,13 +265,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("delete ldap user {} success", clusterUser.getUsername());
             } else {
-                logger.info(execResult.getExecOut());
-                throw new ServiceException(500,
-                        "delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            throw new ServiceException(500,
-                    "delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error(e.getMessage());
         }
 
         this.removeById(id);
