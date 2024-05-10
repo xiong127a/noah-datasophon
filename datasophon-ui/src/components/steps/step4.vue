@@ -27,7 +27,7 @@
 <template>
   <div class="steps4 steps">
     <div class="steps-title flex-bewteen-container pdr30 mgb12">
-      <span>选择服务</span>{{ stepsType }}{{ selectedRowKeysArr }}
+      <span>选择服务</span>
     </div>
     <!-- 只有从集群进入(stepsType:cluster) step4才会有选择服务下拉框 同时table数据也变 -->
     <a-row type="flex" align="middle" v-if="stepsType == 'cluster'">
@@ -54,7 +54,7 @@ export default {
   data () {
     return {
       params: { type: 'custom' },
-      selectedRowKeys: [13],
+      selectedRowKeys: [],
       selectedRowKeysArr: [],
       selectedRowNames: [],
       selectedRowNamesArr: [],
