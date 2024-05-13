@@ -38,7 +38,7 @@ public class ClusterYarnSchedulerServiceImpl extends ServiceImpl<ClusterYarnSche
     @Override
     public void createDefaultYarnScheduler(Integer clusterId) {
         ClusterYarnScheduler scheduler = new ClusterYarnScheduler();
-        scheduler.setScheduler("fair");
+        scheduler.setScheduler("capacity");
         scheduler.setClusterId(clusterId);
         scheduler.setInUse(1);
         this.save(scheduler);

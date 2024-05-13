@@ -394,6 +394,7 @@ INSERT INTO `t_ddh_cluster_user` VALUES (6, 'hbase', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (7, 'hue', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (8, 'postgres', 1);
 INSERT INTO `t_ddh_cluster_user` VALUES (9, 'admin', 1);
+INSERT INTO `t_ddh_cluster_user` VALUES (10, 'root', 1);
 
 -- ----------------------------
 -- Records of t_ddh_cluster_user_group

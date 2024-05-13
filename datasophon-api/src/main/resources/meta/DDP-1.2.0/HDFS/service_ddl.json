@@ -172,6 +172,43 @@
       }
     },
     {
+      "name": "HttpFs",
+      "label": "HttpFs",
+      "roleType": "master",
+      "runAs": {
+        "user": "hdfs",
+        "group": "hadoop"
+      },
+      "cardinality": "1+",
+      "sortNum": 4,
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${host}.log",
+      "jmxPort": "",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "start",
+          "httpfs"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_hadoop.sh",
+        "args": [
+          "stop",
+          "httpfs"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_hadoop.sh",
+        "args": [
+          "status",
+          "httpfs"
+        ]
+      }
+    },
+    {
       "name": "HdfsClient",
       "label": "HdfsClient",
       "roleType": "client",
@@ -198,6 +235,9 @@
           "hadoop.proxyuser.kyuubi.hosts",
           "hadoop.proxyuser.kyuubi.groups",
           "hadoop.proxyuser.kyuubi.users",
+          "hadoop.proxyuser.hdfs.hosts",
+          "hadoop.proxyuser.hdfs.groups",
+          "hadoop.proxyuser.hdfs.users",
           "hadoop.http.staticuser.user",
           "ha.zookeeper.quorum",
           "hadoop.zk.address",
@@ -272,13 +312,26 @@
         ]
       },
       {
+        "filename": "httpfs-site.xml",
+        "configFormat": "xml",
+        "outputDirectory": "etc/hadoop/",
+        "includeParams": [
+          "httpfs.proxyuser.hue.hosts",
+          "httpfs.proxyuser.hue.groups",
+          "custom.httpfs.site.xml"
+        ]
+      },
+      {
         "filename": "install.properties",
         "configFormat": "custom",
         "outputDirectory": "ranger-hdfs-plugin",
         "templateName": "ranger-hdfs.ftl",
         "includeParams": [
           "hadoopHome",
-          "rangerAdminUrl"
+          "rangerAdminUrl",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
         ]
       }
     ]
@@ -411,6 +464,61 @@
       "name": "hadoop.proxyuser.kyuubi.users",
       "label": "允许通过代理的用户",
       "description": "配置kyuubi允许通过代理的用户",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.hdfs.hosts",
+      "label": "允许通过代理访问的主机节点",
+      "description": "配置httpfs允许通过代理访问的主机节点",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.hdfs.groups",
+      "label": "允许通过代理用户所属组",
+      "description": "配置httpfs允许通过代理用户所属组",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "hadoop.proxyuser.hdfs.users",
+      "label": "允许通过代理的用户",
+      "description": "配置httpfs允许通过代理的用户",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "httpfs.proxyuser.hue.hosts",
+      "label": "httpfs允许通过代理访问的主机节点",
+      "description": "配置hue允许通过代理访问的主机节点",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "*"
+    },
+    {
+      "name": "httpfs.proxyuser.hue.groups",
+      "label": "httpfs允许通过代理用户所属组",
+      "description": "配置hue允许通过代理用户所属组",
       "required": true,
       "type": "input",
       "value": "",
@@ -718,7 +826,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": false
     },
     {
       "name": "enableRack",
@@ -1062,8 +1170,56 @@
       "defaultValue": "${HADOOP_HOME}"
     },
     {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
       "name": "custom.core.site.xml",
       "label": "自定义配置core-site.xml",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.httpfs.site.xml",
+      "label": "自定义配置httpfs-site.xml",
       "description": "自定义配置",
       "configType": "custom",
       "required": false,

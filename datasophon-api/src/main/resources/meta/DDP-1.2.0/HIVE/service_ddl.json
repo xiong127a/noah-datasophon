@@ -155,7 +155,10 @@
           "hive.merge.size.per.task",
           "hive.merge.smallfiles.avgsize",
           "hive.exec.submit.local.task.via.child",
-          "iceberg.engine.hive.enabled"
+          "iceberg.engine.hive.enabled",
+          "hive.security.authorization.enabled",
+          "hive.metastore.client.socket.timeout",
+          "hive.stats.autogather"
         ]
       },
       {
@@ -176,7 +179,10 @@
         "templateName": "ranger-hive.ftl",
         "includeParams": [
           "rangerAdminUrl",
-          "hiveHome"
+          "hiveHome",
+          "esAuditEnable",
+          "esSingleHost",
+          "esHttpPort"
         ]
       }
     ]
@@ -505,10 +511,10 @@
       "configWithKerberos": true,
       "required": false,
       "type": "input",
-      "value": "hive/${host}@${realm}",
+      "value": "hive/_HOST@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "hive/${host}@${realm}"
+      "defaultValue": "hive/_HOST@${realm}"
     },
     {
       "name": "hive.metastore.kerberos.keytab.file",
@@ -646,6 +652,42 @@
       "defaultValue": "${HIVE_HOME}"
     },
     {
+      "name": "esAuditEnable",
+      "label": "esAuditEnable",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "false"
+    },
+    {
+      "name": "esSingleHost",
+      "label": "esSingleHost",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
+      "name": "esHttpPort",
+      "label": "esHttpPort",
+      "description": "",
+      "required": false,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": ""
+    },
+    {
       "name": "custom.hive.site.xml",
       "label": "自定义配置hive-site.xml",
       "description": "自定义配置",
@@ -668,6 +710,42 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "hive.security.authorization.enabled",
+      "label": "开启hive权限",
+      "description": "开启hive权限",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "hive.metastore.client.socket.timeout",
+      "label": "连接metastore超时时间",
+      "description": "连接metastore超时时间",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "30000",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "30000"
+    },
+    {
+      "name": "hive.stats.autogather",
+      "label": "hive.stats.autogather",
+      "description": "hive.stats.autogather",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
     }
   ]
 }
