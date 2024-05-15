@@ -222,8 +222,6 @@ export default {
             assembly.push(e.yarnResourceList[0].serviceName)
           }
           e['assembly'] = assembly
-          // e['desc'] = '此租户租户是指系统中的一个独立实体它可以是一个组织、一个部门或者一个个人,拥有自己的数据、配置和权限此租户租户是指系统中的一个独立实体它可以是一个组织、一个部门或者一个个人,拥有自己的数据、配置和权限'
-          // console.log('assembly', e.assembly);
         })
         this.pagination.total = res.total;
       });

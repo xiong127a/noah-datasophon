@@ -1,6 +1,7 @@
 # Tomcat
 server:
-  port: 8081
+  port: ${server.port:8081}
+  address: ${server.ip:0.0.0.0}
   servlet:
     context-path: /ddh/
 security:
@@ -59,10 +60,9 @@ mybatis-plus:
 logging:
   config: classpath:logback-api.xml
 
-
 datasophon:
   migration:
-    enable: true
+    enable: ${datasophon.migration.enable:true}
 
 sa-token:
   # SSO-相关配置
@@ -99,7 +99,7 @@ sa-token:
     cluster:
       nodes: ${sso.redis-nodes:192.168.5.160:6379,192.168.5.161:6379,192.168.5.162:6379}
       # Redis服务器连接密码（默认为空）
-    password: ${sso.redis-password:zb@123}
+    password: ${sso.redis-password:}
     # 连接超时时间
     timeout: 10s
     lettuce:

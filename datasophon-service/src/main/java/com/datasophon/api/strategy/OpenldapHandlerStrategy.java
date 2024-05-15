@@ -14,11 +14,14 @@ public class OpenldapHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        if (!globalVariables.containsKey("${openldapAddr}") || ObjUtil.isNull(globalVariables.get("${openldapAddr}"))) {
-            if (!hosts.isEmpty()) {
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapAddr}", "ldap://" + hosts.get(0) + ":389");
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapIp}", hosts.get(0));
-            }
+        if (!hosts.isEmpty()) {
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapAddr}", "ldap://" + hosts.get(0) + ":389");
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUrl}", "ldap://" + hosts.get(0) + ":389");
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${openldapIp}", hosts.get(0));
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapBindDn}", "cn=root,dc=ldap,dc=com");
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapBindPassword}", "123456");
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapSearchBase}", "dc=ldap,dc=com");
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUserSearchBase}", "ou=People,dc=ldap,dc=com");
         }
     }
 
