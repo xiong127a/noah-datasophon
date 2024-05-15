@@ -170,10 +170,10 @@
       "configType": "map",
       "required": true,
       "type": "input",
-      "value": "hdfs://${dfs.namenode.rpc-address.nameservice1.nn1}",
+      "value": "hdfs://${dfs.nameservices}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://${dfs.namenode.rpc-address.nameservice1.nn1}"
+      "defaultValue": "hdfs://${dfs.nameservices}"
     },
     {
       "name": "logicalName",
@@ -194,10 +194,10 @@
       "configType": "map",
       "required": true,
       "type": "input",
-      "value": "http://${dfs.namenode.http-address.nameservice1.nn1}/webhdfs/v1",
+      "value": "http://${httpFs}:14000/webhdfs/v1/",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${dfs.namenode.http-address.nameservice1.nn1}/webhdfs/v1"
+      "defaultValue": "http://${httpFs}:14000/webhdfs/v1/"
     },
     {
       "name": "hadoopConfDir",

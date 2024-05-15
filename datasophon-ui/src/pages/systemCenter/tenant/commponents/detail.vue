@@ -102,6 +102,7 @@ export default {
   methods: {
     // 点击编辑
     echoUSer () {
+      console.log('detaqq', this.detail);
       this.resourceList = { ...this.detail }
     },
 
