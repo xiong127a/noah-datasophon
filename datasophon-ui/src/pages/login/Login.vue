@@ -165,11 +165,13 @@ export default {
     },
 
     // 根据ticket值登录
-    doLoginByTicket (ticket) {
+    async doLoginByTicket (ticket) {
       let param = {
         ticket: ticket
       }
-      this.$axiosGet('/ddh/sso/doLoginByTicket', param).then(async res => {
+      let res = await this.$axiosGet('/ddh/sso/doLoginByTicket', param);
+      // .then( res => {
+        console.log("doLoginByTicket接口的返回数据：",res)
         if (res.code === 200) {
           localStorage.setItem('satoken', null);
           localStorage.setItem('satoken', res.data);
@@ -195,13 +197,15 @@ export default {
           this.$router.push('/login')
           location.reload()
         }
-      })
+      // })
     },
     //获取地址栏上的 ticket参数
     getParam (key) {
+      
       let url = location.href;
       if (url.indexOf("?") != -1) {
         let str = url.split('?')[1];
+        console.log("url问号后面[1]",str)
         str = str.split("=");
          if(str[0]==key){
             return str[1]
