@@ -101,7 +101,6 @@ export default {
     ...mapState("setting", ["footerLinks", "copyright"]),
   },
   created () {
-    
       if(localStorage.getItem('satoken')){
         this.$router.push("/colony-manage/colony-list");
       }else{
@@ -111,8 +110,9 @@ export default {
                 // true  的时候 用户管理模块隐藏（未实现2024-5-8）
 
                 this.back = location.pathname; 
-                this.ticket = this.getParam('ticket');  //方舟登录
-                this.token = this.getParam('token') // hh第三方网址进来的用户token
+                this.ticket = this.getParameterByName('ticket');  //方舟登录
+                this.token = this.getParameterByName('token') // hh第三方网址进来的用户token
+               
                 let pathTicket = this.ticket?this.ticket:this.token;
                 console.log("ticket或者token",pathTicket)
                 if (pathTicket && this.isSsoLogin) {
@@ -200,18 +200,24 @@ export default {
       // })
     },
     //获取地址栏上的 ticket参数
-    getParam (key) {
-      
-      let url = location.href;
-      if (url.indexOf("?") != -1) {
-        let str = url.split('?')[1];
-        console.log("url问号后面[1]",str)
-        str = str.split("=");
-         if(str[0]==key){
-            return str[1]
-         }
-      }
+    // getParam (key){
+    //   let url = location.href;
+    //   if (url.indexOf("?") != -1) {
+    //     let str = url.split('?')[1];
+    //     console.log("url问号后面[1]",str)
+    //     str = str.split("=");
+    //      if(str[0]==key){
+    //         return str[1]
+    //      }
+    //   }
+    // },
+    getParameterByName(name) {
+      name = name.replace(/[\\[\]]/, '\\$&');
+      var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+      var results = regex.exec(location.href);
+      return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
     }
+    
   },
 };
 </script>
