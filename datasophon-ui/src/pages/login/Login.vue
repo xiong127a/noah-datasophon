@@ -115,7 +115,7 @@ export default {
                
                 let pathTicket = this.ticket?this.ticket:this.token;
                 console.log("ticket或者token",pathTicket)
-               
+                
                 if (pathTicket && this.isSsoLogin) {
                   this.doLoginByTicket(pathTicket);
                 }else{
@@ -156,7 +156,7 @@ export default {
     //sso 重定向至认证中心
     goSsoAuthUrl () {
       let param = {
-        clientLoginUrl: location.href
+        clientLoginUrl: location.origin+location.pathname+location.hash
       }
       this.$axiosGet('/ddh/sso/getSsoAuthUrl', param).then(res => {
         if (res.code === 200) {
@@ -191,7 +191,8 @@ export default {
 
         this.$axiosGet('/ddh/sso/logout', {}).then(res => {})  //sso 退出
         logout();  //基础平台 退出
-        this.$router.push('/login')
+        // this.$router.push('/login')
+        location.href = location.origin + location.pathname+'#/login';
         location.reload()
       }
       
