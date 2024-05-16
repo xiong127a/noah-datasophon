@@ -115,6 +115,7 @@ export default {
                
                 let pathTicket = this.ticket?this.ticket:this.token;
                 console.log("ticket或者token",pathTicket)
+               
                 if (pathTicket && this.isSsoLogin) {
                   this.doLoginByTicket(pathTicket);
                 }else{
@@ -170,47 +171,32 @@ export default {
         ticket: ticket
       }
       let res = await this.$axiosGet('/ddh/sso/doLoginByTicket', param);
-      // .then( res => {
-        console.log("doLoginByTicket接口的返回数据：",res)
-        if (res.code === 200) {
-          localStorage.setItem('satoken', null);
-          localStorage.setItem('satoken', res.data);
-          
-          this.$axiosGet('/ddh/saveSsoUser',"").then((res) => {
-            // console.log(res, 'saveSsoUser--res:')
+      if (res.code === 200) {
+        localStorage.setItem('satoken', null);
+        localStorage.setItem('satoken', res.data);
+        
+        this.$axiosGet('/ddh/saveSsoUser',"").then((res) => {
+         
+          if (res.code === 200) {
+            const username = res.data.username;
+            const password = res.data.password;
+            this.$axiosPost(global.API.login, { username, password }).then(
+              (res) => this.afterLogin(res)
+            );
+          }
+        })
+      } else {
+        this.$message.warning(res.msg);
+        localStorage.removeItem("isCluster");
 
-            if (res.code === 200) {
-              const username = res.data.username;
-              const password = res.data.password;
-              this.$axiosPost(global.API.login, { username, password }).then(
-                (res) => this.afterLogin(res)
-              );
-            }
-          })
-          
-        } else {
-          this.$message.warning(res.msg);
-          localStorage.removeItem("isCluster");
-
-          this.$axiosGet('/ddh/sso/logout', {}).then(res => {})  //sso 退出
-          logout();  //基础平台 退出
-          this.$router.push('/login')
-          location.reload()
-        }
-      // })
+        this.$axiosGet('/ddh/sso/logout', {}).then(res => {})  //sso 退出
+        logout();  //基础平台 退出
+        this.$router.push('/login')
+        location.reload()
+      }
+      
     },
-    //获取地址栏上的 ticket参数
-    // getParam (key){
-    //   let url = location.href;
-    //   if (url.indexOf("?") != -1) {
-    //     let str = url.split('?')[1];
-    //     console.log("url问号后面[1]",str)
-    //     str = str.split("=");
-    //      if(str[0]==key){
-    //         return str[1]
-    //      }
-    //   }
-    // },
+    //获取地址栏上的参数
     getParameterByName(name) {
       name = name.replace(/[\\[\]]/, '\\$&');
       var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
