@@ -59,7 +59,9 @@ export default {
         logout();
         localStorage.removeItem("isCluster");
         this.setIsCluster("");
-        this.$router.push("/login");
+        // this.$router.push("/login");
+     
+        location.href = location.origin + location.pathname
       });
     },
     ssoLogout(){
