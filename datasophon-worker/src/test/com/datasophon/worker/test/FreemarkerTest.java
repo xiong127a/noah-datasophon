@@ -225,5 +225,64 @@ public class FreemarkerTest {
         FreemakerUtils.generateConfigFile(generators,serviceConfigs,"");
     }
 
+    @Test
+    public void testHuePseudo() throws TemplateException, IOException {
+        Generators generators = new Generators();
+        generators.setFilename("pseudo-distributed.ini");
+        generators.setOutputDirectory("D:\\WorkSpaceForWork\\datasophon\\datasophon-worker\\src\\test\\com\\datasophon\\worker\\test");
+        generators.setConfigFormat("custom");
+        generators.setTemplateName("pseudo-distributed.ftl");
+
+        ServiceConfig serviceConfig = new ServiceConfig();
+        serviceConfig.setName("enableHueKerberos");
+        serviceConfig.setConfigType("map");
+        serviceConfig.setValue(true);
+
+        ServiceConfig serviceConfig1 = new ServiceConfig();
+        serviceConfig1.setName("hueKeyTab");
+        serviceConfig1.setConfigType("map");
+        serviceConfig1.setValue("/etc/security/keytab/hue.service.keytab");
+
+        ServiceConfig serviceConfig2 = new ServiceConfig();
+        serviceConfig2.setName("huePrincipal");
+        serviceConfig2.setConfigType("map");
+        serviceConfig2.setValue("hue/hadoop1@HADOOP.COM");
+
+        ServiceConfig serviceConfig3 = new ServiceConfig();
+        serviceConfig3.setName("hueKbCachePath");
+        serviceConfig3.setConfigType("map");
+        serviceConfig3.setValue("/tmp/cache");
+
+        ServiceConfig serviceConfig4 = new ServiceConfig();
+        serviceConfig4.setName("hueKbKinitPath");
+        serviceConfig4.setConfigType("map");
+        serviceConfig4.setValue("/bin/kinit");
+
+        ServiceConfig serviceConfig5 = new ServiceConfig();
+        serviceConfig5.setName("hueHdfsSecurityEnable");
+        serviceConfig5.setConfigType("map");
+        serviceConfig5.setValue("true");
+
+        ServiceConfig serviceConfig6 = new ServiceConfig();
+        serviceConfig6.setName("hueYarnSecurityEnable");
+        serviceConfig6.setConfigType("map");
+        serviceConfig6.setValue("true");
+
+        ServiceConfig serviceConfig7 = new ServiceConfig();
+        serviceConfig7.setName("hueHiveSecurityEnable");
+        serviceConfig7.setConfigType("map");
+        serviceConfig7.setValue("true");
+
+        ArrayList<ServiceConfig> serviceConfigs = new ArrayList<>();
+        serviceConfigs.add(serviceConfig);
+        serviceConfigs.add(serviceConfig1);
+        serviceConfigs.add(serviceConfig2);
+        serviceConfigs.add(serviceConfig3);
+        serviceConfigs.add(serviceConfig4);
+        serviceConfigs.add(serviceConfig5);
+        serviceConfigs.add(serviceConfig6);
+        serviceConfigs.add(serviceConfig7);
+        FreemakerUtils.generateConfigFile(generators,serviceConfigs,"");
+    }
 
 }

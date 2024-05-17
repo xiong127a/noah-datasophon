@@ -60,7 +60,7 @@ public class ServiceRoleStrategyContext {
         map.put("KAFKA", new KafkaHandlerStrategy());
         map.put("HBASE", new HBaseHandlerStrategy());
         map.put("FLINK", new FlinkHandlerStrategy());
-        map.put("KYUUBI",new KyuubiServerHandlerStrategy());
+        map.put("KYUUBI", new KyuubiServerHandlerStrategy());
         map.put("OpenldapServer", new OpenldapHandlerStrategy());
         map.put("REDIS", new RedisHandlerStrategy());
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy());
@@ -68,7 +68,8 @@ public class ServiceRoleStrategyContext {
         map.put("ALLUXIO", new AlluxioHandlerStrategy());
         map.put("CLICKHOUSE", new ClickhouseHandlerStrategy());
         map.put("Pushgateway", new PushgatewayHandlerStrategy());
-        map.put("MINIO",new MinioHandlerStrategy());
+        map.put("MINIO", new MinioHandlerStrategy());
+        map.put("HUE", new HueHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

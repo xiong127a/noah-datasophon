@@ -158,7 +158,8 @@
           "iceberg.engine.hive.enabled",
           "hive.security.authorization.enabled",
           "hive.metastore.client.socket.timeout",
-          "hive.stats.autogather"
+          "hive.stats.autogather",
+          "hive.server2.active.passive.ha.enable"
         ]
       },
       {
@@ -746,6 +747,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": false
+    },
+    {
+      "name": "hive.server2.active.passive.ha.enable",
+      "label": "hive.stats.autogather",
+      "description": "hive.server2.active.passive.ha.enable",
+      "required": true,
+      "configType": "map",
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
     }
   ]
 }
