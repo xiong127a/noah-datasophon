@@ -63,7 +63,6 @@
           "dbName",
           "defaultHdfsSuperuser",
           "fsDefaultfs",
-          "logicalName",
           "webhdfsUrl",
           "hadoopConfDir",
           "resourcemanagerHost",
@@ -73,7 +72,15 @@
           "sparkHistoryServerUrl",
           "hiveServerHost",
           "hiveServerPort",
-          "hiveConfDir"
+          "hiveConfDir",
+          "enableHueKerberos",
+          "hueKeyTab",
+          "huePrincipal",
+          "hueKbCachePath",
+          "hueKbKinitPath",
+          "hueHdfsSecurityEnable",
+          "hueYarnSecurityEnable",
+          "hueHiveSecurityEnable"
         ]
       }
     ]
@@ -170,22 +177,10 @@
       "configType": "map",
       "required": true,
       "type": "input",
-      "value": "hdfs://${dfs.nameservices}",
+      "value": "${fs.defaultFS}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://${dfs.nameservices}"
-    },
-    {
-      "name": "logicalName",
-      "label": "logicalName",
-      "description": "",
-      "configType": "map",
-      "required": true,
-      "type": "input",
-      "value": "${dfs.nameservices}",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "${dfs.nameservices}"
+      "defaultValue": "${fs.defaultFS}"
     },
     {
       "name": "webhdfsUrl",
@@ -306,6 +301,102 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${hiveHome}/conf"
+    },
+    {
+      "name": "enableHueKerberos",
+      "label": "是否开启kerberos",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "hueKeyTab",
+      "label": "hueKeyTab",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/opt/datasophon/hue/hue.service.keytab",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/opt/datasophon/hue/hue.service.keytab"
+    },
+    {
+      "name": "huePrincipal",
+      "label": "huePrincipal",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "hue/${host}@HADOOP.COM",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hue/${host}@HADOOP.COM"
+    },
+    {
+      "name": "hueKbCachePath",
+      "label": "hueKbCachePath",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/tmp/hue_krb5_ccache",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/tmp/hue_krb5_ccache"
+    },
+    {
+      "name": "hueKbKinitPath",
+      "label": "hueKbKinitPath",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "/bin/kinit",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/bin/kinit"
+    },
+    {
+      "name": "hueHdfsSecurityEnable",
+      "label": "hueHdfsSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableHDFSKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableHDFSKerberos}"
+    },
+    {
+      "name": "hueYarnSecurityEnable",
+      "label": "hueYarnSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableYARNKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableYARNKerberos}"
+    },
+    {
+      "name": "hueHiveSecurityEnable",
+      "label": "hueHiveSecurityEnable",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${enableHIVEKerberos}",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${enableHIVEKerberos}"
     }
   ]
 }
