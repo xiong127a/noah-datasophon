@@ -626,7 +626,7 @@ CREATE TABLE `t_ddh_operation_log`  (
   `service_role_instances_ids` varchar(30)  DEFAULT NULL COMMENT '服务实例',
   `param` text(128)  DEFAULT NULL COMMENT '请求数据',
   `return_code` int(10)  DEFAULT NULL COMMENT '返回状态码',
-  `return_msg` varchar(128)  DEFAULT NULL COMMENT '返回说明',
+  `return_msg` text  DEFAULT NULL COMMENT '返回说明',
   `operate_user` varchar(128)  DEFAULT NULL COMMENT '操作人',
   `start_time` datetime DEFAULT NULL COMMENT '操作开始时间',
   `end_time` datetime DEFAULT NULL COMMENT '操作结束时间',
