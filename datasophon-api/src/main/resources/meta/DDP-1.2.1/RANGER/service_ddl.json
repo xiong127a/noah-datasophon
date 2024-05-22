@@ -162,9 +162,7 @@
           "syncLdapBindDn",
           "syncLdapBindPassword",
           "syncLdapSearchBase",
-          "syncLdapUserSearchBase",
-          "spnegoPrincipal",
-          "spnegoKeytab"
+          "syncLdapUserSearchBase"
         ]
       },
       {
@@ -182,7 +180,9 @@
           "rangerKmsDbUser",
           "rangerKmsDbPass",
           "rangerKmsHadoopConfPath",
-          "rangerKmsRepositoryName"
+          "rangerKmsRepositoryName",
+          "spnegoPrincipal",
+          "spnegoKeytab"
         ]
       },
       {
@@ -540,10 +540,10 @@
       "required": true,
       "configType": "map",
       "type": "input",
-      "value": "hadoop1",
+      "value": "${apiHost}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hadoop1"
+      "defaultValue": "${apiHost}"
     },
     {
       "name": "rangerKmsDbName",

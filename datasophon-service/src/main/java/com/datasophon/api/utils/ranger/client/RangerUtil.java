@@ -84,7 +84,7 @@ public class RangerUtil {
         Role role = new Role();
         role.setName(SUPER_ROLE_NAME);
         List<RoleMember> defaultRoleMembers = new ArrayList<>();
-        List<String> defaultUsers = Arrays.asList("root", "hdfs", "yarn", "hive", "hbase", "mapred", "admin", "ranger", "hadoop");
+        List<String> defaultUsers = Arrays.asList("root", "hdfs", "yarn", "hive", "hbase", "mapred", "admin", "elastic", "hue");
         for (String defaultUser : defaultUsers) {
             RoleMember roleMember = new RoleMember();
             roleMember.setName(defaultUser);
