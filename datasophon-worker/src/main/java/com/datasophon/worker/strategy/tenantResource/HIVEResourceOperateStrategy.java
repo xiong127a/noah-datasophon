@@ -103,7 +103,7 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         // /opt/datasophon/hadoop-3.3.3/bin/hdfs dfsadmin -setSpaceQuota 1024 /tenant/t1
         StringJoiner commands = new StringJoiner(" ");
         if (hiveResource.getEnableKerberos()) {
-            KerberosUtils.downloadKeytabFromMaster("nn" + CacheUtils.get(Constants.HOSTNAME), "nn.service.keytab");
+            KerberosUtils.downloadKeytabFromMaster("nn/" + CacheUtils.get(Constants.HOSTNAME), "nn.service.keytab");
             commands.add("sudo");
             commands.add("-u");
             commands.add("hdfs");

@@ -101,4 +101,7 @@ public class ClusterAlertQuota implements Serializable {
     @TableField(exist = false)
     private String alertGroupName;
 
+    @TableField(exist = false)
+    private String noticeGroupName;
+
 }

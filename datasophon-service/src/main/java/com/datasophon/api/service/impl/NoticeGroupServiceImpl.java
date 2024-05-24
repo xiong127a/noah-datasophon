@@ -29,7 +29,10 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.AlertManagersActor;
 import com.datasophon.api.service.*;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
 import com.datasophon.dao.model.MPage;
@@ -61,7 +64,17 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
 
     @Override
-    public void saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup) {
+    public Result saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup) {
+
+        // 名称校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(noticeGroup.getNoticeGroupName());
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
 
         LambdaQueryWrapper<NoticeGroupEntity> query = new LambdaQueryWrapper<>();
         query.eq(NoticeGroupEntity::getNoticeGroupName, noticeGroup.getNoticeGroupName());
@@ -70,7 +83,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         }
         List<NoticeGroupEntity> list = list(query);
         if (CollectionUtil.isNotEmpty(list)) {
-//            throw new ServiceException(Status.NOTICE_GROUP_NAME_EXIST);
+//            return Result.error("通知组名称重复");
         }
 
         if (Objects.nonNull(noticeGroup.getId())) {
@@ -91,6 +104,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         noticeGroupUserService.saveBatch(collect);
 
         genAlertManagerConfig();
+
+        return Result.success();
     }
 
     /**
