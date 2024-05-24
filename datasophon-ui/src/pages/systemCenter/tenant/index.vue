@@ -18,7 +18,8 @@
           <a-icon type="user" class="icon"></a-icon> <span class="name">{{ item.tenantName }}</span>
         </div>
         <div class="discription">
-          <a-tooltip :title="item.desc" placement="top">{{ item.desc && item.desc.length > 52 ? item.desc.slice(0, 52) + '...' :
+          <a-tooltip :title="item.desc" placement="top">{{ item.desc && item.desc.length > 52 ? item.desc.slice(0, 52) +
+            '...' :
             item.desc }}</a-tooltip>
         </div>
         <div class="tags">
@@ -38,6 +39,12 @@
         </div>
       </div>
     </div>
+    <div class="pageBox">
+      <a-pagination :current="pagination.current" :page-size-options="pagination.sizeOptions" :total="pagination.total"
+        show-size-changer :page-size="pagination.size" @showSizeChange="showSizeChange" @change="tableChange">
+      </a-pagination>
+    </div>
+
   </div>
 </template>
 
@@ -46,19 +53,19 @@ import AddUser from "./commponents/addUser.vue";
 import Detail from "./commponents/detail.vue";
 import DelectUser from "./commponents/delectUser.vue";
 import { mapGetters, mapState, mapMutations } from "vuex";
-
 export default {
   name: "USER",
   // components: { Detail },
   data () {
     return {
       params: {},
+      page: 6,
       pagination: {
         total: 0,
-        size: 10,
-        current: 1,
+        size: 12,
+        page: 1,
         showSizeChanger: true,
-        sizeOptions: ["10", "20", "50", "100"],
+        sizeOptions: ['8', "12", "20", "50", "100"],
         showTotal: (total) => `共 ${total} 条`,
       },
       username: '',
@@ -73,11 +80,11 @@ export default {
             return (
               <span>
                 {parseInt(
-                  this.pagination.current === 1
+                  this.pagination.page === 1
                     ? index + 1
                     : index +
                     1 +
-                    this.pagination.size * (this.pagination.current - 1)
+                    this.pagination.size * (this.pagination.page - 1)
                 )}
               </span>
             );
@@ -116,9 +123,13 @@ export default {
     ...mapGetters("account", ["user"]),
   },
   methods: {
-    tableChange (pagination) {
-      this.pagination.current = pagination.current;
-      this.pagination.size = pagination.size
+    tableChange (current, size) {
+      this.pagination.page = current;
+      this.pagination.size = size
+      this.getUserList();
+    },
+    showSizeChange (current,size) {
+      this.pagination.size = size;
       this.getUserList();
     },
     getVal (val, filed) {
@@ -126,7 +137,7 @@ export default {
     },
     //   查询
     onSearch (key) {
-      this.pagination.current = 1;
+      this.pagination.page = 1;
       this.getUserList();
     },
     toDetail (obj) {
@@ -198,7 +209,7 @@ export default {
       let params = {
         clusterId: Number(localStorage.getItem("clusterId") || 1),
         size: this.pagination.size,
-        page: this.pagination.current,
+        page: this.pagination.page,
         ...this.params,
       };
       this.$axiosGet('/ddh/cluster/tenant/listTenant', params).then((res) => {
@@ -296,6 +307,11 @@ export default {
     letter-spacing: 0;
     font-weight: 400;
     margin: 0 5px;
+  }
+
+  .pageBox {
+    text-align: end;
+    padding: 10px;
   }
 }
 </style>
