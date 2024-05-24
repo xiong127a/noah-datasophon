@@ -17,11 +17,15 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterRackService;
+import com.datasophon.api.utils.StringValidator.GeneralValidator;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
@@ -44,11 +48,33 @@ public class ClusterRackServiceImpl extends ServiceImpl<ClusterRackMapper, Clust
     }
 
     @Override
-    public void saveRack(Integer clusterId, String rack) {
+    public Result saveRack(Integer clusterId, String rack) {
+        // 机架名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        GeneralValidator generalValidator = new GeneralValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(generalValidator);
+        generalValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(rack);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+
+        // 重复校验
+        List<ClusterRack> list = this.lambdaQuery()
+                .eq(ClusterRack::getClusterId, clusterId)
+                .eq(ClusterRack::getRack, rack)
+                .list();
+        if (CollUtil.isNotEmpty(list)) {
+            return Result.error("机架名称重复");
+        }
+
         ClusterRack clusterRack = new ClusterRack();
         clusterRack.setRack(rack);
         clusterRack.setClusterId(clusterId);
         this.save(clusterRack);
+        return Result.success();
     }
 
     @Override

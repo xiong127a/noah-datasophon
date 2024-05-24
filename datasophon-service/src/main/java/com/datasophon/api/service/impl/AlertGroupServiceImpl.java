@@ -23,6 +23,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.ClusterAlertGroupMapService;
 import com.datasophon.api.service.ClusterAlertQuotaService;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.Result;
@@ -91,6 +93,33 @@ public class AlertGroupServiceImpl extends ServiceImpl<AlertGroupMapper, AlertGr
 
     @Override
     public Result saveAlertGroup(AlertGroupEntity alertGroup) {
+
+        // 名称校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(alertGroup.getAlertGroupName());
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+
+        // 重复校验
+        List<Integer> existGroupId = alertGroupMapService.lambdaQuery()
+                .eq(ClusterAlertGroupMap::getClusterId, alertGroup.getClusterId())
+                .list()
+                .stream()
+                .map(ClusterAlertGroupMap::getAlertGroupId)
+                .collect(Collectors.toList());
+        List<String> existGroupName = this
+                .listByIds(existGroupId)
+                .stream()
+                .map(AlertGroupEntity::getAlertGroupName)
+                .collect(Collectors.toList());
+        if (existGroupName.contains(alertGroup.getAlertGroupName())) {
+            return Result.error("告警组名称重复");
+        }
+
         this.save(alertGroup);
         ClusterAlertGroupMap clusterAlertGroupMap = new ClusterAlertGroupMap();
         clusterAlertGroupMap.setAlertGroupId(alertGroup.getId());

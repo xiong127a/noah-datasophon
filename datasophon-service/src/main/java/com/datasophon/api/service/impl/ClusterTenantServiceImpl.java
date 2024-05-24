@@ -13,6 +13,9 @@ import com.datasophon.api.master.*;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.ClusterUserTenantService;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
+import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.TROperateType;
@@ -56,12 +59,10 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Override
     public Result saveOrUpdateTenant(ClusterTenant clusterTenant) throws Exception {
-        if (Objects.isNull(clusterTenant.getId())) {
-            try {
-                checkTenant(clusterTenant);
-            } catch (Exception e) {
-                return Result.error(e.getMessage());
-            }
+        try {
+            checkTenant(clusterTenant);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
 
         filterDeleteResource(clusterTenant);
@@ -139,6 +140,13 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         List<ClusterTenant> tenantList = this.list();
 
         // 校验名称
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        WordValidator wordValidator = new WordValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(wordValidator);
+        wordValidator.setNext(lengthValidator);
+        notEmptyValidator.validate(clusterTenant.getTenantName());
+
         List<String> exitsName = tenantList.stream().map(ClusterTenant::getTenantName).collect(Collectors.toList());
         if (CollUtil.isNotEmpty(exitsName) && exitsName.contains(clusterTenant.getTenantName())) {
             throw new IllegalArgumentException("租户名称已存在");
@@ -153,8 +161,14 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(t -> t.get("hdfsPath"))
                     .collect(Collectors.toList());
             for (com.datasophon.dao.entity.tenantResource.TenantHdfsResource hdfsResource : clusterTenant.getHdfsResourceList()) {
+                if (!TROperateType.ADD.name().equals(hdfsResource.getType())) {
+                    continue;
+                }
                 if (!StrUtil.startWith(hdfsResource.getHdfsPath(), "/")) {
                     throw new IllegalArgumentException("hdfs路径不合法");
+                }
+                if ("/".equals(hdfsResource.getHdfsPath())) {
+                    throw new IllegalArgumentException("不能设置为hdfs跟路径");
                 }
                 if (existHdfsPaths.contains(hdfsResource.getHdfsPath())) {
                     throw new IllegalArgumentException("hdfs路径已被添加过,请勿重复添加");
@@ -174,6 +188,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(t -> t.get("parentQueueName") + "." + t.get("queueName"))
                     .collect(Collectors.toList());
             for (com.datasophon.dao.entity.tenantResource.TenantYarnResource tenantYarnResource : clusterTenant.getYarnResourceList()) {
+                if (!TROperateType.ADD.name().equals(tenantYarnResource.getType())) {
+                    continue;
+                }
                 String queueName = tenantYarnResource.getParentQueueName() + "." + tenantYarnResource.getQueueName();
                 if (existYarnQueue.contains(queueName)) {
                     throw new IllegalArgumentException("yarn队列已经被添加过");
@@ -197,6 +214,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(t -> t.get("hiveDatabase"))
                     .collect(Collectors.toList());
             for (com.datasophon.dao.entity.tenantResource.TenantHiveResource tenantHiveResource : clusterTenant.getHiveResourceList()) {
+                if (!TROperateType.ADD.name().equals(tenantHiveResource.getType())) {
+                    continue;
+                }
                 if (existHiveDbName.contains(tenantHiveResource.getHiveDatabase())) {
                     throw new IllegalArgumentException("hive数据库已经被添加过");
                 }
@@ -215,6 +235,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(t -> t.get("hbaseNamespace"))
                     .collect(Collectors.toList());
             for (com.datasophon.dao.entity.tenantResource.TenantHbaseResource tenantHbaseResource : clusterTenant.getHbaseResourceList()) {
+                if (!TROperateType.ADD.name().equals(tenantHbaseResource.getType())) {
+                    continue;
+                }
                 if (existHbaseNameSpace.contains(tenantHbaseResource.getHbaseNamespace())) {
                     throw new IllegalArgumentException("hbase namespace已经被添加过");
                 }
@@ -233,6 +256,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                     .map(t -> t.get("kafkaTopicName"))
                     .collect(Collectors.toList());
             for (com.datasophon.dao.entity.tenantResource.TenantKafkaResource tenantKafkaResource : clusterTenant.getKafkaResourceList()) {
+                if (!TROperateType.ADD.name().equals(tenantKafkaResource.getType())) {
+                    continue;
+                }
                 if (existKafkaTopic.contains(tenantKafkaResource.getKafkaTopicName())) {
                     throw new IllegalArgumentException("kafka topic已经被添加过");
                 }

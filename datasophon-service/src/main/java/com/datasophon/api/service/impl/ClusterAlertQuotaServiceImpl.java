@@ -28,6 +28,7 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.service.AlertGroupService;
 import com.datasophon.api.service.ClusterAlertQuotaService;
+import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.model.AlertItem;
@@ -36,6 +37,7 @@ import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuota;
+import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.enums.QuotaState;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
 import org.apache.commons.lang.StringUtils;
@@ -65,8 +67,12 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
             ClusterAlertQuotaService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterAlertQuotaServiceImpl.class);
+
     @Autowired
-    AlertGroupService alertGroupService;
+    private AlertGroupService alertGroupService;
+
+    @Autowired
+    private NoticeGroupService noticeGroupService;
 
     @Override
     public Result getAlertQuotaList(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page,
@@ -83,17 +89,27 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
         if (CollectionUtils.isEmpty(alertQuotaList)) {
             return Result.successEmptyCount();
         }
-        // 查询通知组
-        Set<Integer> alertQuotaIdList =
+        // 查询告警组
+        Set<Integer> alertGroupIdList =
                 alertQuotaList.stream().map(ClusterAlertQuota::getAlertGroupId).collect(Collectors.toSet());
-        Collection<AlertGroupEntity> alertGroupEntityList = alertGroupService.listByIds(alertQuotaIdList);
+        // 查询通知组
+        List<Integer> noticeGroupIdList =
+                alertQuotaList.stream().map(ClusterAlertQuota::getNoticeGroupId).collect(Collectors.toList());
+        Collection<AlertGroupEntity> alertGroupEntityList = alertGroupService.listByIds(alertGroupIdList);
+        Collection<NoticeGroupEntity> noticeGroupEntityList = noticeGroupService.listByIds(noticeGroupIdList);
         if (CollectionUtils.isNotEmpty(alertGroupEntityList)) {
-            Map<Integer, AlertGroupEntity> idMap = alertGroupEntityList.stream()
+            Map<Integer, AlertGroupEntity> alertIdMap = alertGroupEntityList.stream()
                     .collect(Collectors.toMap(AlertGroupEntity::getId, a -> a, (a1, a2) -> a1));
+            Map<Integer, NoticeGroupEntity> noticeIdMap = noticeGroupEntityList.stream()
+                    .collect(Collectors.toMap(NoticeGroupEntity::getId, a -> a, (a1, a2) -> a1));
             alertQuotaList.forEach(a -> {
-                AlertGroupEntity alertGroupEntity = idMap.get(a.getAlertGroupId());
+                AlertGroupEntity alertGroupEntity = alertIdMap.get(a.getAlertGroupId());
+                NoticeGroupEntity noticeGroupEntity = noticeIdMap.get(a.getNoticeGroupId());
                 if (Objects.nonNull(alertGroupEntity)) {
                     a.setAlertGroupName(alertGroupEntity.getAlertGroupName());
+                }
+                if (Objects.nonNull(noticeGroupEntity)) {
+                    a.setNoticeGroupName(noticeGroupEntity.getNoticeGroupName());
                 }
                 a.setQuotaStateCode(a.getQuotaState().getValue());
             });

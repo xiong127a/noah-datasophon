@@ -26,7 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -53,8 +55,15 @@ public class NoticeGroupController {
      */
     @RequestMapping("/save")
     public Result save(@RequestBody NoticeGroupEntity noticeGroup) {
-        noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
-        return Result.success();
+        List<String> existGroup = noticeGroupService.list()
+                .stream()
+                .map(NoticeGroupEntity::getNoticeGroupName)
+                .collect(Collectors.toList());
+        if (existGroup.contains(noticeGroup.getNoticeGroupName())) {
+            return Result.error("通知组名称重复");
+        }
+        return noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
+//        return Result.success();
     }
 
 
@@ -63,8 +72,8 @@ public class NoticeGroupController {
      */
     @RequestMapping("/update")
     public Result update(@RequestBody NoticeGroupEntity noticeGroup) {
-        noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
-        return Result.success();
+        return noticeGroupService.saveOrUpdateNoticeGroup(noticeGroup);
+//        return Result.success();
     }
 
 
