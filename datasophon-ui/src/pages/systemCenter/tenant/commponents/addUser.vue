@@ -243,58 +243,6 @@ export default {
         "hbaseResourceList": [],
         "kafkaResourceList": []
       },
-      resourceList1: {
-        "hdfsResourceList": [
-          {
-            "serviceName": "HDFS",
-            "type": "ADD",
-            "hdfsPath": "/tenant/test1",
-            "hdfsSpaceQuota": "2"
-          },
-          {
-            "serviceName": "HDFS",
-            "type": "ADD",
-            "hdfsPath": "/tenant/test2",
-            "hdfsSpaceQuota": "2"
-          }
-        ],
-        "yarnResourceList": [
-          {
-            "serviceName": "YARN",
-            "type": "ADD",
-            "parentQueueName": "root",
-            "queueName": "tenantTest1",
-            "capacityPercent": "10",
-            "nodeLabel": "default"
-          }
-        ],
-        "hiveResourceList": [
-          {
-            "serviceName": "HIVE",
-            "type": "ADD",
-            "hiveDatabase": "tenantTest1",
-            "hiveDatabaseCapacity": "2"
-          }
-        ],
-        "hbaseResourceList": [
-          {
-            "serviceName": "HBASE",
-            "type": "ADD",
-            "hbaseNamespace": "tenantTest1",
-            "hbaseCapacity": "2",
-            "hbaseRegionServerNum": "3"
-          }
-        ],
-        "kafkaResourceList": [
-          {
-            "serviceName": "KAFKA",
-            "type": "ADD",
-            "kafkaTopicName": "tenantTest1",
-            "kafkaTopicCapacity": "2",
-            "kafkaReplicas": "3"
-          }
-        ]
-      },
       form: this.$form.createForm(this),
       loading: false,
     };
@@ -435,7 +383,6 @@ export default {
           return false;
         }
       }
-
     },
     areObjectsEqual (obj1, obj2) {
       if (typeof obj1 !== typeof obj2) {
@@ -529,8 +476,6 @@ export default {
             })
 
           };
-          console.log('数据格式1', this.resourceListINIT);
-          console.log('数据格式2', this.resourceList);
           const params = {
             clusterId: this.clusterId,
             id: _this.editFlag ? this.detail.id : '',
@@ -559,10 +504,6 @@ export default {
         return acc;
       }, {});
       return Object.assign({ [propertyName]: firstProperty }, { ...restProperties })
-      // return {
-      //   [propertyName]: firstProperty,
-      //   ...restProperties,
-      // };
     },
     keepOnlyDesiredProperties (array, desiredProperties) {
       return array.map(obj => {
@@ -577,26 +518,9 @@ export default {
       });
     },
     movePropertyToFirst (arr, propertyName, desiredProps, type, newName = propertyName) {
-      // 示例用法  
-      const objectsArray = [
-        { a: 1, b: 2, c: 3 },
-        { a: 4, b: 5, c: 6 },
-        { a: 7, b: 8, c: 9 }
-      ];
-
       // const desiredProps = ['a', 'b']; // 保留的属性列表  
-
       arr = this.keepOnlyDesiredProperties(arr, desiredProps);
-      let newObjectsArray = this.keepOnlyDesiredProperties(arr, desiredProps);
-
       arr.forEach((obj, index) => {
-        // 示例用法  
-        const myObject = {
-          b: 2,
-          a: 1,
-          c: 3
-        };
-
         const newObject = this.toFirst(obj, propertyName);
         this.resourceListINIT[type][index] = newObject
       });
@@ -607,7 +531,6 @@ export default {
         this.editFlag = true;
         this.form.setFieldsValue({ ...this.detail })
         this.resourceListINIT = { ...this.detail }
-        console.log('this.detail', this.detail);
         const resourceNames = ["hdfsResourceList", "yarnResourceList", "hiveResourceList", "hbaseResourceList", "kafkaResourceList"];
 
         let keys = Object.keys(this.detail)

@@ -110,7 +110,7 @@ export default {
           dataIndex: "alertThreshold",
         },
         { title: "告警组", key: "alertGroupName", dataIndex: "alertGroupName" },
-        { title: "通知组", key: "noticeGroupId", dataIndex: "noticeGroupId" },
+        { title: "通知组", key: "noticeGroupName", dataIndex: "noticeGroupName" },
         {
           title: "状态",
           key: "quotaState",

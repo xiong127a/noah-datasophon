@@ -70,7 +70,6 @@ export default {
         this.tenantList = res.data;
         this.tenantName = res.data[0].tenantName
         this.detailInfo = res.data[0]
-        console.log('this.checkedList', this.checkedList);
         this.tenantList && this.tenantList.forEach((j, index) => {
           this.checkedList && this.checkedList.forEach(e => {
             if (e.tenantId == j.id) {
@@ -114,8 +113,6 @@ export default {
       arr = [...new Set(arr)]
       let deleteID = this.checkedList && this.checkedList.filter(item1 => arr && !arr.find(item2 => item2 == item1.tenantId))
       let addID = arr && arr.filter(item2 => this.checkedList && !this.checkedList.find(item1 => item1.tenantId == item2))
-      console.log('add', addID);
-      console.log('deleteID', deleteID);
       let delId = []
       deleteID && deleteID.forEach(e => {
         delId.push(e.tenantId)

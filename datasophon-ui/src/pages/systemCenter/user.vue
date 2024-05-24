@@ -245,19 +245,10 @@ export default {
       });
     },
     downloadUserKeytab (obj, key) {
-      this.$axiosGet(global.API.downloadUserKeytab, { clusterId: Number(localStorage.getItem("clusterId") || -1), username: obj.username }).then((res) => {
-        let blob = new Blob([res], { type: "application/force-download" })
-        let fileReader = new FileReader()   // FileReader 对象允许Web应用程序异步读取存储在用户计算机上的文件的内容
-        fileReader.readAsDataURL(blob)
-        fileReader.onload = (e) => {
-          let a = document.createElement('a')
-          a.download = `${obj.username}.key`
-          a.href = e.target.result
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-        }
-      })
+      let baseURL = process.env.VUE_APP_API_BASE_URL
+      let params = `clusterId=${Number(localStorage.getItem("clusterId") || -1)}&username=${obj.username}`
+      let url = `${baseURL}/ddh/cluster/kerberos/downloadUserKeytab?${params}`
+      window.open(url, '_self')
     },
     toEmpower (obj) {
       const self = this;
@@ -282,7 +273,7 @@ export default {
 
     },
 
-  
+
     getUserList (key) {
       this.loading = true;
       let params = {
