@@ -218,11 +218,11 @@ export default {
         <DelectUser
           sysTypeTxt="用户"
           detail={obj}
-          callBack={() => self.getUserList()}
+          callBack={() => self.goBack()}
         />
       );
       if (key == 'userGroup') {
-        content = <DelectUserGroup detail={obj} callBack={() => self.getUserList(key == 'userGroup' ? key : null)} />
+        content = <DelectUserGroup detail={obj} callBack={() => self.goBack('userGroup')} />
       }
       this.$confirm({
         width: width,
@@ -305,6 +305,10 @@ export default {
         this.tenantList = res.data;
       });
     },
+    goBack(key){
+      this.pagination.current = 1
+      this.getUserList(key == 'userGroup' ? key : null)
+    }
   },
   mounted () {
     this.getUserList();
