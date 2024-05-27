@@ -128,7 +128,7 @@ export default {
       this.pagination.size = size
       this.getUserList();
     },
-    showSizeChange (current,size) {
+    showSizeChange (current, size) {
       this.pagination.size = size;
       this.getUserList();
     },
@@ -183,7 +183,7 @@ export default {
           callBack={() => self.getUserList}
         />
       );
-      content = <DelectUser sysTypeTxt="租户" detail={obj} api='/ddh/cluster/tenant/delete' callBack={() => self.getUserList()} />
+      content = <DelectUser sysTypeTxt="租户" detail={obj} api='/ddh/cluster/tenant/delete' callBack={() => self.goBack() } />
       this.$confirm({
         width: width,
         title: () => {
@@ -237,6 +237,10 @@ export default {
         this.pagination.total = res.total;
       });
     },
+    goBack(){
+      this.pagination.page = 1
+      this.getUserList()
+    }
   },
   mounted () {
     this.getUserList();
