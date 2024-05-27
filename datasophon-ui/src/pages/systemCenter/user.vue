@@ -245,6 +245,7 @@ export default {
       });
     },
     downloadUserKeytab (obj, key) {
+      // let baseURL = process.env.VUE_APP_API_BASE_URL
       let baseURL = location.origin
       let params = `clusterId=${Number(localStorage.getItem("clusterId") || -1)}&username=${obj.username}`
       let url = `${baseURL}/ddh/cluster/kerberos/downloadUserKeytab?${params}`
