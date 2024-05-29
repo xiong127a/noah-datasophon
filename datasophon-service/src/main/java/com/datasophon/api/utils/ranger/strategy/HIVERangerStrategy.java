@@ -136,11 +136,21 @@ public class HIVERangerStrategy extends AbstractRangerStrategy implements Ranger
 
     public Policy simpleHivePolicyForDatabase(String serviceName, String policyName, List<String> databaseList, List<String> roleList) {
         Map<String, PolicyResource> resources = new HashMap<>();
-        PolicyResource policyResource = new PolicyResource();
-        policyResource.setValues(databaseList);
-        policyResource.setIsRecursive(false);
-        policyResource.setIsExcludes(false);
-        resources.put("database", policyResource);
+        PolicyResource dbRs = new PolicyResource();
+        dbRs.setValues(databaseList);
+        dbRs.setIsRecursive(false);
+        dbRs.setIsExcludes(false);
+        resources.put("database", dbRs);
+        PolicyResource tbRs = new PolicyResource();
+        tbRs.setValues(Collections.singletonList("*"));
+        tbRs.setIsRecursive(false);
+        tbRs.setIsExcludes(false);
+        resources.put("table", tbRs);
+        PolicyResource clRs = new PolicyResource();
+        clRs.setValues(Collections.singletonList("*"));
+        clRs.setIsRecursive(false);
+        clRs.setIsExcludes(false);
+        resources.put("column", clRs);
 
         PolicyItem policyItem = new PolicyItem();
         PolicyItemAccess policyItemAccess = new PolicyItemAccess();
