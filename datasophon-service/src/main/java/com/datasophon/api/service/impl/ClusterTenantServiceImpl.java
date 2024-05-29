@@ -148,6 +148,9 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         notEmptyValidator.validate(clusterTenant.getTenantName());
 
         List<String> exitsName = tenantList.stream().map(ClusterTenant::getTenantName).collect(Collectors.toList());
+        if (Objects.nonNull(clusterTenant.getId())) {
+            exitsName.remove(clusterTenant.getTenantName());
+        }
         if (CollUtil.isNotEmpty(exitsName) && exitsName.contains(clusterTenant.getTenantName())) {
             throw new IllegalArgumentException("租户名称已存在");
         }
