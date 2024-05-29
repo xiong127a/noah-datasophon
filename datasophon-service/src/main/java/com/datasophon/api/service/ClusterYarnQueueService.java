@@ -32,5 +32,9 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueue> {
 
     Result listByPage(Integer clusterId, Integer page, Integer pageSize);
 
+    Result saveQueue(ClusterYarnQueue clusterYarnQueue);
+
     Result refreshQueues(Integer clusterId) throws Exception;
+
+    ClusterYarnQueue getQueueByName(Integer clusterId, String queueName);
 }

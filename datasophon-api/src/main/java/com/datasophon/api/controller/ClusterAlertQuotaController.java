@@ -40,8 +40,8 @@ public class ClusterAlertQuotaController {
      * list alert quota
      */
     @RequestMapping("/list")
-    public Result info(Integer clusterId, Integer alertGroupId, String quotaName, Integer page, Integer pageSize) {
-        return clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId, quotaName, page, pageSize);
+    public Result info(Integer clusterId, Integer alertGroupId, Integer noticeGroupId, String quotaName, Integer page, Integer pageSize) {
+        return clusterAlertQuotaService.getAlertQuotaList(clusterId, alertGroupId,noticeGroupId, quotaName, page, pageSize);
     }
 
     /**

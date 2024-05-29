@@ -1,0 +1,106 @@
+{
+  "name": "SEATUNNEL",
+  "label": "Seatunnel",
+  "description": "数据同步工具",
+  "version": "2.3.3",
+  "sortNum": 32,
+  "dependencies": [],
+  "packageName": "seatunnel-2.3.3.tar.gz",
+  "decompressPackageName": "seatunnel-2.3.3",
+  "roles": [
+    {
+      "name": "SeatunnelServer",
+      "label": "SeatunnelServer",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "logFile": "logs/seatunnel-engine-server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/seatunnel-cluster.sh",
+        "args": [
+          "-d"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "bin/stop-seatunnel-cluster.sh",
+        "args": []
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/seatunnel-status.sh",
+        "args": []
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "seatunnel.yaml",
+        "configFormat": "custom",
+        "templateName": "seatunnel-yml.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "backupCount",
+          "custom.checkPoint"
+        ]
+      },
+      {
+        "filename": "hazelcast.yaml",
+        "configFormat": "custom",
+        "templateName": "hazelcast.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "hosts"
+        ]
+      },
+      {
+        "filename": "hazelcast-client.yaml",
+        "configFormat": "custom",
+        "templateName": "hazelcast-client.ftl",
+        "outputDirectory": "config",
+        "includeParams": [
+          "hosts"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "backupCount",
+      "label": "同步备份的数量",
+      "description": "同步备份的数量",
+      "required": true,
+      "type": "input",
+      "configType": "map",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "custom.checkPoint",
+      "label": "自定义配置检查点存储",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}]
+    },
+    {
+      "name": "hosts",
+      "label": "集群节点ip",
+      "description": "集群节点ip",
+      "required": true,
+      "type": "multiple",
+      "separator": ",",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

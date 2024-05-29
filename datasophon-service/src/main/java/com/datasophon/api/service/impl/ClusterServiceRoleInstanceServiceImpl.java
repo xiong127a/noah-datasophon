@@ -265,7 +265,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         if (Objects.nonNull(list) && !list.isEmpty()) {
             List<String> ids = list.stream().map(e -> e.getId() + "").collect(Collectors.toList());
             commandService.generateServiceRoleCommand(roleGroup.getClusterId(), CommandType.RESTART_SERVICE,
-                    roleGroup.getServiceInstanceId(), ids);
+                    roleGroup.getServiceInstanceId(), ids, null);
         } else {
             return Result.error(Status.ROLE_GROUP_HAS_NO_OUTDATED_SERVICE.getMsg());
         }
@@ -313,6 +313,11 @@ public class ClusterServiceRoleInstanceServiceImpl
     @Override
     public void updateToNeedRestart(Integer roleGroupId) {
         roleInstanceMapper.updateToNeedRestart(roleGroupId);
+    }
+
+    @Override
+    public void updateToNeedRestartByHost(String hostName) {
+        roleInstanceMapper.updateToNeedRestartByHost(hostName);
     }
 
     @Override

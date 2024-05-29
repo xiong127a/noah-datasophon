@@ -34,6 +34,8 @@ public class ServiceRoleStrategyContext {
         map.put("ResourceManager", new ResourceManagerHandlerStrategy("YARN", "ResourceManager"));
         map.put("NodeManager", new NodeManagerHandlerStrategy("YARN", "NodeManager"));
         map.put("RangerAdmin", new RangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
+        map.put("RangerUsersync", new RangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
+        map.put("RangerKms", new RangerAdminHandlerStrategy("RANGER", "RangerKms"));
         map.put("HiveServer2", new HiveServer2HandlerStrategy("HIVE", "HiveServer2"));
         map.put("HbaseMaster", new HbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("RegionServer", new HbaseHandlerStrategy("HBASE", "RegionServer"));
@@ -42,14 +44,35 @@ public class ServiceRoleStrategyContext {
         map.put("SRFE", new FEHandlerStrategy("STARROCKS", "SRFE"));
         map.put("DorisFE", new FEHandlerStrategy("DORIS", "DorisFE"));
         map.put("DorisFEObserver", new FEObserverHandlerStrategy("DORIS", "DorisFEObserver"));
+        map.put("SRFEObserver", new FEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
         map.put("ZkServer", new ZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
         map.put("KafkaBroker", new KafkaHandlerStrategy("KAFKA", "KafkaBroker"));
         map.put("SRBE", new BEHandlerStrategy("STARROCKS", "SRBE"));
         map.put("DorisBE", new BEHandlerStrategy("DORIS", "DorisBE"));
         map.put("HistoryServer", new HistoryServerHandlerStrategy("YARN", "HistoryServer"));
+        map.put("TimelineServer", new TimelineServerHandlerStrategy("YARN", "TimelineServer"));
 
         // TEZ Server service
         map.put("TezServer", new TezServerHandlerStrategy("TEZ", "TezServer"));
+        //kyuubi
+        map.put("KyuubiServer", new KyuubiServerHandlerStrategy("KYUUBI", "KyuubiServer"));
+
+        // clickhouse
+        map.put("ClickHouse", new ClickHouseHandlerStrategy("CLICKHOUSE", "ClickHouse"));
+
+        // alluxio
+        map.put("AlluxioMaster", new AlluxioHandlerStrategy("ALLUXIO", "AlluxioMaster"));
+
+        // openldap
+        map.put("OpenldapServer", new OpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
+
+        map.put("RedisMaster", new RedisHandlerStrategy("REDIS", "RedisMaster"));
+        map.put("RedisWorker", new RedisHandlerStrategy("REDIS", "RedisWorker"));
+
+        map.put("HueMaster", new HueHandlerStrategy("HUE", "HueMaster"));
+
+        map.put("PostgresqlMaster", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
+        map.put("PostgresqlWorker", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

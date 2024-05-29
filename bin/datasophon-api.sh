@@ -29,6 +29,12 @@ shift
 command=$1
 shift
 
+JAVA_DEBUG_OPTS=""
+if [ "$1" = "debug" ]; then
+    JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=n "
+fi
+shift
+
 echo "Begin $startStop $command......"
 
 source /etc/profile
@@ -104,10 +110,10 @@ case $startStop in
 
     echo starting $command, logging to $log
 
-    exec_command="$DDH_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
+    exec_command="$DDH_OPTS -Dspring.config.location=$DDH_CONF_DIR/application.yml -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-    echo "nohup $JAVA $exec_command > $log 2>&1 &"
-    nohup $JAVA $exec_command > $log 2>&1 &
+    echo "nohup $JAVA $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &"
+    nohup $JAVA $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &
     echo $! > $pid
     ;;
 
@@ -158,10 +164,10 @@ case $startStop in
       fi
       echo starting $command, logging to $log
 
-      exec_command="$DDH_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
+      exec_command="$DDH_OPTS -Dspring.config.location=$DDH_CONF_DIR/application.yml -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-      echo "nohup $JAVA $exec_command > $log 2>&1 &"
-      nohup $JAVA $exec_command > $log 2>&1 &
+      echo "nohup $JAVA  $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &"
+      nohup $JAVA $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &
       echo $! > $pid
       ;;
   (*)

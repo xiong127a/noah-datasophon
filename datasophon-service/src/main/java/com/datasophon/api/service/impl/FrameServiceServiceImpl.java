@@ -34,16 +34,13 @@ import com.datasophon.dao.mapper.FrameServiceMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service("frameServiceService")
 public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, FrameServiceEntity>
         implements
-            FrameServiceService {
+        FrameServiceService {
 
     @Autowired
     ClusterInfoService clusterInfoService;
@@ -53,6 +50,14 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
 
     @Autowired
     ClusterServiceInstanceService serviceInstanceService;
+
+    private final static List<String> CUSTOM_REQUIRED_SERVICE = Arrays.asList(
+            "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER"
+    );
+
+    private final static List<String> DATALAKE_REQUIRED_SERVICE = Arrays.asList(
+            "ALERTMANAGER", "GRAFANA", "OPENLDAP", "PROMETHEUS", "RANGER", "HDFS", "YARN", "HUDI", "HIVE", "ICEBERG", "SPARK3", "FLINK"
+    );
 
     @Override
     public Result getAllFrameService(Integer clusterId) {
@@ -64,6 +69,26 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
                 .list();
         setInstalled(clusterId, list);
         return Result.success(list);
+    }
+
+    @Override
+    public Result getAllFrameServiceWithRequired(Integer clusterId, String type) {
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        FrameInfoEntity frameInfo = frameInfoMapper.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
+        List<FrameServiceEntity> list = this.lambdaQuery()
+                .eq(FrameServiceEntity::getFrameId, frameInfo.getId())
+                .orderByAsc(FrameServiceEntity::getSortNum)
+                .list();
+        setInstalled(clusterId, list);
+        setRequired(list, type);
+        return Result.success(list);
+    }
+
+    private void setRequired(List<FrameServiceEntity> list, String type) {
+        List<String> requireService = type.equals("custom") ? CUSTOM_REQUIRED_SERVICE : DATALAKE_REQUIRED_SERVICE;
+        for (FrameServiceEntity frameServiceEntity : list) {
+            frameServiceEntity.setIsRequired(requireService.contains(frameServiceEntity.getServiceName()));
+        }
     }
 
     private void setInstalled(Integer clusterId, List<FrameServiceEntity> list) {

@@ -73,8 +73,8 @@ public class ClusterServiceInstanceRoleGroupController {
      * 分配角色组
      */
     @RequestMapping("/bind")
-    public Result bind(String roleInstanceIds, Integer roleGroupId) {
-        return clusterServiceInstanceRoleGroupService.bind(roleInstanceIds, roleGroupId);
+    public Result bind(String serviceRoleInstancesIds, Integer roleGroupId) {
+        return clusterServiceInstanceRoleGroupService.bind(serviceRoleInstancesIds, roleGroupId);
     }
 
     /**

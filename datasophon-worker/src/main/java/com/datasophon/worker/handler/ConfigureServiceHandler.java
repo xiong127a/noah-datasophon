@@ -130,11 +130,48 @@ public class ConfigureServiceHandler {
                         serviceConfig.setValue("false");
                         customConfList.add(serviceConfig);
                     }
+                    if ("PrestoCoordinator".equals(serviceRoleName) && "coordinator".equals(config.getName())) {
+                        logger.info("Start config presto coordinator");
+                        config.setValue("true");
+                        ServiceConfig serviceConfig = new ServiceConfig();
+                        serviceConfig.setName("node-scheduler.include-coordinator");
+                        serviceConfig.setValue("false");
+                        ServiceConfig serviceConfig1 = new ServiceConfig();
+                        serviceConfig1.setName("discovery-server.enabled");
+                        serviceConfig1.setValue("true");
+                        customConfList.add(serviceConfig);
+                        customConfList.add(serviceConfig1);
+                    }
                     if ("fe_priority_networks".equals(config.getName())
                             || "be_priority_networks".equals(config.getName())) {
                         config.setName("priority_networks");
                     }
 
+                    if("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())){
+                        // add hive-site.xml link in kerberos module
+                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName+"/conf/hive-site.xml";
+                        if(!FileUtil.exist(targetPath)){
+                            logger.info("Add hive-site.xml link");
+                            ExecResult result = ShellUtils.exceShell("ln -s "+config.getValue()+"/conf/hive-site.xml "+targetPath);
+                            if(!result.getExecResult()){
+                                logger.warn("Add hive-site.xml link failed,msg: "+result.getExecErrOut());
+                            }
+                        }
+                    }
+                }
+
+                if ("AlluxioMaster".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
+                    ServiceConfig serviceConfig = new ServiceConfig();
+                    serviceConfig.setName("alluxio.master.hostname");
+                    serviceConfig.setValue(hostName);
+                    customConfList.add(serviceConfig);
+                }
+                if ("AlluxioWorker".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
+                    File alluxioFile =
+                            new File(Constants.INSTALL_PATH + File.separator + decompressPackageName, "conf/alluxio-site.properties");
+                    if (alluxioFile.exists()) {
+                        continue;
+                    }
                 }
 
                 if (Objects.nonNull(myid) && StringUtils.isNotBlank(dataDir)) {

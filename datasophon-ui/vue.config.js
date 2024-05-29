@@ -66,7 +66,7 @@ const assetsCDN = {
 module.exports = {
   // 172.31.96.16:5001
   devServer: {
-    port: 8080,
+    port: 8081,
     proxy: {
       '/ddh': {
         //此处要与 /services/api.js 中的 API_PROXY_PREFIX 值保持一致
@@ -137,6 +137,7 @@ module.exports = {
     // 		use: MonacoWebpackPlugin.loader
     // 	}]
     // }
+    config.devtool = "source-map"  // 设置debugger可以调试
   },
   chainWebpack(config) {
     // 第一步：让其他svg loader不要对路径下进行操作

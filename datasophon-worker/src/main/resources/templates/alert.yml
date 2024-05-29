@@ -12,6 +12,7 @@ groups:
       severity: ${item.alertLevel}
       clusterId: ${item.clusterId}
       serviceRoleName: ${item.serviceRoleName}
+      noticeGroupId: ${item.noticeGroupId}
     annotations:
       # summary描述告警的概要信息
       # description用于描述告警的详细信息。

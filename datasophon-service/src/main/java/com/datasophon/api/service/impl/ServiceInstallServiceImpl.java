@@ -139,6 +139,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterServiceRoleInstanceService roleInstanceService;
 
     public static final String PROMETHEUS = "prometheus";
+    public static final String ALERTMANAGER = "ALERTMANAGER";
 
     @Override
     public Result getServiceConfigOption(Integer clusterId, String serviceName) {
@@ -213,6 +214,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             // add host node to prometheus
             addHostNodeToPrometheus(clusterId, configFileMap);
         }
+
         ClusterServiceInstanceEntity serviceInstanceEntity =
                 serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
@@ -269,6 +271,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceInstanceService.updateById(serviceInstanceEntity);
         }
         return Result.success();
+    }
+
+    private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo, HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+
     }
 
     @Override
@@ -604,6 +610,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                                     ClusterInfoEntity clusterInfo,
                                     HashMap<String, ServiceConfig> map,
                                     HashMap<Generators, List<ServiceConfig>> configFileMap) {
+
+
         FrameServiceEntity frameService =
                 this.frameService.getServiceByFrameCodeAndServiceName(
                         clusterInfo.getClusterFrame(), serviceName);
@@ -623,7 +631,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         config.setRequired(newConfig.isRequired());
                     }
                 }
-                configFileMap.put(generators, serviceConfigs);
+                if (ALERTMANAGER.equalsIgnoreCase(serviceName)) {
+                    configFileMap.put(generators,  new ArrayList<>( map.values()));
+                }else {
+                    configFileMap.put(generators, serviceConfigs);
+                }
+
             }
         }
     }
@@ -705,6 +718,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
         if ("DorisFE".equals(serviceRole) && (hosts.size() & 1) == 0) {
             throw new ServiceException(Status.ODD_NUMBER_ARE_REQUIRED_FOR_DORISFE.getMsg());
+        }
+        if ("KyuubiServer".equals(serviceRole) && hosts.size() !=2) {
+            throw new ServiceException(Status.TWO_KYUUBISERVERS_NEED_TO_BE_DEPLOYED.getMsg());
         }
     }
 

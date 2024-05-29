@@ -92,6 +92,7 @@
               <a-menu-item key="start">启动</a-menu-item>
               <a-menu-item key="stop">停止</a-menu-item>
               <a-menu-item key="reStart">重启</a-menu-item>
+              <a-menu-item key="rollingReStart">滚动重启</a-menu-item>
               <a-menu-item
                 key="decommission"
                 v-show="serviceId==36||serviceId==37"
@@ -179,6 +180,8 @@ import LOGS from "@/components/logs";
 import { mapMutations, mapState } from "vuex";
 import AddCharacter from "./addCharacter.vue";
 import AllotCharacter from "./allotCharacter.vue";
+import RollingRestart from "@/pages/serviceManage/rollingRestart.vue";
+import {getFrameServiceId, getServiceName} from "@/utils/util";
 export default {
   components: { LOGS, Steps },
   name: "exampleList",
@@ -238,7 +241,9 @@ export default {
       exampleId: "",
       changeRoleState: false,
       changeRoleName: false,
-      changeGroupName: false
+      changeGroupName: false,
+      rollingRestartStrParam:"",
+      item: null
     };
   },
   methods: {
@@ -341,51 +346,77 @@ export default {
       });
     },
     optServices (item) {
+      this.item = item;
       if (this.selectedRowKeys.length < 1) {
         this.$message.warning("请至少选择一个实例");
         return false;
       }
+      if (item.key == 'rollingReStart'){
+        this.rollingRestart(item);
+      }else{
+        this.$confirm({
+          width: 450,
+          title: () => {
+            return (
+                <div style="font-size: 22px;">
+                  <a-icon
+                      type="question-circle"
+                      style="color:#2F7FD1 !important;margin-right:10px"
+                  />
+                  提示
+                </div>
+            );
+          },
+          content: (
+              <div style="margin-top:20px">
+                <div style="padding:0 65px;font-size: 16px;color: #555555;">
+                  {'确认' + (item.key == 'start' ? '启动' : item.key == 'stop' ? '停止' : item.key == 'reStart' ? '重启' : item.key == 'decommission' ? '退役' : "") + '吗？'}
+                </div>
+                <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
+                  <a-button
+                      style="margin-right:10px;"
+                      type="primary"
+                      onClick={() => this.ensureServices(item)}
+                  >
+                    确定
+                  </a-button>
+                  <a-button
+                      style="margin-right:10px;"
+                      onClick={() => this.$destroyAll()}
+                  >
+                    取消
+                  </a-button>
+                </div>
+              </div>
+          ),
+          icon: () => {
+            return <div />;
+          },
+          closable: true,
+        });
+      }
+
+    },
+    rollingRestart (item) {
+      const self = this;
+      let width = 520;
+      let title = "输入滚动重启参数";
+      let content = (
+          <RollingRestart  callBack={(data) => self.rollingRestartParam(data)} />
+      );
       this.$confirm({
-        width: 450,
-        title: () => {
-          return (
-            <div style="font-size: 22px;">
-              <a-icon
-                type="question-circle"
-                style="color:#2F7FD1 !important;margin-right:10px"
-              />
-              提示
-            </div>
-          );
-        },
-        content: (
-          <div style="margin-top:20px">
-            <div style="padding:0 65px;font-size: 16px;color: #555555;">
-              {'确认' + (item.key == 'start' ? '启动' : item.key == 'stop' ? '停止' : item.key == 'reStart' ? '重启' : item.key == 'decommission' ? '退役' : "") + '吗？'}
-            </div>
-            <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
-              <a-button
-                style="margin-right:10px;"
-                type="primary"
-                onClick={() => this.ensureServices(item)}
-              >
-                确定
-              </a-button>
-              <a-button
-                style="margin-right:10px;"
-                onClick={() => this.$destroyAll()}
-              >
-                取消
-              </a-button>
-            </div>
-          </div>
-        ),
+        width: width,
+        title: title,
+        content: content,
+        closable: true,
         icon: () => {
           return <div />;
         },
-        closable: true,
       });
-
+    },
+    rollingRestartParam(data){
+      this.rollingRestartStrParam = data.batchCount+","+data.batchSeparationInSeconds+","+data.taskFailureTolerance;
+      this.ensureServices(this.item)
     },
     ensureServices (item) {
       if (item.key === "decommission") {
@@ -412,6 +443,7 @@ export default {
                 : "RESTART_SERVICE",
           serviceInstanceId: this.$route.params.serviceId || "",
           serviceRoleInstancesIds: this.selectedRowKeys.join(","),
+          rollingParam : this.rollingRestartStrParam,
         };
         this.$axiosPost(global.API.generateServiceRoleCommand, params).then(
           (res) => {
@@ -423,7 +455,9 @@ export default {
             }
           }
         );
+        this.rollingRestartStrParam = "";
       }
+
       this.$destroyAll()
     },
     allotCharacter () {
@@ -468,8 +502,9 @@ export default {
           }
         });
       }
+
       this.steps4Data = {
-        serviceIds: [frameServiceId],
+        serviceIds:  [frameServiceId],
         serviceNames: serviceName,
       };
       this.visible = true;
@@ -524,13 +559,13 @@ export default {
                     />
                     {record[item.key]}
                 </div>
-                {record.needRestart && 
+                {record.needRestart &&
                   <div>
                     <a-icon type="sync" />
                   </div>
                 }
                 </span>
-                
+
               );
             } else if (item.key === "serviceRoleState") {
               return (

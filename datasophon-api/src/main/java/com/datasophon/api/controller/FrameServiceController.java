@@ -62,6 +62,14 @@ public class FrameServiceController {
     }
 
     /**
+     * 自定义模式列表和数据湖模式列表，包含必选组件
+     */
+    @RequestMapping("/listWithRequired")
+    public Result listWithRequired(Integer clusterId, String type) {
+        return frameVersionServiceService.getAllFrameServiceWithRequired(clusterId, type);
+    }
+
+    /**
      * 根据servce id列表查询服务
      */
     @RequestMapping("/getServiceListByServiceIds")

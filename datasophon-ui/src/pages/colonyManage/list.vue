@@ -1,4 +1,3 @@
-
 <template>
   <div class="card-list card-shadow">
     <a-list :grid="{ gutter: 24, lg: 3, md: 2, sm: 1, xs: 1 }" :dataSource="dataSource">
@@ -62,13 +61,16 @@ import Steps from "@/components/steps";
 import { changeRouter } from '@/utils/changeRouter'
 export default {
   name: "COLONYLIST",
-  components: { Steps },
+
   provide() {
     return {
       handleCancel: this.handleCancel,
       onSearch: null
     };
   },
+
+  components: { Steps },
+
   data() {
     return {
       visible: false,
@@ -77,9 +79,15 @@ export default {
       clusterId: "", // 操作的集群Id
     };
   },
+
   computed: {
     ...mapGetters("account", ["user"]),
   },
+
+  mounted() {
+    this.getColonyList();
+  },
+
   methods: {
     ...mapMutations("setting", ["setIsCluster", "setMenuData", "setClusterId"]),
     // 进入
@@ -183,10 +191,7 @@ export default {
       this.visible = false;
       this.getColonyList()
     },
-  },
-  mounted() {
-    this.getColonyList();
-  },
+  }
 };
 </script>
 

@@ -1,28 +1,3 @@
-<!--
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
-
- * @Date: 2022-05-24 10:28:22
- * @LastEditTime: 2023-03-15 11:06:57
- * @FilePath: \ddh-ui\src\layouts\header\AdminHeader.vue
--->
 <template>
   <a-layout-header :class="[headerTheme, 'admin-header']">
     <div :class="['admin-header-wide', layout, pageWidth]">
@@ -53,7 +28,7 @@
             <a-menu-item v-for=" lang in runningCluster" :key="lang.value">{{lang.label}}</a-menu-item>
           </a-menu>
         </a-dropdown>
-        <a-dropdown v-if="isCluster === 'isCluster'" class="lang header-item">
+        <!-- <a-dropdown v-if="isCluster === 'isCluster'" class="lang header-item">
           <div style="display: flex;align-items: center;">
             <span class="system-name">{{lang}}</span>
             <a-icon type="caret-down" style="font-size: 18px;color:#fff" />
@@ -61,7 +36,7 @@
           <a-menu @click="val => setLang(val.key)" :selected-keys="[lang]" slot="overlay">
             <a-menu-item v-for=" l in langList" :key="l.key">{{l.key.toLowerCase() + ' ' + l.name}}</a-menu-item>
           </a-menu>
-        </a-dropdown>
+        </a-dropdown> -->
         <header-avatar class="header-item" />
       </div>
     </div>
@@ -74,7 +49,6 @@ import IMenu from "@/components/menu/menu";
 import ClusterSetting from './clusterSetting';
 import AlarmManage from './alarmManage.vue'
 import { mapState, mapMutations, mapGetters } from "vuex";
-
 export default {
   name: "AdminHeader",
   components: { IMenu, HeaderAvatar, ClusterSetting  ,AlarmManage},

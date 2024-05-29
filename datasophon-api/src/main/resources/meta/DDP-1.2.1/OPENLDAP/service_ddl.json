@@ -1,0 +1,82 @@
+{
+  "name": "OPENLDAP",
+  "label": "Openldap",
+  "description": "开放式轻量级目录访问协议",
+  "version": "2.4.44-22.el7",
+  "sortNum": 33,
+  "dependencies": [],
+  "packageName": "openldap-2.4.44-22.el7.tar.gz",
+  "decompressPackageName": "openldap-2.4.44-22.el7",
+  "roles": [
+    {
+      "name": "OpenldapServer",
+      "label": "OpenldapServer",
+      "roleType": "master",
+      "cardinality": "1",
+      "sortNum": 1,
+      "logFile": "/var/log/slapd/slapd.log",
+      "jmxPort": "",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_openldap.sh",
+        "args": [
+          "status"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "changeDomain.ldif",
+        "configFormat": "custom",
+        "outputDirectory": "",
+        "templateName": "changeDomain.ftl",
+        "includeParams": [
+          "olcRootDN",
+          "olcSuffix"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "olcRootDN",
+      "label": "olcRootDN",
+      "description": "具有对LDAP执行所有管理活动的无限制访问权限的用户的根专有名称（DN）条目，如root用户。",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "cn=root,dc=ldap,dc=com",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "cn=root,dc=ldap,dc=com"
+    },
+    {
+      "name": "olcSuffix",
+      "label": "olcSuffix",
+      "description": "数据库后缀，它是LDAP服务器提供信息的域名。简单来说，更改为自己的域名。",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "dc=ldap,dc=com",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "dc=ldap,dc=com"
+    }
+  ]
+}

@@ -17,10 +17,13 @@
 
 package com.datasophon.api.master;
 
-import com.datasophon.api.master.handler.service.*;
+import akka.actor.UntypedActor;
+import com.datasophon.api.master.handler.service.ServiceHandler;
+import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -33,13 +36,13 @@ import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
-
-import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import akka.actor.UntypedActor;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class WorkerServiceActor extends UntypedActor {
 
@@ -67,11 +70,11 @@ public class WorkerServiceActor extends UntypedActor {
             if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
                 Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                 ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
-                ProcessUtils.generateConfigFileMap(configFileMap, config);
+                ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
             } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
                 ClusterServiceRoleGroupConfig config =
                         roleGroupConfigService.getConfigByRoleGroupId(serviceRoleInstance.getRoleGroupId());
-                ProcessUtils.generateConfigFileMap(configFileMap, config);
+                ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 needReConfig = true;
             }
             serviceRoleInfo.setConfigFileMap(configFileMap);
@@ -137,6 +140,7 @@ public class WorkerServiceActor extends UntypedActor {
                                     serviceRoleInfo.getHostname(), executeServiceRoleCommand.getClusterId(),
                                     ServiceRoleState.RUNNING);
                         }
+                        RollingRestartUtils.updateStatus(serviceRoleInfo.getHostname()+serviceInstanceId,execResult.getExecResult());
                     } catch (Exception e) {
                         logger.error(ProcessUtils.getExceptionMessage(e));
                     }

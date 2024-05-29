@@ -24,6 +24,8 @@ import java.io.IOException;
 
 public interface ClusterKerberosService {
 
+    void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException;
+
     void downloadKeytab(Integer clusterId, String principal, String keytabName, String hostname,
                         HttpServletResponse response) throws IOException;
 

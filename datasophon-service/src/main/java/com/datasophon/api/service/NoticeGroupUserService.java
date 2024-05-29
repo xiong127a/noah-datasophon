@@ -20,6 +20,8 @@ package com.datasophon.api.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.datasophon.dao.entity.NoticeGroupUserEntity;
 
+import java.util.List;
+
 /**
  * 通知组-用户中间表
  *
@@ -29,4 +31,9 @@ import com.datasophon.dao.entity.NoticeGroupUserEntity;
  */
 public interface NoticeGroupUserService extends IService<NoticeGroupUserEntity> {
 
+    boolean removeByGroupIds(List<Integer> list);
+
+    List<NoticeGroupUserEntity> listByGroupId(Integer id);
+
+    List<NoticeGroupUserEntity> listByGroupIds(List<Integer> ids);
 }

@@ -31,6 +31,8 @@
   </div>
 </template>
 <script>
+import {getServiceName} from "@/utils/util";
+
 export default {
   props: {
     grouopObj:{
@@ -69,11 +71,12 @@ export default {
       this.form.validateFields((err, values) => {
         if (!err) {
           const params = {
-            "roleGroupName": values.roleGroupName, 
+            "roleGroupName": values.roleGroupName,
             "roleGroupId": this.grouopObj.id,
+            serviceName : this.grouopObj.serviceName
           }
           this.loading = true;
-          this.$axiosPost(global.API.reNameGroup, params).then((res) => {  
+          this.$axiosPost(global.API.reNameGroup, params).then((res) => {
             this.loading = false;
             if (res.code !== 200) return
             this.$message.success('修改成功')
@@ -91,7 +94,7 @@ export default {
         this.form.setFieldsValue({
           roleGroupName: this.grouopObj.roleGroupName
         });
-      } 
+      }
     }
   },
   mounted() {

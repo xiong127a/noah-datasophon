@@ -42,11 +42,11 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         // if feMaster is null, set the first host as feMaster
         //Prevent FE Observer nodes from starting and FE Master nodes from changing
-        if (!globalVariables.containsKey("${feMaster}") || ObjUtil.isNull(globalVariables.get("${feMaster}"))) {
-            if (!hosts.isEmpty()) {
-                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.get(0));
-            }
+//        if (!globalVariables.containsKey("${feMaster}") || ObjUtil.isNull(globalVariables.get("${feMaster}"))) {
+        if (!hosts.isEmpty()) {
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${feMaster}", hosts.get(0));
         }
+//        }
     }
 
     @Override

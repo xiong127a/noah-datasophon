@@ -57,7 +57,7 @@
         <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
       </div>
      </a-spin>
-  
+
     </div>
 
   </div>
@@ -66,6 +66,7 @@
 import CommonTemplate from "@/components/commonTemplate/index";
 import { mapActions, mapState } from "vuex";
 import RenameGroup from "./renameGroup.vue";
+import {getServiceName} from "@/utils/util";
 
 export default {
   components: { CommonTemplate },
@@ -196,8 +197,11 @@ export default {
       });
     },
     confirmDel(item, props) {
+      let serviceName = getServiceName(this.$route.params.serviceId);
+
       let params = {
-        roleGroupId: props.id
+        roleGroupId: props.id,
+        serviceName:serviceName
       };
       this.$axiosPost(global.API.delGroup, params).then((res) => {
         this.$destroyAll();
@@ -212,7 +216,7 @@ export default {
     },
     handlerClick(item,childIndex){
       console.log(item);
-      this.currentId = item.id  
+      this.currentId = item.id
       this.getConfigVersion()
     },
     handlearrayWithData(a) {
@@ -351,7 +355,7 @@ export default {
       this.currentId = val.target.value
       this.getConfigVersion()
     },
-  
+
     //获取角色组
     getServiceRoleType() {
       this.loading = true;
@@ -494,4 +498,4 @@ export default {
     }
   }
 }
-</style> 
+</style>

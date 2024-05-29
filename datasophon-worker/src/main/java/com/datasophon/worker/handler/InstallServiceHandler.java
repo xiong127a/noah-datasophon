@@ -58,6 +58,12 @@ public class InstallServiceHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
+    /**
+     * 安装服务角色
+     *
+     * @param command 安装服务角色的命令
+     * @return 执行结果
+     */
     public ExecResult install(InstallServiceRoleCommand command) {
         ExecResult execResult = new ExecResult();
         try {
@@ -65,13 +71,16 @@ public class InstallServiceHandler {
             String packageName = command.getPackageName();
             String packagePath = destDir + packageName;
 
+            // 判断是否需要下载包文件
             Boolean needDownLoad = !Objects.equals(PropertyUtils.getString(Constants.MASTER_HOST), CacheUtils.get(Constants.HOSTNAME))
                     && isNeedDownloadPkg(packagePath, command.getPackageMd5());
 
             if (Boolean.TRUE.equals(needDownLoad)) {
+                // 下载包文件
                 downloadPkg(packageName, packagePath);
             }
 
+            // 解压缩包文件
             boolean result = decompressPkg(packageName, command.getDecompressPackageName(), command.getRunAs(), packagePath);
             execResult.setExecResult(result);
         } catch (Exception e) {
@@ -81,21 +90,31 @@ public class InstallServiceHandler {
         return execResult;
     }
 
+
     private Boolean isNeedDownloadPkg(String packagePath, String packageMd5) {
         Boolean needDownLoad = true;
+
+        // 输出远程包的md5
         logger.info("Remote package md5 is {}", packageMd5);
+
+        // 如果本地包路径存在
         if (FileUtil.exist(packagePath)) {
-            // check md5
+            // 检查md5
             String md5 = FileUtils.md5(new File(packagePath));
 
+            // 输出本地包的md5
             logger.info("Local md5 is {}", md5);
 
+            // 如果本地md5不为空且与远程md5相等
             if (StringUtils.isNotBlank(md5) && packageMd5.trim().equals(md5.trim())) {
                 needDownLoad = false;
             }
         }
+
+        // 返回是否需要下载
         return needDownLoad;
     }
+
 
     private void downloadPkg(String packageName, String packagePath) {
         String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
@@ -125,22 +144,36 @@ public class InstallServiceHandler {
         logger.info("download package {} success", packageName);
     }
 
+    /**
+     * 解压包
+     *
+     * @param packageName 包名
+     * @param decompressPackageName 解压后的包名
+     * @param runAs 运行用户
+     * @param packagePath 包路径
+     * @return 解压是否成功
+     */
     private boolean decompressPkg(String packageName, String decompressPackageName, RunAs runAs, String packagePath) {
+        // 判断解压后的包是否存在
         if (!FileUtil.exist(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName)) {
+            // 解压包
             Boolean decompressResult = decompressTarGz(packagePath, Constants.INSTALL_PATH);
             if (Boolean.TRUE.equals(decompressResult)) {
+                // 设置解压后的包权限
                 if (Objects.nonNull(runAs)) {
                     ShellUtils.exceShell(" chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " "
                             + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName);
                 }
                 ShellUtils
                         .exceShell(" chmod -R 775 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName);
+                // 修改包含Prometheus的包中的文件
                 if (decompressPackageName.contains(Constants.PROMETHEUS)) {
                     String alertPath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
                             + Constants.SLASH + "alert_rules";
                     ShellUtils.exceShell("sed -i \"s/clusterIdValue/" + PropertyUtils.getString("clusterId")
                             + "/g\" `grep clusterIdValue -rl " + alertPath + "`");
                 }
+                // 修改包含Hadoop的包中的文件
                 if (decompressPackageName.contains(HADOOP)) {
                     changeHadoopInstallPathPerm(decompressPackageName);
                 }
@@ -153,6 +186,7 @@ public class InstallServiceHandler {
             return true;
         }
     }
+
 
     public Boolean decompressTarGz(String sourceTarGzFile, String targetDir) {
         logger.info("Start to use tar -zxvf to decompress {}", sourceTarGzFile);
