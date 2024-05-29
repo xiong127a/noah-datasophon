@@ -21,20 +21,26 @@ import cn.hutool.core.io.FileUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
+import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
 
+import java.util.ArrayList;
+
 public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
 
-    public RangerAdminHandlerStrategy(String serviceName,String serviceRoleName) {
-        super(serviceName,serviceRoleName);
+    public RangerAdminHandlerStrategy(String serviceName, String serviceRoleName) {
+        super(serviceName, serviceRoleName);
     }
 
     @Override
     public ExecResult handler(ServiceRoleOperateCommand command) {
+        String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ExecResult startResult = new ExecResult();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
+
         if (command.getEnableKerberos()) {
             logger.info("start to get ranger keytab file");
             String hostname = CacheUtils.getString(Constants.HOSTNAME);
@@ -46,6 +52,53 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
                 KerberosUtils.downloadKeytabFromMaster("rangeradmin/" + hostname, "rangeradmin.keytab");
             }
         }
+
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
+            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+
+            logger.info("setup ranger user sync");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add("sh");
+            commands.add("./setup.sh");
+            ExecResult execResult = ShellUtils.execWithStatus(workPath + "/ranger-2.1.0-usersync", commands, 300L, logger);
+            if (execResult.getExecResult()) {
+                logger.info("setup ranger user sync success");
+            } else {
+                logger.error("setup ranger user sync failed");
+                return execResult;
+            }
+
+            ShellUtils.exceShell("sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n;s/<value>false<\\/value>/<value>true<\\/value>/}' "
+                    + workPath +
+                    "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
+        }
+
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
+            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
+            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
+
+            logger.info("setup ranger kms");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add("sh");
+            commands.add("./setup.sh");
+            ExecResult execResult = ShellUtils.execWithStatus(workPath + "/ranger-2.1.0-kms", commands, 300L, logger);
+            if (!execResult.getExecResult()) {
+                logger.error("setup ranger kms failed, sh setup.sh error");
+                return execResult;
+            }
+            commands.clear();
+            commands.add("sh");
+            commands.add("./enable-kms-plugin.sh");
+            execResult = ShellUtils.execWithStatus(workPath + "/ranger-2.1.0-kms", commands, 300L, logger);
+            if (execResult.getExecResult()) {
+                logger.info("setup ranger kms success");
+            } else {
+                logger.error("setup ranger kms failed, sh enable-kms-plugin.sh error");
+                return execResult;
+            }
+        }
+
         startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());
 

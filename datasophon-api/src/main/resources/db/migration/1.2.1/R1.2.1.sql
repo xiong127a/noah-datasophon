@@ -1,0 +1,11 @@
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (11, 'SPARK3', 'http://${grafanaHost}:3000/d/rCUqf3dWz/7-spark?orgId=1&from=now-30m&to=now&refresh=5m&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (15, 'FLINK', 'http://${grafanaHost}:3000/d/-0rFuzoZk/flink-dashboard?orgId=1&refresh=30s&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (22, 'PRESTO', 'http://${grafanaHost}:3000/d/7Iy7ibMIz/presto?orgId=1&refresh=5s&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (23, 'MINIO', 'http://${grafanaHost}:3000/d/DP44u7JZk/minio?var-job=minio_job&var-metrics_port=192.168.1.55%3A9000&var-interval=1m&orgId=1&refresh=10s&from=1697555373802&to=1697598573802');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (24, 'CLICKHOUSE', 'http://${grafanaHost}:3000/d/MddcNtTWk/clickhouse-internal-exporter?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (25, 'ALLUXIO', 'http://${grafanaHost}:3000/d/oJnC7i4Mk/alluxio?orgId=1&refresh=1m&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (26, 'REDIS', 'http://${grafanaHost}:3000/d/JIeHsmmYMk/redis-exporter-dashboard-cn-20221128-starsl-cn?orgId=1&var-vendor=&var-account=&var-group=All&var-name=All&var-instance=redis%3A%2F%2Fhadoop1%3A7000&var-iid=');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (27, 'POSTGRESQL', 'http://${grafanaHost}:3000/d/000000039/postgresql-database?orgId=1&refresh=10s&var-DS_PROMETHEUS=Prometheus&var-interval=%24__auto_interval_interval&var-namespace=&var-release=&var-instance=hadoop1%3A9187&var-datname=All&var-mode=All&kiosk=tvlite');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (28, 'ZEPPELIN', 'http://${grafanaHost}:3000/d/0qEUoL0nz/zeppelin?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (29, 'HUE', 'http://${grafanaHost}:3000/d/L581Vo3Zk/hue?orgId=1&kiosk');
+INSERT INTO `t_ddh_cluster_service_dashboard` VALUES (30, 'PUSHGATEWAY', 'http://${grafanaHost}:3000/d/eea-9_siks1/pushgateway?orgId=1&refresh=30s?orgId=1&kiosk');

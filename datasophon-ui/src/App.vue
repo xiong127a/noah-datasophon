@@ -19,7 +19,7 @@
  */
 
 
- * @describe: 
+ * @describe:
  * @Date: 2022-05-24 10:22:10
  * @LastEditTime: 2022-06-14 11:30:14
  * @FilePath: \ddh-ui\src\App.vue
@@ -29,6 +29,7 @@
     <router-view/>
   </a-config-provider>
 </template>
+
 
 <script>
 import {enquireScreen} from './utils/util'

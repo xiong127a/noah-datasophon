@@ -1,13 +1,27 @@
-POLICY_MGR_URL=<#if rangerAdminUrl??>${rangerAdminUrl}</#if>
-
-REPOSITORY_NAME=hbasedev
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 #
-# HBase configuration directory
+# Location of Policy Manager URL  
 #
 # Example:
-# COMPONENT_INSTALL_DIR_NAME=/var/local/hbase-1.1.5
+# POLICY_MGR_URL=http://policymanager.xasecure.net:6080
 #
+
+POLICY_MGR_URL=<#if rangerAdminUrl??>${rangerAdminUrl}</#if>
+REPOSITORY_NAME=hbasedev
 COMPONENT_INSTALL_DIR_NAME=<#if hbaseHome??>${hbaseHome}</#if>
 
 # AUDIT configuration with V3 properties
@@ -35,13 +49,13 @@ XAAUDIT.SOLR.FILE_SPOOL_DIR=/var/log/hbase/audit/solr/spool
 #XAAUDIT.ELASTICSEARCH.URL=localhost
 #XAAUDIT.ELASTICSEARCH.INDEX=audit
 
-XAAUDIT.ELASTICSEARCH.ENABLE=false
-XAAUDIT.ELASTICSEARCH.URL=NONE
+XAAUDIT.ELASTICSEARCH.ENABLE=<#if esAuditEnable?? && esAuditEnable?has_content>${esAuditEnable}<#else>false</#if>
+XAAUDIT.ELASTICSEARCH.URL=<#if esSingleHost??>${esSingleHost}</#if>
 XAAUDIT.ELASTICSEARCH.USER=NONE
 XAAUDIT.ELASTICSEARCH.PASSWORD=NONE
-XAAUDIT.ELASTICSEARCH.INDEX=NONE
-XAAUDIT.ELASTICSEARCH.PORT=NONE
-XAAUDIT.ELASTICSEARCH.PROTOCOL=NONE
+XAAUDIT.ELASTICSEARCH.INDEX=ranger_audits
+XAAUDIT.ELASTICSEARCH.PORT=<#if esHttpPort??>${esHttpPort}</#if>
+XAAUDIT.ELASTICSEARCH.PROTOCOL=http
 
 
 XAAUDIT.HDFS.ENABLE=false
@@ -61,6 +75,19 @@ XAAUDIT.LOG4J.ASYNC.MAX.QUEUE.SIZE=10240
 XAAUDIT.LOG4J.ASYNC.MAX.FLUSH.INTERVAL.MS=30000
 XAAUDIT.LOG4J.DESTINATION.LOG4J=true
 XAAUDIT.LOG4J.DESTINATION.LOG4J.LOGGER=xaaudit
+
+# Enable audit logs to Amazon CloudWatch Logs
+#Example
+#XAAUDIT.AMAZON_CLOUDWATCH.ENABLE=true
+#XAAUDIT.AMAZON_CLOUDWATCH.LOG_GROUP=ranger_audits
+#XAAUDIT.AMAZON_CLOUDWATCH.LOG_STREAM={instance_id}
+#XAAUDIT.AMAZON_CLOUDWATCH.FILE_SPOOL_DIR=/var/log/hive/audit/amazon_cloudwatch/spool
+
+XAAUDIT.AMAZON_CLOUDWATCH.ENABLE=false
+XAAUDIT.AMAZON_CLOUDWATCH.LOG_GROUP=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.LOG_STREAM_PREFIX=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.FILE_SPOOL_DIR=NONE
+XAAUDIT.AMAZON_CLOUDWATCH.REGION=NONE
 
 # End of V3 properties
 
@@ -84,8 +111,6 @@ XAAUDIT.SOLR.IS_ENABLED=false
 XAAUDIT.SOLR.MAX_QUEUE_SIZE=1
 XAAUDIT.SOLR.MAX_FLUSH_INTERVAL_MS=1000
 XAAUDIT.SOLR.SOLR_URL=http://localhost:6083/solr/ranger_audits
-
-
 
 SSL_KEYSTORE_FILE_PATH=/etc/hbase/conf/ranger-plugin-keystore.jks
 SSL_KEYSTORE_PASSWORD=myKeyFilePassword

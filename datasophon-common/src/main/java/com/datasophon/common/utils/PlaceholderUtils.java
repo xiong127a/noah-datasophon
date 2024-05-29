@@ -70,15 +70,20 @@ public class PlaceholderUtils {
         }
     }
 
+    /**
+     * 替换字符串中${...}
+     */
     public static String replacePlaceholders(String value,
                                              Map<String, String> paramsMap, String regex) {
-
+        // 创建正则表达式模式对象
         Pattern pattern = Pattern.compile(regex);
+        // 创建匹配器对象，并将要匹配的字符串传入
         Matcher matcher = pattern.matcher(value);
         // 自旋进行最小匹配，直到无法匹配
         while (matcher.find()) {
+            // 获取当前匹配到的字符串
             String group = matcher.group();
-            // 替换匹配内容
+            // 如果paramsMap中包含了这个占位符作为键,用paramsMap中对应的值替换匹配到的占位符
             // logger.info("find match value {}",group);
             if (paramsMap.containsKey(group)) {
                 value = value.replace(group, paramsMap.get(group));

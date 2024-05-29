@@ -21,8 +21,16 @@ import java.io.Serializable;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @TableName("t_ddh_notice_group_user")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class NoticeGroupUserEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;

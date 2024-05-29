@@ -19,7 +19,7 @@
  */
 
 
- * @describe: 
+ * @describe:
  * @Date: 2022-06-20 20:34:13
  * @LastEditTime: 2023-03-17 17:19:31
  * @FilePath: \ddh-ui\src\components\menu\clusterMenu.vue
@@ -202,10 +202,11 @@ export default {
       let openKeys = this.selectedKeys.filter((item) => item !== "");
       openKeys = openKeys.slice(0, openKeys.length - 1);
       this.sOpenKeys = openKeys
-      if(this.selectedKeys.includes('/overview') ||this.selectedKeys.includes('/host-manage') ||this.selectedKeys.includes('/alarm-manage') ){
-        this.sOpenKeys.push('/service-manage')
-      }
-      
+      // 点击这几个模块 会展开服务管理菜单
+      // if(this.selectedKeys.includes('/overview') ||this.selectedKeys.includes('/host-manage') ||this.selectedKeys.includes('/alarm-manage') ){
+      //   this.sOpenKeys.push('/service-manage')
+      // }
+
       if (!fastEqual(openKeys, this.sOpenKeys)) {
         this.collapsed || this.mode === "horizontal"
           ? (this.cachedOpenKeys = openKeys)
@@ -305,7 +306,7 @@ export default {
         },
         closable: true,
       });
-    
+
     },
     delService(id){
       this.$axiosPost('/ddh/cluster/service/instance/delete', {serviceInstanceId: id,}).then((res) => {

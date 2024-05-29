@@ -62,22 +62,25 @@ public class ShellUtils {
         try {
             // 执行脚本
             Process ps = Runtime.getRuntime().exec(new String[]{"sh", "-c", pathOrCommand});
+            // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
+            BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String line;
+            while ((line = br.readLine()) != null) {
+                stringBuffer.append(line);
+                stringBuffer.append(System.lineSeparator());
+            }
+            in.close();
+            br.close();
+            String execOut = stringBuffer.toString();
             int exitValue = ps.waitFor();
             if (0 == exitValue) {
-                // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
-                BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    logger.info("脚本返回的数据如下：{}", line);
-                    stringBuffer.append(line);
-                }
-                in.close();
-                br.close();
+                logger.info("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
                 result.setExecResult(true);
-                result.setExecOut(stringBuffer.toString());
+                result.setExecOut(execOut);
             } else {
                 result.setExecOut("call shell failed. error code is :" + exitValue);
+                logger.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
             }
 
         } catch (Exception e) {
@@ -124,11 +127,12 @@ public class ShellUtils {
             getOutput(process);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success");
+                logger.info("script execute success --> " + String.join(" ", command));
                 result.setExecResult(true);
                 result.setExecOut("script execute success");
             } else {
-                result.setExecOut("script execute failed");
+                result.setExecOut("script execute failed --> " + String.join(" ", command));
+                logger.error(getError(process));
             }
             return result;
         } catch (Exception e) {
@@ -149,11 +153,11 @@ public class ShellUtils {
             getOutput(process, logger);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success");
+                logger.info("script execute success --> " + String.join(" ", command));
                 result.setExecResult(true);
-                result.setExecOut("script execute success");
+                result.setExecOut("script execute success --> " + String.join(" ", command));
             } else {
-                result.setExecOut("script execute failed");
+                result.setExecOut("script execute failed --> " + String.join(" ", command));
             }
             return result;
         } catch (Exception e) {
@@ -172,8 +176,13 @@ public class ShellUtils {
             try {
                 inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
+                StringBuffer stringBuffer = new StringBuffer();
                 while ((line = inReader.readLine()) != null) {
-                    logger.info(line);
+                    stringBuffer.append(line);
+                    stringBuffer.append(System.lineSeparator());
+                }
+                if (stringBuffer.length() != 0) {
+                    logger.info(stringBuffer.toString());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -184,8 +193,13 @@ public class ShellUtils {
             try {
                 errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
                 String line;
+                StringBuffer stringBuffer = new StringBuffer();
                 while ((line = errorReader.readLine()) != null) {
-                    logger.error(line);
+                    stringBuffer.append(line);
+                    stringBuffer.append(System.lineSeparator());
+                }
+                if (stringBuffer.length() != 0) {
+                    logger.error(stringBuffer.toString());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -205,8 +219,13 @@ public class ShellUtils {
             try {
                 inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
+                StringBuffer stringBuffer = new StringBuffer();
                 while ((line = inReader.readLine()) != null) {
-                    logger.info(line);
+                    stringBuffer.append(line);
+                    stringBuffer.append(System.lineSeparator());
+                }
+                if (stringBuffer.length() != 0) {
+                    logger.trace(stringBuffer.toString());
                 }
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);

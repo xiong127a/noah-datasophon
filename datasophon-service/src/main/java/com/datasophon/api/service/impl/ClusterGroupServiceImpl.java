@@ -29,6 +29,9 @@ import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
+import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.remote.CreateUnixGroupCommand;
 import com.datasophon.common.command.remote.DelUnixGroupCommand;
@@ -69,6 +72,18 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     @Override
     public Result saveClusterGroup(Integer clusterId, String groupName) {
+        // 用户组名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        WordValidator wordValidator = new WordValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(wordValidator);
+        wordValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(groupName);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+
         if (hasRepeatGroupName(clusterId, groupName)) {
             return Result.error(Status.GROUP_NAME_DUPLICATION.getMsg());
         }

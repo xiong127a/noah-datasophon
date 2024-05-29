@@ -22,6 +22,7 @@ import com.datasophon.common.enums.CommandType;
 import java.io.Serializable;
 import java.util.List;
 
+import com.datasophon.common.model.RollingRestartInfo;
 import lombok.Data;
 
 @Data
@@ -33,9 +34,18 @@ public class StartExecuteCommandCommand implements Serializable {
 
     private CommandType commandType;
 
+    private RollingRestartInfo rollingRestartInfo;
+
     public StartExecuteCommandCommand(List<String> list, Integer clusterId, CommandType commandType) {
         this.commandIds = list;
         this.clusterId = clusterId;
         this.commandType = commandType;
+    }
+
+    public StartExecuteCommandCommand(List<String> commandIds, Integer clusterId, CommandType commandType, RollingRestartInfo rollingRestartInfo) {
+        this.commandIds = commandIds;
+        this.clusterId = clusterId;
+        this.commandType = commandType;
+        this.rollingRestartInfo = rollingRestartInfo;
     }
 }

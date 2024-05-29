@@ -37,4 +37,6 @@ public class AlertItem implements Serializable {
     private String alertAdvice;
 
     private Integer triggerDuration;
+
+    private Integer noticeGroupId;
 }

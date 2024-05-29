@@ -125,7 +125,6 @@ function loadRoutes(routesConfig, clusterRoutes) {
   const { store, i18n} = appOptions
   // clusterRoutes ||
   const router = clusterRoutes || appOptions.router
-  console.log(router, clusterRoutes)
   // 如果 routesConfig 有值，则更新到本地，否则从本地获取
   if (routesConfig) {
     store.commit('account/setRoutesConfig', routesConfig)
@@ -140,7 +139,7 @@ function loadRoutes(routesConfig, clusterRoutes) {
       const finalRoutes = mergeRoutes(basicOptions.routes, routes)
       formatRoutes(finalRoutes)
       router.options = {...router.options, routes: finalRoutes}
-      router.matcher = new Router({...router.options, routes:[]}).matcher
+      router.matcher = new Router({...router.options, routes:[],mode:'hash'}).matcher
       router.addRoutes(finalRoutes)
     }
   }
@@ -284,9 +283,12 @@ function getI18nKey(path) {
 function loadGuards(guards, options) {
   const {beforeEach, afterEach} = guards
   const {router} = options
+
   beforeEach.forEach(guard => {
     if (guard && typeof guard === 'function') {
-      router.beforeEach((to, from, next) => guard(to, from, next, options))
+      router.beforeEach((to, from, next) =>{
+         guard(to, from, next, options)
+      })
     }
   })
   afterEach.forEach(guard => {

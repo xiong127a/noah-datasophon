@@ -26,6 +26,7 @@ import convertQueue from './convertQueue.vue'
 export default {
   name: "queuegraph",
   components: { SeeksRelationGraph },
+
   data() {
     return {
       labelCol: {
@@ -83,13 +84,17 @@ export default {
       },
     };
   },
+
+  watch:{
+  },
+
   created() {
     this.getGraphData();
   },
+
   mounted() {
   },
-  watch:{
-  },
+
   methods: {
     refGraphData(){
       // this.$axiosJsonPost('/ddh/cluster/queue/capacity/refreshToYarn', {clusterId: this.clusterId}).then((res) => {
@@ -167,7 +172,6 @@ export default {
       this.isShowNodeMenuPanel = false;
     },
     delNode(node){
-      debugger
       this.$axiosPost('/ddh/cluster/queue/capacity/delete', {id:node.data.id}).then((res) => { 
         if (res.code !== 200) return
         this.$message.success('删除成功')
@@ -215,11 +219,10 @@ export default {
         },
       });
     },
-  },
+  }
 };
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 .c-label {
   color: #666666;

@@ -22,17 +22,35 @@ import java.util.List;
 
 import lombok.Data;
 
+/**
+ * 配置文件详情
+ */
 @Data
 public class Generators implements Serializable {
 
+    /**
+     * 文件名
+     */
     private String filename;
 
+    /**
+     * 文件数据类型
+     */
     private String configFormat;
 
+    /**
+     * 输出文件夹
+     */
     private String outputDirectory;
 
+    /**
+     * 配置参数名称列表
+     */
     private List<String> includeParams;
 
+    /**
+     * 自定义配置模板名称
+     */
     private String templateName;
     @Override
     public boolean equals(Object o) {

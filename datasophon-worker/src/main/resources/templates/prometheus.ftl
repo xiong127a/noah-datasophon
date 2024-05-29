@@ -171,5 +171,72 @@ scrape_configs:
     file_sd_configs:
      - files:
        - configs/dinky.json
-
-
+  - job_name: 'prestocoordinator'
+    file_sd_configs:
+     - files:
+       - configs/prestocoordinator.json
+  - job_name: 'prestoworker'
+    file_sd_configs:
+     - files:
+       - configs/prestoworker.json
+  - job_name: 'minio'
+    metrics_path: /minio/prometheus/metrics
+    scheme: http
+    file_sd_configs:
+     - files:
+       - configs/minioservice.json
+  - job_name: 'kyuubi'
+    file_sd_configs:
+     - files:
+       - configs/kyuubiserver.json
+  - job_name: 'clickhouse'
+    file_sd_configs:
+     - files:
+       - configs/clickhouse.json
+  - job_name: 'alluxiomaster'
+    metrics_path: /metrics/prometheus
+    file_sd_configs:
+     - files:
+       - configs/alluxiomaster.json
+  - job_name: 'alluxioworker'
+    metrics_path: /metrics/prometheus
+    file_sd_configs:
+     - files:
+       - configs/alluxioworker.json
+  - job_name: 'redis'
+    file_sd_configs:
+      - files:
+        - /opt/datasophon/redis/redis_exporter/redis.json
+    metrics_path: /scrape
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9121
+  - job_name: 'postgres'
+    file_sd_configs:
+     - files:
+       - configs/postgresqlmaster.json
+       - configs/postgresqlworker.json
+    metrics_path: /metrics
+    params:
+      auth_module: [foo]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9187
+  - job_name: 'zeppelin'
+    metrics_path: /metrics
+    file_sd_configs:
+     - files:
+       - configs/zeppelinserver.json
+  - job_name: 'hue'
+    metrics_path: /metrics
+    file_sd_configs:
+     - files:
+       - configs/huemaster.json

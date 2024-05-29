@@ -27,7 +27,14 @@ fi
 startStop=$1
 shift
 command=$1
+shift
 
+
+JAVA_DEBUG_OPTS=""
+if [ "$1" = "debug" ]; then
+    JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8001,server=y,suspend=n "
+fi
+shift
 
 echo "Begin $startStop $command......"
 source /etc/profile
@@ -103,7 +110,7 @@ case $startStop in
 
     echo starting $command, logging to $log
 
-    exec_command="$DDH_OPTS $LOG_FILE $JMX -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
+    exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
     echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
     nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &
@@ -169,7 +176,7 @@ case $startStop in
       fi
       echo starting $command, logging to $log
 
-      exec_command="$DDH_OPTS $LOG_FILE $JMX -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
+      exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
       echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
       nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &

@@ -26,6 +26,7 @@ import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -69,7 +70,8 @@ public class MasterServiceActor extends UntypedActor {
                             .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-            Collections.sort(serviceRoleInfoList);
+            Collections.sort(serviceRoleInfoList); //排序
+
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
                 logger.info(
@@ -96,12 +98,12 @@ public class MasterServiceActor extends UntypedActor {
                             (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                     ClusterServiceRoleGroupConfig config =
                             roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
-                    ProcessUtils.generateConfigFileMap(configFileMap, config);
+                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
                     ClusterServiceRoleGroupConfig config =
                             roleGroupConfigService.getConfigByRoleGroupId(
                                     serviceRoleInstance.getRoleGroupId());
-                    ProcessUtils.generateConfigFileMap(configFileMap, config);
+                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
                 logger.info("enable ranger plugin is {}", enableRangerPlugin);

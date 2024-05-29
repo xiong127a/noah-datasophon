@@ -1,0 +1,256 @@
+{
+  "name": "PRESTO",
+  "label": "Presto",
+  "description": "分布式SQL交互式查询引擎",
+  "version": "0.283",
+  "sortNum": 21,
+  "dependencies": [],
+  "packageName": "presto-0.283.tar.gz",
+  "decompressPackageName": "presto-0.283",
+  "roles": [
+    {
+      "name": "PrestoCoordinator",
+      "label": "PrestoCoordinator",
+      "roleType": "master",
+      "cardinality": "1",
+      "jmxPort": 7778,
+      "logFile": "data/var/log/server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/launcher",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "restart"
+        ]
+      },
+      "externalLink": {
+        "name": "Presto UI",
+        "label": "Presto UI",
+        "url": "http://${host}:7777"
+      }
+    },
+    {
+      "name": "PrestoWorker",
+      "label": "PrestoWorker",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "jmxPort": 7779,
+      "logFile": "data/var/log/server.log",
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/launcher",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/launcher",
+        "args": [
+          "restart"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "config.properties",
+        "configFormat": "properties",
+        "outputDirectory": "etc",
+        "includeParams": [
+          "coordinator",
+          "http-server.http.port",
+          "query.max-memory-per-node",
+          "query.max-memory",
+          "discovery.uri",
+          "custom.config.properties"
+        ]
+      },
+      {
+        "filename": "jvm.config",
+        "configFormat": "custom",
+        "outputDirectory": "etc",
+        "templateName": "presto.jvm.config.ftl",
+        "includeParams": [
+          "prestoHeapSize"
+        ]
+      },
+      {
+        "filename": "node.properties",
+        "configFormat": "properties",
+        "outputDirectory": "etc",
+        "includeParams": [
+          "node.data-dir",
+          "node.environment"
+        ]
+      },
+      {
+        "filename": "hive.properties",
+        "configFormat": "properties",
+        "outputDirectory": "etc/catalog",
+        "includeParams": [
+          "custom.hive.properties"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "coordinator",
+      "label": "coordinator",
+      "description": "coordinator",
+      "required": true,
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "prestoHeapSize",
+      "label": "Presto最大堆内存",
+      "description": "Presto最大堆内存",
+      "configType": "map",
+      "required": true,
+      "minValue": 0,
+      "maxValue": 64,
+      "type": "slider",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "32"
+    },
+    {
+      "name": "http-server.http.port",
+      "label": "Presto Http端口",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "7777"
+    },
+    {
+      "name": "discovery.uri",
+      "label": "服务发现地址",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${coordinatorHost}:7777"
+    },
+    {
+      "name": "query.max-memory-per-node",
+      "label": "每个查询在单个节点可使用最大内存",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "minValue": 0,
+      "maxValue": "30",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1GB"
+    },
+    {
+      "name": "query.max-memory",
+      "label": "总共可使用最大内存",
+      "description": "若query.max-memory-per-node = 30GB则query.max-memory = <30GB *节点数>",
+      "required": true,
+      "type": "input",
+      "minValue": 0,
+      "maxValue": "30",
+      "value": "",
+      "unit": "GB",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "30GB"
+    },
+    {
+      "name": "node.data-dir",
+      "label": "日志存储地址",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${INSTALL_PATH}/presto-0.283/data"
+    },
+    {
+      "name": "node.environment",
+      "label": "集群环境名称",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "production"
+    },
+    {
+      "name": "custom.config.properties",
+      "label": "自定义配置config.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "custom.hive.properties",
+      "label": "自定义配置hive.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"connector.name":"hive-hadoop2"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"connector.name":"hive-hadoop2"},{"hive.metastore.uri":"thrift://${metastoreHost}:9083"},{"hive.config.resources":"${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/core-site.xml,${INSTALL_PATH}/hadoop-3.3.3/etc/hadoop/hdfs-site.xml"}]
+    }
+  ]
+}

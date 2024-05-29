@@ -57,27 +57,48 @@ public class FrameServiceEntity implements Serializable {
      */
     private String serviceDesc;
 
+    /**
+     * 压缩包名称
+     */
     private String packageName;
 
+    /**
+     * 依赖角色
+     */
     private String dependencies;
 
+    /**
+     * 角色所有配置json，对应各角色定义的service_ddl.json文件
+     */
     private String serviceJson;
 
     private String serviceJsonMd5;
 
+    /**
+     * 所有配置参数详情数组
+     */
     private String serviceConfig;
 
     private String frameCode;
 
+    /**
+     * 配置文件详情jsonObject -> 该文件包含参数详情jsonArray
+     */
     private String configFileJson;
 
     private String configFileJsonMd5;
 
+    /**
+     * 解压文件名
+     */
     private String decompressPackageName;
 
     @TableField(exist = false)
     private Boolean installed;
 
     private Integer sortNum;
+
+    @TableField(exist = false)
+    private Boolean isRequired;
 
 }

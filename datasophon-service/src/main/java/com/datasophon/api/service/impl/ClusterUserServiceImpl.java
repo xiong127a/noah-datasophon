@@ -17,27 +17,35 @@
 
 package com.datasophon.api.service.impl;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
+import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.ClusterGroupService;
+import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.ClusterUserGroupService;
-import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
+import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.command.LdapCommand;
 import com.datasophon.common.command.remote.CreateUnixUserCommand;
 import com.datasophon.common.command.remote.DelUnixUserCommand;
+import com.datasophon.common.command.remote.GenerateKeytabFileCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.ClusterGroup;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterUser;
-import com.datasophon.dao.entity.ClusterUserGroup;
+import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.dao.entity.*;
 import com.datasophon.dao.mapper.ClusterUserMapper;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -49,10 +57,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,8 +75,23 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     @Autowired
     private ClusterUserGroupService userGroupService;
 
+    @Autowired
+    private ClusterKerberosService clusterKerberosService;
+
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+
+        // 用户名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        WordValidator wordValidator = new WordValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(wordValidator);
+        wordValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(username);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
 
         if (hasRepeatUserName(clusterId, username)) {
             return Result.error(Status.DUPLICATE_USER_NAME.getMsg());
@@ -123,6 +143,50 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                         "create unix user " + username + " failed at " + clusterHost.getHostname());
             }
         }
+
+        // create ldap user
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
+        ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
+
+        LdapCommand ldapCommand = new LdapCommand();
+        ldapCommand.setOperation("add");
+        ldapCommand.setLdapUrl(globalVariables.get("${syncLdapUrl}"));
+        ldapCommand.setUsername(username);
+        ldapCommand.setMail("");
+        ldapCommand.setDescription("");
+        ldapCommand.setRootDn(globalVariables.get("${syncLdapBindDn}"));
+        ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
+        ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
+        ldapCommand.setUserPwd(globalVariables.get("${syncLdapBindPassword}"));
+        String uid = globalVariables.get("${syncLdapUidNumber}");
+        if (StringUtils.isBlank(uid)) {
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
+            ldapCommand.setUidNumber("2000");
+        } else {
+            String nextUid = NumberUtil.toStr(NumberUtil.add("2000", "1").longValue());
+            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", nextUid);
+            ldapCommand.setUidNumber(nextUid);
+        }
+        ldapCommand.setGidNumber("55");
+
+        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+        Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
+        ExecResult execResult = null;
+        try {
+            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+            if (execResult.getExecResult()) {
+                logger.info("create ldap user {} success", username);
+            } else {
+                logger.error("create ldap user " + username + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
+            }
+        } catch (Exception e) {
+            logger.error("create ldap user " + username + " failed");
+            logger.error(e.getMessage());
+        }
+
         return Result.success();
     }
 
@@ -194,6 +258,37 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                 logger.info("del unix user failed at {}", clusterHost.getHostname());
             }
         }
+
+        // delete ldap user
+        Map<String, String> globalVariables = GlobalVariables.get(clusterUser.getClusterId());
+        // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
+        ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
+
+        LdapCommand ldapCommand = new LdapCommand();
+        ldapCommand.setOperation("delete");
+        ldapCommand.setLdapUrl(globalVariables.get("${syncLdapUrl}"));
+        ldapCommand.setRootDn(globalVariables.get("${syncLdapBindDn}"));
+        ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
+        ldapCommand.setUsername(clusterUser.getUsername());
+        ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
+
+        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+        Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
+        ExecResult execResult = null;
+        try {
+            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+            if (execResult.getExecResult()) {
+                logger.info("delete ldap user {} success", clusterUser.getUsername());
+            } else {
+                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
+            }
+        } catch (Exception e) {
+            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error(e.getMessage());
+        }
+
         this.removeById(id);
         return Result.success();
     }

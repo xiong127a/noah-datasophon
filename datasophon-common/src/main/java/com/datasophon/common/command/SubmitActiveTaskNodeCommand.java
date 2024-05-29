@@ -20,6 +20,7 @@ package com.datasophon.common.command;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.model.DAGGraph;
+import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.model.ServiceNode;
 
 import java.io.Serializable;
@@ -40,5 +41,6 @@ public class SubmitActiveTaskNodeCommand implements Serializable {
     private Map<String, ServiceExecuteState> activeTaskList;
     private Map<String, String> readyToSubmitTaskList;
     private Map<String, String> completeTaskList;
+    private RollingRestartInfo rollingRestartInfo;
 
 }

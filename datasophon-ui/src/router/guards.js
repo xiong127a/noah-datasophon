@@ -67,7 +67,7 @@ const authorityGuard = (to, from, next, options) => {
 const redirectGuard = (to, from, next, options) => {
   const clusterId = localStorage.getItem('clusterId')
   const isCluster = localStorage.getItem('isCluster')
-  console.log(clusterId, isCluster, 'dsadasdsada')
+
   const {store} = options
   const getFirstChild = (routes) => {
     const route = routes[0]

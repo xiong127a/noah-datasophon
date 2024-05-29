@@ -385,6 +385,9 @@ public class ProcessUtils {
         serviceRoleInstanceService.updateById(serviceRole);
     }
 
+    /**
+     * 保存到变量表和全局变量缓存
+     */
     public static void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
                                                String variableName, String value) {
         ClusterVariableService variableService =
@@ -442,6 +445,9 @@ public class ProcessUtils {
         }
     }
 
+    /**
+     * 为各集群的每个角色创建各自的 MasterServiceActor
+     */
     public static void createServiceActor(ClusterInfoEntity clusterInfo) {
         FrameServiceService frameServiceService = SpringTool.getApplicationContext().getBean(FrameServiceService.class);
 
@@ -540,12 +546,29 @@ public class ProcessUtils {
      * @Description: 生成configFileMap
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-                                             ClusterServiceRoleGroupConfig config) {
+                                             ClusterServiceRoleGroupConfig config,Integer clusterId) {
         Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(), Map.class);
         for (JSONObject fileJson : map.keySet()) {
             Generators generators = fileJson.toJavaObject(Generators.class);
             List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
+            //replace variable
+            replaceVariable(serviceConfigs,clusterId);
             configFileMap.put(generators, serviceConfigs);
+        }
+    }
+
+    private static void replaceVariable(List<ServiceConfig> serviceConfigs,Integer clusterId) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        for (ServiceConfig serviceConfig : serviceConfigs) {
+            if(Constants.INPUT.equals(serviceConfig.getType())){
+                String name = PlaceholderUtils.replacePlaceholders(serviceConfig.getName(), globalVariables,
+                        Constants.REGEX_VARIABLE);
+                serviceConfig.setName(name);
+
+                String value = PlaceholderUtils.replacePlaceholders((String) serviceConfig.getValue(), globalVariables,
+                        Constants.REGEX_VARIABLE);
+                serviceConfig.setValue(value);
+            }
         }
     }
 

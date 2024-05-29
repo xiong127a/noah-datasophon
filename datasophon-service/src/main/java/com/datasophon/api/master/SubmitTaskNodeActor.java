@@ -18,18 +18,19 @@
 package com.datasophon.api.master;
 
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.DAGGraph;
+import com.datasophon.common.model.RollingRestartInfo;
 import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceRoleInfo;
 
 import scala.Option;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,10 +103,17 @@ public class SubmitTaskNodeActor extends UntypedActor {
 
                     } else if (serviceNode.getElseRoles().size() > 0) {
                         logger.info("{} does not has master roles , start to submit worker or client roles", node);
+
+                        //滚动重启
+                        RollingRestartInfo rollingRestartInfo = submitActiveTaskNodeCommand.getRollingRestartInfo();
+                        int errorCount = 0;
+                        List<ServiceRoleInfo> batchList = new ArrayList<>(); // 批次集合
+
                         for (ServiceRoleInfo elseRole : serviceNode.getElseRoles()) {
                             ActorRef serviceActor = ActorUtils.getLocalActor(WorkerServiceActor.class,
                                     submitActiveTaskNodeCommand.getClusterCode() + "-serviceActor-" + node + "-"
                                             + elseRole.getHostname());
+
                             ProcessUtils.buildExecuteServiceRoleCommand(
                                     submitActiveTaskNodeCommand.getClusterId(),
                                     submitActiveTaskNodeCommand.getCommandType(),
@@ -120,7 +128,35 @@ public class SubmitTaskNodeActor extends UntypedActor {
                                     elseRole,
                                     serviceActor,
                                     ServiceRoleType.WORKER);
+
+                            //滚动重启控制
+                            batchList.add(elseRole);
+                            if (Objects.nonNull(rollingRestartInfo) && batchList.size() == rollingRestartInfo.getBatchCount()) {
+
+                                //批量等待
+                                for (ServiceRoleInfo serviceRoleInfo : batchList) {
+                                    RollingRestartUtils.getCountDownLatchByServiceKey(serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId()).await();
+                                    //错误计数
+                                    errorCount = errorCount + RollingRestartUtils.getErrorCount(serviceRoleInfo.getHostname() + serviceRoleInfo.getServiceInstanceId());
+                                }
+
+                                //清除缓存
+//                                RollingRestartUtils.clean();
+
+                                // 启动失败数量大于阈值 停止后边的任务
+                                if (errorCount > rollingRestartInfo.getTaskFailureTolerance()) {
+                                    return;//停止循环
+                                }
+                                logger.info("批次实例滚动重启结束");
+                                logger.info("滚动重启批次等待:{} s", rollingRestartInfo.getBatchSeparationInSeconds());
+                                Thread.sleep(rollingRestartInfo.getBatchSeparationInSeconds()*1000);
+                                logger.info("滚动重启批次等待结束");
+
+                                batchList.clear();// 进行下一批次计数
+                            }
                         }
+
+                        logger.info("----------------------{}", Thread.currentThread().getName());
 
                     } else {
                         continue;

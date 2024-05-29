@@ -29,10 +29,9 @@ const Group = {
     )
   }
 }
-
 export default {
-  name: 'AStepItem',
   Group: Group,
+  name: 'AStepItem',
   props: ['title', 'icon', 'link', 'titleStyle', 'iconStyle'],
   methods: {
     go () {
@@ -49,11 +48,7 @@ export default {
   .step-item{
     cursor: pointer;
   }
-  :global{
-    .ant-steps-item-process{
-      .linkable{
-        color: @primary-color;
-      }
-    }
-  }
+:global(.ant-steps-item-process .linkable) {
+  color: @primary-color;
+}
 </style>

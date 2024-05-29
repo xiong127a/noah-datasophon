@@ -1,6 +1,7 @@
 # Tomcat
 server:
-  port: 8081
+  port: ${server.port:8081}
+  address: ${server.ip:0.0.0.0}
   servlet:
     context-path: /ddh/
 security:
@@ -9,11 +10,11 @@ security:
 # mysql
 spring:
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    url: jdbc:mysql://localhost:3306/datasophon?useUnicode=true&characterEncoding=utf-8
-    username: datasophon
-    password: datasophon
     driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://${datasource.ip:localhost}:${datasource.port:3306}/${datasource.database:datasophon}?&useUnicode=true&characterEncoding=utf-8
+    username: ${datasource.username:datasophon}
+    password: ${datasource.password:datasophon}
   #json格式化全局配置
   jackson:
     time-zone: GMT+8
@@ -59,7 +60,55 @@ mybatis-plus:
 logging:
   config: classpath:logback-api.xml
 
-
 datasophon:
   migration:
-    enable: true
+    enable: ${datasophon.migration.enable:true}
+
+sa-token:
+  # SSO-相关配置
+  sso:
+    auth-url: ${sso.auth-url:https://192.168.5.184:10000/index.html} # 单点登录登录页面地址url
+    # 是否打开单点注销接口
+    is-slo: true
+    server-url: ${sso.server-url:https://192.168.5.174:10000/sso-server/}
+    servicecode: NOAH # 系统编码
+    public-key: ${sso.public-key:MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCerqMJBTLxl/5ozlNeysw/SwuOPiqTTKd/j1MCm/2Zj/79VJ0FFvhKtOzOBYhoIu/QtlJPG2Lxrw3vNMksyqMiZ8Wca6a1/DgTicD/t8uTzx6buvfIR7GwccK1a/7u1mL2ZqddTIlmkvx/0IiAxXV2pDnQn1QS400O/xKr6RdXywIDAQAB}
+    exclude-urls:
+      - /sso/getSsoAuthUrl
+      - /sso/doLoginByTicket
+      - /sso/isLogin
+      - /login
+      - /signOut
+      - /ssoEnable
+      - /
+      - /static/**
+      - /webjars/**
+      - /ui/**
+    active: ${sso.active:true}
+    isHttp: true
+  #是否允许同一账号并发登录 (为true时允许一起登录, 为false时新登录挤掉旧登录) =-1
+  isConcurrent: true
+  #在多人登录同一账号时，是否共用一个token (为true时所有登录共用一个token, 为false时每次登录新建一个token)
+  isShare: false
+  # 是否使用redis存储信息，默认false使用内存来存储信息，true使用spring redis存储信息（请配置spring redis），若配置下述alone-redis，则使用下述alone-redis存储信息（不必再配置spring redis）。
+  redis-enabled: true
+  # 配置Sa-Token单独使用的Redis连接 （此处需要和SSO-Server端连接同一个Redis）
+  alone-redis:
+    #是否启用独立的redis来存储信息，此处为true时，redis-enabled也要设置为true
+    enabled: true
+    cluster:
+      nodes: ${sso.redis-nodes:192.168.5.160:6379,192.168.5.161:6379,192.168.5.162:6379}
+      # Redis服务器连接密码（默认为空）
+    password: ${sso.redis-password:}
+    # 连接超时时间
+    timeout: 10s
+    lettuce:
+      pool:
+        # 连接池最大连接数
+        max-active: 200
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1ms
+        # 连接池中的最大空闲连接
+        max-idle: 10
+        # 连接池中的最小空闲连接
+        min-idle: 0
