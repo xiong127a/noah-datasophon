@@ -261,13 +261,13 @@ export default {
       if (this.resourceList[type].length == 0 && active == false)
         switch (type) {
           case 'hdfsResourceList': this.resourceList[type] = [{
-            "hdfsPath": "root",
+            "hdfsPath": "",
             "hdfsSpaceQuota": "",
             "serviceName": "HDFS",
             "type": 'ADD'
           }]; break
           case 'yarnResourceList': this.resourceList[type] = [{
-            "parentQueueName": "",
+            "parentQueueName": "root",
             "queueName": "",
             "capacityPercent": "",
             "nodeLabel": "",
@@ -299,13 +299,13 @@ export default {
     toAdd (type) {
       switch (type) {
         case 'hdfsResourceList': this.resourceList[type].push({
-          "hdfsPath": "root",
+          "hdfsPath": "",
           "hdfsSpaceQuota": "",
           "serviceName": "HDFS",
           "type": 'ADD'
         },); break
         case 'yarnResourceList': this.resourceList[type].push({
-          "parentQueueName": "",
+          "parentQueueName": "root",
           "queueName": "",
           "capacityPercent": "",
           "nodeLabel": "",
