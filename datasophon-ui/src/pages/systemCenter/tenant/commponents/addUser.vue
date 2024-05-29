@@ -102,7 +102,7 @@
             <div class="right">
               <div class="title">
                 <span>数据库名</span>
-                <span>数据库容量</span>
+                <span>数据库容量(GB)</span>
                 <span style="text-indent:42px">操作</span>
               </div>
               <div class="content" v-for="(item, index) in resourceList.hiveResourceList" :key="index">
@@ -261,7 +261,7 @@ export default {
       if (this.resourceList[type].length == 0 && active == false)
         switch (type) {
           case 'hdfsResourceList': this.resourceList[type] = [{
-            "hdfsPath": "",
+            "hdfsPath": "root",
             "hdfsSpaceQuota": "",
             "serviceName": "HDFS",
             "type": 'ADD'
@@ -299,7 +299,7 @@ export default {
     toAdd (type) {
       switch (type) {
         case 'hdfsResourceList': this.resourceList[type].push({
-          "hdfsPath": "",
+          "hdfsPath": "root",
           "hdfsSpaceQuota": "",
           "serviceName": "HDFS",
           "type": 'ADD'
