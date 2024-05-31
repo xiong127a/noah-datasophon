@@ -118,6 +118,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "RANGER");
             }
+
         }
         String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "RANGER" + Constants.CONFIG;
         List<ServiceConfig> configs = ServiceConfigMap.get(key);

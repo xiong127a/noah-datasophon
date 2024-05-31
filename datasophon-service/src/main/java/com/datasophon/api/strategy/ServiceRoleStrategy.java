@@ -27,22 +27,17 @@ import java.util.Map;
 public interface ServiceRoleStrategy {
 
     /**
-     * 传入参数为所有master节点host
-     * 保存服务角色与主机对应关系时
-     * 添加自定义变量保存到变量表和全局变量缓存
-     * 可以在服务配置时取到对应的变量
+     * 保存角色host映射关系时根据roleName调用
      */
     void handler(Integer clusterId, List<String> hosts);
 
     /**
-     * 保存服务配置时
-     * 添加自定义配置 或者修改其它服务配置
-     * 之后会将对应的配置添加到表和全部变量
+     * 保存服务配置时根据ServiceName调用
      */
     void handlerConfig(Integer clusterId, List<ServiceConfig> list);
 
     /**
-     * 获取服务配置时修改配置
+     * 获取服务配置时修改配置，根据ServiceName调用
      * handler之后handlerConfig之前调用
      * 提取角色本身配置和handler中自定义的变量
      */
