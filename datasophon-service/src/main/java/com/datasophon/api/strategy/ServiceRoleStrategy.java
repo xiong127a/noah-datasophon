@@ -44,7 +44,7 @@ public interface ServiceRoleStrategy {
     void getConfig(Integer clusterId, List<ServiceConfig> list);
 
     /**
-     * 构建DAG时处理角色关系
+     * 构建DAG时处理角色关系，例如设置主从角色，设置搭建顺序等。
      *
      * 可以将自定义角色配置传递给worker
      */
