@@ -99,7 +99,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         // refresh to yarn
         if (!refreshToYarn(clusterId, "-addToClusterNodeLabels", nodeLabel)) {
             throw new BusinessException(
-                    Status.ADD_YARN_NODE_LABEL_FAILED.getMsg() + ",maybe you need to enable yarn node labels");
+                    Status.ADD_YARN_NODE_LABEL_FAILED.getMsg() + " , 请检查yarn配置页面标签配置项(yarn.node-labels.enabled)是否开启");
         }
         return Result.success();
     }
