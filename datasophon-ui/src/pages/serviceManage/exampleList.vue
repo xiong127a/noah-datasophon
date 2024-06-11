@@ -295,7 +295,6 @@ export default {
     },
     handleMenuClick (key) {
       if (key.key === "del") {
-        debugger
         // this.delExample();
         return false;
       }
