@@ -1,28 +1,3 @@
-<!--
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
-
- * @Date: 2022-05-24 10:28:22
- * @LastEditTime: 2022-09-26 17:15:22
- * @FilePath: \ddh-ui\src\pages\serviceManage\index.vue
--->
 <template>
   <div class="service-list card-shadow">
     <a-tabs v-model="tabKey" @change="callback">
@@ -38,8 +13,11 @@
       <a-tab-pane v-if="serviceName === 'YARN'" :key="4" tab="资源配置">
         <Queue />
       </a-tab-pane>
+      <a-tab-pane :key="5" tab="角色监控" v-if="serviceName ==='HDFS'">
+        <ExampleRoleMonitor ref="RoleMonitoringRef" :serviceId="serviceId" :serviceName="serviceName" />
+      </a-tab-pane>
     </a-tabs>
-    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ? '280px' : '200px'}" v-if="webUis.length > 0">
+    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' || serviceName==='HDFS' ?'300px':'200px'}" v-if="webUis.length > 0">
       <a-menu slot="overlay" @click="handleMenuClick">
         <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
       </a-menu>
@@ -61,9 +39,11 @@ import ExampleList from "./exampleList.vue";
 const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
+import ExampleRoleMonitor from './ExampleRoleMonitor.vue';  //角色监控
 export default {
   name: "ServiceList",
-  components: { ExampleList, Setting, OverViewPage, Queue },
+  components: { ExampleList, Setting, OverViewPage, Queue,ExampleRoleMonitor },
+
   data() {
     return {
       tabKey: 1,
@@ -82,19 +62,39 @@ export default {
       ],
     };
   },
+
   watch: {
     $route: function (val, oldVal) {
       if (this.$store.state.setting.serviceId === val.params.serviceId) return false
       this.$store.commit('setting/setServiceId', val.params.serviceId)
       this.serviceId = val.params.serviceId;
+      this.serviceName = val.params.serviceName;
     }
   },
+
+  mounted() {
+    this.getWebUis();
+    this.getServiceName()
+  },
+
+  activated () {
+    console.log('每次我只触发一次')
+    this.serviceId = this.$route.params.serviceId;
+    this.getWebUis();
+    this.getServiceName()
+    console.log(this.$route, 'sdadadasd')
+  },
+
+  deactivated () {
+    console.log('每次我buxiang只触发一次')
+  },
+
   methods: {
     getWebUIWidth (serviceName) {
       if (serviceName === 'KRBCLIENT') {
         return '136px'
       } else {
-        return serviceName === 'YARN' ? '280px' : '200px'
+        return  serviceName==='HDFS' ? '300px':'200px'
       }
     },
     handleMenuClick(item) {
@@ -133,20 +133,6 @@ export default {
         }
       }
     }
-  },
-  mounted() {
-    this.getWebUis();
-    this.getServiceName()
-  },
-  activated () {
-    console.log('每次我只触发一次')
-    this.serviceId = this.$route.params.serviceId;
-    this.getWebUis();
-    this.getServiceName()
-    console.log(this.$route, 'sdadadasd')
-  },
-  deactivated () {
-    console.log('每次我buxiang只触发一次')
   }
 };
 </script>
