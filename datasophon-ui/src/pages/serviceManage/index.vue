@@ -13,11 +13,8 @@
       <a-tab-pane v-if="serviceName === 'YARN'" :key="4" tab="资源配置">
         <Queue />
       </a-tab-pane>
-      <a-tab-pane :key="5" tab="角色监控" v-if="serviceName ==='HDFS'">
-        <ExampleRoleMonitor ref="RoleMonitoringRef" :serviceId="serviceId" :serviceName="serviceName" />
-      </a-tab-pane>
     </a-tabs>
-    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' || serviceName==='HDFS' ?'300px':'200px'}" v-if="webUis.length > 0">
+    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ?'280px':'200px'}" v-if="webUis.length > 0">
       <a-menu slot="overlay" @click="handleMenuClick">
         <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
       </a-menu>
@@ -39,10 +36,9 @@ import ExampleList from "./exampleList.vue";
 const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
-import ExampleRoleMonitor from './ExampleRoleMonitor.vue';  //角色监控
 export default {
   name: "ServiceList",
-  components: { ExampleList, Setting, OverViewPage, Queue,ExampleRoleMonitor },
+  components: { ExampleList, Setting, OverViewPage, Queue },
 
   data() {
     return {
@@ -68,7 +64,6 @@ export default {
       if (this.$store.state.setting.serviceId === val.params.serviceId) return false
       this.$store.commit('setting/setServiceId', val.params.serviceId)
       this.serviceId = val.params.serviceId;
-      this.serviceName = val.params.serviceName;
     }
   },
 
@@ -94,7 +89,7 @@ export default {
       if (serviceName === 'KRBCLIENT') {
         return '136px'
       } else {
-        return  serviceName==='HDFS' ? '300px':'200px'
+        return  serviceName==='YARN' ? '280px':'200px'
       }
     },
     handleMenuClick(item) {
