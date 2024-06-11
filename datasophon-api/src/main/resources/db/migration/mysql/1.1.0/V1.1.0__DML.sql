@@ -381,6 +381,9 @@ INSERT INTO `t_ddh_install_step` VALUES (9, '服务安装启动', NULL, 1);
 -- ----------------------------
 INSERT INTO `t_ddh_cluster_group` VALUES (1, 'hadoop', 1);
 INSERT INTO `t_ddh_cluster_group` VALUES (2, 'elastic', 1);
+INSERT INTO `t_ddh_cluster_group` VALUES (3, 'root', 1);
+INSERT INTO `t_ddh_cluster_group` VALUES (4, 'hue', 1);
+INSERT INTO `t_ddh_cluster_group` VALUES (5, 'postgres', 1);
 
 -- ----------------------------
 -- Records of t_ddh_cluster_user
@@ -405,7 +408,10 @@ INSERT INTO `t_ddh_cluster_user_group` VALUES (3, 3, 1, 1, 1);
 INSERT INTO `t_ddh_cluster_user_group` VALUES (4, 4, 1, 1, 1);
 INSERT INTO `t_ddh_cluster_user_group` VALUES (5, 5, 2, 1, 1);
 INSERT INTO `t_ddh_cluster_user_group` VALUES (6, 6, 1, 1, 1);
-INSERT INTO `t_ddh_cluster_user_group` VALUES (11, 9, 1, 1, 1);
+INSERT INTO `t_ddh_cluster_user_group` VALUES (7, 7, 4, 1, 1);
+INSERT INTO `t_ddh_cluster_user_group` VALUES (8, 8, 5, 1, 1);
+INSERT INTO `t_ddh_cluster_user_group` VALUES (9, 9, 1, 1, 1);
+INSERT INTO `t_ddh_cluster_user_group` VALUES (10, 10, 3, 1, 1);
 
 -- ----------------------------
 -- Records of t_ddh_session

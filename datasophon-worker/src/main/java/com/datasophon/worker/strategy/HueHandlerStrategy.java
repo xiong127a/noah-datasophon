@@ -37,7 +37,7 @@ public class HueHandlerStrategy extends AbstractHandlerStrategy implements Servi
         }
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            ShellUtils.exceShell("yum -y install cyrus-sasl-plain  cyrus-sasl-devel  cyrus-sasl-gssapi");
+            ShellUtils.exceShell("yum -y install cyrus-sasl-plain  cyrus-sasl-devel  cyrus-sasl-gssapi --skip-broken");
 
             logger.info("init hue database");
             ArrayList<String> commands = new ArrayList<>();
