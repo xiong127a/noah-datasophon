@@ -1,28 +1,3 @@
-<!--
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
-
- * @Date: 2022-05-24 10:28:22
- * @LastEditTime: 2023-04-13 16:17:15
- * @FilePath: \ddh-ui\src\pages\serviceManage\exampleList.vue
--->
 <template>
   <div class="example-page">
     <a-card class="mgb16 card-shadow">
@@ -183,17 +158,21 @@ import AllotCharacter from "./allotCharacter.vue";
 import RollingRestart from "@/pages/serviceManage/rollingRestart.vue";
 import {getFrameServiceId, getServiceName} from "@/utils/util";
 export default {
-  components: { LOGS, Steps },
   name: "exampleList",
-  props: {
-    serviceId: String,
-  },
+
   provide () {
     return {
       handleCancel: this.handleCancel,
       onSearch: this.onSearch,
     };
   },
+
+  components: { LOGS, Steps },
+
+  props: {
+    serviceId: String,
+  },
+
   data () {
     return {
       params: {},
@@ -246,6 +225,45 @@ export default {
       item: null
     };
   },
+
+  watch: {
+    logsVisible: {
+      handler (val) {
+        if (val) {
+          this.refreshData = setInterval(() => {
+            this.bindTime()
+          }, 10000);
+        } else {
+          clearInterval(this.refreshData);
+          this.refreshData = null;
+        }
+
+      },
+      immediate: true,
+      deep: true
+    },
+  },
+
+  mounted () {
+    this.getServiceRoleType()
+    this.pollingSearch();
+  },
+
+  activated () {
+    clearInterval(this.timer);
+    this.pollingSearch();
+  },
+
+  deactivated () {
+    clearInterval(this.timer);
+  },
+
+  beforeDestroy () {
+    clearInterval(this.timer);
+    clearInterval(this.refreshData);
+    this.refreshData = null;
+  },
+
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
     ...mapState("setting", ["menuData"]),
@@ -277,7 +295,8 @@ export default {
     },
     handleMenuClick (key) {
       if (key.key === "del") {
-        this.delExample();
+        debugger
+        // this.delExample();
         return false;
       }
       if (key.key === "roleGroup") {
@@ -471,7 +490,7 @@ export default {
       let serviceId = { id: this.$route.params.serviceId || "" }
       let roleInstanceIds = this.selectedRowKeys
       let content = (
-        <AllotCharacter serviceId={serviceId} roleInstanceIds={roleInstanceIds} callBack={() => self.pollingSearch(), () => { this.selectedRowKeys = [] }} />
+        <AllotCharacter serviceId={serviceId} roleInstanceIds={roleInstanceIds} callBack={(() => self.pollingSearch(), () => { this.selectedRowKeys = [] })} />
       );
       this.$confirm({
         width: width,
@@ -665,40 +684,7 @@ export default {
         self.getExampleList(true);
       }, global.intervalTime);
     },
-  },
-  watch: {
-    logsVisible: {
-      handler (val) {
-        if (val) {
-          this.refreshData = setInterval(() => {
-            this.bindTime()
-          }, 10000);
-        } else {
-          clearInterval(this.refreshData);
-          this.refreshData = null;
-        }
-
-      },
-      immediate: true,
-      deep: true
-    },
-  },
-  mounted () {
-    this.pollingSearch();
-    this.getServiceRoleType()
-  },
-  activated () {
-    clearInterval(this.timer);
-    this.pollingSearch();
-  },
-  deactivated () {
-    clearInterval(this.timer);
-  },
-  beforeDestroy () {
-    clearInterval(this.timer);
-    clearInterval(this.refreshData);
-    this.refreshData = null;
-  },
+  }
 };
 </script>
 
