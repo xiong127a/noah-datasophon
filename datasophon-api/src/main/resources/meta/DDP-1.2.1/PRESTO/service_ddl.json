@@ -2,11 +2,11 @@
   "name": "PRESTO",
   "label": "Presto",
   "description": "分布式SQL交互式查询引擎",
-  "version": "0.283",
+  "version": "0.287",
   "sortNum": 21,
   "dependencies": [],
-  "packageName": "presto-0.283.tar.gz",
-  "decompressPackageName": "presto-0.283",
+  "packageName": "presto-0.287.tar.gz",
+  "decompressPackageName": "presto-0.287",
   "roles": [
     {
       "name": "PrestoCoordinator",
@@ -215,7 +215,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${INSTALL_PATH}/presto-0.283/data"
+      "defaultValue": "${INSTALL_PATH}/presto-0.287/data"
     },
     {
       "name": "node.environment",
