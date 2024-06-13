@@ -690,7 +690,7 @@ export default {
                   ...dataNodeItem,
                   hostname:'ndp'+it,
                   id: it,
-                  serviceRoleName: 'DataNode' +it,
+                  serviceRoleName: 'DataNode',
                   serviceRoleState:'正在运行',
                   serviceRoleStateCode:1
                 })
