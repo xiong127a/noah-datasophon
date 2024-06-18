@@ -295,8 +295,7 @@ export default {
     },
     handleMenuClick (key) {
       if (key.key === "del") {
-        debugger
-        // this.delExample();
+        this.delExample();
         return false;
       }
       if (key.key === "roleGroup") {
