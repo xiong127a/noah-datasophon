@@ -19,6 +19,7 @@ package com.datasophon.api.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.model.MPage;
 
@@ -26,7 +27,7 @@ import java.util.List;
 
 public interface NoticeGroupService extends IService<NoticeGroupEntity> {
 
-    void saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup);
+    Result saveOrUpdateNoticeGroup(NoticeGroupEntity noticeGroup);
 
     void removeNoticeGroup(List<Integer> list);
 

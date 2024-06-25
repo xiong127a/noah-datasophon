@@ -30,6 +30,10 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterNodeLabelService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.PackageUtils;
+import com.datasophon.api.utils.StringValidator.GeneralValidator;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
+import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.utils.ExecResult;
@@ -73,6 +77,18 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
 
     @Override
     public Result saveNodeLabel(Integer clusterId, String nodeLabel) {
+        // 标签名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        GeneralValidator generalValidator = new GeneralValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(generalValidator);
+        generalValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(nodeLabel);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+
         if (repeatNodeLable(clusterId, nodeLabel)) {
             return Result.error(Status.REPEAT_NODE_LABEL.getMsg());
         }
@@ -83,7 +99,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         // refresh to yarn
         if (!refreshToYarn(clusterId, "-addToClusterNodeLabels", nodeLabel)) {
             throw new BusinessException(
-                    Status.ADD_YARN_NODE_LABEL_FAILED.getMsg() + ",maybe you need to enable yarn node labels");
+                    Status.ADD_YARN_NODE_LABEL_FAILED.getMsg() + " , 请检查yarn配置页面标签配置项(yarn.node-labels.enabled)是否开启");
         }
         return Result.success();
     }

@@ -32,6 +32,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
+import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -68,36 +69,47 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         boolean enableKerberos = false;
         Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
         ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
-        TenantRangerCommand tenantRangerCommand = TenantRangerCommand.builder().clusterId(clusterId).operateType("createService").build();
         // enable ranger plugin
         for (ServiceConfig config : list) {
             if ("enableHDFSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHdfsPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHDFSPlugin}", "true");
                 enableRangerPlugin(clusterId, "HDFS", "NameNode");
-                tenantRangerCommand.setServiceName("HDFS");
-                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
+                TenantRangerCommand hdfsRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("HDFS")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(hdfsRangerCommand, ActorRef.noSender());
             }
             if ("enableYARNPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableYARNPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableYARNPlugin}", "true");
                 enableRangerPlugin(clusterId, "YARN", "ResourceManager");
-                tenantRangerCommand.setServiceName("YARN");
-                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
+                TenantRangerCommand yarnRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("YARN")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(yarnRangerCommand, ActorRef.noSender());
             }
             if ("enableHIVEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHivePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHIVEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HIVE", "HiveServer2");
-                tenantRangerCommand.setServiceName("HIVE");
-                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
+                TenantRangerCommand hiveRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("HIVE")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(hiveRangerCommand, ActorRef.noSender());
             }
             if ("enableHBASEPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableHbasePlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableHBASEPlugin}", "true");
                 enableRangerPlugin(clusterId, "HBASE", "HbaseMaster");
-                tenantRangerCommand.setServiceName("HBASE");
-                tenantActor.tell(tenantRangerCommand, ActorRef.noSender());
+                TenantRangerCommand hbaseRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("HBASE")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
             }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();
@@ -106,6 +118,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "RANGER");
             }
+
         }
         String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "RANGER" + Constants.CONFIG;
         List<ServiceConfig> configs = ServiceConfigMap.get(key);
@@ -148,6 +161,9 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ClusterServiceInstanceEntity serviceInstance =
                 serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        // 判断是否存在es服务
+        Boolean hasEs =
+                serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
         // 查询角色组id
         List<ClusterServiceRoleInstanceEntity> roleList =
                 roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
@@ -186,6 +202,22 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 if (!map.containsKey(name)) {
                     logger.info("put config {} into service {}", name, serviceRoleName);
                     serviceConfigs.add(parameter);
+                }
+                // 如果存在es服务，则添加审计日志写入es配置
+                if (hasEs && "esAuditEnable".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue("true");
+                }
+                if (hasEs && "esSingleHost".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue(globalVariables.get("${esSingleHost}"));
+                }
+                if (hasEs && "esHttpPort".equals(parameter.getName())) {
+                    parameter.setHidden(false);
+                    parameter.setRequired(true);
+                    parameter.setValue(globalVariables.get("${esHttpPort}"));
                 }
             }
             logger.info("Update hdfs enable ranger plugin");

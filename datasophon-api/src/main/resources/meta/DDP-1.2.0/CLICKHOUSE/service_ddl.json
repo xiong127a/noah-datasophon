@@ -16,7 +16,7 @@
       "roleType": "master",
       "cardinality": "1+",
       "logFile": "/var/log/clickhouse-server/clickhouse-server.log",
-      "jmxPort": "",
+      "jmxPort": "9363",
       "startRunner": {
         "timeout": "60",
         "program": "/etc/init.d/clickhouse-server",
@@ -53,9 +53,9 @@
         "outputDirectory": "etc",
         "templateName": "clickhouse-server-config.ftl",
         "includeParams": [
-          "tcpPort",
-          "shardAddress",
-          "zkAddress"
+          "ckTcpPort",
+          "ckShardAddress",
+          "ckZkAddress"
         ]
       },
       {
@@ -64,27 +64,27 @@
         "outputDirectory": "etc",
         "templateName": "clickhouse-user.ftl",
         "includeParams": [
-          "username",
-          "password"
+          "ckUsername",
+          "ckPassword"
         ]
       }
     ]
   },
   "parameters": [
     {
-      "name": "tcpPort",
+      "name": "ckTcpPort",
       "label": "tcp端口",
       "description": "tcp端口",
       "required": true,
       "configType": "map",
       "type": "input",
-      "value": "9010",
+      "value": "9001",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9010"
+      "defaultValue": "9001"
     },
     {
-      "name": "shardAddress",
+      "name": "ckShardAddress",
       "label": "clickhouse所有分片地址",
       "description": "clickhouse所有分片地址",
       "required": true,
@@ -96,7 +96,7 @@
       "defaultValue": ""
     },
     {
-      "name": "zkAddress",
+      "name": "ckZkAddress",
       "label": "zookeeper地址",
       "description": "zookeeper地址",
       "required": true,
@@ -108,7 +108,7 @@
       "defaultValue": ""
     },
     {
-      "name": "username",
+      "name": "ckUsername",
       "label": "用户名",
       "description": "用户名",
       "required": true,
@@ -120,7 +120,7 @@
       "defaultValue": "default"
     },
     {
-      "name": "password",
+      "name": "ckPassword",
       "label": "密码",
       "description": "密码",
       "required": true,

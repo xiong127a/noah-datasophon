@@ -1,13 +1,17 @@
 package com.datasophon.dao.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.datasophon.dao.entity.tenantResource.*;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Data
-@TableName("t_ddh_cluster_tenant")
+@TableName(value = "t_ddh_cluster_tenant", autoResultMap = true)
 public class ClusterTenant implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -29,57 +33,33 @@ public class ClusterTenant implements Serializable {
     private String tenantName;
 
     /**
-     * hdfs路径
+     * hdfs资源列表
      */
-    private String hdfsPath;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<TenantHdfsResource> hdfsResourceList;
 
     /**
-     * hdfs文件配额
+     * yarn资源列表
      */
-    private String hdfsQuota;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<TenantYarnResource> yarnResourceList;
 
     /**
-     * hdfs空间配额
+     * hive资源列表
      */
-    private String hdfsSpaceQuota;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<TenantHiveResource> hiveResourceList;
 
     /**
-     * yarn内存
+     * hbase资源列表
      */
-    private String yarnMemory;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<TenantHbaseResource> hbaseResourceList;
 
     /**
-     * yarn cpu
+     * kafka资源列表
      */
-    private String yarnCpu;
-
-    /**
-     * hive数据库名称
-     */
-    private String hiveDatabase;
-
-    /**
-     * hive数据库容量
-     */
-    private String hiveDatabaseCapacity;
-
-    /**
-     * kafka topic配置
-     */
-    private String kafkaTopicsConfig;
-
-    /**
-     * hbase 命名空间
-     */
-    private String hbaseNamespace;
-
-    /**
-     * hbase 容量
-     */
-    private String hbaseCapacity;
-
-    /**
-     * hbase regionserver数量
-     */
-    private String hbaseRegionServerNum;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<TenantKafkaResource> kafkaResourceList;
 }
+

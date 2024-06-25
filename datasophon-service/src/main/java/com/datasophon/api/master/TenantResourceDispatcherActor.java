@@ -1,0 +1,82 @@
+package com.datasophon.api.master;
+
+import akka.actor.ActorRef;
+import akka.actor.UntypedActor;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.utils.SpringTool;
+import com.datasophon.common.Constants;
+import com.datasophon.common.model.TenantResource.TenantFrameResource;
+import com.datasophon.common.model.TenantResource.TenantHiveResource;
+import com.datasophon.common.model.TenantResource.TenantKafkaResource;
+import com.datasophon.common.model.TenantResource.TenantYarnResource;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class TenantResourceDispatcherActor extends UntypedActor {
+
+    @Override
+    public void onReceive(Object message) throws Throwable {
+        if (message instanceof TenantFrameResource) {
+            TenantFrameResource tenantFrameResource = (TenantFrameResource) message;
+            Map<String, String> roleHostMap = getRoleHostMap(tenantFrameResource.getClusterId());
+
+            if (tenantFrameResource.getServiceName().equals("YARN")) {
+                TenantYarnResource tenantYarnResource = (TenantYarnResource) tenantFrameResource;
+                tenantYarnResource.setClusterId(tenantFrameResource.getClusterId());
+                ActorRef resourceActorRef = ActorUtils.getLocalActor(YarnQueueActor.class, "yarnQueueActor");
+                resourceActorRef.tell(tenantYarnResource, ActorRef.noSender());
+            } else {
+                String serviceMasterRoleName = getServiceMasterRoleName(tenantFrameResource.getServiceName());
+                if (tenantFrameResource.getServiceName().equals("KAFKA")) {
+                    String zkAddr = GlobalVariables.get(tenantFrameResource.getClusterId()).get("${kafkaZkAddr}");
+                    TenantKafkaResource kafkaResource = (TenantKafkaResource) tenantFrameResource;
+                    kafkaResource.setKafkaZkAddr(zkAddr);
+                }
+                if (tenantFrameResource.getServiceName().equals("HIVE")) {
+                    String hiveMetastoreDir = GlobalVariables.get(tenantFrameResource.getClusterId()).get("${hive.metastore.warehouse.dir}");
+                    TenantHiveResource hiveResource = (TenantHiveResource) tenantFrameResource;
+                    hiveResource.setHiveMetastoreDir(hiveMetastoreDir);
+                }
+                ActorRef resourceActorRef = ActorUtils.getRemoteActor(roleHostMap.get(serviceMasterRoleName), "tenantResourceActor");
+                resourceActorRef.tell(tenantFrameResource, ActorRef.noSender());
+            }
+
+        } else {
+            unhandled(message);
+        }
+    }
+
+    private Map<String, String> getRoleHostMap(Integer clusterId) {
+        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService =
+                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+        List<ClusterServiceRoleInstanceEntity> nameNodeInstance = clusterServiceRoleInstanceService.list(
+                new QueryWrapper<ClusterServiceRoleInstanceEntity>().eq(Constants.CLUSTER_ID, clusterId));
+        return nameNodeInstance.stream().collect(Collectors.toMap(
+                ClusterServiceRoleInstanceEntity::getServiceRoleName,
+                ClusterServiceRoleInstanceEntity::getHostname,
+                (a, b) -> a,
+                HashMap::new));
+    }
+
+    private String getServiceMasterRoleName(String serviceName) {
+        switch (serviceName) {
+            case "HDFS":
+                return "NameNode";
+            case "HIVE":
+                return "HiveServer2";
+            case "KAFKA":
+                return "KafkaBroker";
+            case "HBASE":
+                return "HbaseMaster";
+            default:
+                return "";
+        }
+    }
+
+}

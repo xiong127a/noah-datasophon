@@ -59,8 +59,8 @@ public class ClusterRackController {
      */
     @RequestMapping("/save")
     public Result save(Integer clusterId, String rack) {
-        clusterRackService.saveRack(clusterId, rack);
-        return Result.success();
+        return clusterRackService.saveRack(clusterId, rack);
+//        return Result.success();
     }
 
     /**

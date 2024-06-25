@@ -50,3 +50,12 @@ if [ "${ios}" == "centos7" ]; then
     echo "pssh-2.3.1-5.el7.noarch.rpm install successfully"
   fi
 fi
+
+if [ "${ios}" == "arm" ]; then
+  tar -zxvf ${PACKAGES_PATH}/${PSSH_TAR_NAME} -C ${PACKAGES_PATH}
+  rpm -ivh ${PACKAGES_PATH}/${PSSH_FOLDER_NAME}/pssh-2.3.1-5.el7.noarch.rpm
+  rpm -qa | grep pssh
+  if [ "$?" == "0" ]; then
+    echo "pssh-2.3.1-5.el7.noarch.rpm install successfully"
+  fi
+fi

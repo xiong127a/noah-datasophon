@@ -58,8 +58,16 @@ public class InstallServiceActor extends UntypedActor {
                     commands.add("krb5-workstation");
                     commands.add("krb5-libs");
                 }
+                if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
+                    commands.add("--skip-broken");
+                }
                 ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180, logger);
                 if (execResult.getExecResult()) {
+                    if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
+                        ShellUtils.exceShell("sudo sed -i 's/^/#/' /etc/krb5.conf.d/kcm_default_ccache");
+                        ShellUtils.exceShell("sudo systemctl restart krb5kdc");
+                        ShellUtils.exceShell("sudo systemctl restart kadmin");
+                    }
                     installResult = serviceHandler.install(command);
                 }
             } else {

@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -46,9 +47,9 @@ import java.util.stream.Collectors;
 @Transactional
 public class ClusterServiceInstanceServiceImpl
         extends
-            ServiceImpl<ClusterServiceInstanceMapper, ClusterServiceInstanceEntity>
+        ServiceImpl<ClusterServiceInstanceMapper, ClusterServiceInstanceEntity>
         implements
-            ClusterServiceInstanceService {
+        ClusterServiceInstanceService {
 
     @Autowired
     private ClusterServiceInstanceMapper serviceInstanceMapper;
@@ -256,6 +257,15 @@ public class ClusterServiceInstanceServiceImpl
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
         List<ClusterServiceRoleInstanceEntity> list =
                 roleInstanceService.getRunningServiceRoleInstanceListByServiceId(serviceInstanceId);
-      return !list.isEmpty();
+        return !list.isEmpty();
     }
+
+    @Override
+    public Boolean hasRoleInstance(Integer clusterId, String serviceName) {
+        List<ClusterServiceInstanceEntity> list = this.list(new QueryWrapper<ClusterServiceInstanceEntity>()
+                .eq(Constants.CLUSTER_ID, clusterId)
+                .eq(Constants.SERVICE_NAME, serviceName));
+        return CollUtil.isNotEmpty(list);
+    }
+
 }

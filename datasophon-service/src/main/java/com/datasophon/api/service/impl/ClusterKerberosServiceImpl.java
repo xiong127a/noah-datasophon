@@ -19,36 +19,23 @@
 
 package com.datasophon.api.service.impl;
 
-import akka.actor.ActorRef;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
 import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterKerberosService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.command.remote.GenerateKeytabFileCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
+import java.io.*;
+import java.util.Map;
 
 @Service("clusterKerberosService")
 @Transactional
@@ -64,17 +51,45 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
     private ClusterServiceRoleInstanceService roleInstanceService;
 
     @Override
+    public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
+        String keytabName = username + "/user";
+        String keytabFileName = username + ".user.keytab";
+        String keytabFilePath =
+                KEYTAB_PATH + Constants.SLASH + keytabFileName;
+        File file = new File(keytabFilePath);
+        if (!file.exists()) {
+            generateKeytabFile(clusterId, keytabFilePath, keytabName);
+        }
+        FileInputStream inputStream = new FileInputStream(file);
+        response.setContentType("application/octet-stream");
+        response.addHeader("Content-Length", "" + file.length());
+        response.setHeader("Content-Disposition", "attachment;filename=" + keytabFileName);
+        OutputStream out = response.getOutputStream();
+        try {
+            int length = 0;
+            byte[] buffer = new byte[1024];
+            while ((length = inputStream.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+        } finally {
+            inputStream.close();
+            out.flush();
+            out.close();
+        }
+    }
+
+    @Override
     public void downloadKeytab(
-                               Integer clusterId,
-                               String principal,
-                               String keytabName,
-                               String hostname,
-                               HttpServletResponse response) throws IOException {
+            Integer clusterId,
+            String principal,
+            String keytabName,
+            String hostname,
+            HttpServletResponse response) throws IOException {
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH + keytabName;
         File file = new File(keytabFilePath);
         if (!file.exists()) {
-            generateKeytabFile(clusterId, keytabFilePath, principal, keytabName, hostname);
+            generateKeytabFile(clusterId, keytabFilePath, principal);
         }
         FileInputStream inputStream = new FileInputStream(file);
         response.reset();
@@ -102,59 +117,28 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         file.transferTo(new File(keytabFilePath));
     }
 
-    @Override
-    public void generateKeytabFile(
-                                    Integer clusterId,
-                                    String keytabFilePath,
-                                    String principal,
-                                    String keytabName,
-                                    String hostname) {
-        ClusterServiceRoleInstanceEntity roleInstanceEntity =
-                roleInstanceService.getKAdminRoleIns(clusterId);
-        ActorRef kerberosActor =
-                ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), "kerberosActor");
-        GenerateKeytabFileCommand command = new GenerateKeytabFileCommand();
-        command.setKeytabName(keytabName);
-        command.setPrincipal(principal);
-        command.setHostname(hostname);
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(kerberosActor, command, timeout);
-        ExecResult execResult = null;
-        try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-//            String localHostname = CacheUtils.getString(Constants.HOSTNAME);
-            if (execResult.getExecResult()
-                    && !hostname.equals(roleInstanceEntity.getHostname())) {
-                String keytabFileDir = KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH;
-                if (!FileUtil.exist(keytabFileDir)) {
-                    FileUtil.mkdir(keytabFileDir);
-                }
-                String sshuser = GlobalVariables.get(clusterId).get(SSHUSER);
-                // scp root@hadoop1:/etc/security/keytab/hadoop3/gzf3.user.keytab /etc/security/keytab/hadoop3/
-                ShellUtils.exceShell(
-                        "scp "
-                                + sshuser
-                                + "@"
-                                + roleInstanceEntity.getHostname()
-                                + ":"
-                                + keytabFilePath
-                                + " "
-                                + keytabFileDir);
-                // scp /etc/security/keytab/hadoop3/ root@hadoop3:/etc/security/keytab/hadoop3/gzf3.user.keytab
-                ShellUtils.exceShell(
-                        "scp "
-                                + keytabFilePath
-                                + " "
-                                + sshuser
-                                + "@"
-                                + hostname
-                                + ":"
-                                + keytabFileDir
-                );
-            }
-        } catch (Exception e) {
-            logger.error(
-                    "Failed to generate keytab file: {} with hostname {}", keytabName, hostname);
+    private void generateKeytabFile(
+            Integer clusterId,
+            String keytabFilePath,
+            String principal) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        String kadminPrincipal = globalVariables.get("${kadminPrincipal}");
+        String kadminPassword = globalVariables.get("${kadminPassword}");
+        String listPrinc = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"listprincs\"";
+        ExecResult execResult = ShellUtils.exceShell(listPrinc);
+        String execOut = execResult.getExecOut();
+        if (!execOut.contains(principal)) {
+            String addprinc = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"addprinc -randkey " + principal + "\"";
+            logger.info("add principal cmd is : {}", addprinc);
+            ShellUtils.exceShell(addprinc);
         }
+        if (!FileUtil.exist(keytabFilePath)) {
+            FileUtil.mkParentDirs(keytabFilePath);
+        }
+        String keytabCmd = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"xst -k " + keytabFilePath + " "
+                + principal + "\"";
+        logger.info("generate keytab file cmd is : {}", keytabCmd);
+        ShellUtils.exceShell(keytabCmd);
+
     }
 }

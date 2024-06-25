@@ -1,29 +1,3 @@
-<!--
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
-
- * @Date: 2022-06-09 10:11:22
- * @LastEditTime: 2023-04-13 15:19:15
- * @FilePath: \ddh-ui\src\pages\hostManage\index.vue
--->
-
 <template>
   <div class="host-manage steps">
     <a-card class="mgb16 card-shadow">
@@ -43,6 +17,7 @@
           <a-dropdown>
             <a-menu slot="overlay" @click="handleMenuClick">
               <a-menu-item key="handStartService">启动主机服务</a-menu-item>
+              <a-menu-item key="handStopService">停止主机服务</a-menu-item>
               <a-menu-item key="handStartHost">启动主机Worker</a-menu-item>
               <a-menu-item key="handStopHost">停止主机Worker</a-menu-item>
               <a-menu-item key="handAgent">重新安装Worker</a-menu-item>
@@ -101,13 +76,16 @@ import AddLabel from "./addLabel.vue";
 import AddRack from './addRack.vue'
 export default {
   name: "HOSTMANAGE",
-  components: { Steps },
+
   provide() {
     return {
       handleCancel: this.handleCancel,
       onSearch: this.onSearch,
     };
   },
+
+  components: { Steps },
+
   data() {
     return {
       params: {},
@@ -308,6 +286,16 @@ export default {
       sortDirections: ["descend", "ascend"],
     };
   },
+
+  computed: {
+    ...mapState({
+      setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
+    }),
+    clusterId() {
+      return this.setting.clusterId;
+    },
+  },
+
   watch: {
     clusterId: {
       handler(val, oldVal) {
@@ -317,14 +305,11 @@ export default {
       },
     },
   },
-  computed: {
-    ...mapState({
-      setting: (state) => state.setting, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
-    }),
-    clusterId() {
-      return this.setting.clusterId;
-    },
+
+  mounted() {
+    this.getHostListByPage();
   },
+
   methods: {
     seeRole(row) {
       let width = 520;
@@ -453,7 +438,6 @@ export default {
       });
     },
     refresh() {
-      debugger
       this.selectedRowKeys = []
       this.onSearch()
     },
@@ -482,6 +466,10 @@ export default {
         this.doConfirm("启动该主机服务", this.handStartService);
         return false;
       }
+      if(key.key === "handStopService") {
+        this.doConfirm("停止该主机服务", this.handStopCommand);
+        return false;
+      }
       if(key.key === "handStartHost") {
         // 启动主机 Worker
         this.doConfirm("启动该主机 Worker", this.handStartHost)
@@ -497,7 +485,6 @@ export default {
       let params = {
         hostnames: this.hostnames.join(","),
         clusterId: this.clusterId,
-        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.reStartDispatcherHostAgent, params).then(
         (res) => {
@@ -516,9 +503,7 @@ export default {
     handStartHost() {
       let params = {
         clusterHostIds: this.hostnames.join(","),
-        clusterId:this.clusterId,
         commandType: "start",
-        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
         if (resp.code === 200) {
@@ -532,7 +517,6 @@ export default {
       let params = {
         clusterHostIds: this.hostnames.join(","),
         commandType: "stop",
-        hostIds: this.selectedRowKeys.join(",")
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
         if (resp.code === 200) {
@@ -543,15 +527,19 @@ export default {
       })
     },
     handStartService() {
+      this.handCommand('start')
+    },
+    handStopCommand() {
+      this.handCommand('stop')
+    },
+    handCommand(op){
       let params = {
         clusterHostIds: this.hostnames.join(","),
-        clusterId:this.clusterId,
-        commandType: "start",
-        hostIds: this.selectedRowKeys.join(",")
+        commandType: op,
       };
       this.$axiosPost(global.API.generateHostServiceCommand, params).then((resp) => {
         if (resp.code === 200) {
-          this.$message.success("启动 Worker 服务成功");
+          this.$message.success(op == 'start' ? "启动 Worker 服务成功" : "停止 Worker 服务成功");
         } else {
           this.$message.error(resp.msg);
         }
@@ -677,10 +665,7 @@ export default {
         },
       });
     },
-  },
-  mounted() {
-    this.getHostListByPage();
-  },
+  }
 };
 </script>
 

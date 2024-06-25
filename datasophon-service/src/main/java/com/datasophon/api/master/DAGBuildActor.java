@@ -70,6 +70,7 @@ public class DAGBuildActor extends UntypedActor {
                     SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
 
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(executeCommandCommand.getClusterId());
+            // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装 HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]
             List<ClusterServiceCommandEntity> commandList = commandService.lambdaQuery()
                     .in(ClusterServiceCommandEntity::getCommandId, executeCommandCommand.getCommandIds()).list();
 
