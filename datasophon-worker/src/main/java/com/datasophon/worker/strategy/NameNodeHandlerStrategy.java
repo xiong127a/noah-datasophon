@@ -82,6 +82,7 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
                 // 清空namenode元数据
 //                FileUtil.del("/data/dfs/nn/current");
 //                ExecResult execResult = ShellUtils.execWithStatus(workPath, commands, 180L, logger);
+                ShellUtils.exceShell("dir=$(sed -n '/<name>dfs.namenode.name.dir<\\/name>/{n;s/.*<value>\\(.*\\)<\\/value>.*/\\1\\/current/p;}' /opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml) && rm -rf \"$dir\"");
                 ExecResult execResult = ShellUtils.exceShell("echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop");
                 if (execResult.getExecResult()) {
                     logger.info("Namenode format success");
