@@ -36,6 +36,14 @@ public class ClusterKerberosController {
     private ClusterKerberosService kerberosService;
 
     /**
+     * download user keytab
+     */
+    @GetMapping("/downloadUserKeytab")
+    public void downloadUserKeytab(Integer clusterId, String username, HttpServletResponse response) throws IOException {
+        kerberosService.downloadUserKeytab(clusterId, username, response);
+    }
+
+    /**
      * download keytab
      */
     @GetMapping("/downloadKeytab")

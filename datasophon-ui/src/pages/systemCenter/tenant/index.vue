@@ -12,19 +12,39 @@
         </a-col>
       </a-row>
     </a-card>
-    <a-card class="card-shadow">
-      <div class="table-info steps-body">
-        <a-table @change="(pagination) => { tableChange(pagination) }" :columns="columns" :loading="loading"
-          :dataSource="dataSource" rowKey="id" :pagination="pagination" :expandedRowRender="expandedRowRender">
-          <template slot='expandedRowRender' slot-scope="record">
-            <!-- <p style="margin: 0">
-              这是由以及{{ record.tenantName }}
-            </p> -->
-          <Detail :detail="record"></Detail>
-          </template>
-        </a-table>
+    <div class="content card-shadow">
+      <div class="list" v-for="(item, index) in dataSource" :key="index">
+        <div class="top">
+          <a-icon type="user" class="icon"></a-icon> <span class="name">{{ item.tenantName }}</span>
+        </div>
+        <div class="discription">
+          <a-tooltip :title="item.desc" placement="top">{{ item.desc && item.desc.length > 52 ? item.desc.slice(0, 52) +
+            '...' :
+            item.desc }}</a-tooltip>
+        </div>
+        <div class="tags">
+          <a-button v-for="(i, index) in item.assembly" :key="index" shape="round" size="small"
+            style="margin:0px 6px 10px 0px;font-size:12px">
+            {{ i }}
+          </a-button>
+          <!-- <a-tag color="orange" v-for="(item, index) in item.assembly" :key="index">{{ item }}</a-tag> -->
+        </div>
+        <div class="btns">
+          <a-tooltip title="详情" placement="top"><a-icon type="eye" class="icon"
+              @click="toDetail(item)"></a-icon></a-tooltip>
+          <a-tooltip title="编辑" placement="top"><a-icon type="edit" class="icon"
+              @click="createUser(item)"></a-icon></a-tooltip>
+          <a-tooltip title="删除" placement="top"><a-icon type="delete" class="icon"
+              @click="delectUser(item)"></a-icon></a-tooltip>
+        </div>
       </div>
-    </a-card>
+    </div>
+    <div class="pageBox">
+      <a-pagination :current="pagination.current" :page-size-options="pagination.sizeOptions" :total="pagination.total"
+        show-size-changer :page-size="pagination.size" @showSizeChange="showSizeChange" @change="tableChange">
+      </a-pagination>
+    </div>
+
   </div>
 </template>
 
@@ -33,25 +53,23 @@ import AddUser from "./commponents/addUser.vue";
 import Detail from "./commponents/detail.vue";
 import DelectUser from "./commponents/delectUser.vue";
 import { mapGetters, mapState, mapMutations } from "vuex";
-
 export default {
   name: "USER",
-    components: { Detail },
+  // components: { Detail },
   data () {
     return {
       params: {},
+      page: 6,
       pagination: {
         total: 0,
-        size: 10,
-        current: 1,
+        size: 12,
+        page: 1,
         showSizeChanger: true,
-        sizeOptions: ["10", "20", "50", "100"],
+        sizeOptions: ['8', "12", "20", "50", "100"],
         showTotal: (total) => `共 ${total} 条`,
       },
       username: '',
-      dataSource: [{
-        username: '的时刻'
-      }],
+      dataSource: [],
       loading: false,
       columns: [
         {
@@ -62,11 +80,11 @@ export default {
             return (
               <span>
                 {parseInt(
-                  this.pagination.current === 1
+                  this.pagination.page === 1
                     ? index + 1
                     : index +
                     1 +
-                    this.pagination.size * (this.pagination.current - 1)
+                    this.pagination.size * (this.pagination.page - 1)
                 )}
               </span>
             );
@@ -105,9 +123,13 @@ export default {
     ...mapGetters("account", ["user"]),
   },
   methods: {
-    tableChange (pagination) {
-      this.pagination.current = pagination.current;
-      this.pagination.size = pagination.size
+    tableChange (current, size) {
+      this.pagination.page = current;
+      this.pagination.size = size
+      this.getUserList();
+    },
+    showSizeChange (current, size) {
+      this.pagination.size = size;
       this.getUserList();
     },
     getVal (val, filed) {
@@ -115,8 +137,24 @@ export default {
     },
     //   查询
     onSearch (key) {
-      this.pagination.current = 1;
+      this.pagination.page = 1;
       this.getUserList();
+    },
+    toDetail (obj) {
+      const self = this;
+      let width = '50%'
+      let content = (
+        <Detail detail={obj} />
+      );
+      this.$confirm({
+        width: width,
+        title: '租户详情',
+        content: content,
+        closable: true,
+        icon: () => {
+          return <div />;
+        },
+      });
     },
     createUser (obj) {
       const self = this;
@@ -145,7 +183,7 @@ export default {
           callBack={() => self.getUserList}
         />
       );
-      content = <DelectUser sysTypeTxt="租户" detail={obj} api='/ddh/cluster/tenant/delete' callBack={() => self.getUserList()} />
+      content = <DelectUser sysTypeTxt="租户" detail={obj} api='/ddh/cluster/tenant/delete' callBack={() => self.goBack() } />
       this.$confirm({
         width: width,
         title: () => {
@@ -171,15 +209,38 @@ export default {
       let params = {
         clusterId: Number(localStorage.getItem("clusterId") || 1),
         size: this.pagination.size,
-        page: this.pagination.current,
+        page: this.pagination.page,
         ...this.params,
       };
       this.$axiosGet('/ddh/cluster/tenant/listTenant', params).then((res) => {
         this.loading = false;
         this.dataSource = res.data;
+        this.dataSource.forEach(e => {
+          let assembly = []
+          if (e.hdfsResourceList.length > 0) {
+            assembly.push(e.hdfsResourceList[0].serviceName)
+          }
+          if (e.hbaseResourceList.length > 0) {
+            assembly.push(e.hbaseResourceList[0].serviceName)
+          }
+          if (e.hiveResourceList.length > 0) {
+            assembly.push(e.hiveResourceList[0].serviceName)
+          }
+          if (e.kafkaResourceList.length > 0) {
+            assembly.push(e.kafkaResourceList[0].serviceName)
+          }
+          if (e.yarnResourceList.length > 0) {
+            assembly.push(e.yarnResourceList[0].serviceName)
+          }
+          e['assembly'] = assembly
+        })
         this.pagination.total = res.total;
       });
     },
+    goBack(){
+      this.pagination.page = 1
+      this.getUserList()
+    }
   },
   mounted () {
     this.getUserList();
@@ -191,6 +252,58 @@ export default {
 .user-list {
   background: #f5f7f8;
 
+  .content {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 10px;
+
+    .list {
+      width: 24.6%;
+      margin-right: 5px;
+      border: 1px solid #e2dede;
+      padding: 10px;
+      margin-bottom: 10px;
+
+      .top {
+        margin: 10px;
+
+        .name {
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .icon {
+          color: #2872e0;
+          font-size: 20px;
+          margin-right: 10px;
+        }
+      }
+
+      .discription {
+        font-size: 12px;
+        text-indent: 20px;
+        height: 40px;
+      }
+
+      .tags {
+        margin: 10px 0px;
+      }
+
+      .btns {
+        text-align: end;
+
+        .icon {
+          margin-right: 5px;
+          font-size: 16px;
+          cursor: pointer;
+        }
+      }
+    }
+  }
+
   .btn-opt {
     border-radius: 1px;
     font-size: 12px;
@@ -198,6 +311,11 @@ export default {
     letter-spacing: 0;
     font-weight: 400;
     margin: 0 5px;
+  }
+
+  .pageBox {
+    text-align: end;
+    padding: 10px;
   }
 }
 </style>

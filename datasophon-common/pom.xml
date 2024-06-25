@@ -245,6 +245,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.dameng</groupId>
+            <artifactId>jdbc8</artifactId>
+            <version>1.8</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
         </dependency>

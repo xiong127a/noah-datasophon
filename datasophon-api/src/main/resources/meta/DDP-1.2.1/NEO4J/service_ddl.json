@@ -1,0 +1,149 @@
+{
+  "name": "NEO4J",
+  "label": "NEO4J",
+  "description": "图数据库",
+  "version": "5.16.0",
+  "sortNum": 42,
+  "dependencies": [],
+  "packageName": "neo4j-5.16.0.tar.gz",
+  "decompressPackageName": "neo4j-5.16.0",
+  "roles": [
+    {
+      "name": "neo4j",
+      "label": "neo4j",
+      "roleType": "master",
+      "cardinality": "1+",
+      "logFile": "logs/debug.log",
+      "jmxPort": "",
+      "startRunner": {
+        "timeout": "600",
+        "program": "bin/neo4j",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/neo4j",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/status.sh",
+        "args": []
+      },
+      "externalLink": {
+        "name": "neo4j UI",
+        "label": "neo4j UI",
+        "url": "http://${host}:7474"
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "neo4j.conf",
+        "configFormat": "custom",
+        "outputDirectory": "conf",
+        "templateName": "neo4j-conf.ftl",
+        "includeParams": [
+          "neo4jBoltEnabled",
+          "neo4jBoltPort",
+          "neo4jHttpEnabled",
+          "neo4jHttpPort",
+          "neo4jHttpsEnabled",
+          "neo4jHttpsPort",
+          "custom.neo4j.conf"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "neo4jBoltEnabled",
+      "label": "neo4jBoltEnabled",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "neo4jBoltPort",
+      "label": "neo4jBoltPort",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "7687",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "7687"
+    },
+    {
+      "name": "neo4jHttpEnabled",
+      "label": "neo4jHttpEnabled",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": true,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": true
+    },
+    {
+      "name": "neo4jHttpPort",
+      "label": "neo4jHttpPort",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "7474",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "7474"
+    },
+    {
+      "name": "neo4jHttpsEnabled",
+      "label": "neo4jHttpsEnabled",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "neo4jHttpsPort",
+      "label": "neo4jHttpsPort",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "7473",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "7473"
+    },
+    {
+      "name": "custom.neo4j.conf",
+      "label": "自定义配置",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}

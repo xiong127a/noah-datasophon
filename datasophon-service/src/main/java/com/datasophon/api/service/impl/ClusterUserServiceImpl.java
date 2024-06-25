@@ -33,6 +33,9 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.StringValidator.LengthValidator;
+import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
+import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.LdapCommand;
@@ -77,6 +80,18 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+
+        // 用户名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        WordValidator wordValidator = new WordValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(wordValidator);
+        wordValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(username);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
 
         if (hasRepeatUserName(clusterId, username)) {
             return Result.error(Status.DUPLICATE_USER_NAME.getMsg());
@@ -127,20 +142,6 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                 throw new ServiceException(500,
                         "create unix user " + username + " failed at " + clusterHost.getHostname());
             }
-
-            String keytabName = username + ".user.keytab";
-            String KEYTAB_PATH = "/etc/security/keytab";
-            String keytabFilePath =
-                    KEYTAB_PATH + Constants.SLASH + clusterHost.getHostname() + Constants.SLASH + keytabName;
-
-            clusterKerberosService.generateKeytabFile(
-                    clusterHost.getClusterId(),
-                    keytabFilePath,
-                    username,
-                    keytabName,
-                    clusterHost.getHostname()
-            );
-            logger.info("add kerberos principal {} success at {}", username, clusterHost.getHostname());
         }
 
         // create ldap user
@@ -158,7 +159,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
         ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
         ldapCommand.setUserPwd(globalVariables.get("${syncLdapBindPassword}"));
-        String uid = globalVariables.get("syncLdapUidNumber");
+        String uid = globalVariables.get("${syncLdapUidNumber}");
         if (StringUtils.isBlank(uid)) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
             ldapCommand.setUidNumber("2000");
@@ -177,13 +178,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("create ldap user {} success", username);
             } else {
-                logger.info(execResult.getExecOut());
-                throw new ServiceException(500,
-                        "create ldap user " + username + " failed");
+                logger.error("create ldap user " + username + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            throw new ServiceException(500,
-                    "create ldap user " + username + " failed");
+            logger.error("create ldap user " + username + " failed");
+            logger.error(e.getMessage());
         }
 
         return Result.success();
@@ -279,13 +280,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             if (execResult.getExecResult()) {
                 logger.info("delete ldap user {} success", clusterUser.getUsername());
             } else {
-                logger.info(execResult.getExecOut());
-                throw new ServiceException(500,
-                        "delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+                logger.error(execResult.getExecOut());
+                logger.error(execResult.getExecErrOut());
             }
         } catch (Exception e) {
-            throw new ServiceException(500,
-                    "delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error(e.getMessage());
         }
 
         this.removeById(id);

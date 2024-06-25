@@ -1,0 +1,59 @@
+{
+  "name": "PUSHGATEWAY",
+  "label": "PUSHGATEWAY",
+  "description": "推送监控指标到 Prometheus 的网关",
+  "version": "1.7.0",
+  "sortNum": 40,
+  "dependencies": [
+    "PROMETHEUS"
+  ],
+  "packageName": "pushgateway-1.7.0.tar.gz",
+  "decompressPackageName": "pushgateway-1.7.0",
+  "roles": [
+    {
+      "name": "Pushgateway",
+      "label": "Pushgateway",
+      "roleType": "master",
+      "cardinality": "1",
+      "jmxPort": 9091,
+      "runAs": {
+        "user": "root",
+        "group": "root"
+      },
+      "logFile": "logs/pushgateway-${host}.out",
+      "startRunner": {
+        "timeout": "60",
+        "program": "control_pushgateway.sh",
+        "args": [
+          "start",
+          "pushgateway"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "control_pushgateway.sh",
+        "args": [
+          "stop",
+          "pushgateway"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "control_pushgateway.sh",
+        "args": [
+          "status",
+          "pushgateway"
+        ]
+      },
+      "externalLink": {
+        "name": "Prometheus Ui",
+        "label": "Prometheus Ui",
+        "url": "http://${host}:9091"
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": []
+  },
+  "parameters": []
+}

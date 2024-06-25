@@ -108,9 +108,11 @@ public class WorkerApplicationServer {
         userMap.put("hive", HADOOP);
         userMap.put("mapred", HADOOP);
         userMap.put("hbase", HADOOP);
+        userMap.put("kyuubi",HADOOP);
         userMap.put("elastic", "elastic");
         userMap.put("hue", "hue");
         userMap.put("postgres", "postgres");
+        userMap.put("admin", HADOOP);
     }
 
     private static void createDefaultUser(Map<String, String> userMap) {

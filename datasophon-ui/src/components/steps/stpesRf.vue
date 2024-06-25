@@ -168,6 +168,7 @@ export default {
           this.$message.warning("请至少选择一个服务");
           flag = false;
         }
+        this.steps4Data.serviceIds=[...new Set(this.steps4Data.serviceIds)]
         await this.$axiosPost('/ddh/service/install/checkServiceDependency', {
           clusterId: this.clusterId,
           serviceIds:this.steps4Data.serviceIds.join(',')

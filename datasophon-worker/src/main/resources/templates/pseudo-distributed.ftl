@@ -294,7 +294,7 @@
   ## rest_response_size=2000
 
   # Turn on Prometheus metrics end point /metrics.
-  ## enable_prometheus=false
+  enable_prometheus=true
 
   # Turn on the Gist snippet sharing.
   ## enable_gist=true
@@ -742,16 +742,34 @@
 
     # Path to Hue's Kerberos keytab file
     ## hue_keytab=
+<#if enableHueKerberos == "true">
+    hue_keytab=${hueKeyTab}
+</#if>
     # Kerberos principal name for Hue
     ## hue_principal=hue/hostname.foo.com
+<#if enableHueKerberos == "true">
+    hue_principal=${huePrincipal}
+</#if>
     # Frequency in seconds with which Hue will renew its keytab
     ## REINIT_FREQUENCY=3600
+<#if enableHueKerberos == "true">
+    REINIT_FREQUENCY=3600
+</#if>
     # Path to keep Kerberos credentials cached
     ## ccache_path=/var/run/hue/hue_krb5_ccache
+<#if enableHueKerberos == "true">
+    ccache_path=${hueKbCachePath}
+</#if>
     # Path to kinit
     ## kinit_path=/path/to/kinit
+<#if enableHueKerberos == "true">
+    kinit_path=${hueKbKinitPath}
+</#if>
     # Set to false if renew_lifetime in krb5.conf is set to 0m
     ## krb5_renewlifetime_enabled=true
+<#if enableHueKerberos == "true">
+    krb5_renewlifetime_enabled=true
+</#if>
 
     # Mutual authentication from the server, attaches HTTP GSSAPI/Kerberos Authentication to the given Request object
     ## mutual_authentication="OPTIONAL" or "REQUIRED" or "DISABLED"
@@ -1180,7 +1198,7 @@
       fs_defaultfs=${fsDefaultfs}
 
       # NameNode logical name.
-      logical_name=${logicalName}
+      # logical_name=
 
       # Use WebHdfs/HttpFs as the communication mechanism.
       # Domain should be the NameNode or HttpFs host.
@@ -1188,7 +1206,10 @@
       webhdfs_url=${webhdfsUrl}
 
       # Change this if your HDFS cluster is Kerberos-secured
-      ## security_enabled=false
+      # security_enabled=
+<#if hueHdfsSecurityEnable == "true">
+      security_enabled=true
+</#if>
 
       # In secure mode (HTTPS), if SSL certificates from YARN Rest APIs
       # have to be verified against certificate authority
@@ -1219,6 +1240,9 @@
 
       # Change this if your YARN cluster is Kerberos-secured
       ## security_enabled=false
+<#if hueYarnSecurityEnable == "true">
+      security_enabled=true
+</#if>
 
       # URL of the ResourceManager API
       resourcemanager_api_url=${resourcemanagerApiUrl}
@@ -1368,6 +1392,9 @@
 
   # Use SASL framework to establish connection to host.
   ## use_sasl=false
+<#if hueHiveSecurityEnable == "true">
+  use_sasl=true
+</#if>
 
   # Max number of objects (columns, tables, databases) available to list in the left assist, autocomplete, table browser etc.
   # Setting this higher than the default can degrade performance.

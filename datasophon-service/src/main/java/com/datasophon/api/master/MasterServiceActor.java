@@ -70,8 +70,7 @@ public class MasterServiceActor extends UntypedActor {
                             .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-
-            serviceRoleInfoList = RollingRestartUtils.sortMasterRole(serviceRoleInfoList); //排序
+            Collections.sort(serviceRoleInfoList); //排序
 
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
@@ -99,12 +98,12 @@ public class MasterServiceActor extends UntypedActor {
                             (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                     ClusterServiceRoleGroupConfig config =
                             roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
-                    ProcessUtils.generateConfigFileMap(configFileMap, config);
+                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
                     ClusterServiceRoleGroupConfig config =
                             roleGroupConfigService.getConfigByRoleGroupId(
                                     serviceRoleInstance.getRoleGroupId());
-                    ProcessUtils.generateConfigFileMap(configFileMap, config);
+                    ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
                 logger.info("enable ranger plugin is {}", enableRangerPlugin);

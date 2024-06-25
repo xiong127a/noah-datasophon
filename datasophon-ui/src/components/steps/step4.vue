@@ -32,13 +32,14 @@
     <!-- 只有从集群进入(stepsType:cluster) step4才会有选择服务下拉框 同时table数据也变 -->
     <a-row type="flex" align="middle" v-if="stepsType == 'cluster'">
       <a-col :span="22">
-        <a-select allowClear showSearch placeholder="请选择" class="w252 mgr12" @change="(value) => getVal(value, 'type')">
+        <a-select allowClear showSearch placeholder="请选择" class="w252 mgr12" v-model="params.type"
+          @change="(value) => getVal(value, 'type')">
           <a-select-option v-for="(item, index) in serveList" :key="index" :value="item">{{ item }}</a-select-option>
         </a-select></a-col>
     </a-row>
     <div class="table-info mgt16 steps-body pdr30">
       <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource"
-        :rowSelection="{ selectedRowKeys: selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
+        :rowSelection="{ selectedRowKeys: stepsType == 'cluster'? selectedRowKeysArr: selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
         rowKey="id"></a-table>
     </div>
   </div>
@@ -52,11 +53,11 @@ export default {
   },
   data () {
     return {
-      params: {},
+      params: { type: 'custom' },
       selectedRowKeys: [],
       selectedRowKeysArr: [],
       selectedRowNames: [],
-      selectedRowNamesArr:[],
+      selectedRowNamesArr: [],
       pagination: {
         total: 0,
         pageSize: 10,
@@ -155,7 +156,11 @@ export default {
     },
     //表格选择
     onSelectChange (selectedRowKeys, row) {
-      this.selectedRowKeys = selectedRowKeys;
+      console.log('biaogw', selectedRowKeys);
+      this.selectedRowKeys = selectedRowKeys
+      this.selectedRowKeysArr = selectedRowKeys
+      // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
+      // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
       let arr = [];
       row.map((item) => {
         arr.push({
@@ -170,6 +175,7 @@ export default {
       this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
         this.dataSource = res.data;
         let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
+        console.log('arrwith',arr);
         if (arr.length > 0) {
           arr.map(childItem => {
             this.selectedRowKeysArr.push(childItem.id)
@@ -182,7 +188,7 @@ export default {
         self.steps4Data.serviceIds.map(item => {
           this.selectedRowKeysArr.push(item)
         })
-        
+
         self.steps4Data.serviceNames.map(item => {
           this.selectedRowNamesArr.push({
             serviceId: item.id,

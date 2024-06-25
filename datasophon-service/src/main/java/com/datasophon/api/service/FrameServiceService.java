@@ -34,6 +34,8 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
 
     Result getAllFrameService(Integer clusterId);
 
+    Result getAllFrameServiceWithRequired(Integer clusterId, String type);
+
     Result getServiceListByServiceIds(List<Integer> serviceIds);
 
     FrameServiceEntity getServiceByFrameIdAndServiceName(Integer id, String serviceName);

@@ -38,15 +38,18 @@ public class ServiceRoleStrategyContext {
         map.put("TrinoCoordinator", new TrinoHandlerStrategy());
         map.put("JournalNode", new JournalNodeHandlerStrategy());
         map.put("ZKFC", new ZKFCHandlerStrategy());
-        map.put("SRFE", new FEHandlerStartegy());
+        map.put("HttpFs", new HttpFsHandlerStrategy());
         map.put("DorisFE", new FEHandlerStartegy());
+        map.put("SRFE", new SRFEHandlerStrategy());
         map.put("DorisFEObserver", new FEObserverHandlerStartegy());
-        map.put("SRBE", new BEHandlerStartegy());
+        map.put("SRFEObserver", new SRFEObserverHandlerStrategy());
         map.put("DorisBE", new BEHandlerStartegy());
+        map.put("SRBE", new SRBEHandlerStrategy());
         map.put("Krb5Kdc", new Krb5KdcHandlerStrategy());
         map.put("KAdmin", new KAdminHandlerStrategy());
         map.put("RangerAdmin", new RangerAdminHandlerStrategy());
         map.put("ElasticSearch", new ElasticSearchHandlerStrategy());
+        map.put("ELASTICSEARCH", new ElasticSearchHandlerStrategy());
         map.put("Prometheus", new PrometheusHandlerStrategy());
         map.put("ALERTMANAGER", new AlertManagerHandlerStrategy());
 
@@ -58,11 +61,16 @@ public class ServiceRoleStrategyContext {
         map.put("KAFKA", new KafkaHandlerStrategy());
         map.put("HBASE", new HBaseHandlerStrategy());
         map.put("FLINK", new FlinkHandlerStrategy());
+        map.put("KYUUBI", new KyuubiServerHandlerStrategy());
         map.put("OpenldapServer", new OpenldapHandlerStrategy());
         map.put("REDIS", new RedisHandlerStrategy());
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy());
         map.put("PostgresqlWorker", new PostgresqlHandlerStrategy());
-
+        map.put("ALLUXIO", new AlluxioHandlerStrategy());
+        map.put("CLICKHOUSE", new ClickhouseHandlerStrategy());
+        map.put("Pushgateway", new PushgatewayHandlerStrategy());
+        map.put("MINIO", new MinioHandlerStrategy());
+        map.put("HUE", new HueHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

@@ -33,7 +33,7 @@
         style="margin-right: 10px"
         type="primary"
         @click.stop="handleSubmit"
-        :loading="loading"
+         :loading="loading"
         >确认</a-button
       >
       <a-button @click.stop="formCancel">取消</a-button>
@@ -86,7 +86,8 @@ export default {
       e.preventDefault();
       this.form.validateFields((err, values) => {
         if (!err) {
-          let serviceName = getServiceName(this.$route.params.serviceId);
+          // let serviceName = getServiceName(this.$route.params.serviceId);
+          let serviceName = getServiceName(this.serviceId.id);
           const params = {
             "roleGroupName": values.characterGroupName,
             "roleGroupId": values.characterGroupId,

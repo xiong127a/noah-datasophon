@@ -21,9 +21,14 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
+            String cpuArchitecture = ShellUtils.getCpuArchitecture();
+
             // 安装服务
+            logger.info("start install openldap, command is -> yum -y install openldap compat-openldap openldap-clients openldap-servers openldap-servers-sql openldap-devel migrationtools");
             ShellUtils.exceShell("yum -y install openldap compat-openldap openldap-clients openldap-servers openldap-servers-sql openldap-devel migrationtools");
-            logger.info("yum install openldap success");
+            if ("aarch64".equals(cpuArchitecture)) {
+                ShellUtils.exceShell("yum -y install openldap.aarch64 openldap-clients.aarch64 openldap-servers.aarch64");
+            }
 
             // 配置OpenLDAP数据库
             logger.info("start config database");
@@ -36,8 +41,9 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
             ShellUtils.exceShell("systemctl enable slapd");
             ShellUtils.exceShell("systemctl start slapd");
 
-            // 配置域名等
+            // 生成一个 SSHA 哈希密,添加到changeDomain.ldif文件的 olcRootPW 值
             ShellUtils.exceShell("slappasswd -s 123456 |sed -e 's#{SSHA}#olcRootPW: {SSHA}#g' >> " + workPath + "/changeDomain.ldif");
+            // 添加rootDn
             ShellUtils.exceShell("ldapmodify -Y EXTERNAL -H ldapi:/// -f " + workPath + "/changeDomain.ldif");
 
             // 导入基本Schema
@@ -68,6 +74,7 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
 
             // 添加基础用户
             ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/base.ldif");
+            ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/default-user.ldif");
         }
 
         ExecResult startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),

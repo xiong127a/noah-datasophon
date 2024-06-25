@@ -60,6 +60,14 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
+    /**
+     * 将所有service_ddl.json中configType是kb的配置项加入到当前配置列表
+     * isConfigWithKerberos判定条件在 service_ddl.json 中设置 configWithKerberos = true
+     * @param globalVariables 全局变量
+     * @param map             当前前端传入的配置项
+     * @param configs         所有service_ddl.json中设置的所有配置项
+     * @param kbConfigs       需要添加到当前的配置项
+     */
     public void addConfigWithKerberos(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
                                       List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
@@ -94,7 +102,7 @@ public abstract class ServiceHandlerAbstract {
             config.setRequired(true);
             config.setHidden(false);
             if (Constants.INPUT.equals(config.getType())) {
-                String value = PlaceholderUtils.replacePlaceholders((String) serviceConfig.getValue(), globalVariables,
+                String value = PlaceholderUtils.replacePlaceholders((String) config.getValue(), globalVariables,
                         Constants.REGEX_VARIABLE);
                 config.setValue(value);
             }

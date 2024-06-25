@@ -68,9 +68,9 @@ public class Test {
 //        Policy policy1 = rangerClient.getPolicies().createPolicy(policy);
 //        System.out.println(policy1);
 
-        Service hbasedev = RangerUtil.simpleHbaseService("hbasedev", "hadoop2:2181,hadoop3:2181,hadoop1:2181", "2181", "/hbase");
-        Service service = rangerClient.getServices().createService(hbasedev);
-        System.out.println(service);
+//        Service hbasedev = RangerUtil.simpleHbaseService("hbasedev", "hadoop2:2181,hadoop3:2181,hadoop1:2181", "2181", "/hbase");
+//        Service service = rangerClient.getServices().createService(hbasedev);
+//        System.out.println(service);
 
 //        Policy policy = RangerUtil.simpleHbasePolicy("hbasedev", "test", Collections.singletonList("bigdata:*"), Collections.singletonList("gzf1"));
 //        Policy policy1 = rangerClient.getPolicies().createPolicy(policy);
