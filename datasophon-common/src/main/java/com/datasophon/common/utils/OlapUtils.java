@@ -17,6 +17,7 @@
 
 package com.datasophon.common.utils;
 
+import com.datasophon.common.Constants;
 import com.datasophon.common.model.ProcInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,7 +132,7 @@ public class OlapUtils {
 
     private static Connection getConnection(String feMaster) throws ClassNotFoundException, SQLException {
         String username = "root";
-        String password = "";
+        String password = Constants.DORIS_PW;
         String url = "jdbc:mysql://" + feMaster + ":9030";
         // 加载驱动
         Class.forName("com.mysql.cj.jdbc.Driver");
