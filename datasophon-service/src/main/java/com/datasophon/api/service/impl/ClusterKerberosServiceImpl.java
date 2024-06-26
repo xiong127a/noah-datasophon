@@ -60,21 +60,18 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         if (!file.exists()) {
             generateKeytabFile(clusterId, keytabFilePath, keytabName);
         }
-        FileInputStream inputStream = new FileInputStream(file);
         response.setContentType("application/octet-stream");
         response.addHeader("Content-Length", "" + file.length());
         response.setHeader("Content-Disposition", "attachment;filename=" + keytabFileName);
-        OutputStream out = response.getOutputStream();
-        try {
-            int length = 0;
+
+        try (FileInputStream inputStream = new FileInputStream(file);
+             OutputStream out = response.getOutputStream()) {
+            int length;
             byte[] buffer = new byte[1024];
             while ((length = inputStream.read(buffer)) != -1) {
                 out.write(buffer, 0, length);
             }
-        } finally {
-            inputStream.close();
             out.flush();
-            out.close();
         }
     }
 
@@ -91,22 +88,20 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         if (!file.exists()) {
             generateKeytabFile(clusterId, keytabFilePath, principal);
         }
-        FileInputStream inputStream = new FileInputStream(file);
+
         response.reset();
         response.setContentType("application/octet-stream");
         response.addHeader("Content-Length", "" + file.length());
         response.setHeader("Content-Disposition", "attachment;filename=" + keytabName);
-        OutputStream out = response.getOutputStream();
-        try {
-            int length = 0;
+
+        try (FileInputStream inputStream = new FileInputStream(file);
+             OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
+            int length;
             while ((length = inputStream.read(buffer)) != -1) {
                 out.write(buffer, 0, length);
             }
-        } finally {
-            inputStream.close();
             out.flush();
-            out.close();
         }
     }
 

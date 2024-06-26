@@ -40,43 +40,7 @@
     }
   ],
   "configWriter": {
-    "generators": [
-      {
-        "filename": "changeDomain.ldif",
-        "configFormat": "custom",
-        "outputDirectory": "",
-        "templateName": "changeDomain.ftl",
-        "includeParams": [
-          "olcRootDN",
-          "olcSuffix"
-        ]
-      }
-    ]
+    "generators": []
   },
-  "parameters": [
-    {
-      "name": "olcRootDN",
-      "label": "olcRootDN",
-      "description": "具有对LDAP执行所有管理活动的无限制访问权限的用户的根专有名称（DN）条目，如root用户。",
-      "required": true,
-      "configType": "map",
-      "type": "input",
-      "value": "cn=root,dc=ldap,dc=com",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "cn=root,dc=ldap,dc=com"
-    },
-    {
-      "name": "olcSuffix",
-      "label": "olcSuffix",
-      "description": "数据库后缀，它是LDAP服务器提供信息的域名。简单来说，更改为自己的域名。",
-      "required": true,
-      "configType": "map",
-      "type": "input",
-      "value": "dc=ldap,dc=com",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "dc=ldap,dc=com"
-    }
-  ]
+  "parameters": []
 }

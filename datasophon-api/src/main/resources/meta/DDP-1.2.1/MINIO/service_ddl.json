@@ -2,11 +2,11 @@
   "name": "MINIO",
   "label": "MINIO",
   "description": "s3对象存储",
-  "version": "8.4.3",
+  "version": "20240613",
   "sortNum": 22,
   "dependencies": [],
-  "packageName": "minio-8.4.3.tar.gz",
-  "decompressPackageName": "minio-8.4.3",
+  "packageName": "minio-20240613.tar.gz",
+  "decompressPackageName": "minio-20240613",
   "roles": [
     {
       "name": "MinioService",

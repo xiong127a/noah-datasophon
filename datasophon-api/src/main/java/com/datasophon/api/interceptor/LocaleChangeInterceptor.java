@@ -35,17 +35,20 @@ public class LocaleChangeInterceptor extends HandlerInterceptorAdapter {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 检查请求中是否存在名为 language 的 cookie
         Cookie cookie = WebUtils.getCookie(request, Constants.LOCALE_LANGUAGE);
         if (cookie != null) {
             // Proceed in cookie
             return true;
         }
-        // Proceed in header
+        // 没有找到上述 cookie，请求头中获取名为 language 的值
         String newLocale = request.getHeader(Constants.LOCALE_LANGUAGE);
         if (newLocale != null) {
+            // 设置新的区域设置
             LocaleContextHolder.setLocale(parseLocaleValue(newLocale));
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Nullable
