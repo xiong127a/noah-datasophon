@@ -390,30 +390,24 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public void downloadPackage(String packageName, HttpServletResponse response) throws IOException {
-        FileInputStream inputStream = null;
-        OutputStream out = null;
-        // 通过文件路径获得File对象
         File file = new File(Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + packageName);
-
-        inputStream = new FileInputStream(file);
 
         response.reset();
         response.setContentType("application/octet-stream");
-        response.addHeader("Content-Length", "" + file.length());
         // 支持中文名称文件,需要对header进行单独设置，不然下载的文件名会出现乱码或者无法显示的情况
         // 设置响应头，控制浏览器下载该文件
+        response.addHeader("Content-Length", "" + file.length());
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
-        // 通过response获取ServletOutputStream对象(out)
-        out = response.getOutputStream();
-        int length = 0;
-        byte[] buffer = new byte[1024];
-        while ((length = inputStream.read(buffer)) != -1) {
-            // 4.写到输出流(out)中
-            out.write(buffer, 0, length);
+
+        try (FileInputStream inputStream = new FileInputStream(file);
+             OutputStream out = response.getOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            out.flush();
         }
-        inputStream.close();
-        out.flush();
-        out.close();
     }
 
     @Override

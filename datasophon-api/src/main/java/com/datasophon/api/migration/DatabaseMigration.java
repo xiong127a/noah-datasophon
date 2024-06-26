@@ -21,6 +21,7 @@ package com.datasophon.api.migration;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.utils.FileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.DateFormatUtils;
@@ -36,6 +37,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -71,13 +73,28 @@ public class DatabaseMigration {
   @Value("${spring.datasource.password}")
   private String password;
 
+  @Value("${spring.datasource.driver-class-name}")
+  private String driver;
+
   private final JdbcTemplate jdbcTemplate;
+
+  private String dbType;
+
+  @PostConstruct
+  public void init() {
+      if (StrUtil.contains(driver, "DmDriver")) {
+          dbType = "dm";
+      } else {
+          dbType = "mysql";
+      }
+  }
 
   public DatabaseMigration(JdbcTemplate jdbcTemplate) {
     this.jdbcTemplate = jdbcTemplate;
   }
 
   public void migration() {
+    log.info("dbType is " + dbType + "-------------------------------------");
     prepareMigrationTable();
     Set<Migration> migrations = getMigrations();
     if (CollectionUtils.isEmpty(migrations)) {
@@ -105,7 +122,8 @@ public class DatabaseMigration {
       return Collections.emptySet();
     }
     // query migration histories
-    TreeSet<Migration> migrationHistories = new TreeSet<>(jdbcTemplate.query("select * from migration_history", new BeanPropertyRowMapper<>(Migration.class)));
+    String querySql = "select * from " + extractDatabaseName(url) + ".migration_history";
+    TreeSet<Migration> migrationHistories = new TreeSet<>(jdbcTemplate.query(querySql, new BeanPropertyRowMapper<>(Migration.class)));
     // filter the migrations that need to do
     Set<Migration> migrationsToDo;
     if (CollectionUtils.isEmpty(migrationHistories)) {
@@ -152,9 +170,27 @@ public class DatabaseMigration {
   }
 
   private void prepareMigrationTable() {
-    List<String> tables = jdbcTemplate.queryForList("SHOW TABLES", String.class);
+    String querySql;
+    String createSql;
+    if ("dm".equals(dbType)) {
+      String schema = extractDatabaseName(url);
+      querySql = "select TABLE_NAME  from dba_tables where owner='" + schema + "'";
+      createSql =
+              "CREATE TABLE " +
+                      schema +
+                      ".migration_history(" +
+                      "\"version\" VARCHAR(128) NOT NULL," +
+                      "\"execute_user\" VARCHAR(128) NOT NULL," +
+                      "\"execute_date\" TIMESTAMP(0) DEFAULT CURRENT_TIMESTAMP() NOT NULL," +
+                      "\"success\" TINYINT NOT NULL," +
+                      "NOT CLUSTER PRIMARY KEY(\"version\")) STORAGE(ON \"MAIN\", CLUSTERBTR);";
+    } else {
+      querySql = "SHOW TABLES";
+      createSql = TABLE_CREATE_SQL;
+    }
+    List<String> tables = jdbcTemplate.queryForList(querySql, String.class);
     if (!tables.contains(MIGRATION_TABLE_NAME)) {
-      jdbcTemplate.execute(TABLE_CREATE_SQL);
+      jdbcTemplate.execute(createSql);
     }
   }
 
@@ -162,20 +198,34 @@ public class DatabaseMigration {
     TreeSet<Migration> allMigrations = new TreeSet<>();
     // load migration files
     Resource[] resources;
+    String sqlPath;
+    String migrationHome;
+    if ("dm".equals(dbType)) {
+      sqlPath = "db/migration/dm/**/*.sql";
+      migrationHome = MIGRATION_HOME + "/dm";
+    } else {
+      sqlPath = "db/migration/mysql/**/*.sql";
+      migrationHome = MIGRATION_HOME + "/mysql";
+    }
     try {
-      resources = new PathMatchingResourcePatternResolver().getResources(ResourceUtils.CLASSPATH_URL_PREFIX + "db/migration/**/*.sql");
+      // 获取类路径下所有匹配的资源文件
+      resources = new PathMatchingResourcePatternResolver().getResources(ResourceUtils.CLASSPATH_URL_PREFIX + sqlPath);
     } catch (IOException e) {
       return allMigrations;
     }
-    File home = new File(FileUtils.concatPath(System.getProperty("user.dir"), MIGRATION_HOME));
+    // 检查 conf/db/migration 目录
+    File home = new File(FileUtils.concatPath(System.getProperty("user.dir"), migrationHome));
     if (home.exists() && home.isDirectory()) {
+      // 如果目录存在且是目录，则列出所有的 .sql 文件
       List<File> sqlFiles = FileUtil.loopFiles(home ,pathname ->
               "sql".equals(FileUtil.getSuffix(pathname.getName()))
       );
       if (sqlFiles != null) {
+        // 将文件转换为 Resource 对象
         resources = sqlFiles.stream().map(FileSystemResource::new).toArray(Resource[]::new);
       }
     }
+    // 将资源文件按文件名前缀分组
     Map<String, List<Resource>> resourceMap = Arrays.stream(resources)
             .filter(Migration::isMigrationFile)
             .collect(Collectors.groupingBy(r -> Objects.requireNonNull(r.getFilename()).substring(1, r.getFilename().indexOf(SPLIT))));
@@ -207,17 +257,18 @@ public class DatabaseMigration {
 
   private void upsertMigration(Migration migration) {
     SQL query = new SQL();
-    query.SELECT("*").FROM(MIGRATION_TABLE_NAME)
-            .WHERE("`version` = '" + migration.getVersion() + "'");
+    String schema = extractDatabaseName(url);
+    query.SELECT("*").FROM(schema + "." + MIGRATION_TABLE_NAME)
+            .WHERE("version = '" + migration.getVersion() + "'");
     List<Migration> migrations = jdbcTemplate.query(query.toString(), new BeanPropertyRowMapper<>(Migration.class));
     SQL sql = new SQL();
     if (!CollectionUtils.isEmpty(migrations) && !migrations.get(0).isSuccess()) {
-      sql.UPDATE(MIGRATION_TABLE_NAME)
+      sql.UPDATE(schema + "." + MIGRATION_TABLE_NAME)
               .SET("success = " + String.format("'%s'", (migration.isSuccess() ? "1" : "0"))
                       , "execute_date = " + String.format("'%s'", DateFormatUtils.format(new Date(), DEFAULT_DATE_FORMAT)))
-              .WHERE("`version` = " + String.format("'%s'", migration.getVersion()));
+              .WHERE("version = " + String.format("'%s'", migration.getVersion()));
     } else {
-      sql.INSERT_INTO(MIGRATION_TABLE_NAME)
+      sql.INSERT_INTO(schema + "." + MIGRATION_TABLE_NAME)
               .INTO_VALUES(String.format("'%s'", migration.getVersion())
                       , String.format("'%s'", migration.getExecuteUser())
                       , String.format("'%s'", DateFormatUtils.format(migration.getExecuteDate(), DEFAULT_DATE_FORMAT))
@@ -267,7 +318,22 @@ public class DatabaseMigration {
   }
 
   private TreeSet<Migration> queryMigrationHistory() {
-    return new TreeSet<>(jdbcTemplate.query("select * from migration_history", new BeanPropertyRowMapper<>(Migration.class)));
+    String querySql = "select * from " + extractDatabaseName(url) + ".migration_history";
+    return new TreeSet<>(jdbcTemplate.query(querySql, new BeanPropertyRowMapper<>(Migration.class)));
+  }
+
+  public static String extractDatabaseName(String jdbcUrl) {
+        String pattern = "jdbc:[a-z]+://[^/]+/([^?]+)";
+        java.util.regex.Pattern regex = java.util.regex.Pattern.compile(pattern);
+        java.util.regex.Matcher matcher = regex.matcher(jdbcUrl);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            int start = jdbcUrl.lastIndexOf('/') + 1;
+            int end = jdbcUrl.length();
+            return jdbcUrl.substring(start, end);
+        }
   }
 
   static class LogWriter extends PrintWriter {

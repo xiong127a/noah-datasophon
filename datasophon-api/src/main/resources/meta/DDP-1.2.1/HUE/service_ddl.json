@@ -105,10 +105,10 @@
       "configType": "map",
       "required": true,
       "type": "input",
-      "value": "hadoop1",
+      "value": "${apiHost}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hadoop1"
+      "defaultValue": "${apiHost}"
     },
     {
       "name": "dbPort",

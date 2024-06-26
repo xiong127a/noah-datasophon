@@ -105,16 +105,16 @@ public class MinaUtils {
     public static String execCmdWithResult(ClientSession session, String command) {
         session.resetAuthTimeout();
         LOG.info("exe cmd: {}", command);
+
         // 命令返回的结果
-        ChannelExec ce = null;
         // 返回结果流
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        // 错误信息
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
-        try {
-            ce = session.createExecChannel(command);
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
+             ByteArrayOutputStream err = new ByteArrayOutputStream();
+             ChannelExec ce = session.createExecChannel(command)) {
+
             ce.setOut(out);
             ce.setErr(err);
+
             // 执行并等待
             ce.open();
             Set<ClientChannelEvent> events =
@@ -125,25 +125,20 @@ public class MinaUtils {
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
                 throw new Exception("mina 连接超时");
             }
+
             int exitStatus = ce.getExitStatus();
             LOG.info("mina result {}", exitStatus);
             if (exitStatus == 1) {
                 return "failed";
             }
+
+            LOG.info("exe cmd return : {}", out);
+            return out.toString().trim();
+
         } catch (Exception e) {
             e.printStackTrace();
             return null;
-        } finally {
-            if (ce.isClosed()) {
-                try {
-                    ce.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
         }
-        LOG.info("exe cmd return : {}", out);
-        return out.toString().trim();
     }
 
     /**
@@ -155,24 +150,26 @@ public class MinaUtils {
      */
     public static boolean uploadFile(ClientSession session, String remotePath, String inputFile) {
         File uploadFile = new File(inputFile);
-        InputStream input = null;
-        SftpFileSystem sftp = null;
-        try {
-            sftp = SftpClientFactory.instance().createSftpFileSystem(session);
+
+        try (SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session);
+             InputStream input = Files.newInputStream(uploadFile.toPath())) {
+
             Path path = sftp.getDefaultDir().resolve(remotePath);
             if (!Files.exists(path)) {
                 LOG.info("create pathHome {} ", path);
                 Files.createDirectories(path);
             }
-            input = Files.newInputStream(uploadFile.toPath());
+
             Path file = path.resolve(uploadFile.getName());
             if (Files.exists(file)) {
                 LOG.info("delete file  {}", file);
                 Files.deleteIfExists(file);
             }
+
             Files.copy(input, file);
             LOG.info("file copy success");
             return true;
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -185,9 +182,7 @@ public class MinaUtils {
      * @return
      */
     public static boolean createDir(ClientSession session, String path) {
-        SftpFileSystem sftp = null;
-        try {
-            sftp = SftpClientFactory.instance().createSftpFileSystem(session);
+        try (SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session)) {
             Path remoteRoot = sftp.getDefaultDir().resolve(path);
             if (!Files.exists(remoteRoot)) {
                 Files.createDirectories(remoteRoot);

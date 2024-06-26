@@ -33,7 +33,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
-import java.util.Objects;
 
 public class UserPermissionHandler implements HandlerInterceptor {
 
@@ -47,29 +46,27 @@ public class UserPermissionHandler implements HandlerInterceptor {
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
             UserPermission annotation = handlerMethod.getMethod().getAnnotation(UserPermission.class);
-            if (Objects.nonNull(annotation)) {
+            if (annotation != null) {
                 UserInfoEntity authUser = (UserInfoEntity) request.getSession().getAttribute(Constants.SESSION_USER);
-                Map<String, String[]> parameterMap = request.getParameterMap();
-                if (Objects.nonNull(authUser)) {
-                    if (!SecurityUtils.isAdmin(authUser)) {
-                        logger.info("step into authrization");
-                        if (parameterMap.containsKey("clusterId")) {
-                            logger.info("find clusterId");
-                            String[] clusterIds = parameterMap.get("clusterId");
-                            if (clusterUserService.isClusterManager(authUser.getId(), clusterIds[0])) {
-                                logger.info("{} is cluster manager", authUser.getUsername());
-                                return true;
-                            }
+
+                if (authUser == null) {
+                    throw new ServiceException(Status.USER_NO_OPERATION_PERM);
+                }
+
+                if (!SecurityUtils.isAdmin(authUser)) {
+                    logger.info("Step into authorization");
+                    Map<String, String[]> parameterMap = request.getParameterMap();
+                    if (parameterMap.containsKey("clusterId")) {
+                        logger.info("Find clusterId");
+                        String[] clusterIds = parameterMap.get("clusterId");
+                        if (!clusterUserService.isClusterManager(authUser.getId(), clusterIds[0])) {
                             throw new ServiceException(Status.USER_NO_OPERATION_PERM);
                         }
+                        logger.info("{} is cluster manager", authUser.getUsername());
                     }
-                    return true;
-                } else {
-                    throw new ServiceException(Status.USER_NO_OPERATION_PERM);
                 }
             }
         }
-
         return true;
     }
 }

@@ -380,6 +380,13 @@
 <!--                    </execution>-->
 <!--                </executions>-->
 <!--            </plugin>-->
+
+<!--            <plugin>-->
+<!--                <groupId>org.sonarsource.scanner.maven</groupId>-->
+<!--                <artifactId>sonar-maven-plugin</artifactId>-->
+<!--                <version>3.9.1.2184</version>-->
+<!--            </plugin>-->
+
         </plugins>
 
     </build>
@@ -408,5 +415,18 @@
                 <mavenCentralUrl>https://maven-central.storage-download.googleapis.com/maven2</mavenCentralUrl>
             </properties>
         </profile>
+<!--        <profile>-->
+<!--            <id>sonar</id>-->
+<!--            <activation>-->
+<!--                <activeByDefault>true</activeByDefault>-->
+<!--            </activation>-->
+<!--            <properties>-->
+<!--                &lt;!&ndash; sonar平台地址 如：http://localhost:9000 &ndash;&gt;-->
+<!--                <sonar.host.url>http://192.168.1.104:9000</sonar.host.url>-->
+<!--                &lt;!&ndash; 不知道为什么，前面配置的用户名密码好像都没生效，需要在这里配置，你可以先不加试一下，如果需要再加 &ndash;&gt;-->
+<!--                <sonar.login>gaozhenfeng</sonar.login>-->
+<!--                <sonar.password>jkl123</sonar.password>-->
+<!--            </properties>-->
+<!--        </profile>-->
     </profiles>
 </project>

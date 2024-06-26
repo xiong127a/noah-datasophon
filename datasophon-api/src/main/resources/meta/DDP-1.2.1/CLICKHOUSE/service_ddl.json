@@ -73,8 +73,8 @@
   "parameters": [
     {
       "name": "ckTcpPort",
-      "label": "tcp端口",
-      "description": "tcp端口",
+      "label": "tcp连接端口",
+      "description": "tcp连接端口，如命令行连接，配置后不可更改",
       "required": true,
       "configType": "map",
       "type": "input",
