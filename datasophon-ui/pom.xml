@@ -67,8 +67,8 @@
                     <nodeVersion>${build.node.version}</nodeVersion>
                     <npmVersion>${build.npm.version}</npmVersion>
 
-                    <nodeDownloadRoot>https://npmmirror.com/mirrors/node/</nodeDownloadRoot>
-                    <npmDownloadRoot>https://npmmirror.com/mirrors/npm/-/</npmDownloadRoot>
+                    <nodeDownloadRoot>https://nodejs.org/dist/</nodeDownloadRoot>
+                    <npmDownloadRoot>https://registry.npmjs.org/npm/-/</npmDownloadRoot>
                 </configuration>
                 <executions>
                     <execution>
