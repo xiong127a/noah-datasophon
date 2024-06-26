@@ -30,6 +30,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 
 public class OlapUtils {
 
@@ -131,12 +132,16 @@ public class OlapUtils {
     }
 
     private static Connection getConnection(String feMaster) throws ClassNotFoundException, SQLException {
-        String username = "root";
-        String password = Constants.DORIS_PW;
+//        String username = "root";
+//        String password = "";
         String url = "jdbc:mysql://" + feMaster + ":9030";
         // 加载驱动
         Class.forName("com.mysql.cj.jdbc.Driver");
-        return DriverManager.getConnection(url, username, password);
+        Properties info = new Properties();
+        info.setProperty("user", "root");
+        info.setProperty("password", "");
+        return DriverManager.getConnection(url, info);
+//        return DriverManager.getConnection(url, username, password);
     }
 
     private static void close(Connection connection, Statement statement) throws SQLException {
