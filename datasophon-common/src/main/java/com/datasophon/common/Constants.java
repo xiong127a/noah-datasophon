@@ -255,4 +255,6 @@ public final class Constants {
      * root user
      */
     public static final String ROOT = "root";
+
+    public static final String DORIS_PW = "";
 }
