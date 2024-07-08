@@ -41,7 +41,8 @@
         "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "backupCount"
+          "backupCount",
+          "custom.checkPoint"
         ]
       },
       {
@@ -76,6 +77,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "1"
+    },
+    {
+      "name": "custom.checkPoint",
+      "label": "自定义配置检查点存储",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}]
     },
     {
       "name": "hosts",
