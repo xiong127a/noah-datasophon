@@ -32,6 +32,7 @@ import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.utils.TaskConstants;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
+import org.apache.tools.ant.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,6 +146,12 @@ public class ConfigureServiceHandler {
                     if ("fe_priority_networks".equals(config.getName())
                             || "be_priority_networks".equals(config.getName())) {
                         config.setName("priority_networks");
+                    }
+                    if (("SRFE".equals(serviceRoleName)
+                            || "SRBE".equals(serviceRoleName)
+                            || "SRFEObserver".equals(serviceRoleName))
+                            && "priority_networks".equals(config.getName())) {
+                        config.setValue(InetAddress.getLocalHost().getHostAddress());
                     }
 
                     if("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())){
