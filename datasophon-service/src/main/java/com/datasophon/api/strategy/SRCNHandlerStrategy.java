@@ -36,16 +36,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class SRFEHandlerStrategy implements ServiceRoleStrategy {
+public class SRCNHandlerStrategy implements ServiceRoleStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(SRFEHandlerStrategy.class);
+    private static final Logger logger = LoggerFactory.getLogger(SRCNHandlerStrategy.class);
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        if (!hosts.isEmpty()) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${srFeMaster}", hosts.get(0));
-        }
+
     }
 
     @Override
@@ -62,16 +59,8 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
         Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
         String feMaster = globalVariables.get("${srFeMaster}");
-        if (hostname.equals(feMaster)) {
-            logger.info("fe master is {}", feMaster);
-            serviceRoleInfo.setSortNum(1);
-        } else {
-            logger.info("set fe follower master");
-            serviceRoleInfo.setMasterHost(feMaster);
-            serviceRoleInfo.setSlave(true);
-            serviceRoleInfo.setSortNum(2);
-        }
-
+        logger.info("fe master is {}", feMaster);
+        serviceRoleInfo.setMasterHost(feMaster);
     }
 
     @Override
@@ -83,11 +72,11 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
         if (roleInstanceEntity.getHostname().equals(feMaster)
                 && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
             try {
-                List<ProcInfo> frontends = OlapUtils.showSRFrontends(feMaster);
-                for (ProcInfo frontend : frontends) {
+                List<ProcInfo> backends = OlapUtils.showSRComputes(feMaster);
+                for (ProcInfo frontend : backends) {
                     frontend.setHostName(hostMap.get(frontend.getHostName()));
                 }
-                resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
+                resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), backends, map);
             } catch (Exception e) {
 
             }

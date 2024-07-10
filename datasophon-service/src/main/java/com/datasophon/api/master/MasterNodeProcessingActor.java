@@ -31,6 +31,9 @@ public class MasterNodeProcessingActor extends UntypedActor {
                 case ADD_FE_OBSERVER:
                     execResult = OlapUtils.addObserver(command.getFeMaster(), command.getHostName());
                     break;
+                case ADD_CN:
+                    execResult = OlapUtils.addCn(command.getFeMaster(), command.getHostName());
+                    break;
             }
             if (execResult.getExecResult()) {
                 logger.info(command.getHostName() + " " + tip + " added success");
@@ -50,6 +53,9 @@ public class MasterNodeProcessingActor extends UntypedActor {
                             break;
                         case ADD_FE_OBSERVER:
                             execResult = OlapUtils.addObserverBySqlClient(command.getFeMaster(), command.getHostName());
+                            break;
+                        case ADD_CN:
+                            execResult = OlapUtils.addCnBySqlClient(command.getFeMaster(), command.getHostName());
                             break;
                     }
                     if (execResult.getExecResult()) {

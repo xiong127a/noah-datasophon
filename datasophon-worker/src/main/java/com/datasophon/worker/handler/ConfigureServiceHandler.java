@@ -149,7 +149,8 @@ public class ConfigureServiceHandler {
                     }
                     if (("SRFE".equals(serviceRoleName)
                             || "SRBE".equals(serviceRoleName)
-                            || "SRFEObserver".equals(serviceRoleName))
+                            || "SRFEObserver".equals(serviceRoleName)
+                            || "SRCN".equals(serviceRoleName))
                             && "priority_networks".equals(config.getName())) {
                         config.setValue(InetAddress.getLocalHost().getHostAddress());
                     }
