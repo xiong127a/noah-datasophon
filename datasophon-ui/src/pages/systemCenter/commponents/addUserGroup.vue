@@ -30,7 +30,7 @@
         <a-input v-decorator="[
             'groupName',
             { rules: [{ required: true, message: '用户组名称不能为空!' }, { validator: checkName }] },
-          ]" placeholder="请输入用户组名称" />
+          ]" placeholder="请输入用户组名称"  :maxLength="255"/>
       </a-form-item>
     </a-form>
     <div class="ant-modal-confirm-btns-new">

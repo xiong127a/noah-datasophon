@@ -3,7 +3,7 @@
     <a-card class="mgb16 card-shadow">
       <a-row type="flex" align="middle">
         <a-col :span="16">
-          <a-input placeholder="请输入指标名称" class="w252 mgr12" @change="(value) => getVal(value, 'quotaName')" allowClear />
+          <a-input placeholder="请输入指标名称" class="w252 mgr12" @change="(value) => getVal(value, 'quotaName')" allowClear :maxLength="255"/>
           <a-select placeholder="请选择告警组" class="w252 mgr12" allowClear @change="(value) => getVal(value, 'alertGroupId')">
             <a-select-option :value="item.id" v-for="(item,index) in groupList" :key="index">{{item.alertGroupName}}</a-select-option>
           </a-select>

@@ -33,19 +33,19 @@
     <div class="form-content steps-body">
       <a-form :label-col="labelCol" :wrapper-col="wrapperCol" :form="form">
         <a-form-item label :label-col="labelCol1" :wrapper-col="wrapperCol1">
-          <a-textarea v-decorator="[
+          <a-textarea  v-decorator="[
             'hosts',
             {initialValue: steps1.hosts, rules: [{ required: true, message: '主机列表不能为空!' }] },
-          ]" placeholder="请输入主机列表..." />
+          ]" placeholder="请输入主机列表..." :max-length="2000" />
         </a-form-item>
         <a-form-item label="SSH用户名">
           <a-input v-decorator="[
             `sshUser`,
             { initialValue: steps1.sshUser,rules: [{ required: true, message: `SSH用户名不能为空!` }] },
-          ]" placeholder="请输入SSH用户名" />
+          ]" placeholder="请输入SSH用户名" :maxLength="255"/>
         </a-form-item>
         <a-form-item label="SSH端口">
-          <a-input v-decorator="['sshPort', {initialValue: steps1.sshPort, rules: [{ required: true, message: 'SSH端口不能为空!' }] }]" placeholder="请输入SSH端口" />
+          <a-input v-decorator="['sshPort', {initialValue: steps1.sshPort, rules: [{ required: true, message: 'SSH端口不能为空!' }] }]" placeholder="请输入SSH端口" :maxLength="255"/>
         </a-form-item>
       </a-form>
     </div>

@@ -30,7 +30,7 @@
         <a-input v-decorator="[
             'rack',
             { rules: [{ required: true, message: '机架名称不能为空!' }] },
-          ]" placeholder="请输入机架名称" />
+          ]" placeholder="请输入机架名称"  :maxLength="255"/>
       </a-form-item>
     </a-form>
     <div class="ant-modal-confirm-btns-new">

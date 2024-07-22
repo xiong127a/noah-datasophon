@@ -11,6 +11,7 @@
             class="w180 mgr12"
             @change="(value) => getVal(value, 'hostname')"
             :allowClear='true'
+            :maxLength="255"
           />
           <a-select
             placeholder="请选择角色类型"

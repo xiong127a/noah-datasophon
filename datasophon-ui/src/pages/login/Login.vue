@@ -41,13 +41,13 @@
             <a-form-item>
               <a-input class="login-input" size="large" placeholder="输入用户名" autoComplete="off" allowClear
                 v-decorator="['name', { rules: [{ required: true, message: '请输入用户名', whitespace: true }] }]">
-                <template #prefix><a-icon type="user" class="icon" /></template>
+                <template #prefix><a-icon type="user" class="icon" :maxLength="255"/></template>
               </a-input>
             </a-form-item>
             <a-form-item>
               <a-input class="login-input" size="large" placeholder="输入密码" type="password" autoComplete="off" allowClear
                 v-decorator="['password', { rules: [{ required: true, message: '请输入密码', whitespace: true }] }]">
-                <template #prefix><a-icon type="lock" class="icon" /></template>
+                <template #prefix><a-icon type="lock" class="icon" :maxLength="255"/></template>
               </a-input>
             </a-form-item>
             <a-form-item>

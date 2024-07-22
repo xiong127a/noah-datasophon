@@ -15,6 +15,7 @@
             { rules: [{ required: true, message: '角色组名称不能为空!' }] },
           ]"
           placeholder="请输入角色组名称"
+          :maxLength="255"
         />
       </a-form-item>
       <!-- <a-form-item label="角色类型">

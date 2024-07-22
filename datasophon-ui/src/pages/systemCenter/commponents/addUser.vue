@@ -30,7 +30,7 @@
         <a-input v-decorator="[
             'username',
             { rules: [{ required: true, message: '用户名称不能为空!' }, { validator: checkName }] },
-          ]" placeholder="请输入用户名称" />
+          ]" placeholder="请输入用户名称"  :maxLength="255"/>
       </a-form-item>
       <a-form-item label="主用户组">
         <a-select showSearch allowClear 

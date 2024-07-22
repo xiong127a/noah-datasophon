@@ -30,7 +30,7 @@
         <a-input id="error" v-decorator="[
             'queueName',
             { rules: [{ required: true, message: '队列名称不能为空!' }, { validator: checkName }] },
-          ]" placeholder="请输入队列名称" />
+          ]" placeholder="请输入队列名称" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="最小资源数" style="margin-bottom: 0px" :required="true">
         <a-row type="flex" style="position: relative">
@@ -47,7 +47,7 @@
                       { validator: checkNumber }
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
             </a-form-item>
           </a-col>
           <a-col :span="2" style="text-align: right">Core</a-col>
@@ -65,7 +65,7 @@
                       { validator: checkNumber }
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
             </a-form-item>
           </a-col>
           <a-col :span="2" style="text-align: right">GB</a-col>
@@ -86,7 +86,7 @@
                       { validator: checkNumber }
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
             </a-form-item>
           </a-col>
           <a-col :span="2" style="text-align: right">Core</a-col>
@@ -104,7 +104,7 @@
                       { validator: checkNumber }
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
             </a-form-item>
           </a-col>
           <a-col :span="2" style="text-align: right">GB</a-col>
@@ -114,7 +114,7 @@
         <a-input id="error" v-decorator="[
             'appNum',
             { rules: [{ required: true, message: '最多同时运行应用数不能为空!' }, { validator: checkNumber }] },
-          ]" placeholder="请输入最多同时运行应用数" />
+          ]" placeholder="请输入最多同时运行应用数" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="资源分配策略">
         <a-select v-decorator="['schedulePolicy', { rules: [{ required: true, message: '资源分配策略不能为空!' }]}]" placeholder="请选择资源分配策略">
@@ -125,13 +125,13 @@
         <a-input id="error" v-decorator="[
             'weight',
             { rules: [{ required: true, message: '权重不能为空!' }, { validator: checkNumber }] },
-          ]" placeholder="请输入权重" />
+          ]" placeholder="请输入权重" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="队列中AM占用最大比例">
         <a-input id="error" v-decorator="[
             'amShare',
             { rules: [{ required: true, message: '队列中AM占用最大比例不能为空!' }, { validator: checkFloat }] },
-          ]" placeholder="请输入队列中AM占用最大比例" />
+          ]" placeholder="请输入队列中AM占用最大比例" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="是否允许队列抢占资源">
         <a-switch v-decorator="[`allowPreemption`, { valuePropName: 'checked' }]"></a-switch>

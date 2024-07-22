@@ -6,12 +6,12 @@
         <a-input :disabled="editFlag" v-decorator="[
           'tenantName',
           { rules: [{ required: true, message: '租户名称不能为空!' }, { validator: checkName }] },
-        ]" placeholder="请输入租户名称,不能为中文" onkeyup="value=value.replace(/[\u4e00-\u9fa5]/ig,'')" />
+        ]" placeholder="请输入租户名称,不能为中文" onkeyup="value=value.replace(/[\u4e00-\u9fa5]/ig,'')"  :maxLength="255"/>
       </a-form-item>
       <a-form-item label="描述">
-        <a-input placeholder="请输入描述，500个字符以内" type="textarea" v-decorator="[
+        <a-input placeholder="请输入描述，2000个字符以内" type="textarea" v-decorator="[
           'desc',
-        ]" />
+        ]"  :maxLength="2000"/>
       </a-form-item>
       <a-form-item label="组件配置">
         <!-- <a-tabs type="card" v-model="tabType" @change="changeTab">
@@ -41,8 +41,8 @@
               </div>
               <div class="content" v-for="(item, index) in resourceList.hdfsResourceList" :key="index">
                 <a-input style="width: 40%;margin:5px" v-model="item.hdfsPath"
-                  :readOnly="editFlag && item.type == undefined"></a-input>
-                <a-input style="width: 40%;margin:5px" v-model="item.hdfsSpaceQuota"></a-input>
+                  :readOnly="editFlag && item.type == undefined"  :maxLength="255"></a-input>
+                <a-input style="width: 40%;margin:5px" v-model="item.hdfsSpaceQuota"  :maxLength="255"></a-input>
                 <a style="margin-left:15px" @click="toDelete('hdfsResourceList', index)">删除</a>
               </div>
               <a style="margin-left:10px" @click="toAdd('hdfsResourceList')">添加</a>
@@ -62,12 +62,12 @@
               </div>
               <div class="content" v-for="(item, index) in resourceList.yarnResourceList" :key="index">
                 <a-input style="width: 22%;margin:5px" v-model="item.parentQueueName"
-                  :readOnly="editFlag && item.type == undefined"></a-input>
+                  :readOnly="editFlag && item.type == undefined"  :maxLength="255"></a-input>
                 <!-- <div style="width: 22%;margin:5px 5px 5px 15px" v-if="editFlag && item.type == undefined">{{ item.parentQueueName }}</div> -->
                 <a-input style="width: 22%;margin:5px" v-model="item.queueName"
-                  :readOnly="editFlag && item.type == undefined"></a-input>
-                <a-input style="width: 22%;margin:5px" v-model="item.capacityPercent"></a-input>
-                <a-input style="width: 22%;margin:5px" v-model="item.nodeLabel"></a-input>
+                  :readOnly="editFlag && item.type == undefined"  :maxLength="255"></a-input>
+                <a-input style="width: 22%;margin:5px" v-model="item.capacityPercent"  :maxLength="255"></a-input>
+                <a-input style="width: 22%;margin:5px" v-model="item.nodeLabel"  :maxLength="255"></a-input>
                 <a style="margin-left:5px" @click="toDelete('yarnResourceList', index)">删除</a>
               </div>
               <a style="margin-left:10px" @click="toAdd('yarnResourceList')">添加</a>
@@ -86,9 +86,9 @@
               </div>
               <div class="content" v-for="(item, index) in resourceList.hbaseResourceList" :key="index">
                 <a-input style="width: 30%;margin:5px" v-model="item.hbaseNamespace"
-                  :readOnly="editFlag && item.type == undefined"></a-input>
-                <a-input style="width: 29%;margin:5px" v-model="item.hbaseCapacity"></a-input>
-                <a-input style="width: 28%;margin:5px" v-model="item.hbaseRegionServerNum"></a-input>
+                  :readOnly="editFlag && item.type == undefined"  :maxLength="255"></a-input>
+                <a-input style="width: 29%;margin:5px" v-model="item.hbaseCapacity"  :maxLength="255"></a-input>
+                <a-input style="width: 28%;margin:5px" v-model="item.hbaseRegionServerNum"  :maxLength="255"></a-input>
                 <a style="margin-left:10px" @click="toDelete('hbaseResourceList', index)">删除</a>
               </div>
               <a style="margin-left:10px" @click="toAdd('hbaseResourceList')">添加</a>
@@ -107,8 +107,8 @@
               </div>
               <div class="content" v-for="(item, index) in resourceList.hiveResourceList" :key="index">
                 <a-input style="width: 42%;margin:5px" v-model="item.hiveDatabase"
-                  :readOnly="editFlag && item.type == undefined"></a-input>
-                <a-input style="width: 42%;margin:5px" v-model="item.hiveDatabaseCapacity"></a-input>
+                  :readOnly="editFlag && item.type == undefined"  :maxLength="255"></a-input>
+                <a-input style="width: 42%;margin:5px" v-model="item.hiveDatabaseCapacity"  :maxLength="255"></a-input>
                 <a style="margin-left:10px" @click="toDelete('hiveResourceList', index)">删除</a>
               </div>
               <a style="margin-left:10px" @click="toAdd('hiveResourceList')">添加</a>
@@ -129,8 +129,8 @@
               <div class="content" v-for="(item, index) in resourceList.kafkaResourceList" :key="index">
                 <a-input style="width: 30%;margin:5px" v-model="item.kafkaTopicName"
                   :readOnly="editFlag && item.type == undefined"></a-input>
-                <a-input style="width: 28%;margin:5px" v-model="item.kafkaTopicCapacity"></a-input>
-                <a-input style="width: 28%;margin:5px" v-model="item.kafkaReplicas"></a-input>
+                <a-input style="width: 28%;margin:5px" v-model="item.kafkaTopicCapacity"  :maxLength="255"></a-input>
+                <a-input style="width: 28%;margin:5px" v-model="item.kafkaReplicas"  :maxLength="255"></a-input>
                 <a style="margin-left:10px" @click="toDelete('kafkaResourceList', index)">删除</a>
               </div>
               <a style="margin-left:10px" @click="toAdd('kafkaResourceList')">添加</a>

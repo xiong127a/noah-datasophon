@@ -33,7 +33,7 @@
             `${item.name}`,
             // { validator: checkName }
             { initialValue: item.value+'',rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
-          ]" placeholder="请输入" />
+          ]" placeholder="请输入" :maxLength="255"/>
             <a-slider v-if="item.type==='slider'" :marks="marks(item)" :min="item.minValue" :max="item.maxValue" style="width: 96%;display: inline-block" v-decorator="[`${item.name}`,{initialValue: item.value? Number(item.value) : 0}]" />
             <a-switch v-if="item.type==='switch'" v-decorator="[`${item.name}`, { valuePropName: 'checked', initialValue: item.value }]"></a-switch>
             <a-select v-if="item.type==='select'" v-decorator="[
@@ -69,7 +69,7 @@
                   },
                 ],
               }
-              ]" placeholder="请输入" />
+              ]" placeholder="请输入" :maxLength="255"/>
               <span @click="() => reduceMultiple(item.name, childIndex, 'multiple')">
                 <svg-icon v-if="item.value.length > 1" icon-class="reduce-icon" class="reduce-icon" />
               </span>
@@ -101,7 +101,7 @@
                       },
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
                   </a-form-item>
                 </a-col>
                 <a-col :span="12">
@@ -119,7 +119,7 @@
                       },
                     ],
                   }
-                  ]" placeholder="请输入" />
+                  ]" placeholder="请输入" :maxLength="255"/>
                   </a-form-item>
                 </a-col>
                 <span style="position: absolute; right: 0px" @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')">

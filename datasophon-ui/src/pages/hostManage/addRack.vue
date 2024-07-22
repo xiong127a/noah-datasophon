@@ -30,7 +30,7 @@
         <a-input id="error" v-decorator="[
             'rack',
             { rules: [{ required: true, message: '机架名称不能为空!' }, { validator: checkName }]  },
-          ]" placeholder="请输入机架名称" />
+          ]" placeholder="请输入机架名称" :maxLength="255"/>
       </a-form-item>
       <a-form-item v-if="type !== 'add'" label="机架">
         <a-select v-decorator="['rack', { rules: [{ required: true, message: '机架不能为空!' }]}]" placeholder="请选择机架">

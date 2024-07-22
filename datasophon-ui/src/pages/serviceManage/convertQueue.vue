@@ -6,6 +6,7 @@
         <a-input :disabled="type =='show'"
             v-decorator="['queueName', {rules: [{ required: true, message: '队列名称不能为空' }],initialValue:this.pageData.queueName || ''}]"
             placeholder="请输入队列名称"
+             :maxLength="255"
           />
       </a-form-item>
       <a-form-item label="资源占比" >

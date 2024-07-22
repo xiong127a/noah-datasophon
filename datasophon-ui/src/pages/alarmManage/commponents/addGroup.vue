@@ -39,6 +39,7 @@
             { rules: [{ required: true, message: '告警组名称不能为空!' }] },
           ]"
           placeholder="请输入告警组名称"
+          :maxLength="255"
         />
       </a-form-item>
       <a-form-item label="告警组类别">

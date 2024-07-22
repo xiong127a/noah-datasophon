@@ -30,7 +30,7 @@
         <a-input v-decorator="[
             'nodeLabel',
             { rules: [{ required: true, message: '标签名称不能为空!' }] },
-          ]" placeholder="请输入标签名称" />
+          ]" placeholder="请输入标签名称"  :maxLength="255"/>
       </a-form-item>
     </a-form>
     <div class="ant-modal-confirm-btns-new">

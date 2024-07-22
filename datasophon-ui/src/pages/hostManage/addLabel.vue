@@ -30,7 +30,7 @@
         <a-input id="error" v-decorator="[
             'nodeLabel',
             { rules: [{ required: true, message: '标签名称不能为空!' }, { validator: checkName }] },
-          ]" placeholder="请输入标签名称" />
+          ]" placeholder="请输入标签名称" :maxLength="255"/>
       </a-form-item>
       <a-form-item v-if="type !== 'add'" label="标签">
         <a-select v-decorator="['nodeLabelId', { rules: [{ required: true, message: '标签不能为空!' }]}]" placeholder="请选择标签">

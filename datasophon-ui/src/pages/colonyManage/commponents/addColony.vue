@@ -39,6 +39,7 @@
             { rules: [{ required: true, message: '集群名称不能为空!' }] },
           ]"
           placeholder="请输入集群名称"
+          :maxLength="255"
         />
       </a-form-item>
       <a-form-item label="集群编码">
@@ -49,6 +50,7 @@
             { rules: [{ required: true, message: '集群编码不能为空!' }] },
           ]"
           placeholder="请输入集群编码"
+          :maxLength="255"
         />
       </a-form-item>
       <a-form-item label="集群框架">

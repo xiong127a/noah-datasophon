@@ -39,6 +39,7 @@
             { rules: [{ required: true, message: '通知组名称不能为空!' }] },
           ]"
             placeholder="请输入组名称"
+            :maxLength="255"
         />
       </a-form-item>
 

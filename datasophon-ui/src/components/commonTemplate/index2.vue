@@ -29,7 +29,7 @@
       <div v-for="(item, index) in form.testData" :key="index">
         <div class="form-item-container" v-if="!['multipleWithKey', 'multiple', 'multipleSelect'].includes(item.type)">
           <a-form-model-item :label="item.label" :prop="'testData.'+index+'.'+ `${item.name}`" :rules="{ required: item.required, message: `${item.label}不能为空!` }">
-            <a-input v-if="item.type==='input'" v-model="item[`${item.name}`]" placeholder="请输入" />
+            <a-input v-if="item.type==='input'" v-model="item[`${item.name}`]" placeholder="请输入" :maxLength="255"/>
             <a-slider v-if="item.type==='slider'" :marks="marks(item)" :min="item.minValue" :max="item.maxValue" style="width: 96%;display: inline-block" v-model="item.value" />
             <a-switch v-if="item.type==='switch'" v-model="item.value"></a-switch>
             <a-select v-if="item.type==='select'" v-model="item.value" placeholder="请选择">
@@ -49,7 +49,7 @@
         <div v-else>
           <div v-if="['multiple'].includes(item.type)" class="form-item-container">
             <a-form-model-item :prop="'testData.'+index+'.'+ `${item.name+'multiple'+childIndex}`" v-for="(child, childIndex) in item.value" :key="childIndex" v-bind="childIndex === 0 ? labelCol : formItemLayoutWithOutLabel" :label="(childIndex === 0 || item.value.length === 0) ? item.label : ''">
-              <a-input v-model='item.value[childIndex]' placeholder="请输入" />
+              <a-input v-model='item.value[childIndex]' placeholder="请输入" :maxLength="255"/>
               <span @click="() => reduceMultiple(item.name, childIndex, 'multiple')">
                 <svg-icon v-if="item.value.length > 1" icon-class="reduce-icon" class="reduce-icon" />
               </span>
@@ -68,12 +68,12 @@
               <a-row type="flex" style="position: relative">
                 <a-col :span="12">
                   <a-form-model-item style="width:97%">
-                    <a-input v-model="child.key" placeholder="请输入" />
+                    <a-input v-model="child.key" placeholder="请输入" :maxLength="255"/>
                   </a-form-model-item>
                 </a-col>
                 <a-col :span="12">
                   <a-form-model-item :prop="'testData.'+index+'.'+ `${item.name+'arrayWithValue'+childIndex}`" :rules="[{required: item.required, whitespace: true, message: `${item.label}不能为空!`}]"  style="width:97%">
-                    <a-input v-model="child.value" placeholder="请输入" />
+                    <a-input v-model="child.value" placeholder="请输入" :maxLength="255"/>
                   </a-form-model-item>
                 </a-col>
                 <span style="position: absolute; right: 0px" @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')">

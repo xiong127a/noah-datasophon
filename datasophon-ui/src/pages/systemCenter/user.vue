@@ -33,9 +33,9 @@
           <a-row type="flex" align="middle">
             <a-col :span="22">
               <a-input placeholder="请输入用户名" v-if="item.key == 'user'" class="w252 mgr12"
-                @change="(value) => getVal(value, 'username')" allowClear />
+                @change="(value) => getVal(value, 'username')" allowClear :maxLength="255"/>
               <a-input placeholder="请输入用户组名" v-if="item.key == 'userGroup'" class="w252 mgr12"
-                @change="(value) => getVal(value, 'groupName')" allowClear />
+                @change="(value) => getVal(value, 'groupName')" allowClear :maxLength="255"/>
               <a-button class type="primary" icon="search" @click="onSearch(item.key)"></a-button>
             </a-col>
             <a-col :span="2" style="text-align: right">

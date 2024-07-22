@@ -30,16 +30,16 @@
         <a-input v-decorator="[
             'username',
             { rules: [{ required: true, message: '用户名称不能为空!' }, { validator: checkName }] },
-          ]" placeholder="请输入用户名称" />
+          ]" placeholder="请输入用户名称" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="用户密码">
-        <a-input type="password" :disabled="editFlag" v-decorator="['password',{ rules: [{ required: true, message: '用户密码不能为空!' }] }]" placeholder="请输入用户密码" />
+        <a-input type="password" :disabled="editFlag" v-decorator="['password',{ rules: [{ required: true, message: '用户密码不能为空!' }] }]" placeholder="请输入用户密码" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="邮    箱">
-        <a-input v-decorator="['email',{ rules: [{ required: true, message: '邮箱不能为空!' },{pattern: new RegExp(/\w{3,}(\.\w+)*@[A-z0-9]+(\.[A-z]{2,5}){1,2}/), message: '请输入正确的邮箱地址'}] }]" placeholder="请输入邮箱" />
+        <a-input v-decorator="['email',{ rules: [{ required: true, message: '邮箱不能为空!' },{pattern: new RegExp(/\w{3,}(\.\w+)*@[A-z0-9]+(\.[A-z]{2,5}){1,2}/), message: '请输入正确的邮箱地址'}] }]" placeholder="请输入邮箱" :maxLength="255"/>
       </a-form-item>
       <a-form-item label="手机号码">
-        <a-input v-decorator="['phone',{ rules: [{ required: true, message: '手机号码不能为空!' }] }]" placeholder="请输入手机号码" />
+        <a-input v-decorator="['phone',{ rules: [{ required: true, message: '手机号码不能为空!' }] }]" placeholder="请输入手机号码" :maxLength="255"/>
       </a-form-item>
     </a-form>
     <div class="ant-modal-confirm-btns-new">
