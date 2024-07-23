@@ -20,22 +20,16 @@ package com.datasophon.dao.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.datasophon.domain.host.enums.HostState;
-import com.datasophon.domain.host.enums.MANAGED;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.datasophon.dao.enums.ClusterState;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
-@TableName("t_ddh_cluster_host")
 @Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-public class ClusterHostDO implements Serializable {
+@TableName("t_ddh_k8s_cluster_info")
+public class K8sClusterInfoEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -45,67 +39,50 @@ public class ClusterHostDO implements Serializable {
     @TableId
     private Integer id;
     /**
+     * 创建人
+     */
+    private String createBy;
+    /**
      * 创建时间
      */
     private Date createTime;
     /**
-     * 主机名
+     * 集群名称
      */
-    private String hostname;
+    private String clusterName;
     /**
-     * IP
+     * 集群编码
      */
-    private String ip;
+    private String clusterCode;
     /**
-     * 机架
+     * 集群框架
      */
-    private String rack;
+    private String clusterFrame;
     /**
-     * 核数
+     * 集群版本
      */
-    private Integer coreNum;
+    private String frameVersion;
     /**
-     * 总内存
+     * 集群状态 1:待配置 2：正在运行 3: 停止 4: 删除中 5: 已删除
      */
-    private Integer totalMem;
+    private ClusterState clusterState;
     /**
-     * 总磁盘
+     * k8s配置文件
      */
-    private Integer totalDisk;
+    private String kubeConfig;
     /**
-     * 已用内存
+     * k8s的namespace
      */
-    private Integer usedMem;
+    private String namespace;
     /**
-     * 已用磁盘
+     * 集群框架id
      */
-    private Integer usedDisk;
-    /**
-     * 平均负载
-     */
-    private String averageLoad;
-    /**
-     * 检测时间
-     */
-    private Date checkTime;
-    /**
-     * 集群id
-     */
-    private Integer clusterId;
-    /**
-     * 1:正常运行 2：断线 3、存在告警
-     */
-    private HostState hostState;
-    /**
-     * 1:受管 2：断线
-     */
-    private MANAGED managed;
-
-    private String cpuArchitecture;
-
-    private String nodeLabel;
+    private Integer frameId;
 
     @TableField(exist = false)
-    private Integer serviceRoleNum;
+    private List<UserInfoEntity> clusterManagerList;
+
+    @TableField(exist = false)
+    private Integer clusterStateCode;
 
 }
