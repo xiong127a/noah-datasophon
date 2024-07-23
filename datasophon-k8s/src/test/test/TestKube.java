@@ -50,7 +50,7 @@ public class TestKube {
     @Test
     public void testNodeList() {
         KubeUtil kubeUtil = new KubeUtil();
-        List<ClusterHostDO> list = kubeUtil.getHostListByConfig(1, KUBE_CONFIG);
+        List<ClusterHostDO> list = kubeUtil.getHostListByConfig(1);
         System.out.println(JSONUtil.toJsonStr(list));
     }
 }
