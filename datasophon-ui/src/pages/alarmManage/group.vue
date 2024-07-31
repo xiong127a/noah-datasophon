@@ -3,7 +3,7 @@
     <a-card class="mgb16 card-shadow ">
       <a-row type="flex" align="middle">
         <a-col :span="16">
-          <a-input placeholder="请输入告警组名称" v-model="alertGroupName" class="w252 mgr12" allowClear />
+          <a-input placeholder="请输入告警组名称" v-model="alertGroupName" class="w252 mgr12" :maxLength="255" allowClear />
           <a-button class type="primary" icon="search" @click="onSearch"></a-button>
         </a-col>
         <a-col :span="8" style="text-align: right">

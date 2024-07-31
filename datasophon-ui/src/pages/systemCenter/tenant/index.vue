@@ -4,7 +4,7 @@
     <a-card class="mgb16 card-shadow">
       <a-row type="flex" align="middle">
         <a-col :span="22">
-          <a-input placeholder="请输入租户名称" class="w252 mgr12" @change="(value) => getVal(value, 'tenantName')" allowClear />
+          <a-input placeholder="请输入租户名称" class="w252 mgr12" @change="(value) => getVal(value, 'tenantName')" :maxLength="255" allowClear />
           <a-button class type="primary" icon="search" @click="onSearch"></a-button>
         </a-col>
         <a-col :span="2" style="text-align: right">
