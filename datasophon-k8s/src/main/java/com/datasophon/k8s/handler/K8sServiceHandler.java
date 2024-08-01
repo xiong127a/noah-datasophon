@@ -15,34 +15,17 @@
  *  limitations under the License.
  */
 
-package com.datasophon.common.command;
+package com.datasophon.k8s.handler;
 
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.RunAs;
-import com.datasophon.common.model.ServiceConfig;
-
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-
+import com.datasophon.common.model.ServiceRoleInfo;
+import com.datasophon.common.utils.ExecResult;
 import lombok.Data;
 
 @Data
-public class GenerateServiceConfigCommand implements Serializable {
+public abstract class K8sServiceHandler {
 
-    private static final long serialVersionUID = -4211566568993105684L;
+    private K8sServiceHandler next;
 
-    private String serviceName;
+    public abstract ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception;
 
-    private String decompressPackageName;
-
-    private Integer myid;
-
-    Map<Generators, List<ServiceConfig>> cofigFileMap;
-
-    private String serviceRoleName;
-
-    private RunAs runAs;
-
-    private String hostName;
 }
