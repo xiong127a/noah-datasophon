@@ -47,4 +47,6 @@ public class InstallServiceRoleCommand extends BaseCommand implements Serializab
 
     private ServiceRoleType serviceRoleType;
 
+    private String hostName;
+
 }
