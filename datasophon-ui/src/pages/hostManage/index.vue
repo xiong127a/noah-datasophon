@@ -3,8 +3,8 @@
     <a-card class="mgb16 card-shadow">
       <a-row type="flex" align="middle">
         <a-col :span="16">
-          <a-input placeholder="请输入IP" class="w180 mgr12" @change="(value) => getVal(value, 'ip')" allowClear />
-          <a-input placeholder="请输入主机名" class="w180 mgr12" @change="(value) => getVal(value, 'hostname')" allowClear />
+          <a-input placeholder="请输入IP" class="w180 mgr12" @change="(value) => getVal(value, 'ip')" :maxLength="255" allowClear />
+          <a-input placeholder="请输入主机名" class="w180 mgr12" @change="(value) => getVal(value, 'hostname')" :maxLength="255" allowClear />
           <a-select placeholder="请选择Cpu架构" class="w180 mgr12" :allowClear="true" @change="(value) => getVal(value, 'cpuArchitecture')">
             <a-select-option :value="item.id" v-for="(item,index) in cpuArchitecture" :key="index">{{item.key}}</a-select-option>
           </a-select>
