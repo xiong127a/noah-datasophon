@@ -16,8 +16,8 @@ public class LengthValidator implements StringValidator {
         if (StrUtil.isBlank(data)) {
             throw new IllegalArgumentException("输入值不能为空");
         }
-        if (data.length() > 30) {
-            throw new IllegalArgumentException("输入值长度不能超过30");
+        if (data.length() > 255) {
+            throw new IllegalArgumentException("输入值长度不能超过255");
         }
         if (nextValidator != null) {
             nextValidator.validate(data);
