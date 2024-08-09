@@ -1,11 +1,11 @@
-package com.datasophon.k8s.handler;
+package com.datasophon.api.k8s.handler;
 
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
-import com.datasophon.common.command.GenerateDeploymentYamlCommand;
+import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.K8sYamlDeploymentActor;
@@ -20,19 +20,21 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
 
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
-        GenerateDeploymentYamlCommand generateDeploymentYamlCommand = new GenerateDeploymentYamlCommand();
-        generateDeploymentYamlCommand.setServiceName(serviceRoleInfo.getParentName());
-        generateDeploymentYamlCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
-        generateDeploymentYamlCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
-        generateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
-        generateDeploymentYamlCommand.setServiceRoleName(serviceRoleInfo.getName());
-        generateDeploymentYamlCommand.setHostName(serviceRoleInfo.getHostname());
-        generateDeploymentYamlCommand.setClusterId(serviceRoleInfo.getClusterId());
+        K8sGenerateDeploymentYamlCommand k8SGenerateDeploymentYamlCommand = new K8sGenerateDeploymentYamlCommand();
+        k8SGenerateDeploymentYamlCommand.setServiceName(serviceRoleInfo.getParentName());
+        k8SGenerateDeploymentYamlCommand.setServiceRoleName(serviceRoleInfo.getName());
+        k8SGenerateDeploymentYamlCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
+        k8SGenerateDeploymentYamlCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
+        k8SGenerateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
+        k8SGenerateDeploymentYamlCommand.setHostName(serviceRoleInfo.getHostname());
+        k8SGenerateDeploymentYamlCommand.setStartRunner(serviceRoleInfo.getStartRunner());
+        k8SGenerateDeploymentYamlCommand.setStopRunner(serviceRoleInfo.getStopRunner());
+        k8SGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
 
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sYamlDeploymentActor.class, ActorUtils.getActorRefName(K8sYamlDeploymentActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> configureFuture = Patterns.ask(actorRef, generateDeploymentYamlCommand, timeout);
+        Future<Object> configureFuture = Patterns.ask(actorRef, k8SGenerateDeploymentYamlCommand, timeout);
         try {
             ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
             if (Objects.nonNull(configResult) && configResult.getExecResult()) {

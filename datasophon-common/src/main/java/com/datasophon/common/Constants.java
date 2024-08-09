@@ -257,4 +257,8 @@ public final class Constants {
     public static final String ROOT = "root";
 
     public static final String DORIS_PW = "";
+
+    public static final String PVM_MODE = "PVM";
+
+    public static final String K8S_MODE = "K8S";
 }

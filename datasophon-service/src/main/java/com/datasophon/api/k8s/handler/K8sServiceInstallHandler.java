@@ -1,7 +1,6 @@
-package com.datasophon.k8s.handler;
+package com.datasophon.api.k8s.handler;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
@@ -47,6 +46,7 @@ public class K8sServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setServiceRoleType(serviceRoleInfo.getRoleType());
         installServiceRoleCommand.setPackageName(serviceRoleInfo.getPackageName());
         installServiceRoleCommand.setHostName(serviceRoleInfo.getHostname());
+        installServiceRoleCommand.setLogFile(serviceRoleInfo.getLogFile());
 
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sInstallServiceActor.class, ActorUtils.getActorRefName(K8sInstallServiceActor.class));

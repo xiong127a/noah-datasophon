@@ -72,6 +72,18 @@ public class ClusterInfoEntity implements Serializable {
      * 集群框架id
      */
     private Integer frameId;
+    /**
+     * 集群部署模式
+     */
+    private String depType;
+    /**
+     * k8s配置
+     */
+    private String kubeConfig;
+    /**
+     * k8s命令空间
+     */
+    private String namespace;
 
     @TableField(exist = false)
     private List<UserInfoEntity> clusterManagerList;

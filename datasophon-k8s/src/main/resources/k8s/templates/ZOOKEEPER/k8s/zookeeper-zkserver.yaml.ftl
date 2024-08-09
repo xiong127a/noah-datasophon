@@ -6,7 +6,7 @@ metadata:
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
-  replicas: 3
+  replicas: ${roleNodeCnt}
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
@@ -43,7 +43,7 @@ spec:
             - name: "ZOOCFGDIR"
               value: "/opt/datasophon/zookeeper-3.5.10/conf"
             - name: USER
-              value: root
+              value: ${runAs}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
@@ -53,13 +53,13 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "sh /opt/datasophon/zookeeper-3.5.10/bin/zkServer.sh start && tail -f /dev/null"
+            - "sh ${startCommand} && tail -f /dev/null"
           readinessProbe:
             exec:
               command:
                 - "/bin/bash"
                 - "-c"
-                - "sh /opt/datasophon/zookeeper-3.5.10/bin/zkStatus.sh status zookeeper"
+                - "sh ${statusCommand}"
             failureThreshold: 3
             initialDelaySeconds: 3
             periodSeconds: 30

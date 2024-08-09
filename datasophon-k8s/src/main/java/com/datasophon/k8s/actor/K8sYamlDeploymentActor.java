@@ -1,7 +1,7 @@
 package com.datasophon.k8s.actor;
 
 import akka.actor.UntypedActor;
-import com.datasophon.common.command.GenerateDeploymentYamlCommand;
+import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sYamlDeploymentHandler;
 import org.slf4j.Logger;
@@ -13,20 +13,19 @@ public class K8sYamlDeploymentActor extends UntypedActor {
 
     @Override
     public void onReceive(Object msg) throws Throwable {
-        if (msg instanceof GenerateDeploymentYamlCommand) {
-
-            GenerateDeploymentYamlCommand command = (GenerateDeploymentYamlCommand) msg;
-            logger.info("start configure {}", command.getServiceName());
+        if (msg instanceof K8sGenerateDeploymentYamlCommand) {
+            K8sGenerateDeploymentYamlCommand command = (K8sGenerateDeploymentYamlCommand) msg;
+            logger.info("start configure {} k8s yaml file", command.getServiceRoleName());
             K8sYamlDeploymentHandler serviceHandler = new K8sYamlDeploymentHandler(command.getServiceName(), command.getServiceRoleName());
             ExecResult startResult = serviceHandler.configure(
                     command.getCofigFileMap(),
-                    command.getDecompressPackageName(),
-                    command.getHostName(),
-                    command.getClusterId()
-                    );
+                    command.getRunAs(),
+                    command.getStartRunner(),
+                    command.getStatusRunner(),
+                    command.getRoleNodeCnt()
+            );
             getSender().tell(startResult, getSelf());
-
-            logger.info("{} configure result {}", command.getServiceName(),
+            logger.info("{} configure k8s yaml file result {}", command.getServiceRoleName(),
                     startResult.getExecResult() ? "success" : "failed");
         } else {
             unhandled(msg);
