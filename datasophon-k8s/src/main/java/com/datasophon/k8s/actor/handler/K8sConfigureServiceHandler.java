@@ -20,7 +20,6 @@ package com.datasophon.k8s.actor.handler;
 import cn.hutool.core.util.IdUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
@@ -28,7 +27,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.FreemakerUtils;
+import com.datasophon.k8s.util.K8sFreemakerUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
@@ -66,7 +66,7 @@ public class K8sConfigureServiceHandler {
                                 RunAs runAs,
                                 String hostName) {
         ExecResult execResult = new ExecResult();
-        try (ClientSession clientSession = MinaUtils.openConnection(hostName, 22, Constants.ROOT)){
+        try (ClientSession clientSession = K8sMinaUtils.openConnection(hostName, 22, Constants.ROOT)){
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", hostName);
             paramMap.put("${user}", "root");
@@ -149,9 +149,9 @@ public class K8sConfigureServiceHandler {
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
                         final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
-                        if (!MinaUtils.checkDirExists(clientSession, targetPath)) {
+                        if (!K8sMinaUtils.checkDirExists(clientSession, targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            MinaUtils.execCmdWithResult(clientSession, "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            K8sMinaUtils.execCmdWithResult(clientSession, "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
                         }
                     }
                 }
@@ -163,13 +163,13 @@ public class K8sConfigureServiceHandler {
                     customConfList.add(serviceConfig);
                 }
                 if ("AlluxioWorker".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
-                    if (MinaUtils.checkDirExists(clientSession, Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/alluxio-site.properties")) {
+                    if (K8sMinaUtils.checkDirExists(clientSession, Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/alluxio-site.properties")) {
                         continue;
                     }
                 }
 
                 if (Objects.nonNull(myid) && StringUtils.isNotBlank(dataDir)) {
-                    MinaUtils.writeUtf8String(clientSession, myid + "", dataDir + Constants.SLASH + "myid");
+                    K8sMinaUtils.writeUtf8String(clientSession, myid + "", dataDir + Constants.SLASH + "myid");
                 }
 
                 if ("node.properties".equals(generators.getFilename())) {
@@ -182,17 +182,17 @@ public class K8sConfigureServiceHandler {
                 if (!configs.isEmpty()) {
                     // extra app, package: META, templates
                     String path = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/templates";
-                    if (MinaUtils.checkDirExists(clientSession, path) && MinaUtils.isDirectory(clientSession, path)) {
+                    if (K8sMinaUtils.checkDirExists(clientSession, path) && K8sMinaUtils.isDirectory(clientSession, path)) {
                         // 3rd app, load ext templates
                         logger.info("Add ext app template path: {} to loader path.", path);
-                        FreemakerUtils.generateConfigFile(
+                        K8sFreemakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 decompressPackageName,
                                 path,
                                 clientSession);
                     } else {
-                        FreemakerUtils.generateConfigFile(
+                        K8sFreemakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 decompressPackageName,
@@ -202,7 +202,7 @@ public class K8sConfigureServiceHandler {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
                     String outputFile =
                             packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-                    MinaUtils.writeUtf8String(clientSession, "", outputFile);
+                    K8sMinaUtils.writeUtf8String(clientSession, "", outputFile);
                 }
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
@@ -221,10 +221,10 @@ public class K8sConfigureServiceHandler {
     private boolean setupRangerAdmin(ClientSession session, String decompressPackageName) {
         logger.info("start to execute ranger admin setup.sh");
         String commands = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh";
-        String result = MinaUtils.execCmdWithResult(session, commands);
+        String result = K8sMinaUtils.execCmdWithResult(session, commands);
 
         String globalCommand = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "set_globals.sh";
-        MinaUtils.execCmdWithResult(session, globalCommand);
+        K8sMinaUtils.execCmdWithResult(session, globalCommand);
 
         if ("true".equals(result)) {
             logger.info("ranger admin setup success");
@@ -248,7 +248,7 @@ public class K8sConfigureServiceHandler {
     private void movePath(ServiceConfig config, RunAs runAs, ClientSession clientSession) {
         String oldPath = (String) config.getDefaultValue();
         String newPath = (String) config.getValue();
-        if (MinaUtils.checkDirExists(clientSession, oldPath) && !MinaUtils.checkDirExists(clientSession, newPath)) {
+        if (K8sMinaUtils.checkDirExists(clientSession, oldPath) && !K8sMinaUtils.checkDirExists(clientSession, newPath)) {
             if (StringUtils.isNotBlank(config.getSeparator()) && newPath.contains(config.getSeparator())) {
                 for (String dir : newPath.split(config.getSeparator())) {
                     mkdir(dir, runAs, clientSession);
@@ -256,8 +256,8 @@ public class K8sConfigureServiceHandler {
             } else {
                 mkdir(newPath, runAs, clientSession);
             }
-            MinaUtils.deleteFile(clientSession, oldPath);
-            MinaUtils.createFile(clientSession, newPath);
+            K8sMinaUtils.deleteFile(clientSession, oldPath);
+            K8sMinaUtils.createFile(clientSession, newPath);
             logger.info("move path {} to {}", oldPath, newPath);
         }
     }
@@ -293,7 +293,7 @@ public class K8sConfigureServiceHandler {
 
     private void mkdir(String path, RunAs runAs, ClientSession clientSession) {
         logger.info("create file path {}", path);
-        if (!MinaUtils.checkDirExists(clientSession, path)) {
+        if (!K8sMinaUtils.checkDirExists(clientSession, path)) {
             String command =
                     "mkdir -p " + path
                             + " && "
@@ -301,7 +301,7 @@ public class K8sConfigureServiceHandler {
             if (Objects.nonNull(runAs)) {
                 command = command + " && chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + path;
             }
-            MinaUtils.execCmdWithResult(clientSession, command);
+            K8sMinaUtils.execCmdWithResult(clientSession, command);
         }
     }
 

@@ -90,5 +90,10 @@
             <artifactId>feign-okhttp</artifactId>
             <version>${feign.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-k8s</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

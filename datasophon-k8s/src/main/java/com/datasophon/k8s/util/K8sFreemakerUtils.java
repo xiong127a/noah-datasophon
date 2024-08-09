@@ -19,7 +19,6 @@ package com.datasophon.k8s.util;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
@@ -46,9 +45,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class FreemakerUtils {
+public class K8sFreemakerUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(FreemakerUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(K8sFreemakerUtils.class);
 
     public static void generateConfigFile(Generators generators,
                                           List<ServiceConfig> configs,
@@ -77,7 +76,7 @@ public class FreemakerUtils {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
-        loaderList.add(new ClassTemplateLoader(FreemakerUtils.class, "/templates"));
+        loaderList.add(new ClassTemplateLoader(K8sFreemakerUtils.class, "/templates"));
         if (StringUtils.isNotBlank(extPath) && new File(extPath).exists()) {
             // 如果 三方的 package 中存在 templates 模版，则直接加载
             loaderList.add(new FileTemplateLoader(new File(extPath)));
@@ -122,7 +121,7 @@ public class FreemakerUtils {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         // ""代表当前包
-        config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+        config.setClassForTemplateLoading(K8sFreemakerUtils.class, "/templates");
         // 得到模板对象
         String configFormat = generators.getConfigFormat();
         Template template = null;
@@ -144,7 +143,7 @@ public class FreemakerUtils {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         // ""代表当前包
-        config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+        config.setClassForTemplateLoading(K8sFreemakerUtils.class, "/templates");
         // 得到模板对象
         Template template = config.getTemplate("scrape.ftl");
 
@@ -202,7 +201,23 @@ public class FreemakerUtils {
         String generatedContent = stringWriter.toString();
 
         // 将内容写入到远程系统
-        MinaUtils.writeUtf8String(clientSession, generatedContent, outputFile);
+        K8sMinaUtils.writeUtf8String(clientSession, generatedContent, outputFile);
+    }
+
+    public static void writeToTemplateLocal(Template template, Map<String, Object> data, String outputFile)
+            throws IOException, TemplateException {
+        // 创建文件对象
+        File file = new File(outputFile);
+        // 如果文件不存在，则创建其父目录
+        if (!file.exists()) {
+            FileUtil.mkParentDirs(file);
+        }
+        // 创建文件写入器
+        FileWriter out = new FileWriter(file);
+        // 将数据写入模板，并将结果写入文件
+        template.process(data, out);
+        // 关闭文件写入器
+        out.close();
     }
 
 }

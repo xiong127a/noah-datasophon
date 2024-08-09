@@ -38,6 +38,8 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -99,6 +101,15 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public Result saveCluster(ClusterInfoEntity clusterInfo) {
+
+        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+            try (KubernetesClient client = KubeUtil.getKubeClientByConfig(clusterInfo.getKubeConfig())) {
+                KubeUtil.testConnect(client);
+            } catch (Exception e) {
+                return Result.error("连接k8s集群失败");
+            }
+        }
+
         List<ClusterInfoEntity> list = this
                 .list(new QueryWrapper<ClusterInfoEntity>().eq(Constants.CLUSTER_CODE, clusterInfo.getClusterCode()));
         if (Objects.nonNull(list) && !list.isEmpty()) {
@@ -117,13 +128,15 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         }
         // ProcessUtils.createServiceActor(clusterInfo);
 
-        yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
+        if (Constants.PVM_MODE.equals(clusterInfo.getDepType())) {
+            yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
 
-        nodeLabelService.createDefaultNodeLabel(clusterInfo.getId());
+            nodeLabelService.createDefaultNodeLabel(clusterInfo.getId());
 
-        queueCapacityService.createDefaultQueue(clusterInfo.getId());
+            queueCapacityService.createDefaultQueue(clusterInfo.getId());
 
-        rackService.createDefaultRack(clusterInfo.getId());
+            rackService.createDefaultRack(clusterInfo.getId());
+        }
 
         putClusterVariable(clusterInfo);
         return Result.success();
@@ -211,7 +224,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             List<ClusterServiceInstanceEntity> serviceInstanceList = clusterServiceInstanceService.listAll(id);
             if (serviceInstanceList.stream().noneMatch(instance -> clusterServiceInstanceService.hasRunningRoleInstance(instance.getId()))) {
                 ActorUtils.getLocalActor(
-                        ClusterActor.class, "clusterActor")
+                                ClusterActor.class, "clusterActor")
                         .tell(new ClusterCommand(ClusterCommandType.DELETE, id), ActorRef.noSender());
 
                 this.updateClusterState(id, ClusterState.DELETING.getValue());
@@ -223,8 +236,10 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             clusterHostService.removeHostByClusterId(id);
         }
 
-
-
     }
 
+    @Override
+    public String getKubeConfigByClusterId(Integer clusterId) {
+        return this.getById(clusterId).getKubeConfig();
+    }
 }

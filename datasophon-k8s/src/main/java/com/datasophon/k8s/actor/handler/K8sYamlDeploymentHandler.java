@@ -1,17 +1,15 @@
 package com.datasophon.k8s.actor.handler;
 
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.DockerImageUtils;
-import com.datasophon.k8s.util.FreemakerUtils;
+import com.datasophon.k8s.util.K8sFreemakerUtils;
 import com.google.common.collect.Lists;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
@@ -19,7 +17,6 @@ import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import lombok.Data;
-import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,11 +42,13 @@ public class K8sYamlDeploymentHandler {
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap,
-                                String decompressPackageName,
-                                String hostName,
-                                Integer clusterId) {
+                                RunAs runAs,
+                                ServiceRoleRunner startRunner,
+                                ServiceRoleRunner statusRunner,
+                                Integer roleNodeCnt) {
         ExecResult execResult = new ExecResult();
-        try (ClientSession session = MinaUtils.openConnection(hostName, 22, Constants.ROOT)) {
+        execResult.setExecResult(true);
+        try {
             Map<String, Object> data = new HashMap<>();
             Set<ServiceConfig> volumePath = new HashSet<>();
 
@@ -66,27 +65,24 @@ public class K8sYamlDeploymentHandler {
             data.put("serviceName", serviceName);
             data.put("namespace", Constant.K8S_NAMESPACE);
             data.put("dockerImage", DockerImageUtils.getString(serviceName));
-
-            ClusterServiceRoleInstanceService clusterServiceRoleInstanceService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-            List<ClusterServiceRoleInstanceEntity> roleHostList =
-                    clusterServiceRoleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
-            data.put("roleNodeCnt", roleHostList.size());
+            data.put("runAs", runAs.getUser());
+            data.put("startCommand", startRunner.getProgram() + " " + String.join(" ", startRunner.getArgs()));
+            data.put("statusCommand", statusRunner.getProgram() + " " + String.join(" ", statusRunner.getArgs()));
+            data.put("roleNodeCnt", roleNodeCnt);
 
             Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
             List<TemplateLoader> loaderList = new ArrayList<>();
-            loaderList.add(new ClassTemplateLoader(FreemakerUtils.class,
-                    "/k8s-templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s"));
+            loaderList.add(new ClassTemplateLoader(K8sFreemakerUtils.class,
+                    "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s"));
             config.setTemplateLoader(new MultiTemplateLoader(loaderList.toArray(new TemplateLoader[0])));
             Template template = config.getTemplate(serviceRoleFullName + ".yaml.ftl");
 
-            String packagePath =
-                    Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + serviceRoleFullName + ".yaml";
-            FreemakerUtils.writeToTemplate(template, data, packagePath, session);
+            String yamlFilePath = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
+            K8sFreemakerUtils.writeToTemplateLocal(template, data, yamlFilePath);
 
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
-            logger.error("load k8s yaml template error!", e);
+            logger.error("{} load k8s yaml template error!", serviceRoleName, e);
         }
         return execResult;
     }

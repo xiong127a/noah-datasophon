@@ -1,7 +1,6 @@
-package com.datasophon.k8s.handler;
+package com.datasophon.api.k8s.handler;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
