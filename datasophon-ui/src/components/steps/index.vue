@@ -39,7 +39,8 @@
       </a-steps>
     </div>
     <div class="rf">
-      <StepsRf :currentSteps="currentSteps" :stepsType="stepsType" :interval="interval" :stepsList="stepsList" :serviceData="steps4Data" />
+      <StepsRf :currentSteps="currentSteps" :stepsType="stepsType" :interval="interval" :stepsList="stepsList"
+        :serviceData="steps4Data" :depType="depType"/>
     </div>
   </div>
 </template>
@@ -55,7 +56,8 @@ export default {
       default: 'cluster',
     },
     steps4Data: Object,
-    clusterId: Number
+    clusterId: Number,
+    depType:String,
   },
   components: {StepsRf},
   provide () {
@@ -99,6 +101,9 @@ export default {
       if (this.stepsType === 'hostManage')list =  list.splice(0, 3)
       if (this.stepsType === 'addService')list =  list.splice(3, list.length)
       if (this.stepsType === 'service-example')list =  list.splice(4, list.length)
+      if (this.depType == 'K8S') {
+        list = list.filter(item => item !== '主机Agent分发')
+      }
       return list
     },
     ...mapState({
