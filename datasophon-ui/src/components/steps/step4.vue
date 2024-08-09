@@ -53,7 +53,7 @@ export default {
   },
   data () {
     return {
-      params: { type: 'custom' },
+      params: { type: '' },
       selectedRowKeys: [],
       selectedRowKeysArr: [],
       selectedRowNames: [],

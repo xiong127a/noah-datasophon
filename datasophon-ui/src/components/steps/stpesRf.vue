@@ -28,7 +28,7 @@
     <div class="steps-rf-container">
       <Steps1 ref="steps1Ref" v-if="stepsNumber === 1" :steps1="steps1Data" />
       <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" />
-      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3" />
+      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3 && depType=='PVM'" />
       <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"/>
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
@@ -68,7 +68,7 @@ export default {
     Steps7,
     Steps8,
   },
-  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object },
+  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object, depType:String, },
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId" , 'onSearch'],
   data() {
     return {
