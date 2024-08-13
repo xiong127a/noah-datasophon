@@ -55,19 +55,18 @@
           </template>
           <a-icon type="info-circle" class="iconInfo" />
         </a-tooltip>
-
         <a-select v-decorator="['depType', { rules: [{ required: true, message: '集群部署方式不能为空!' }] }]"
-          placeholder="请选择集群部署方式">
+          placeholder="请选择集群部署方式" @change="tochange">
           <a-select-option :value="item" v-for="(item, index) in depTypeList" :key="index">{{ item
             }}</a-select-option>
         </a-select>
       </a-form-item>
-      <a-form-item label="kubernetes命名空间">
+      <a-form-item label="kubernetes命名空间" v-if="depType == 'K8S'">
         <a-input v-decorator="['namespace', { rules: [{ required: true, message: 'kubernetes命名空间不能为空!' }] }]"
           placeholder="请输入kubernetes命名空间">
         </a-input>
       </a-form-item>
-      <a-form-item label="kubeConfig">
+      <a-form-item label="kubeConfig"  v-if="depType == 'K8S'">
         <a-textarea v-decorator="['kubeConfig', { rules: [{ required: true, message: 'kubeConfig不能为空!' }] }]"
           placeholder="请输入kubeConfig" style="width:100%;height: 300px;">
         </a-textarea>
@@ -111,10 +110,14 @@ export default {
       loading: false,
       frameList: [], //集群框架列表
       depTypeList: ['K8S', 'PVM'], //部署方式列表
+      depType:'',
     };
   },
   watch: {},
   methods: {
+    tochange(val){
+      this.depType = val
+    },
     formCancel() {
       this.$destroyAll();
     },
@@ -160,6 +163,7 @@ export default {
               namespace: this.detail.namespace,
               kubeConfig: this.detail.kubeConfig,
             })
+            this.depType = this.detail.depType
           }
         }
       })
