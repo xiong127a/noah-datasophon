@@ -194,8 +194,8 @@ export default {
           clusterId: this.clusterId,
           serviceIds:this.steps4Data.serviceIds.join(',')
         }).then((res) => { 
-          // flag = res.code == 200
-          flag = res.code == 500//暂时的
+          flag = res.code == 200
+          // flag = res.code == 500//暂时的
           if(res.code != 200)return true
         })
       }
