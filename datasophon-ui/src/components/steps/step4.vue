@@ -151,7 +151,7 @@ export default {
     getCheckboxProps (record) {
       return {
         props: {
-          disabled: record.installed || record.isRequired
+          disabled: this.depType=='K8S'? false :record.installed || record.isRequired //临时
         }
       }
     },
@@ -159,7 +159,7 @@ export default {
     onSelectChange (selectedRowKeys, row) {
       console.log('biaogw', selectedRowKeys);
       this.selectedRowKeys = selectedRowKeys
-      this.selectedRowKeysArr = this.depType =='K8S'?[]:selectedRowKeys
+      this.selectedRowKeysArr = selectedRowKeys
       // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
       // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
       let arr = [];
