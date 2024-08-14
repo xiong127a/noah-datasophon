@@ -50,6 +50,7 @@ export default {
   props: {
     steps4Data: Object,
     stepsType: String,
+    depType:String,
   },
   data () {
     return {
@@ -158,7 +159,7 @@ export default {
     onSelectChange (selectedRowKeys, row) {
       console.log('biaogw', selectedRowKeys);
       this.selectedRowKeys = selectedRowKeys
-      this.selectedRowKeysArr = selectedRowKeys
+      this.selectedRowKeysArr = this.depType =='K8S'?[]:selectedRowKeys
       // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
       // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
       let arr = [];
@@ -178,7 +179,9 @@ export default {
         console.log('arrwith',arr);
         if (arr.length > 0) {
           arr.map(childItem => {
-            this.selectedRowKeysArr.push(childItem.id)
+            if (this.depType !=='K8S'){
+              this.selectedRowKeysArr.push(childItem.id)
+            }
             this.selectedRowNamesArr.push({
               serviceId: childItem.id,
               serviceName: childItem.serviceName
@@ -186,7 +189,9 @@ export default {
           })
         }
         self.steps4Data.serviceIds.map(item => {
-          this.selectedRowKeysArr.push(item)
+          if (this.depType !=='K8S'){
+            this.selectedRowKeysArr.push(item)
+          } 
         })
 
         self.steps4Data.serviceNames.map(item => {

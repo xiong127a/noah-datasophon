@@ -29,7 +29,7 @@
       <Steps1 ref="steps1Ref" v-if="stepsNumber === 1" :steps1="steps1Data" />
       <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" />
       <Steps3 ref="steps3Ref" v-if="stepsNumber === 3 " />
-      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"/>
+      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType" :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
       <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data" />
@@ -38,7 +38,8 @@
     <div class="footer">
       <a-button class="mgr10" @click="closeModal">取消</a-button>
       <a-button v-if="stepsNumber > 1 && stepsNumber !== 8" class="mgr10" type="primary" @click="back">上一步</a-button>
-      <a-button class="mgr10" type="primary" :loading="nextLoading" @click="next">{{ currentSteps !== stepsList.length ? '下一步' : '完成'}}</a-button>
+      <a-button class="mgr10" type="primary" :loading="nextLoading" @click="next">{{ currentSteps !== stepsList.length ?
+        '下一步' : '完成'}}</a-button>
     </div>
   </div>
 </template>
@@ -147,7 +148,7 @@ export default {
           this.nextLoading = false;
           flag = res.dispatcherHostAgentCompleted;
           if (!flag) self.$message.warning("存在为未分发完成的主机");
-          if (!flag) return false;
+          // if (!flag) return false;
           if (this.stepsList.length === this.currentSteps) {
             this.handleCancel();
             this.onSearch()
