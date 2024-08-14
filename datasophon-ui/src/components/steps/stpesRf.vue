@@ -32,7 +32,7 @@
       <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType" :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
-      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data1" />
+      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="depType == 'K8S' ? steps4Data1 : steps4Data" />
       <Steps8 ref="steps8Ref" v-if="stepsNumber === 8" :steps4Data="steps4Data" />
     </div>
     <div class="footer">
@@ -161,7 +161,7 @@ export default {
           this.nextLoading = false;
           flag = res.dispatcherHostAgentCompleted;
           if (!flag) self.$message.warning("存在为未分发完成的主机");
-          if (!flag) return false;
+          // if (!flag) return false;
           if (this.stepsList.length === this.currentSteps) {
             this.handleCancel();
             this.onSearch()
