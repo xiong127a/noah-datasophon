@@ -32,7 +32,7 @@
       <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType" :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
-      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data" />
+      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data1" />
       <Steps8 ref="steps8Ref" v-if="stepsNumber === 8" :steps4Data="steps4Data" />
     </div>
     <div class="footer">
@@ -83,6 +83,10 @@ export default {
         serviceIds: [],
         serviceNames: [],
       },
+      steps4Data1: {//暂时的 传空
+        serviceIds: [],
+        serviceNames: [],
+      },
     };
   },
   watch: {
@@ -102,6 +106,15 @@ export default {
     stepsNumber () {
       if (this.currentSteps === 4 && this.depType == 'K8S'){
         return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 5 && this.depType == 'K8S') {
+        return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 6 && this.depType == 'K8S') {
+        return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 7 && this.depType == 'K8S') {
+      return this.currentSteps + 1
       }//暂时的
       if (this.currentSteps === 3 && this.depType == 'K8S'){
         return this.currentSteps + 1
