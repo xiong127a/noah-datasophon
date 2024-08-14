@@ -148,7 +148,7 @@ export default {
           this.nextLoading = false;
           flag = res.dispatcherHostAgentCompleted;
           if (!flag) self.$message.warning("存在为未分发完成的主机");
-          // if (!flag) return false;
+          if (!flag) return false;
           if (this.stepsList.length === this.currentSteps) {
             this.handleCancel();
             this.onSearch()
