@@ -158,10 +158,14 @@ export default {
         if (res.code == 200 && this.depType=='K8S'){
           let data = JSON.parse(JSON.stringify(res.data))
           data && data.forEach(e => {
-            e['CheckResult'] = e.checkResult
-            delete e.checkResult
+            if (e.checkResult.code=='10001'){
+              e['CheckResult'] = e.checkResult
+              delete e.checkResult
+              let arr=[]
+              arr[0] = e
+              this.saveK8sHostApi(arr)
+            } 
         })
-          this.saveK8sHostApi(data)
         }
       });
     },

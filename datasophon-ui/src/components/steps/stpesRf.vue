@@ -33,7 +33,7 @@
         :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
-      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="depType == 'K8S' ? steps4Data1 : steps4Data" />
+      <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data" />
       <Steps8 ref="steps8Ref" v-if="stepsNumber === 8" :steps4Data="steps4Data" />
     </div>
     <div class="footer">
@@ -81,10 +81,6 @@ export default {
         sshPort: "",
       },
       steps4Data: {
-        serviceIds: [],
-        serviceNames: [],
-      },
-      steps4Data1: {//暂时的 传空
         serviceIds: [],
         serviceNames: [],
       },
