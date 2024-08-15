@@ -156,12 +156,11 @@ export default {
         this.dataSource = res.data;
         this.pagination.total = res.total;
         if (res.code == 200 && this.depType=='K8S'){
-          let data = ''
-          res.data&&res.data.forEach(e => {
+          let data = JSON.parse(JSON.stringify(res.data))
+          data && data.forEach(e => {
             e['CheckResult'] = e.checkResult
             delete e.checkResult
         })
-        data=res.data
           this.saveK8sHostApi(data)
         }
       });
