@@ -216,7 +216,7 @@ export default {
       });
     },
     getServiceConfigOption() {
-      // this.loading = true;//暂时的
+      this.loading = true;
       const self = this;
       this.SERVICENAMES.map((item) => {
         const params = {

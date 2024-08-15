@@ -40,6 +40,7 @@ export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
     steps1Data: Object,
+    depType:String,
   },
   data() {
     return {
@@ -154,6 +155,15 @@ export default {
         this.loading = false;
         this.dataSource = res.data;
         this.pagination.total = res.total;
+        if (res.code == 200 && this.depType=='K8S'){
+          let data = ''
+          res.data&&res.data.forEach(e => {
+            e['CheckResult'] = e.checkResult
+            delete e.checkResult
+        })
+        data=res.data
+          this.saveK8sHostApi(data)
+        }
       });
     },
     // 三秒去刷一下
@@ -164,6 +174,10 @@ export default {
       self.timer = setInterval(() => {
         self.getEnvironmentList(true);
       }, global.intervalTime);
+    },
+    saveK8sHostApi (params){
+      this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
+       });
     },
     //表格选择
     onSelectChange(selectedRowKeys) {
