@@ -172,15 +172,17 @@ export default {
         this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
         this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        arr.map((item, index) => {
-          let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
-          if (curIndex !== -1) {
-            let serviceId = this.steps4Data.serviceIds[curIndex]
-            let nameIndex = this.steps4Data.serviceNames.findIndex(nameItem => nameItem.serviceId === serviceId)
-            this.steps4Data.serviceIds.splice(curIndex, 1)
-            this.steps4Data.serviceNames.splice(nameIndex, 1)
-          }
-        })
+        if (this.depType!=='K8S'){
+          arr.map((item, index) => {
+            let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
+            if (curIndex !== -1) {
+              let serviceId = this.steps4Data.serviceIds[curIndex]
+              let nameIndex = this.steps4Data.serviceNames.findIndex(nameItem => nameItem.serviceId === serviceId)
+              this.steps4Data.serviceIds.splice(curIndex, 1)
+              this.steps4Data.serviceNames.splice(nameIndex, 1)
+            }
+          })
+        }
         // && arr.length < 1
         if (this.steps4Data.serviceIds.length < 1) {
           this.$message.warning("请至少选择一个服务");

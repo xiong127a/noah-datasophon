@@ -39,7 +39,7 @@
     </a-row>
     <div class="table-info mgt16 steps-body pdr30">
       <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource"
-        :rowSelection="{ selectedRowKeys: stepsType == 'cluster'? selectedRowKeysArr: selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
+        :rowSelection="{ selectedRowKeys: stepsType == 'cluster' ? selectedRowKeysArr : selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
         rowKey="id"></a-table>
     </div>
   </div>
@@ -151,13 +151,13 @@ export default {
     getCheckboxProps (record) {
       return {
         props: {
-          disabled: this.depType=='K8S'? false :record.installed || record.isRequired //临时
+          disabled: this.depType == 'K8S' ? false : record.installed || record.isRequired //临时
         }
       }
     },
     //表格选择
     onSelectChange (selectedRowKeys, row) {
-      console.log('biaogw', selectedRowKeys);
+      this.selectedRowNamesArr = [] 
       this.selectedRowKeys = selectedRowKeys
       this.selectedRowKeysArr = selectedRowKeys
       // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
@@ -170,35 +170,44 @@ export default {
         });
       });
       this.selectedRowNames = arr;
+      if (this.depType == 'K8S') { //k8s模式下 配置服务只传重新勾选的serviceName
+        row.forEach(e => {
+          this.selectedRowNamesArr.push({
+            serviceId: e.id,
+            serviceName: e.serviceName
+          })
+        });
+      }
     },
     getListWithRequired () {
       const self = this;
       this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
         this.dataSource = res.data;
         let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
-        console.log('arrwith',arr);
         if (arr.length > 0) {
           arr.map(childItem => {
-            if (this.depType !=='K8S'){
+            if (this.depType !== 'K8S') {
               this.selectedRowKeysArr.push(childItem.id)
+              this.selectedRowNamesArr.push({
+                serviceId: childItem.id,
+                serviceName: childItem.serviceName
+              })
             }
-            this.selectedRowNamesArr.push({
-              serviceId: childItem.id,
-              serviceName: childItem.serviceName
-            })
           })
         }
         self.steps4Data.serviceIds.map(item => {
-          if (this.depType !=='K8S'){
+          if (this.depType !== 'K8S') {
             this.selectedRowKeysArr.push(item)
-          } 
+          }
         })
 
         self.steps4Data.serviceNames.map(item => {
+          if (this.depType !== 'K8S') {
           this.selectedRowNamesArr.push({
             serviceId: item.id,
             serviceName: item.serviceName
           })
+        }
         })
       });
     },
