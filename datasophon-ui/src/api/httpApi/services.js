@@ -31,7 +31,7 @@ export default {
   getAllHost: path + '/api/cluster/host/all', // 查询集群所有主机  
   saveServiceRoleHostMapping: path + '/service/install/saveServiceRoleHostMapping', // 保存服务角色与主机对应关系 
   getNonMasterRoleList: path + '/api/frame/service/role/getNonMasterRoleList', // 查询服务对应的非Master角色 
-  saveServiceConfig: path + '/servicedatasophon-manager/saveServiceConfig', // 保存服务配置
+  saveServiceConfig: path + '/service/install/saveServiceConfig', // 保存服务配置
   startExecuteCommand: path + '/api/cluster/service/command/startExecuteCommand', // 启动执行指令  
   generateCommand: path + '/api/cluster/service/command/generateCommand', // 生成服务操作指令  
   getServiceCommandlist: path + '/api/cluster/service/command/getServiceCommandlist', // 查询服务安装指令列表1  
