@@ -148,6 +148,48 @@ public class MinaUtils {
         }
     }
 
+    public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
+        session.resetAuthTimeout();
+        LOG.info("Executing command: {}", command);
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+             ChannelExec channelExec = session.createExecChannel(command)) {
+
+            channelExec.setOut(outputStream);
+            channelExec.setErr(errorStream);
+
+            // 打开通道并执行命令
+            channelExec.open();
+
+            // 等待命令执行完成或超时
+            Set<ClientChannelEvent> events = channelExec.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
+
+            if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                throw new IOException("Command execution timed out");
+            }
+
+            int exitStatus = channelExec.getExitStatus();
+            LOG.info("Command executed with exit status: {}", exitStatus);
+
+            if (exitStatus != 0) {
+                String errorOutput = errorStream.toString().trim();
+                LOG.error("Command execution failed: {}", errorOutput);
+                throw new IOException("Command execution failed with error: " + errorOutput);
+            }
+
+            String result = outputStream.toString().trim();
+            LOG.info("Command output: {}", result);
+
+            return result;
+
+        } catch (Exception e) {
+            LOG.error("Error executing command: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+
     /**
      * 上传文件,相同路径ui覆盖
      *

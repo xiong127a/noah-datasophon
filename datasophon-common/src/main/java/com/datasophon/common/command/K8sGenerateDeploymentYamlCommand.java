@@ -38,4 +38,6 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
     private String hostName;
 
     private Integer roleNodeCnt;
+
+    private String logFile;
 }

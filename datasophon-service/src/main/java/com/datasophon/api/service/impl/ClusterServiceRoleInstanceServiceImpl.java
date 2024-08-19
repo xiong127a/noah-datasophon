@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
@@ -37,6 +38,7 @@ import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
+import com.datasophon.common.command.K8sGetLogCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.ExecResult;
@@ -51,6 +53,7 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
+import com.datasophon.k8s.actor.K8sLogActor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,9 +75,9 @@ import java.util.stream.Collectors;
 @Service("clusterServiceRoleInstanceService")
 public class ClusterServiceRoleInstanceServiceImpl
         extends
-            ServiceImpl<ClusterServiceRoleInstanceMapper, ClusterServiceRoleInstanceEntity>
+        ServiceImpl<ClusterServiceRoleInstanceMapper, ClusterServiceRoleInstanceEntity>
         implements
-            ClusterServiceRoleInstanceService {
+        ClusterServiceRoleInstanceService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceRoleInstanceServiceImpl.class);
 
@@ -192,15 +195,26 @@ public class ClusterServiceRoleInstanceServiceImpl
             logFile = PlaceholderUtils.replacePlaceholders(logFile, globalVariables, Constants.REGEX_VARIABLE);
             logger.info("logFile is {}", logFile);
         }
-        GetLogCommand command = new GetLogCommand();
-        command.setLogFile(logFile);
-        command.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
         logger.info("start to get {} log from {}", serviceRole.getServiceRoleName(), roleInstance.getHostname());
 
-        ActorSelection configActor = ActorUtils.actorSystem
-                .actorSelection("akka.tcp://datasophon@" + roleInstance.getHostname() + ":2552/user/worker/logActor");
+        Future<Object> logFuture;
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
+        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+            K8sGetLogCommand k8sCommand = new K8sGetLogCommand();
+            k8sCommand.setLogFile(logFile);
+            k8sCommand.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
+            k8sCommand.setHostname(roleInstance.getHostname());
+            ActorRef k8sLog =
+                    ActorUtils.getLocalActor(K8sLogActor.class, ActorUtils.getActorRefName(K8sLogActor.class));
+            logFuture = Patterns.ask(k8sLog, k8sCommand, timeout);
+        } else {
+            GetLogCommand command = new GetLogCommand();
+            command.setLogFile(logFile);
+            command.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
+            ActorSelection configActor = ActorUtils.actorSystem
+                    .actorSelection("akka.tcp://datasophon@" + roleInstance.getHostname() + ":2552/user/worker/logActor");
+            logFuture = Patterns.ask(configActor, command, timeout);
+        }
         ExecResult logResult = (ExecResult) Await.result(logFuture, timeout.duration());
         if (Objects.nonNull(logResult) && logResult.getExecResult()) {
             return Result.success(logResult.getExecOut());
@@ -244,7 +258,7 @@ public class ClusterServiceRoleInstanceServiceImpl
     @Override
     public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByClusterIdAndRoleName(Integer clusterId,
                                                                                                    String roleName) {
-      return this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+        return this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                 .eq(Constants.CLUSTER_ID, clusterId).eq(Constants.SERVICE_ROLE_NAME, roleName));
     }
 

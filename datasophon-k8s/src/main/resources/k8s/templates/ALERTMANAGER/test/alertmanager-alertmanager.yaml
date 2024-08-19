@@ -2,14 +2,14 @@ apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
   labels:
-    name: "${serviceRoleFullName}"
-  name: "${serviceRoleFullName}"
-  namespace: ${namespace}
+    name: "alertmanager-alertmanager"
+  name: "alertmanager-alertmanager"
+  namespace: datasophon
 spec:
-  replicas: ${roleNodeCnt}
+  replicas: 1
   selector:
     matchLabels:
-      app: "${serviceRoleFullName}"
+      app: "alertmanager-alertmanager"
   strategy:
     type: "RollingUpdate"
     rollingUpdate:
@@ -20,52 +20,50 @@ spec:
   template:
     metadata:
       labels:
-        name: "${serviceRoleFullName}"
-        app: "${serviceRoleFullName}"
-        podConflictName: "${serviceRoleFullName}"
+        name: "alertmanager-alertmanager"
+        app: "alertmanager-alertmanager"
+        podConflictName: "alertmanager-alertmanager"
       annotations:
-        serviceInstanceName: "${serviceName}"
+        serviceInstanceName: "alertmanager"
     spec:
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels:
-                  name: "${serviceRoleFullName}"
-                  podConflictName: "${serviceRoleFullName}"
+                  name: "alertmanager-alertmanager"
+                  podConflictName: "alertmanager-alertmanager"
               namespaces:
-                - "${namespace}"
+                - "datasophon"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: true
       containers:
         - env:
-            - name: "ZOOCFGDIR"
-              value: "/opt/datasophon/zookeeper-3.5.10/conf"
             - name: USER
-              value: ${runAs}
+              value: root
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
-          image: "${dockerImage}"
+          image: "192.168.5.200:5000/bdp/alertmanager:0.23.0"
           imagePullPolicy: "Always"
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - "cd /opt/datasophon/alertmanager-0.23.0 && sh control.sh start alertmanager && exec tail -f /dev/null"
           readinessProbe:
             exec:
               command:
                 - "/bin/bash"
                 - "-c"
-                - "${statusCommand}"
+                - "cd /opt/datasophon/alertmanager-0.23.0 && sh control.sh status alertmanager"
             failureThreshold: 3
             initialDelaySeconds: 3
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15
-          name: "${serviceRoleFullName}"
+          name: "alertmanager-alertmanager"
           resources:
             requests:
               memory: "2Gi"
@@ -76,21 +74,22 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
-            </#list>
+            - mountPath: "/opt/datasophon/alertmanager-0.23.0/alertmanager.yml"
+              name: "config1"
+            - mountPath: "/opt/datasophon/alertmanager-0.23.0/logs"
+              name: "logs"
             - mountPath: "/etc/localtime"
               name: "timezone"
       nodeSelector:
-        ${serviceRoleFullName}: "true"
+        alertmanager-alertmanager: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list itemList as item>
         - hostPath:
-            path: "${item.value}"
-          name: "${item.name}"
-        </#list>
+            path: "/opt/datasophon/alertmanager-0.23.0/alertmanager.yml"
+          name: "config1"
+        - hostPath:
+            path: "/opt/datasophon/alertmanager-0.23.0/logs"
+          name: "logs"
         - hostPath:
             path: "/etc/localtime"
           name: "timezone"

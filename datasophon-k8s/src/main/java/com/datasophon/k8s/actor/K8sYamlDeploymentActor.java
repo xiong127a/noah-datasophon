@@ -22,7 +22,10 @@ public class K8sYamlDeploymentActor extends UntypedActor {
                     command.getRunAs(),
                     command.getStartRunner(),
                     command.getStatusRunner(),
-                    command.getRoleNodeCnt()
+                    command.getRoleNodeCnt(),
+                    command.getDecompressPackageName(),
+                    command.getLogFile(),
+                    command.getHostName()
             );
             getSender().tell(startResult, getSelf());
             logger.info("{} configure k8s yaml file result {}", command.getServiceRoleName(),

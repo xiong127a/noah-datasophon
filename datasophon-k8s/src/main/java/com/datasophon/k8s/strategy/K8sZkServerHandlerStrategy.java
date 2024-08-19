@@ -11,7 +11,7 @@ import com.datasophon.k8s.util.K8sKerberosUtils;
 public class K8sZkServerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
     public K8sZkServerHandlerStrategy(String serviceName, String serviceRoleName) {
-        super(serviceName,serviceRoleName);
+        super(serviceName, serviceRoleName);
     }
 
     @Override
@@ -28,10 +28,8 @@ public class K8sZkServerHandlerStrategy extends K8sAbstractHandlerStrategy imple
             if (!FileUtil.exist("/etc/security/keytab/zkclient.service.keytab")) {
                 K8sKerberosUtils.downloadKeytabFromMaster("zkcli/" + hostname, "zkclient.service.keytab");
             }
-            startResult = serviceHandler.start(command.getKubeConfig());
-        } else {
-            startResult = serviceHandler.start(command.getKubeConfig());
         }
+        startResult = serviceHandler.start(command.getKubeConfig());
         return startResult;
     }
 
