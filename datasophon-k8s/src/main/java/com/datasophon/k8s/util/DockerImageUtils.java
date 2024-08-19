@@ -27,6 +27,11 @@ public class DockerImageUtils {
             try {
                 fis = DockerImageUtils.class.getResourceAsStream(fileName);
                 properties.load(fis);
+
+                properties.forEach((key, value) -> {
+                    logger.info("Loaded docker images : {}={}", key, value);
+                });
+
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
                 if (fis != null) {
@@ -38,6 +43,7 @@ public class DockerImageUtils {
             }
         }
     }
+
 
     public static String getString(String key) {
         return properties.getProperty(key.trim());

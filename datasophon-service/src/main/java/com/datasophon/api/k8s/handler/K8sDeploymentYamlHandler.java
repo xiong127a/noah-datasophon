@@ -5,14 +5,21 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.SpringTool;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.k8s.actor.K8sYamlDeploymentActor;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +37,17 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
         k8SGenerateDeploymentYamlCommand.setStartRunner(serviceRoleInfo.getStartRunner());
         k8SGenerateDeploymentYamlCommand.setStopRunner(serviceRoleInfo.getStopRunner());
         k8SGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
+        k8SGenerateDeploymentYamlCommand.setLogFile(serviceRoleInfo.getLogFile());
+
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
+        String hostMapKey =
+                clusterInfo.getClusterCode()
+                        + Constants.UNDERLINE
+                        + Constants.SERVICE_ROLE_HOST_MAPPING;
+        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        List<String> hostList = map.get(serviceRoleInfo.getName());
+        k8SGenerateDeploymentYamlCommand.setRoleNodeCnt(hostList.size());
 
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sYamlDeploymentActor.class, ActorUtils.getActorRefName(K8sYamlDeploymentActor.class));

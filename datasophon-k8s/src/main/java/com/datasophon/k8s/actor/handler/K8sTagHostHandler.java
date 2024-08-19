@@ -36,15 +36,15 @@ public class K8sTagHostHandler {
             switch (tagOperation) {
                 case ADD_TAG:
                     addTag(hostName, client);
-                    execResult.setExecOut("Tag added successfully to host " + hostName);
                     break;
                 case CANCEL_TAG:
                     cancelTag(hostName, client);
-                    execResult.setExecOut("Tag canceled successfully from host " + hostName);
                     break;
                 default:
                     break;
             }
+            execResult.setExecOut("Tag operate successfully to host " + hostName);
+            execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
             logger.error("{} tag at host {} error!", serviceRoleName, hostName, e);

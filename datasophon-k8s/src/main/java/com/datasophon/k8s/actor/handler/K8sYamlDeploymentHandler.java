@@ -1,28 +1,36 @@
 package com.datasophon.k8s.actor.handler;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.DockerImageUtils;
 import com.datasophon.k8s.util.K8sFreemakerUtils;
-import com.google.common.collect.Lists;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.sftp.client.SftpClientFactory;
+import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 
 @Data
+@Slf4j
 public class K8sYamlDeploymentHandler {
 
     private String serviceName;
@@ -45,45 +53,121 @@ public class K8sYamlDeploymentHandler {
                                 RunAs runAs,
                                 ServiceRoleRunner startRunner,
                                 ServiceRoleRunner statusRunner,
-                                Integer roleNodeCnt) {
+                                Integer roleNodeCnt,
+                                String decompressPackageName,
+                                String logFile,
+                                String hostname) {
+
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
+
+        String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         try {
-            Map<String, Object> data = new HashMap<>();
-            Set<ServiceConfig> volumePath = new HashSet<>();
+            Set<ServiceConfig> volumePathSet = new HashSet<>();
 
-            for (Generators generators : configFileMap.keySet()) {
-                List<ServiceConfig> configList = configFileMap.get(generators);
-                for (ServiceConfig serviceConfig : configList) {
-                    if (Constants.PATH.equals(serviceConfig.getConfigType())) {
-                        volumePath.add(serviceConfig);
-                    }
-                }
-            }
-            data.put("itemList", Lists.newArrayList(volumePath));
-            data.put("serviceRoleFullName", serviceRoleFullName);
-            data.put("serviceName", serviceName);
-            data.put("namespace", Constant.K8S_NAMESPACE);
-            data.put("dockerImage", DockerImageUtils.getString(serviceName));
-            data.put("runAs", runAs.getUser());
-            data.put("startCommand", startRunner.getProgram() + " " + String.join(" ", startRunner.getArgs()));
-            data.put("statusCommand", statusRunner.getProgram() + " " + String.join(" ", statusRunner.getArgs()));
-            data.put("roleNodeCnt", roleNodeCnt);
+            volumeConfig(configFileMap, appHome, volumePathSet);
 
-            Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-            List<TemplateLoader> loaderList = new ArrayList<>();
-            loaderList.add(new ClassTemplateLoader(K8sFreemakerUtils.class,
-                    "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s"));
-            config.setTemplateLoader(new MultiTemplateLoader(loaderList.toArray(new TemplateLoader[0])));
-            Template template = config.getTemplate(serviceRoleFullName + ".yaml.ftl");
+            volumeLog(logFile, hostname, appHome, volumePathSet);
+
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet);
+
+            Template template = generateTemplate();
 
             String yamlFilePath = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
+
             K8sFreemakerUtils.writeToTemplateLocal(template, data, yamlFilePath);
 
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
             logger.error("{} load k8s yaml template error!", serviceRoleName, e);
         }
+
         return execResult;
     }
+
+    private Template generateTemplate() throws IOException {
+        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
+        config.setTemplateLoader(new MultiTemplateLoader(
+                new TemplateLoader[]{
+                        new ClassTemplateLoader(K8sFreemakerUtils.class,
+                                "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s")
+                }
+        ));
+        return config.getTemplate(serviceRoleFullName + ".yaml.ftl");
+    }
+
+    private Map<String, Object> prepareTemplateMap(RunAs runAs,
+                                                   ServiceRoleRunner startRunner,
+                                                   ServiceRoleRunner statusRunner,
+                                                   Integer roleNodeCnt,
+                                                   String appHome,
+                                                   Set<ServiceConfig> volumePathSet) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("itemList", new ArrayList<>(volumePathSet));
+        data.put("serviceRoleFullName", serviceRoleFullName);
+        data.put("serviceName", serviceName);
+        data.put("namespace", Constant.K8S_NAMESPACE);
+        data.put("dockerImage", DockerImageUtils.getString(serviceName));
+        data.put("runAs", runAs.getUser());
+        data.put("startCommand", String.format("cd %s && sh %s %s && tail -f /dev/null",
+                appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+        data.put("statusCommand", String.format("cd %s && sh %s %s",
+                appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        data.put("roleNodeCnt", roleNodeCnt);
+        return data;
+    }
+
+    private static void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet) {
+        int fileCount = 1;
+        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
+            Generators generators = entry.getKey();
+            String configFilePath;
+            if (StrUtil.isNotBlank(generators.getOutputDirectory())) {
+                configFilePath = String.join(Constants.SLASH, appHome, generators.getOutputDirectory(), generators.getFilename());
+            } else {
+                configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
+            }
+
+            // 配置文件挂载
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("config" + fileCount++);
+            fileConfig.setValue(configFilePath);
+            volumePathSet.add(fileConfig);
+
+            // path配置目录挂载
+            List<ServiceConfig> configList = entry.getValue();
+            configList.stream()
+                    .filter(serviceConfig -> Constants.PATH.equals(serviceConfig.getConfigType()))
+                    .forEach(volumePathSet::add);
+        }
+    }
+
+    private static void volumeLog(String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet) {
+        String logStr;
+        HashMap<String, String> paramMap = new HashMap<>();
+        paramMap.put("${user}", "root");
+        paramMap.put("${host}", hostname);
+        String logFileName = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
+
+        if (logFileName.startsWith(StrUtil.SLASH)) {
+            logStr = logFileName;
+        } else {
+            logStr = appHome + Constants.SLASH + logFileName;
+        }
+
+        try (ClientSession session = K8sMinaUtils.openConnection(hostname, 22, Constants.ROOT);
+             SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session)) {
+            if (!K8sMinaUtils.checkPathExists(sftp, logStr)) {
+                K8sMinaUtils.createFile(sftp, logStr);
+            }
+        } catch (Exception e) {
+            log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
+        }
+
+        ServiceConfig logConfig = new ServiceConfig();
+        logConfig.setName("logs");
+        logConfig.setValue(logStr);
+        volumePathSet.add(logConfig);
+    }
+
 }

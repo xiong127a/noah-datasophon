@@ -7,6 +7,7 @@ import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -48,45 +49,18 @@ public class K8sServiceHandler {
 
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
              InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
-            // 加载YAML文件
-            List<HasMetadata> metadata = client.load(yamlInputStream).get();
 
-            if (metadata.isEmpty() || !(metadata.get(0) instanceof Deployment)) {
-                throw new IllegalStateException("YAML文件中没有找到有效的Deployment资源");
-            }
-
+            List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
             String deploymentName = metadata.get(0).getMetadata().getName();
-            log.info("检查deployment: {} 是否已经存在", deploymentName);
-
-            // 获取Deployment资源
-            RollableScalableResource<Deployment> resource = client.apps()
-                    .deployments()
-                    .inNamespace(Constant.K8S_NAMESPACE)
-                    .withName(deploymentName);
-
-            Deployment existingDeployment = resource.get();
-            if (existingDeployment != null && existingDeployment.getStatus().getReplicas() > 0) {
-                log.info("deployment: {} 已经存在且运行中，跳过启动逻辑", deploymentName);
-                execResult.setExecResult(true);
-                execResult.setExecOut("deployment已经存在且运行中");
-                return execResult;
-            }
-
-            // 加载YAML文件并创建资源
-            try (InputStream newYamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
-                metadata = client.load(newYamlInputStream)
-                        .inNamespace(Constant.K8S_NAMESPACE)
-                        .create();
-            }
+            final Deployment deployment = client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(deploymentName).get();
+            Resource<Deployment> resource = client.resource(deployment).inNamespace(Constant.K8S_NAMESPACE);
 
             log.info("在k8s上启动deployment: {} ,使用本地资源文件: {}", deploymentName, yamlFile);
-
-            // 等待Deployment资源准备就绪
             resource.waitUntilReady(20, TimeUnit.MINUTES);
 
-            // 打印Deployment的输出日志
             log.info("开始打印deployment: {} 的输出日志", deploymentName);
-            log.info(resource.getLog());
+            RollableScalableResource<Deployment> scalableResource = client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(deploymentName);
+            log.info(scalableResource.getLog());
 
             execResult.setExecResult(true);
         } catch (IOException e) {

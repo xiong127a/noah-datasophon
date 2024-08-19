@@ -1,5 +1,6 @@
 package com.datasophon.k8s.actor.handler;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.RunAs;
@@ -10,10 +11,12 @@ import com.datasophon.k8s.util.K8sMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.sftp.client.SftpClientFactory;
+import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.io.IOException;
 import java.util.Objects;
 
 @Data
@@ -40,41 +43,63 @@ public class K8sInstallServiceHandler {
      * @param command 安装服务角色的命令
      * @return 执行结果
      */
-    public ExecResult install(InstallServiceRoleCommand command) {
+    public ExecResult install(InstallServiceRoleCommand command) throws IOException {
         ExecResult execResult = new ExecResult();
-        try (ClientSession clientSession = K8sMinaUtils.openConnection(command.getHostName(), 22, Constants.ROOT)) {
+        ClientSession clientSession = K8sMinaUtils.openConnection(command.getHostName(), 22, Constants.ROOT);
+        try {
             execResult.setExecResult(createConfDir(command.getDecompressPackageName(), command.getRunAs(), clientSession));
         } catch (Exception e) {
             execResult.setExecOut(e.getMessage());
             e.printStackTrace();
+        } finally {
+            if (ObjectUtil.isNotEmpty(clientSession)) {
+                clientSession.close();
+            }
         }
         return execResult;
+    }
+
+    public static void main(String[] args) throws IOException {
+        K8sInstallServiceHandler k8sInstallServiceHandler = new K8sInstallServiceHandler("ALERTMANAGER", "AlertManager");
+        InstallServiceRoleCommand installServiceRoleCommand = new InstallServiceRoleCommand();
+        installServiceRoleCommand.setHostName("k8s-03");
+        installServiceRoleCommand.setDecompressPackageName("alertmanager-0.23.0");
+        RunAs runAs = new RunAs();
+        runAs.setUser("root");
+        runAs.setGroup("root");
+        installServiceRoleCommand.setRunAs(runAs);
+        k8sInstallServiceHandler.install(installServiceRoleCommand);
     }
 
     private boolean createConfDir(String decompressPackageName, RunAs runAs, ClientSession session) {
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(serviceName);
-        if (!K8sMinaUtils.checkDirExists(session, appHome)) {
-            if (Objects.nonNull(runAs)) {
-                K8sMinaUtils.execCmdWithResult(session,
-                        " chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + appHome);
+        try (SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session)) {
+            if (!K8sMinaUtils.checkPathExists(sftp, appHome)) {
+                if (Objects.nonNull(runAs)) {
+                    K8sMinaUtils.execCmdWithResult(session,
+                            "mkdir -p " + appHome + " && " +
+                            " chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + appHome);
+                }
+                K8sMinaUtils.execCmdWithResult(session, " chmod -R 775 " + appHome);
+                // 修改包含Prometheus的包中的文件
+                if (decompressPackageName.contains(Constants.PROMETHEUS)) {
+                    String alertPath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
+                            + Constants.SLASH + "alert_rules";
+                    K8sMinaUtils.execCmdWithResult(session,
+                            "sed -i \"s/clusterIdValue/" + PropertyUtils.getString("clusterId")
+                                    + "/g\" `grep clusterIdValue -rl " + alertPath + "`");
+                }
+                // 修改包含Hadoop的包中的文件
+                if (decompressPackageName.contains(HADOOP)) {
+                    changeHadoopInstallPathPerm(decompressPackageName, session);
+                }
             }
-            K8sMinaUtils.execCmdWithResult(session, " chmod -R 775 " + appHome);
-            // 修改包含Prometheus的包中的文件
-            if (decompressPackageName.contains(Constants.PROMETHEUS)) {
-                String alertPath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
-                        + Constants.SLASH + "alert_rules";
-                K8sMinaUtils.execCmdWithResult(session,
-                        "sed -i \"s/clusterIdValue/" + PropertyUtils.getString("clusterId")
-                                + "/g\" `grep clusterIdValue -rl " + alertPath + "`");
+            if (!K8sMinaUtils.checkPathExists(sftp, appLinkHome)) {
+                K8sMinaUtils.execCmdWithResult(session, "ln -s " + appHome + " " + appLinkHome);
             }
-            // 修改包含Hadoop的包中的文件
-            if (decompressPackageName.contains(HADOOP)) {
-                changeHadoopInstallPathPerm(decompressPackageName, session);
-            }
-        }
-        if (!K8sMinaUtils.checkDirExists(session, appLinkHome)) {
-            K8sMinaUtils.execCmdWithResult(session, "ln -s " + appHome + " " + appLinkHome);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         return true;
     }
