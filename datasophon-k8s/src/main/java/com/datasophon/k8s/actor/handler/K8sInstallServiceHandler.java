@@ -1,6 +1,5 @@
 package com.datasophon.k8s.actor.handler;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.RunAs;
@@ -10,9 +9,6 @@ import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.K8sMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.SftpClientFactory;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,16 +41,11 @@ public class K8sInstallServiceHandler {
      */
     public ExecResult install(InstallServiceRoleCommand command) throws IOException {
         ExecResult execResult = new ExecResult();
-        ClientSession clientSession = K8sMinaUtils.openConnection(command.getHostName(), 22, Constants.ROOT);
         try {
-            execResult.setExecResult(createConfDir(command.getDecompressPackageName(), command.getRunAs(), clientSession));
+            execResult.setExecResult(createConfDir(command.getDecompressPackageName(), command.getRunAs(), command.getHostName()));
         } catch (Exception e) {
             execResult.setExecOut(e.getMessage());
             e.printStackTrace();
-        } finally {
-            if (ObjectUtil.isNotEmpty(clientSession)) {
-                clientSession.close();
-            }
         }
         return execResult;
     }
@@ -71,56 +62,52 @@ public class K8sInstallServiceHandler {
         k8sInstallServiceHandler.install(installServiceRoleCommand);
     }
 
-    private boolean createConfDir(String decompressPackageName, RunAs runAs, ClientSession session) {
+    private boolean createConfDir(String decompressPackageName, RunAs runAs, String hostname) {
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(serviceName);
-        try (SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session)) {
-            if (!K8sMinaUtils.checkPathExists(sftp, appHome)) {
-                if (Objects.nonNull(runAs)) {
-                    K8sMinaUtils.execCmdWithResult(session,
-                            "mkdir -p " + appHome + " && " +
-                            " chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + appHome);
-                }
-                K8sMinaUtils.execCmdWithResult(session, " chmod -R 775 " + appHome);
-                // 修改包含Prometheus的包中的文件
-                if (decompressPackageName.contains(Constants.PROMETHEUS)) {
-                    String alertPath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
-                            + Constants.SLASH + "alert_rules";
-                    K8sMinaUtils.execCmdWithResult(session,
-                            "sed -i \"s/clusterIdValue/" + PropertyUtils.getString("clusterId")
-                                    + "/g\" `grep clusterIdValue -rl " + alertPath + "`");
-                }
-                // 修改包含Hadoop的包中的文件
-                if (decompressPackageName.contains(HADOOP)) {
-                    changeHadoopInstallPathPerm(decompressPackageName, session);
-                }
+        if (!K8sMinaUtils.checkPathExists(hostname, appHome)) {
+            if (Objects.nonNull(runAs)) {
+                K8sMinaUtils.execCmdWithResult(hostname,
+                        "mkdir -p " + appHome + " && " +
+                                " chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + appHome);
             }
-            if (!K8sMinaUtils.checkPathExists(sftp, appLinkHome)) {
-                K8sMinaUtils.execCmdWithResult(session, "ln -s " + appHome + " " + appLinkHome);
+            K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
+            // 修改包含Prometheus的包中的文件
+            if (decompressPackageName.contains(Constants.PROMETHEUS)) {
+                String alertPath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
+                        + Constants.SLASH + "alert_rules";
+                K8sMinaUtils.execCmdWithResult(hostname,
+                        "sed -i \"s/clusterIdValue/" + PropertyUtils.getString("clusterId")
+                                + "/g\" `grep clusterIdValue -rl " + alertPath + "`");
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            // 修改包含Hadoop的包中的文件
+            if (decompressPackageName.contains(HADOOP)) {
+                changeHadoopInstallPathPerm(decompressPackageName, hostname);
+            }
+        }
+        if (!K8sMinaUtils.checkPathExists(hostname, appLinkHome)) {
+            K8sMinaUtils.execCmdWithResult(hostname, "ln -s " + appHome + " " + appLinkHome);
         }
         return true;
     }
 
-    private void changeHadoopInstallPathPerm(String decompressPackageName, ClientSession session) {
-        K8sMinaUtils.execCmdWithResult(session,
+    private void changeHadoopInstallPathPerm(String decompressPackageName, String hostname) {
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chown -R  root:hadoop " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName);
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chmod 755 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName);
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chmod -R 755 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + "/etc");
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chmod 6050 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
                         + "/bin/container-executor");
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chmod 400 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
                         + "/etc/hadoop/container-executor.cfg");
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chown -R yarn:hadoop " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName
                         + "/logs/userlogs");
-        K8sMinaUtils.execCmdWithResult(session,
+        K8sMinaUtils.execCmdWithResult(hostname,
                 " chmod 775 " + Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + "/logs/userlogs");
     }
 }

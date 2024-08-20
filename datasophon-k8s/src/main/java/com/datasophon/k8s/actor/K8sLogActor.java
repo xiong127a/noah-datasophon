@@ -18,22 +18,16 @@
 package com.datasophon.k8s.actor;
 
 import akka.actor.UntypedActor;
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
-import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.command.K8sGetLogCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.SftpClientFactory;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 
@@ -54,17 +48,18 @@ public class K8sLogActor extends UntypedActor {
 
             ExecResult execResult = new ExecResult();
             String logStr = "can not find log file";
-            try (ClientSession clientSession = K8sMinaUtils.openConnection(command.getHostname(), 22, Constants.ROOT);
-                 SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(clientSession)) {
-                if (logFileName.startsWith(StrUtil.SLASH) && K8sMinaUtils.checkPathExists(sftp, logFileName)) {
-                    logStr = K8sMinaUtils.readLastRows(sftp, logFileName, Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-                } else if (K8sMinaUtils.checkPathExists(sftp,
+            try {
+                if (logFileName.startsWith(StrUtil.SLASH) && K8sMinaUtils.checkPathExists(command.getHostname(), logFileName)) {
+                    logStr = K8sMinaUtils.readLastRows(command.getHostname(), logFileName, Charset.defaultCharset(), PropertyUtils.getInt("rows"));
+                } else if (K8sMinaUtils.checkPathExists(command.getHostname(),
                         Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + Constants.SLASH + logFileName)) {
                     logStr = K8sMinaUtils
-                            .readLastRows(sftp,
+                            .readLastRows(command.getHostname(),
                                     Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + Constants.SLASH + logFileName,
                                     Charset.defaultCharset(), PropertyUtils.getInt("rows"));
                 }
+            } catch (Exception e) {
+                logger.error("get log error");
             }
 
             execResult.setExecResult(true);

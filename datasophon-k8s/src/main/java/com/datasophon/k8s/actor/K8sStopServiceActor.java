@@ -24,14 +24,7 @@ public class K8sStopServiceActor extends UntypedActor {
             ExecResult startResult = new ExecResult();
             K8sServiceHandler serviceHandler =
                     new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
-
-            K8sServiceRoleStrategy serviceRoleHandler =
-                    K8sServiceRoleStrategyContext.getServiceRoleHandler(command.getServiceRoleName());
-            if (Objects.nonNull(serviceRoleHandler)) {
-                startResult = serviceRoleHandler.handler(command);
-            } else {
-                startResult = serviceHandler.stop(command.getKubeConfig());
-            }
+            startResult = serviceHandler.stop(command.getKubeConfig());
 
             getSender().tell(startResult, getSelf());
             logger.info("service role {} stop on k8s result {}", command.getServiceRoleName(),

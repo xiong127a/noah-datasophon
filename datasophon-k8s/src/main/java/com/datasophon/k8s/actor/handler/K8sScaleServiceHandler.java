@@ -46,6 +46,7 @@ public class K8sScaleServiceHandler {
                 default:
                     break;
             }
+            execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
             logger.error("{} {} error!", serviceRoleName, scaleType.name(), e);

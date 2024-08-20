@@ -105,137 +105,144 @@ public class K8sMinaUtils {
     /**
      * 同步执行,需要获取执行完的结果
      *
-     * @param session 连接
      * @param command 命令
      * @return 结果
      */
-    public static String execCmdWithResult(ClientSession session, String command) {
-        session.resetAuthTimeout();
-        LOG.info("exe cmd: {}", command);
+    public static String execCmdWithResult(String hostname, String command) {
+        return SshSftpUtil.withClientSession(hostname, session -> {
+            session.resetAuthTimeout();
+            LOG.info("exe cmd: {}", command);
 
-        // 命令返回的结果
-        // 返回结果流
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ByteArrayOutputStream err = new ByteArrayOutputStream();
-             ChannelExec ce = session.createExecChannel(command)) {
+            // 命令返回的结果
+            // 返回结果流
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream();
+                 ByteArrayOutputStream err = new ByteArrayOutputStream();
+                 ChannelExec ce = session.createExecChannel(command)) {
 
-            ce.setOut(out);
-            ce.setErr(err);
+                ce.setOut(out);
+                ce.setErr(err);
 
-            // 执行并等待
-            ce.open();
-            Set<ClientChannelEvent> events =
-                    ce.waitFor(
-                            EnumSet.of(ClientChannelEvent.CLOSED),
-                            TimeUnit.SECONDS.toMillis(100000));
-            // 检查请求是否超时
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                throw new Exception("mina 连接超时");
+                // 执行并等待
+                ce.open();
+                Set<ClientChannelEvent> events =
+                        ce.waitFor(
+                                EnumSet.of(ClientChannelEvent.CLOSED),
+                                TimeUnit.SECONDS.toMillis(100000));
+                // 检查请求是否超时
+                if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                    throw new Exception("mina 连接超时");
+                }
+
+                int exitStatus = ce.getExitStatus();
+                LOG.info("mina result {}", exitStatus);
+                if (exitStatus == 1) {
+                    return "failed";
+                }
+
+                LOG.info("exe cmd return : {}", out);
+                return out.toString().trim();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
             }
-
-            int exitStatus = ce.getExitStatus();
-            LOG.info("mina result {}", exitStatus);
-            if (exitStatus == 1) {
-                return "failed";
-            }
-
-            LOG.info("exe cmd return : {}", out);
-            return out.toString().trim();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        });
     }
 
     /**
      * 上传文件,相同路径ui覆盖
      *
-     * @param session    连接
      * @param remotePath 远程目录地址
      * @param inputFile  文件 File
      */
-    public static boolean uploadFile(ClientSession session, String remotePath, String inputFile) {
-        File uploadFile = new File(inputFile);
+    public static boolean uploadFile(String hostname, String remotePath, String inputFile) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            File uploadFile = new File(inputFile);
+            try (InputStream input = Files.newInputStream(uploadFile.toPath())) {
+                Path path = sftp.getDefaultDir().resolve(remotePath);
+                if (!Files.exists(path)) {
+                    LOG.info("create pathHome {} ", path);
+                    Files.createDirectories(path);
+                }
 
-        try (SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session);
-             InputStream input = Files.newInputStream(uploadFile.toPath())) {
+                Path file = path.resolve(uploadFile.getName());
+                if (Files.exists(file)) {
+                    LOG.info("delete file  {}", file);
+                    Files.deleteIfExists(file);
+                }
 
-            Path path = sftp.getDefaultDir().resolve(remotePath);
-            if (!Files.exists(path)) {
-                LOG.info("create pathHome {} ", path);
-                Files.createDirectories(path);
+                Files.copy(input, file);
+                LOG.info("file copy success");
+                return true;
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-
-            Path file = path.resolve(uploadFile.getName());
-            if (Files.exists(file)) {
-                LOG.info("delete file  {}", file);
-                Files.deleteIfExists(file);
-            }
-
-            Files.copy(input, file);
-            LOG.info("file copy success");
-            return true;
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        });
     }
 
     /**
      * 创建目录
      */
-    public static boolean createDir(SftpFileSystem sftp, String path) throws IOException {
-        Path remoteRoot = sftp.getDefaultDir().resolve(path);
-        if (!Files.exists(remoteRoot)) {
-            Files.createDirectories(remoteRoot);
-        }
-        return true;
-    }
-
-    public static boolean createFile(SftpFileSystem sftp, String path) {
-        Path remoteFile = sftp.getPath(path);
-        try {
-            if (!Files.exists(remoteFile)) {
-                Files.createFile(remoteFile);
+    public static boolean createDir(String hostname, String path) throws IOException {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            Path remoteRoot = sftp.getDefaultDir().resolve(path);
+            if (!Files.exists(remoteRoot)) {
+                Files.createDirectories(remoteRoot);
             }
             return true;
-        } catch (IOException e) {
-            log.error("Failed to create file at {}: {}", path, e.getMessage());
-            return false;
-        }
+        });
     }
 
-
-    public static boolean deleteFile(SftpFileSystem sftp, String path) {
-        try {
+    public static boolean createFile(String hostname, String path) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             Path remoteFile = sftp.getPath(path);
-            if (Files.exists(remoteFile) && Files.isRegularFile(remoteFile)) {
-                Files.delete(remoteFile);
+            try {
+                if (!Files.exists(remoteFile)) {
+                    Files.createFile(remoteFile);
+                }
                 return true;
+            } catch (IOException e) {
+                log.error("Failed to create file at {}: {}", path, e.getMessage());
+                return false;
             }
-        } catch (IOException e) {
-            log.error("Failed to delete file at {}: {}", path, e.getMessage());
-        }
-        return false;
+        });
     }
 
 
-    public static boolean writeUtf8String(SftpFileSystem sftp, String content, String remoteFilePath) {
-        try {
-            Path remoteFile = sftp.getPath(remoteFilePath);
-            Path parentDir = remoteFile.getParent();
-
-            if (parentDir != null && !Files.exists(parentDir)) {
-                Files.createDirectories(parentDir);
+    public static boolean deleteFile(String hostname, String path) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remoteFile = sftp.getPath(path);
+                if (Files.exists(remoteFile) && Files.isRegularFile(remoteFile)) {
+                    Files.delete(remoteFile);
+                    return true;
+                }
+            } catch (IOException e) {
+                log.error("Failed to delete file at {}: {}", path, e.getMessage());
             }
-
-            Files.write(remoteFile, content.getBytes(StandardCharsets.UTF_8));
-            return true;
-        } catch (IOException e) {
-            log.error("Failed to write content to file at {}: {}", remoteFilePath, e.getMessage());
             return false;
-        }
+        });
+    }
+
+
+    public static boolean writeUtf8String(String hostname, String content, String remoteFilePath) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remoteFile = sftp.getPath(remoteFilePath);
+                Path parentDir = remoteFile.getParent();
+
+                if (parentDir != null && !Files.exists(parentDir)) {
+                    Files.createDirectories(parentDir);
+                }
+
+                Files.write(remoteFile, content.getBytes(StandardCharsets.UTF_8));
+                return true;
+            } catch (IOException e) {
+                log.error("Failed to write content to file at {}: {}", remoteFilePath, e.getMessage());
+                return false;
+            }
+        });
     }
 
     public static boolean deleteDirectory(SftpFileSystem sftp, String path) {
@@ -263,71 +270,76 @@ public class K8sMinaUtils {
         return false;
     }
 
-    public static boolean checkPathExists(SftpFileSystem sftp, String path) {
-        try {
-            Path remoteRoot = sftp.getDefaultDir().resolve(path);
-            return Files.exists(remoteRoot);
-        } catch (Exception e) {
-            log.error("Failed to check path existence at {}: {}", path, e.getMessage());
-            return false;
-        }
+    public static boolean checkPathExists(String hostname, String path) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remoteRoot = sftp.getDefaultDir().resolve(path);
+                return Files.exists(remoteRoot);
+            } catch (Exception e) {
+                log.error("Failed to check path existence at {}: {}", path, e.getMessage());
+                return false;
+            }
+        });
     }
 
-    public static boolean isDirectory(SftpFileSystem sftp, String path) {
-        try {
-            Path remoteRoot = sftp.getDefaultDir().resolve(path);
-            return Files.isDirectory(remoteRoot);
-        } catch (Exception e) {
-            log.error("Failed to check if path is a directory at {}: {}", path, e.getMessage());
-            return false;
-        }
+    public static boolean isDirectory(String hostname, String path) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remoteRoot = sftp.getDefaultDir().resolve(path);
+                return Files.isDirectory(remoteRoot);
+            } catch (Exception e) {
+                log.error("Failed to check if path is a directory at {}: {}", path, e.getMessage());
+                return false;
+            }
+        });
     }
 
     public static void checkSession(ClientSession session) {
         if (session == null || !session.isOpen()) {
             throw new RuntimeException("SSH session is not open or has been closed.");
         }
-
     }
 
-    public static String readLastRows(SftpFileSystem sftp, String remoteFilePath, Charset charset, int rows) throws IOException {
-        charset = charset == null ? Charset.defaultCharset() : charset;
-        byte[] lineSeparator = System.lineSeparator().getBytes(charset);
+    public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows) throws IOException {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+//            charset = charset == null ? Charset.defaultCharset() : charset;
+            byte[] lineSeparator = System.lineSeparator().getBytes(charset);
 
-        SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
-        Path filePath = sftp.getPath(remoteFilePath);
+            SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
+            Path filePath = sftp.getPath(remoteFilePath);
 
-        BasicFileAttributes attrs = provider.readAttributes(filePath, BasicFileAttributes.class);
-        long pointer = attrs.size();
+            BasicFileAttributes attrs = provider.readAttributes(filePath, BasicFileAttributes.class);
+            long pointer = attrs.size();
 
-        List<Byte> resultBytes = new ArrayList<>();
-        int lineSeparatorCount = 0;
+            List<Byte> resultBytes = new ArrayList<>();
+            int lineSeparatorCount = 0;
 
-        try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
-            ByteBuffer buffer = ByteBuffer.allocate(1);
+            try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
+                ByteBuffer buffer = ByteBuffer.allocate(1);
 
-            while (pointer > 0 && lineSeparatorCount < rows) {
-                pointer--;
-                channel.position(pointer);
-                buffer.clear();
-                channel.read(buffer);
-                buffer.flip();
+                while (pointer > 0 && lineSeparatorCount < rows) {
+                    pointer--;
+                    channel.position(pointer);
+                    buffer.clear();
+                    channel.read(buffer);
+                    buffer.flip();
 
-                byte b = buffer.get();
-                resultBytes.add(0, b);
+                    byte b = buffer.get();
+                    resultBytes.add(0, b);
 
-                if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(channel, lineSeparator, pointer)) {
-                    lineSeparatorCount++;
+                    if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(channel, lineSeparator, pointer)) {
+                        lineSeparatorCount++;
+                    }
                 }
-            }
 
-            // 将结果字节数组转换为字符串
-            byte[] byteArray = new byte[resultBytes.size()];
-            for (int i = 0; i < resultBytes.size(); i++) {
-                byteArray[i] = resultBytes.get(i);
+                // 将结果字节数组转换为字符串
+                byte[] byteArray = new byte[resultBytes.size()];
+                for (int i = 0; i < resultBytes.size(); i++) {
+                    byteArray[i] = resultBytes.get(i);
+                }
+                return new String(byteArray, charset);
             }
-            return new String(byteArray, charset);
-        }
+        });
     }
 
     private static boolean checkLineSeparator(SeekableByteChannel channel, byte[] lineSeparator, long pointer) throws IOException {
@@ -340,6 +352,5 @@ public class K8sMinaUtils {
 
         return Arrays.equals(buffer.array(), lineSeparator);
     }
-
 
 }

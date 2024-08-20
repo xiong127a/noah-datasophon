@@ -11,6 +11,7 @@ import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.k8s.actor.K8sStopRolePodActor;
 import com.datasophon.k8s.actor.K8sStopServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class K8sServiceRoleStopHandler extends ServiceHandler {
         }
 
         ActorRef startActor =
-                ActorUtils.getLocalActor(K8sStopServiceActor.class, ActorUtils.getActorRefName(K8sStopServiceActor.class));
+                ActorUtils.getLocalActor(K8sStopRolePodActor.class, ActorUtils.getActorRefName(K8sStopRolePodActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> startFuture = Patterns.ask(startActor, k8sServiceRoleOperateCommand, timeout);
         try {
