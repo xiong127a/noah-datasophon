@@ -9,10 +9,7 @@ import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.CommonUtil;
-import com.datasophon.k8s.util.DockerImageUtils;
-import com.datasophon.k8s.util.K8sFreemakerUtils;
-import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.k8s.util.*;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -20,8 +17,6 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.SftpClientFactory;
 import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,10 +150,9 @@ public class K8sYamlDeploymentHandler {
             logStr = appHome + Constants.SLASH + logFileName;
         }
 
-        try (ClientSession session = K8sMinaUtils.openConnection(hostname, 22, Constants.ROOT);
-             SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(session)) {
-            if (!K8sMinaUtils.checkPathExists(sftp, logStr)) {
-                K8sMinaUtils.createFile(sftp, logStr);
+        try {
+            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+                K8sMinaUtils.createFile(hostname, logStr);
             }
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);

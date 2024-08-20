@@ -31,9 +31,6 @@ import com.datasophon.k8s.util.K8sFreemakerUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.SftpClientFactory;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,8 +65,7 @@ public class K8sConfigureServiceHandler {
                                 RunAs runAs,
                                 String hostName) {
         ExecResult execResult = new ExecResult();
-        try (ClientSession clientSession = K8sMinaUtils.openConnection(hostName, 22, Constants.ROOT);
-             SftpFileSystem sftp = SftpClientFactory.instance().createSftpFileSystem(clientSession)) {
+        try {
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", hostName);
             paramMap.put("${user}", "root");
@@ -97,10 +93,10 @@ public class K8sConfigureServiceHandler {
                         }
                     }
                     if (Constants.PATH.equals(config.getConfigType())) {
-                        createPath(config, runAs, clientSession, sftp);
+                        createPath(config, runAs, hostName);
                     }
                     if (Constants.MV_PATH.equals(config.getConfigType())) {
-                        movePath(config, runAs, clientSession, sftp);
+                        movePath(config, runAs, hostName);
                     }
                     if (Constants.CUSTOM.equals(config.getConfigType())) {
                         addToCustomList(iterator, customConfList, config);
@@ -152,9 +148,9 @@ public class K8sConfigureServiceHandler {
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
                         final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
-                        if (!K8sMinaUtils.checkPathExists(sftp, targetPath)) {
+                        if (!K8sMinaUtils.checkPathExists(hostName, targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            K8sMinaUtils.execCmdWithResult(clientSession, "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            K8sMinaUtils.execCmdWithResult(hostName, "ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
                         }
                     }
                 }
@@ -166,13 +162,13 @@ public class K8sConfigureServiceHandler {
                     customConfList.add(serviceConfig);
                 }
                 if ("AlluxioWorker".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {
-                    if (K8sMinaUtils.checkPathExists(sftp, Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/alluxio-site.properties")) {
+                    if (K8sMinaUtils.checkPathExists(hostName, Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/alluxio-site.properties")) {
                         continue;
                     }
                 }
 
                 if (Objects.nonNull(myid) && StringUtils.isNotBlank(dataDir)) {
-                    K8sMinaUtils.writeUtf8String(sftp, myid + "", dataDir + Constants.SLASH + "myid");
+                    K8sMinaUtils.writeUtf8String(hostName, myid + "", dataDir + Constants.SLASH + "myid");
                 }
 
                 if ("node.properties".equals(generators.getFilename())) {
@@ -185,7 +181,7 @@ public class K8sConfigureServiceHandler {
                 if (!configs.isEmpty()) {
                     // extra app, package: META, templates
                     String path = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/templates";
-                    if (K8sMinaUtils.checkPathExists(sftp, path) && K8sMinaUtils.isDirectory(sftp, path)) {
+                    if (K8sMinaUtils.checkPathExists(hostName, path) && K8sMinaUtils.isDirectory(hostName, path)) {
                         // 3rd app, load ext templates
                         logger.info("Add ext app template path: {} to loader path.", path);
                         K8sFreemakerUtils.generateConfigFile(
@@ -193,24 +189,24 @@ public class K8sConfigureServiceHandler {
                                 configs,
                                 decompressPackageName,
                                 path,
-                                sftp);
+                                hostName);
                     } else {
                         K8sFreemakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 decompressPackageName,
-                                sftp);
+                                hostName);
                     }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
                     String outputFile =
                             packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-                    K8sMinaUtils.writeUtf8String(sftp, "", outputFile);
+                    K8sMinaUtils.writeUtf8String(hostName, "", outputFile);
                 }
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
             }
-            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(clientSession, decompressPackageName)) {
+            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(hostName, decompressPackageName)) {
                 return execResult;
             }
             execResult.setExecResult(true);
@@ -221,13 +217,13 @@ public class K8sConfigureServiceHandler {
         return execResult;
     }
 
-    private boolean setupRangerAdmin(ClientSession session, String decompressPackageName) {
+    private boolean setupRangerAdmin(String hostname, String decompressPackageName) {
         logger.info("start to execute ranger admin setup.sh");
         String commands = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh";
-        String result = K8sMinaUtils.execCmdWithResult(session, commands);
+        String result = K8sMinaUtils.execCmdWithResult(hostname, commands);
 
         String globalCommand = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "set_globals.sh";
-        K8sMinaUtils.execCmdWithResult(session, globalCommand);
+        K8sMinaUtils.execCmdWithResult(hostname, globalCommand);
 
         if ("true".equals(result)) {
             logger.info("ranger admin setup success");
@@ -237,30 +233,30 @@ public class K8sConfigureServiceHandler {
         return false;
     }
 
-    private void createPath(ServiceConfig config, RunAs runAs, ClientSession clientSession, SftpFileSystem sftp) {
+    private void createPath(ServiceConfig config, RunAs runAs, String hostname) {
         String path = (String) config.getValue();
         if (StringUtils.isNotBlank(config.getSeparator()) && path.contains(config.getSeparator())) {
             for (String dir : path.split(config.getSeparator())) {
-                mkdir(dir, runAs, clientSession, sftp);
+                mkdir(dir, runAs, hostname);
             }
         } else {
-            mkdir(path, runAs, clientSession, sftp);
+            mkdir(path, runAs, hostname);
         }
     }
 
-    private void movePath(ServiceConfig config, RunAs runAs, ClientSession clientSession, SftpFileSystem sftp) {
+    private void movePath(ServiceConfig config, RunAs runAs, String hostname) {
         String oldPath = (String) config.getDefaultValue();
         String newPath = (String) config.getValue();
-        if (K8sMinaUtils.checkPathExists(sftp, oldPath) && !K8sMinaUtils.checkPathExists(sftp, newPath)) {
+        if (K8sMinaUtils.checkPathExists(hostname, oldPath) && !K8sMinaUtils.checkPathExists(hostname, newPath)) {
             if (StringUtils.isNotBlank(config.getSeparator()) && newPath.contains(config.getSeparator())) {
                 for (String dir : newPath.split(config.getSeparator())) {
-                    mkdir(dir, runAs, clientSession, sftp);
+                    mkdir(dir, runAs, hostname);
                 }
             } else {
-                mkdir(newPath, runAs, clientSession, sftp);
+                mkdir(newPath, runAs, hostname);
             }
-            K8sMinaUtils.deleteFile(sftp, oldPath);
-            K8sMinaUtils.createFile(sftp, newPath);
+            K8sMinaUtils.deleteFile(hostname, oldPath);
+            K8sMinaUtils.createFile(hostname, newPath);
             logger.info("move path {} to {}", oldPath, newPath);
         }
     }
@@ -294,9 +290,9 @@ public class K8sConfigureServiceHandler {
         return joinValue;
     }
 
-    private void mkdir(String path, RunAs runAs, ClientSession clientSession, SftpFileSystem sftp) {
+    private void mkdir(String path, RunAs runAs, String hostname) {
         logger.info("create file path {}", path);
-        if (!K8sMinaUtils.checkPathExists(sftp, path)) {
+        if (!K8sMinaUtils.checkPathExists(hostname, path)) {
             String command =
                     "mkdir -p " + path
                             + " && "
@@ -304,7 +300,7 @@ public class K8sConfigureServiceHandler {
             if (Objects.nonNull(runAs)) {
                 command = command + " && chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + path;
             }
-            K8sMinaUtils.execCmdWithResult(clientSession, command);
+            K8sMinaUtils.execCmdWithResult(hostname, command);
         }
     }
 

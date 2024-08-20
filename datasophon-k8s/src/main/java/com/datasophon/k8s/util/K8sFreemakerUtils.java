@@ -31,8 +31,6 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import org.apache.commons.lang.StringUtils;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,8 +51,8 @@ public class K8sFreemakerUtils {
     public static void generateConfigFile(Generators generators,
                                           List<ServiceConfig> configs,
                                           String decompressPackageName,
-                                          SftpFileSystem sftp) throws IOException, TemplateException {
-        generateConfigFile(generators, configs, decompressPackageName, null, sftp);
+                                          String hostname) throws IOException, TemplateException {
+        generateConfigFile(generators, configs, decompressPackageName, null, hostname);
     }
 
     /**
@@ -71,7 +69,7 @@ public class K8sFreemakerUtils {
                                           List<ServiceConfig> configs,
                                           String decompressPackageName,
                                           String extPath,
-                                          SftpFileSystem sftp) throws IOException, TemplateException {
+                                          String hostname) throws IOException, TemplateException {
         // 1.加载模板
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
@@ -112,12 +110,12 @@ public class K8sFreemakerUtils {
         logger.info("load template: {} success.", template.getSourceName());
         data.put("itemList", configs);
         // 3.产生输出
-        processOut(generators, template, data, decompressPackageName, sftp);
+        processOut(generators, template, data, decompressPackageName, hostname);
     }
 
 
     public static void generatePromAlertFile(Generators generators, List<AlertItem> configs,
-                                             String serviceName, SftpFileSystem sftp) throws IOException, TemplateException {
+                                             String serviceName, String hostname) throws IOException, TemplateException {
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
@@ -135,11 +133,11 @@ public class K8sFreemakerUtils {
         data.put("itemList", configs);
         data.put("serviceName", serviceName);
         // 3.产生输出
-        processOut(generators, template, data, "prometheus-2.17.2", sftp);
+        processOut(generators, template, data, "prometheus-2.17.2", hostname);
     }
 
     public static void generatePromScrapeConfig(Generators generators, List<ServiceConfig> configs,
-                                                String serviceName, SftpFileSystem sftp) throws IOException, TemplateException {
+                                                String serviceName, String hostname) throws IOException, TemplateException {
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
@@ -151,11 +149,11 @@ public class K8sFreemakerUtils {
         Map<String, Object> data = new HashMap<>();
         data.put("itemList", configs);
         // 3.产生输出
-        processOut(generators, template, data, serviceName, sftp);
+        processOut(generators, template, data, serviceName, hostname);
     }
 
     private static void processOut(Generators generators, Template template, Map<String, Object> data,
-                                   String decompressPackageName, SftpFileSystem sftp) throws IOException, TemplateException {
+                                   String decompressPackageName, String hostname) throws IOException, TemplateException {
         // 定义输出目录的路径
         String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
         // 获取生成文件的输出目录
@@ -167,19 +165,19 @@ public class K8sFreemakerUtils {
                 // 构建输出文件的路径
                 String outputFile = packagePath + outPutDir + Constants.SLASH + generators.getFilename();
                 // 调用方法将数据模板写入到输出文件中
-                writeToTemplate(template, data, outputFile, sftp);
+                writeToTemplate(template, data, outputFile, hostname);
             }
         } else if (outputDirectory.startsWith(Constants.SLASH)) {
             // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
             String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
             // 调用方法将数据模板写入到输出文件中
-            writeToTemplate(template, data, outputFile, sftp);
+            writeToTemplate(template, data, outputFile, hostname);
         } else {
             // 如果输出目录不以斜杠开头也不包含逗号，则将输出目录添加到包路径之后作为输出文件的路径
             String outputFile = packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
 //            String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
             // 调用方法将数据模板写入到输出文件中
-            writeToTemplate(template, data, outputFile, sftp);
+            writeToTemplate(template, data, outputFile, hostname);
         }
     }
 
@@ -192,7 +190,7 @@ public class K8sFreemakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToTemplate(Template template, Map<String, Object> data, String outputFile, SftpFileSystem sftp)
+    public static void writeToTemplate(Template template, Map<String, Object> data, String outputFile, String hostname)
             throws IOException, TemplateException {
         // 使用 StringWriter 合并模板和数据
         StringWriter stringWriter = new StringWriter();
@@ -202,7 +200,7 @@ public class K8sFreemakerUtils {
         String generatedContent = stringWriter.toString();
 
         // 将内容写入到远程系统
-        K8sMinaUtils.writeUtf8String(sftp, generatedContent, outputFile);
+        K8sMinaUtils.writeUtf8String(hostname, generatedContent, outputFile);
     }
 
     public static void writeToTemplateLocal(Template template, Map<String, Object> data, String outputFile)
