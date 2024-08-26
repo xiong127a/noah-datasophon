@@ -1,16 +1,16 @@
 {
-  "name": "SeatunnelNoah",
-  "label": "SeatunnelNoah",
+  "name": "NOAHSYNC",
+  "label": "NoahSync",
   "description": "数据同步工具",
   "version": "2.3.5",
   "sortNum": 43,
   "dependencies": [],
-  "packageName": "seatunnel-noah-2.3.5.tar.gz",
-  "decompressPackageName": "seatunnel-noah-2.3.5",
+  "packageName": "noah-sync-2.3.5.tar.gz",
+  "decompressPackageName": "noah-sync-2.3.5",
   "roles": [
     {
-      "name": "SeatunnelNoahServer",
-      "label": "SeatunnelNoahServer",
+      "name": "NoahSyncServer",
+      "label": "NoahSyncServer",
       "roleType": "worker",
       "cardinality": "1+",
       "logFile": "logs/seatunnel-engine-server.log",
@@ -50,7 +50,8 @@
         "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       },
       {
@@ -59,7 +60,8 @@
         "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       },
       {
@@ -135,6 +137,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "127.0.0.1/noah-di-api"
+    },
+    {
+      "name": "port",
+      "label": "集群节点port",
+      "description": "集群节点port",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "1805",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1805"
     }
   ]
 }
