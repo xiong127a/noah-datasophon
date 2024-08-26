@@ -50,7 +50,8 @@
         "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       },
       {
@@ -59,7 +60,8 @@
         "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       }
     ]
@@ -88,6 +90,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "port",
+      "label": "集群节点port",
+      "description": "集群节点port",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "5801",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "5801"
     }
   ]
 }
