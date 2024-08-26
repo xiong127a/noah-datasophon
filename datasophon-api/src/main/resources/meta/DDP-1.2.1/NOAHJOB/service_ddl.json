@@ -14,7 +14,7 @@
       "roleType": "master",
       "cardinality": "1",
       "logFile": "standalone-server/logs/standalone-server-${hostname}.out",
-      "jmxPort": 12357,
+      "jmxPort": 12367,
       "startRunner": {
         "timeout": "60",
         "program": "bin/dolphinscheduler-daemon.sh",
@@ -63,6 +63,9 @@
           "zkUrls",
           "authUrl",
           "serverUrl",
+          "redisAloneEnabled",
+          "redisAloneHost",
+          "redisAlonePort",
           "redis.nodes",
           "redis.password",
           "onProfile",
@@ -471,6 +474,36 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "192.168.102.23:7000,192.168.102.23:7001,192.168.102.24:7000,192.168.102.24:7001,192.168.102.25:7000,192.168.102.25:7001"
+    },{
+      "name": "redisAloneEnabled",
+      "label": "redisAloneEnabled",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },{
+      "name": "redisAloneHost",
+      "label": "redisAloneHost",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "192.168.1.176"
+    },{
+      "name": "redisAlonePort",
+      "label": "redisAlonePort",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "6379"
     },{
       "name": "redis.password",
       "label": "redis.password",
