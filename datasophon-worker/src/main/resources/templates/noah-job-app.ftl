@@ -294,13 +294,13 @@ sa-token:
   # 配置Sa-Token单独使用的Redis连接 （此处需要和SSO-Server端连接同一个Redis）
   alone-redis:
     #是否启用独立的redis来存储信息，此处为true时，redis-enabled也要设置为true
-    enabled: true
+    enabled: ${redisAloneEnabled}
     cluster:
       nodes: ${"redis.nodes"}
       # Redis服务器连接密码（默认为空）
     password: ${"redis.password"}
-    #host: 192.168.1.176
-    #port: 6379
+    host: ${redisAloneHost}
+    port: ${redisAlonePort}
     #password:
     # 连接超时时间
     timeout: 10s
