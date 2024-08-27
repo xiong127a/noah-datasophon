@@ -9,13 +9,14 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
 
+import java.io.IOException;
+
 public class K8sKerberosUtils {
 
-    public static void downloadKeytabFromMaster(String principal, String keytabName) {
+    public static void downloadKeytabFromMaster(String hostname, String principal, String keytabName) {
         String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
         Integer clusterId = PropertyUtils.getInt("clusterId");
-        String hostname = CacheUtils.getString("hostname");
 
         // get kerberos keytab
         String downloadUrl =
@@ -42,11 +43,12 @@ public class K8sKerberosUtils {
         });
     }
 
-    public static void createKeytabDir() {
-        if (!FileUtil.exist("/etc/security/keytab/")) {
+    public static void createKeytabDir(String hostname) throws IOException {
+        if (!K8sMinaUtils.checkPathExists(hostname, "/etc/security/keytab/")) {
             FileUtil.mkdir("/etc/security/keytab/");
+            K8sMinaUtils.createDir(hostname, "/etc/security/keytab/");
         }
-        ShellUtils.exceShell("chown -R root:hadoop /etc/security/keytab/");
-        ShellUtils.exceShell("chmod -R 770 /etc/security/keytab/");
+        K8sMinaUtils.execCmdWithResult(hostname, "chown -R root:hadoop /etc/security/keytab/");
+        K8sMinaUtils.execCmdWithResult(hostname, "chmod -R 770 /etc/security/keytab/");
     }
 }

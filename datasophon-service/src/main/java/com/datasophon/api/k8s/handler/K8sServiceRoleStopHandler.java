@@ -33,6 +33,7 @@ public class K8sServiceRoleStopHandler extends ServiceHandler {
         k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
+        k8sServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
 
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);

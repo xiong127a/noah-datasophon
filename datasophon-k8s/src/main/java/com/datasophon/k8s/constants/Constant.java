@@ -6,4 +6,8 @@ public class Constant {
 
     public static final String K8S_NAMESPACE = "datasophon";
 
+    public static final String ROLE_NODE_CNT = "roleNodeCnt";
+
+    public static final String CURRENT_NODE_CNT = "currentNodeCnt";
+
 }

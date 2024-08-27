@@ -30,7 +30,7 @@ public class K8sStartServiceActor extends UntypedActor {
             if (Objects.nonNull(serviceRoleHandler)) {
                 startResult = serviceRoleHandler.handler(command);
             } else {
-                startResult = serviceHandler.start(command.getKubeConfig());
+                startResult = serviceHandler.start(command);
             }
 
             getSender().tell(startResult, getSelf());

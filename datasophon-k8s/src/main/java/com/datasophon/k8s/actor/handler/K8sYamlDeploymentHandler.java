@@ -2,6 +2,7 @@ package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
@@ -108,12 +109,14 @@ public class K8sYamlDeploymentHandler {
                 appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
         data.put("statusCommand", String.format("cd %s && sh %s %s",
                 appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
-        data.put("roleNodeCnt", roleNodeCnt);
+        data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
+        CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
     }
 
     private static void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet) {
         int fileCount = 1;
+        int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
             String configFilePath;
@@ -123,17 +126,25 @@ public class K8sYamlDeploymentHandler {
                 configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
             }
 
+            Generators key = entry.getKey();
+            String filename = key.getFilename();
             // 配置文件挂载
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("config" + fileCount++);
-            fileConfig.setValue(configFilePath);
-            volumePathSet.add(fileConfig);
+            if (!"java.env".equals(filename)) {
+                ServiceConfig fileConfig = new ServiceConfig();
+                fileConfig.setName("config" + fileCount++);
+                fileConfig.setValue(configFilePath);
+                volumePathSet.add(fileConfig);
+            }
 
             // path配置目录挂载
-            List<ServiceConfig> configList = entry.getValue();
-            configList.stream()
-                    .filter(serviceConfig -> Constants.PATH.equals(serviceConfig.getConfigType()))
-                    .forEach(volumePathSet::add);
+            for (ServiceConfig serviceConfig : entry.getValue()) {
+                if (Constants.PATH.equals(serviceConfig.getConfigType())) {
+                    ServiceConfig pathConfig = new ServiceConfig();
+                    pathConfig.setName("path" + pathCount++);
+                    pathConfig.setValue(serviceConfig.getValue());
+                    volumePathSet.add(pathConfig);
+                }
+            }
         }
     }
 
@@ -151,6 +162,7 @@ public class K8sYamlDeploymentHandler {
         }
 
         try {
+            K8sMinaUtils.checkParentPath(hostname, logStr);
             if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
                 K8sMinaUtils.createFile(hostname, logStr);
             }

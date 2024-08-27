@@ -10,6 +10,7 @@ import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
+import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -32,12 +33,19 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
         k8SGenerateDeploymentYamlCommand.setServiceRoleName(serviceRoleInfo.getName());
         k8SGenerateDeploymentYamlCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
         k8SGenerateDeploymentYamlCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
-        k8SGenerateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
         k8SGenerateDeploymentYamlCommand.setHostName(serviceRoleInfo.getHostname());
         k8SGenerateDeploymentYamlCommand.setStartRunner(serviceRoleInfo.getStartRunner());
         k8SGenerateDeploymentYamlCommand.setStopRunner(serviceRoleInfo.getStopRunner());
         k8SGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
         k8SGenerateDeploymentYamlCommand.setLogFile(serviceRoleInfo.getLogFile());
+        if (Objects.nonNull(serviceRoleInfo.getRunAs())) {
+            k8SGenerateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
+        } else {
+            RunAs runAs = new RunAs();
+            runAs.setUser(Constants.ROOT);
+            runAs.setGroup(Constants.ROOT);
+            k8SGenerateDeploymentYamlCommand.setRunAs(runAs);
+        }
 
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());

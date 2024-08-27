@@ -282,6 +282,22 @@ public class K8sMinaUtils {
         });
     }
 
+    public static void checkParentPath(String hostname, String path) {
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path remotePath = sftp.getDefaultDir().resolve(path);
+                Path parentPath = remotePath.getParent();
+
+                if (!checkPathExists(hostname, parentPath.toString())) {
+                    createDir(hostname, parentPath.toString());
+                }
+            } catch (Exception e) {
+                log.error("Failed to check or create path at {}: {}", path, e.getMessage());
+            }
+            return null;
+        });
+    }
+
     public static boolean isDirectory(String hostname, String path) {
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             try {

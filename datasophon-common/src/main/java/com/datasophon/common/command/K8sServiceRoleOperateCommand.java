@@ -1,10 +1,14 @@
 package com.datasophon.common.command;
 
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
+import com.datasophon.common.model.ServiceConfig;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 @Data
 public class K8sServiceRoleOperateCommand extends BaseCommand implements Serializable {
@@ -31,6 +35,8 @@ public class K8sServiceRoleOperateCommand extends BaseCommand implements Seriali
     private String kubeConfig;
 
     private String hostname;
+
+    private Map<Generators, List<ServiceConfig>> configFileMap;
 
     public K8sServiceRoleOperateCommand() {
         this.enableRangerPlugin = false;
