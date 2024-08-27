@@ -58,10 +58,10 @@ spring:
     # url: jdbc:dm://192.168.6.227:5236/DOLPHINSCHEDULER?useUnicode=true&characterEncoding=UTF-8
     # username: DOLPHINSCHEDULER
     # password: Jd2019@123
-    url: jdbc:oscar://192.168.5.62:2005/noah?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowMultiQueries=true&&serverTimezone=GMT%2b88
-    driverClassName: com.oscar.Driver
-    username: sysdba
-    password: szoscar55
+    url: ${databaseUrl}
+    driverClassName: ${driverClassName}
+    username: ${username}
+    password: ${password}
     # 达梦环境
     # url: jdbc:dm://192.168.1.155:5236?schema=noah
     # driver-class-name: dm.jdbc.driver.DmDriver
@@ -76,7 +76,7 @@ spring:
     properties:
       org.quartz.threadPool:threadPriority: 5
       org.quartz.jobStore.isClustered: true
-      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.jobStore.class: ${orgQuartzJobStoreDriverDelegateClass}
       org.quartz.scheduler.instanceId: AUTO
       org.quartz.jobStore.tablePrefix: QRTZ_
       org.quartz.jobStore.acquireTriggersWithinLock: true
@@ -145,7 +145,7 @@ traffic:
     #tenant2: 20
 
 master:
-  listen-port: 5678
+  listen-port: 8765
   # master fetch command num
   fetch-command-num: 10
   # master prepare execute thread number to limit handle commands in parallel
@@ -176,7 +176,7 @@ master:
 
 worker:
   # worker listener port
-  listen-port: 1234
+  listen-port: 4321
   # worker execute thread number to limit task instances in parallel
   exec-threads: 10
   # worker heartbeat interval
@@ -199,7 +199,7 @@ worker:
   alert-listen-port: 50052
 
 alert:
-  port: 50052
+  port: 25005
   # Mark each alert of alert server if late after x milliseconds as failed.
   # Define value is (0 = infinite), and alert server would be waiting alert result.
   wait-timeout: 0
@@ -225,7 +225,7 @@ python-gateway:
   read-timeout: 0
 
 server:
-  port: 12345
+  port: 54321
   servlet:
     session:
       timeout: 120m
@@ -295,12 +295,24 @@ sa-token:
   alone-redis:
     #是否启用独立的redis来存储信息，此处为true时，redis-enabled也要设置为true
     enabled: ${redisAloneEnabled}
+  <#-- 检查 redis.nodes 是否存在且有内容，且值不是 "null" -->
+  <#if redisNodes?? && redisNodes?has_content && redisNodes != "null">
     cluster:
-      nodes: ${"redis.nodes"}
-      # Redis服务器连接密码（默认为空）
-    password: ${"redis.password"}
+      nodes: ${redisNodes}
+  </#if>
+  <#-- Redis服务器连接密码（默认为空） -->
+  <#if redisPassword?? && redisPassword?has_content && redisPassword != "null">
+    password: ${redisPassword}
+  <#else>
+    password:
+  </#if>
+  <#-- 检查 Redis 单机配置是否存在且有内容，且值不是 "null" -->
+  <#if redisAloneHost?? && redisAloneHost?has_content && redisAloneHost != "null">
     host: ${redisAloneHost}
+  </#if>
+  <#if redisAlonePort?? && redisAlonePort?has_content && redisAlonePort != "null">
     port: ${redisAlonePort}
+  </#if>
     #password:
     # 连接超时时间
     timeout: 10s
@@ -323,17 +335,3 @@ logging:
   level:
     org.apache.dolphinscheduler.dao.mapper: debug
 
-
----
-spring:
-  config:
-    activate:
-      on-profile: ${onProfile}
-  quartz:
-    properties:
-      org.quartz.jobStore.driverDelegateClass: ${orgQuartzJobStoreDriverDelegateClass}
-  datasource:
-    driver-class-name: ${driverClassName}
-    url: ${databaseUrl}
-    username: ${username}
-    password: ${password}
