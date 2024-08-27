@@ -13,7 +13,7 @@
       "label": "NoahJobServer",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "standalone-server/logs/standalone-server-${hostname}.out",
+      "logFile": "standalone-server/logs/standalone-server-${host}.out",
       "jmxPort": 12367,
       "startRunner": {
         "timeout": "60",
@@ -66,9 +66,8 @@
           "redisAloneEnabled",
           "redisAloneHost",
           "redisAlonePort",
-          "redis.nodes",
-          "redis.password",
-          "onProfile",
+          "redisNodes",
+          "redisPassword",
           "orgQuartzJobStoreDriverDelegateClass"
         ]
       },
@@ -111,8 +110,6 @@
           "alert.rpc.port",
           "zeppelin.rest.url",
           "portal.url",
-          "redis.nodes",
-          "redis.password",
           "custom.common.properties"
         ]
       }
@@ -201,17 +198,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "https://192.168.5.174:10000/sso-server/"
-    },{
-      "name": "onProfile",
-      "label": "数据库类型mysql|postgresql",
-      "description": "",
-      "configType": "map",
-      "required": true,
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "mysql"
     },{
       "name": "orgQuartzJobStoreDriverDelegateClass",
       "label": "orgQuartzJobStoreDriverDelegateClass",
@@ -465,18 +451,20 @@
       "hidden": false,
       "defaultValue": "http://192.168.5.228:8111/portal-api"
     },{
-      "name": "redis.nodes",
-      "label": "redis.nodes",
+      "name": "redisNodes",
+      "label": "redisNodes",
+      "configType": "map",
       "description": "",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "192.168.102.23:7000,192.168.102.23:7001,192.168.102.24:7000,192.168.102.24:7001,192.168.102.25:7000,192.168.102.25:7001"
+      "defaultValue": "null"
     },{
       "name": "redisAloneEnabled",
       "label": "redisAloneEnabled",
+      "configType": "map",
       "description": "",
       "required": true,
       "type": "input",
@@ -487,28 +475,31 @@
     },{
       "name": "redisAloneHost",
       "label": "redisAloneHost",
+      "configType": "map",
       "description": "",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "192.168.1.176"
+      "defaultValue": "null"
     },{
       "name": "redisAlonePort",
       "label": "redisAlonePort",
+      "configType": "map",
       "description": "",
       "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "6379"
+      "defaultValue": "null"
     },{
-      "name": "redis.password",
-      "label": "redis.password",
+      "name": "redisPassword",
+      "label": "redisPassword",
       "description": "",
-      "required": false,
+      "configType": "map",
+      "required": true,
       "type": "input",
       "value": "",
       "configurableInWizard": true,
