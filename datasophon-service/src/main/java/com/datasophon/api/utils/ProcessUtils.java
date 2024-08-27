@@ -495,6 +495,7 @@ public class ProcessUtils {
             K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
             K8sServiceScaleDownHandler k8sServiceScaleDownHandler = new K8sServiceScaleDownHandler();
             K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
+            K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
             K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
             k8sHostCancelTagHandler.setNext(k8sServiceRoleStopHandler);
             k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
@@ -502,10 +503,12 @@ public class ProcessUtils {
                 K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
                 k8sServiceScaleDownHandler.setNext(k8sServiceConfigureHandler);
                 k8sServiceConfigureHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
             } else {
                 k8sServiceScaleDownHandler.setNext(k8sHostTagHandler);
-                k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
             }
             return k8sHostCancelTagHandler.handlerRequest(serviceRoleInfo);
         }
@@ -534,8 +537,10 @@ public class ProcessUtils {
                 execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
             } else {
                 K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
+                K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
                 K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
-                k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
                 execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
             }
         }

@@ -36,6 +36,7 @@ public class K8sServiceStartHandler extends ServiceHandler {
         k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
+        k8sServiceRoleOperateCommand.setConfigFileMap(serviceRoleInfo.getConfigFileMap());
 
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);

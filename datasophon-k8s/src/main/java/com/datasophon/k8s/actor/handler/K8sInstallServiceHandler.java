@@ -50,18 +50,6 @@ public class K8sInstallServiceHandler {
         return execResult;
     }
 
-    public static void main(String[] args) throws IOException {
-        K8sInstallServiceHandler k8sInstallServiceHandler = new K8sInstallServiceHandler("ALERTMANAGER", "AlertManager");
-        InstallServiceRoleCommand installServiceRoleCommand = new InstallServiceRoleCommand();
-        installServiceRoleCommand.setHostName("k8s-03");
-        installServiceRoleCommand.setDecompressPackageName("alertmanager-0.23.0");
-        RunAs runAs = new RunAs();
-        runAs.setUser("root");
-        runAs.setGroup("root");
-        installServiceRoleCommand.setRunAs(runAs);
-        k8sInstallServiceHandler.install(installServiceRoleCommand);
-    }
-
     private boolean createConfDir(String decompressPackageName, RunAs runAs, String hostname) {
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(serviceName);

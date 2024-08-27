@@ -1,5 +1,6 @@
 package com.datasophon.k8s.actor.handler;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Slf4j
@@ -36,7 +38,12 @@ public class K8sStopRolePodHandler {
     public ExecResult stop(String kubeConfig, String hostname) {
         ExecResult execResult = new ExecResult();
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
-            List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel(serviceRoleFullName).list().getItems();
+            List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", serviceRoleFullName).list().getItems();
+            List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+            if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
+                execResult.setExecResult(true);
+                return execResult;
+            }
             for (Pod pod : pods) {
                 String nodeName = pod.getSpec().getNodeName();
                 if (nodeName != null && nodeName.equals(hostname)) {
@@ -55,4 +62,5 @@ public class K8sStopRolePodHandler {
             return execResult;
         }
     }
+
 }
