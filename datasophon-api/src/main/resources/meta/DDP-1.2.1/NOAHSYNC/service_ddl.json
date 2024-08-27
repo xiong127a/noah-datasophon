@@ -65,9 +65,9 @@
         ]
       },
       {
-        "filename": "seatunnel-cluster.sh",
+        "filename": "seatunnel.sh",
         "configFormat": "custom",
-        "templateName": "seatunnel-cluster.ftl",
+        "templateName": "seatunnel.ftl",
         "outputDirectory": "bin",
         "includeParams": [
           "schedulerUrl",
