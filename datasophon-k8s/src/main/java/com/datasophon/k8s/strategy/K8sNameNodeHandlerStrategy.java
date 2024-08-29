@@ -63,7 +63,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 try {
                     K8sUtil.runJob(
                             Constants.DATASOPHON,
-                            "hdfs-namenode-bootstrapStandby",
+                            "hdfs-namenode-format-standby",
                             kubeClient,
                             volumeMounts,
                             DockerImageUtils.getString(command.getServiceName()),
@@ -83,7 +83,7 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 try {
                     K8sUtil.runJob(
                             Constants.DATASOPHON,
-                            "hdfs-namenode-bootstrapStandby",
+                            "hdfs-namenode-format",
                             kubeClient,
                             volumeMounts,
                             DockerImageUtils.getString(command.getServiceName()),

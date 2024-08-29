@@ -20,6 +20,7 @@
 package com.datasophon.k8s.util;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.UserEnum;
 import com.jcraft.jsch.SftpATTRS;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.SshClient;
@@ -367,6 +368,27 @@ public class K8sMinaUtils {
         buffer.flip();
 
         return Arrays.equals(buffer.array(), lineSeparator);
+    }
+
+    public static void createUserAndGroup(String hostname, String user, String group) throws IOException {
+        Integer userId = UserEnum.getUserIdByUsername(user);
+        Integer groupId = UserEnum.getGroupIdByGroupName(group);
+
+        if (userId == null || groupId == null) {
+            throw new IllegalArgumentException("User or group ID not found.");
+        }
+
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            String command = String.format(
+                    "if ! getent group %s > /dev/null; then groupadd -g %d %s; fi && " +
+                            "if ! getent passwd %s > /dev/null; then useradd -m -u %d -g %d %s; fi",
+                    group, groupId, group, user, userId, groupId, user
+            );
+
+            execCmdWithResult(hostname, command);
+
+            return true;
+        });
     }
 
 }
