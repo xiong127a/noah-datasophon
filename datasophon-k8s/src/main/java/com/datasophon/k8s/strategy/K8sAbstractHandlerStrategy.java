@@ -44,7 +44,8 @@ public class K8sAbstractHandlerStrategy {
             Generators generators = entry.getKey();
             String configFilePath;
             if (StrUtil.isNotBlank(generators.getOutputDirectory())) {
-                configFilePath = String.join(Constants.SLASH, workerPath, generators.getOutputDirectory(), generators.getFilename());
+                String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
+                configFilePath = String.join(Constants.SLASH, workerPath, output, generators.getFilename());
             } else {
                 configFilePath = String.join(Constants.SLASH, workerPath, generators.getFilename());
             }

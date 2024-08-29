@@ -1,5 +1,6 @@
 package com.datasophon.k8s.actor.handler;
 
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Data
 @Slf4j
@@ -63,7 +65,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeConfig(configFileMap, appHome, volumePathSet);
 
-            volumeLog(logFile, hostname, appHome, volumePathSet);
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet);
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet);
 
@@ -105,10 +107,10 @@ public class K8sYamlDeploymentHandler {
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         data.put("runAs", runAs.getUser());
-        data.put("startCommand", String.format("cd %s && sh %s %s && tail -f /dev/null",
-                appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
-        data.put("statusCommand", String.format("cd %s && sh %s %s",
-                appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
+                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+        data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
+                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
@@ -121,7 +123,8 @@ public class K8sYamlDeploymentHandler {
             Generators generators = entry.getKey();
             String configFilePath;
             if (StrUtil.isNotBlank(generators.getOutputDirectory())) {
-                configFilePath = String.join(Constants.SLASH, appHome, generators.getOutputDirectory(), generators.getFilename());
+                String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
+                configFilePath = String.join(Constants.SLASH, appHome, output, generators.getFilename());
             } else {
                 configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
             }
@@ -148,9 +151,16 @@ public class K8sYamlDeploymentHandler {
         }
     }
 
-    private static void volumeLog(String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet) {
+    private static void volumeLog(
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet) {
         String logStr;
-        HashMap<String, String> paramMap = new HashMap<>();
+        Map<String, String> paramMap = configFileMap.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toMap(
+                        t -> "${" + t.getName() + "}",
+                        t -> Convert.toStr(t.getValue()),
+                        (existing, replacement) -> replacement
+                ));
         paramMap.put("${user}", "root");
         paramMap.put("${host}", hostname);
         String logFileName = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
