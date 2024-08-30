@@ -67,7 +67,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet);
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap);
 
             Template template = generateTemplate();
 
@@ -99,7 +99,8 @@ public class K8sYamlDeploymentHandler {
                                                    ServiceRoleRunner statusRunner,
                                                    Integer roleNodeCnt,
                                                    String appHome,
-                                                   Set<ServiceConfig> volumePathSet) {
+                                                   Set<ServiceConfig> volumePathSet,
+                                                   Map<Generators, List<ServiceConfig>> configFileMap) {
         Map<String, Object> data = new HashMap<>();
         data.put("itemList", new ArrayList<>(volumePathSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
@@ -112,6 +113,17 @@ public class K8sYamlDeploymentHandler {
         data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
                 runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
+        String journalnodeDir = configFileMap.values()
+                .stream()
+                .flatMap(List::stream)
+                .filter(t -> "dfs.journalnode.edits.dir".equals(t.getName()))
+                .map(t -> Convert.toStr(t.getValue()))
+                .findFirst()
+                .orElse(null);
+        if (Objects.nonNull(journalnodeDir)) {
+            data.put("journalnodeDir", journalnodeDir);
+        }
+
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
     }
