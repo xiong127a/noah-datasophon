@@ -19,6 +19,8 @@ package com.datasophon.common;
 
 import com.datasophon.common.utils.PropertyUtils;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -261,4 +263,9 @@ public final class Constants {
     public static final String PVM_MODE = "PVM";
 
     public static final String K8S_MODE = "K8S";
+
+
+    public static final String SERVICE_CHECK_NAMES="Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager";
+
+    public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));
 }

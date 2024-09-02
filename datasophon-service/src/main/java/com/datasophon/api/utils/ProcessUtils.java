@@ -670,6 +670,11 @@ public class ProcessUtils {
         return clusterInfoService.getById(clusterId);
     }
 
+    public static Map<Integer, String> getAllClusterIdAndType() {
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        return clusterInfoService.list().stream().collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
+    }
+
     /**
      * 并集：左边集合与右边集合合并
      *
