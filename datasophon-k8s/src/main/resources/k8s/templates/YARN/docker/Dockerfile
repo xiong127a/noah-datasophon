@@ -24,7 +24,8 @@ FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333
 # 使用指定的用户和组 ID 创建用户和组
 RUN groupadd -r -g 2001 hadoop \
     && useradd -r -u 2002 -g 2001 -m yarn \
-    && useradd -r -u 2001 -g 2001 -m hdfs
+    && useradd -r -u 2001 -g 2001 -m hdfs \
+    && useradd -r -u 2004 -g 2001 -m mapred
 
 WORKDIR /opt/datasophon
 

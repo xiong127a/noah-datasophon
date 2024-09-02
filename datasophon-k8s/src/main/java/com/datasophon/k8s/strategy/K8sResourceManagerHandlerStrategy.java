@@ -41,8 +41,10 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                     new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
                     new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
             };
-            String jobCmd = "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn\" " +
-                    "&& su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn\"\n";
+            String jobCmd =
+                    "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /user/yarn\" " +
+                            "|| (su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn\" " +
+                            "&& su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn\")\n";
             try {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
