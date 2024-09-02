@@ -19,9 +19,12 @@
 
 package com.datasophon.api.master.alert;
 
+import akka.actor.UntypedActor;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
+import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
@@ -29,12 +32,8 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-
-import akka.actor.UntypedActor;
 
 /**
  * 检查指定组件状态
@@ -44,46 +43,54 @@ public class ServiceRoleCheckActor extends UntypedActor {
     @Override
     public void onReceive(Object msg) throws Throwable {
         if (msg instanceof ServiceRoleCheckCommand) {
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
 
-            List<ClusterServiceRoleInstanceEntity> list =
-                    roleInstanceService.list(
-                            new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                                    .in(
-                                            Constants.SERVICE_ROLE_NAME,
-                                            "Prometheus",
-                                            "AlertManager",
-                                            "Krb5Kdc",
-                                            "KAdmin",
-                                            "SRFE",
-                                            "SRBE",
-                                            "SRFEObserver",
-                                            "DorisFE",
-                                            "DorisFEObserver",
-                                            "DorisBE",
-                                            "NameNode",
-                                            "ResourceManager"));
+            //查询服务实例
+            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(
+                    new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+                            .in(Constants.SERVICE_ROLE_NAME, Constants.STATUS_CHECK_SERVICES)
+            );
+
+            //集群类型map
+            Map<Integer, String> allClusterIdAndType = ProcessUtils.getAllClusterIdAndType();
 
             if (!list.isEmpty()) {
                 Map<String, ClusterServiceRoleInstanceEntity> map = translateListToMap(list);
+
                 for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
-                    ServiceRoleStrategy serviceRoleHandler =
-                            ServiceRoleStrategyContext.getServiceRoleHandler(
-                                    roleInstanceEntity.getServiceRoleName());
-                    if (Objects.nonNull(serviceRoleHandler)) {
-                        serviceRoleHandler.handlerServiceRoleCheck(roleInstanceEntity, map);
+                    ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(roleInstanceEntity.getServiceRoleName());
+
+                    //服务集群部署模式
+                    String depType = allClusterIdAndType.get(roleInstanceEntity.getClusterId());
+                    switch (depType) {
+                        case Constants.PVM_MODE:
+                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
+                            break;
+                        case Constants.K8S_MODE:
+                            handlerK8sServiceRoleCheck(roleInstanceEntity, map);
+                            break;
+                        default:
+                            break;
                     }
+
+
                 }
             } else {
                 unhandled(msg);
             }
+
         }
     }
 
+
+    private void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        K8sServiceRoleStatusService k8sServiceRoleStatusHandler = new K8sServiceRoleStatusService();
+        k8sServiceRoleStatusHandler.checkStatusAndOpAlert(roleInstanceEntity);
+    }
+
+
     private Map<String, ClusterServiceRoleInstanceEntity> translateListToMap(
-                                                                             List<ClusterServiceRoleInstanceEntity> list) {
+            List<ClusterServiceRoleInstanceEntity> list) {
         return list.stream()
                 .collect(
                         Collectors.toMap(
@@ -91,4 +98,5 @@ public class ServiceRoleCheckActor extends UntypedActor {
                                 e -> e,
                                 (v1, v2) -> v1));
     }
+
 }
