@@ -126,17 +126,12 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
             alertGroupMap.setClusterId(clusterInfo.getId());
             groupMapService.save(alertGroupMap);
         }
-        // ProcessUtils.createServiceActor(clusterInfo);
+        ProcessUtils.createServiceActor(clusterInfo);
 
-        if (Constants.PVM_MODE.equals(clusterInfo.getDepType())) {
-            yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
-
-            nodeLabelService.createDefaultNodeLabel(clusterInfo.getId());
-
-            queueCapacityService.createDefaultQueue(clusterInfo.getId());
-
-            rackService.createDefaultRack(clusterInfo.getId());
-        }
+        yarnSchedulerService.createDefaultYarnScheduler(clusterInfo.getId());
+        nodeLabelService.createDefaultNodeLabel(clusterInfo.getId());
+        queueCapacityService.createDefaultQueue(clusterInfo.getId());
+        rackService.createDefaultRack(clusterInfo.getId());
 
         putClusterVariable(clusterInfo);
         return Result.success();

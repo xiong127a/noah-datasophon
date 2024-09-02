@@ -53,11 +53,8 @@ spec:
             - "-c"
             - "${startCommand}"
           readinessProbe:
-            exec:
-              command:
-                - "/bin/bash"
-                - "-c"
-                - "${statusCommand}"
+            tcpSocket:
+              port: 8485
             failureThreshold: 3
             initialDelaySeconds: 3
             periodSeconds: 30
