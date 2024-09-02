@@ -20,6 +20,7 @@
 package com.datasophon.k8s.util;
 
 import com.datasophon.common.Constants;
+import com.datasophon.common.enums.UserEnum;
 import com.jcraft.jsch.SftpATTRS;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.SshClient;
@@ -316,10 +317,14 @@ public class K8sMinaUtils {
         }
     }
 
-    public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows) throws IOException {
+    /*public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows)  {
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
 //            charset = charset == null ? Charset.defaultCharset() : charset;
-            byte[] lineSeparator = System.lineSeparator().getBytes(charset);
+
+            String linuxLineSeparator = "\n";
+
+            byte[] lineSeparator=linuxLineSeparator.getBytes();
+            //byte[] lineSeparator = System.getProperty("line.separator").getBytes();
 
             SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
             Path filePath = sftp.getPath(remoteFilePath);
@@ -332,31 +337,29 @@ public class K8sMinaUtils {
 
             try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
                 ByteBuffer buffer = ByteBuffer.allocate(1);
-
                 while (pointer > 0 && lineSeparatorCount < rows) {
                     pointer--;
                     channel.position(pointer);
                     buffer.clear();
                     channel.read(buffer);
                     buffer.flip();
-
                     byte b = buffer.get();
                     resultBytes.add(0, b);
-
                     if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(channel, lineSeparator, pointer)) {
                         lineSeparatorCount++;
                     }
                 }
-
+            }
                 // 将结果字节数组转换为字符串
                 byte[] byteArray = new byte[resultBytes.size()];
                 for (int i = 0; i < resultBytes.size(); i++) {
                     byteArray[i] = resultBytes.get(i);
                 }
                 return new String(byteArray, charset);
-            }
         });
     }
+
+
 
     private static boolean checkLineSeparator(SeekableByteChannel channel, byte[] lineSeparator, long pointer) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(lineSeparator.length);
@@ -367,6 +370,82 @@ public class K8sMinaUtils {
         buffer.flip();
 
         return Arrays.equals(buffer.array(), lineSeparator);
+    }
+*/
+
+    public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            //charset = charset == null ? Charset.defaultCharset() : charset;
+
+            String linuxLineSeparator = "\n";
+            byte[] lineSeparator = linuxLineSeparator.getBytes(charset);
+
+            SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
+            Path filePath = sftp.getPath(remoteFilePath);
+
+            BasicFileAttributes attrs = provider.readAttributes(filePath, BasicFileAttributes.class);
+            long fileSize = attrs.size();
+
+            final int bufferSize = 8192;
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            int lineSeparatorCount = 0;
+            long position = fileSize;
+
+            try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
+                while (position > 0 && lineSeparatorCount < rows) {
+                    long start = Math.max(position - bufferSize, 0);
+                    ByteBuffer buffer = ByteBuffer.allocate((int) (position - start));
+                    channel.position(start);
+                    channel.read(buffer);
+                    buffer.flip();
+
+                    for (int i = buffer.limit() - 1; i >= 0; i--) {
+                        byte b = buffer.get(i);
+                        byteArrayOutputStream.write(b);
+                        if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(buffer, lineSeparator, i)) {
+                            lineSeparatorCount++;
+                            if (lineSeparatorCount >= rows) break;
+                        }
+                    }
+                    position = start;
+                }
+            }
+
+            byteArrayOutputStream.flush();
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+            return new StringBuilder(new String(byteArray, charset)).reverse().toString();
+        });
+    }
+
+    private static boolean checkLineSeparator(ByteBuffer buffer, byte[] lineSeparator, int index) {
+        // Simple check for line separator
+        for (int i = 0; i < lineSeparator.length; i++) {
+            if (index - i < 0 || buffer.get(index - i) != lineSeparator[lineSeparator.length - 1 - i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    public static void createUserAndGroup(String hostname, String user, String group) throws IOException {
+        Integer userId = UserEnum.getUserIdByUsername(user);
+        Integer groupId = UserEnum.getGroupIdByGroupName(group);
+
+        if (userId == null || groupId == null) {
+            throw new IllegalArgumentException("User or group ID not found.");
+        }
+
+        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            String command = String.format(
+                    "if ! getent group %s > /dev/null; then groupadd -g %d %s; fi && " +
+                            "if ! getent passwd %s > /dev/null; then useradd -m -u %d -g %d %s; fi",
+                    group, groupId, group, user, userId, groupId, user
+            );
+
+            execCmdWithResult(hostname, command);
+
+            return true;
+        });
     }
 
 }

@@ -30,7 +30,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
             try {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
-                        "formatZk",
+                        "zkfc-format",
                         kubeClient,
                         volumeMounts,
                         DockerImageUtils.getString(command.getServiceName()),
@@ -44,9 +44,8 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                 logger.info("zkfc format failed");
                 startResult.setExecResult(false);
             }
-        } else {
-            startResult = serviceHandler.start(command);
         }
+        startResult = serviceHandler.start(command);
         return startResult;
     }
 }

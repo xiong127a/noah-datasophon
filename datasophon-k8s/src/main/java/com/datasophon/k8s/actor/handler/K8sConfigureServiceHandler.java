@@ -296,7 +296,7 @@ public class K8sConfigureServiceHandler {
             String command =
                     "mkdir -p " + path
                             + " && "
-                            + "chmod 777 " + path;
+                            + "chmod 775 " + path;
             if (Objects.nonNull(runAs)) {
                 command = command + " && chown -R " + runAs.getUser() + ":" + runAs.getGroup() + " " + path;
             }

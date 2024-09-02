@@ -50,7 +50,11 @@ public class K8sInstallServiceHandler {
         return execResult;
     }
 
-    private boolean createConfDir(String decompressPackageName, RunAs runAs, String hostname) {
+    private boolean createConfDir(String decompressPackageName, RunAs runAs, String hostname) throws IOException {
+        if (Objects.nonNull(runAs)) {
+            K8sMinaUtils.createUserAndGroup(hostname, runAs.getUser(), runAs.getGroup());
+        }
+
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(serviceName);
         if (!K8sMinaUtils.checkPathExists(hostname, appHome)) {

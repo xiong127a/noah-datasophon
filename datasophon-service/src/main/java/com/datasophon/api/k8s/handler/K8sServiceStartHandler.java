@@ -33,10 +33,20 @@ public class K8sServiceStartHandler extends ServiceHandler {
         // 启动
         Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
         K8sServiceRoleOperateCommand k8sServiceRoleOperateCommand = new K8sServiceRoleOperateCommand();
-        k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
+        k8sServiceRoleOperateCommand.setStartRunner(serviceRoleInfo.getStartRunner());
+        k8sServiceRoleOperateCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
+        k8sServiceRoleOperateCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
+        k8sServiceRoleOperateCommand.setSlave(serviceRoleInfo.isSlave());
+        k8sServiceRoleOperateCommand.setCommandType(serviceRoleInfo.getCommandType());
+        k8sServiceRoleOperateCommand.setMasterHost(serviceRoleInfo.getMasterHost());
+        k8sServiceRoleOperateCommand.setManagerHost(serviceRoleInfo.getMasterHost());
+        k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setConfigFileMap(serviceRoleInfo.getConfigFileMap());
+        k8sServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
+        k8sServiceRoleOperateCommand.setRunAs(serviceRoleInfo.getRunAs());
+        k8sServiceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
 
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);

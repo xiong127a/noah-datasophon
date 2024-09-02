@@ -38,20 +38,6 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: true
-      initContainers:
-        - name: namenode-format
-          image: "${dockerImage}"
-          args:
-            - "/bin/bash"
-            - "-c"
-            - "if [ -d ${journalnodeDir}/meta ]; then echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby; else echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop; fi"
-          volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
-            </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
       containers:
         - env:
             - name: USER
@@ -67,11 +53,8 @@ spec:
             - "-c"
             - "${startCommand}"
           readinessProbe:
-            exec:
-              command:
-                - "/bin/bash"
-                - "-c"
-                - "${statusCommand}"
+            tcpSocket:
+              port: 8485
             failureThreshold: 3
             initialDelaySeconds: 10
             periodSeconds: 10
