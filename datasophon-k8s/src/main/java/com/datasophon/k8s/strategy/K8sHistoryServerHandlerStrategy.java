@@ -59,10 +59,13 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
                     new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
                     new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
             };
-            String jobCmd = "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn/yarn-logs\" && " +
-                "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir /tmp\" && " +
-                "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chmod 777 /tmp\" && " +
-                "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn/yarn-logs\"\n";
+            String jobCmd =
+                    "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /user/yarn/yarn-logs\" || (" +
+                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn/yarn-logs\" && " +
+                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn/yarn-logs\" ) && " +
+                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /tmp\" || (" +
+                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir /tmp\" && " +
+                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chmod 777 /tmp\" )\n";
             try {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,

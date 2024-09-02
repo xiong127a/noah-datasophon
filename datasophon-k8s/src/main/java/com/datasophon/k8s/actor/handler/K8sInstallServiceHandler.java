@@ -51,7 +51,7 @@ public class K8sInstallServiceHandler {
     }
 
     private boolean createConfDir(String decompressPackageName, RunAs runAs, String hostname) throws IOException {
-        if (Objects.nonNull(runAs)) {
+        if (Objects.nonNull(runAs) && !Constants.ROOT.equals(runAs.getUser())) {
             K8sMinaUtils.createUserAndGroup(hostname, runAs.getUser(), runAs.getGroup());
         }
 

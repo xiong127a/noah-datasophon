@@ -80,6 +80,8 @@ spec:
             </#list>
             - mountPath: "/etc/localtime"
               name: "timezone"
+            - mountPath: "/opt/datasophon/prometheus-2.17.2/configs"
+              name: "configs"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -92,3 +94,6 @@ spec:
         - hostPath:
             path: "/etc/localtime"
           name: "timezone"
+        - hostPath:
+            path: "/opt/datasophon/prometheus-2.17.2/configs"
+          name: "configs"
