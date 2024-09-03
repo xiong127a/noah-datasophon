@@ -24,10 +24,9 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         if (!command.isSlave() && command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("start to execute hdfs zkfc -formatZK");
-            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
             VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap());
             String jobCmd = workPath + "/bin/hdfs" + " zkfc " + "-formatZK";
-            try {
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
                         "zkfc-format",
@@ -37,7 +36,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                         jobCmd,
                         logger,
                         command.getHostname()
-                        );
+                );
                 logger.info("zkfc format success");
                 startResult.setExecResult(true);
             } catch (Exception e) {

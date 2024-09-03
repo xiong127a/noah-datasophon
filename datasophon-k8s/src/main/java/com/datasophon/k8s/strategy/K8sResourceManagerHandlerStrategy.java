@@ -32,7 +32,6 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
             }
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
             String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
             String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
             String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
@@ -45,7 +44,7 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
                     "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /user/yarn\" " +
                             "|| (su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn\" " +
                             "&& su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn\")\n";
-            try {
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
                         "create-yarn-dir",

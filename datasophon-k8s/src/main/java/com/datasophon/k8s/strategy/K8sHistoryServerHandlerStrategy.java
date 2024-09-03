@@ -50,7 +50,6 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
             }
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
             String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
             String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
             String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
@@ -66,7 +65,7 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
                             "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /tmp\" || (" +
                             "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir /tmp\" && " +
                             "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chmod 777 /tmp\" )\n";
-            try {
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())){
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
                         "create-jobhistoryserver-dir",
