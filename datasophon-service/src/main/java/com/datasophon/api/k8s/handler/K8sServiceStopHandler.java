@@ -29,7 +29,6 @@ public class K8sServiceStopHandler extends ServiceHandler {
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         logger.info("start to stop service {} in {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
         K8sServiceRoleOperateCommand k8sServiceRoleOperateCommand = new K8sServiceRoleOperateCommand();
-        k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
 

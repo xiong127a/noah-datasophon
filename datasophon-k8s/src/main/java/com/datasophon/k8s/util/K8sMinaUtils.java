@@ -291,6 +291,7 @@ public class K8sMinaUtils {
 
                 if (!checkPathExists(hostname, parentPath.toString())) {
                     createDir(hostname, parentPath.toString());
+                    execCmdWithResult(hostname, "chmod 777 " + parentPath);
                 }
             } catch (Exception e) {
                 log.error("Failed to check or create path at {}: {}", path, e.getMessage());

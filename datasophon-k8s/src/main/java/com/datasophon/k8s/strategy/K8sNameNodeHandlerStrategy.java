@@ -1,24 +1,12 @@
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.core.convert.Convert;
-import cn.hutool.core.io.FileUtil;
-import com.datasophon.common.Constants;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
-import com.datasophon.common.enums.CommandType;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.*;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import com.datasophon.k8s.util.K8sKerberosUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -42,62 +30,6 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 K8sKerberosUtils.downloadKeytabFromMaster(hostname, "HTTP/" + hostname, "spnego.service.keytab");
             }
         }
-
-//        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-//            Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
-//            String namenodeDir = configFileMap.values()
-//                    .stream()
-//                    .flatMap(List::stream)
-//                    .filter(t -> "dfs.namenode.name.dir".equals(t.getName()))
-//                    .map(t -> Convert.toStr(t.getValue()))
-//                    .findFirst()
-//                    .orElse("");
-//            String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
-//            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-//            VolumeMountDTO[] volumeMounts = volumeMountList(workPath, configFileMap);
-//
-//            if (command.isSlave()) {
-//                // 执行hdfs namenode -bootstrapStandby
-//                logger.info("Start to execute hdfs namenode -bootstrapStandby");
-//                String jobCmd = "echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby";
-//                try {
-//                    K8sUtil.runJob(
-//                            Constants.DATASOPHON,
-//                            "hdfs-namenode-format-standby",
-//                            kubeClient,
-//                            volumeMounts,
-//                            DockerImageUtils.getString(command.getServiceName()),
-//                            jobCmd,
-//                            logger,
-//                            hostname);
-//                    execResult.setExecResult(true);
-//                    logger.info("Namenode standby success");
-//                } catch (Exception e) {
-//                    logger.error("Namenode standby failed");
-//                    return execResult;
-//                }
-//            } else {
-//                logger.info("Start to execute format namenode");
-//                String jobCmd = "echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop";
-////                K8sMinaUtils.execCmdWithResult(hostname, "rm -rf " + namenodeDir);
-//                try {
-//                    K8sUtil.runJob(
-//                            Constants.DATASOPHON,
-//                            "hdfs-namenode-format",
-//                            kubeClient,
-//                            volumeMounts,
-//                            DockerImageUtils.getString(command.getServiceName()),
-//                            jobCmd,
-//                            logger,
-//                            hostname);
-//                    execResult.setExecResult(true);
-//                    logger.info("Namenode format success");
-//                } catch (Exception e) {
-//                    logger.error("Namenode format failed");
-//                    return execResult;
-//                }
-//            }
-//        }
 
         if (command.getEnableRangerPlugin()) {
 //            logger.info("Start to enable ranger hdfs plugin");
