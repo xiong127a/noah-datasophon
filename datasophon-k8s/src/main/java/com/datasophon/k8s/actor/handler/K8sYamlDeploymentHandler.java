@@ -56,7 +56,8 @@ public class K8sYamlDeploymentHandler {
                                 Integer roleNodeCnt,
                                 String decompressPackageName,
                                 String logFile,
-                                String hostname) {
+                                String hostname,
+                                String serviceRoleName) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -65,9 +66,11 @@ public class K8sYamlDeploymentHandler {
         try {
             Set<ServiceConfig> volumePathSet = new HashSet<>();
 
-            volumeConfig(configFileMap, appHome, volumePathSet);
+            volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet);
+            K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
+
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet,serviceRoleName);
 
             volumeHadoopConfig(volumePathSet);
 
@@ -132,7 +135,7 @@ public class K8sYamlDeploymentHandler {
         return data;
     }
 
-    private static void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet) {
+    private static void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName) {
         int fileCount = 1;
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
@@ -165,10 +168,19 @@ public class K8sYamlDeploymentHandler {
                 }
             }
         }
+        if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
+            log.info("start config trino config");
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("config" + fileCount++);
+            fileConfig.setValue("/opt/datasophon/hadoop-3.3.3/etc/hadoop");
+            volumePathSet.add(fileConfig);
+        }
+
+
     }
 
     private static void volumeLog(
-            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet) {
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream()
                 .flatMap(List::stream)
@@ -194,6 +206,12 @@ public class K8sYamlDeploymentHandler {
 //            }
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
+        }
+
+        if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
+            log.info("start config trino logfile");
+            int lastSlashIndex = logStr.lastIndexOf('/');
+            logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
         }
 
         ServiceConfig logConfig = new ServiceConfig();
