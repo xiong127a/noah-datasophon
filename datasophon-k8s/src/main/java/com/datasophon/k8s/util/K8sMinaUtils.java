@@ -237,7 +237,7 @@ public class K8sMinaUtils {
                     Files.createDirectories(parentDir);
                 }
 
-                Files.write(remoteFile, content.getBytes(StandardCharsets.UTF_8));
+                Files.write(remoteFile, content.replace("\r\n", "\n").getBytes(StandardCharsets.UTF_8));
                 return true;
             } catch (IOException e) {
                 log.error("Failed to write content to file at {}: {}", remoteFilePath, e.getMessage());
