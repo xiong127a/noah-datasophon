@@ -68,10 +68,9 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
 
         logger.info("command is slave : {}", command.isSlave());
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && !command.isSlave()) {
-            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
             String jobCmd = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + Constants.SLASH +
                     "bin/schematool -dbType mysql -initSchema";
-            try {
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
                         "init-hive-db",
@@ -100,7 +99,6 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
         }
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
             String baseCmd = "/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs";
             String jobCmd = "su - hdfs -c \"" + baseCmd + " -test -e /user/hive/warehouse\" " +
                     "|| (su - hdfs -c \"" + baseCmd + " -mkdir -p /user/hive/warehouse\" " +
@@ -109,7 +107,7 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
                     "|| (su - hdfs -c \"" + baseCmd + " -mkdir -p /tmp/hive\" " +
                     "&& su - hdfs -c \"" + baseCmd + " -chown hive:hadoop /tmp/hive\" " +
                     "&& su - hdfs -c \"" + baseCmd + " -chmod 777 /tmp/hive\")";
-            try {
+            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(
                         Constants.DATASOPHON,
                         "init-hive-dir",
