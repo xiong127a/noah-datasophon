@@ -24,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,6 +69,8 @@ public class K8sYamlDeploymentHandler {
             volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName,hostname);
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet,serviceRoleName);
+
+            volumeHadoopConfig(volumePathSet);
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap);
 
@@ -194,9 +198,9 @@ public class K8sYamlDeploymentHandler {
 
         try {
             K8sMinaUtils.checkParentPath(hostname, logStr);
-            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
-                K8sMinaUtils.createFile(hostname, logStr);
-            }
+//            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+//                K8sMinaUtils.createFile(hostname, logStr);
+//            }
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
@@ -209,8 +213,29 @@ public class K8sYamlDeploymentHandler {
 
         ServiceConfig logConfig = new ServiceConfig();
         logConfig.setName("logs");
-        logConfig.setValue(logStr);
+        Path logPath = Paths.get(logStr);
+        Path parentPath = logPath.getParent();
+        logConfig.setValue(parentPath.toString().replace("\\", "/"));
         volumePathSet.add(logConfig);
+    }
+
+    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
+        if ("HIVE".equals(serviceName)) {
+            List<String> hadoopConf = Arrays.asList(
+                    "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml",
+                    "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml",
+                    "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh",
+                    "/opt/datasophon/hadoop-3.3.3/etc/hadoop/mapred-site.xml",
+                    "/opt/datasophon/hadoop-3.3.3/etc/hadoop/yarn-site.xml"
+            );
+            int config = 1;
+            for (String conf : hadoopConf) {
+                ServiceConfig hadoopConfig = new ServiceConfig();
+                hadoopConfig.setName("hadoopconfig" + config++);
+                hadoopConfig.setValue(conf);
+                volumePathSet.add(hadoopConfig);
+            }
+        }
     }
 
 }

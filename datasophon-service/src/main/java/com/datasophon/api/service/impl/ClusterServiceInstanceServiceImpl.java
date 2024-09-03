@@ -22,10 +22,13 @@ import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
+import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.*;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.model.SimpleServiceConfig;
+import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
@@ -33,6 +36,8 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.ServiceState;
 import com.datasophon.dao.mapper.ClusterServiceInstanceMapper;
+import com.datasophon.k8s.actor.K8sStopServiceActor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +50,7 @@ import java.util.stream.Collectors;
 
 @Service("clusterServiceInstanceService")
 @Transactional
+@Slf4j
 public class ClusterServiceInstanceServiceImpl
         extends
         ServiceImpl<ClusterServiceInstanceMapper, ClusterServiceInstanceEntity>
@@ -227,6 +233,27 @@ public class ClusterServiceInstanceServiceImpl
                 roleGroupConfigService.listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
         List<ClusterServiceRoleInstanceEntity> roleInstanceList =
                 roleInstanceService.getServiceRoleInstanceListByServiceId(serviceInstanceId);
+        ClusterServiceInstanceEntity clusterServiceInstance = this.getById(serviceInstanceId);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
+
+        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+            List<String> serviceRoleList =
+                    roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().collect(Collectors.toList());
+            for (String serviceRoleName : serviceRoleList) {
+                K8sServiceStopHandler k8sServiceStopHandler = new K8sServiceStopHandler();
+                ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+                serviceRoleInfo.setClusterId(clusterServiceInstance.getClusterId());
+                serviceRoleInfo.setParentName(clusterServiceInstance.getServiceName());
+                serviceRoleInfo.setName(serviceRoleName);
+                try {
+                    k8sServiceStopHandler.handlerRequest(serviceRoleInfo);
+                    log.info("remove {} deployment success", serviceRoleName);
+                } catch (Exception e) {
+                    log.error("remove {} deployment failed", serviceRoleName);
+                    return Result.error(e.getMessage());
+                }
+            }
+        }
 
         // del role group
         roleGroupService.removeByIds(roleGroupIds);

@@ -39,17 +39,19 @@ public class K8sStopRolePodHandler {
         ExecResult execResult = new ExecResult();
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", serviceRoleFullName).list().getItems();
-            List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
-            if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
-                execResult.setExecResult(true);
-                return execResult;
-            }
-            for (Pod pod : pods) {
-                String nodeName = pod.getSpec().getNodeName();
-                if (nodeName != null && nodeName.equals(hostname)) {
-                    String podName = pod.getMetadata().getName();
-                    log.info("删除节点 {} 上的pod: {}", hostname, podName);
-                    client.pods().delete(pod);
+            if (CollUtil.isNotEmpty(pods)) {
+                List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+                if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
+                    execResult.setExecResult(true);
+                    return execResult;
+                }
+                for (Pod pod : pods) {
+                    String nodeName = pod.getSpec().getNodeName();
+                    if (nodeName != null && nodeName.equals(hostname)) {
+                        String podName = pod.getMetadata().getName();
+                        log.info("删除节点 {} 上的pod: {}", hostname, podName);
+                        client.pods().delete(pod);
+                    }
                 }
             }
             execResult.setExecResult(true);
