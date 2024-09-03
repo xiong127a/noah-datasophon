@@ -19,6 +19,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("NodeManager", new K8sNodeManagerHandlerStrategy("YARN", "NodeManager"));
         map.put("HistoryServer", new K8sHistoryServerHandlerStrategy("YARN", "HistoryServer"));
         map.put("TimelineServer", new K8sTimelineServerHandlerStrategy("YARN", "TimelineServer"));
+        map.put("HiveServer2", new K8sHiveServer2HandlerStrategy("HIVE", "HiveServer2"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

@@ -70,11 +70,19 @@ public class K8sScaleServiceHandler {
     private void scaleDown(KubernetesClient client) {
         RollableScalableResource<Deployment> resource =
                 client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
+
+        if (resource == null || resource.get() == null) {
+            log.warn("Deployment {} 在命名空间 {} 中不存在，无法缩容", serviceRoleFullName, Constant.K8S_NAMESPACE);
+            return;
+        }
+
         Integer replicas = resource.get().getStatus().getReplicas();
-        log.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+        log.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+
         int count = replicas - 1;
-        log.info("scale down deployment 为: " + count);
+        log.info("缩容 deployment 为: {}", count);
         resource.scale(count);
     }
+
 
 }
