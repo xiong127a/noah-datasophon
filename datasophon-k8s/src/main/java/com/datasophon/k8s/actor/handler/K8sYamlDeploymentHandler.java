@@ -181,7 +181,14 @@ public class K8sYamlDeploymentHandler {
             fileConfig.setValue("/opt/datasophon/hadoop-3.3.3/etc/hadoop");
             volumePathSet.add(fileConfig);
         }
-        if ("KAFKA".equals(serviceName)) {
+        if ("Krb5Kdc".equals(serviceRoleName)||"KAdmin".equals(serviceRoleName)){
+            String krb5kdcDir="/var/kerberos/krb5kdc";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("kerberos-data");
+            fileConfig.setValue(krb5kdcDir);
+            volumePathSet.add(fileConfig);
+        }
+        if ("KafkaBroker".equals(serviceRoleName)){
             K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
         }
     }
