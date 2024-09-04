@@ -139,15 +139,24 @@ public class K8sYamlDeploymentHandler {
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
             String configFilePath;
-            if (StrUtil.isNotBlank(generators.getOutputDirectory())) {
-                String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
-                configFilePath = String.join(Constants.SLASH, appHome, output, generators.getFilename());
+            String outputDirectory = generators.getOutputDirectory();
+            if (StrUtil.isNotBlank(outputDirectory) ){
+                // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
+                if (outputDirectory.startsWith(Constants.SLASH)) {
+                    configFilePath = String.join(Constants.SLASH, outputDirectory, generators.getFilename());
+                }else {
+                    String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
+                    configFilePath = String.join(Constants.SLASH, appHome, output, generators.getFilename());
+                }
             } else {
                 configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
             }
 
             Generators key = entry.getKey();
             String filename = key.getFilename();
+            if (key.getOutputDirectory().startsWith("/var/kerberos/krb5kdc")){
+                continue;
+            }
             // 配置文件挂载
             if (!"java.env".equals(filename)) {
                 ServiceConfig fileConfig = new ServiceConfig();
@@ -167,7 +176,6 @@ public class K8sYamlDeploymentHandler {
             }
         }
         if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
-            log.info("start config trino config");
             ServiceConfig fileConfig = new ServiceConfig();
             fileConfig.setName("config" + fileCount++);
             fileConfig.setValue("/opt/datasophon/hadoop-3.3.3/etc/hadoop");
