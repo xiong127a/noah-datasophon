@@ -133,7 +133,7 @@ public class K8sYamlDeploymentHandler {
         return data;
     }
 
-    private static void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName,String hostname) {
+    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName,String hostname) {
         int fileCount = 1;
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
@@ -173,7 +173,9 @@ public class K8sYamlDeploymentHandler {
             fileConfig.setValue("/opt/datasophon/hadoop-3.3.3/etc/hadoop");
             volumePathSet.add(fileConfig);
         }
-        K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
+        if ("KAFKA".equals(serviceName)) {
+            K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
+        }
     }
 
     private static void volumeLog(
@@ -220,7 +222,8 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
-        if ("HIVE".equals(serviceName)) {
+        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE");
+        if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml",
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml",

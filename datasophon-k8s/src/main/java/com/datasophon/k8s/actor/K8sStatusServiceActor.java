@@ -18,7 +18,7 @@ public class K8sStatusServiceActor extends UntypedActor {
         if (msg instanceof K8sServiceRoleOperateCommand) {
 
             K8sServiceRoleOperateCommand command = (K8sServiceRoleOperateCommand) msg;
-            logger.info("start to check service role status {} on k8s", command.getServiceRoleName());
+//            logger.info("start to check service role status {} on k8s", command.getServiceRoleName());
 
             //执行状态检查
             K8sStatusHandler k8sStatusHandler = new K8sStatusHandler(command.getServiceName(), command.getServiceRoleName());
@@ -26,7 +26,7 @@ public class K8sStatusServiceActor extends UntypedActor {
 
             //回调
             getSender().tell(startResult, getSelf());
-            logger.info("service role {} status check  on k8s result {}", command.getServiceRoleName(), startResult.getExecResult() ? "success" : "failed");
+//            logger.info("service role {} status check  on k8s result {}", command.getServiceRoleName(), startResult.getExecResult() ? "success" : "failed");
         } else {
             unhandled(msg);
         }

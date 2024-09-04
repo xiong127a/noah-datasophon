@@ -79,9 +79,11 @@ public class K8sScaleServiceHandler {
         Integer replicas = resource.get().getStatus().getReplicas();
         log.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
-        int count = replicas - 1;
-        log.info("缩容 deployment 为: {}", count);
-        resource.scale(count);
+        if (replicas > 0) {
+            int count = replicas - 1;
+            log.info("缩容 deployment 为: {}", count);
+            resource.scale(count);
+        }
     }
 
 

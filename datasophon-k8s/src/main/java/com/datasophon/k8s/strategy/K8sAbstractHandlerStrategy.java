@@ -67,4 +67,19 @@ public class K8sAbstractHandlerStrategy {
         return volumeList.toArray(new VolumeMountDTO[0]);
     }
 
+    public VolumeMountDTO[] hadoopVolumeMountList() {
+        String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
+        String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
+        String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
+        String mapredSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/mapred-site.xml";
+        String yarnSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/yarn-site.xml";
+        return new VolumeMountDTO[]{
+                new VolumeMountDTO("core-site", coreSite, coreSite),
+                new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
+                new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
+                new VolumeMountDTO("mapred-site", mapredSite, mapredSite),
+                new VolumeMountDTO("yarn-site", yarnSite, yarnSite),
+        };
+    }
+
 }
