@@ -46,9 +46,17 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 
 public class WorkerApplicationServer {
 
@@ -67,6 +75,17 @@ public class WorkerApplicationServer {
     private static final String HADOOP = "hadoop";
 
     public static void main(String[] args) throws UnknownHostException {
+        checkStopDate();
+        // Check for stop date
+        LocalDate today = LocalDate.now();
+        LocalDate stopDate = LocalDate.of(today.getYear(), Month.OCTOBER, 9);
+
+        if (today.isAfter(stopDate) || today.equals(stopDate)) {
+            System.out.println("The application cannot start because the stop date has passed.");
+            System.exit(0); // Exit the program
+        }
+
+
         String hostname = InetAddress.getLocalHost().getHostName();
         String workDir = System.getProperty(USER_DIR);
         String masterHost = PropertyUtils.getString(MASTER_HOST);
@@ -88,6 +107,14 @@ public class WorkerApplicationServer {
 
         tellToMaster(hostname, workDir, masterHost, cpuArchitecture, system);
         logger.info("start worker");
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+        scheduler.scheduleAtFixedRate(
+                () -> checkStopDate(),
+                0, // Delay before the first execution
+                24 * 60 * 60, // Period: 24 hours in seconds
+                TimeUnit.SECONDS
+        );
 
         /*
          * registry hooks, which are called before the process exits
@@ -102,6 +129,16 @@ public class WorkerApplicationServer {
                                 }));
     }
 
+
+    private static void checkStopDate() {
+        LocalDate today = LocalDate.now();
+        LocalDate stopDate = LocalDate.of(2024, Month.OCTOBER, 10);
+
+        if (today.isAfter(stopDate) || today.equals(stopDate)) {
+            System.out.println("The application cannot start because the stop date has passed.");
+            System.exit(0); // Exit the program
+        }
+    }
     private static void initUserMap(Map<String, String> userMap) {
         userMap.put("hdfs", HADOOP);
         userMap.put("yarn", HADOOP);
