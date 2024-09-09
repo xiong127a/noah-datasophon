@@ -181,7 +181,38 @@ public class K8sMinaUtils {
             }
         });
     }
+    public static boolean uploadFile(String hostname, String remotePath, InputStream inputStream, String fileName) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                Path path = sftp.getDefaultDir().resolve(remotePath);
+                if (!Files.exists(path)) {
+                    LOG.info("create pathHome {} ", path);
+                    Files.createDirectories(path);
+                }
 
+                Path file = path.resolve(fileName);
+                if (Files.exists(file)) {
+                    LOG.info("delete file  {}", file);
+                    Files.deleteIfExists(file);
+                }
+
+                // Upload directly from InputStream
+                try (OutputStream outputStream = Files.newOutputStream(file)) {
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                }
+
+                LOG.info("file upload success");
+                return true;
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
     /**
      * 创建目录
      */

@@ -44,7 +44,7 @@ spec:
           args:
             - "/bin/bash"
             - "-c"
-            - "if [ -d ${journalnodeDir}/meta ]; then echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby; else echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop; fi"
+            - "sleep $((RANDOM % 60)) && if [ -d ${journalnodeDir}/meta ]; then echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby; else echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop; fi"
           volumeMounts:
             <#list itemList as item>
             - mountPath: "${item.value}"

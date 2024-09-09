@@ -21,11 +21,16 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterKerberosService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,8 +39,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
+
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.k8s.util.K8sUtil.runCmd;
 
 @Service("clusterKerberosService")
 @Transactional
@@ -82,11 +93,16 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             String keytabName,
             String hostname,
             HttpServletResponse response) throws IOException {
+        String depMode = getDepMode(clusterId);
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH + keytabName;
         File file = new File(keytabFilePath);
         if (!file.exists()) {
-            generateKeytabFile(clusterId, keytabFilePath, principal);
+            if (Constants.PVM_MODE.equals(depMode)) {
+                generateKeytabFile(clusterId, keytabFilePath, principal);
+            } else {
+                K8sgenerateKeytabFile(clusterId, keytabFilePath, principal);
+            }
         }
 
         response.reset();
@@ -110,6 +126,29 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + hostname + Constants.SLASH + keytabFileName;
         file.transferTo(new File(keytabFilePath));
+    }
+
+    private void K8sgenerateKeytabFile(
+            Integer clusterId,
+            String keytabFilePath,
+            String principal
+    ) {
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+
+        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
+
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            runCmd(Constants.DATASOPHON,
+                    client,
+                    "kerberos-kadmin",
+                    logger,
+                    masterHost,
+                    "/bin/sh", "-c", "/opt/datasophon/kerberos-1.15.1/createKeytab.sh " + principal + " " + keytabFilePath);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void generateKeytabFile(

@@ -41,6 +41,8 @@ public class K8sYamlDeploymentHandler {
 
     private Logger logger;
 
+
+
     public K8sYamlDeploymentHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
@@ -57,7 +59,8 @@ public class K8sYamlDeploymentHandler {
                                 String decompressPackageName,
                                 String logFile,
                                 String hostname,
-                                String serviceRoleName) {
+                                String serviceRoleName,
+                                boolean enableKerberos) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -66,7 +69,7 @@ public class K8sYamlDeploymentHandler {
         try {
             Set<ServiceConfig> volumePathSet = new HashSet<>();
 
-            volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName,hostname);
+            volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName,hostname,enableKerberos);
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet,serviceRoleName);
 
@@ -133,7 +136,7 @@ public class K8sYamlDeploymentHandler {
         return data;
     }
 
-    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName,String hostname) {
+    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName,String hostname,Boolean enableKerberos) {
         int fileCount = 1;
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
@@ -158,12 +161,12 @@ public class K8sYamlDeploymentHandler {
                 continue;
             }
             // 配置文件挂载
-            if (!"java.env".equals(filename)) {
+           // if (!"java.env".equals(filename)) {
                 ServiceConfig fileConfig = new ServiceConfig();
                 fileConfig.setName("config" + fileCount++);
                 fileConfig.setValue(configFilePath);
                 volumePathSet.add(fileConfig);
-            }
+            //}
 
             // path配置目录挂载
             for (ServiceConfig serviceConfig : entry.getValue()) {
@@ -174,6 +177,22 @@ public class K8sYamlDeploymentHandler {
                     volumePathSet.add(pathConfig);
                 }
             }
+        }
+
+
+        //if (enableKerberos){
+        if(enableKerberos){
+            String keytabDir = "/etc/security/keytab/";
+            ServiceConfig keytabConfig = new ServiceConfig();
+            keytabConfig.setName("keytab");
+            keytabConfig.setValue(keytabDir);
+            volumePathSet.add(keytabConfig);
+
+            String krb5Conf = "/etc/krb5.conf";
+            ServiceConfig krb5ConfConfig = new ServiceConfig();
+            krb5ConfConfig.setName("krd5conf");
+            krb5ConfConfig.setValue(krb5Conf);
+            volumePathSet.add(krb5ConfConfig);
         }
         if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
             ServiceConfig fileConfig = new ServiceConfig();
@@ -187,6 +206,11 @@ public class K8sYamlDeploymentHandler {
             fileConfig.setName("kerberos-data");
             fileConfig.setValue(krb5kdcDir);
             volumePathSet.add(fileConfig);
+            String keytabDir = "/etc/security/keytab/";
+            ServiceConfig keytabConfig = new ServiceConfig();
+            keytabConfig.setName("keytab");
+            keytabConfig.setValue(keytabDir);
+            volumePathSet.add(keytabConfig);
         }
         if ("KafkaBroker".equals(serviceRoleName)){
             K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);

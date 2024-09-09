@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static com.datasophon.api.utils.ProcessUtils.enableKerberos;
+
 public class K8sServiceStartHandler extends ServiceHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(K8sServiceStartHandler.class);
@@ -31,7 +33,6 @@ public class K8sServiceStartHandler extends ServiceHandler {
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         logger.info("start to start service {} in {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
         // 启动
-        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
         K8sServiceRoleOperateCommand k8sServiceRoleOperateCommand = new K8sServiceRoleOperateCommand();
         k8sServiceRoleOperateCommand.setServiceName(serviceRoleInfo.getParentName());
         k8sServiceRoleOperateCommand.setServiceRoleName(serviceRoleInfo.getName());
@@ -53,8 +54,7 @@ public class K8sServiceStartHandler extends ServiceHandler {
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setKubeConfig(kubeConfig);
 
-        Boolean enableKerberos =
-                Boolean.parseBoolean(globalVariables.get("${enable" + serviceRoleInfo.getParentName() + "Kerberos}"));
+        Boolean enableKerberos = enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName());
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         k8sServiceRoleOperateCommand.setEnableKerberos(enableKerberos);
 

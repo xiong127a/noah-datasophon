@@ -36,7 +36,7 @@ public class K8sAbstractHandlerStrategy {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap) {
+    public VolumeMountDTO[] volumeMountList(String workerPath, Map<Generators, List<ServiceConfig>> configFileMap,boolean enableKerberos) {
         List<VolumeMountDTO> volumeList = new ArrayList<>();
         int fileCount = 1;
         int pathCount = 1;
@@ -44,8 +44,13 @@ public class K8sAbstractHandlerStrategy {
             Generators generators = entry.getKey();
             String configFilePath;
             if (StrUtil.isNotBlank(generators.getOutputDirectory())) {
-                String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
-                configFilePath = String.join(Constants.SLASH, workerPath, output, generators.getFilename());
+                // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
+                if (generators.getOutputDirectory().startsWith(Constants.SLASH)) {
+                    configFilePath = String.join(Constants.SLASH, generators.getOutputDirectory(), generators.getFilename());
+                }else {
+                    String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
+                    configFilePath = String.join(Constants.SLASH, workerPath, output, generators.getFilename());
+                }
             } else {
                 configFilePath = String.join(Constants.SLASH, workerPath, generators.getFilename());
             }
@@ -64,6 +69,13 @@ public class K8sAbstractHandlerStrategy {
                 }
             }
         }
+        if (enableKerberos){
+            String keytabDir = "/etc/security/keytab/";
+            volumeList.add(new VolumeMountDTO("keytab", keytabDir, keytabDir));
+            String krb5Conf = "/etc/krb5.conf";
+            volumeList.add(new VolumeMountDTO("krd5conf", krb5Conf, krb5Conf));
+        }
+
         return volumeList.toArray(new VolumeMountDTO[0]);
     }
 

@@ -67,7 +67,7 @@ public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                     "|| (su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -mkdir -p " + dirPath + "\" " +
                     "&& su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -chown hbase:hadoop " + dirPath + "\" " +
                     "&& su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -chmod 777 " + dirPath + "\")\n";
-            VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap());
+            VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
             VolumeMountDTO[] volumeMounts = hadoopVolumeMountList();
             VolumeMountDTO[] allVolume = Stream.concat(
                     Arrays.stream(volumeMountDTOS),

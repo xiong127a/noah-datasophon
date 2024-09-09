@@ -10,6 +10,11 @@ import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import static com.datasophon.k8s.util.K8sMinaUtils.uploadFile;
 
 public class K8sKerberosUtils {
 
@@ -20,27 +25,25 @@ public class K8sKerberosUtils {
 
         // get kerberos keytab
         String downloadUrl =
-                "http://" + masterHost + ":" + masterPort + "/ddh/cluster/kerberos/downloadKeytab?clusterId="
+                "http://" +  masterHost+ ":" + masterPort + "/ddh/cluster/kerberos/downloadKeytab?clusterId="
                         + clusterId + "&principal=" + principal + "&keytabName=" + keytabName + "&hostname=" + hostname;
 
         String dest = "/etc/security/keytab/";
-        HttpUtil.downloadFile(downloadUrl, FileUtil.file(dest), new StreamProgress() {
+        try {
+            try (InputStream fileStream = downloadFileAsStream(downloadUrl)) {
+                System.out.println("File downloaded successfully.");
 
-            @Override
-            public void start() {
-                Console.log("start to install。。。。");
+                // Step 2: Upload the file from InputStream
+                boolean uploadSuccess = uploadFile(hostname, dest, fileStream, keytabName);
+                if (uploadSuccess) {
+                    System.out.println("File uploaded successfully.");
+                } else {
+                    System.out.println("File upload failed.");
+                }
             }
-
-            @Override
-            public void progress(long progressSize, long l1) {
-                Console.log("installed：{}", FileUtil.readableFileSize(progressSize));
-            }
-
-            @Override
-            public void finish() {
-                Console.log("install success！");
-            }
-        });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void createKeytabDir(String hostname) throws IOException {
@@ -50,5 +53,13 @@ public class K8sKerberosUtils {
         }
         K8sMinaUtils.execCmdWithResult(hostname, "chown -R root:hadoop /etc/security/keytab/");
         K8sMinaUtils.execCmdWithResult(hostname, "chmod -R 770 /etc/security/keytab/");
+    }
+    private static InputStream downloadFileAsStream(String downloadUrl) throws IOException {
+        URL url = new URL(downloadUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+
+        // Return the InputStream directly
+        return connection.getInputStream();
     }
 }

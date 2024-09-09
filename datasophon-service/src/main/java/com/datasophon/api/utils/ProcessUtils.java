@@ -817,4 +817,9 @@ public class ProcessUtils {
         return clusterInfoService.getById(clusterId).getDepType();
     }
 
+    public static Boolean enableKerberos(Integer clusterId,String serviceParentName) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Kerberos}"));
+    }
+
 }
