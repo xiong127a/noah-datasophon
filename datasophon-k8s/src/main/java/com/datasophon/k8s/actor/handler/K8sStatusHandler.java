@@ -68,7 +68,7 @@ public class K8sStatusHandler {
                 if (nodeName != null && nodeName.equals(hostname)) {
                     String podName = pod.getMetadata().getName();
                     String phase = pod.getStatus().getPhase();
-                    log.info("check pod status  service role instants: {}, pod: {} , status:{}", serviceRoleFullName, podName, phase);
+                    //log.info("check pod status  service role instants: {}, pod: {} , status:{}", serviceRoleFullName, podName, phase);
 
                     //判断pod 状态是否正常
                     if ("Running".equals(phase) || "Ready".equals(phase)) {

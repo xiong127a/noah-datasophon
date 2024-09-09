@@ -29,7 +29,7 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String hostname = command.getHostname();
-        VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap());
+        VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
         VolumeMountDTO[] volumeMounts = hadoopVolumeMountList();
         VolumeMountDTO[] allVolume = Stream.concat(
                 Arrays.stream(volumeMountDTOS),

@@ -1,6 +1,8 @@
 package com.datasophon.k8s.util;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.common.model.VolumeMountDTO;
+import com.datasophon.k8s.constants.Constant;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -9,12 +11,12 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.ExecListener;
+import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.slf4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -25,6 +27,63 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class K8sUtil {
+
+    public static void runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String... cmd) {
+        List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", image).list().getItems();
+
+        List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+        if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
+            logger.info("pods null");
+            return;
+        }
+        try {
+            for (Pod pod : pods) {
+                String nodeName = pod.getSpec().getNodeName();
+                if (nodeName != null && nodeName.equals(hostname)) {
+
+                    String podName = pod.getMetadata().getName();
+
+                    long startTime = System.currentTimeMillis(); // Start timing
+
+                    ExecWatch exec = client.pods()
+                            .inNamespace(namespace).withName(podName)
+                            .writingOutput(System.out)
+                            .writingError(System.err)
+                            //.withTTY()
+                            .usingListener(new SimpleListener())
+                            .exec(cmd);
+                    int join = exec.exitCode().join();
+
+                    long endTime = System.currentTimeMillis(); // End timing
+                    long duration = endTime - startTime; // Calculate duration
+
+                    logger.info("Command execution time: " + duration + " milliseconds");
+
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    private static class SimpleListener implements ExecListener {
+
+        @Override
+        public void onOpen() {
+            System.out.println("The shell will remain open for 10 seconds.");
+        }
+
+        @Override
+        public void onFailure(Throwable t, Response failureResponse) {
+            t.printStackTrace();
+            System.err.println("shell barfed");
+        }
+
+        @Override
+        public void onClose(int code, String reason) {
+            System.out.println("The shell will now close.");
+        }
+    }
+
     public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, Logger logger, String hostname) throws Exception {
         // delete job
         logger.info("delete job if need ,job name: " + name);
@@ -37,10 +96,10 @@ public class K8sUtil {
         long startTime = System.currentTimeMillis();
 
         // 尝试删除已存在的同名 Job，循环等待 Job 和相关 Pod 被删除完成
-        waitForDeleteJob(namespace,name, client, timeout, startTime, logger);
+        waitForDeleteJob(namespace, name, client, timeout, startTime, logger);
 
         // 提交一个新的 Job
-        submitJob(namespace,name, client, volumeMounts, image, cmd, hostname);
+        submitJob(namespace, name, client, volumeMounts, image, cmd, hostname);
 
 
         long waitPodTimeout = 300; // Timeout in seconds
@@ -48,7 +107,7 @@ public class K8sUtil {
 
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
         String podName = "";
-        podName = waitForCreatePodOfJob(namespace,name, client, logger, podName, waitPodStartTime, waitPodTimeout);
+        podName = waitForCreatePodOfJob(namespace, name, client, logger, podName, waitPodStartTime, waitPodTimeout);
         logger.info("Pod name: " + podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
@@ -100,7 +159,7 @@ public class K8sUtil {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.info("p> "+line);  // You can replace this with your desired logging mechanism
+                    logger.info("p> " + line);  // You can replace this with your desired logging mechanism
                 }
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);

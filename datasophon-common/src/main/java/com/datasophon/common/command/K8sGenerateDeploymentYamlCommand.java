@@ -40,4 +40,10 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
     private Integer roleNodeCnt;
 
     private String logFile;
+
+    private Boolean enableKerberos;
+
+    public K8sGenerateDeploymentYamlCommand() {
+        this.enableKerberos = false;
+    }
 }

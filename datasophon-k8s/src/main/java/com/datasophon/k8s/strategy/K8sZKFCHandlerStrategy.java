@@ -24,7 +24,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         if (!command.isSlave() && command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             logger.info("start to execute hdfs zkfc -formatZK");
-            VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap());
+            VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
             String jobCmd = workPath + "/bin/hdfs" + " zkfc " + "-formatZK";
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(

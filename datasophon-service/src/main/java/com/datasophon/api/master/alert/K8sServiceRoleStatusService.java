@@ -30,7 +30,7 @@ public class K8sServiceRoleStatusService {
 
     public void checkStatusAndOpAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
 
-        logger.info("start to check service status {} in {}", roleInstanceEntity.getServiceRoleName(), roleInstanceEntity.getHostname());
+        //logger.info("start to check service status {} in {}", roleInstanceEntity.getServiceRoleName(), roleInstanceEntity.getHostname());
 
         //准备调用参数
         K8sServiceRoleOperateCommand k8sServiceRoleOperateCommand = new K8sServiceRoleOperateCommand();
