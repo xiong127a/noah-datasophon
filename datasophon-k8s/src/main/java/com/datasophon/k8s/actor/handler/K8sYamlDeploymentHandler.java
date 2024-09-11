@@ -66,9 +66,9 @@ public class K8sYamlDeploymentHandler {
         try {
             Set<ServiceConfig> volumePathSet = new HashSet<>();
 
-            volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName,hostname);
+            volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName, hostname);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet,serviceRoleName);
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceRoleName);
 
             volumeHadoopConfig(volumePathSet);
 
@@ -113,10 +113,17 @@ public class K8sYamlDeploymentHandler {
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         data.put("runAs", runAs.getUser());
-        data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
-        data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
-                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        if (StrUtil.isBlank(runAs.getUser()) || Constants.ROOT.equals(runAs.getUser())) {
+            data.put("startCommand", String.format("cd %s && sh %s %s && tail -f /dev/null",
+                    appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+            data.put("statusCommand", String.format("cd %s && sh %s %s",
+                    appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        } else {
+            data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
+                    runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+            data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
+                    runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        }
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         String journalnodeDir = configFileMap.values()
                 .stream()
@@ -133,7 +140,7 @@ public class K8sYamlDeploymentHandler {
         return data;
     }
 
-    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName,String hostname) {
+    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName, String hostname) {
         int fileCount = 1;
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
@@ -166,7 +173,7 @@ public class K8sYamlDeploymentHandler {
                 }
             }
         }
-        if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
+        if ("TrinoCoordinator".equals(serviceRoleName) || "TrinoWorker".equals(serviceRoleName)) {
             log.info("start config trino config");
             ServiceConfig fileConfig = new ServiceConfig();
             fileConfig.setName("config" + fileCount++);
@@ -179,7 +186,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(
-            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet,String serviceRoleName) {
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream()
                 .flatMap(List::stream)
@@ -207,7 +214,7 @@ public class K8sYamlDeploymentHandler {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
 
-        if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
+        if ("TrinoCoordinator".equals(serviceRoleName) || "TrinoWorker".equals(serviceRoleName)) {
             log.info("start config trino logfile");
             int lastSlashIndex = logStr.lastIndexOf('/');
             logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;

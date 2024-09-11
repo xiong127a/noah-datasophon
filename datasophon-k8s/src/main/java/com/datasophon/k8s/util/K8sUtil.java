@@ -9,10 +9,13 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
@@ -24,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class K8sUtil {
     public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, Logger logger, String hostname) throws Exception {
         // delete job
@@ -37,10 +41,10 @@ public class K8sUtil {
         long startTime = System.currentTimeMillis();
 
         // 尝试删除已存在的同名 Job，循环等待 Job 和相关 Pod 被删除完成
-        waitForDeleteJob(namespace,name, client, timeout, startTime, logger);
+        waitForDeleteJob(namespace, name, client, timeout, startTime, logger);
 
         // 提交一个新的 Job
-        submitJob(namespace,name, client, volumeMounts, image, cmd, hostname);
+        submitJob(namespace, name, client, volumeMounts, image, cmd, hostname);
 
 
         long waitPodTimeout = 300; // Timeout in seconds
@@ -48,7 +52,7 @@ public class K8sUtil {
 
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
         String podName = "";
-        podName = waitForCreatePodOfJob(namespace,name, client, logger, podName, waitPodStartTime, waitPodTimeout);
+        podName = waitForCreatePodOfJob(namespace, name, client, logger, podName, waitPodStartTime, waitPodTimeout);
         logger.info("Pod name: " + podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
@@ -100,7 +104,7 @@ public class K8sUtil {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.info("p> "+line);  // You can replace this with your desired logging mechanism
+                    logger.info("p> " + line);  // You can replace this with your desired logging mechanism
                 }
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
@@ -260,4 +264,69 @@ public class K8sUtil {
                 .inNamespace(namespace)
                 .resource(job).create();
     }
+
+    /**
+     * 封装的方法，用于在指定 Pod 容器中执行命令。
+     *
+     * @param client     KubernetesClient 实例
+     * @param namespace  Pod 所在的命名空间
+     * @param deployment 指定的 Deployment 名称
+     * @param hostname   Pod 所在的 hostname
+     * @param command    需要执行的命令
+     * @param logger     日志记录实例
+     */
+    public static String executeCommandInPod(KubernetesClient client, String namespace, String deployment, String hostname, String command, Logger logger) {
+        try {
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", deployment).list().getItems();
+            Pod targetPod = null;
+
+            for (Pod pod : pods) {
+                if (pod.getStatus().getHostIP().equals(hostname)) {
+                    targetPod = pod;
+                    break;
+                }
+            }
+
+            if (targetPod == null) {
+                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for deployment " + deployment);
+            }
+
+            String podName = targetPod.getMetadata().getName();
+            logger.info("Executing command in Pod: " + podName + " on host: " + hostname);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+            client.pods().inNamespace(namespace).withName(podName)
+                    .writingOutput(out)
+                    .writingError(err)
+                    .usingListener(new SimpleListener())
+                    .exec("sh", "-c", command);
+
+            return out.toString();
+
+        } catch (Exception e) {
+            logger.error("Command execution failed", e);
+            return "Command execution failed: " + e.getMessage();
+        }
+    }
+
+    static class SimpleListener implements ExecListener {
+
+        @Override
+        public void onOpen() {
+            log.info("Connection opened");
+        }
+
+        @Override
+        public void onFailure(Throwable t, Response response) {
+            log.error("Exec command failed: " + t.getMessage());
+        }
+
+        @Override
+        public void onClose(int code, String reason) {
+            log.info("Connection closed with exit code: " + code + ", reason: " + reason);
+        }
+    }
+
 }

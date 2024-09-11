@@ -206,9 +206,9 @@ public class K8sConfigureServiceHandler {
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
             }
-            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(hostName, decompressPackageName)) {
-                return execResult;
-            }
+//            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(hostName, decompressPackageName)) {
+//                return execResult;
+//            }
             execResult.setExecResult(true);
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
