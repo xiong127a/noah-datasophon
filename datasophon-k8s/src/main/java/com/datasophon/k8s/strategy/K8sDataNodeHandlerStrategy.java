@@ -26,17 +26,6 @@ public class K8sDataNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
             if (!K8sMinaUtils.checkPathExists(hostname, "/etc/security/keytab/dn.service.keytab")) {
                 K8sKerberosUtils.downloadKeytabFromMaster(hostname, "dn/" + hostname, "dn.service.keytab");
             }
-            String hadoopConfDir =
-                    Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + "/etc/hadoop/";
-            if (!K8sMinaUtils.checkPathExists(hostname, hadoopConfDir + "ssl-server.xml")) {
-                K8sMinaUtils.execCmdWithResult(hostname, "cp " + hadoopConfDir + "ssl-server.xml.template " + hadoopConfDir + "ssl-server.xml");
-            }
-            if (!K8sMinaUtils.checkPathExists(hostname, hadoopConfDir + "ssl-client.xml")) {
-                K8sMinaUtils.execCmdWithResult(hostname, "cp " + hadoopConfDir + "ssl-client.xml.template " + hadoopConfDir + "ssl-client.xml");
-            }
-            if (!K8sMinaUtils.checkPathExists(hostname, "/etc/security/keytab/keystore")) {
-                K8sMinaUtils.execCmdWithResult(hostname, "cd " + Constants.WORKER_SCRIPT_PATH + " && sh keystore.sh " + hostname);
-            }
         }
         return serviceHandler.start(command);
     }

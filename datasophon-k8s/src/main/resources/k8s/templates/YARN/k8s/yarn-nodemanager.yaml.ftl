@@ -51,7 +51,28 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              if [ "${enableKerberos}" ]; then
+                echo "Kerberos is enabled. Performing Kerberos setup...";
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  HOSTNAME=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                fi
+              else
+                echo "Kerberos is not enabled. Skipping Kerberos setup.";
+              fi
+              chmod 755 /opt/datasophon/hadoop-3.3.3/
+              chmod 755 /opt/datasophon/hadoop-3.3.3/etc/hadoop
+              chmod 755 /opt/datasophon/hadoop-3.3.3/etc
+              ${startCommand}
           readinessProbe:
             tcpSocket:
               port: 8485

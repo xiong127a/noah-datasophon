@@ -11,6 +11,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -32,37 +34,6 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
             }
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
-            String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
-            String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
-            VolumeMountDTO[] volumeMounts = {
-                    new VolumeMountDTO("core-site", coreSite, coreSite),
-                    new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
-                    new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
-            };
-            String jobCmd =
-                    "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /user/yarn\" " +
-                            "|| (su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn\" " +
-                            "&& su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn\")\n";
-            try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                K8sUtil.runJob(
-                        Constants.DATASOPHON,
-                        "create-yarn-dir",
-                        kubeClient,
-                        volumeMounts,
-                        DockerImageUtils.getString(command.getServiceName()),
-                        jobCmd,
-                        logger,
-                        command.getHostname()
-                );
-                logger.info("create yarn dir success");
-                startResult.setExecResult(true);
-            } catch (Exception e) {
-                logger.info("create yarn dir failed");
-                startResult.setExecResult(false);
-                return startResult;
-            }
-
             // 存在 tez 则创建软连接
             final String tezHomePath = Constants.INSTALL_PATH + Constants.SLASH + "tez";
             if (K8sMinaUtils.checkPathExists(hostname, tezHomePath)) {
