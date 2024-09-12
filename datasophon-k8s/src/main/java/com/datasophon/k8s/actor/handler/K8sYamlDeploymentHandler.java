@@ -41,8 +41,6 @@ public class K8sYamlDeploymentHandler {
 
     private Logger logger;
 
-
-
     public K8sYamlDeploymentHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
@@ -59,8 +57,7 @@ public class K8sYamlDeploymentHandler {
                                 String decompressPackageName,
                                 String logFile,
                                 String hostname,
-                                String serviceRoleName,
-                                boolean enableKerberos) {
+                                String serviceRoleName) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -71,7 +68,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeConfig(configFileMap, appHome, volumePathSet,serviceRoleName,hostname,enableKerberos);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet,serviceRoleName);
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceRoleName);
 
             volumeHadoopConfig(volumePathSet);
 
@@ -116,10 +113,17 @@ public class K8sYamlDeploymentHandler {
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         data.put("runAs", runAs.getUser());
-        data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
-        data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
-                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        if (StrUtil.isBlank(runAs.getUser()) || Constants.ROOT.equals(runAs.getUser())) {
+            data.put("startCommand", String.format("cd %s && sh %s %s && tail -f /dev/null",
+                    appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+            data.put("statusCommand", String.format("cd %s && sh %s %s",
+                    appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        } else {
+            data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
+                    runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+            data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
+                    runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        }
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         String journalnodeDir = configFileMap.values()
                 .stream()
@@ -246,7 +250,7 @@ public class K8sYamlDeploymentHandler {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
 
-        if ("TrinoCoordinator".equals(serviceRoleName)||"TrinoWorker".equals(serviceRoleName)){
+        if ("TrinoCoordinator".equals(serviceRoleName) || "TrinoWorker".equals(serviceRoleName)) {
             log.info("start config trino logfile");
             int lastSlashIndex = logStr.lastIndexOf('/');
             logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;

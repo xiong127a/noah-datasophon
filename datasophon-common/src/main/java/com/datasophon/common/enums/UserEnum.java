@@ -19,7 +19,10 @@ public enum UserEnum {
     ELASTIC("elastic", "elastic", 2007, 2007),
     HUE("hue", "hue", 2008, 2008),
     POSTGRES("postgres", "postgres", 2009, 2009),
-    ADMIN("admin", "hadoop", 2010, 2001);
+    ADMIN("admin", "hadoop", 2010, 2001),
+    RANGER("ranger", "ranger", 2011, 2002),
+    RANGER_USER_SYNC("rangerusersync", "ranger", 2012, 2002),
+    RANGER_KMS("rangerkms", "ranger", 2013, 2002);
 
     private final String username;
     private final String groupname;
