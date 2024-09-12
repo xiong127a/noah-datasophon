@@ -23,6 +23,9 @@ public class K8sServiceRoleStrategyContext {
         map.put("HbaseMaster", new K8sHbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("RegionServer", new K8sHbaseHandlerStrategy("HBASE", "RegionServer"));
         map.put("KafkaBroker", new K8sKafkaHandlerStrategy("KAFKA", "KafkaBroker"));
+        map.put("RangerAdmin", new K8sRangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
+        map.put("RangerUsersync", new K8sRangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
+        map.put("RangerKms", new K8sRangerAdminHandlerStrategy("RANGER", "RangerKms"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {
