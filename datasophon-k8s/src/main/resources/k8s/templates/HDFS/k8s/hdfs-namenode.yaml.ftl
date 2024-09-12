@@ -44,7 +44,30 @@ spec:
           args:
             - "/bin/bash"
             - "-c"
-            - "sleep $((RANDOM % 60)) && if [ -d ${journalnodeDir}/meta ]; then echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby; else echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop; fi"
+            - |
+              if [ "${enableKerberos}" = "true" ]; then
+                echo "Kerberos is enabled. Running keystore setup...";
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  HOSTNAME=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                fi
+              else
+                echo "Kerberos is not enabled. Skipping Kerberos setup.";
+              fi
+              sleep $((RANDOM % 60))
+              if [ -d ${journalnodeDir}/meta ]; then
+                echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby
+              else
+                echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop
+              fi
           volumeMounts:
             <#list itemList as item>
             - mountPath: "${item.value}"
@@ -65,7 +88,25 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              if [ "${enableKerberos}" = "true" ]; then
+                echo "Kerberos is enabled. Running keystore setup...";
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  HOSTNAME=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                fi
+              else
+                echo "Kerberos is not enabled.";
+              fi
+              ${startCommand}
           readinessProbe:
             exec:
               command:

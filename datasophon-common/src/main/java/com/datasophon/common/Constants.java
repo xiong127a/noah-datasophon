@@ -48,6 +48,7 @@ public final class Constants {
 
     public static final String WORKER_PACKAGE_NAME = "datasophon-worker.tar.gz";
     public static final String WORKER_SCRIPT_PATH = INSTALL_PATH + "/datasophon-worker/script/";
+    public static final String K8S_SCRIPT_PATH = INSTALL_PATH + "/opt/datasophon/script/";
     public static final String WORKER_PATH = INSTALL_PATH + "/datasophon-worker";
 
     public static final String CLUSTER_ID = "cluster_id";
