@@ -98,6 +98,8 @@
             <groupId>com.datasophon</groupId>
             <artifactId>datasophon-common</artifactId>
             <version>${project.version}</version>
+           <!-- <scope>system</scope>
+            <systemPath>D:\WorkSpaceForWork\datasophon\datasophon-common\target\datasophon-common-1.2.1.jar</systemPath> -->
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>
