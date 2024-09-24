@@ -34,8 +34,53 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class K8sUtil {
+    /**
+     * 封装的方法，用于在指定 Pod 容器中执行命令。
+     *
+     * @param client     KubernetesClient 实例
+     * @param namespace  Pod 所在的命名空间
+     * @param deployment 指定的 Deployment 名称
+     * @param hostname   Pod 所在的 hostname
+     * @param command    需要执行的命令
+     * @param logger     日志记录实例
+     */
+    public static String executeCommandInPod(KubernetesClient client, String namespace, String deployment, String hostname, String command, Logger logger) {
+        try {
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", deployment).list().getItems();
+            Pod targetPod = null;
 
-    public static void runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String... cmd) {
+            for (Pod pod : pods) {
+                if (pod.getStatus().getHostIP().equals(hostname)) {
+                    targetPod = pod;
+                    break;
+                }
+            }
+
+            if (targetPod == null) {
+                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for deployment " + deployment);
+            }
+
+            String podName = targetPod.getMetadata().getName();
+            logger.info("Executing command in Pod: " + podName + " on host: " + hostname);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+            client.pods().inNamespace(namespace).withName(podName)
+                    .writingOutput(out)
+                    .writingError(err)
+                    .usingListener(new SimpleListener())
+                    .exec("sh", "-c", command);
+
+            return out.toString();
+
+        } catch (Exception e) {
+            logger.error("Command execution failed", e);
+            return "Command execution failed: " + e.getMessage();
+        }
+    }
+
+    public static void runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String cmd) {
         List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", image).list().getItems();
 
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
@@ -57,8 +102,9 @@ public class K8sUtil {
                             .writingOutput(System.out)
                             .writingError(System.err)
                             //.withTTY()
-                            .usingListener(new SimpleListener())
-                            .exec(cmd);
+                            .usingListener(new SimpleListener()).
+                            exec("sh", "-c", cmd);
+
                     int join = exec.exitCode().join();
 
                     long endTime = System.currentTimeMillis(); // End timing
@@ -70,24 +116,6 @@ public class K8sUtil {
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-    }
-    private static class SimpleListener implements ExecListener {
-
-        @Override
-        public void onOpen() {
-            System.out.println("The shell will remain open for 10 seconds.");
-        }
-
-        @Override
-        public void onFailure(Throwable t, Response failureResponse) {
-            t.printStackTrace();
-            System.err.println("shell barfed");
-        }
-
-        @Override
-        public void onClose(int code, String reason) {
-            System.out.println("The shell will now close.");
         }
     }
 
@@ -325,6 +353,24 @@ public class K8sUtil {
         client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .resource(job).create();
+    }
+
+    static class SimpleListener implements ExecListener {
+
+        @Override
+        public void onOpen() {
+            log.info("Connection opened");
+        }
+
+        @Override
+        public void onFailure(Throwable t, Response response) {
+            log.error("Exec command failed: " + t.getMessage());
+        }
+
+        @Override
+        public void onClose(int code, String reason) {
+            log.info("Connection closed with exit code: " + code + ", reason: " + reason);
+        }
     }
 
 }

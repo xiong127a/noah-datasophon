@@ -51,7 +51,15 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cd ${appHome}/ranger-hive-plugin && \
+                sh ${appHome}/ranger-hive-plugin/enable-hive-plugin.sh
+              else
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+              fi
+              ${startCommand}
           readinessProbe:
             exec:
               command:

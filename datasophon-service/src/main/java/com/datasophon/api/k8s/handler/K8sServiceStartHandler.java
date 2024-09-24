@@ -48,17 +48,19 @@ public class K8sServiceStartHandler extends ServiceHandler {
         k8sServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
         k8sServiceRoleOperateCommand.setRunAs(serviceRoleInfo.getRunAs());
         k8sServiceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
-
+        k8sServiceRoleOperateCommand.setServiceRoleType(serviceRoleInfo.getRoleType());
         ClusterInfoService clusterInfoService =
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setKubeConfig(kubeConfig);
-
+        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+        String nnHost = globalVariables.get("${nn1}");
+        k8sServiceRoleOperateCommand.setNnHost(nnHost);
         Boolean enableKerberos = enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName());
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         k8sServiceRoleOperateCommand.setEnableKerberos(enableKerberos);
 
-        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT) {
+        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT&&!"SPARK3".equals(serviceRoleInfo.getParentName())&&!"FLINK".equals(serviceRoleInfo.getParentName())) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);
             if (Objects.nonNull(getNext())) {

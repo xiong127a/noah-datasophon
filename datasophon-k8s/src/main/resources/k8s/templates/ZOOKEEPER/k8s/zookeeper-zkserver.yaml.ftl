@@ -55,11 +55,8 @@ spec:
             - "-c"
             - "${startCommand}"
           readinessProbe:
-            exec:
-              command:
-                - "/bin/bash"
-                - "-c"
-                - "${statusCommand}"
+            tcpSocket:
+              port: 2181
             failureThreshold: 3
             initialDelaySeconds: 3
             periodSeconds: 30

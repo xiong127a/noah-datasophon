@@ -27,12 +27,14 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.datasophon.api.utils.ProcessUtils.enableKerberos;
+import static com.datasophon.api.utils.ProcessUtils.enableRangerPlugin;
 
 public class K8sDeploymentYamlHandler extends ServiceHandler {
 
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         K8sGenerateDeploymentYamlCommand k8SGenerateDeploymentYamlCommand = new K8sGenerateDeploymentYamlCommand();
+        k8SGenerateDeploymentYamlCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
         k8SGenerateDeploymentYamlCommand.setServiceName(serviceRoleInfo.getParentName());
         k8SGenerateDeploymentYamlCommand.setServiceRoleName(serviceRoleInfo.getName());
         k8SGenerateDeploymentYamlCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
@@ -62,7 +64,7 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
         k8SGenerateDeploymentYamlCommand.setRoleNodeCnt(hostList.size());
 
         k8SGenerateDeploymentYamlCommand.setEnableKerberos(enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));
-
+        k8SGenerateDeploymentYamlCommand.setEnableRangerPlugin(enableRangerPlugin(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sYamlDeploymentActor.class, ActorUtils.getActorRefName(K8sYamlDeploymentActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));

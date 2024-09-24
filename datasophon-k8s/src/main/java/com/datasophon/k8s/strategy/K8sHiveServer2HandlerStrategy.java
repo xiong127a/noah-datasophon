@@ -15,6 +15,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
@@ -29,30 +30,12 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String hostname = command.getHostname();
-        VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
+        VolumeMountDTO[] volumeMountDTOS = volumeMountList(workPath, command.getConfigFileMap(), command.getEnableKerberos());
         VolumeMountDTO[] volumeMounts = hadoopVolumeMountList();
         VolumeMountDTO[] allVolume = Stream.concat(
                 Arrays.stream(volumeMountDTOS),
                 Arrays.stream(volumeMounts)
         ).toArray(VolumeMountDTO[]::new);
-
-        if (command.getEnableRangerPlugin()) {
-            logger.info("Start to enable Hive HDFS plugin");
-            String successFilePath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + "/ranger-hive-plugin/success.id";
-            String pluginPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName() + "/ranger-hive-plugin";
-            if (!K8sMinaUtils.checkPathExists(hostname, successFilePath)) {
-                String result = K8sMinaUtils.execCmdWithResult(hostname, "cd " + pluginPath + " && sh ./enable-hive-plugin.sh");
-                if (!"failed".equals(result)) {
-                    logger.info("Enable Ranger Hive plugin success");
-                    K8sMinaUtils.writeUtf8String(hostname, "success", successFilePath);
-                    startResult.setExecResult(true);
-                } else {
-                    logger.info("Enable Ranger Hive plugin failed");
-                    startResult.setExecResult(false);
-                    return startResult;
-                }
-            }
-        }
 
 
         logger.info("command is slave : {}", command.isSlave());
@@ -78,18 +61,20 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
                 return startResult;
             }
         }
-
+        String jobCmd = "";
         if (command.getEnableKerberos()) {
             logger.info("start to get hive keytab file");
             K8sKerberosUtils.createKeytabDir(hostname);
             if (!K8sMinaUtils.checkPathExists(hostname, "/etc/security/keytab/hive.service.keytab")) {
                 K8sKerberosUtils.downloadKeytabFromMaster(hostname, "hive/" + hostname, "hive.service.keytab");
             }
+            jobCmd = "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM\"  && ";
+            jobCmd += "su - hdfs -c \"kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
         }
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             String baseCmd = "/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs";
-            String jobCmd = "su - hdfs -c \"" + baseCmd + " -test -e /user/hive/warehouse\" " +
+            jobCmd += "su - hdfs -c \"" + baseCmd + " -test -e /user/hive/warehouse\" " +
                     "|| (su - hdfs -c \"" + baseCmd + " -mkdir -p /user/hive/warehouse\" " +
                     "&& su - hdfs -c \"" + baseCmd + " -chown hive:hadoop /user/hive/warehouse\") && " +
                     "su - hdfs -c \"" + baseCmd + " -test -e /tmp/hive\" " +
@@ -97,16 +82,13 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
                     "&& su - hdfs -c \"" + baseCmd + " -chown hive:hadoop /tmp/hive\" " +
                     "&& su - hdfs -c \"" + baseCmd + " -chmod 777 /tmp/hive\")";
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
-                K8sUtil.runJob(
+                K8sUtil.runCmd(
                         Constants.DATASOPHON,
-                        "init-hive-dir",
                         kubeClient,
-                        allVolume,
-                        DockerImageUtils.getString(command.getServiceName()),
-                        jobCmd,
+                        "hdfs-namenode",
                         logger,
-                        command.getHostname()
-                );
+                        command.getNnHost(),
+                        jobCmd);
                 logger.info("init hive dir success");
                 startResult.setExecResult(true);
             } catch (Exception e) {

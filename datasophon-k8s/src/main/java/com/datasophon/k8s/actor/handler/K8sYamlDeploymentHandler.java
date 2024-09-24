@@ -42,7 +42,6 @@ public class K8sYamlDeploymentHandler {
     private Logger logger;
 
 
-
     public K8sYamlDeploymentHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
@@ -103,7 +102,8 @@ public class K8sYamlDeploymentHandler {
                                 String logFile,
                                 String hostname,
                                 String serviceRoleName,
-                                boolean enableKerberos) {
+                                boolean enableKerberos,
+                                boolean enableRangerPlugin) {
 
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
@@ -120,7 +120,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeEnableKerberosConfig(volumePathSet, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, enableKerberos);
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, enableKerberos, enableRangerPlugin);
 
             Template template = generateTemplate();
 
@@ -170,7 +170,8 @@ public class K8sYamlDeploymentHandler {
                                                    String appHome,
                                                    Set<ServiceConfig> volumePathSet,
                                                    Map<Generators, List<ServiceConfig>> configFileMap,
-                                                   Boolean enableKerberos) {
+                                                   Boolean enableKerberos,
+                                                   Boolean enableRangerPlugin) {
         Map<String, Object> data = new HashMap<>();
         data.put("itemList", new ArrayList<>(volumePathSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
@@ -178,11 +179,21 @@ public class K8sYamlDeploymentHandler {
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
         data.put("enableKerberos", enableKerberos.toString());
+        data.put("enableRangerPlugin", enableRangerPlugin.toString());
+        data.put("appHome", appHome);
         data.put("runAs", runAs.getUser());
-        data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
-        data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
-                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        if (startRunner!=null){
+            data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
+                    runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
+        }else{
+            data.put("startCommand","tail -f /dev/null");
+        }
+        if (statusRunner!=null){
+            data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
+                    runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
+        }else{
+            data.put("statusCommand", "exit 0");
+        }
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         String journalnodeDir = configFileMap.values()
                 .stream()
@@ -241,7 +252,19 @@ public class K8sYamlDeploymentHandler {
                 }
             }
         }
-
+        if ("RANGER".equals(serviceName)) {
+            volumePathSet.clear();
+            String rangerDir = "/opt/datasophon/ranger-2.1.0";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("rangerdir");
+            fileConfig.setValue(rangerDir);
+            volumePathSet.add(fileConfig);
+            String rangerAdminConf = "/etc/ranger/admin";
+            ServiceConfig adminConfig = new ServiceConfig();
+            adminConfig.setName("adminconf");
+            adminConfig.setValue(rangerAdminConf);
+            volumePathSet.add(adminConfig);
+        }
 
         if ("Krb5Kdc".equals(serviceRoleName) || "KAdmin".equals(serviceRoleName)) {
             String krb5kdcDir = "/var/kerberos/krb5kdc";
@@ -262,7 +285,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
-        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "Trino");
+        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml",
@@ -273,10 +296,17 @@ public class K8sYamlDeploymentHandler {
             );
             int config = 1;
             for (String conf : hadoopConf) {
-                ServiceConfig hadoopConfig = new ServiceConfig();
-                hadoopConfig.setName("hadoopconfig" + config++);
-                hadoopConfig.setValue(conf);
-                volumePathSet.add(hadoopConfig);
+                // 检查是否已经存在相同的配置
+                boolean exists = volumePathSet.stream()
+                        .anyMatch(existingConfig -> existingConfig.getValue().equals(conf));
+
+                // 仅当不存在相同配置时才添加
+                if (!exists) {
+                    ServiceConfig hadoopConfig = new ServiceConfig();
+                    hadoopConfig.setName("hadoopconfig" + config++);
+                    hadoopConfig.setValue(conf);
+                    volumePathSet.add(hadoopConfig);
+                }
             }
         }
     }

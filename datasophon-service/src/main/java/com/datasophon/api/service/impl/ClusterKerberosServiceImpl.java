@@ -68,8 +68,13 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         String keytabFilePath =
                 KEYTAB_PATH + Constants.SLASH + keytabFileName;
         File file = new File(keytabFilePath);
+        String depMode = getDepMode(clusterId);
         if (!file.exists()) {
-            generateKeytabFile(clusterId, keytabFilePath, keytabName);
+            if (Constants.PVM_MODE.equals(depMode)) {
+                generateKeytabFile(clusterId, keytabFilePath, keytabName);
+            } else {
+                K8sgenerateKeytabFile(clusterId, keytabFilePath, keytabName);
+            }
         }
         response.setContentType("application/octet-stream");
         response.addHeader("Content-Length", "" + file.length());
@@ -145,7 +150,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
                     "kerberos-kadmin",
                     logger,
                     masterHost,
-                    "/bin/sh", "-c", "/opt/datasophon/kerberos-1.15.1/createKeytab.sh " + principal + " " + keytabFilePath);
+                    "/opt/datasophon/kerberos-1.15.1/createKeytab.sh " + principal + " " + keytabFilePath);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

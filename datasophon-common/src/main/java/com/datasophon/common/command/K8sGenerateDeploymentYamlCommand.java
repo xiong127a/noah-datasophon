@@ -43,7 +43,10 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
 
     private Boolean enableKerberos;
 
+    private Boolean enableRangerPlugin;
+
     public K8sGenerateDeploymentYamlCommand() {
         this.enableKerberos = false;
+        this.enableRangerPlugin = false;
     }
 }

@@ -38,20 +38,6 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: true
-      initContainers:
-        - name: setup-ranger
-          image: "${dockerImage}"
-          args:
-            - "/bin/bash"
-            - "-c"
-            - "cd /opt/datasophon/ranger-2.1.0 && sh /opt/datasophon/ranger-2.1.0/setup.sh  && sh /opt/datasophon/ranger-2.1.0/set_globals.sh"
-          volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
-            </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
       containers:
         - env:
             - name: USER
@@ -65,7 +51,12 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              if [ ! -f /opt/datasophon/ranger-2.1.0/bin/ranger_admin.sh ]; then
+                rsync -av --ignore-existing /opt/datasophon/ranger-2.1.0/ /opt/ranger-2.1.0/ && rsync -av --ignore-existing /opt/ranger-2.1.0/ /opt/datasophon/ranger-2.1.0/
+              fi
+              cd /opt/datasophon/ranger-2.1.0 && sh /opt/datasophon/ranger-2.1.0/setup.sh  && sh /opt/datasophon/ranger-2.1.0/set_globals.sh
+              ${startCommand}
           readinessProbe:
             exec:
               command:

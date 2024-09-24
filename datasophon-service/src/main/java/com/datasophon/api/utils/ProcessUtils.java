@@ -821,5 +821,8 @@ public class ProcessUtils {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Kerberos}"));
     }
-
+    public static boolean enableRangerPlugin(Integer clusterId, String serviceParentName) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Plugin}"));
+    }
 }
