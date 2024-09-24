@@ -40,6 +40,8 @@ spec:
       hostNetwork: true
       containers:
         - env:
+            - name: "JAVA_HOME"
+              value: "/opt/datasophon/elasticsearch-7.16.2/jdk"
             - name: USER
               value: ${runAs}
             - name: MEM_LIMIT
@@ -51,15 +53,7 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - |
-              cp /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties1 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties \
-              && chmod 755 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties \
-              && cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync \
-              && sh ./setup.sh \
-              && sh ./set_globals.sh
-              #literal#sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n; s/<value>false<\\/value>/<value>true<\\/value>/}' /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml#end#
-              ln -s /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/ranger-usersync-services.sh /usr/bin/ranger-usersync
-              ${startCommand}
+            - "${startCommand}"
           readinessProbe:
             exec:
               command:
@@ -67,10 +61,10 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 3
+            periodSeconds: 30
             successThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 15
           name: "${serviceRoleFullName}"
           resources:
             requests:
@@ -86,6 +80,8 @@ spec:
             - mountPath: "${item.value}"
               name: "${item.name}"
             </#list>
+            - mountPath: "/etc/localtime"
+              name: "timezone"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30

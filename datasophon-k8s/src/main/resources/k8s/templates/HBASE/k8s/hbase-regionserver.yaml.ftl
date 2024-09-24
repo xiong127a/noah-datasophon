@@ -51,7 +51,34 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              if ${enableKerberos}; then
+                  echo "Kerberos is enabled. Running keystore setup...";
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  HOSTNAME=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                fi
+                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                fi
+              else
+                echo "Kerberos is not enabled. Skipping Kerberos setup.";
+              fi
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cp /opt/datasophon/hadoop-3.3.3/share/hadoop/common/lib/jackson-mapper-asl-1.9.13.jar /opt/datasophon/hbase-2.2.7/lib
+                cp /opt/datasophon/hadoop-3.3.3/ranger-hdfs-plugin/lib/ranger-hdfs-plugin-impl/httpcore-nio-4.4.6.jar /opt/datasophon/hbase-2.2.7/lib
+                cd ${appHome}/ranger-hbase-plugin && \
+                sh ${appHome}/ranger-hbase-plugin/enable-hbase-plugin.sh
+              else
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+              fi
+              ${startCommand}
           readinessProbe:
             exec:
               command:

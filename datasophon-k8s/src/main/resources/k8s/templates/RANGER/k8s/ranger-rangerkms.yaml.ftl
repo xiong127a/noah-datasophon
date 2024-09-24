@@ -38,22 +38,6 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: true
-      initContainers:
-        - name: setup-ranger-kms
-          image: "${dockerImage}"
-          args:
-            - "/bin/bash"
-            - "-c"
-            - "cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms && sh ./setup.sh  && sh ./enable-kms-plugin.sh"
-          volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
-            </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
-            - mountPath: "/opt/datasophon/ranger-2.1.0/conf/ranger-admin-site.xml"
-              name: "ranger-admin-site"
       containers:
         - env:
             - name: USER
@@ -67,7 +51,14 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              ln -s /opt/datasophon/ranger-2.1.0 /opt/datasophon/ranger \
+              && cp /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties2 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties \
+              && chmod 755 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties \
+              && cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms \
+              && sh ./setup.sh \
+              && sh ./enable-kms-plugin.sh
+              ${startCommand}
           readinessProbe:
             exec:
               command:
@@ -94,10 +85,6 @@ spec:
             - mountPath: "${item.value}"
               name: "${item.name}"
             </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
-            - mountPath: "/opt/datasophon/ranger-2.1.0/conf/ranger-admin-site.xml"
-              name: "ranger-admin-site"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -110,6 +97,3 @@ spec:
         - hostPath:
             path: "/etc/localtime"
           name: "timezone"
-        - hostPath:
-            path: "/opt/datasophon/ranger-2.1.0/conf/ranger-admin-site.xml"
-          name: "ranger-admin-site"

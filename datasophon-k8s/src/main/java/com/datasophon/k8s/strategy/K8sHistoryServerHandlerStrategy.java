@@ -30,6 +30,8 @@ import com.datasophon.k8s.util.*;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -40,42 +42,38 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) throws IOException {
         ExecResult startResult = new ExecResult();
+        String hostname = command.getHostname();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
+        String jobCmd=null;
         if (command.getEnableKerberos()) {
             logger.info("start to get jobhistoryserver keytab file");
-            String hostname = command.getHostname();
             K8sKerberosUtils.createKeytabDir(hostname);
             if (!K8sMinaUtils.checkPathExists(hostname, "/etc/security/keytab/jhs.service.keytab")) {
                 K8sKerberosUtils.downloadKeytabFromMaster(hostname, "jhs/" + hostname, "jhs.service.keytab");
             }
+            jobCmd= "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/"+hostname+"@HADOOP.COM && kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            String coreSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml";
-            String hdfsSite = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hdfs-site.xml";
-            String hadoopEnv = "/opt/datasophon/hadoop-3.3.3/etc/hadoop/hadoop-env.sh";
-            VolumeMountDTO[] volumeMounts = {
-                    new VolumeMountDTO("core-site", coreSite, coreSite),
-                    new VolumeMountDTO("hdfs-site", hdfsSite, hdfsSite),
-                    new VolumeMountDTO("hadoop-env", hadoopEnv, hadoopEnv),
-            };
-            String jobCmd =
-                    "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /user/yarn/yarn-logs\" || (" +
-                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir -p /user/yarn/yarn-logs\" && " +
-                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chown yarn:hadoop /user/yarn/yarn-logs\" ) && " +
-                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -test -e /tmp\" || (" +
-                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -mkdir /tmp\" && " +
-                            "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs -chmod 777 /tmp\" )\n";
+            if (command.getEnableKerberos()){
+                jobCmd = "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM\"  && ";
+                jobCmd += "su - hdfs -c \"kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
+            }
+
+            String hdfsCmdPrefix = "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs ";
+            jobCmd += hdfsCmdPrefix + "-test -e /user/yarn/yarn-logs\" || (" +
+                    hdfsCmdPrefix + "-mkdir -p /user/yarn/yarn-logs\" && " +
+                    hdfsCmdPrefix + "-chown yarn:hadoop /user/yarn/yarn-logs\") && " +
+                    hdfsCmdPrefix + "-test -e /tmp\" || (" +
+                    hdfsCmdPrefix + "-mkdir /tmp\" && " +
+                    hdfsCmdPrefix + "-chmod 777 /tmp\")\n";
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())){
-                K8sUtil.runJob(
+                K8sUtil.runCmd(
                         Constants.DATASOPHON,
-                        "create-jobhistoryserver-dir",
                         kubeClient,
-                        volumeMounts,
-                        DockerImageUtils.getString(command.getServiceName()),
-                        jobCmd,
+                        "hdfs-namenode",
                         logger,
-                        command.getHostname()
-                );
+                        command.getNnHost(),
+                        jobCmd);
                 logger.info("create jobhistoryserver dir success");
                 startResult.setExecResult(true);
             } catch (Exception e) {

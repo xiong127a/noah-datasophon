@@ -45,28 +45,37 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ "${enableKerberos}" = "true" ]; then
+              if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
                   HOSTNAME=$(hostname)
                   cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
                 fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
                   echo "ssl-server.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
               else
                 echo "Kerberos is not enabled. Skipping Kerberos setup.";
               fi
-              sleep $((RANDOM % 60))
-              if [ -d ${journalnodeDir}/meta ]; then
-                echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -bootstrapStandby
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cd ${appHome}/ranger-hdfs-plugin && \
+                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
               else
-                echo Y | /opt/datasophon/hadoop-3.3.3/bin/hdfs namenode -format smhadoop
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+              fi
+              sleep $((RANDOM % 10))
+              if [ -d ${journalnodeDir}/meta ]; then
+                echo "Standby"
+                echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby
+              else
+                echo "active"
+                echo Y | ${appHome}/bin/hdfs namenode -format smhadoop
               fi
           volumeMounts:
             <#list itemList as item>
@@ -89,22 +98,30 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ "${enableKerberos}" = "true" ]; then
+              HOSTNAME=$(hostname)
+              if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then
-                  HOSTNAME=$(hostname)
                   cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
                 fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml ]; then
+                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
                   echo "ssl-client.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-client.xml
+                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 fi
-                if [ ! -f /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml ]; then
+                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
                   echo "ssl-server.xml not found. Copying from template...";
-                  cp /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml.template /opt/datasophon/hadoop-3.3.3/etc/hadoop/ssl-server.xml
+                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
+                  su - hdfs -c "kinit -kt /etc/security/keytab/nn.service.keytab nn/$HOSTNAME@HADOOP.COM"
               else
                 echo "Kerberos is not enabled.";
+              fi
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cd ${appHome}/ranger-hdfs-plugin && \
+                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
+              else
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
               fi
               ${startCommand}
           readinessProbe:

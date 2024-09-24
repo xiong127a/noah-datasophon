@@ -36,6 +36,8 @@ public class K8sServiceRoleOperateCommand extends BaseCommand implements Seriali
 
     private String hostname;
 
+    private String nnHost;
+
     private Map<Generators, List<ServiceConfig>> configFileMap;
 
     public K8sServiceRoleOperateCommand() {

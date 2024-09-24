@@ -26,6 +26,7 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         String hostname = command.getHostname();
+        String jobCmd = "";
         if (command.getEnableKerberos()) {
             logger.info("start to get resourcemanager keytab file");
             K8sKerberosUtils.createKeytabDir(hostname);
@@ -38,23 +39,6 @@ public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrateg
             final String tezHomePath = Constants.INSTALL_PATH + Constants.SLASH + "tez";
             if (K8sMinaUtils.checkPathExists(hostname, tezHomePath)) {
                 K8sMinaUtils.execCmdWithResult(hostname, "ln -s " + tezHomePath + "/conf/tez-site.xml " + workPath + "/etc/hadoop/tez-site.xml");
-            }
-        }
-        if (command.getEnableRangerPlugin()) {
-            logger.info("Start to enable ranger yarn plugin");
-            if (!K8sMinaUtils.checkPathExists(hostname, workPath + "/ranger-yarn-plugin/success.id")) {
-                String commands =
-                        "cd " + workPath + "/ranger-yarn-plugin && " +
-                                " sh " + workPath + "/ranger-yarn-plugin/enable-yarn-plugin.sh";
-                K8sMinaUtils.execCmdWithResult(hostname, commands);
-                boolean success = K8sMinaUtils.writeUtf8String(hostname, "success", workPath + "/ranger-yarn-plugin/success.id");
-                if (success) {
-                    logger.info("Enable ranger yarn plugin failed");
-                    startResult.setExecResult(true);
-                } else {
-                    logger.info("Enable ranger yarn plugin failed");
-                    return startResult;
-                }
             }
         }
         return serviceHandler.start(command);
