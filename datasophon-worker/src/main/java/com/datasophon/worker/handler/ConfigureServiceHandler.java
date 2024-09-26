@@ -166,6 +166,14 @@ public class ConfigureServiceHandler {
                             }
                         }
                     }
+
+                     if (("Meta".equals(serviceRoleName)
+                         || "Graph".equals(serviceRoleName)
+                         || "Storage".equals(serviceRoleName))
+                         && "localIp".equals(config.getName())
+                     ){
+                         config.setValue(InetAddress.getLocalHost().getHostAddress());
+                    }
                 }
 
                 if ("AlluxioMaster".equals(serviceRoleName) && "alluxio-site.properties".equals(generators.getFilename())) {

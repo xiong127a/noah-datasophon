@@ -1,0 +1,92 @@
+[
+  {
+    "url": "login",
+    "operationModule": "用户登录"
+  },
+  {
+    "url": "signOut",
+    "operationModule": "用户退出"
+  },
+  {
+    "url": "api/user",
+    "operationModule": "用户管理"
+  },
+  {
+    "url": "api/cluster",
+    "operationModule": "集群管理"
+  },
+  {
+    "url": "api/cluster/host",
+    "operationModule": "主机管理",
+    "operationType": {
+      "assignRack": "分配机架"
+    }
+  },
+  {
+    "url": "cluster/node/label",
+    "operationModule": "标签管理",
+    "operationType": {
+      "assign": "分配标签"
+    }
+  },
+  {
+    "url": "cluster/group",
+    "operationModule": "租户管理-用户组管理"
+  },
+  {
+    "url": "cluster/user",
+    "operationModule": "租户管理-用户管理"
+  },
+  {
+    "url": "cluster/rack",
+    "operationModule": "机架管理"
+  },
+  {
+    "url": "alert/group",
+    "operationModule": "告警组管理"
+  },
+  {
+    "url": "cluster/alert/quota",
+    "operationModule": "告警指标管理",
+    "operationType": {
+      "start": "启用指标",
+      "stop": "停用指标"
+    }
+  },
+  {
+    "url": "host/install",
+    "operationModule": "主机操作",
+    "operationType": {
+      "generateHostAgentCommand": "${commandType:start=启动主机worker;stop=停止主机worker}",
+      "reStartDispatcherHostAgent": "重新安装主机",
+      "generateHostServiceCommand": "启动主机服务"
+    }
+  },
+  {
+    "url": "cluster/tenant",
+    "operationModule": "租户管理"
+  },
+  {
+    "url": "cluster/yarn/queue",
+    "operationModule": "租户管理"
+  },
+  {
+    "url": "cluster/service/instance",
+    "operationModule": "服务管理"
+  },
+  {
+    "url": "cluster/service/instance/role/group",
+    "operationModule": "服务管理-角色组",
+    "operationType": {
+      "bind": "分配角色组",
+      "rename": "重命名角色组"
+    }
+  },
+  {
+    "url": "service/install",
+    "operationModule": "服务管理-配置",
+    "operationType": {
+      "saveServiceConfig": "保存配置信息"
+    }
+  }
+]

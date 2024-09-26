@@ -1,0 +1,134 @@
+########## basics ##########
+# Whether to run as a daemon process
+--daemonize=true
+# The file to host the process id
+--pid_file=pids/nebula-graphd.pid
+# Whether to enable optimizer
+--enable_optimizer=true
+# The default charset when a space is created
+--default_charset=utf8
+# The default collate when a space is created
+--default_collate=utf8_bin
+# Whether to use the configuration obtained from the configuration file
+--local_config=true
+
+########## logging ##########
+# The directory to host logging files
+--log_dir=${logDir}
+# Log level, 0, 1, 2, 3 for INFO, WARNING, ERROR, FATAL respectively
+--minloglevel=0
+# Verbose log level, 1, 2, 3, 4, the higher of the level, the more verbose of the logging
+--v=0
+# Maximum seconds to buffer the log messages
+--logbufsecs=0
+# Whether to redirect stdout and stderr to separate output files
+--redirect_stdout=true
+# Destination filename of stdout and stderr, which will also reside in log_dir.
+--stdout_log_file=graphd-stdout.log
+--stderr_log_file=graphd-stderr.log
+# Copy log messages at or above this level to stderr in addition to logfiles. The numbers of severity levels INFO, WARNING, ERROR, and FATAL are 0, 1, 2, and 3, respectively.
+--stderrthreshold=3
+# wether logging files' name contain time stamp.
+--timestamp_in_logfile_name=true
+########## query ##########
+# Whether to treat partial success as an error.
+# This flag is only used for Read-only access, and Modify access always treats partial success as an error.
+--accept_partial_success=false
+# Maximum sentence length, unit byte
+--max_allowed_query_size=${maxAllowedQuerySize}
+
+########## networking ##########
+# Comma separated Meta Server Addresses
+--meta_server_addrs=${metaServerAddrs}
+# Local IP used to identify the nebula-graphd process.
+# Change it to an address other than loopback if the service is distributed or
+# will be accessed remotely.
+--local_ip=${localIp}
+# Network device to listen on
+--listen_netdev=any
+# Port to listen on
+--port=${graphPort}
+# To turn on SO_REUSEPORT or not
+--reuse_port=false
+# Backlog of the listen socket, adjust this together with net.core.somaxconn
+--listen_backlog=1024
+# The number of seconds Nebula service waits before closing the idle connections
+--client_idle_timeout_secs=28800
+# The number of seconds before idle sessions expire
+# The range should be in [1, 604800]
+--session_idle_timeout_secs=28800
+# The number of threads to accept incoming connections
+--num_accept_threads=1
+# The number of networking IO threads, 0 for # of CPU cores
+--num_netio_threads=0
+# Max active connections for all networking threads. 0 means no limit.
+# Max connections for each networking thread = num_max_connections / num_netio_threads
+--num_max_connections=${graphNumMaxConnections}
+# The number of threads to execute user queries, 0 for # of CPU cores
+--num_worker_threads=${graphNumWorkerThreads}
+# HTTP service ip
+--ws_ip=0.0.0.0
+# HTTP service port
+--ws_http_port=19669
+# storage client timeout
+--storage_client_timeout_ms=60000
+# slow query threshold in us
+--slow_query_threshold_us=200000
+# Port to listen on Meta with HTTP protocol, it corresponds to ws_http_port in metad's configuration file
+--ws_meta_http_port=19559
+
+########## authentication ##########
+# Enable authorization
+--enable_authorize=${enableAuthorize}
+# User login authentication type, password for nebula authentication, ldap for ldap authentication, cloud for cloud authentication
+--auth_type=${authType}
+
+########## memory ##########
+# System memory high watermark ratio, cancel the memory checking when the ratio greater than 1.0
+--system_memory_high_watermark_ratio=${systemMemoryHighWatermarkRatio}
+
+########## metrics ##########
+--enable_space_level_metrics=false
+
+########## experimental feature ##########
+# if use experimental features
+--enable_experimental_feature=false
+
+# if use balance data feature, only work if enable_experimental_feature is true
+--enable_data_balance=${enableDataBalance}
+
+# enable udf, written in c++ only for now
+--enable_udf=true
+
+# set the directory where the .so files of udf are stored, when enable_udf is true
+--udf_path=${udfPath}
+
+########## session ##########
+# Maximum number of sessions that can be created per IP and per user
+--max_sessions_per_ip_per_user=${maxSessionsPerIpPerUser}
+
+########## memory tracker ##########
+# trackable memory ratio (trackable_memory / (total_memory - untracked_reserved_memory) )
+--memory_tracker_limit_ratio=${graphMemoryTrackerLimitRatio}
+# untracked reserved memory in Mib
+--memory_tracker_untracked_reserved_memory_mb=${graphMemoryTrackerUntrackedReservedMemoryMb}
+
+# enable log memory tracker stats periodically
+--memory_tracker_detail_log=false
+# log memory tacker stats interval in milliseconds
+--memory_tracker_detail_log_interval_ms=60000
+
+# enable memory background purge (if jemalloc is used)
+--memory_purge_enabled=${graphMemoryPurgeEnabled}
+# memory background purge interval in seconds
+--memory_purge_interval_seconds=${graphMemoryPurgeIntervalSeconds}
+
+########## performance optimization ##########
+# The max job size in multi job mode
+--max_job_size=${maxJobSize}
+# The min batch size for handling dataset in multi job mode, only enabled when max_job_size is greater than 1
+--min_batch_size=${minBatchSize}
+# if true, return directly without go through RPC
+--optimize_appendvertices=${optimizeAppendvertices}
+# number of paths constructed by each thread
+--path_batch_size=${pathBatchSize}
