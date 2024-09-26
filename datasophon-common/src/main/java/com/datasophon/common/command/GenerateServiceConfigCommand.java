@@ -43,4 +43,6 @@ public class GenerateServiceConfigCommand implements Serializable {
     private String serviceRoleName;
 
     private RunAs runAs;
+
+    private String hostName;
 }

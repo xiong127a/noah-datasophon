@@ -2,11 +2,11 @@
   "name": "SEATUNNEL",
   "label": "Seatunnel",
   "description": "数据同步工具",
-  "version": "2.3.3",
+  "version": "2.3.5",
   "sortNum": 32,
   "dependencies": [],
-  "packageName": "seatunnel-2.3.3.tar.gz",
-  "decompressPackageName": "seatunnel-2.3.3",
+  "packageName": "seatunnel-2.3.5.tar.gz",
+  "decompressPackageName": "seatunnel-2.3.5",
   "roles": [
     {
       "name": "SeatunnelServer",
@@ -41,8 +41,7 @@
         "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "backupCount",
-          "custom.checkPoint"
+          "backupCount"
         ]
       },
       {
@@ -77,18 +76,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "1"
-    },
-    {
-      "name": "custom.checkPoint",
-      "label": "自定义配置检查点存储",
-      "description": "自定义配置",
-      "configType": "custom",
-      "required": false,
-      "type": "multipleWithKey",
-      "value": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}],
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}]
     },
     {
       "name": "hosts",

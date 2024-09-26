@@ -123,7 +123,10 @@ CREATE TABLE "DATASOPHON"."t_ddh_cluster_info"
  "cluster_frame" VARCHAR(128) NULL,
  "frame_version" VARCHAR(128) NULL,
  "cluster_state" INT NULL,
- "frame_id" INT NULL
+ "frame_id" INT NULL,
+ "dep_type" VARCHAR(128) NULL,
+ "kube_config" TEXT,
+ "namespace" VARCHAR(128) NULL
 );
 CREATE TABLE "DATASOPHON"."t_ddh_cluster_node_label"
 (

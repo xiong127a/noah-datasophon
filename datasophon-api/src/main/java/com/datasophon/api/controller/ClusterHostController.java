@@ -19,6 +19,7 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 
@@ -27,10 +28,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
@@ -127,6 +125,14 @@ public class ClusterHostController {
             log.warn("移除主机异常.", e);
             return Result.error("移除主机异常, Cause: " + e.getMessage());
         }
+    }
+
+    /**
+     * k8s配置集群时添加主机
+     */
+    @RequestMapping(value = "/saveK8sHost", method = RequestMethod.POST)
+    public Result saveK8sHost(@RequestBody List<HostInfo> hostInfoList, @RequestParam Integer clusterId) {
+        return clusterHostService.saveK8sHost(hostInfoList, clusterId);
     }
 
 }

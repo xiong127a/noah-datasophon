@@ -486,11 +486,11 @@
       "description": "",
       "configType": "map",
       "configWithKerberos": true,
-      "required": false,
+      "required": true,
       "type": "input",
       "value": "/etc/krb5.conf",
       "configurableInWizard": true,
-      "hidden": true,
+      "hidden": false,
       "defaultValue": "/etc/krb5.conf"
     },
     {
@@ -499,11 +499,11 @@
       "description": "",
       "configType": "map",
       "configWithKerberos": true,
-      "required": false,
+      "required": true,
       "type": "input",
       "value": "${KAFKA_HOME}/config/kafka-jaas.conf",
       "configurableInWizard": true,
-      "hidden": true,
+      "hidden": false,
       "defaultValue": "${KAFKA_HOME}/config/kafka-jaas.conf"
     },
     {
@@ -512,11 +512,11 @@
       "description": "",
       "configType": "map",
       "configWithKerberos": true,
-      "required": false,
+      "required": true,
       "type": "input",
       "value": "${KAFKA_HOME}",
       "configurableInWizard": true,
-      "hidden": true,
+      "hidden": false,
       "defaultValue": "${KAFKA_HOME}"
     },
     {

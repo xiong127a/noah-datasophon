@@ -1,0 +1,85 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  labels:
+    name: "grafana-grafana"
+  name: "grafana-grafana"
+  namespace: datasophon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "grafana-grafana"
+  strategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  minReadySeconds: 5
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        name: "grafana-grafana"
+        app: "grafana-grafana"
+        podConflictName: "grafana-grafana"
+      annotations:
+        serviceInstanceName: "grafana"
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  name: "grafana-grafana"
+                  podConflictName: "grafana-grafana"
+              namespaces:
+                - "datasophon"
+              topologyKey: "kubernetes.io/hostname"
+      hostPID: false
+      hostNetwork: true
+      containers:
+        - env:
+            - name: USER
+              value: root
+            - name: MEM_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          image: "192.168.5.200:5000/bdp/grafana:9.1.6"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - "cd /opt/datasophon/grafana-9.1.6 && sh control.sh start grafana && tail -f /dev/null"
+          readinessProbe:
+            exec:
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "sh /opt/datasophon/grafana-9.1.6/control.sh status grafana"
+            failureThreshold: 3
+            initialDelaySeconds: 3
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 15
+          name: "grafana-grafana"
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: "/etc/localtime"
+              name: "timezone"
+      nodeSelector:
+        grafana-grafana: "true"
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - hostPath:
+            path: "/etc/localtime"
+          name: "timezone"

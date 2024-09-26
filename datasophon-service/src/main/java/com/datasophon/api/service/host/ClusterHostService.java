@@ -18,6 +18,7 @@
 package com.datasophon.api.service.host;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
 
@@ -58,4 +59,6 @@ public interface ClusterHostService extends IService<ClusterHostDO> {
     Result assignRack(Integer clusterId, String rack, String hostIds);
 
     List<ClusterHostDO> getClusterHostByRack(Integer clusterId, String rack);
+
+    Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId);
 }

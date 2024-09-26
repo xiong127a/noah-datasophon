@@ -1,0 +1,17 @@
+# 第一阶段
+FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333 AS builder
+
+RUN groupadd -r -g 2002 ranger \
+    && useradd -r -u 2011 -g 2002 -m ranger \
+    && useradd -r -u 2012 -g 2002 -m rangerusersync \
+    && useradd -r -u 2013 -g 2002 -m rangerkms \
+    && mkdir -p /opt
+
+WORKDIR /opt/datasophon
+
+ADD ranger-2.1.0.tar.gz /opt/
+
+RUN chmod -R 775 /opt/ranger-2.1.0 \
+    && rm -rf /opt/ranger-2.1.0/ranger-2.1.0-usersync/install.properties \
+    && rm -rf /opt/ranger-2.1.0/ranger-2.1.0-kms/install.properties \
+    && chown -R ranger:ranger /opt/ranger-2.1.0

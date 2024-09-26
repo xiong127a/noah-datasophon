@@ -2,12 +2,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>datasophon</artifactId>
         <groupId>com.datasophon</groupId>
         <version>${revision}</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
 
     <artifactId>datasophon-service</artifactId>
 
@@ -89,6 +89,11 @@
             <groupId>com.netflix.feign</groupId>
             <artifactId>feign-okhttp</artifactId>
             <version>${feign.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-k8s</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>

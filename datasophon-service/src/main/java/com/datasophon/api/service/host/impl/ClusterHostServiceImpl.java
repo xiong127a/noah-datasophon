@@ -18,6 +18,7 @@
 package com.datasophon.api.service.host.impl;
 
 import akka.actor.ActorRef;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -31,6 +32,8 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
+import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteCmdCommand;
@@ -46,13 +49,16 @@ import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterHostMapper;
+import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
+import org.apache.sshd.client.session.ClientSession;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import scala.concurrent.duration.FiniteDuration;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -104,16 +110,16 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
-            .collect(Collectors.toMap(obj->obj.getId()+"", ClusterRack::getRack));
+                .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
-            BeanUtils.copyProperties(clusterHostDO,queryHostListPageDTO);
+            BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
             // 查询主机上服务角色数
             int serviceRoleNum = roleInstanceService.count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                     .eq(Constants.HOSTNAME, clusterHostDO.getHostname()));
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
-            queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(),"/default-rack"));
+            queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
             hostListPageDTOS.add(queryHostListPageDTO);
         }
         int count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
@@ -270,5 +276,35 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         return this.list(new QueryWrapper<ClusterHostDO>()
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.RACK, rack));
+    }
+
+    public Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId) {
+        for (HostInfo hostInfo : hostInfoList) {
+            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
+            if (ObjectUtil.isNull(hostEntity)) {
+                ClusterHostDO clusterHostDO = new ClusterHostDO();
+                clusterHostDO.setClusterId(clusterId);
+                clusterHostDO.setCreateTime(hostInfo.getCreateTime());
+                clusterHostDO.setHostname(hostInfo.getHostname());
+                clusterHostDO.setIp(hostInfo.getIp());
+                clusterHostDO.setRack("/default-rack");
+                clusterHostDO.setHostState(HostState.RUNNING);
+                clusterHostDO.setManaged(MANAGED.YES);
+                clusterHostDO.setNodeLabel("default");
+
+                ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                String arch;
+                try {
+                    arch = MinaUtils.executeCommandAndGetResult(session, "arch");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    MinaUtils.closeConnection(session);
+                }
+                clusterHostDO.setCpuArchitecture(arch);
+                this.save(clusterHostDO);
+            }
+        }
+        return Result.success();
     }
 }

@@ -30,6 +30,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.datasophon.api.k8s.handler.*;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.master.ActorUtils;
@@ -282,7 +283,7 @@ public class ProcessUtils {
 
         ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
         ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                1L, TimeUnit.SECONDS),
+                        1L, TimeUnit.SECONDS),
                 commandActor, message,
                 ActorUtils.actorSystem.dispatcher(),
                 ActorRef.noSender());
@@ -477,39 +478,116 @@ public class ProcessUtils {
     }
 
     public static ExecResult restartService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception {
-        ServiceHandler serviceStartHandler = new ServiceStartHandler();
-        ServiceHandler serviceStopHandler = new ServiceStopHandler();
-        if (needReConfig) {
-            ServiceConfigureHandler serviceConfigureHandler = new ServiceConfigureHandler();
-            serviceStopHandler.setNext(serviceConfigureHandler);
-            serviceConfigureHandler.setNext(serviceStartHandler);
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        if (Constants.PVM_MODE.equals(depMode)) {
+            ServiceHandler serviceStartHandler = new ServiceStartHandler();
+            ServiceHandler serviceStopHandler = new ServiceStopHandler();
+            if (needReConfig) {
+                ServiceConfigureHandler serviceConfigureHandler = new ServiceConfigureHandler();
+                serviceStopHandler.setNext(serviceConfigureHandler);
+                serviceConfigureHandler.setNext(serviceStartHandler);
+            } else {
+                serviceStopHandler.setNext(serviceStartHandler);
+            }
+            return serviceStopHandler.handlerRequest(serviceRoleInfo);
         } else {
-            serviceStopHandler.setNext(serviceStartHandler);
+            K8sHostCancelTagHandler k8sHostCancelTagHandler = new K8sHostCancelTagHandler();
+            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
+            K8sServiceScaleDownHandler k8sServiceScaleDownHandler = new K8sServiceScaleDownHandler();
+            K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
+            K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
+            K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
+            k8sHostCancelTagHandler.setNext(k8sServiceRoleStopHandler);
+            k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
+            if (needReConfig) {
+                K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                k8sServiceScaleDownHandler.setNext(k8sServiceConfigureHandler);
+                k8sServiceConfigureHandler.setNext(k8sHostTagHandler);
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+            } else {
+                k8sServiceScaleDownHandler.setNext(k8sHostTagHandler);
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+            }
+            return k8sHostCancelTagHandler.handlerRequest(serviceRoleInfo);
         }
-        return serviceStopHandler.handlerRequest(serviceRoleInfo);
     }
 
     public static ExecResult startService(ServiceRoleInfo serviceRoleInfo, boolean needReConfig) throws Exception {
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
         ExecResult execResult;
-        if (needReConfig) {
-            ServiceConfigureHandler serviceHandler = new ServiceConfigureHandler();
-            ServiceHandler serviceStartHandler = new ServiceStartHandler();
-            serviceHandler.setNext(serviceStartHandler);
-            execResult = serviceHandler.handlerRequest(serviceRoleInfo);
+        if (Constants.PVM_MODE.equals(depMode)) {
+            if (needReConfig) {
+                ServiceConfigureHandler serviceHandler = new ServiceConfigureHandler();
+                ServiceHandler serviceStartHandler = new ServiceStartHandler();
+                serviceHandler.setNext(serviceStartHandler);
+                execResult = serviceHandler.handlerRequest(serviceRoleInfo);
+            } else {
+                ServiceHandler serviceStartHandler = new ServiceStartHandler();
+                execResult = serviceStartHandler.handlerRequest(serviceRoleInfo);
+            }
         } else {
-            ServiceHandler serviceStartHandler = new ServiceStartHandler();
-            execResult = serviceStartHandler.handlerRequest(serviceRoleInfo);
+            if (needReConfig) {
+                K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
+                K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
+                k8sServiceConfigureHandler.setNext(k8sHostTagHandler);
+                k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
+                execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+            } else {
+                K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
+                K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
+                K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
+                k8sHostTagHandler.setNext(k8sServiceStartHandler);
+                k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
+                execResult = k8sHostTagHandler.handlerRequest(serviceRoleInfo);
+            }
+        }
+        return execResult;
+    }
+
+    public static ExecResult stopService(ServiceRoleInfo serviceRoleInfo) throws Exception {
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ExecResult execResult;
+        if (Constants.PVM_MODE.equals(depMode)) {
+            ServiceHandler serviceStopHandler = new ServiceStopHandler();
+            execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
+        } else {
+            K8sHostCancelTagHandler k8sHostCancelTagHandler = new K8sHostCancelTagHandler();
+            K8sServiceRoleStopHandler k8sServiceRoleStopHandler = new K8sServiceRoleStopHandler();
+            K8sServiceScaleDownHandler k8sServiceScaleDownHandler = new K8sServiceScaleDownHandler();
+            k8sHostCancelTagHandler.setNext(k8sServiceRoleStopHandler);
+            k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
+            execResult = k8sHostCancelTagHandler.handlerRequest(serviceRoleInfo);
         }
         return execResult;
     }
 
     public static ExecResult startInstallService(ServiceRoleInfo serviceRoleInfo) throws Exception {
-        ServiceHandler serviceInstallHandler = new ServiceInstallHandler();
-        ServiceHandler serviceConfigureHandler = new ServiceConfigureHandler();
-        ServiceHandler serviceStartHandler = new ServiceStartHandler();
-        serviceInstallHandler.setNext(serviceConfigureHandler);
-        serviceConfigureHandler.setNext(serviceStartHandler);
-        ExecResult execResult = serviceInstallHandler.handlerRequest(serviceRoleInfo);
+        String depMode = getDepMode(serviceRoleInfo.getClusterId());
+        ExecResult execResult;
+        if (Constants.PVM_MODE.equals(depMode)) {
+            ServiceHandler serviceInstallHandler = new ServiceInstallHandler();
+            ServiceHandler serviceConfigureHandler = new ServiceConfigureHandler();
+            ServiceHandler serviceStartHandler = new ServiceStartHandler();
+            serviceInstallHandler.setNext(serviceConfigureHandler);
+            serviceConfigureHandler.setNext(serviceStartHandler);
+            execResult = serviceInstallHandler.handlerRequest(serviceRoleInfo);
+        } else {
+            K8sServiceInstallHandler k8sServiceInstallHandler = new K8sServiceInstallHandler();
+            K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+            K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
+            K8sHostTagHandler k8SHostTagHandler = new K8sHostTagHandler();
+            K8sServiceStartHandler k8sServiceStartHandler = new K8sServiceStartHandler();
+
+            k8sServiceInstallHandler.setNext(k8sServiceConfigureHandler);
+            k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
+            k8sDeploymentYamlHandler.setNext(k8SHostTagHandler);
+            k8SHostTagHandler.setNext(k8sServiceStartHandler);
+
+            execResult = k8sServiceInstallHandler.handlerRequest(serviceRoleInfo);
+        }
         return execResult;
     }
 
@@ -546,21 +624,21 @@ public class ProcessUtils {
      * @Description: 生成configFileMap
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-                                             ClusterServiceRoleGroupConfig config,Integer clusterId) {
+                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
         Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(), Map.class);
         for (JSONObject fileJson : map.keySet()) {
             Generators generators = fileJson.toJavaObject(Generators.class);
             List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
             //replace variable
-            replaceVariable(serviceConfigs,clusterId);
+            replaceVariable(serviceConfigs, clusterId);
             configFileMap.put(generators, serviceConfigs);
         }
     }
 
-    private static void replaceVariable(List<ServiceConfig> serviceConfigs,Integer clusterId) {
+    private static void replaceVariable(List<ServiceConfig> serviceConfigs, Integer clusterId) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         for (ServiceConfig serviceConfig : serviceConfigs) {
-            if(Constants.INPUT.equals(serviceConfig.getType())){
+            if (Constants.INPUT.equals(serviceConfig.getType())) {
                 String name = PlaceholderUtils.replacePlaceholders(serviceConfig.getName(), globalVariables,
                         Constants.REGEX_VARIABLE);
                 serviceConfig.setName(name);
@@ -590,6 +668,11 @@ public class ProcessUtils {
     public static ClusterInfoEntity getClusterInfo(Integer clusterId) {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         return clusterInfoService.getById(clusterId);
+    }
+
+    public static Map<Integer, String> getAllClusterIdAndType() {
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        return clusterInfoService.list().stream().collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
     }
 
     /**
@@ -729,4 +812,17 @@ public class ProcessUtils {
 
     }
 
+    public static String getDepMode(Integer clusterId) {
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        return clusterInfoService.getById(clusterId).getDepType();
+    }
+
+    public static Boolean enableKerberos(Integer clusterId,String serviceParentName) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Kerberos}"));
+    }
+    public static boolean enableRangerPlugin(Integer clusterId, String serviceParentName) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Plugin}"));
+    }
 }

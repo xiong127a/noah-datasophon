@@ -46,8 +46,9 @@
       </a-list-item>
     </a-list>
     <!-- 配置集群的modal -->
-    <a-modal v-if="visible" title :visible="visible" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
-      <Steps :clusterId="clusterId" />
+    <a-modal v-if="visible" title :visible="visible" :maskClosable="false" :closable="false" :width="1576"
+      :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
+      <Steps :clusterId="clusterId" :depType="depType" />
     </a-modal>
   </div>
 </template>
@@ -101,7 +102,7 @@ export default {
     },
     addColony(obj) {
       const self = this;
-      let width = 520;
+      let width = 900;
       let title = JSON.stringify(obj) !== "{}" ? "编辑集群" : "创建集群";
       let content = (
         <AddColony detail={obj} callBack={() => self.getColonyList()} />
@@ -186,6 +187,7 @@ export default {
       this.clusterId = row.id;
       this.setClusterId(row.id)
       this.visible = true;
+      this.depType = row.depType
     },
     handleCancel(e) {
       this.visible = false;
