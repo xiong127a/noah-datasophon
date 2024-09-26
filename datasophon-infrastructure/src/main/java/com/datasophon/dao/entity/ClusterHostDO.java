@@ -22,13 +22,19 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
 
 @TableName("t_ddh_cluster_host")
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ClusterHostDO implements Serializable {
 
     private static final long serialVersionUID = 1L;

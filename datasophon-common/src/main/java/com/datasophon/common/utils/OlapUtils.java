@@ -82,6 +82,22 @@ public class OlapUtils {
         return execResult;
     }
 
+    public static ExecResult addCn(String feMaster, String hostname) {
+        ExecResult execResult = new ExecResult();
+        String sql = "ALTER SYSTEM add COMPUTE NODE \"" + hostname + ":9050\";";
+        logger.info("Add cn to cluster , the sql is {}", sql);
+
+        try {
+            executeSql(feMaster, hostname, sql);
+            execResult.setExecResult(true);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return execResult;
+    }
+
     private static void executeSql(String feMaster, String hostname,
                                    String sql) throws ClassNotFoundException, SQLException {
         Connection connection = getConnection(feMaster);
@@ -125,6 +141,19 @@ public class OlapUtils {
                         + feMaster
                         + " -uroot -P9030 -e"
                         + " 'ALTER SYSTEM add BACKEND  \""
+                        + hostname
+                        + ":9050\"';";
+        // logger.info("sqlCommand is {}", sqlCommand);
+        return ShellUtils.exceShell(sqlCommand);
+    }
+
+    public static ExecResult addCnBySqlClient(String feMaster,
+                                                   String hostname) {
+        String sqlCommand =
+                "mysql -h"
+                        + feMaster
+                        + " -uroot -P9030 -e"
+                        + " 'ALTER SYSTEM add COMPUTE NODE \""
                         + hostname
                         + ":9050\"';";
         // logger.info("sqlCommand is {}", sqlCommand);
@@ -183,6 +212,12 @@ public class OlapUtils {
 
     public static List<ProcInfo> showSRBackends(String feMaster) throws SQLException, ClassNotFoundException {
         String sql = "SHOW PROC '/backends';";
+        // logger.info("sql is {}",sql);
+        return executeQuerySRProcInfo(feMaster, sql);
+    }
+
+    public static List<ProcInfo> showSRComputes(String feMaster) throws SQLException, ClassNotFoundException {
+        String sql = "SHOW PROC '/compute_nodes';";
         // logger.info("sql is {}",sql);
         return executeQuerySRProcInfo(feMaster, sql);
     }

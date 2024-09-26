@@ -43,13 +43,9 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        // if feMaster is null, set the first host as feMaster
-        //Prevent FE Observer nodes from starting and FE Master nodes from changing
-//        if (!globalVariables.containsKey("${srFeMaster}") || ObjUtil.isNull(globalVariables.get("${srFeMaster}"))) {
         if (!hosts.isEmpty()) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${srFeMaster}", hosts.get(0));
         }
-//        }
     }
 
     @Override

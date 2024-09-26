@@ -32,6 +32,7 @@ import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.utils.TaskConstants;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
+import org.apache.tools.ant.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,6 +147,13 @@ public class ConfigureServiceHandler {
                             || "be_priority_networks".equals(config.getName())) {
                         config.setName("priority_networks");
                     }
+                    if (("SRFE".equals(serviceRoleName)
+                            || "SRBE".equals(serviceRoleName)
+                            || "SRFEObserver".equals(serviceRoleName)
+                            || "SRCN".equals(serviceRoleName))
+                            && "priority_networks".equals(config.getName())) {
+                        config.setValue(InetAddress.getLocalHost().getHostAddress());
+                    }
 
                     if("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())){
                         // add hive-site.xml link in kerberos module
@@ -157,6 +165,14 @@ public class ConfigureServiceHandler {
                                 logger.warn("Add hive-site.xml link failed,msg: "+result.getExecErrOut());
                             }
                         }
+                    }
+
+                     if (("Meta".equals(serviceRoleName)
+                         || "Graph".equals(serviceRoleName)
+                         || "Storage".equals(serviceRoleName))
+                         && "localIp".equals(config.getName())
+                     ){
+                         config.setValue(InetAddress.getLocalHost().getHostAddress());
                     }
                 }
 

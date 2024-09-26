@@ -177,6 +177,9 @@ CREATE TABLE `t_ddh_cluster_info`  (
   `frame_version` varchar(128)  DEFAULT NULL COMMENT '集群版本',
   `cluster_state` int(11) DEFAULT NULL COMMENT '集群状态 1:待配置2：正在运行',
   `frame_id` int(10) DEFAULT NULL,
+  `dep_type` VARCHAR(128) NULL,
+  `kube_config` TEXT,
+  `namespace` VARCHAR(128) NULL,
   PRIMARY KEY (`id`)
 ) AUTO_INCREMENT = 1 DEFAULT CHARSET=utf8mb4 COMMENT = '集群信息表' ROW_FORMAT = DYNAMIC;
 

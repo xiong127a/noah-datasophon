@@ -46,9 +46,8 @@ public class LocaleChangeInterceptor extends HandlerInterceptorAdapter {
         if (newLocale != null) {
             // 设置新的区域设置
             LocaleContextHolder.setLocale(parseLocaleValue(newLocale));
-            return true;
         }
-        return false;
+        return true;
     }
 
     @Nullable
