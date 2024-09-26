@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
+import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterAlertHistoryService;
@@ -40,6 +41,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.command.K8sGetLogCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -63,12 +65,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -107,6 +104,7 @@ public class ClusterServiceRoleInstanceServiceImpl
 
     @Autowired
     private ClusterServiceRoleInstanceWebuisService webuisService;
+
 
     @Override
     public List<ClusterServiceRoleInstanceEntity> listStoppedServiceRoleListByHostnameAndClusterId(String hostname,
@@ -235,14 +233,53 @@ public class ClusterServiceRoleInstanceServiceImpl
     @Override
     public Result deleteServiceRole(List<String> idList) {
         Collection<ClusterServiceRoleInstanceEntity> list = this.listByIds(idList);
+        Map<String, Long> roleNameRemoveCount = list.stream()
+                .filter(instance -> instance.getServiceRoleState() != ServiceRoleState.RUNNING) // 过滤条件
+                .collect(Collectors.groupingBy(
+                        ClusterServiceRoleInstanceEntity::getServiceRoleName, // 以服务角色名称为键
+                        Collectors.counting() // 统计数量
+                ));
         // is there a running instance
         boolean flag = false;
+        Integer clusterId = null;
+        String ServiceName = null;
         ArrayList<Integer> needRemoveList = new ArrayList<>();
         for (ClusterServiceRoleInstanceEntity instance : list) {
+            if (clusterId == null) {
+                clusterId = instance.getClusterId();
+            }
+            if (ServiceName == null) {
+                ServiceName = instance.getServiceName();
+            }
             if (instance.getServiceRoleState() == ServiceRoleState.RUNNING) {
                 flag = true;
             } else {
+                clusterId = instance.getClusterId();
                 needRemoveList.add(instance.getId());
+            }
+        }
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+            List<String> matchingRoleNames = new ArrayList<>();
+            for (Map.Entry<String, Long> entry : roleNameRemoveCount.entrySet()) {
+                String roleName = entry.getKey();
+                Long count = entry.getValue();
+                if (roleInstanceService.listServiceRoleByName(roleName).size()==(count)) {
+                    matchingRoleNames.add(roleName); // 添加到列表
+                }
+            }
+            for (String serviceRoleName : matchingRoleNames) {
+                K8sServiceStopHandler k8sServiceStopHandler = new K8sServiceStopHandler();
+                ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+                serviceRoleInfo.setClusterId(clusterId);
+                serviceRoleInfo.setParentName(ServiceName);
+                serviceRoleInfo.setName(serviceRoleName);
+                try {
+                    k8sServiceStopHandler.handlerRequest(serviceRoleInfo);
+                    logger.info("remove {} deployment success", serviceRoleName);
+                } catch (Exception e) {
+                    logger.error("remove {} deployment failed", serviceRoleName);
+                }
             }
         }
         if (!needRemoveList.isEmpty()) {
