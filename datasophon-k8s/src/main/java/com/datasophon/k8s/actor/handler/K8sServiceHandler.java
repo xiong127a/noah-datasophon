@@ -62,12 +62,31 @@ public class K8sServiceHandler {
     public ExecResult install(K8sServiceRoleOperateCommand command) {
         ExecResult execResult = new ExecResult();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
-        addProcessStatus();
         execResult.setExecResult(true);
-
-        if (isFinalNode()) {
+        boolean flag = true;
+        //如果之前已经deployment，这里scale+1 不再次提交deployment
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+            RollableScalableResource<Deployment> resource =
+                    client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
+            if (Objects.nonNull(resource.get())){
+                flag=false;
+                Integer replicas = resource.get().getSpec().getReplicas();
+                if (replicas == null) {
+                    replicas = 0;
+                }
+                log.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+                int scaleNum = replicas + 1;
+                resource.scale(scaleNum);
+                log.info("scale up deployment 为: " + scaleNum);
+                return execResult;
+            }
+        } catch (Exception e) {
+            execResult.setExecErrOut(e.getMessage());
+        }
+        addProcessStatus();
+        if (isFinalNode()&&flag) {
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-                 InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
                 List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
                 String deploymentName = metadata.get(0).getMetadata().getName();
                 final Deployment deployment = client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(deploymentName).get();
@@ -84,6 +103,8 @@ public class K8sServiceHandler {
                 execResult.setExecErrOut("启动deployment时发生异常: " + e.getMessage());
                 execResult.setExecOut("启动deployment时发生异常: " + e.getMessage());
                 execResult.setExecResult(false);
+            }finally {
+                CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
             }
         }
 
@@ -96,16 +117,17 @@ public class K8sServiceHandler {
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         log.info("本地资源文件: {}", yamlFile);
 
+        File yamlFileObj = new File(yamlFile);
         if (Objects.isNull(status)) {
             CacheUtils.put(serviceRoleFullName, false);
-            File yamlFileObj = new File(yamlFile);
-            if (!yamlFileObj.exists()) {
-                log.error("k8s资源文件不存在: {}", yamlFile);
-                execResult.setExecErrOut("k8s资源文件不存在: " + yamlFile);
-                execResult.setExecOut("k8s资源文件不存在: " + yamlFile);
-                return execResult;
-            }
-
+        }
+        if (!yamlFileObj.exists()) {
+            log.error("k8s资源文件不存在: {}", yamlFile);
+            execResult.setExecErrOut("k8s资源文件不存在: " + yamlFile);
+            execResult.setExecOut("k8s资源文件不存在: " + yamlFile);
+            execResult.setExecResult(false);
+            return execResult;
+        }else{
             log.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
                  FileInputStream fis = new FileInputStream(yamlFileObj)) {
@@ -119,10 +141,7 @@ public class K8sServiceHandler {
                 execResult.setExecErrOut("停止deployment时发生异常: " + e.getMessage());
                 execResult.setExecOut("停止deployment时发生异常: " + e.getMessage());
             }
-        } else {
-            execResult.setExecResult(status);
         }
-
         return execResult;
     }
 
@@ -168,6 +187,7 @@ public class K8sServiceHandler {
     private Boolean isFinalNode() {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        System.out.println(nodeCount+currentCount);
         return currentCount.equals(nodeCount);
     }
 

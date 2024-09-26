@@ -35,6 +35,7 @@ public class K8sScaleServiceHandler {
 
     public ExecResult scaleService(String kubeConfig, K8sScaleType scaleType) {
         ExecResult execResult = new ExecResult();
+
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             switch (scaleType) {
                 case SCALE_UP:
@@ -54,10 +55,10 @@ public class K8sScaleServiceHandler {
         return execResult;
     }
 
-    private void scaleUp(KubernetesClient client) {
+    private synchronized void scaleUp(KubernetesClient client) {
         RollableScalableResource<Deployment> resource =
                 client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
-        Integer replicas = resource.get().getStatus().getReplicas();
+        Integer replicas = resource.get().getSpec().getReplicas();
         if (replicas == null) {
             replicas = 0;
         }
@@ -67,7 +68,7 @@ public class K8sScaleServiceHandler {
         log.info("scale up deployment 为: " + scaleNum);
     }
 
-    private void scaleDown(KubernetesClient client) {
+    private synchronized void scaleDown(KubernetesClient client) {
         RollableScalableResource<Deployment> resource =
                 client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
 
@@ -76,10 +77,10 @@ public class K8sScaleServiceHandler {
             return;
         }
 
-        Integer replicas = resource.get().getStatus().getReplicas();
-        log.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+        Integer replicas = resource.get().getSpec().getReplicas();
+        log.info("当前 deployment: {} Spec Replicas: {}", serviceRoleFullName, replicas);
 
-        if (replicas > 0) {
+        if (replicas != null && replicas > 0) {
             int count = replicas - 1;
             log.info("缩容 deployment 为: {}", count);
             resource.scale(count);

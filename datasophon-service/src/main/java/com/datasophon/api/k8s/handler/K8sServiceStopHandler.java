@@ -46,14 +46,14 @@ public class K8sServiceStopHandler extends ServiceHandler {
             return execResult;
         }
 
-        ActorRef startActor =
+        ActorRef stopActor =
                 ActorUtils.getLocalActor(K8sStopServiceActor.class, ActorUtils.getActorRefName(K8sStopServiceActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, k8sServiceRoleOperateCommand, timeout);
+        Future<Object> startFuture = Patterns.ask(stopActor, k8sServiceRoleOperateCommand, timeout);
         try {
             ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
             if (Objects.nonNull(startResult) && startResult.getExecResult()) {
-                // 角色启动成功
+                // 角色删除成功
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
                 }
