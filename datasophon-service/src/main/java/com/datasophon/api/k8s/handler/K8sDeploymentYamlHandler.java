@@ -3,7 +3,6 @@ package com.datasophon.api.k8s.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
-import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
@@ -20,9 +19,9 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -60,8 +59,9 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
-        List<String> hostList = map.get(serviceRoleInfo.getName());
-        k8SGenerateDeploymentYamlCommand.setRoleNodeCnt(hostList.size());
+        List<String> hostList =
+                map==null?new ArrayList<>():map.get(serviceRoleInfo.getName());
+        k8SGenerateDeploymentYamlCommand.setRoleNodeCnt(hostList==null?0:hostList.size());
 
         k8SGenerateDeploymentYamlCommand.setEnableKerberos(enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));
         k8SGenerateDeploymentYamlCommand.setEnableRangerPlugin(enableRangerPlugin(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));

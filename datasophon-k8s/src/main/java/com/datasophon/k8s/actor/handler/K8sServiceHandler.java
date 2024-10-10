@@ -10,20 +10,19 @@ import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.Resource;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -31,15 +30,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class K8sServiceHandler {
 
-    private String serviceName;
-
-    private String serviceRoleName;
-
-    private String serviceRoleFullName;
-
-    private Logger logger;
-
     private static final Long timeout = 300L;
+    private String serviceName;
+    private String serviceRoleName;
+    private String serviceRoleFullName;
+    private Logger logger;
 
     public K8sServiceHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
@@ -47,6 +42,32 @@ public class K8sServiceHandler {
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
+    }
+
+    // 更新指定字段的值
+    public static void updateField(Map<String, Object> yamlData, String fieldPath, Object newValue) {
+        // 将字段路径按 '.' 分割以支持嵌套字段
+        String[] keys = fieldPath.split("\\.");
+
+        // 遍历路径以找到目标字段
+        Map<String, Object> currentMap = yamlData;
+
+        for (int i = 0; i < keys.length - 1; i++) {
+            String key = keys[i];
+
+            // 检查当前地图是否包含该键
+            if (currentMap.containsKey(key)) {
+                // 获取下一个层级的 Map
+                currentMap = (Map<String, Object>) currentMap.get(key);
+            } else {
+                // 如果路径不存在，直接返回
+                System.out.println("Field path does not exist: " + fieldPath);
+                return;
+            }
+        }
+
+        // 设置新值
+        currentMap.put(keys[keys.length - 1], newValue);
     }
 
     public ExecResult start(K8sServiceRoleOperateCommand command) {
@@ -63,49 +84,64 @@ public class K8sServiceHandler {
         ExecResult execResult = new ExecResult();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         execResult.setExecResult(true);
-        boolean flag = true;
-        //如果之前已经deployment，这里scale+1 不再次提交deployment
-        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
+        boolean isExistingDeployment = false;
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
+             InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
             RollableScalableResource<Deployment> resource =
                     client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
-            if (Objects.nonNull(resource.get())){
-                flag=false;
-                Integer replicas = resource.get().getSpec().getReplicas();
-                if (replicas == null) {
-                    replicas = 0;
+            Deployment existingDeployment = resource.get();
+            //如果之前已经deployment，执行了添加实例，replicas+1 不再次提交deployment
+            if (Objects.nonNull(existingDeployment)) {
+                isExistingDeployment = true;
+                Integer replicas = existingDeployment.getSpec().getReplicas() != null ? existingDeployment.getSpec().getReplicas() : 0;
+
+                // 读取 YAML 文件并加载数据
+                Yaml yaml = new Yaml();
+
+                Map<String, Object> yamlData = yaml.load(yamlInputStream);
+
+                log.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+
+                // 更新 replicas 字段
+                updateField(yamlData, "spec.replicas", replicas + 1);
+
+                // 将更新后的 YAML 应用到 Kubernetes
+                try (InputStream updatedYamlInputStream = new ByteArrayInputStream(yaml.dump(yamlData).getBytes())) {
+                    client.load(updatedYamlInputStream).createOrReplace();
+                } catch (IOException e) {
+                    log.error("更新 Kubernetes Deployment 失败: {}", e.getMessage());
+                    return execResult; // 处理更新失败的异常
                 }
-                log.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
-                int scaleNum = replicas + 1;
-                resource.scale(scaleNum);
-                log.info("scale up deployment 为: " + scaleNum);
-                return execResult;
             }
-        } catch (Exception e) {
-            execResult.setExecErrOut(e.getMessage());
-        }
-        addProcessStatus();
-        if (isFinalNode()&&flag) {
-            try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
-                List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
-                String deploymentName = metadata.get(0).getMetadata().getName();
-                final Deployment deployment = client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(deploymentName).get();
-                Resource<Deployment> resource = client.resource(deployment).inNamespace(Constant.K8S_NAMESPACE);
+            addProcessStatus();
+            //多个副本同时启动提升安装启动速度
+            if (isFinalNode() && !isExistingDeployment) {
+                log.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
 
-                log.info("在k8s上启动deployment: {} ,使用本地资源文件: {}", deploymentName, yamlFile);
-                resource.waitUntilReady(20, TimeUnit.MINUTES);
-
-                log.info("开始打印deployment: {} 的输出日志", deploymentName);
-                RollableScalableResource<Deployment> scalableResource = client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(deploymentName);
-                log.info(scalableResource.getLog());
-            } catch (Exception e) {
-                log.error("启动deployment时发生异常: {}", e.getMessage(), e);
-                execResult.setExecErrOut("启动deployment时发生异常: " + e.getMessage());
-                execResult.setExecOut("启动deployment时发生异常: " + e.getMessage());
-                execResult.setExecResult(false);
-            }finally {
                 CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+
+                List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
+
+                String deploymentName = metadata.get(0).getMetadata().getName();
+                log.info("在k8s上启动deployment: {} ,使用本地资源文件: {}", deploymentName, yamlFile);
+                // 等待Pod准备就绪
+                resource.waitUntilReady(20, TimeUnit.MINUTES);
+                log.info(resource.getLog());
             }
+
+
+        } catch (IOException e) {
+            log.error("文件操作时发生异常: {}", e.getMessage(), e);
+            execResult.setExecErrOut("文件操作时发生异常: " + e.getMessage());
+            execResult.setExecResult(false);
+        } catch (KubernetesClientException e) {
+            log.error("与 Kubernetes 交互时发生异常: {}", e.getMessage(), e);
+            execResult.setExecErrOut("与 Kubernetes 交互时发生异常: " + e.getMessage());
+            execResult.setExecResult(false);
+        } catch (Exception e) {
+            log.error("启动deployment时发生异常: {}", e.getMessage(), e);
+            execResult.setExecErrOut("启动deployment时发生异常: " + e.getMessage());
+            execResult.setExecResult(false);
         }
 
         return execResult;
@@ -127,7 +163,7 @@ public class K8sServiceHandler {
             execResult.setExecOut("k8s资源文件不存在: " + yamlFile);
             execResult.setExecResult(false);
             return execResult;
-        }else{
+        } else {
             log.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
                  FileInputStream fis = new FileInputStream(yamlFileObj)) {
@@ -187,7 +223,7 @@ public class K8sServiceHandler {
     private Boolean isFinalNode() {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-        System.out.println(nodeCount+currentCount);
+        log.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
         return currentCount.equals(nodeCount);
     }
 

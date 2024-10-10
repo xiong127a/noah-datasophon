@@ -11,7 +11,10 @@ import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.*;
+import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.DockerImageUtils;
+import com.datasophon.k8s.util.K8sFreemakerUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -19,7 +22,6 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -182,30 +184,22 @@ public class K8sYamlDeploymentHandler {
         data.put("enableRangerPlugin", enableRangerPlugin.toString());
         data.put("appHome", appHome);
         data.put("runAs", runAs.getUser());
-        if (startRunner!=null){
-            data.put("startCommand", String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                    runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())));
-        }else{
-            data.put("startCommand","tail -f /dev/null");
-        }
-        if (statusRunner!=null){
-            data.put("statusCommand", String.format("su - %s -c 'cd %s && sh %s %s'",
-                    runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())));
-        }else{
-            data.put("statusCommand", "exit 0");
-        }
+        data.put("startCommand", startRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
+                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())) : "tail -f /dev/null");
+        data.put("statusCommand", statusRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s'",
+                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
+
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
-        String journalnodeDir = configFileMap.values()
-                .stream()
-                .flatMap(List::stream)
-                .filter(t -> "dfs.journalnode.edits.dir".equals(t.getName()))
-                .map(t -> Convert.toStr(t.getValue()))
-                .findFirst()
-                .orElse(null);
+        // 获取 journalnodeDir 和 namenodeDir
+        String journalnodeDir = getConfigDirectory(configFileMap, "dfs.namenode.name.dir");
         if (Objects.nonNull(journalnodeDir)) {
             data.put("journalnodeDir", journalnodeDir);
         }
 
+        String namenodeDir = getConfigDirectory(configFileMap, "dfs.journalnode.edits.dir");
+        if (Objects.nonNull(namenodeDir)) {
+            data.put("namenodeDir", namenodeDir);
+        }
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
     }
@@ -285,7 +279,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
-        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK");
+        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml",
@@ -311,4 +305,22 @@ public class K8sYamlDeploymentHandler {
         }
     }
 
+    private void volumeEnableRangerPluginConfig(Set<ServiceConfig> volumePathSet, boolean enableRangerPlugin) {
+        if (enableRangerPlugin) {
+            String keytabDir = "/etc/ranger/";
+            ServiceConfig keytabConfig = new ServiceConfig();
+            keytabConfig.setName("rangerconf");
+            keytabConfig.setValue(keytabDir);
+            volumePathSet.add(keytabConfig);
+        }
+    }
+    // 提取出一个通用方法，用于从配置中提取目录
+    private String getConfigDirectory(Map<Generators, List<ServiceConfig>> configFileMap, String key) {
+        return configFileMap.values().stream()
+                .flatMap(List::stream)
+                .filter(t -> key.equals(t.getName()))
+                .map(t -> Convert.toStr(t.getValue()))
+                .findFirst()
+                .orElse(null);
+    }
 }

@@ -69,6 +69,13 @@ spec:
               else
                 echo "Kerberos is not enabled. Skipping Kerberos setup.";
               fi
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cd ${appHome}/ranger-hdfs-plugin && \
+                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
+              else
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+              fi
               ${startCommand}
           readinessProbe:
             exec:

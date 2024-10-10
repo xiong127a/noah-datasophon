@@ -45,37 +45,39 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if ${enableKerberos}; then
-                echo "Kerberos is enabled. Running keystore setup...";
-                if [ ! -f /etc/security/keytab/keystore ]; then
-                  HOSTNAME=$(hostname)
-                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+              if [ ! -d ${namenodeDir} ]; then
+                if ${enableKerberos}; then
+                  echo "Kerberos is enabled. Running keystore setup...";
+                  if [ ! -f /etc/security/keytab/keystore ]; then
+                    HOSTNAME=$(hostname)
+                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
+                    echo "ssl-client.xml not found. Copying from template...";
+                    cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                  fi
+                  if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
+                    echo "ssl-server.xml not found. Copying from template...";
+                    cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
+                  fi
+                else
+                  echo "Kerberos is not enabled. Skipping Kerberos setup.";
                 fi
-                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
-                  echo "ssl-client.xml not found. Copying from template...";
-                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
+                if ${enableRangerPlugin}; then
+                  echo "Ranger plugin is enabled. Performing Ranger setup...";
+                  cd ${appHome}/ranger-hdfs-plugin && \
+                  sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
+                else
+                  echo "Ranger plugin is not enabled. Skipping Ranger setup.";
                 fi
-                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
-                  echo "ssl-server.xml not found. Copying from template...";
-                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
+                sleep $((RANDOM % 10))
+                if [ -d ${journalnodeDir}/meta ]; then
+                  echo "Standby"
+                  echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby
+                else
+                  echo "active"
+                  echo Y | ${appHome}/bin/hdfs namenode -format smhadoop
                 fi
-              else
-                echo "Kerberos is not enabled. Skipping Kerberos setup.";
-              fi
-              if ${enableRangerPlugin}; then
-                echo "Ranger plugin is enabled. Performing Ranger setup...";
-                cd ${appHome}/ranger-hdfs-plugin && \
-                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
-              else
-                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
-              fi
-              sleep $((RANDOM % 10))
-              if [ -d ${journalnodeDir}/meta ]; then
-                echo "Standby"
-                echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby
-              else
-                echo "active"
-                echo Y | ${appHome}/bin/hdfs namenode -format smhadoop
               fi
           volumeMounts:
             <#list itemList as item>
