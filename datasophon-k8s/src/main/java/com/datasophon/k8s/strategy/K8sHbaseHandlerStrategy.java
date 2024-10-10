@@ -1,21 +1,18 @@
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.core.io.FileUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceRoleType;
-import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.*;
+import com.datasophon.k8s.util.K8sKerberosUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -48,7 +45,7 @@ public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                     "|| (su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -mkdir -p " + dirPath + "\" " +
                     "&& su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -chown hbase:hadoop " + dirPath + "\" " +
                     "&& su - hdfs -c \"" + hadoopHome + "/bin/hdfs dfs -chmod 777 " + dirPath + "\")\n";
-
+            logger.info(jobCmd);
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runCmd(
                         Constants.DATASOPHON,

@@ -33,11 +33,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.k8s.handler.*;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.CancelCommandMap;
-import com.datasophon.api.master.MasterServiceActor;
-import com.datasophon.api.master.ServiceCommandActor;
-import com.datasophon.api.master.ServiceExecuteResultActor;
+import com.datasophon.api.master.*;
 import com.datasophon.api.master.handler.service.*;
 import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
@@ -501,8 +497,10 @@ public class ProcessUtils {
             k8sServiceRoleStopHandler.setNext(k8sServiceScaleDownHandler);
             if (needReConfig) {
                 K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
                 k8sServiceScaleDownHandler.setNext(k8sServiceConfigureHandler);
-                k8sServiceConfigureHandler.setNext(k8sHostTagHandler);
+                k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
+                k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
                 k8sHostTagHandler.setNext(k8sServiceStartHandler);
                 k8sServiceStartHandler.setNext(k8sServiceScaleUpHandler);
             } else {
@@ -530,9 +528,11 @@ public class ProcessUtils {
         } else {
             if (needReConfig) {
                 K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                K8sDeploymentYamlHandler k8sDeploymentYamlHandler = new K8sDeploymentYamlHandler();
                 K8sHostTagHandler k8sHostTagHandler = new K8sHostTagHandler();
                 K8sServiceScaleUpHandler k8sServiceScaleUpHandler = new K8sServiceScaleUpHandler();
-                k8sServiceConfigureHandler.setNext(k8sHostTagHandler);
+                k8sServiceConfigureHandler.setNext(k8sDeploymentYamlHandler);
+                k8sDeploymentYamlHandler.setNext(k8sHostTagHandler);
                 k8sHostTagHandler.setNext(k8sServiceScaleUpHandler);
                 execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
             } else {

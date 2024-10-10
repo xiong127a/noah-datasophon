@@ -95,6 +95,8 @@ spec:
             </#list>
             - mountPath: "/etc/localtime"
               name: "timezone"
+            - mountPath: "/data/tmp/hadoop"
+              name: "hadooptmp"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -107,3 +109,6 @@ spec:
         - hostPath:
             path: "/etc/localtime"
           name: "timezone"
+        - hostPath:
+            path: "/data/tmp/hadoop"
+          name: "hadooptmp"

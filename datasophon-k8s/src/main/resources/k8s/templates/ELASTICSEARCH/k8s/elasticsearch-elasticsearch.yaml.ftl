@@ -53,7 +53,8 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              echo "vm.max_map_count=655360" >> /etc/sysctl.conf && sysctl -p && ${startCommand}
           readinessProbe:
             exec:
               command:
