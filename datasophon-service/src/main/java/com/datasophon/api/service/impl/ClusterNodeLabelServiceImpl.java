@@ -20,20 +20,21 @@ package com.datasophon.api.service.impl;
 import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.BusinessException;
+import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterNodeLabelService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.StringValidator.GeneralValidator;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
 import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
-import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.utils.ExecResult;
@@ -43,6 +44,8 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterNodeLabelEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterNodeLabelMapper;
+import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.client.KubernetesClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,14 +58,18 @@ import scala.concurrent.duration.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.k8s.util.K8sUtil.runCmd;
 
 @Service("clusterNodeLabelService")
 @Transactional
 public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMapper, ClusterNodeLabelEntity>
         implements
-            ClusterNodeLabelService {
+        ClusterNodeLabelService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterNodeLabelServiceImpl.class);
 
@@ -108,31 +115,53 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         List<ClusterServiceRoleInstanceEntity> roleList =
                 roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "ResourceManager");
+        String depMode = getDepMode(clusterId);
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
+        ArrayList<String> commands = new ArrayList<>();
+        commands.add(Constants.INSTALL_PATH + Constants.SLASH
+                + PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN") + "/bin/yarn");
+        commands.add("rmadmin");
+        commands.add(type);
+        commands.add("\"" + nodeLabel + "\"");
         if (roleList.size() > 0) {
             String hostname = roleList.get(0).getHostname();
-            ActorSelection execCmdActor = ActorUtils.actorSystem
-                    .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
-            ExecuteCmdCommand command = new ExecuteCmdCommand();
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            ArrayList<String> commands = new ArrayList<>();
-            commands.add(Constants.INSTALL_PATH + Constants.SLASH
-                    + PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN") + "/bin/yarn");
-            commands.add("rmadmin");
-            commands.add(type);
-            commands.add("\"" + nodeLabel + "\"");
-            command.setCommands(commands);
-            Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
-            try {
-                ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("add yarn node label success at {}", hostname);
-                    return true;
+            if (depMode.equals(Constants.PVM_MODE)) {
+                ActorSelection execCmdActor = ActorUtils.actorSystem
+                        .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
+                ExecuteCmdCommand command = new ExecuteCmdCommand();
+                Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+                command.setCommands(commands);
+                Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
+                try {
+                    ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+                    if (execResult.getExecResult()) {
+                        logger.info("add yarn node label success at {}", hostname);
+                        return true;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+                logger.info("add yarn node label failed");
+                return false;
+            }else{
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+
+                String enableYARNKerberos = globalVariables.get("${enableYARNKerberos}");
+                String cmd =String.join(" ", commands);
+                if (StrUtil.isNotEmpty(enableYARNKerberos) && "true".equals(enableYARNKerberos)) {
+                    cmd="kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM && "+cmd;
+                }
+                try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+                runCmd(Constants.DATASOPHON,
+                        client,
+                        "yarn-resourcemanager",
+                        logger,
+                        hostname,
+                        cmd);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
-            logger.info("add yarn node label failed");
-            return false;
         }
         return true;
     }
