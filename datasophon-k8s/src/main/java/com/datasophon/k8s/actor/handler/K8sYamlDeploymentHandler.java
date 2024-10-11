@@ -193,12 +193,12 @@ public class K8sYamlDeploymentHandler {
         // 获取 journalnodeDir 和 namenodeDir
         String journalnodeDir = getConfigDirectory(configFileMap, "dfs.namenode.name.dir");
         if (Objects.nonNull(journalnodeDir)) {
-            data.put("journalnodeDir", journalnodeDir);
+            data.put("namenodeDir", journalnodeDir);
         }
 
         String namenodeDir = getConfigDirectory(configFileMap, "dfs.journalnode.edits.dir");
         if (Objects.nonNull(namenodeDir)) {
-            data.put("namenodeDir", namenodeDir);
+            data.put("journalnodeDir", namenodeDir);
         }
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;

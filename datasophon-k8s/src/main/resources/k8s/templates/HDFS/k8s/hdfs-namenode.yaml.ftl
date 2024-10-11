@@ -45,7 +45,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ ! -d ${namenodeDir} ]; then
+              if [ ! -d ${namenodeDir}/current ]; then
+                echo "format namenode";
                 if ${enableKerberos}; then
                   echo "Kerberos is enabled. Running keystore setup...";
                   if [ ! -f /etc/security/keytab/keystore ]; then
@@ -78,6 +79,8 @@ spec:
                   echo "active"
                   echo Y | ${appHome}/bin/hdfs namenode -format smhadoop
                 fi
+              else
+                echo "formatted......."
               fi
           volumeMounts:
             <#list itemList as item>

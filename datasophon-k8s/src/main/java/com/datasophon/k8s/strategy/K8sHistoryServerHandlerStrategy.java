@@ -44,7 +44,7 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
         ExecResult startResult = new ExecResult();
         String hostname = command.getHostname();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(), command.getServiceRoleName());
-        String jobCmd=null;
+        String jobCmd="";
         if (command.getEnableKerberos()) {
             logger.info("start to get jobhistoryserver keytab file");
             K8sKerberosUtils.createKeytabDir(hostname);
@@ -54,11 +54,6 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
             jobCmd= "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/"+hostname+"@HADOOP.COM && kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            if (command.getEnableKerberos()){
-                jobCmd = "su - hdfs -c \"kinit -kt /etc/security/keytab/spnego.service.keytab HTTP/" + hostname + "@HADOOP.COM\"  && ";
-                jobCmd += "su - hdfs -c \"kinit -kt /etc/security/keytab/hdfs.user.keytab hdfs/user@HADOOP.COM\" && ";
-            }
-
             String hdfsCmdPrefix = "su - hdfs -c \"/opt/datasophon/hadoop-3.3.3/bin/hdfs dfs ";
             jobCmd += hdfsCmdPrefix + "-test -e /user/yarn/yarn-logs\" || (" +
                     hdfsCmdPrefix + "-mkdir -p /user/yarn/yarn-logs\" && " +

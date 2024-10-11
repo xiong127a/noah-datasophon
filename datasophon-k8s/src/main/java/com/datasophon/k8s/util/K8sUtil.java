@@ -96,7 +96,7 @@ public class K8sUtil {
                     String podName = pod.getMetadata().getName();
 
                     long startTime = System.currentTimeMillis(); // Start timing
-
+                    logger.info("Command is " +cmd);
                     ExecWatch exec = client.pods()
                             .inNamespace(namespace).withName(podName)
                             .writingOutput(System.out)
