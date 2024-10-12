@@ -137,7 +137,7 @@ public class K8sMinaUtils {
                 int exitStatus = ce.getExitStatus();
                 LOG.info("mina result {}", exitStatus);
                 if (exitStatus == 1) {
-                    return "failed";
+                    return Constants.FAILED;
                 }
 
                 LOG.info("exe cmd return : {}", out);

@@ -27,6 +27,8 @@ public interface ClusterUserService extends IService<ClusterUser> {
 
     Result create(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
 
+    Result createOnK8s(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds);
+
     Result listPage(Integer clusterId, String username, Integer page, Integer pageSize);
 
     Result deleteClusterUser(Integer id);
