@@ -53,5 +53,8 @@ public enum UserEnum {
         UserEnum userEnum = GROUPNAME_MAP.get(groupname);
         return userEnum != null ? userEnum.getGroupId() : null;
     }
+    public static Map getUserNameMap() {
+        return USERNAME_MAP;
+    }
 
 }
