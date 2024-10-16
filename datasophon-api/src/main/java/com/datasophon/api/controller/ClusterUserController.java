@@ -21,7 +21,6 @@ import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterUser;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -61,14 +60,7 @@ public class ClusterUserController {
      */
     @RequestMapping("/create")
     public Result save(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds) {
-        String depMode = getDepMode(clusterId);
-        Result result = null;
-        if (Constants.PVM_MODE.equals(depMode)) {
-            result = clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds);
-        } else {
-            result = clusterUserService.createOnK8s(clusterId, username, mainGroupId, otherGroupIds);
-        }
-        return result;
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds):clusterUserService.createOnK8s(clusterId, username, mainGroupId, otherGroupIds);
     }
 
     /**
@@ -86,10 +78,8 @@ public class ClusterUserController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result delete(Integer id) {
-        Result result = null;
-        result = clusterUserService.deleteClusterUser(id);
-        return result;
+    public Result delete(Integer clusterId,Integer id) {
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.deleteClusterUser(id):clusterUserService.deleteClusterUserOnK8s(id);
     }
 
 }

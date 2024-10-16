@@ -275,6 +275,18 @@ public class K8sYamlDeploymentHandler {
         if ("KafkaBroker".equals(serviceRoleName)) {
             K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
         }
+        if ("OpenldapServer".equals(serviceRoleName)) {
+            String openldapData = "/var/lib/openldap/";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("openldap-data");
+            fileConfig.setValue(openldapData);
+            volumePathSet.add(fileConfig);
+            String openldapConf = "/etc/openldap/slapd.d";
+            ServiceConfig keytabConfig = new ServiceConfig();
+            keytabConfig.setName("openldap-conf");
+            keytabConfig.setValue(openldapConf);
+            volumePathSet.add(keytabConfig);
+        }
 
     }
 

@@ -33,6 +33,8 @@ public interface ClusterUserService extends IService<ClusterUser> {
 
     Result deleteClusterUser(Integer id);
 
+    Result deleteClusterUserOnK8s(Integer id);
+
     List<ClusterUser> listAllUser(Integer clusterId);
 
     void createUnixUserOnHost(ClusterUser clusterUser, String hostname);
