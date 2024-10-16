@@ -44,6 +44,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.k8s.util.K8sUtil.runCmd;
@@ -141,15 +142,17 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
 
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
-
-        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
-
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        String hostname = globalVariables.get("${openldapIp}");
+        if (Objects.isNull(hostname)){
+            hostname= PropertyUtils.getString(Constants.MASTER_HOST);
+        }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             runCmd(Constants.DATASOPHON,
                     client,
                     "kerberos-kadmin",
                     logger,
-                    masterHost,
+                    hostname,
                     "/opt/datasophon/kerberos-1.15.1/createKeytab.sh " + principal + " " + keytabFilePath);
         } catch (Exception e) {
             throw new RuntimeException(e);
