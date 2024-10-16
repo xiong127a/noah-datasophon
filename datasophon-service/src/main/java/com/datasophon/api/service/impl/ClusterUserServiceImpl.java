@@ -28,10 +28,7 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.ClusterGroupService;
-import com.datasophon.api.service.ClusterKerberosService;
-import com.datasophon.api.service.ClusterUserGroupService;
-import com.datasophon.api.service.ClusterUserService;
+import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
@@ -64,6 +61,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
+
 @Service("clusterUserService")
 @Transactional
 public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, ClusterUser> implements ClusterUserService {
@@ -80,6 +79,9 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
     @Autowired
     private ClusterKerberosService clusterKerberosService;
+
+    @Autowired
+    private ClusterInfoService clusterInfoService;
 
     @Override
     public Result create(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
@@ -241,7 +243,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         for (ClusterHostDO clusterHost : hostList) {
             // 执行命令获取当前主机的最大 UID
             String result = K8sMinaUtils.execCmdWithResult(clusterHost.getHostname(),
-                    "awk -F: 'BEGIN { max = 0 } { if ($3 > max) max=$3 } END { print max }' /etc/passwd");
+                    "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/passwd");
 
             // 将返回结果转换为 Integer 类型
             Integer currentMaxUid = null;
@@ -258,7 +260,12 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             }
         }
         Integer createUnixUserUid=Math.max(systemInitMaxUid,globalMaxUid)+1;
-        // sync to all hosts
+
+        if (createUnixUserUid > 65535) {
+            throw new ServiceException(500,
+                    "create unix user " + username + " failed at Uid{"+createUnixUserUid+"} > 65535");
+        }
+
         for (ClusterHostDO clusterHost : hostList) {
             ExecResult execResult = null;
             try {
@@ -276,9 +283,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
 
         // create ldap user
-       /* Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
-        ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
         LdapCommand ldapCommand = new LdapCommand();
         ldapCommand.setOperation("add");
@@ -290,34 +295,21 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
         ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
         ldapCommand.setUserPwd(globalVariables.get("${syncLdapBindPassword}"));
-        String uid = globalVariables.get("${syncLdapUidNumber}");
-        if (StringUtils.isBlank(uid)) {
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", "2000");
-            ldapCommand.setUidNumber("2000");
-        } else {
-            String nextUid = NumberUtil.toStr(NumberUtil.add("2000", "1").longValue());
-            ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${syncLdapUidNumber}", nextUid);
-            ldapCommand.setUidNumber(nextUid);
-        }
+        ldapCommand.setUidNumber(String.valueOf(createUnixUserUid));
         ldapCommand.setGidNumber("55");
 
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
-        ExecResult execResult = null;
         try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
+            if (openldapProcess(ldapCommand)) {
                 logger.info("create ldap user {} success", username);
             } else {
                 logger.error("create ldap user " + username + " failed");
-                logger.error(execResult.getExecOut());
-                logger.error(execResult.getExecErrOut());
+
             }
         } catch (Exception e) {
             logger.error("create ldap user " + username + " failed");
             logger.error(e.getMessage());
         }
-*/
+
         return Result.success();
     }
 
@@ -423,7 +415,50 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         this.removeById(id);
         return Result.success();
     }
+    @Override
+    public Result deleteClusterUserOnK8s(Integer id) {
+        ClusterUser clusterUser = this.getById(id);
+        // delete user and group
+        userGroupService.deleteByUser(id);
+        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterUser.getClusterId());
+        // sync to all hosts
+        for (ClusterHostDO clusterHost : hostList) {
+            try {
+                if (!delUnixUser(clusterUser.getUsername(), clusterHost.getHostname()).equals(Constants.FAILED)) {
+                    logger.info("del unix user success at {}", clusterHost.getHostname());
+                } else {
+                    logger.info("del unix user failed at {}", clusterHost.getHostname());
+                }
+            } catch (Exception e) {
+                logger.info("del unix user failed at {}", clusterHost.getHostname());
+            }
+        }
 
+        // delete ldap user
+        Map<String, String> globalVariables = GlobalVariables.get(clusterUser.getClusterId());
+
+        LdapCommand ldapCommand = new LdapCommand();
+        ldapCommand.setOperation("delete");
+        ldapCommand.setLdapUrl(globalVariables.get("${syncLdapUrl}"));
+        ldapCommand.setRootDn(globalVariables.get("${syncLdapBindDn}"));
+        ldapCommand.setLdapPwd(globalVariables.get("${syncLdapBindPassword}"));
+        ldapCommand.setUsername(clusterUser.getUsername());
+        ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
+
+        try {
+            if (openldapProcess(ldapCommand)) {
+                logger.info("delete ldap user {} success", clusterUser.getUsername());
+            } else {
+                logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            }
+        } catch (Exception e) {
+            logger.error("delete ldap user " + clusterUser.getUsername() + " failed");
+            logger.error(e.getMessage());
+        }
+
+        this.removeById(id);
+        return Result.success();
+    }
     @Override
     public List<ClusterUser> listAllUser(Integer clusterId) {
         return this.lambdaQuery().eq(ClusterUser::getClusterId, clusterId).list();
@@ -492,4 +527,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         String result =K8sMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
         return result;
     }
+
+    public static String delUnixUser(String username,String hostname) {
+        ArrayList<String> commands = new ArrayList<>();
+        commands.add("userdel");
+        commands.add("-r");
+        commands.add(username);
+        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
+    }
+
 }

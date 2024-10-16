@@ -22,7 +22,8 @@ public enum UserEnum {
     ADMIN("admin", "hadoop", 2010, 2001),
     RANGER("ranger", "ranger", 2011, 2002),
     RANGER_USER_SYNC("rangerusersync", "ranger", 2012, 2002),
-    RANGER_KMS("rangerkms", "ranger", 2013, 2002);
+    RANGER_KMS("rangerkms", "ranger", 2013, 2002),
+    LDAP("ldap", "ldap", 55, 55);
 
     private final String username;
     private final String groupname;
@@ -55,6 +56,9 @@ public enum UserEnum {
     }
     public static Map getUserNameMap() {
         return USERNAME_MAP;
+    }
+    public static Map getGroupNameMap() {
+        return GROUPNAME_MAP;
     }
 
 }

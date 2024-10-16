@@ -74,6 +74,7 @@ export default {
       e.preventDefault();
       this.$axiosPost('/ddh/cluster/group/delete', {
         id:this.detail.id,
+        clusterId: Number(localStorage.getItem("clusterId") || '-1'),
       })
         .then((res) => {
           this.loading = false;
