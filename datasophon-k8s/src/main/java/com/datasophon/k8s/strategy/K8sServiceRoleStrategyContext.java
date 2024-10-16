@@ -26,6 +26,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("RangerAdmin", new K8sRangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
         map.put("RangerUsersync", new K8sRangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
         map.put("RangerKms", new K8sRangerAdminHandlerStrategy("RANGER", "RangerKms"));
+        map.put("OpenldapServer", new k8sOpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

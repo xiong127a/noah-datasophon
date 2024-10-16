@@ -63,7 +63,7 @@ public class ClusterActor extends UntypedActor {
     @Override
     public void onReceive(Object msg) throws Throwable {
         if (msg instanceof ClusterCommand) {
-            logger.info("start to check cluster info");
+            //logger.info("start to check cluster info");
             ClusterServiceRoleInstanceService roleInstanceService =
                     SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
             ClusterInfoService clusterInfoService =

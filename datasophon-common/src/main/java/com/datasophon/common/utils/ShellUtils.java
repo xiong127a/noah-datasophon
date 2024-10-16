@@ -58,29 +58,42 @@ public class ShellUtils {
      */
     public static ExecResult exceShell(String pathOrCommand) {
         ExecResult result = new ExecResult();
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuffer outputBuffer = new StringBuffer();
+        StringBuffer errorBuffer = new StringBuffer();
+
         try {
             // 执行脚本
             Process ps = Runtime.getRuntime().exec(new String[]{"sh", "-c", pathOrCommand});
-            // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
-            BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            String line;
-            while ((line = br.readLine()) != null) {
-                stringBuffer.append(line);
-                stringBuffer.append(System.lineSeparator());
+
+            // 读取标准输出流
+            try (BufferedReader outputReader = new BufferedReader(new InputStreamReader(ps.getInputStream()));
+                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(ps.getErrorStream()))) {
+
+                String line;
+                while ((line = outputReader.readLine()) != null) {
+                    outputBuffer.append(line);
+                    outputBuffer.append(System.lineSeparator());
+                }
+
+                // 读取错误输出流
+                while ((line = errorReader.readLine()) != null) {
+                    errorBuffer.append(line);
+                    errorBuffer.append(System.lineSeparator());
+                }
             }
-            in.close();
-            br.close();
-            String execOut = stringBuffer.toString();
+
+            // 等待进程结束
             int exitValue = ps.waitFor();
-            if (0 == exitValue) {
+            String execOut = outputBuffer.toString();
+
+            if (exitValue == 0) {
                 logger.info("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
                 result.setExecResult(true);
                 result.setExecOut(execOut);
             } else {
-                result.setExecOut("call shell failed. error code is :" + exitValue);
+                result.setExecOut("call shell failed. error code is :" + exitValue + ", error: " + errorBuffer.toString());
                 logger.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
+                logger.error("Error output: {}", errorBuffer.toString());
             }
 
         } catch (Exception e) {
