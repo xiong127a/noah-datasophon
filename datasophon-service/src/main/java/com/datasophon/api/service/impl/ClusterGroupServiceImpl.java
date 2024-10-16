@@ -26,8 +26,8 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterGroupService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterUserGroupService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.StringValidator.LengthValidator;
 import com.datasophon.api.utils.StringValidator.NotEmptyValidator;
@@ -35,12 +35,14 @@ import com.datasophon.api.utils.StringValidator.WordValidator;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.remote.CreateUnixGroupCommand;
 import com.datasophon.common.command.remote.DelUnixGroupCommand;
+import com.datasophon.common.enums.UserEnum;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.mapper.ClusterGroupMapper;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +53,9 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -117,7 +121,83 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         return Result.success();
     }
+    @Override
+    public Result saveClusterGroupOnK8s(Integer clusterId, String groupName) {
+        // 用户组名校验
+        NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
+        WordValidator wordValidator = new WordValidator();
+        LengthValidator lengthValidator = new LengthValidator();
+        notEmptyValidator.setNext(wordValidator);
+        wordValidator.setNext(lengthValidator);
+        try {
+            notEmptyValidator.validate(groupName);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
 
+        if (hasRepeatGroupName(clusterId, groupName)) {
+            return Result.error(Status.GROUP_NAME_DUPLICATION.getMsg());
+        }
+        ClusterGroup clusterGroup = new ClusterGroup();
+        clusterGroup.setClusterId(clusterId);
+        clusterGroup.setGroupName(groupName);
+        this.save(clusterGroup);
+
+        Map<String, UserEnum> groupNameMap = UserEnum.getGroupNameMap();
+        Integer systemInitMaxGid = groupNameMap.values().stream()
+                .map(UserEnum::getGroupId)
+                .max(Integer::compareTo)
+                .orElse(null);
+
+        Integer globalMaxGid = 0;
+
+        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterId);
+
+
+        for (ClusterHostDO clusterHost : hostList) {
+            // 执行命令获取当前主机的最大 GID
+            String result = K8sMinaUtils.execCmdWithResult(clusterHost.getHostname(),
+                    "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/group");
+
+            // 将返回结果转换为 Integer 类型
+            Integer currentMaxGid = null;
+            try {
+                currentMaxGid = Integer.parseInt(result.trim()); // 解析结果
+            } catch (NumberFormatException e) {
+                System.err.println("无法解析 GID: " + result);
+                continue;
+            }
+
+            // 更新全局最大 UID
+            if (globalMaxGid == null || (globalMaxGid != null && currentMaxGid > globalMaxGid)) {
+                globalMaxGid = currentMaxGid;
+            }
+        }
+
+        Integer createUnixUserGid=Math.max(systemInitMaxGid,globalMaxGid)+1;
+
+        if (createUnixUserGid > 65535) {
+            throw new ServiceException(500,
+                    "create unix user " + groupName + " failed at Gid{"+createUnixUserGid+"} > 65535");
+        }
+        for (ClusterHostDO clusterHost : hostList) {
+            ExecResult execResult = null;
+            try {
+                if (!createUnixGroup(groupName, clusterHost.getHostname(),createUnixUserGid).equals(Constants.FAILED)) {
+                    logger.info("create unix group {} success at {}", groupName, clusterHost.getHostname());
+                } else {
+                    logger.info(execResult.getExecOut());
+                    throw new ServiceException(500,
+                            "create unix group " + groupName + " failed at " + clusterHost.getHostname());
+                }
+            } catch (Exception e) {
+                throw new ServiceException(500,
+                        "create unix group " + groupName + " failed at " + clusterHost.getHostname());
+            }
+        }
+
+        return Result.success();
+    }
     private boolean hasRepeatGroupName(Integer clusterId, String groupName) {
         List<ClusterGroup> list = this.list(new QueryWrapper<ClusterGroup>()
                 .eq(Constants.CLUSTER_ID, clusterId)
@@ -166,7 +246,28 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         }
         return Result.success();
     }
-
+    @Override
+    public Result deleteUserGroupOnK8s(Integer id) {
+        ClusterGroup clusterGroup = this.getById(id);
+        Integer num = userGroupService.countGroupUserNum(id);
+        if (num > 0) {
+            return Result.error(Status.USER_GROUP_TIPS_ONE.getMsg());
+        }
+        this.removeById(id);
+        List<ClusterHostDO> hostList = hostService.getHostListByClusterId(clusterGroup.getClusterId());
+        for (ClusterHostDO clusterHost : hostList) {
+            try {
+                if (!delUnixGroup(clusterGroup.getGroupName(), clusterHost.getHostname()).equals(Constants.FAILED)) {
+                    logger.info("del unix group success at {}", clusterHost.getHostname());
+                } else {
+                    logger.info("del unix group failed at {}", clusterHost.getHostname());
+                }
+            } catch (Exception e) {
+                logger.info("del unix group failed at {}", clusterHost.getHostname());
+            }
+        }
+        return Result.success();
+    }
     @Override
     public Result listPage(String groupName, Integer clusterId, Integer page, Integer pageSize) {
         Integer offset = (page - 1) * pageSize;
@@ -216,5 +317,30 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         } catch (Exception e) {
             throw new ServiceException(500, "create unix group " + groupName + " failed at " + hostname);
         }
+    }
+    public static String createUnixGroup(String groupName,String hostname,Integer createUnixGroupGid) {
+        if (isGroupExists(groupName,hostname)) {
+            return Constants.FAILED;
+        }
+        ArrayList<String> commands = new ArrayList<>();
+        commands.add("groupadd");
+        commands.add(groupName);
+        if (createUnixGroupGid != null) {
+            commands.add("-g");
+            commands.add(String.valueOf(createUnixGroupGid));
+        }
+        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
+    }
+
+    public static String delUnixGroup(String groupName,String hostname) {
+        ArrayList<String> commands = new ArrayList<>();
+        commands.add("groupdel");
+        commands.add(groupName);
+        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
+    }
+
+    public static boolean isGroupExists(String groupName,String hostname) {
+        String result = K8sMinaUtils.execCmdWithResult(hostname, "egrep \"" + groupName + "\" /etc/group >& /dev/null");
+        return !result.equals(Constants.FAILED);
     }
 }
