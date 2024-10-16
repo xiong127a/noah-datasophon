@@ -114,13 +114,13 @@ public class K8sYamlDeploymentHandler {
         try {
             Set<ServiceConfig> volumePathSet = new HashSet<>();
 
-            volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName, hostname);
+            volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName);
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceRoleName);
 
             volumeHadoopConfig(volumePathSet);
 
-            volumeEnableKerberosConfig(volumePathSet, enableKerberos);
+            volumeEnableKerberosConfig(volumePathSet,appHome,serviceRoleName, enableKerberos);
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, enableKerberos, enableRangerPlugin);
 
@@ -138,7 +138,7 @@ public class K8sYamlDeploymentHandler {
         return execResult;
     }
 
-    private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet, boolean enableKerberos) {
+    private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet,String appHome,String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             String keytabDir = "/etc/security/keytab/";
             ServiceConfig keytabConfig = new ServiceConfig();
@@ -151,6 +151,21 @@ public class K8sYamlDeploymentHandler {
             krb5ConfConfig.setName("krd5conf");
             krb5ConfConfig.setValue(krb5Conf);
             volumePathSet.add(krb5ConfConfig);
+        }else{
+            if (serviceRoleName.equals("KafkaBroker")){
+                Iterator<ServiceConfig> iterator = volumePathSet.iterator();
+                while (iterator.hasNext()) {
+                    ServiceConfig config = iterator.next();
+                    String value =(String) config.getValue();
+                    if (value.endsWith(".sh")) {
+                        String fileName = value.substring(value.lastIndexOf('/') + 1);
+
+                        if (!fileName.equals("kafka-server-start.sh")) {
+                            iterator.remove(); // 从集合中删除
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -204,7 +219,7 @@ public class K8sYamlDeploymentHandler {
         return data;
     }
 
-    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName, String hostname) {
+    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName) {
         int fileCount = 1;
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
@@ -245,6 +260,7 @@ public class K8sYamlDeploymentHandler {
                     volumePathSet.add(pathConfig);
                 }
             }
+
         }
         if ("RANGER".equals(serviceName)) {
             volumePathSet.clear();
@@ -271,9 +287,6 @@ public class K8sYamlDeploymentHandler {
             keytabConfig.setName("keytab");
             keytabConfig.setValue(keytabDir);
             volumePathSet.add(keytabConfig);
-        }
-        if ("KafkaBroker".equals(serviceRoleName)) {
-            K8sMinaUtils.execCmdWithResult(hostname, " chmod -R 775 " + appHome);
         }
         if ("OpenldapServer".equals(serviceRoleName)) {
             String openldapData = "/var/lib/openldap/";
