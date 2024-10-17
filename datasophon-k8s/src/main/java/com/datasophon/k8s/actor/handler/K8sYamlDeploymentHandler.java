@@ -304,7 +304,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
-        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER");
+        List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER", "HUE");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
                     "/opt/datasophon/hadoop-3.3.3/etc/hadoop/core-site.xml",
@@ -327,6 +327,13 @@ public class K8sYamlDeploymentHandler {
                     volumePathSet.add(hadoopConfig);
                 }
             }
+        }
+        if ("HUE".equals(serviceName)) {
+            ServiceConfig hiveConfig = new ServiceConfig();
+            hiveConfig.setName("hive-config");
+            hiveConfig.setValue("/opt/datasophon/hive-3.1.0/conf");
+            volumePathSet.add(hiveConfig);
+
         }
     }
 
