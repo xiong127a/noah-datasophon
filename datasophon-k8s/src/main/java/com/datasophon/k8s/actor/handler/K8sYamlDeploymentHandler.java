@@ -288,6 +288,7 @@ public class K8sYamlDeploymentHandler {
             keytabConfig.setValue(keytabDir);
             volumePathSet.add(keytabConfig);
         }
+
         if ("OpenldapServer".equals(serviceRoleName)) {
             String openldapData = "/var/lib/openldap/";
             ServiceConfig fileConfig = new ServiceConfig();
@@ -301,6 +302,13 @@ public class K8sYamlDeploymentHandler {
             volumePathSet.add(keytabConfig);
         }
 
+        if ("REDIS".equals(serviceName)) {
+            String redisMasterCluster = appHome+"/cluster/";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("redis-cluster");
+            fileConfig.setValue(redisMasterCluster);
+            volumePathSet.add(fileConfig);
+        }
     }
 
     private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
