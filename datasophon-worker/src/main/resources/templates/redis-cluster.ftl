@@ -25,32 +25,24 @@ add_node_command() {
 }
 
 check_redis_nodes() {
-    IFS=' ' read -ra MASTER_NODES <<< "$REDIS_MASTERS"
-    IFS=' ' read -ra WORKER_NODES <<< "$REDIS_WORKERS"
+    for node in "<#noparse>${REDIS_MASTERS[@]}</#noparse>" "<#noparse>${REDIS_WORKERS[@]}</#noparse>"; do
+        host=$(echo "$node" | cut -d ":" -f 1)
+        port=$(echo "$node" | cut -d ":" -f 2)
 
-    local CHECK_SCRIPT
+        echo "Checking Redis node $node..."
 
-    # 检测Master节点状态
-    for master in "<#noparse>${MASTER_NODES[@]}</#noparse>"; do
-        CHECK_SCRIPT="$CONTROL_SCRIPT status master"
-        if ! ssh "$(echo "$master" | cut -d ":" -f 1)" "$CHECK_SCRIPT"; then
-            echo "Redis master node $master is not running."
+        if ! /opt/datasophon/redis/redis-cli -h "$host" -p "$port" ping | grep -q "PONG"; then
+            echo "Redis node $node is not running."
             return 1
         fi
     done
 
-    # 检测Worker节点状态
-    for worker in "<#noparse>${WORKER_NODES[@]}</#noparse>"; do
-        CHECK_SCRIPT="$CONTROL_SCRIPT status slave"
-        if ! ssh "$(echo "$worker" | cut -d ":" -f 1)" "$CHECK_SCRIPT $(echo "$worker" | cut -d ":" -f 2)"; then
-            echo "Redis worker node $worker is not running."
-            return 1
-        fi
-    done
-
+    echo "All Redis nodes are running."
     return 0
 }
-
+# 将REDIS_MASTERS和REDIS_WORKERS转换为数组
+IFS=' ' read -ra MASTER_NODES <<< "$REDIS_MASTERS"
+IFS=' ' read -ra WORKER_NODES <<< "$REDIS_WORKERS"
 main() {
     if check_redis_nodes; then
         # 如果所有节点都正常启动，执行创建集群命令
@@ -68,6 +60,7 @@ main() {
 
         # 执行添加节点命令
         FIRST_MASTER="<#noparse>${MASTER_NODES[0]}</#noparse>"
+        echo $FIRST_MASTER
         for worker in "<#noparse>${WORKER_NODES[@]}</#noparse>"; do
             ADD_NODE_COMMAND=$(add_node_command "$worker" "$FIRST_MASTER")
             echo "Executing command: $ADD_NODE_COMMAND"
