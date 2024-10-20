@@ -53,7 +53,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(
-            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName) {
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceName,RunAs runAs) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream()
                 .flatMap(List::stream)
@@ -71,27 +71,23 @@ public class K8sYamlDeploymentHandler {
         } else {
             logStr = appHome + Constants.SLASH + logFileName;
         }
-
-        try {
-            K8sMinaUtils.checkParentPath(hostname, logStr);
-//            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
-//                K8sMinaUtils.createFile(hostname, logStr);
-//            }
-        } catch (Exception e) {
-            log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
-        }
-
-        if ("TrinoCoordinator".equals(serviceRoleName) || "TrinoWorker".equals(serviceRoleName)) {
+        List<String> needService = Arrays.asList("TRINO", "PRESTO");
+        if (needService.contains(serviceName)) {
             log.info("start config trino logfile");
             int lastSlashIndex = logStr.lastIndexOf('/');
             logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
         }
-
+        try {
+            if(!K8sMinaUtils.checkPathExists(hostname,logStr)){
+                K8sMinaUtils.createFile(hostname,logStr);
+                K8sMinaUtils.execCmdWithResult(hostname,String.format("chown -R %s:%s %s",runAs.getUser(),runAs.getGroup(),logStr));
+            }
+        } catch (Exception e) {
+            log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
+        }
         ServiceConfig logConfig = new ServiceConfig();
         logConfig.setName("logs");
-        Path logPath = Paths.get(logStr);
-        Path parentPath = logPath.getParent();
-        logConfig.setValue(parentPath.toString().replace("\\", "/"));
+        logConfig.setValue(logStr);
         volumePathSet.add(logConfig);
     }
 
@@ -104,6 +100,7 @@ public class K8sYamlDeploymentHandler {
                                 String logFile,
                                 String hostname,
                                 String serviceRoleName,
+                                String masterHost,
                                 boolean enableKerberos,
                                 boolean enableRangerPlugin) {
 
@@ -116,13 +113,13 @@ public class K8sYamlDeploymentHandler {
 
             volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceRoleName);
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName,runAs);
 
             volumeHadoopConfig(volumePathSet);
 
             volumeEnableKerberosConfig(volumePathSet,appHome,serviceRoleName, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, enableKerberos, enableRangerPlugin);
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap,masterHost, enableKerberos, enableRangerPlugin);
 
             Template template = generateTemplate();
 
@@ -187,6 +184,7 @@ public class K8sYamlDeploymentHandler {
                                                    String appHome,
                                                    Set<ServiceConfig> volumePathSet,
                                                    Map<Generators, List<ServiceConfig>> configFileMap,
+                                                   String masterHost,
                                                    Boolean enableKerberos,
                                                    Boolean enableRangerPlugin) {
         Map<String, Object> data = new HashMap<>();
@@ -198,11 +196,12 @@ public class K8sYamlDeploymentHandler {
         data.put("enableKerberos", enableKerberos.toString());
         data.put("enableRangerPlugin", enableRangerPlugin.toString());
         data.put("appHome", appHome);
+        data.put("masterHost", masterHost);
         data.put("runAs", runAs.getUser());
         data.put("startCommand", startRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())) : "tail -f /dev/null");
+                runAs.getUser(), appHome,startRunner.getProgram(), String.join(" ", startRunner.getArgs())) : "tail -f /dev/null");
         data.put("statusCommand", statusRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s'",
-                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
+                runAs.getUser(), appHome,statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         // 获取 journalnodeDir 和 namenodeDir
@@ -308,6 +307,17 @@ public class K8sYamlDeploymentHandler {
             fileConfig.setName("redis-cluster");
             fileConfig.setValue(redisMasterCluster);
             volumePathSet.add(fileConfig);
+        }
+
+        if ("POSTGRESQL".equals(serviceName)) {
+            String postgresqlData = appHome+"/data/";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("postgresql-data");
+            fileConfig.setValue(postgresqlData);
+            volumePathSet.add(fileConfig);
+        }
+        if ("PostgresqlWorker".equals(serviceRoleName)) {
+            volumePathSet.removeIf(config -> ((String)config.getValue()).contains("postgresql.conf"));
         }
     }
 

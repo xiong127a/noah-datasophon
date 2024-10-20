@@ -45,8 +45,7 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - |
-              ${startCommand}
+            - "${startCommand}"
           env:
             - name: USER
               value: ${runAs}

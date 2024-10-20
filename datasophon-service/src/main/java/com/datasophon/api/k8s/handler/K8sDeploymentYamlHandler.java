@@ -43,6 +43,7 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
         k8SGenerateDeploymentYamlCommand.setStopRunner(serviceRoleInfo.getStopRunner());
         k8SGenerateDeploymentYamlCommand.setStatusRunner(serviceRoleInfo.getStatusRunner());
         k8SGenerateDeploymentYamlCommand.setLogFile(serviceRoleInfo.getLogFile());
+        k8SGenerateDeploymentYamlCommand.setMasterHost(serviceRoleInfo.getMasterHost());
         if (Objects.nonNull(serviceRoleInfo.getRunAs())) {
             k8SGenerateDeploymentYamlCommand.setRunAs(serviceRoleInfo.getRunAs());
         } else {
