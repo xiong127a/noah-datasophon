@@ -26,10 +26,16 @@ public class K8sServiceRoleStrategyContext {
         map.put("RangerAdmin", new K8sRangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
         map.put("RangerUsersync", new K8sRangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
         map.put("RangerKms", new K8sRangerAdminHandlerStrategy("RANGER", "RangerKms"));
+
         map.put("OpenldapServer", new k8sOpenldapHandlerStrategy("OPENLDAP", "OpenldapServer"));
+
         map.put("HueMaster", new K8sHueHandlerStrategy("HUE", "HueMaster"));
+
         map.put("RedisMaster", new K8sRedisHandlerStrategy("REDIS", "RedisMaster"));
         map.put("RedisWorker", new K8sRedisHandlerStrategy("REDIS", "RedisWorker"));
+
+        map.put("PostgresqlMaster", new K8sPostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
+        map.put("PostgresqlWorker", new K8sPostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {

@@ -46,6 +46,9 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              rm -rf ${appHome}/data/*
+              # 备份命令
+              su - postgres -c '${appHome}/bin/pg_basebackup -h ${masterHost} -U postgres -F p -X s -v -P -R -D ${appHome}/data'
               ${startCommand}
           env:
             - name: USER

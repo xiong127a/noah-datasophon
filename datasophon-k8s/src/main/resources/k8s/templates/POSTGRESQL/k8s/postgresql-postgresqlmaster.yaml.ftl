@@ -46,6 +46,11 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              if [ ! -f /opt/datasophon/postgresql/data/postgresql.auto.conf ]; then
+                echo 'init db'
+                cp -r /opt/datasophon/postgresql/databak/* /opt/datasophon/postgresql/data/
+                chown -R postgres:postgres ${appHome}/data
+              fi
               ${startCommand}
           env:
             - name: USER

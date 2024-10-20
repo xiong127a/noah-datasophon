@@ -41,6 +41,8 @@ public class K8sGenerateDeploymentYamlCommand implements Serializable {
 
     private String logFile;
 
+    private String masterHost;
+
     private Boolean enableKerberos;
 
     private Boolean enableRangerPlugin;
