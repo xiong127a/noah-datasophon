@@ -9,7 +9,6 @@ WORKDIR /opt/datasophon
 # 将 tar.gz 文件添加到工作目录
 ADD minio-20240613.tar.gz /opt/datasophon
 
-RUN ln -s /opt/datasophon/minio-20240613 /opt/datasophon/minio
-
 # 修改权限
-RUN chmod -R 775 /opt/datasophon/minio-20240613
+RUN chmod -R 775 /opt/datasophon/minio-20240613 \
+    && ln -s /opt/datasophon/minio-20240613 /opt/datasophon/minio
