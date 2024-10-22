@@ -40,9 +40,9 @@ public class K8sHueHandlerStrategy extends K8sAbstractHandlerStrategy implements
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
 
             logger.info("init hue database");
-            String initCommand = "cd " + workPath + "/build/env/bin/ && "
-                    + "su - hue -c \"./hue syncdb\" && "
-                    + "su - hue -c \"./hue migrate\"";
+            String initCommand = "su - hue -c \"cd " + workPath + "/build/env/bin/ && "
+                    + " ./hue syncdb && "
+                    + " ./hue migrate\"";
             VolumeMountDTO[] volumeMounts = volumeMountList(workPath, command.getConfigFileMap(),command.getEnableKerberos());
             try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                 K8sUtil.runJob(

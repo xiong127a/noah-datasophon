@@ -79,6 +79,7 @@ public class K8sYamlDeploymentHandler {
         }
         try {
             if(!K8sMinaUtils.checkPathExists(hostname,logStr)){
+                K8sMinaUtils.checkParentPath(hostname,logStr);
                 K8sMinaUtils.createFile(hostname,logStr);
                 K8sMinaUtils.execCmdWithResult(hostname,String.format("chown -R %s:%s %s",runAs.getUser(),runAs.getGroup(),logStr));
             }
