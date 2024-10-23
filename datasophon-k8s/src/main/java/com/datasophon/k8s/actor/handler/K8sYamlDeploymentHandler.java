@@ -53,7 +53,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(
-            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceName,RunAs runAs) {
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceName, RunAs runAs) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream()
                 .flatMap(List::stream)
@@ -78,10 +78,10 @@ public class K8sYamlDeploymentHandler {
             logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
         }
         try {
-            if(!K8sMinaUtils.checkPathExists(hostname,logStr)){
-                K8sMinaUtils.checkParentPath(hostname,logStr);
-                K8sMinaUtils.createFile(hostname,logStr);
-                K8sMinaUtils.execCmdWithResult(hostname,String.format("chown -R %s:%s %s",runAs.getUser(),runAs.getGroup(),logStr));
+            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+                K8sMinaUtils.checkParentPath(hostname, logStr);
+                K8sMinaUtils.createFile(hostname, logStr);
+                K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
             }
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
@@ -114,13 +114,13 @@ public class K8sYamlDeploymentHandler {
 
             volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName);
 
-            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName,runAs);
+            volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
 
             volumeHadoopConfig(volumePathSet);
 
-            volumeEnableKerberosConfig(volumePathSet,appHome,serviceRoleName, enableKerberos);
+            volumeEnableKerberosConfig(volumePathSet, appHome, serviceRoleName, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap,masterHost, enableKerberos, enableRangerPlugin);
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin);
 
             Template template = generateTemplate();
 
@@ -136,7 +136,7 @@ public class K8sYamlDeploymentHandler {
         return execResult;
     }
 
-    private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet,String appHome,String serviceRoleName, boolean enableKerberos) {
+    private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet, String appHome, String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             String keytabDir = "/etc/security/keytab/";
             ServiceConfig keytabConfig = new ServiceConfig();
@@ -149,12 +149,12 @@ public class K8sYamlDeploymentHandler {
             krb5ConfConfig.setName("krd5conf");
             krb5ConfConfig.setValue(krb5Conf);
             volumePathSet.add(krb5ConfConfig);
-        }else{
-            if (serviceRoleName.equals("KafkaBroker")){
+        } else {
+            if (serviceRoleName.equals("KafkaBroker")) {
                 Iterator<ServiceConfig> iterator = volumePathSet.iterator();
                 while (iterator.hasNext()) {
                     ServiceConfig config = iterator.next();
-                    String value =(String) config.getValue();
+                    String value = (String) config.getValue();
                     if (value.endsWith(".sh")) {
                         String fileName = value.substring(value.lastIndexOf('/') + 1);
 
@@ -200,9 +200,9 @@ public class K8sYamlDeploymentHandler {
         data.put("masterHost", masterHost);
         data.put("runAs", runAs.getUser());
         data.put("startCommand", startRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s && tail -f /dev/null'",
-                runAs.getUser(), appHome,startRunner.getProgram(), String.join(" ", startRunner.getArgs())) : "tail -f /dev/null");
+                runAs.getUser(), appHome, startRunner.getProgram(), String.join(" ", startRunner.getArgs())) : "tail -f /dev/null");
         data.put("statusCommand", statusRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s'",
-                runAs.getUser(), appHome,statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
+                runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
         // 获取 journalnodeDir 和 namenodeDir
@@ -253,6 +253,9 @@ public class K8sYamlDeploymentHandler {
 
             // path配置目录挂载
             for (ServiceConfig serviceConfig : entry.getValue()) {
+                if (volumePathSet.stream().anyMatch(item -> serviceConfig.getValue().equals(item.getValue()))) {
+                    continue;
+                }
                 if (Constants.PATH.equals(serviceConfig.getConfigType())) {
                     ServiceConfig pathConfig = new ServiceConfig();
                     pathConfig.setName("path" + pathCount++);
@@ -303,7 +306,7 @@ public class K8sYamlDeploymentHandler {
         }
 
         if ("REDIS".equals(serviceName)) {
-            String redisMasterCluster = appHome+"/cluster/";
+            String redisMasterCluster = appHome + "/cluster/";
             ServiceConfig fileConfig = new ServiceConfig();
             fileConfig.setName("redis-cluster");
             fileConfig.setValue(redisMasterCluster);
@@ -311,7 +314,7 @@ public class K8sYamlDeploymentHandler {
         }
 
         if ("POSTGRESQL".equals(serviceName)) {
-            String postgresqlData = appHome+"/data/";
+            String postgresqlData = appHome + "/data/";
             ServiceConfig fileConfig = new ServiceConfig();
             fileConfig.setName("postgresql-data");
             fileConfig.setValue(postgresqlData);
@@ -319,7 +322,7 @@ public class K8sYamlDeploymentHandler {
         }
 
         if ("PostgresqlWorker".equals(serviceRoleName)) {
-            volumePathSet.removeIf(config -> ((String)config.getValue()).contains("postgresql.conf"));
+            volumePathSet.removeIf(config -> ((String) config.getValue()).contains("postgresql.conf"));
         }
 
         if ("ClickHouse".equals(serviceRoleName)) {
@@ -374,6 +377,7 @@ public class K8sYamlDeploymentHandler {
             volumePathSet.add(keytabConfig);
         }
     }
+
     // 提取出一个通用方法，用于从配置中提取目录
     private String getConfigDirectory(Map<Generators, List<ServiceConfig>> configFileMap, String key) {
         return configFileMap.values().stream()
