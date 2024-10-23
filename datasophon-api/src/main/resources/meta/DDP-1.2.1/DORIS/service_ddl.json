@@ -65,7 +65,7 @@
       },
       "statusRunner": {
         "timeout": "60",
-        "program": "fe/bin/status_observer.sh",
+        "program": "fe/bin/status_fe.sh",
         "args": [
           "status",
           "fe"
