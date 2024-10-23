@@ -19,6 +19,8 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +62,9 @@ public class K8sServiceStartHandler extends ServiceHandler {
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         k8sServiceRoleOperateCommand.setEnableKerberos(enableKerberos);
 
-        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT&&!"SPARK3".equals(serviceRoleInfo.getParentName())&&!"FLINK".equals(serviceRoleInfo.getParentName())) {
+
+        List<String> needClientService = Arrays.asList("SPARK3", "FLINK", "ICEBERG");
+        if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT&&!needClientService.contains(serviceRoleInfo.getParentName())) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);
             if (Objects.nonNull(getNext())) {
