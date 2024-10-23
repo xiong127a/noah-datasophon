@@ -317,8 +317,17 @@ public class K8sYamlDeploymentHandler {
             fileConfig.setValue(postgresqlData);
             volumePathSet.add(fileConfig);
         }
+
         if ("PostgresqlWorker".equals(serviceRoleName)) {
             volumePathSet.removeIf(config -> ((String)config.getValue()).contains("postgresql.conf"));
+        }
+
+        if ("ClickHouse".equals(serviceRoleName)) {
+            String clickHouseData = "/var/lib/clickhouse/";
+            ServiceConfig fileConfig = new ServiceConfig();
+            fileConfig.setName("clickhouse-data");
+            fileConfig.setValue(clickHouseData);
+            volumePathSet.add(fileConfig);
         }
     }
 
