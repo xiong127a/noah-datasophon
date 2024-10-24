@@ -4,7 +4,9 @@
   "description": "高吞吐量的分布式发布订阅消息系统",
   "version": "2.4.1",
   "sortNum": 4,
-  "dependencies":["ZOOKEEPER"],
+  "dependencies": [
+    "ZOOKEEPER"
+  ],
   "packageName": "kafka-2.4.1.tar.gz",
   "decompressPackageName": "kafka-2.4.1",
   "roles": [
@@ -27,12 +29,14 @@
         "timeout": "600",
         "program": "bin/kafka-server-stop.sh",
         "args": [
+
         ]
       },
       "statusRunner": {
         "timeout": "60",
         "program": "bin/kafka-server-status.sh",
         "args": [
+
         ]
       },
       "restartRunner": {
@@ -42,6 +46,47 @@
           "restart",
           "namenode"
         ]
+      }
+    },
+    {
+      "name": "ke",
+      "label": "ke",
+      "roleType": "master",
+      "cardinality": "1",
+      "logFile": "efak/logs/log.log",
+      "jmxPort": 18048,
+      "startRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "restart"
+        ]
+      },
+      "externalLink": {
+        "name": "efak Ui",
+        "label": "efak Ui",
+        "url": "http://${host}:8048"
       }
     }
   ],
@@ -81,6 +126,25 @@
         ]
       },
       {
+        "filename": "system-config.properties",
+        "configFormat": "custom",
+        "outputDirectory": "efak/conf",
+        "templateName": "ke-system.ftl",
+        "includeParams": [
+          "cluster1ZkList",
+          "cluster1EfakBrokerSize",
+          "kafkaZkLimitSize",
+          "cluster1EfakOffsetStorage",
+          "efakTopicToken",
+          "enableSasl",
+          "securityProtocol",
+          "saslMechanism",
+          "kbServiceName",
+          "kafkaHost",
+          "kafkaRealm"
+        ]
+      },
+      {
         "filename": "kafka-server-start.sh",
         "configFormat": "custom",
         "outputDirectory": "bin",
@@ -89,6 +153,7 @@
           "kafkaHeapSize"
         ]
       },
+
       {
         "filename": "kafka-run-class.sh",
         "configFormat": "custom",
@@ -176,7 +241,9 @@
       "required": true,
       "type": "multiple",
       "separator": ",",
-      "value": ["/data/kafka-logs"],
+      "value": [
+        "/data/kafka-logs"
+      ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
@@ -206,7 +273,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "8"
-    },{
+    },
+    {
       "name": "offsets.topic.replication.factor",
       "label": "内置topic副本数",
       "description": "",
@@ -216,7 +284,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "3"
-    },{
+    },
+    {
       "name": "log.retention.hours",
       "label": "数据保留的最长时间",
       "description": "",
@@ -237,7 +306,21 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
-    },{
+    },
+    {
+      "name": "securityProtocol",
+      "label": "securityProtocol",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "SASL_PLAINTEXT",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "SASL_PLAINTEXT"
+    },
+    {
       "name": "default.replication.factor",
       "label": "topic副本数",
       "description": "",
@@ -516,6 +599,7 @@
       "type": "input",
       "value": "${KAFKA_HOME}",
       "configurableInWizard": true,
+      "hidden": true,
       "defaultValue": "${KAFKA_HOME}"
     },
     {
@@ -543,19 +627,6 @@
       "configurableInWizard": true,
       "hidden": true,
       "defaultValue": "${realm}"
-    },
-    {
-      "name": "securityProtocol",
-      "label": "securityProtocol",
-      "description": "",
-      "configType": "map",
-      "configWithKerberos": true,
-      "required": false,
-      "type": "input",
-      "value": "SASL_PLAINTEXT",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
     },
     {
       "name": "saslMechanism",
@@ -590,10 +661,83 @@
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [],
+      "value": [
+
+      ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "cluster1ZkList",
+      "label": "zk连接地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${zkUrls}/kafka",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${zkUrls}/kafka"
+    },{
+      "name": "enableSasl",
+      "label": "启用sasl认证",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "cluster1EfakBrokerSize",
+      "label": "在线broker大小",
+      "description": "在线broker大小",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "20"
+    },
+    {
+      "name": "kafkaZkLimitSize",
+      "label": "zk客户端线程数",
+      "description": "zk客户端线程数",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "16"
+    },
+    {
+      "name": "cluster1EfakOffsetStorage",
+      "label": "offsets存储",
+      "description": "offsets存储在zk还是kafka",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "kafka"
+    },
+    {
+      "name": "efakTopicToken",
+      "label": "efak.topic.token",
+      "configType": "map",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "keadmin"
     }
   ]
 }
