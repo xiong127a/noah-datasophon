@@ -2,11 +2,11 @@
   "name": "SEATUNNEL",
   "label": "Seatunnel",
   "description": "数据同步工具",
-  "version": "2.3.5",
+  "version": "2.3.3",
   "sortNum": 32,
   "dependencies": [],
-  "packageName": "seatunnel-2.3.5.tar.gz",
-  "decompressPackageName": "seatunnel-2.3.5",
+  "packageName": "seatunnel-2.3.3.tar.gz",
+  "decompressPackageName": "seatunnel-2.3.3",
   "roles": [
     {
       "name": "SeatunnelServer",
