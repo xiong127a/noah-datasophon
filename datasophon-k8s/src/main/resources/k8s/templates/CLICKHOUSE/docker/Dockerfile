@@ -1,4 +1,4 @@
-# 第一阶段 需要安装sudo
+# 需要安装sudo
 FROM 192.168.5.200:5000/bdp/centos:7.9.2009
 
 RUN mkdir -p /opt/datasophon
