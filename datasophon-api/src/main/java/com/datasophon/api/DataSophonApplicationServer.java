@@ -32,11 +32,6 @@ import javax.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
-import java.time.Month;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @SpringBootApplication
 @ServletComponentScan
@@ -45,53 +40,25 @@ import java.util.concurrent.TimeUnit;
 @EnableSpringUtil
 public class DataSophonApplicationServer extends SpringBootServletInitializer {
 
-    private static ScheduledExecutorService scheduler;
-
     public static void main(String[] args) {
         SpringApplication.run(DataSophonApplicationServer.class, args);
-        // Add shutdown hook to close and shutdown resources
-        Runtime.getRuntime().addShutdownHook(new Thread(DataSophonApplicationServer::shutdown));
+		// add shutdown hook， close and shutdown resources
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            shutdown();
+        }));
     }
 
     @PostConstruct
     public void run() throws UnknownHostException, NoSuchAlgorithmException {
-        checkStopDate();
         String hostName = InetAddress.getLocalHost().getHostName();
         CacheUtils.put(Constants.HOSTNAME, hostName);
-        ActorUtils.init(); // 静态初始化方法
-
-        // Schedule tasks
-        scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(this::checkStopDate, 0, 24 * 60 * 60,TimeUnit.SECONDS);
+        ActorUtils.init();
     }
-
 
     /**
-     * 优雅关闭方法
+     * Master 关闭时调用
      */
     public static void shutdown() {
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
-            try {
-                if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                scheduler.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
-        ActorUtils.shutdown(); // 静态关闭方法
-    }
-
-    private void checkStopDate() {
-        LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(2024, Month.OCTOBER, 10);
-
-        if (today.isAfter(stopDate) || today.equals(stopDate)) {
-            shutdown();
-            System.out.println("The application cannot start because the stop date has passed.");
-            System.exit(0); // 退出程序
-        }
+        ActorUtils.shutdown();
     }
 }
