@@ -63,8 +63,8 @@ const resp401 = {
    */
   onFulfilled(response, options) {
     const {message} = options
-    if (response.code === 401) {
-      // message.error('登录已失效，请重新登录')
+    if (response.code === 401 && response.config.url !=='/ddh/signOut') {
+      message.error('登录已失效，请重新登录')
       logout();
       location.reload();
     }
@@ -79,8 +79,8 @@ const resp401 = {
   onRejected(error, options) {
     const {message} = options
     const {response} = error
-    if (response.status === 401) {
-      // message.error('登录已失效，请重新登录')
+    if (response.status === 401 && response.config.url !=='/ddh/signOut') {
+      message.error('登录已失效，请重新登录')
       logout();
       location.reload();
     }
@@ -120,7 +120,6 @@ const reqCommon = {
       localStorage.setItem('isCluster', '')
       localStorage.setItem('clusterId', '')
       localStorage.setItem('menuData', '[]')
-      // message.warning('认证 token 已过期，请重新登录')
     }
     config.headers['Content-Type'] = config.ContentType?config.ContentType:'application/json;charset=UTF-8'
     config.headers.clusterId =  window.localStorage.getItem("clusterId");
