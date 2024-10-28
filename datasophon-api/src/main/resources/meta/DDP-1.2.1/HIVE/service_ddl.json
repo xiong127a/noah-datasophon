@@ -750,7 +750,7 @@
     },
     {
       "name": "hive.server2.active.passive.ha.enable",
-      "label": "hive.stats.autogather",
+      "label": "hive.server2.active.passive.ha.enable",
       "description": "hive.server2.active.passive.ha.enable",
       "required": true,
       "configType": "map",
