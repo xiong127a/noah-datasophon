@@ -76,16 +76,6 @@ public class WorkerApplicationServer {
 
     public static void main(String[] args) throws UnknownHostException {
         checkStopDate();
-        // Check for stop date
-        LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(today.getYear(), Month.OCTOBER, 9);
-
-        if (today.isAfter(stopDate) || today.equals(stopDate)) {
-            System.out.println("The application cannot start because the stop date has passed.");
-            System.exit(0); // Exit the program
-        }
-
-
         String hostname = InetAddress.getLocalHost().getHostName();
         String workDir = System.getProperty(USER_DIR);
         String masterHost = PropertyUtils.getString(MASTER_HOST);
@@ -132,7 +122,7 @@ public class WorkerApplicationServer {
 
     private static void checkStopDate() {
         LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(2024, Month.OCTOBER, 10);
+        LocalDate stopDate = LocalDate.of(2024, Month.NOVEMBER, 21);
 
         if (today.isAfter(stopDate) || today.equals(stopDate)) {
             System.out.println("The application cannot start because the stop date has passed.");

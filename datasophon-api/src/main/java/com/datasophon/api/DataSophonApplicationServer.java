@@ -86,7 +86,7 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
 
     private void checkStopDate() {
         LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(2024, Month.OCTOBER, 10);
+        LocalDate stopDate = LocalDate.of(2024, Month.NOVEMBER, 21);
 
         if (today.isAfter(stopDate) || today.equals(stopDate)) {
             shutdown();
