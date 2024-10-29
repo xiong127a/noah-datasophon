@@ -1,22 +1,3 @@
-/*
- *
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- */
-
 package com.datasophon.api.utils;
 
 import com.datasophon.common.Constants;
@@ -46,9 +27,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.LoggerFactory;
 
 public class MinaUtils {
-
+    
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(MinaUtils.class);
-
+    
     /** 打开远程会话 */
     public static ClientSession openConnection(String sshHost, Integer sshPort, String sshUser) {
         SshClient sshClient = SshClient.setUpDefaultClient();
@@ -69,7 +50,7 @@ public class MinaUtils {
         LOG.info(sshHost + " 连接成功");
         return session;
     }
-
+    
     /** 关闭远程会话 */
     public static void closeConnection(ClientSession session) {
         try {
@@ -78,7 +59,7 @@ public class MinaUtils {
             throw new RuntimeException(e);
         }
     }
-
+    
     /** 获取密钥对 */
     static KeyPair getKeyPairFromString(String pk) {
         final KeyPairGenerator rsa;
@@ -94,7 +75,7 @@ public class MinaUtils {
             throw new RuntimeException(e);
         }
     }
-
+    
     /**
      * 同步执行,需要获取执行完的结果
      *
@@ -130,15 +111,62 @@ public class MinaUtils {
             if (exitStatus == 1) {
                 return "failed";
             }
-
-            LOG.info("exe cmd return : {}", out);
-            return out.toString().trim();
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        } finally {
+            if (ce.isClosed()) {
+                try {
+                    ce.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        LOG.info("exe cmd return : {}", out);
+        return out.toString().trim();
+    }
+    public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
+        session.resetAuthTimeout();
+        LOG.info("Executing command: {}", command);
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+             ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+             ChannelExec channelExec = session.createExecChannel(command)) {
+
+            channelExec.setOut(outputStream);
+            channelExec.setErr(errorStream);
+
+            // 打开通道并执行命令
+            channelExec.open();
+
+            // 等待命令执行完成或超时
+            Set<ClientChannelEvent> events = channelExec.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
+
+            if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                throw new IOException("Command execution timed out");
+            }
+
+            int exitStatus = channelExec.getExitStatus();
+            LOG.info("Command executed with exit status: {}", exitStatus);
+
+            if (exitStatus != 0) {
+                String errorOutput = errorStream.toString().trim();
+                LOG.error("Command execution failed: {}", errorOutput);
+                throw new IOException("Command execution failed with error: " + errorOutput);
+            }
+
+            String result = outputStream.toString().trim();
+            LOG.info("Command output: {}", result);
+
+            return result;
+
+        } catch (Exception e) {
+            LOG.error("Error executing command: {}", e.getMessage());
+            throw e;
         }
     }
+
 
     /**
      * 上传文件,相同路径ui覆盖
@@ -164,16 +192,14 @@ public class MinaUtils {
                 LOG.info("delete file  {}", file);
                 Files.deleteIfExists(file);
             }
-
             Files.copy(input, file);
             LOG.info("file copy success");
             return true;
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-
+    
     /**
      * 创建目录
      *
@@ -194,7 +220,7 @@ public class MinaUtils {
         }
         return false;
     }
-
+    
     public static void main(String[] args) throws IOException, InterruptedException {
         ClientSession session = MinaUtils.openConnection("localhost", 22, "liuxin");
         for (int i = 0; i < Constants.TEN; i++) {
