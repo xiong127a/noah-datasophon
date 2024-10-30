@@ -63,7 +63,7 @@ const resp401 = {
    */
   onFulfilled(response, options) {
     const {message} = options
-    if (response.code === 401 && response.config.url !=='/ddh/signOut') {
+    if (response.code === 401 ) {
       message.error('登录已失效，请重新登录')
       logout();
       location.reload();
@@ -79,7 +79,8 @@ const resp401 = {
   onRejected(error, options) {
     const {message} = options
     const {response} = error
-    if (response.status === 401 && response.config.url !=='/ddh/signOut') {
+    // && response.config.url !=='/ddh/signOut'
+    if (response.status === 401) {
       message.error('登录已失效，请重新登录')
       logout();
       location.reload();
