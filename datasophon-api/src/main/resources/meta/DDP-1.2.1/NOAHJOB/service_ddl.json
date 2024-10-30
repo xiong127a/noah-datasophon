@@ -1,0 +1,521 @@
+{
+  "name": "NOAHJOB",
+  "label": "NoahJob",
+  "description": "分布式易扩展的可视化工作流任务调度平台",
+  "version": "3.0.0",
+  "sortNum": 44,
+  "dependencies":["ZOOKEEPER"],
+  "packageName": "noah-job-3.0.0.tar.gz",
+  "decompressPackageName": "noah-job-3.0.0",
+  "roles": [
+    {
+      "name": "NoahJobServer",
+      "label": "NoahJobServer",
+      "roleType": "master",
+      "cardinality": "1",
+      "logFile": "standalone-server/logs/standalone-server-${host}.out",
+      "jmxPort": 12367,
+      "startRunner": {
+        "timeout": "60",
+        "program": "bin/dolphinscheduler-daemon.sh",
+        "args": [
+          "start",
+          "standalone-server"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "bin/dolphinscheduler-daemon.sh",
+        "args": [
+          "stop",
+          "standalone-server"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "bin/dolphinscheduler-daemon.sh",
+        "args": [
+          "status",
+          "standalone-server"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "bin/restart-dolphinscheduler.sh",
+        "args": [
+          "standalone-server"
+        ]
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "application.yaml",
+        "configFormat": "custom",
+        "outputDirectory": "standalone-server/conf",
+        "templateName": "noah-job-app.ftl",
+        "includeParams": [
+          "driverClassName",
+          "databaseUrl",
+          "username",
+          "password",
+          "zkUrls",
+          "authUrl",
+          "serverUrl",
+          "redisAloneEnabled",
+          "redisAloneHost",
+          "redisAlonePort",
+          "redisNodes",
+          "redisPassword",
+          "orgQuartzJobStoreDriverDelegateClass"
+        ]
+      },
+      {
+        "filename": "common.properties",
+        "configFormat": "properties",
+        "outputDirectory": "standalone-server/conf",
+        "includeParams": [
+          "data.basedir.path",
+          "resource.storage.type",
+          "resource.upload.path",
+          "aws.access.key.id",
+          "aws.secret.access.key",
+          "aws.region",
+          "aws.bucket",
+          "aws.datasource.authentication.bucket",
+          "aws.endpoint",
+          "resource.alibaba.cloud.access.key.id",
+          "resource.alibaba.cloud.access.key.secret",
+          "resource.alibaba.cloud.region",
+          "resource.alibaba.cloud.oss.bucket.name",
+          "resource.alibaba.cloud.oss.endpoint",
+          "hdfs.root.user",
+          "fs.defaultFS",
+          "hadoop.security.authentication.startup.state",
+          "java.security.krb5.conf.path",
+          "login.user.keytab.username",
+          "login.user.keytab.path",
+          "kerberos.expire.time",
+          "resource.manager.httpaddress.port",
+          "yarn.resourcemanager.ha.rm.ids",
+          "yarn.application.status.address",
+          "yarn.job.history.status.address",
+          "datasource.encryption.enable",
+          "datasource.encryption.salt",
+          "data-quality.jar.name",
+          "support.hive.oneSession",
+          "sudo.enable",
+          "development.state",
+          "alert.rpc.port",
+          "zeppelin.rest.url",
+          "portal.url",
+          "custom.common.properties"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "driverClassName",
+      "label": "DolphinScheduler数据库驱动",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "com.mysql.cj.jdbc.Driver"
+    },
+    {
+      "name": "databaseUrl",
+      "label": "DolphinScheduler数据库地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "jdbc:mysql://${apiHost}:3306/noah_scheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false"
+    },
+    {
+      "name": "username",
+      "label": "NoahJob数据库用户名",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "ke_dev"
+    },
+    {
+      "name": "password",
+      "label": "NoahJob数据库密码",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "ke_dev"
+    },
+    {
+      "name": "zkUrls",
+      "label": "ZK地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${zkUrls}"
+    },
+    {
+      "name": "authUrl",
+      "label": "单点登录Url",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "https://192.168.5.184:10000/index.html"
+    },{
+      "name": "serverUrl",
+      "label": "serverUrl",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "https://192.168.5.174:10000/sso-server/"
+    },{
+      "name": "orgQuartzJobStoreDriverDelegateClass",
+      "label": "orgQuartzJobStoreDriverDelegateClass",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "org.quartz.impl.jdbcjobstore.JobStoreTX"
+    },
+    {
+      "name": "data.basedir.path",
+      "label": "data.basedir.path",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data/dolphinscheduler"
+    },{
+      "name": "resource.storage.type",
+      "label": "resource.storage.type",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "S3"
+    },{
+      "name": "resource.upload.path",
+      "label": "resource.upload.path",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/dolphinscheduler"
+    },{
+      "name": "aws.access.key.id",
+      "label": "aws.access.key.id",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "minioadmin"
+    },{
+      "name": "aws.secret.access.key",
+      "label": "aws.secret.access.key",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "minioadmin"
+    },{
+      "name": "aws.region",
+      "label": "aws.region",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "us-east-1"
+    },{
+      "name": "aws.bucket",
+      "label": "aws.bucket",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "noah"
+    },{
+      "name": "aws.datasource.authentication.bucket",
+      "label": "aws.datasource.authentication.bucket",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "datasource-authentication"
+    },{
+      "name": "aws.endpoint",
+      "label": "aws.endpoint",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${host}/"
+    },{
+      "name": "hdfs.root.user",
+      "label": "hdfs.root.user",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "hdfs"
+    },{
+      "name": "fs.defaultFS",
+      "label": "fs.defaultFS",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://${host}/noah"
+    },{
+      "name": "resource.manager.httpaddress.port",
+      "label": "resource.manager.httpaddress.port",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8088"
+    },{
+      "name": "yarn.resourcemanager.ha.rm.ids",
+      "label": "yarn.resourcemanager.ha.rm.ids",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${rmHost}"
+    },{
+      "name": "yarn.application.status.address",
+      "label": "yarn.application.status.address",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://ds1:%s/ws/v1/cluster/apps/%s"
+    },{
+      "name": "yarn.job.history.status.address",
+      "label": "yarn.job.history.status.address",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://ds1:19888/ws/v1/history/mapreduce/jobs/%s"
+    },{
+      "name": "datasource.encryption.enable",
+      "label": "datasource.encryption.enable",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },{
+      "name": "datasource.encryption.salt",
+      "label": "datasource.encryption.salt",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "!@#$%^&*"
+    },{
+      "name": "data-quality.jar.name",
+      "label": "data-quality.jar.name",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "dolphinscheduler-data-quality-dev-SNAPSHOT.jar"
+    },{
+      "name": "support.hive.oneSession",
+      "label": "support.hive.oneSession",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },{
+      "name": "sudo.enable",
+      "label": "sudo.enable",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },{
+      "name": "development.state",
+      "label": "development.state",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },{
+      "name": "alert.rpc.port",
+      "label": "alert.rpc.port",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "50052"
+    },{
+      "name": "zeppelin.rest.url",
+      "label": "zeppelin.rest.url",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://localhost:8080"
+    },{
+      "name": "portal.url",
+      "label": "portal.url",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "http://192.168.5.228:8111/portal-api"
+    },{
+      "name": "redisNodes",
+      "label": "redisNodes",
+      "configType": "map",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "null"
+    },{
+      "name": "redisAloneEnabled",
+      "label": "redisAloneEnabled",
+      "configType": "map",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "true"
+    },{
+      "name": "redisAloneHost",
+      "label": "redisAloneHost",
+      "configType": "map",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "null"
+    },{
+      "name": "redisAlonePort",
+      "label": "redisAlonePort",
+      "configType": "map",
+      "description": "",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "null"
+    },{
+      "name": "redisPassword",
+      "label": "redisPassword",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },{
+      "name": "custom.common.properties",
+      "label": "自定义配置common.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    }
+  ]
+}
