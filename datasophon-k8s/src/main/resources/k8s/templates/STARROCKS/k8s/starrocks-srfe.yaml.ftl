@@ -46,7 +46,13 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              ${startCommand}
+              if [ "$HOSTNAME" = "${masterHost}" ]; then
+                ${startCommand}
+              else
+                modified_command=$(echo "${startCommand}" | sed 's/start_fe.sh --daemon/start_fe.sh --helper ${masterHost}:9010 --daemon/')
+                echo $modified_command
+                eval $modified_command
+              fi
           env:
             - name: USER
               value: ${runAs}
