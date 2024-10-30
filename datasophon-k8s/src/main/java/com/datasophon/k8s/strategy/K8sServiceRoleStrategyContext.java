@@ -36,6 +36,11 @@ public class K8sServiceRoleStrategyContext {
 
         map.put("PostgresqlMaster", new K8sPostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
         map.put("PostgresqlWorker", new K8sPostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
+
+        map.put("SRBE", new K8sSRBEHandlerStrategy("STARROCKS", "SRBE"));
+        map.put("SRCN", new K8sSRCNHandlerStrategy("STARROCKS", "SRCN"));
+        map.put("SRFE", new K8sSRFEHandlerStrategy("STARROCKS", "SRFE"));
+        map.put("SRFEObserver", new K8sSRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {
