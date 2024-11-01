@@ -52,7 +52,9 @@
 ########## Disk ##########
 # Root data path. Split by comma. e.g. --data_path=/disk1/path1/,/disk2/path2/
 # One path per Rocksdb instance.
---data_path=${storageDataPath}
+<#list itemList as item>
+--${item.name}=${item.value}/storage
+</#list>
 
 # Minimum reserved bytes of each data path
 --minimum_reserved_bytes=${minimumReservedBytes}

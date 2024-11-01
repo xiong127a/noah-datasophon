@@ -42,6 +42,8 @@ public class ServiceRoleOperateCommand extends BaseCommand implements Serializab
 
     private String managerHost;
 
+    private String graphHost;
+
     private Boolean enableRangerPlugin;
 
     private RunAs runAs;

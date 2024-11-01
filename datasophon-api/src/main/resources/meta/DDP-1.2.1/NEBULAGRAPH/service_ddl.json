@@ -225,7 +225,7 @@
             "label": "Meta服务的地址",
             "description": "全部 Meta 服务的 IP（或主机名）和端口。多个 Meta 服务用英文逗号（,）分隔。",
             "required": true,
-            "configType": "map",
+             "configType": "map",
             "type": "input",
             "value": "",
             "configurableInWizard": true,
@@ -280,7 +280,7 @@
             "hidden": false,
             "defaultValue": "/data/ngdata/"
         },
-        {
+         {
             "name": "localIp",
             "label": "本地IP",
             "description": "本地IP",
@@ -329,7 +329,7 @@
             "hidden": false,
             "defaultValue": "0"
         },
-        {
+         {
             "name": "storageNumMaxConnections",
             "label": "storage所有网络线程的最大活动连接数",
             "description": "storage所有网络线程的最大活动连接数，0表示没有限制。每个网络线程的最大连接数=num_max_connections/num_netio_threads。",
@@ -353,7 +353,7 @@
             "hidden": false,
             "defaultValue": 0
         },
-        {
+           {
             "name": "storageNumWorkerThreads",
             "label": "storage执行用户查询的线程数",
             "description": "storage执行用户查询的线程数。0表示 CPU 核数。",
@@ -450,7 +450,7 @@
             "hidden": false,
             "defaultValue": 0.8
         },
-        {
+          {
             "name": "graphMemoryTrackerLimitRatio",
             "label": "graph可用内存的百分比。",
             "description": "取值可设置为：(0, 1]、2、3。设置该参数时请确保system_memory_high_watermark_ratio的值不为1，否则该参数的值不生效。",
@@ -474,7 +474,7 @@
             "hidden": false,
             "defaultValue": 50
         },
-        {
+           {
             "name": "storageMemoryTrackerUntrackedReservedMemoryMb",
             "label": "storage保留内存的大小，单位：MB。",
             "description": "storage保留内存的大小，单位：MB。",
@@ -498,7 +498,7 @@
             "hidden": false,
             "defaultValue": true
         },
-        {
+           {
             "name": "storageMemoryPurgeEnabled",
             "label": "storage是否定期开启内存清理功能。",
             "description": "storage是否定期开启内存清理功能。当值为true时，会定期清理内存。",
@@ -522,7 +522,7 @@
             "hidden": false,
             "defaultValue": 10
         },
-        {
+         {
             "name": "storageMemoryPurgeIntervalSeconds",
             "label": "storage内存清理的时间间隔，单位：秒。",
             "description": "storage内存清理的时间间隔，单位：秒。memory_purge_enabled为true时，该参数生效。",

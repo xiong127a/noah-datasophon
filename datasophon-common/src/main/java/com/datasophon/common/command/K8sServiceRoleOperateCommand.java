@@ -26,6 +26,8 @@ public class K8sServiceRoleOperateCommand extends BaseCommand implements Seriali
 
     private String managerHost;
 
+    private String graphHost;
+
     private Boolean enableRangerPlugin;
 
     private RunAs runAs;

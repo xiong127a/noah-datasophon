@@ -71,7 +71,7 @@ public class K8sYamlDeploymentHandler {
         } else {
             logStr = appHome + Constants.SLASH + logFileName;
         }
-        List<String> needService = Arrays.asList("TRINO", "PRESTO");
+        List<String> needService = Arrays.asList("TRINO", "PRESTO","NEBULAGRAPH");
         if (needService.contains(serviceName)) {
             log.info("start config trino logfile");
             int lastSlashIndex = logStr.lastIndexOf('/');

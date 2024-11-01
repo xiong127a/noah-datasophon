@@ -74,6 +74,9 @@ public class ServiceRoleStrategyContext {
 
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
         map.put("PostgresqlWorker", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
+
+
+        map.put("Storage", new StorageHandlerStrategy("NEBULAGRAPH", "Storage"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

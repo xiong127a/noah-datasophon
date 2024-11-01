@@ -53,6 +53,7 @@ public class ServiceRoleStrategyContext {
         map.put("ELASTICSEARCH", new ElasticSearchHandlerStrategy());
         map.put("Prometheus", new PrometheusHandlerStrategy());
         map.put("ALERTMANAGER", new AlertManagerHandlerStrategy());
+        map.put("Graph", new NebulaGraphHandlerStrategy());
 
         map.put("RANGER", new RangerAdminHandlerStrategy());
         map.put("ZOOKEEPER", new ZkServerHandlerStrategy());
@@ -72,6 +73,7 @@ public class ServiceRoleStrategyContext {
         map.put("Pushgateway", new PushgatewayHandlerStrategy());
         map.put("MINIO", new MinioHandlerStrategy());
         map.put("HUE", new HueHandlerStrategy());
+        map.put("NEBULAGRAPH", new NebulaGraphHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

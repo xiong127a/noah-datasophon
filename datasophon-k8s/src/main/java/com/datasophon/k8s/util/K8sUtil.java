@@ -85,7 +85,7 @@ public class K8sUtil {
 
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
         if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
-            logger.info("host {} pods{} is null",hostname,image);
+            logger.info("host {} pods {} is null",hostname,image);
             return;
         }
         try {
