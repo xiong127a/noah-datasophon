@@ -57,7 +57,7 @@ public class ServiceStartHandler extends ServiceHandler {
         serviceRoleOperateCommand.setCommandType(serviceRoleInfo.getCommandType());
         serviceRoleOperateCommand.setMasterHost(serviceRoleInfo.getMasterHost());
         serviceRoleOperateCommand.setManagerHost(CacheUtils.getString(Constants.HOSTNAME));
-
+        serviceRoleOperateCommand.setGraphHost(globalVariables.get("${nebulaGraphHost}"));
         logger.info("service master host is {}", serviceRoleInfo.getMasterHost());
 
         serviceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());

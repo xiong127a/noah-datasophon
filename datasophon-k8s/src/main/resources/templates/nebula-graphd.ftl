@@ -101,8 +101,9 @@
 --enable_udf=true
 
 # set the directory where the .so files of udf are stored, when enable_udf is true
---udf_path=${udfPath}
-
+<#list itemList as item>
+--${item.name}=${item.value}
+</#list>
 ########## session ##########
 # Maximum number of sessions that can be created per IP and per user
 --max_sessions_per_ip_per_user=${maxSessionsPerIpPerUser}

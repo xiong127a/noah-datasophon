@@ -41,7 +41,9 @@
 
 ########## storage ##########
 # Root data path, here should be only single path for metad
---data_path=${metaDataPath}
+<#list itemList as item>
+--${item.name}=${item.value}/meta
+</#list>
 
 ########## Misc #########
 # The default number of parts when a space is created
@@ -51,3 +53,5 @@
 
 --heartbeat_interval_secs=10
 --agent_heartbeat_interval_secs=60
+
+
