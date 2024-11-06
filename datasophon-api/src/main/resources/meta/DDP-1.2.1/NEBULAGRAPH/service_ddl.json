@@ -45,7 +45,7 @@
         {
             "name": "Graph",
             "label": "Graph",
-            "roleType": "worker",
+            "roleType": "master",
             "cardinality": "1+",
             "logFile": "logs/nebula-graphd.INFO",
             "jmxPort": 19669,
