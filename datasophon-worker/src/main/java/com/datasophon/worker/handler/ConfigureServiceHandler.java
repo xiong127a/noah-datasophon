@@ -19,6 +19,7 @@ package com.datasophon.worker.handler;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.Constants;
@@ -155,14 +156,14 @@ public class ConfigureServiceHandler {
                         config.setValue(InetAddress.getLocalHost().getHostAddress());
                     }
 
-                    if("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())){
+                    if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
-                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName+"/conf/hive-site.xml";
-                        if(!FileUtil.exist(targetPath)){
+                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
+                        if (!FileUtil.exist(targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            ExecResult result = ShellUtils.exceShell("ln -s "+config.getValue()+"/conf/hive-site.xml "+targetPath);
-                            if(!result.getExecResult()){
-                                logger.warn("Add hive-site.xml link failed,msg: "+result.getExecErrOut());
+                            ExecResult result = ShellUtils.exceShell("ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            if (!result.getExecResult()) {
+                                logger.warn("Add hive-site.xml link failed,msg: " + result.getExecErrOut());
                             }
                         }
                     }
@@ -296,9 +297,10 @@ public class ConfigureServiceHandler {
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
         String joinValue = String.join(config.getSeparator(), strs);
-        config.setValue(joinValue);
+        String finalValue = config.getOpen() + joinValue + config.getClose();
+        config.setValue(finalValue);
         logger.info("config set value to {}", config.getValue());
-        return joinValue;
+        return finalValue;
     }
 
     private void mkdir(String path, RunAs runAs) {
