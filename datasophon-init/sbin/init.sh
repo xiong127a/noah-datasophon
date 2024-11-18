@@ -222,7 +222,11 @@ initALL() {
   #pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-jdk.sh >>${initLogDir}/installAllJDK_$(date +%Y%m%d).log
   #echo "installAllJDK end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllJDK_$(date +%Y%m%d).log
   #checkJDK
-
+  echo "installAllOPENSSL start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  echo "installAllOPENSSL_ end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  
+  
   pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-java-policy.sh >>${initLogDir}/modifyJavaPolicy_$(date +%Y%m%d).log
   pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-tmp_pid.sh
 
@@ -342,6 +346,10 @@ initSingleNode() {
   #pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-jdk.sh >>${initLogDir}/installSingleNodeJDK_$(date +%Y%m%d).log
   #echo "installSingleNodeJDK end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installSingleNodeJDK_$(date +%Y%m%d).log
   #checkSingleNodeJDK
+  
+  echo "installAllOPENSSL start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  echo "installAllOPENSSL_ end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
 
   pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-java-policy.sh >>${initLogDir}/modifySingleNodeJavaPolicy_$(date +%Y%m%d).log
 
