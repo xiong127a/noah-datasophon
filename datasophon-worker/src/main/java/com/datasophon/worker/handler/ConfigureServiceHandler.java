@@ -297,7 +297,10 @@ public class ConfigureServiceHandler {
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
         String joinValue = String.join(config.getSeparator(), strs);
-        String finalValue = config.getOpen() + joinValue + config.getClose();
+        String finalValue = joinValue;
+        if (StrUtil.isAllNotBlank(config.getOpen(), config.getClose())) {
+            finalValue = config.getOpen() + joinValue + config.getClose();
+        }
         config.setValue(finalValue);
         logger.info("config set value to {}", config.getValue());
         return finalValue;
