@@ -1,0 +1,121 @@
+{
+    "name": "KIBANA",
+    "label": "Kibana",
+    "description": "一个开源的分析和可视化平台",
+    "version": "7.16.2",
+    "sortNum": 12,
+    "dependencies": [
+
+    ],
+    "packageName": "kibana-7.16.2.tar.gz",
+    "decompressPackageName": "kibana-7.16.2",
+    "roles": [
+        {
+            "name": "KibanaServer",
+            "label": "KibanaServer",
+            "roleType": "master",
+            "cardinality": "1",
+            "logFile": "logs/kibana-${host}.log",
+            "runAs": {
+                "user": "kibana",
+                "group": "kibana"
+            },
+            "startRunner": {
+                "timeout": "60",
+                "program": "control_kibana.sh",
+                "args": [
+                    "start",
+                    "kibana"
+                ]
+            },
+            "stopRunner": {
+                "timeout": "60",
+                "program": "control_kibana.sh",
+                "args": [
+                    "stop",
+                    "kibana"
+                ]
+            },
+            "statusRunner": {
+                "timeout": "60",
+                "program": "control_kibana.sh",
+                "args": [
+                    "status",
+                    "kibana"
+                ]
+            },
+            "externalLink": {
+              "name": "Kibana Home",
+              "label": "Kibana Home",
+              "url": "http://${host}:${kibanaPort}"
+            }
+        }
+    ],
+    "configWriter": {
+        "generators": [
+            {
+                "filename": "kibana.yml",
+                "configFormat": "properties3",
+                "outputDirectory": "config",
+                "includeParams": [
+                    "server.port",
+                    "server.host",
+                    "elasticsearch.hosts",
+                    "custom.kibana.yml"
+                ]
+            }
+        ]
+    },
+    "parameters": [
+        {
+            "name": "server.port",
+            "label": "服务端口",
+            "description": "服务端口",
+            "required": true,
+            "type": "input",
+            "value": "5601",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "5601"
+        },
+        {
+            "name": "server.host",
+            "label": "访问地址",
+            "description": "访问地址",
+            "required": true,
+            "type": "input",
+            "value": "${host}",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "${host}"
+        },
+        {
+            "name": "elasticsearch.hosts",
+            "label": "elasticsearch地址",
+            "description": "",
+            "separator": ",",
+            "open": "[",
+            "close": "]",
+            "required": true,
+            "type": "multiple",
+            "value": " ",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "${host}"
+        },
+        {
+            "name": "custom.kibana.yml",
+            "label": "自定义配置kibana.yml",
+            "description": "自定义配置",
+            "configType": "custom",
+            "required": false,
+            "type": "multipleWithKey",
+            "value": [
+
+            ],
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": ""
+        }
+    ]
+}
