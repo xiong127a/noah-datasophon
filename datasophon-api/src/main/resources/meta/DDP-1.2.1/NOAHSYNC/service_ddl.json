@@ -94,13 +94,14 @@
       "name": "hosts",
       "label": "集群节点ip",
       "description": "集群节点ip",
-      "required": true,
+      "configType": "",
+      "required": false,
       "type": "multiple",
       "separator": ",",
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": []
     },
     {
       "name": "schedulerUrl",
