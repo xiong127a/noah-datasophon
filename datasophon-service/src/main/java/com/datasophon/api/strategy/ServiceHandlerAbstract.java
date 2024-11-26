@@ -95,7 +95,7 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
-    private void addConfig(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
+    public void addConfig(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
                            List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
         if (map.containsKey(serviceConfig.getName())) {
             ServiceConfig config = map.get(serviceConfig.getName());
