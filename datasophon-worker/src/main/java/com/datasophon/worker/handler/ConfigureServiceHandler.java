@@ -113,7 +113,11 @@ public class ConfigureServiceHandler {
                         addToCustomList(iterator, customConfList, config);
                     }
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                        iterator.remove();
+                        if (StrUtil.equals("map2", config.getConfigType())) {
+                            config.setConfigType("map");
+                        }else {
+                            iterator.remove();
+                        }
                     }
                     if (config.getValue() instanceof Boolean || config.getValue() instanceof Integer) {
                         logger.info("Convert boolean and integer to string");
