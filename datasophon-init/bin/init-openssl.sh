@@ -1,5 +1,5 @@
 #!/bin/bash
-
+start_time=$(date +%s)
 # 设置源码包和安装路径
 SOURCE_DIR="/data/datasophon-init/packages"
 OPENSSL_TAR="openssl-1.1.1.tar.gz"
@@ -115,5 +115,7 @@ sudo ln -sf ${OPENSSL_DIR}/lib /usr/lib64/openssl
 
 # 验证 OpenSSL 版本是否已经更新
 openssl version
-
+end_time=$(date +%s)
+execution_time=$((end_time - start_time))
+echo "脚本执行时长: $execution_time 秒"
 echo "OpenSSL 安装和软连接配置完成！"

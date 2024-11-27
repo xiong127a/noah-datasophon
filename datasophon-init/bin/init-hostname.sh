@@ -18,9 +18,12 @@ echo "INIT_PATH: ${INIT_PATH}"
 
 hostname=$1
 modifyHostname() {
+    . /etc/os-release
     echo "${hostname}" >/etc/hostname
-    echo "HOSTNAME=${hostname}" >/etc/sysconfig/network
-    echo "NOZEROCONF=yes" >>/etc/sysconfig/network
+    if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
+      echo "HOSTNAME=${hostname}" >/etc/sysconfig/network
+      echo "NOZEROCONF=yes" >>/etc/sysconfig/network
+    fi
     hostnamectl set-hostname ${hostname}
     hostnamectl set-hostname --static ${hostname}
 }
