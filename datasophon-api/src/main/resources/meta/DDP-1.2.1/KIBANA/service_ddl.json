@@ -17,8 +17,8 @@
             "cardinality": "1",
             "logFile": "logs/kibana-${host}.log",
             "runAs": {
-                "user": "kibana",
-                "group": "kibana"
+                "user": "elastic",
+                "group": "elastic"
             },
             "startRunner": {
                 "timeout": "60",

@@ -76,6 +76,7 @@ public class ServiceRoleStrategyContext {
         map.put("HUE", new HueHandlerStrategy());
         map.put("NEBULAGRAPH", new NebulaGraphHandlerStrategy());
         map.put("KIBANA", new KibanaSearchHandlerStrategy());
+        map.put("NOAHSYNC",new NoahSyncHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

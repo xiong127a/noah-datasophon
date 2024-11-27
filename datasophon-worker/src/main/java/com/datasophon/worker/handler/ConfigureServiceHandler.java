@@ -113,7 +113,11 @@ public class ConfigureServiceHandler {
                         addToCustomList(iterator, customConfList, config);
                     }
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                        iterator.remove();
+                        if (StrUtil.equals("map2", config.getConfigType())) {
+                            config.setConfigType("map");
+                        }else {
+                            iterator.remove();
+                        }
                     }
                     if (config.getValue() instanceof Boolean || config.getValue() instanceof Integer) {
                         logger.info("Convert boolean and integer to string");
@@ -297,7 +301,10 @@ public class ConfigureServiceHandler {
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
         String joinValue = String.join(config.getSeparator(), strs);
-        String finalValue = config.getOpen() + joinValue + config.getClose();
+        String finalValue = joinValue;
+        if (StrUtil.isAllNotBlank(config.getOpen(), config.getClose())) {
+            finalValue = config.getOpen() + joinValue + config.getClose();
+        }
         config.setValue(finalValue);
         logger.info("config set value to {}", config.getValue());
         return finalValue;
