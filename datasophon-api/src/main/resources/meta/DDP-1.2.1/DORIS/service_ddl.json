@@ -308,7 +308,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/storage"
+        "/data/doirs/be/storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
