@@ -224,7 +224,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data/fe/metastore"
+      "defaultValue": "/data/starrocks/fe/metastore"
     },
     {
       "name": "http_port",
@@ -444,7 +444,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/storage"
+        "/data/starrocks/be/storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
@@ -470,7 +470,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/spill_storage"
+        "/data/starrocks/be/spill_storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
@@ -496,7 +496,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/cache_data/"
+        "/data/starrocks/be/cache_data/"
       ],
       "configurableInWizard": true,
       "hidden": false,
