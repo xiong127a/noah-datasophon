@@ -78,9 +78,9 @@ efak.topic.token=${efakTopicToken}
 # kafka sasl authenticate
 ######################################
 cluster1.efak.sasl.enable=${enableSasl}
-cluster1.efak.sasl.protocol=<#if securityProtocol??>${securityProtocol}</#if>
-cluster1.efak.sasl.mechanism=<#if saslMechanism??>${saslMechanism}</#if>
-cluster1.efak.sasl.jaas.config=com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/etc/security/keytab/kafka.service.keytab" useTicketCache=false serviceName=kafka principal="kafka/<#if kafkaHost??>${kafkaHost}</#if>@<#if kafkaRealm??>${kafkaRealm}</#if>";
+cluster1.efak.sasl.protocol=${securityProtocol}
+cluster1.efak.sasl.mechanism=${saslMechanism}
+cluster1.efak.sasl.jaas.config=com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab="/etc/security/keytab/kafka.service.keytab" useTicketCache=false serviceName=kafka principal="kafka/${kafkaHost}@${kafkaRealm}";
 cluster1.efak.sasl.client.id=
 cluster1.efak.blacklist.topics=
 cluster1.efak.sasl.cgroup.enable=false

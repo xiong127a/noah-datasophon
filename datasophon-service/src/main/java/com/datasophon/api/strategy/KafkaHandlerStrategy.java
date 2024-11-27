@@ -70,6 +70,11 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
             if ("cluster1.efak.sasl.enable".equals(config.getName())) {
                 enableSasl = isEnableConfig(config);
             }
+            /*if ("JMX_PORT".equals(config.getName())) {
+                if (ObjectUtil.isNotEmpty(config.getValue())){
+                    config.setRequired(true);
+                }
+            }*/
         }
 
         String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "KAFKA" + Constants.CONFIG;

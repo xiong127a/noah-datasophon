@@ -153,7 +153,7 @@ public class K8sYamlDeploymentHandler {
             krb5ConfConfig.setValue(krb5Conf);
             volumePathSet.add(krb5ConfConfig);
         } else {
-            if (serviceRoleName.equals("KafkaBroker")) {
+            if (serviceRoleName.equals("KafkaBroker")||serviceRoleName.equals("efak")) {
                 Iterator<ServiceConfig> iterator = volumePathSet.iterator();
                 while (iterator.hasNext()) {
                     ServiceConfig config = iterator.next();
