@@ -66,30 +66,33 @@ public class K8sYamlDeploymentHandler {
         paramMap.put("${host}", hostname);
         String logFileName = PlaceholderUtils.replacePlaceholders(logFile, paramMap, Constants.REGEX_VARIABLE);
 
-        if (logFileName.startsWith(StrUtil.SLASH)) {
-            logStr = logFileName;
-        } else {
-            logStr = appHome + Constants.SLASH + logFileName;
-        }
-        List<String> needService = Arrays.asList("TRINO", "PRESTO","NEBULAGRAPH");
-        if (needService.contains(serviceName)) {
-            log.info("start config trino logfile");
-            int lastSlashIndex = logStr.lastIndexOf('/');
-            logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
-        }
         try {
-            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
-                K8sMinaUtils.checkParentPath(hostname, logStr);
-                K8sMinaUtils.createFile(hostname, logStr);
-                K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
+            if (logFileName.startsWith(StrUtil.SLASH)) {
+                logStr = logFileName;
+            } else {
+                logStr = appHome + Constants.SLASH + logFileName;
             }
+            List<String> needService = Arrays.asList("TRINO", "PRESTO", "NEBULAGRAPH");
+            if (needService.contains(serviceName) || logFile.contains("${host}")) {
+                //挂载日志目录
+                int lastSlashIndex = logStr.lastIndexOf('/');
+                logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
+            } else {
+                //挂载日志文件
+                if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+                    K8sMinaUtils.checkParentPath(hostname, logStr);
+                    K8sMinaUtils.createFile(hostname, logStr);
+                    K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
+                }
+            }
+
+            ServiceConfig logConfig = new ServiceConfig();
+            logConfig.setName("logs");
+            logConfig.setValue(logStr);
+            volumePathSet.add(logConfig);
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
-        ServiceConfig logConfig = new ServiceConfig();
-        logConfig.setName("logs");
-        logConfig.setValue(logStr);
-        volumePathSet.add(logConfig);
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap,
