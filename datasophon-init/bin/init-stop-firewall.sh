@@ -21,15 +21,32 @@ INIT_SBIN_PATH=${INIT_PATH}/sbin
 echo "INIT_SBIN_PATH: ${INIT_SBIN_PATH}"
 PACKAGES_PATH=${INIT_PATH}/packages
 echo "PACKAGES_PATH: ${PACKAGES_PATH}"
-FIREWALL_STATUS=`firewall-cmd --state`
-if [[ ${FIREWALL_STATUS} == "running" ]]
-then
-    echo "Closing firewall."
-    systemctl stop firewalld.service
-    systemctl disable firewalld.service
-    echo "Firewall closed."
+# 检查 firewalld (CentOS/RHEL)
+if command -v firewall-cmd &>/dev/null; then
+    FIREWALL_STATUS=$(firewall-cmd --state)
+    if [ "${FIREWALL_STATUS}" == "running" ]; then
+        echo "Closing firewall (firewalld)."
+        systemctl stop firewalld.service
+        systemctl disable firewalld.service
+        echo "Firewall closed."
+    else
+        echo "Firewall (firewalld) already closed."
+    fi
+
+# 检查 ufw (Ubuntu/Debian)
+elif command -v ufw &>/dev/null; then
+    FIREWALL_STATUS=$(ufw status | grep -o 'active')
+    if [ "${FIREWALL_STATUS}" == "active" ]; then
+        echo "Closing firewall (ufw)."
+        ufw disable
+        echo "Firewall closed."
+    else
+        echo "Firewall (ufw) already closed."
+    fi
+
 else
-    echo "Firewall closed."
+    echo "No supported firewall found (either firewalld or ufw)."
 fi
+
 echo "init-stop-firewall.sh finished."
 echo "Done."

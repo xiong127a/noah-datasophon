@@ -4,7 +4,6 @@
 PACKAGE_DIR="/data/datasophon-init/packages"
 INSTALL_DIR="/usr/local"
 JDK_ARCH=""
-SSHPASS_ARCH=""
 
 # 获取系统架构
 ARCH=$(uname -m)
@@ -21,10 +20,8 @@ fi
 # 根据系统架构设置相应的 JDK 安装包名称
 if [[ "$ARCH" == "x86_64" ]]; then
     JDK_ARCH="jdk-8u333-linux-x64.tar.gz"
-    SSHPASS_ARCH="sshpass-1.06-1.el7.x86_64.rpm"
 elif [[ "$ARCH" == "aarch64" ]]; then
     JDK_ARCH="jdk-8u333-linux-aarch64.tar.gz"
-    SSHPASS_ARCH="sshpass-1.06-8.ky10.aarch64.rpm"
 else
     echo "Unsupported architecture: $ARCH"
     exit 1
@@ -37,25 +34,7 @@ if [[ ! -f "$PACKAGE_PATH" ]]; then
     exit 1
 fi
 
-# 检查 sshpass 安装包是否存在
-SSHPASS_PACKAGE_PATH="$PACKAGE_DIR/$SSHPASS_ARCH"
-if [[ ! -f "$SSHPASS_PACKAGE_PATH" ]]; then
-    echo "sshpass package $SSHPASS_ARCH not found in $PACKAGE_DIR"
-    exit 1
-fi
 
-# 检查 sshpass 是否已经安装
-if command -v sshpass &>/dev/null; then
-    echo "sshpass is already installed, skipping installation."
-else
-    # 安装 sshpass
-    echo "Installing sshpass from $SSHPASS_PACKAGE_PATH..."
-    rpm -ivh "$SSHPASS_PACKAGE_PATH"
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to install sshpass."
-        exit 1
-    fi
-fi
 
 # 清理已有的 JAVA_HOME 环境变量
 echo "Cleaning up old JAVA_HOME environment variable..."
@@ -110,15 +89,6 @@ else
     exit 1
 fi
 
-# 验证 sshpass 是否安装成功
-echo "Verifying sshpass installation..."
-sshpass -V
-if [[ $? -eq 0 ]]; then
-    echo "sshpass installation successful!"
-else
-    echo "sshpass installation failed."
-    exit 1
-fi
 
 echo "Installation complete. Please ensure the new environment variables are loaded."
 

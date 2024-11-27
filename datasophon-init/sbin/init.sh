@@ -56,6 +56,85 @@ initOS=$(prop "init.os")
 
 echo "yumRepoIp: ${yumRepoIp}"
 
+initContainerAll() {
+  function network() {
+    local timeout=8
+    local target=www.baidu.com
+    local ret_code=$(curl -I -s --connect-timeout ${timeout} -m 20 ${target} -w %{http_code} | tail -n1)
+    if [ "x$ret_code" = "x200" ]; then
+      return 1
+    else
+      return 0
+    fi
+    return 0
+  }
+  network
+  if [ $? -eq 0 ]; then
+    echo -e "\033[31m 由于机器没有联网，请自行检查设置正确的机器时间！ \033[0m"
+    echo -e "\033[31m 由于机器没有联网，请自行设置好离线yum源！ \033[0m"
+    read -p "Please confirm whether the time displayed by the machine is correct(yes/no):" isCorrect
+    if [ "$isCorrect" = "yes" ]; then
+      echo "机器时间设置正常，请进行如下环境初始化操作"
+    else
+      echo "机器时间不正确，请设置正确时间后，再进行 DataSophon 初始化环境操作"
+      exit
+    fi
+  else
+    echo "机器可以联网，无需自行检查系统时间是否正常"
+  fi
+  rm -rf ${INIT_BIN_PATH}/tmp_scp_host_info.txt
+  rm -rf ${INIT_BIN_PATH}/1.txt
+  rm -rf ${initLogDir}/installAllSuccess_$(date +%Y%m%d).log
+
+  bash ${INIT_BIN_PATH}/init-stop-firewall.sh
+  #bash ${INIT_BIN_PATH}/init-stop-selinux.sh
+  
+  
+  
+  #Create a tmp_scp_host_info  file 创建一个临时需要进行拷贝分发资源包的host信息文件
+  echo "Create a tmp_scp_host_info start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/CreateTmpScpHostInfoFile_$(date +%Y%m%d).log
+  bash ${INIT_BIN_PATH}/init-hostIp-txt.sh ${hostAllInfoPath} ${initAllHostNums}  >>${initLogDir}/CreateTmpScpHostInfoFile_$(date +%Y%m%d).log
+  echo "Create a tmp_scp_host_info start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/CreateTmpScpHostInfoFile_$(date +%Y%m%d).log
+  
+  containerSecretFreeAllLogin
+  checkSecretFreeAllLogin
+  
+  #Distribution resource pack 分发资源包
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i "mkdir -p '${INIT_PATH}'"
+  echo "Distribution resource pack start_time:$(date '+%Y%m%d %H:%M:%S')"
+  pscp.pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -r ${INIT_BIN_PATH} ${INIT_PATH}
+
+  
+  
+  #Create hadoop users and groups 创建hadoop用户和组
+  echo "Create hadoop users and groups start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/initsshhadoopLogin_$(date +%Y%m%d).log
+  bash ${INIT_BIN_PATH}/init-ssh-hadoop.sh >>${initLogDir}/initsshhadoopLogin_$(date +%Y%m%d).log
+  echo "Create hadoop users and groups end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/initsshhadoopLogin_$(date +%Y%m%d).log
+
+  #close all Firewall
+  echo "closeAllFirewall start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/closeAllFirewall_$(date +%Y%m%d).log
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-stop-firewall.sh >>${initLogDir}/closeAllFirewall_$(date +%Y%m%d).log
+  echo "closeAllFirewall end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/closeAllFirewall_$(date +%Y%m%d).log
+  checkCloseAllFirewall
+  setAllHostname
+  checkHostName
+  
+  echo "installMySQLContainer start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQLContainer_$(date +%Y%m%d).log
+  bash ${INIT_BIN_PATH}/init-mysql-container.sh $mysqlPassword >>${initLogDir}/installMySQLContainer_$(date +%Y%m%d).log
+  echo "installAllPerlJSON end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installMySQLContainer_$(date +%Y%m%d).log
+
+  rm -rf ${INIT_BIN_PATH}/tmp_scp_host_info.txt
+  rm -rf ${INIT_BIN_PATH}/1.txt
+  initsource
+  source /etc/profile
+  source /root/.bash_profile
+  echo "The DataSophon deployment environment of added nodes has been inited successfully . Please proceed to the next step" >>${initLogDir}/installSingleNodeSuccess_$(date +%Y%m%d).log
+  cat ${initLogDir}/installSingleNodeSuccess_$(date +%Y%m%d).log
+  rm -rf ${initLogDir}/installSingleNodeSuccess_$(date +%Y%m%d).log
+
+  
+
+}
 #初始化所有节点
 initALL() {
 
@@ -223,7 +302,7 @@ initALL() {
   #echo "installAllJDK end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllJDK_$(date +%Y%m%d).log
   #checkJDK
   echo "installAllOPENSSL start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
-  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -t ${smallTimeOut} -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
   echo "installAllOPENSSL_ end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
   
   
@@ -348,7 +427,7 @@ initSingleNode() {
   #checkSingleNodeJDK
   
   echo "installAllOPENSSL start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
-  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
+  pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -t ${smallTimeOut} -i bash ${INIT_BIN_PATH}/init-openssl.sh >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
   echo "installAllOPENSSL_ end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/installAllOPENSSL_$(date +%Y%m%d).log
 
   pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -i bash ${INIT_BIN_PATH}/init-java-policy.sh >>${initLogDir}/modifySingleNodeJavaPolicy_$(date +%Y%m%d).log
@@ -486,16 +565,31 @@ checkCloseAllFirewall() {
     ip=$(prop "dataSophon.ip.${i}")         #ip
     pwd=$(prop "dataSophon.password.${i}")  # password
     port=$(prop "dataSophon.ssh.port.${i}") # port
-    sshpass -p'${pwd}' ssh -P${port} -o StrictHostKeyChecking=no root@${ip} 'firewall-cmd --state' >${initLogDir}/checkCloseAllFirewall.log
-    cat ${initLogDir}/checkCloseAllFirewall.log | grep running
-    if [ $? -eq 0 ]; then
-      echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAll_$(date +%Y%m%d).log
-      echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAllError_$(date +%Y%m%d).log
-      cat ${initLogDir}/installAllError_$(date +%Y%m%d).log
-      rm -rf ${initLogDir}/installAllError_$(date +%Y%m%d).log
-      exit
+    if [[ "${initOS}" == "ubuntu" || "${initOS}" == "debian" ]]; then
+      sshpass -p'${pwd}' ssh -p${port} -o StrictHostKeyChecking=no root@${ip} 'ufw status' > ${initLogDir}/checkCloseAllFirewall.log
+    # 判断防火墙是否在运行
+      cat ${initLogDir}/checkCloseAllFirewall.log | grep -q 'Status: active'
+	  if [ $? -eq 0 ]; then
+        echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAll_$(date +%Y%m%d).log
+        echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAllError_$(date +%Y%m%d).log
+        cat ${initLogDir}/installAllError_$(date +%Y%m%d).log
+        rm -rf ${initLogDir}/installAllError_$(date +%Y%m%d).log
+        exit
+      else
+        echo "${ip} close firewall successfully" >>${initLogDir}/installAll_$(date +%Y%m%d).log
+      fi
     else
-      echo "${ip} close firewall successfully" >>${initLogDir}/installAll_$(date +%Y%m%d).log
+      sshpass -p'${pwd}' ssh -P${port} -o StrictHostKeyChecking=no root@${ip} 'firewall-cmd --state' >${initLogDir}/checkCloseAllFirewall.log
+      cat ${initLogDir}/checkCloseAllFirewall.log | grep running
+      if [ $? -eq 0 ]; then
+        echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAll_$(date +%Y%m%d).log
+        echo "ERROR: '${ip}' close firewall failed" >>${initLogDir}/installAllError_$(date +%Y%m%d).log
+        cat ${initLogDir}/installAllError_$(date +%Y%m%d).log
+        rm -rf ${initLogDir}/installAllError_$(date +%Y%m%d).log
+        exit
+      else
+        echo "${ip} close firewall successfully" >>${initLogDir}/installAll_$(date +%Y%m%d).log
+     fi
     fi
   done
   echo "SUCCESS: All closing firewall links have been inited successfully" >>${initLogDir}/installAllSuccess_$(date +%Y%m%d).log
@@ -946,6 +1040,78 @@ checkKrb5Devel() {
 }
 #---------------------------initAll fun end-------------------------------#
 
+#---------------------------initContainerAll fun strat-------------------------------#
+#免密登录
+containerSecretFreeAllLogin() {
+  echo "containerSecretFreeAllLogin........................"
+  mkdir -p ${initLogDir}
+  echo "containerSecretFreeAllLogin start_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+
+  # 检查 openssh 是否安装（兼容 rpm 和 apt）
+  if command -v rpm &>/dev/null; then
+    # 使用 rpm 检查是否安装 openssh
+    rpm -qa | grep openssh
+    if [[ "$?" == "0" ]]; then
+      echo "ssh exists (rpm)" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    else
+      bash ${INIT_BIN_PATH}/init-sshpackage.sh >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    fi
+  elif command -v dpkg &>/dev/null; then
+    # 使用 dpkg 检查是否安装 openssh
+    dpkg -l | grep openssh-server
+    if [[ "$?" == "0" ]]; then
+      echo "ssh exists (apt)" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    else
+      echo '21312'
+      bash ${INIT_BIN_PATH}/init-sshpackage.sh >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    fi
+  fi
+  # 检查 sshpass 是否安装（兼容 rpm 和 apt）
+  if command -v rpm &>/dev/null; then
+    # 使用 rpm 检查是否安装 sshpass
+    rpm -qa | grep sshpass
+    if [[ "$?" == "0" ]]; then
+      echo "sshpass exists (rpm)" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    else
+      bash ${INIT_BIN_PATH}/init-sshpass.sh >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    fi
+  elif command -v dpkg &>/dev/null; then
+    # 使用 dpkg 检查是否安装 sshpass
+    dpkg -l | grep sshpass
+    if [[ "$?" == "0" ]]; then
+      echo "sshpass exists (apt)" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    else
+      bash ${INIT_BIN_PATH}/init-sshpass.sh >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+    fi
+  fi
+  # 检查 pssh 是否安装（不依赖包管理器）
+  if command -v pssh &>/dev/null; then
+  # pssh 可执行文件存在
+    echo "pssh exists" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+  else
+    # pssh 可执行文件不存在，执行安装脚本
+    bash ${INIT_BIN_PATH}/init-pssh.sh ${initOS} >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+  fi
+   pssh -h ${INIT_BIN_PATH}/tmp_scp_host_info.txt -t ${smallTimeOut} -i bash ${INIT_BIN_PATH}/init-gcc-c++.sh >>${initLogDir}/installGccC++_$(date +%Y%m%d).log
+  if [ "$initOS" == "ubuntu" ] || [ "$initOS" == "debian" ]; then
+    apt -y install expect
+  else
+    yum -y install expect
+  fi
+  # 生成 SSH 密钥
+  bash ${INIT_BIN_PATH}/init-ssh-gen-key.sh >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+
+  # 将 SSH 密钥复制到远程主机
+  bash ${INIT_BIN_PATH}/init-ssh-copy-key.sh ${hostAllInfoPath} ${initAllHostNums} ${nmapServerPort} >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+
+  echo "containerSecretFreeAllLogin end_time:$(date '+%Y%m%d %H:%M:%S')" >>${initLogDir}/containerSecretFreeAllLogin_$(date +%Y%m%d).log
+}
+
+
+
+
+#---------------------------initContainerAll fun end-------------------------------#
+
 #---------------------------init add Single node fun strat-------------------------------#
 
 secretFreeSingleNodeLogin() {
@@ -1328,7 +1494,9 @@ fi
 if [ "$Action" = "checkcloseAllSwap" ]; then
   checkcloseAllSwap
 fi
-
 if [ "$Action" = "testFun" ]; then
   testFun
+fi
+if [ "$Action" = "initContainerAll" ]; then
+  initContainerAll
 fi

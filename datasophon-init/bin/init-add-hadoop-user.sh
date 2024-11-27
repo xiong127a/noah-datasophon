@@ -38,3 +38,4 @@ fi
 
 echo "init-add-hadoop-user.sh."
 echo "Done."
+

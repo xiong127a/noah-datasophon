@@ -59,3 +59,14 @@ if [ "${ios}" == "arm" ]; then
     echo "pssh-2.3.1-5.el7.noarch.rpm install successfully"
   fi
 fi
+
+if [ "$ios" == "ubuntu" ] || [ "$ios" == "debian" ]; then
+  tar -zxvf ${PACKAGES_PATH}/${PSSH_TAR_NAME} -C ${PACKAGES_PATH}
+  dpkg -i ${PACKAGES_PATH}/${PSSH_FOLDER_NAME}/pssh_2.3.4-2_all.deb
+  ln -s /usr/bin/parallel-ssh /usr/bin/pssh
+  ln -s /usr/bin/parallel-scp /usr/bin/pscp.pssh
+  dpkg -l | grep pssh
+  if [ "$?" == "0" ]; then
+    echo "pssh_2.3.4-2_all.deb install successfully"
+  fi
+fi
