@@ -1,6 +1,7 @@
 package com.datasophon.k8s.util;
 
 import com.datasophon.common.utils.IOUtils;
+import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,11 +28,17 @@ public class DockerImageUtils {
             try {
                 fis = DockerImageUtils.class.getResourceAsStream(fileName);
                 properties.load(fis);
-
-                properties.forEach((key, value) -> {
-                    logger.info("Loaded docker images : {}={}", key, value);
-                });
-
+                String imageRegistry = PropertyUtils.getString("IMAGE_REGISTRY");
+                // 遍历所有配置项并替换 $IMAGE_REGISTRY 占位符
+                for (String key : properties.stringPropertyNames()) {
+                    String value = properties.getProperty(key);
+                    if (value != null && value.contains("$IMAGE_REGISTRY")) {
+                        // 替换镜像地址中的 $IMAGE_REGISTRY
+                        String updatedValue = value.replace("$IMAGE_REGISTRY", imageRegistry);
+                        properties.setProperty(key, updatedValue);  // 更新值
+                        logger.info("Updated docker image for {}: {}", key, updatedValue);
+                    }
+                }
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
                 if (fis != null) {
