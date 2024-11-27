@@ -1,0 +1,73 @@
+package com.datasophon.api.strategy;
+
+import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.SpringTool;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceRoleInfo;
+import com.datasophon.common.utils.HostUtils;
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
+
+    private static final Logger logger = LoggerFactory.getLogger(NoahSyncHandlerStrategy.class);
+
+    @Override
+    public void handler(Integer clusterId, List<String> hosts) {
+
+    }
+
+    @Override
+    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+
+    }
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+
+        String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+
+        if (Objects.nonNull(hostMap)) {
+            List<String> noahSyncServers = hostMap.get("NoahSyncServer");
+            Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
+            ServiceConfig hosts = map.get("hosts");
+            hosts.setName("hosts");
+            hosts.setLabel("集群节点ip");
+            hosts.setDescription("集群节点ip");
+            hosts.setValue(noahSyncServers);
+            hosts.setHidden(false);
+            hosts.setRequired(true);
+            hosts.setType("multiple");
+            hosts.setSeparator(",");
+            hosts.setDefaultValue(noahSyncServers);
+            hosts.setConfigType("zkserver");
+            hosts.setConfigurableInWizard(true);
+        }
+    }
+
+    @Override
+    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+
+    }
+
+    @Override
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+
+    }
+}
