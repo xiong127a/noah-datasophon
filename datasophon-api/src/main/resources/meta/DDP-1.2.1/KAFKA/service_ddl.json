@@ -51,7 +51,7 @@
     {
       "name": "efak",
       "label": "efak",
-      "roleType": "master",
+      "roleType": "worker",
       "cardinality": "1",
       "logFile": "efak/logs/log.log",
       "jmxPort": 18048,
@@ -691,8 +691,8 @@
       "value": "9999",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9999",
-    }
+      "defaultValue": "9999"
+    },
     {
       "name": "custom.server.properties",
       "label": "自定义配置server.properties",
@@ -1159,6 +1159,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
-    },
+    }
   ]
 }

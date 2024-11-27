@@ -18,6 +18,7 @@
 package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.Constants;
@@ -102,7 +103,11 @@ public class K8sConfigureServiceHandler {
                         addToCustomList(iterator, customConfList, config);
                     }
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                        iterator.remove();
+                        if (StrUtil.equals("map2", config.getConfigType())) {
+                            config.setConfigType("map");
+                        }else {
+                            iterator.remove();
+                        }
                     }
                     if (config.getValue() instanceof Boolean || config.getValue() instanceof Integer) {
                         logger.info("Convert boolean and integer to string");

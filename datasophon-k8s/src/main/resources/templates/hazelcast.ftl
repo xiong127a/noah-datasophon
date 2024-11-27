@@ -19,7 +19,7 @@ hazelcast:
 </#list>
     port:
       auto-increment: false
-      port: 5801
+      port: ${port}
   properties:
     hazelcast.invocation.max.retry.count: 20
     hazelcast.tcp.join.port.try.count: 30
