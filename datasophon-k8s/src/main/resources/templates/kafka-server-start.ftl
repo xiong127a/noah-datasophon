@@ -21,6 +21,11 @@ then
 fi
 base_dir=$(dirname $0)
 
+<#if JMX_PORT??>
+export JMX_PORT=${JMX_PORT}
+</#if>
+
+
 if [ "x$KAFKA_LOG4J_OPTS" = "x" ]; then
     export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$base_dir/../config/log4j.properties"
 fi

@@ -21,9 +21,9 @@ then
 fi
 base_dir=$(dirname $0)
 
-if [ -n "${JMX_PORT}" ]; then
-export JMX_PORT="${JMX_PORT}"
-fi
+<#if JMX_PORT??>
+export JMX_PORT=${JMX_PORT}
+</#if>
 
 
 if [ "x$KAFKA_LOG4J_OPTS" = "x" ]; then
