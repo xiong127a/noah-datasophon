@@ -44,7 +44,7 @@ status(){
     if [ $? -eq 0 ]
     then
       # 发送GET请求到指定的URL
-      response=$(curl -s  http://localhost:18040/api/health)
+      response=$(curl -s  http://localhost:8070/api/health)
       # 检查返回值是否为200
       status=$(get_json "${response}" "status")
       if [ $status == "OK" ]; then

@@ -97,7 +97,8 @@
         "timeout": "60",
         "program": "be/bin/status_be.sh",
         "args": [
-          "status"
+          "status",
+          "be"
         ]
       }
     },
@@ -126,7 +127,8 @@
         "timeout": "60",
         "program": "be/bin/status_cn.sh",
         "args": [
-          "status"
+          "status",
+          "cn"
         ]
       }
     }

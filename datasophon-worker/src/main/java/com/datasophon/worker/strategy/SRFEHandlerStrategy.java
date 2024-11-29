@@ -32,6 +32,7 @@ import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.ActorUtils;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SRFEHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
 
@@ -56,7 +57,11 @@ public class SRFEHandlerStrategy extends AbstractHandlerStrategy implements Serv
                 startRunner.setProgram(command.getStartRunner().getProgram());
                 startRunner.setArgs(commands);
                 startRunner.setTimeout("600");
-                startResult = serviceHandler.start(startRunner, command.getStatusRunner(),
+                ServiceRoleRunner statusRunner = command.getStatusRunner();
+                List<String> args = statusRunner.getArgs();
+                args.add("--helper");
+                statusRunner.setArgs(args);
+                startResult = serviceHandler.start(startRunner, statusRunner,
                         command.getDecompressPackageName(), command.getRunAs());
                 if (startResult.getExecResult()) {
                     // add follower
