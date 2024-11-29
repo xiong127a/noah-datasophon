@@ -19,6 +19,7 @@
 
 package com.datasophon.api.load;
 
+import cn.hutool.core.net.NetUtil;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
@@ -378,6 +379,9 @@ public class LoadServiceMeta implements ApplicationRunner {
                 globalVariables.put("${apiPort}", configBean.getServerPort());
                 globalVariables.put("${INSTALL_PATH}", Constants.INSTALL_PATH);
 
+                String priorityNetworks = getPriorityNetworks(NetUtil.getIpByHost(InetAddress.getLocalHost().getHostName()));
+                globalVariables.put("${priority_networks}", priorityNetworks);
+
                 GlobalVariables.put(cluster.getId(), globalVariables);
 
                 ProcessUtils.createServiceActor(cluster);
@@ -452,4 +456,50 @@ public class LoadServiceMeta implements ApplicationRunner {
         serviceEntity.setConfigFileJsonMd5(SecureUtil.md5(serviceEntity.getConfigFileJson()));
         serviceEntity.setSortNum(serviceInfo.getSortNum());
     }
+
+
+    // 根据 IP 地址推断子网掩码
+    public static String getSubnetFromIp(String ip) {
+        if (ip == null) {
+            return null;
+        }
+
+        // 拆分 IP 地址
+        String[] ipParts = ip.split("\\.");  // 将 IP 地址分割为四个部分
+        if (ipParts.length != 4) {
+            return null;  // 无效的 IP 地址
+        }
+
+        int firstOctet = Integer.parseInt(ipParts[0]);
+
+        // 根据 IP 地址的第一部分推断出适当的子网掩码
+        String subnetMask;
+        if (firstOctet >= 1 && firstOctet <= 126) {
+            // A 类地址，使用 /8
+            subnetMask = "/8";
+        } else if (firstOctet >= 128 && firstOctet <= 191) {
+            // B 类地址，使用 /16
+            subnetMask = "/16";
+        } else if (firstOctet >= 192 && firstOctet <= 223) {
+            // C 类地址，使用 /24
+            subnetMask = "/24";
+        } else {
+            // 其他情况，暂不处理
+            subnetMask = "/24"; // 默认返回 /24
+        }
+
+        // 构造网络前缀
+        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
+        return networkPrefix + subnetMask;
+    }
+
+    // 设置 priority_networks 参数
+    public static String getPriorityNetworks(String ipAddress) {
+        if (ipAddress != null) {
+            // 根据 IP 地址获取子网
+            return getSubnetFromIp(ipAddress);
+        }
+        return null;
+    }
+
 }

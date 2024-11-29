@@ -65,7 +65,7 @@
       },
       "statusRunner": {
         "timeout": "60",
-        "program": "fe/bin/status_fe.sh",
+        "program": "fe/bin/status_observer.sh",
         "args": [
           "status",
           "fe"
@@ -308,7 +308,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/doirs/be/storage"
+        "/data/be/storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
