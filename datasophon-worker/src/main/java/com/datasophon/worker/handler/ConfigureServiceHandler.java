@@ -18,6 +18,7 @@
 package com.datasophon.worker.handler;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
@@ -77,8 +78,10 @@ public class ConfigureServiceHandler {
         try {
 
             String hostName = InetAddress.getLocalHost().getHostName();
+            String ip = NetUtil.getIpByHost(hostName);
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", hostName);
+            paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);
@@ -148,17 +151,17 @@ public class ConfigureServiceHandler {
                         customConfList.add(serviceConfig);
                         customConfList.add(serviceConfig1);
                     }
-                    if ("fe_priority_networks".equals(config.getName())
-                            || "be_priority_networks".equals(config.getName())) {
-                        config.setName("priority_networks");
-                    }
-                    if (("SRFE".equals(serviceRoleName)
-                            || "SRBE".equals(serviceRoleName)
-                            || "SRFEObserver".equals(serviceRoleName)
-                            || "SRCN".equals(serviceRoleName))
-                            && "priority_networks".equals(config.getName())) {
-                        config.setValue(InetAddress.getLocalHost().getHostAddress());
-                    }
+//                    if ("fe_priority_networks".equals(config.getName())
+//                            || "be_priority_networks".equals(config.getName())) {
+//                        config.setName("priority_networks");
+//                    }
+//                    if (("SRFE".equals(serviceRoleName)
+//                            || "SRBE".equals(serviceRoleName)
+//                            || "SRFEObserver".equals(serviceRoleName)
+//                            || "SRCN".equals(serviceRoleName))
+//                            && "priority_networks".equals(config.getName())) {
+//                        config.setValue(InetAddress.getLocalHost().getHostAddress());
+//                    }
 
                     if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
