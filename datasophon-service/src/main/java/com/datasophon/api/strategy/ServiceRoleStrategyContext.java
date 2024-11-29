@@ -44,6 +44,7 @@ public class ServiceRoleStrategyContext {
         map.put("DorisFE", new FEHandlerStartegy());
         map.put("DorisFEObserver", new FEObserverHandlerStartegy());
         map.put("DorisBE", new BEHandlerStartegy());
+        map.put("STARROCKS", new StarrocksHandlerStrategy());
         map.put("SRFE", new SRFEHandlerStrategy());
         map.put("SRFEObserver", new SRFEObserverHandlerStrategy());
         map.put("SRBE", new SRBEHandlerStrategy());
