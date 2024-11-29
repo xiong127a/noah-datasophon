@@ -31,7 +31,7 @@ SH_DIR=`dirname $0`
 curdir=`dirname "$0"`
 curdir=`cd "$curdir"; pwd`
 PID_DIR=`cd "$curdir"; pwd`
-pid=$PID_DIR/fe.pid
+pid=$PID_DIR/be.pid
 
 function get_json(){
   echo "${1//\"/}" | sed "s/.*$2:\([^,}]*\).*/\1/"
@@ -44,12 +44,12 @@ status(){
     if [ $? -eq 0 ]
     then
       # 发送GET请求到指定的URL
-      response=$(curl -s  http://localhost:8060/api/bootstrap)
+      response=$(curl -s  http://localhost:18040/api/health)
       # 检查返回值是否为200
-      code=$(get_json "${response}" "code")
-      if [ $code -eq 0 ]; then
-          echo "http request success, return value is：$response"
-          echo "FE is OK"
+      status=$(get_json "${response}" "status")
+      if [ $status == "OK" ]; then
+          echo "http request success, return value is $response"
+          echo "BE is OK"
       else
           echo "http request failed, return value is：$response"
           echo "$command  is not ready"
