@@ -14,7 +14,7 @@
       "roleType": "master",
       "cardinality": "1",
       "sortNum": 1,
-      "logFile": "/opt/datasophon/openldap/var/slapd.log",
+      "logFile": "/var/log/slapd/slapd.log",
       "jmxPort": "",
       "startRunner": {
         "timeout": "60",

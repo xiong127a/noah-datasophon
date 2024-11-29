@@ -45,16 +45,16 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ -z "$(ls -A /var/lib/openldap)" ]; then 
+              if [ -z "$(ls -A /var/lib/ldap)" ]; then
                 echo '/var/lib/openldap file not already exist'
-                cp -r /mnt/backup/ldap/* /var/lib/openldap/; 
+                cp -r /mnt/backup/ldap/* /var/lib/ldap;
               fi 
               if [ -z "$(ls -A /etc/openldap/slapd.d)" ]; then 
                 echo '/etc/openldap/slapd.d file not already exist'
                 cp -r /mnt/backup/slapd.d/* /etc/openldap/slapd.d/; 
               fi
-              chown ldap:ldap -R /var/lib/openldap /etc/openldap/slapd.d/
-              chmod 700 -R /var/lib/openldap /etc/openldap/slapd.d/
+              chown ldap:ldap -R /var/lib/ldap /etc/openldap/slapd.d/
+              chmod 700 -R /var/lib/ldap /etc/openldap/slapd.d/
           volumeMounts:
             <#list itemList as item>
             - mountPath: "${item.value}"
@@ -77,7 +77,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              systemctl restart systemd-journald && systemctl restart rsyslog && ${startCommand}
+              systemctl restart systemd-journald && systemctl restart rsyslog
+              ${startCommand}
           readinessProbe:
             exec:
               command:
