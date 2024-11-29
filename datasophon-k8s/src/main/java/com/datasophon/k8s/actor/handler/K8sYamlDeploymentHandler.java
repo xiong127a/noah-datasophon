@@ -72,20 +72,22 @@ public class K8sYamlDeploymentHandler {
             } else {
                 logStr = appHome + Constants.SLASH + logFileName;
             }
+
+            if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
+                K8sMinaUtils.checkParentPath(hostname, logStr);
+            }
+
             List<String> needService = Arrays.asList("TRINO", "PRESTO", "NEBULAGRAPH");
+
             if (needService.contains(serviceName) || logFile.contains("${host}")) {
                 //挂载日志目录
                 int lastSlashIndex = logStr.lastIndexOf('/');
                 logStr = (lastSlashIndex != -1) ? logStr.substring(0, lastSlashIndex) : logStr;
             } else {
-                //挂载日志文件
-                if (!K8sMinaUtils.checkPathExists(hostname, logStr)) {
-                    K8sMinaUtils.checkParentPath(hostname, logStr);
-                    K8sMinaUtils.createFile(hostname, logStr);
-                    K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
-                }
+                K8sMinaUtils.createFile(hostname, logStr);
             }
 
+            K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
             ServiceConfig logConfig = new ServiceConfig();
             logConfig.setName("logs");
             logConfig.setValue(logStr);

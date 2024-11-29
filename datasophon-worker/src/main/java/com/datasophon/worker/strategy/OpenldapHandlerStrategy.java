@@ -24,7 +24,7 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
             //String cpuArchitecture = ShellUtils.getCpuArchitecture();
 
             // 开启日志
-            ShellUtils.exceShell("echo \"local4.* "+ workPath + "/var/slapd.log\" >> /etc/rsyslog.conf");
+            ShellUtils.exceShell("echo \"local4.* /var/log/slapd/slapd.log >> /etc/rsyslog.conf");
             ShellUtils.exceShell("systemctl restart rsyslog");
 
             // 初始化OpenLDAP

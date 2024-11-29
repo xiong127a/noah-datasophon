@@ -7,13 +7,16 @@ import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.SpringTool;
+import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
+import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.k8s.actor.K8sInstallServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.ObjectUtils;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -36,6 +39,12 @@ public class K8sServiceInstallHandler extends ServiceHandler {
             execResult.setExecResult(true);
             execResult.setExecOut("already installed");
             return execResult;
+        }
+        if (ObjectUtils.isEmpty(serviceRoleInfo.getRunAs())) {
+            RunAs runAs = new RunAs();
+            runAs.setUser(Constants.ROOT);
+            runAs.setGroup(Constants.ROOT);
+            serviceRoleInfo.setRunAs(runAs);
         }
         InstallServiceRoleCommand installServiceRoleCommand = new InstallServiceRoleCommand();
         installServiceRoleCommand.setServiceName(serviceRoleInfo.getParentName());
