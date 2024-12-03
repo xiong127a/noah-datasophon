@@ -88,13 +88,64 @@ public class K8sYamlDeploymentHandler {
             }
 
             K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
-            ServiceConfig logConfig = new ServiceConfig();
-            logConfig.setName("logs");
-            logConfig.setValue(logStr);
-            volumePathSet.add(logConfig);
+            addConfigFile(volumePathSet, "logs", logStr);
         } catch (Exception e) {
             log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
+    }
+
+    public static void addConfigFile(Set<ServiceConfig> volumePathSet, int count, String configFilePath) {
+        // 创建新的 ServiceConfig 对象
+        ServiceConfig fileConfig = new ServiceConfig();
+
+        // 设置名字为 "config" + fileCount
+        fileConfig.setName("config" + count);
+
+        // 设置文件路径
+        fileConfig.setValue(configFilePath);
+
+        // 将新的 ServiceConfig 对象添加到 volumePathSet
+        volumePathSet.add(fileConfig);
+    }
+
+    public static void addConfigFile(Set<ServiceConfig> volumePathSet, String configFileName, String configFilePath) {
+        // 创建新的 ServiceConfig 对象
+        ServiceConfig fileConfig = new ServiceConfig();
+
+        // 设置名字为 "config" + fileCount
+        fileConfig.setName(configFileName);
+
+        // 设置文件路径
+        fileConfig.setValue(configFilePath);
+
+        // 将新的 ServiceConfig 对象添加到 volumePathSet
+        volumePathSet.add(fileConfig);
+    }
+
+    public static void addConfigPath(Set<ServiceConfig> volumePathSet, int count, String configFilePath) {
+        // 创建新的 ServiceConfig 对象
+        ServiceConfig fileConfig = new ServiceConfig();
+
+        // 设置名字为 "config" + fileCount
+        fileConfig.setName("path" + count);
+
+        // 设置文件路径
+        fileConfig.setValue(configFilePath);
+
+        // 将新的 ServiceConfig 对象添加到 volumePathSet
+        volumePathSet.add(fileConfig);
+    }
+
+    public static String generateConfigFilePath(String outputDirectory, Generators generators, String appHome) {
+        String configFilePath;
+        if (outputDirectory.startsWith(Constants.SLASH)) {
+            // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
+            configFilePath = String.join(Constants.SLASH, outputDirectory, generators.getFilename());
+        } else {
+            configFilePath = String.join(Constants.SLASH, appHome, outputDirectory, generators.getFilename());
+        }
+
+        return configFilePath;
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap,
@@ -121,7 +172,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
 
-            volumeHadoopConfig(volumePathSet);
+            volumeHadoopConfig(volumePathSet,hostname);
 
             volumeEnableKerberosConfig(volumePathSet, appHome, serviceRoleName, enableKerberos);
 
@@ -143,26 +194,16 @@ public class K8sYamlDeploymentHandler {
 
     private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet, String appHome, String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
-            String keytabDir = "/etc/security/keytab/";
-            ServiceConfig keytabConfig = new ServiceConfig();
-            keytabConfig.setName("keytab");
-            keytabConfig.setValue(keytabDir);
-            volumePathSet.add(keytabConfig);
-
-            String krb5Conf = "/etc/krb5.conf";
-            ServiceConfig krb5ConfConfig = new ServiceConfig();
-            krb5ConfConfig.setName("krd5conf");
-            krb5ConfConfig.setValue(krb5Conf);
-            volumePathSet.add(krb5ConfConfig);
+            addConfigFile(volumePathSet, "keytab", "/etc/security/keytab/");
+            addConfigFile(volumePathSet, "krd5conf", "/etc/krb5.conf");
         } else {
-            if (serviceRoleName.equals("KafkaBroker")||serviceRoleName.equals("efak")) {
+            if (serviceRoleName.equals("KafkaBroker") || serviceRoleName.equals("efak")) {
                 Iterator<ServiceConfig> iterator = volumePathSet.iterator();
                 while (iterator.hasNext()) {
                     ServiceConfig config = iterator.next();
                     String value = (String) config.getValue();
                     if (value.endsWith(".sh")) {
                         String fileName = value.substring(value.lastIndexOf('/') + 1);
-
                         if (!fileName.equals("kafka-server-start.sh")) {
                             iterator.remove(); // 从集合中删除
                         }
@@ -232,29 +273,18 @@ public class K8sYamlDeploymentHandler {
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();
             if (StrUtil.isNotBlank(outputDirectory)) {
-                // 如果输出目录以斜杠开头，则直接使用输出目录作为输出文件的路径
-                if (outputDirectory.startsWith(Constants.SLASH)) {
-                    configFilePath = String.join(Constants.SLASH, outputDirectory, generators.getFilename());
-                } else {
-                    String output = generators.getOutputDirectory().replaceAll("^/+", "").replaceAll("/+$", "");
-                    configFilePath = String.join(Constants.SLASH, appHome, output, generators.getFilename());
+                for (String outPutDir : outputDirectory.split(StrUtil.COMMA)) {
+                    configFilePath = generateConfigFilePath(outPutDir, generators, appHome);
+                    addConfigFile(volumePathSet, fileCount++, configFilePath);
                 }
             } else {
                 configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
+                addConfigFile(volumePathSet, fileCount++, configFilePath);
             }
 
-            Generators key = entry.getKey();
-            String filename = key.getFilename();
-            if (key.getOutputDirectory().startsWith("/var/kerberos/krb5kdc")) {
+            if (generators.getOutputDirectory().startsWith("/var/kerberos/krb5kdc")) {
                 continue;
             }
-            // 配置文件挂载
-            // if (!"java.env".equals(filename)) {
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("config" + fileCount++);
-            fileConfig.setValue(configFilePath);
-            volumePathSet.add(fileConfig);
-            //}
 
             // path配置目录挂载
             for (ServiceConfig serviceConfig : entry.getValue()) {
@@ -262,68 +292,33 @@ public class K8sYamlDeploymentHandler {
                     continue;
                 }
                 if (Constants.PATH.equals(serviceConfig.getConfigType())) {
-                    ServiceConfig pathConfig = new ServiceConfig();
-                    pathConfig.setName("path" + pathCount++);
-                    pathConfig.setValue(serviceConfig.getValue());
-                    volumePathSet.add(pathConfig);
+                    addConfigPath(volumePathSet, pathCount++, serviceConfig.getValue().toString());
                 }
             }
 
         }
         if ("RANGER".equals(serviceName)) {
             volumePathSet.clear();
-            String rangerDir = "/opt/datasophon/ranger-2.1.0";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("rangerdir");
-            fileConfig.setValue(rangerDir);
-            volumePathSet.add(fileConfig);
-            String rangerAdminConf = "/etc/ranger/admin";
-            ServiceConfig adminConfig = new ServiceConfig();
-            adminConfig.setName("adminconf");
-            adminConfig.setValue(rangerAdminConf);
-            volumePathSet.add(adminConfig);
+            addConfigFile(volumePathSet, "rangerdir", "/opt/datasophon/ranger-2.1.0");
+            addConfigFile(volumePathSet, "adminconf", "/etc/ranger/admin");
         }
 
         if ("Krb5Kdc".equals(serviceRoleName) || "KAdmin".equals(serviceRoleName)) {
-            String krb5kdcDir = "/var/kerberos/krb5kdc";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("kerberos-data");
-            fileConfig.setValue(krb5kdcDir);
-            volumePathSet.add(fileConfig);
-            String keytabDir = "/etc/security/keytab/";
-            ServiceConfig keytabConfig = new ServiceConfig();
-            keytabConfig.setName("keytab");
-            keytabConfig.setValue(keytabDir);
-            volumePathSet.add(keytabConfig);
+            addConfigFile(volumePathSet, "kerberos-data", "/var/kerberos/krb5kdc");
+            addConfigFile(volumePathSet, "keytab", "/etc/security/keytab/");
         }
 
         if ("OpenldapServer".equals(serviceRoleName)) {
-            String openldapData = "/var/lib/openldap/";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("openldap-data");
-            fileConfig.setValue(openldapData);
-            volumePathSet.add(fileConfig);
-            String openldapConf = "/etc/openldap/slapd.d";
-            ServiceConfig keytabConfig = new ServiceConfig();
-            keytabConfig.setName("openldap-conf");
-            keytabConfig.setValue(openldapConf);
-            volumePathSet.add(keytabConfig);
+            addConfigFile(volumePathSet, "openldap-data", "/var/lib/openldap/");
+            addConfigFile(volumePathSet, "openldap-conf", "/etc/openldap/slapd.d");
         }
 
         if ("REDIS".equals(serviceName)) {
-            String redisMasterCluster = appHome + "/cluster/";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("redis-cluster");
-            fileConfig.setValue(redisMasterCluster);
-            volumePathSet.add(fileConfig);
+            addConfigFile(volumePathSet, "redis-cluster", appHome + "/cluster/");
         }
 
         if ("POSTGRESQL".equals(serviceName)) {
-            String postgresqlData = appHome + "/data/";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("postgresql-data");
-            fileConfig.setValue(postgresqlData);
-            volumePathSet.add(fileConfig);
+            addConfigFile(volumePathSet, "postgresql-data", appHome + "/data/");
         }
 
         if ("PostgresqlWorker".equals(serviceRoleName)) {
@@ -331,15 +326,16 @@ public class K8sYamlDeploymentHandler {
         }
 
         if ("ClickHouse".equals(serviceRoleName)) {
-            String clickHouseData = "/var/lib/clickhouse/";
-            ServiceConfig fileConfig = new ServiceConfig();
-            fileConfig.setName("clickhouse-data");
-            fileConfig.setValue(clickHouseData);
-            volumePathSet.add(fileConfig);
+            addConfigFile(volumePathSet, "clickhouse-data", "/var/lib/clickhouse/");
         }
+
+        if ("HUE".equals(serviceName)) {
+            addConfigFile(volumePathSet, "hive-config" ,"/opt/datasophon/hive-3.1.0/conf");
+        }
+
     }
 
-    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet) {
+    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet,String hostname) {
         List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER", "HUE", "ALLUXIO");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
@@ -357,31 +353,12 @@ public class K8sYamlDeploymentHandler {
 
                 // 仅当不存在相同配置时才添加
                 if (!exists) {
-                    ServiceConfig hadoopConfig = new ServiceConfig();
-                    hadoopConfig.setName("hadoopconfig" + config++);
-                    hadoopConfig.setValue(conf);
-                    volumePathSet.add(hadoopConfig);
+                    addConfigFile(volumePathSet, "hadoopconfig" + config++, conf);
                 }
             }
         }
-        if ("HUE".equals(serviceName)) {
-            ServiceConfig hiveConfig = new ServiceConfig();
-            hiveConfig.setName("hive-config");
-            hiveConfig.setValue("/opt/datasophon/hive-3.1.0/conf");
-            volumePathSet.add(hiveConfig);
-
-        }
     }
 
-    private void volumeEnableRangerPluginConfig(Set<ServiceConfig> volumePathSet, boolean enableRangerPlugin) {
-        if (enableRangerPlugin) {
-            String keytabDir = "/etc/ranger/";
-            ServiceConfig keytabConfig = new ServiceConfig();
-            keytabConfig.setName("rangerconf");
-            keytabConfig.setValue(keytabDir);
-            volumePathSet.add(keytabConfig);
-        }
-    }
 
     // 提取出一个通用方法，用于从配置中提取目录
     private String getConfigDirectory(Map<Generators, List<ServiceConfig>> configFileMap, String key) {

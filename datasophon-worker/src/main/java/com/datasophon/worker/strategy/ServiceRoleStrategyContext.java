@@ -77,6 +77,8 @@ public class ServiceRoleStrategyContext {
 
 
         map.put("Storage", new StorageHandlerStrategy("NEBULAGRAPH", "Storage"));
+
+        map.put("ApiServer", new DSHandlerStrategy("DS", "ApiServer"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {
