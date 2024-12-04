@@ -10,7 +10,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -23,7 +22,6 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 @Data
-@Slf4j
 public class K8sScaleServiceHandler {
 
     private String serviceName;
@@ -40,6 +38,32 @@ public class K8sScaleServiceHandler {
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
+    }
+
+    // 更新指定字段的值
+    public static void updateField(Map<String, Object> yamlData, String fieldPath, Object newValue) {
+        // 将字段路径按 '.' 分割以支持嵌套字段
+        String[] keys = fieldPath.split("\\.");
+
+        // 遍历路径以找到目标字段
+        Map<String, Object> currentMap = yamlData;
+
+        for (int i = 0; i < keys.length - 1; i++) {
+            String key = keys[i];
+
+            // 检查当前地图是否包含该键
+            if (currentMap.containsKey(key)) {
+                // 获取下一个层级的 Map
+                currentMap = (Map<String, Object>) currentMap.get(key);
+            } else {
+                // 如果路径不存在，直接返回
+                System.out.println("Field path does not exist: " + fieldPath);
+                return;
+            }
+        }
+
+        // 设置新值
+        currentMap.put(keys[keys.length - 1], newValue);
     }
 
     public ExecResult scaleService(String kubeConfig, K8sScaleType scaleType) {
@@ -75,7 +99,7 @@ public class K8sScaleServiceHandler {
 
         Deployment existingDeployment = resource.get();
         if (existingDeployment == null) {
-            log.error("Deployment {} 不存在", serviceRoleFullName);
+            logger.error("Deployment {} 不存在", serviceRoleFullName);
             return;
         }
 
@@ -83,7 +107,7 @@ public class K8sScaleServiceHandler {
         if (replicas == null) {
             replicas = 0;
         }
-        log.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+        logger.info("当前deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
         // 加载和更新 YAML 文件
         Yaml yaml = new Yaml();
@@ -100,7 +124,7 @@ public class K8sScaleServiceHandler {
         try (InputStream updatedYamlInputStream = new ByteArrayInputStream(yaml.dump(yamlData).getBytes())) {
             client.load(updatedYamlInputStream).createOrReplace();
         }
-        log.info("scale up deployment 为: {}", replicas+1);
+        logger.info("scale up deployment 为: {}", replicas + 1);
     }
 
     private synchronized void scaleDown(KubernetesClient client) {
@@ -108,16 +132,16 @@ public class K8sScaleServiceHandler {
                 client.apps().deployments().inNamespace(Constant.K8S_NAMESPACE).withName(serviceRoleFullName);
 
         if (resource == null || resource.get() == null) {
-            log.warn("Deployment {} 在命名空间 {} 中不存在，无法缩容", serviceRoleFullName, Constant.K8S_NAMESPACE);
+            logger.warn("Deployment {} 在命名空间 {} 中不存在，无法缩容", serviceRoleFullName, Constant.K8S_NAMESPACE);
             return;
         }
 
         Integer replicas = resource.get().getSpec().getReplicas();
-        log.info("当前 deployment: {} Spec Replicas: {}", serviceRoleFullName, replicas);
+        logger.info("当前 deployment: {} Spec Replicas: {}", serviceRoleFullName, replicas);
 
         if (replicas != null && replicas > 0) {
             int count = replicas - 1;
-            log.info("缩容 deployment 为: {}", count);
+            logger.info("缩容 deployment 为: {}", count);
             int maxRetries = 3;
             int retries = 0;
             boolean updated = false;
@@ -139,31 +163,6 @@ public class K8sScaleServiceHandler {
             }
 
         }
-    }
-    // 更新指定字段的值
-    public static void updateField(Map<String, Object> yamlData, String fieldPath, Object newValue) {
-        // 将字段路径按 '.' 分割以支持嵌套字段
-        String[] keys = fieldPath.split("\\.");
-
-        // 遍历路径以找到目标字段
-        Map<String, Object> currentMap = yamlData;
-
-        for (int i = 0; i < keys.length - 1; i++) {
-            String key = keys[i];
-
-            // 检查当前地图是否包含该键
-            if (currentMap.containsKey(key)) {
-                // 获取下一个层级的 Map
-                currentMap = (Map<String, Object>) currentMap.get(key);
-            } else {
-                // 如果路径不存在，直接返回
-                System.out.println("Field path does not exist: " + fieldPath);
-                return;
-            }
-        }
-
-        // 设置新值
-        currentMap.put(keys[keys.length - 1], newValue);
     }
 
 

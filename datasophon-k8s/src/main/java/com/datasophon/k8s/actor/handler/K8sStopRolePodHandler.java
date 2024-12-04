@@ -8,7 +8,6 @@ import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
-@Slf4j
 public class K8sStopRolePodHandler {
 
     private String serviceName;
@@ -49,7 +47,7 @@ public class K8sStopRolePodHandler {
                     String nodeName = pod.getSpec().getNodeName();
                     if (nodeName != null && nodeName.equals(hostname)) {
                         String podName = pod.getMetadata().getName();
-                        log.info("删除节点 {} 上的pod: {}", hostname, podName);
+                        logger.info("删除节点 {} 上的pod: {}", hostname, podName);
                         client.pods().delete(pod);
                     }
                 }
@@ -57,7 +55,7 @@ public class K8sStopRolePodHandler {
             execResult.setExecResult(true);
             return execResult;
         } catch (Exception e) {
-            log.error("删除节点 {} 上的pod失败", hostname);
+            logger.error("删除节点 {} 上的pod失败", hostname);
             execResult.setExecOut(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
             execResult.setExecResult(false);

@@ -21,14 +21,11 @@ package com.datasophon.k8s.util;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.UserEnum;
-import com.jcraft.jsch.SftpATTRS;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelExec;
 import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.sftp.client.SftpClient;
-import org.apache.sshd.sftp.client.SftpClientFactory;
 import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.apache.sshd.sftp.client.fs.SftpFileSystemProvider;
 import org.slf4j.LoggerFactory;
@@ -43,7 +40,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -181,6 +180,7 @@ public class K8sMinaUtils {
             }
         });
     }
+
     public static boolean uploadFile(String hostname, String remotePath, InputStream inputStream, String fileName) {
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
             try {
@@ -213,6 +213,7 @@ public class K8sMinaUtils {
             }
         });
     }
+
     /**
      * 创建目录
      */
@@ -349,61 +350,40 @@ public class K8sMinaUtils {
         }
     }
 
-    /*public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows)  {
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-//            charset = charset == null ? Charset.defaultCharset() : charset;
-
-            String linuxLineSeparator = "\n";
-
-            byte[] lineSeparator=linuxLineSeparator.getBytes();
-            //byte[] lineSeparator = System.getProperty("line.separator").getBytes();
-
-            SftpFileSystemProvider provider = (SftpFileSystemProvider) sftp.provider();
-            Path filePath = sftp.getPath(remoteFilePath);
-
-            BasicFileAttributes attrs = provider.readAttributes(filePath, BasicFileAttributes.class);
-            long pointer = attrs.size();
-
-            List<Byte> resultBytes = new ArrayList<>();
-            int lineSeparatorCount = 0;
-
-            try (SeekableByteChannel channel = provider.newByteChannel(filePath, EnumSet.of(StandardOpenOption.READ))) {
-                ByteBuffer buffer = ByteBuffer.allocate(1);
-                while (pointer > 0 && lineSeparatorCount < rows) {
-                    pointer--;
-                    channel.position(pointer);
-                    buffer.clear();
-                    channel.read(buffer);
-                    buffer.flip();
-                    byte b = buffer.get();
-                    resultBytes.add(0, b);
-                    if (b == lineSeparator[lineSeparator.length - 1] && checkLineSeparator(channel, lineSeparator, pointer)) {
-                        lineSeparatorCount++;
-                    }
+    /**
+     * 读取文件最后几行 <br>
+     * 相当于Linux系统中的tail命令 读取大小限制是2GB
+     *
+     * @param filename 文件名
+     * @param charset  文件编码格式,传null默认使用defaultCharset
+     * @param rows     读取行数
+     * @throws IOException IOException
+     */
+    public static String readLastRows(String filename, Charset charset, int rows) throws IOException {
+        charset = charset == null ? Charset.defaultCharset() : charset;
+        byte[] lineSeparator = System.getProperty("line.separator").getBytes();
+        try (RandomAccessFile rf = new RandomAccessFile(filename, "r")) {
+            // 每次读取的字节数要和系统换行符大小一致
+            byte[] c = new byte[lineSeparator.length];
+            // 在获取到指定行数和读完文档之前,从文档末尾向前移动指针,遍历文档每一个字节
+            for (long pointer = rf.length(), lineSeparatorNum = 0; pointer >= 0 && lineSeparatorNum < rows; ) {
+                // 移动指针
+                rf.seek(pointer--);
+                // 读取数据
+                int readLength = rf.read(c);
+                if (readLength != -1 && Arrays.equals(lineSeparator, c)) {
+                    lineSeparatorNum++;
+                }
+                // 扫描完依然没有找到足够的行数,将指针归0
+                if (pointer == -1 && lineSeparatorNum < rows) {
+                    rf.seek(0);
                 }
             }
-                // 将结果字节数组转换为字符串
-                byte[] byteArray = new byte[resultBytes.size()];
-                for (int i = 0; i < resultBytes.size(); i++) {
-                    byteArray[i] = resultBytes.get(i);
-                }
-                return new String(byteArray, charset);
-        });
+            byte[] tempbytes = new byte[(int) (rf.length() - rf.getFilePointer())];
+            rf.readFully(tempbytes);
+            return new String(tempbytes, charset);
+        }
     }
-
-
-
-    private static boolean checkLineSeparator(SeekableByteChannel channel, byte[] lineSeparator, long pointer) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(lineSeparator.length);
-
-        channel.position(pointer - lineSeparator.length + 1);
-        buffer.clear();
-        channel.read(buffer);
-        buffer.flip();
-
-        return Arrays.equals(buffer.array(), lineSeparator);
-    }
-*/
 
     public static String readLastRows(String hostname, String remoteFilePath, Charset charset, int rows) {
         return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
@@ -459,6 +439,7 @@ public class K8sMinaUtils {
         }
         return true;
     }
+
     public static void createUserAndGroup(String hostname, String user, String group) throws IOException {
         Integer userId = UserEnum.getUserIdByUsername(user);
         Integer groupId = UserEnum.getGroupIdByGroupName(group);

@@ -8,7 +8,6 @@ import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +21,6 @@ import java.util.stream.Collectors;
  */
 
 @Data
-@Slf4j
 public class K8sStatusHandler {
 
     private String serviceName;
@@ -68,12 +66,12 @@ public class K8sStatusHandler {
                 if (nodeName != null && nodeName.equals(hostname)) {
                     String podName = pod.getMetadata().getName();
                     String phase = pod.getStatus().getPhase();
-                    //log.info("check pod status  service role instants: {}, pod: {} , status:{}", serviceRoleFullName, podName, phase);
+                    //logger.info("check pod status  service role instants: {}, pod: {} , status:{}", serviceRoleFullName, podName, phase);
 
                     //判断pod 状态是否正常
                     if ("Running".equals(phase) || "Ready".equals(phase)) {
                         execResult.setExecResult(true);
-                    }else {
+                    } else {
                         execResult.setExecResult(false);
                     }
                 }
@@ -81,7 +79,7 @@ public class K8sStatusHandler {
             return execResult;
 
         } catch (Exception e) {
-            log.error("check service role instance error ,host {}, instance name: {}, e: {}", hostname, serviceRoleFullName, e.getMessage());
+            logger.error("check service role instance error ,host {}, instance name: {}, e: {}", hostname, serviceRoleFullName, e.getMessage());
             execResult.setExecOut(e.getMessage());
             execResult.setExecErrOut(e.getMessage());
             execResult.setExecResult(false);

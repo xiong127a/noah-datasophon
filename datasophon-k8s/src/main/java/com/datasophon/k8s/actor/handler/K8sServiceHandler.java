@@ -13,7 +13,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -27,7 +26,6 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Data
-@Slf4j
 public class K8sServiceHandler {
 
     private static final Long timeout = 300L;
@@ -100,7 +98,7 @@ public class K8sServiceHandler {
 
                 Map<String, Object> yamlData = yaml.load(yamlInputStream);
 
-                log.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
+                logger.info("当前 deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
                 // 更新 replicas 字段
                 updateField(yamlData, "spec.replicas", replicas + 1);
@@ -109,37 +107,37 @@ public class K8sServiceHandler {
                 try (InputStream updatedYamlInputStream = new ByteArrayInputStream(yaml.dump(yamlData).getBytes())) {
                     client.load(updatedYamlInputStream).createOrReplace();
                 } catch (IOException e) {
-                    log.error("更新 Kubernetes Deployment 失败: {}", e.getMessage());
+                    logger.error("更新 Kubernetes Deployment 失败: {}", e.getMessage());
                     return execResult; // 处理更新失败的异常
                 }
             }
             addProcessStatus();
             //多个副本同时启动提升安装启动速度
             if (isFinalNode() && !isExistingDeployment) {
-                log.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+                logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
 
                 CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
 
                 List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
 
                 String deploymentName = metadata.get(0).getMetadata().getName();
-                log.info("在k8s上启动deployment: {} ,使用本地资源文件: {}", deploymentName, yamlFile);
+                logger.info("在k8s上启动deployment: {} ,使用本地资源文件: {}", deploymentName, yamlFile);
                 // 等待Pod准备就绪
                 resource.waitUntilReady(20, TimeUnit.MINUTES);
-                log.info(resource.getLog());
+                logger.info(resource.getLog());
             }
 
 
         } catch (IOException e) {
-            log.error("文件操作时发生异常: {}", e.getMessage(), e);
+            logger.error("文件操作时发生异常: {}", e.getMessage(), e);
             execResult.setExecErrOut("文件操作时发生异常: " + e.getMessage());
             execResult.setExecResult(false);
         } catch (KubernetesClientException e) {
-            log.error("与 Kubernetes 交互时发生异常: {}", e.getMessage(), e);
+            logger.error("与 Kubernetes 交互时发生异常: {}", e.getMessage(), e);
             execResult.setExecErrOut("与 Kubernetes 交互时发生异常: " + e.getMessage());
             execResult.setExecResult(false);
         } catch (Exception e) {
-            log.error("启动deployment时发生异常: {}", e.getMessage(), e);
+            logger.error("启动deployment时发生异常: {}", e.getMessage(), e);
             execResult.setExecErrOut("启动deployment时发生异常: " + e.getMessage());
             execResult.setExecResult(false);
         }
@@ -151,20 +149,20 @@ public class K8sServiceHandler {
         ExecResult execResult = new ExecResult();
         Boolean status = (Boolean) CacheUtils.get(serviceRoleFullName);
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
-        log.info("本地资源文件: {}", yamlFile);
+        logger.info("本地资源文件: {}", yamlFile);
 
         File yamlFileObj = new File(yamlFile);
         if (Objects.isNull(status)) {
             CacheUtils.put(serviceRoleFullName, false);
         }
         if (!yamlFileObj.exists()) {
-            log.error("k8s资源文件不存在: {}", yamlFile);
+            logger.error("k8s资源文件不存在: {}", yamlFile);
             execResult.setExecErrOut("k8s资源文件不存在: " + yamlFile);
             execResult.setExecOut("k8s资源文件不存在: " + yamlFile);
             execResult.setExecResult(false);
             return execResult;
         } else {
-            log.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
+            logger.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
                  FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
@@ -172,8 +170,9 @@ public class K8sServiceHandler {
                         .delete();
                 execResult.setExecResult(true);
                 CacheUtils.put(serviceRoleFullName, true);
+                CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
             } catch (Exception e) {
-                log.error("停止deployment时发生异常: {}", e.getMessage(), e);
+                logger.error("停止deployment时发生异常: {}", e.getMessage(), e);
                 execResult.setExecErrOut("停止deployment时发生异常: " + e.getMessage());
                 execResult.setExecOut("停止deployment时发生异常: " + e.getMessage());
             }
@@ -201,13 +200,13 @@ public class K8sServiceHandler {
             try {
                 TimeUnit.SECONDS.sleep(5); // 每隔5秒检查一次
             } catch (InterruptedException e) {
-                log.error("等待过程中被中断", e);
+                logger.error("等待过程中被中断", e);
                 Thread.currentThread().interrupt(); // 保留中断状态
                 return false;
             }
         }
 
-        log.info("超时等待结束，状态未变为 true，将 execResult 设为 false");
+        logger.info("超时等待结束，状态未变为 true，将 execResult 设为 false");
         return false;
     }
 
@@ -223,7 +222,7 @@ public class K8sServiceHandler {
     private Boolean isFinalNode() {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT);
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-        log.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
+        logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
         return currentCount.equals(nodeCount);
     }
 
