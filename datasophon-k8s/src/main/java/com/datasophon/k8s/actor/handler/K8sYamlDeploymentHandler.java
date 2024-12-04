@@ -21,27 +21,20 @@ import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Data
-@Slf4j
 public class K8sYamlDeploymentHandler {
 
+    private static Logger logger;
     private String serviceName;
-
     private String serviceRoleName;
-
     private String serviceRoleFullName;
-
-    private Logger logger;
 
 
     public K8sYamlDeploymentHandler(String serviceName, String serviceRoleName) {
@@ -90,7 +83,7 @@ public class K8sYamlDeploymentHandler {
             K8sMinaUtils.execCmdWithResult(hostname, String.format("chown -R %s:%s %s", runAs.getUser(), runAs.getGroup(), logStr));
             addConfigFile(volumePathSet, "logs", logStr);
         } catch (Exception e) {
-            log.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
+            logger.error("An error occurred while checking or creating the file: {}", e.getMessage(), e);
         }
     }
 
@@ -172,7 +165,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
 
-            volumeHadoopConfig(volumePathSet,hostname);
+            volumeHadoopConfig(volumePathSet, hostname);
 
             volumeEnableKerberosConfig(volumePathSet, appHome, serviceRoleName, enableKerberos);
 
@@ -330,12 +323,12 @@ public class K8sYamlDeploymentHandler {
         }
 
         if ("HUE".equals(serviceName)) {
-            addConfigFile(volumePathSet, "hive-config" ,"/opt/datasophon/hive-3.1.0/conf");
+            addConfigFile(volumePathSet, "hive-config", "/opt/datasophon/hive-3.1.0/conf");
         }
 
     }
 
-    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet,String hostname) {
+    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet, String hostname) {
         List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER", "HUE", "ALLUXIO");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
