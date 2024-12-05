@@ -97,15 +97,16 @@ public class K8sUtil {
 
                     long startTime = System.currentTimeMillis(); // Start timing
                     logger.info("Command is " +cmd);
-                    ExecWatch exec = client.pods()
+                    try (ExecWatch exec = client.pods()
                             .inNamespace(namespace).withName(podName)
                             .writingOutput(System.out)
                             .writingError(System.err)
-                            //.withTTY()
+                            .withTTY()
                             .usingListener(new SimpleListener()).
-                            exec("sh", "-c", cmd);
+                            exec("sh", "-c", cmd)) {
 
-                    int join = exec.exitCode().join();
+                        int join = exec.exitCode().join();
+                    }
 
                     long endTime = System.currentTimeMillis(); // End timing
                     long duration = endTime - startTime; // Calculate duration
