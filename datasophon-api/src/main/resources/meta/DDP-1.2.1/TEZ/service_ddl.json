@@ -49,7 +49,7 @@
       "externalLink": {
         "name": "TEZServer UI",
         "label": "TEZServer UI",
-        "url": "http://${host}:9999/tez/#/"
+        "url": "http://${host}:9998/tez/#/"
       }
     }
   ],
