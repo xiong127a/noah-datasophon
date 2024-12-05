@@ -43,6 +43,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("SRFEObserver", new K8sSRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
 
         map.put("Storage", new K8sStorageHandlerStrategy("NEBULAGRAPH", "Storage"));
+        map.put("TezServer", new K8sTezServerHandlerStrategy("TEZ", "TezServer"));
     }
 
     public static K8sServiceRoleStrategy getServiceRoleHandler(String type) {
