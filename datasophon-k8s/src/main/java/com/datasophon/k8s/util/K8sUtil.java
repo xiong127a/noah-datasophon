@@ -5,6 +5,8 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.stream.StreamUtil;
+import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.VolumeMountDTO;
@@ -91,42 +93,47 @@ public class K8sUtil {
         }
     }
 
-    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String cmd) {
+    public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, Logger logger, String hostname, List<String> commands) {
         List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", image).list().getItems();
         ExecResult execResult = new ExecResult();
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
+
         if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
             logger.info("host {} pods {} is null", hostname, image);
             execResult.setExecResult(false);
             return execResult;
         }
+
         try {
             for (Pod pod : pods) {
                 String nodeName = pod.getSpec().getNodeName();
                 if (nodeName != null && nodeName.equals(hostname)) {
-
                     String podName = pod.getMetadata().getName();
-
                     long startTime = System.currentTimeMillis(); // Start timing
-                    logger.info("Command is " + cmd);
+                    logger.info("Command is {}", commands);
 
                     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
 
-
+                    // Execute the command
                     try (ExecWatch exec = client.pods()
                             .inNamespace(namespace)
                             .withName(podName)
                             .writingOutput(outputStream)
-                            .writingError(System.err)
-                            .exec("sh", "-c", cmd)
+                            .writingError(errorStream)
+                            .exec(commands.toArray(new String[0]))
                     ) {
                         int exitCode = exec.exitCode().get();
                         String out = IoUtil.toStr(outputStream, Charset.defaultCharset());
+                        String error = IoUtil.toStr(errorStream, Charset.defaultCharset());
 
                         if (exitCode != 0) {
                             execResult.setExecResult(false);
-                            execResult.setExecErrOut(out);
-                            logger.error("exec result: {}", out);
+                            if (StrUtil.isBlank(error)) {
+                                error = out;
+                            }
+                            execResult.setExecErrOut(error);
+                            logger.error("exec result: {}", error);
                         } else {
                             execResult.setExecResult(true);
                             execResult.setExecOut(out);
@@ -136,26 +143,54 @@ public class K8sUtil {
 
                     long endTime = System.currentTimeMillis(); // End timing
                     long duration = endTime - startTime; // Calculate duration
-
-                    logger.info("Command execution time: " + duration + " milliseconds");
-
+                    logger.info("Command execution time: {} milliseconds", duration);
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
         return execResult;
     }
 
 
-    public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig, String commandLine) {
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String cmd) {
+        List<String> commands = handlerCommand(cmd);
+
+        // 调用公共的 executeCommand 方法
+        return executeCommand(namespace, client, image, logger, hostname, commands);
+    }
+
+    private static List<String> handlerCommand(String cmd) {
+        // 对命令进行适当的处理，确保其在执行时不会被拆分
+        return Arrays.asList("sh", "-c", cmd);
+    }
+
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, ExecuteCmdCommand cmdCommand) {
+        // 获取 ExecuteCmdCommand 中的命令列表
+        List<String> commands = cmdCommand.getCommands();
+        if (CollUtil.isNotEmpty(commands)) {
+            String commandLine = String.join(" ", commands); // 合并命令为单一字符串
+            commands = handlerCommand(commandLine);
+        }
+
+        if (StrUtil.isNotBlank(cmdCommand.getCommandLine())) {
+            commands = handlerCommand(cmdCommand.getCommandLine());
+        }
+
+        // 调用公共的 executeCommand 方法
+        return executeCommand(namespace, client, image, logger, hostname, commands);
+    }
+
+
+    public static ExecResult exec(ClusterServiceRoleInstanceEntity roleInstanceEntity, String kubeConfig, ExecuteCmdCommand cmdCommand) {
         KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(kubeConfig);
         return runCmd(Constants.DATASOPHON,
                 kubeClient,
                 (roleInstanceEntity.getServiceName() + "-" + roleInstanceEntity.getServiceRoleName()).toLowerCase(),
                 log,
                 roleInstanceEntity.getHostname(),
-                commandLine
+                cmdCommand
         );
     }
 
