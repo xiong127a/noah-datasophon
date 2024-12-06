@@ -19,15 +19,9 @@
 
 package com.datasophon.api.strategy;
 
-import akka.actor.ActorRef;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ServiceConfig;
@@ -35,26 +29,21 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(NameNodeHandlerStrategy.class);
+
 
     private static final String ENABLE_RACK = "enableRack";
 
     private static final String ENABLE_KERBEROS = "enableKerberos";
 
-    private static final String ACTIVE = "active";
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
@@ -92,7 +81,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         }
         List<ServiceConfig> rackConfigs = new ArrayList<>();
         if (enableRack) {
-            logger.info("start to add rack config");
+            log.info("start to add rack config");
             addConfigWithRack(globalVariables, map, configs, rackConfigs);
         } else {
             removeConfigWithRack(list, map, configs);
@@ -116,7 +105,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
         Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
         if (hostname.equals(globalVariables.get("${nn2}"))) {
-            logger.info("set to slave namenode");
+            log.info("set to slave namenode");
             serviceRoleInfo.setSlave(true);
             serviceRoleInfo.setSortNum(5);
         }
@@ -126,6 +115,18 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     public void handlerServiceRoleCheck(
             ClusterServiceRoleInstanceEntity roleInstanceEntity,
             Map<String, ClusterServiceRoleInstanceEntity> map) {
+        performServiceRoleCheck(roleInstanceEntity, "nMStateActor");
+    }
+
+    @Override
+    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        performServiceRoleCheck(roleInstanceEntity, "");
+    }
+
+
+
+
+    public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
         Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
         String nn2 = globalVariable.get("${nn2}");
         String commandLine =
@@ -134,33 +135,11 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             commandLine =
                     globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn2";
         }
-        getNMState(roleInstanceEntity, commandLine);
-    }
-
-    private void getNMState(
-            ClusterServiceRoleInstanceEntity roleInstanceEntity, String commandLine) {
-        ClusterServiceRoleInstanceWebuisService webuisService =
-                SpringTool.getApplicationContext()
-                        .getBean(ClusterServiceRoleInstanceWebuisService.class);
-        ActorRef execCmdActor =
-                ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), "nMStateActor");
         ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
         cmdCommand.setCommandLine(commandLine);
-        Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(execCmdActor, cmdCommand, timeout);
-        try {
-            ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                if (execResult.getExecOut().contains(ACTIVE)) {
-                    webuisService.updateWebUiToActive(roleInstanceEntity.getId());
-                } else {
-                    webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
-                }
-            } else {
-                webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
-            }
-        } catch (Exception e) {
-            logger.error(e.getMessage());
-        }
+        return cmdCommand;
     }
+
+
+
 }

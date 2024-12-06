@@ -59,7 +59,7 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
         IPage<NoticeGroupEntity> noticeGroupEntityIPage = noticeGroupService.pageNoticeGroup(page);
 
         //去掉之前的
-        list.removeIf(serviceConfig -> StringUtils.isEmpty(serviceConfig.getConfigType()) || "".equals(serviceConfig.getConfigType())  );
+        list.removeIf(serviceConfig -> StringUtils.isEmpty(serviceConfig.getConfigType()) || "".equals(serviceConfig.getConfigType()));
 
         //准备alertNoticeConfig,邮件通知组和路由
         List<ServiceConfig> alertNoticeConfig = noticeGroupEntityIPage.getRecords().stream()
@@ -103,5 +103,10 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
             ProcessUtils.saveAlert(roleInstanceEntity, alertTargetName, AlertLevel.EXCEPTION, "restart");
 
         }
+    }
+
+    @Override
+    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 }
