@@ -99,7 +99,7 @@ public class K8sUtil {
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
 
         if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
-            logger.info("host {} pods {} is null", hostname, image);
+            logger.debug("host {} pods {} is null", hostname, image);
             execResult.setExecResult(false);
             return execResult;
         }
@@ -110,7 +110,7 @@ public class K8sUtil {
                 if (nodeName != null && nodeName.equals(hostname)) {
                     String podName = pod.getMetadata().getName();
                     long startTime = System.currentTimeMillis(); // Start timing
-                    logger.info("Command is {}", commands);
+                    logger.debug("Command is {}", commands);
 
                     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                     ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
@@ -137,13 +137,13 @@ public class K8sUtil {
                         } else {
                             execResult.setExecResult(true);
                             execResult.setExecOut(out);
-                            logger.info("exec result: {}", out);
+                            logger.debug("exec result: {}", out);
                         }
                     }
 
                     long endTime = System.currentTimeMillis(); // End timing
                     long duration = endTime - startTime; // Calculate duration
-                    logger.info("Command execution time: {} milliseconds", duration);
+                    logger.debug("Command execution time: {} milliseconds", duration);
                 }
             }
         } catch (Exception e) {
