@@ -20,6 +20,7 @@
 package com.datasophon.api.master.alert;
 
 import akka.actor.UntypedActor;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
@@ -68,6 +69,7 @@ public class ServiceRoleCheckActor extends UntypedActor {
                             break;
                         case Constants.K8S_MODE:
                             handlerK8sServiceRoleCheck(roleInstanceEntity, map);
+                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerK8sServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         default:
                             break;
