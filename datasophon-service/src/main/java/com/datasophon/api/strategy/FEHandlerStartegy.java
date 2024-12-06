@@ -76,6 +76,11 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
     }
 
     @Override
+    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        handlerServiceRoleCheck(roleInstanceEntity, map);
+    }
+
+    @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
                                         Map<String, ClusterServiceRoleInstanceEntity> map) {
         Map<String, String> globalVariables = GlobalVariables.get(roleInstanceEntity.getClusterId());
@@ -92,6 +97,7 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
 
         }
     }
+
     private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
                                       Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {
