@@ -51,7 +51,6 @@ public class K8sHbaseHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                         Constants.DATASOPHON,
                         kubeClient,
                         "hdfs-namenode",
-                        logger,
                         command.getNnHost(),
                         jobCmd);
                 logger.info("init hbase dir success");

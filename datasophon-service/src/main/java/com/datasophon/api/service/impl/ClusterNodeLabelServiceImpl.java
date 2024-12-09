@@ -155,7 +155,6 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
                 runCmd(Constants.DATASOPHON,
                         client,
                         "yarn-resourcemanager",
-                        logger,
                         hostname,
                         cmd);
                 } catch (Exception e) {

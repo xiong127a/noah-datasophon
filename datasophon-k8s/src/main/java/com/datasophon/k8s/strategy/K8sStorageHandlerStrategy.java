@@ -69,7 +69,6 @@ public class K8sStorageHandlerStrategy extends K8sAbstractHandlerStrategy implem
                             Constants.DATASOPHON,
                             kubeClient,
                             "nebulagraph-graph",
-                            logger,
                             command.getGraphHost(),
                             String.join(" ", commands));
                     logger.info("add storage success");
