@@ -55,9 +55,8 @@ public class K8sUtil {
      * @param deployment 指定的 Deployment 名称
      * @param hostname   Pod 所在的 hostname
      * @param command    需要执行的命令
-     * @param logger     日志记录实例
      */
-    public static String executeCommandInPod(KubernetesClient client, String namespace, String deployment, String hostname, String command, Logger logger) {
+    public static String executeCommandInPod(KubernetesClient client, String namespace, String deployment, String hostname, String command) {
         try {
             List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", deployment).list().getItems();
             Pod targetPod = null;
@@ -74,7 +73,7 @@ public class K8sUtil {
             }
 
             String podName = targetPod.getMetadata().getName();
-            logger.info("Executing command in Pod: " + podName + " on host: " + hostname);
+            log.debug("Executing command in Pod: " + podName + " on host: " + hostname);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ByteArrayOutputStream err = new ByteArrayOutputStream();
@@ -88,18 +87,18 @@ public class K8sUtil {
             return out.toString();
 
         } catch (Exception e) {
-            logger.error("Command execution failed", e);
+            log.error("Command execution failed", e);
             return "Command execution failed: " + e.getMessage();
         }
     }
 
-    public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, Logger logger, String hostname, List<String> commands) {
+    public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, String hostname, List<String> commands) {
         List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", image).list().getItems();
         ExecResult execResult = new ExecResult();
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
 
         if (CollUtil.isEmpty(pods) || !hostList.contains(hostname)) {
-            logger.info("host {} pods {} is null", hostname, image);
+            log.debug("host {} pods {} is null", hostname, image);
             execResult.setExecResult(false);
             return execResult;
         }
@@ -110,7 +109,7 @@ public class K8sUtil {
                 if (nodeName != null && nodeName.equals(hostname)) {
                     String podName = pod.getMetadata().getName();
                     long startTime = System.currentTimeMillis(); // Start timing
-                    logger.info("Command is {}", commands);
+                    log.debug("Command is {}", commands);
 
                     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                     ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
@@ -133,17 +132,17 @@ public class K8sUtil {
                                 error = out;
                             }
                             execResult.setExecErrOut(error);
-                            logger.error("exec result: {}", error);
+                            log.error("exec result: {}", error);
                         } else {
                             execResult.setExecResult(true);
                             execResult.setExecOut(out);
-                            logger.info("exec result: {}", out);
+                            log.debug("exec result: {}", out);
                         }
                     }
 
                     long endTime = System.currentTimeMillis(); // End timing
                     long duration = endTime - startTime; // Calculate duration
-                    logger.info("Command execution time: {} milliseconds", duration);
+                    log.debug("Command execution time: {} milliseconds", duration);
                 }
             }
         } catch (Exception e) {
@@ -154,11 +153,11 @@ public class K8sUtil {
     }
 
 
-    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, String cmd) {
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname, String cmd) {
         List<String> commands = handlerCommand(cmd);
 
         // 调用公共的 executeCommand 方法
-        return executeCommand(namespace, client, image, logger, hostname, commands);
+        return executeCommand(namespace, client, image, hostname, commands);
     }
 
     private static List<String> handlerCommand(String cmd) {
@@ -166,7 +165,7 @@ public class K8sUtil {
         return Arrays.asList("sh", "-c", cmd);
     }
 
-    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, Logger logger, String hostname, ExecuteCmdCommand cmdCommand) {
+    public static ExecResult runCmd(String namespace, KubernetesClient client, String image, String hostname, ExecuteCmdCommand cmdCommand) {
         // 获取 ExecuteCmdCommand 中的命令列表
         List<String> commands = cmdCommand.getCommands();
         if (CollUtil.isNotEmpty(commands)) {
@@ -179,7 +178,7 @@ public class K8sUtil {
         }
 
         // 调用公共的 executeCommand 方法
-        return executeCommand(namespace, client, image, logger, hostname, commands);
+        return executeCommand(namespace, client, image, hostname, commands);
     }
 
 
@@ -188,15 +187,14 @@ public class K8sUtil {
         return runCmd(Constants.DATASOPHON,
                 kubeClient,
                 (roleInstanceEntity.getServiceName() + "-" + roleInstanceEntity.getServiceRoleName()).toLowerCase(),
-                log,
                 roleInstanceEntity.getHostname(),
                 cmdCommand
         );
     }
 
-    public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, Logger logger, String hostname) throws Exception {
+    public static void runJob(String namespace, String name, KubernetesClient client, VolumeMountDTO[] volumeMounts, String image, String cmd, String hostname) throws Exception {
         // delete job
-        logger.info("delete job if need ,job name: " + name);
+        log.debug("delete job if need ,job name: " + name);
         List<StatusDetails> statusDetailsList = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
@@ -206,7 +204,7 @@ public class K8sUtil {
         long startTime = System.currentTimeMillis();
 
         // 尝试删除已存在的同名 Job，循环等待 Job 和相关 Pod 被删除完成
-        waitForDeleteJob(namespace, name, client, timeout, startTime, logger);
+        waitForDeleteJob(namespace, name, client, timeout, startTime);
 
         // 提交一个新的 Job
         submitJob(namespace, name, client, volumeMounts, image, cmd, hostname);
@@ -217,8 +215,8 @@ public class K8sUtil {
 
         // 进入一个循环等待 Pod 从创建到运行的状态。如果 Pod 处于 Pending 状态，方法会继续等待，直到 Pod 变为 Running 状态。
         String podName = "";
-        podName = waitForCreatePodOfJob(namespace, name, client, logger, podName, waitPodStartTime, waitPodTimeout);
-        logger.info("Pod name: " + podName);
+        podName = waitForCreatePodOfJob(namespace, name, client, podName, waitPodStartTime, waitPodTimeout);
+        log.debug("Pod name: " + podName);
 
         CountDownLatch jobCompletionLatch = new CountDownLatch(1);
 
@@ -247,9 +245,9 @@ public class K8sUtil {
 
             @Override
             public void onClose(WatcherException cause) {
-                logger.info("Watcher closed");
+                log.info("Watcher closed");
                 if (cause != null) {
-                    logger.error(cause.getMessage(), cause);
+                    log.error(cause.getMessage(), cause);
                 }
             }
 
@@ -269,34 +267,34 @@ public class K8sUtil {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    logger.info("p> " + line);  // You can replace this with your desired logging mechanism
+                    log.info("p> " + line);  // You can replace this with your desired logging mechanism
                 }
             } catch (IOException e) {
-                logger.error(e.getMessage(), e);
+                log.error(e.getMessage(), e);
                 throw new IOException();
             } finally {
                 logWatch.close();
             }
 
             // Wait for the job to complete
-            logger.info("Waiting  for job to complete...");
+            log.info("Waiting  for job to complete...");
             jobCompletionLatch.await();
 
         } catch (InterruptedException | IOException e) {
-            logger.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             throw new InterruptedException();
         } finally {
             watch.close();
         }
 
         boolean flag = isJobEndSuccess.get();
-        logger.info("Job completed with success status: " + flag);
+        log.info("Job completed with success status: " + flag);
         if (!flag) {
             throw new RuntimeException("Job failed.");
         }
     }
 
-    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client, Logger logger, String podName, long waitPodStartTime, long waitPodTimeout) {
+    private static String waitForCreatePodOfJob(String namespace, String jobName, KubernetesClient client, String podName, long waitPodStartTime, long waitPodTimeout) {
         // 循环等待创建pod成功
         while (true) {
             // 需要考虑，有可能pod还没创建出来
@@ -314,9 +312,9 @@ public class K8sUtil {
                 // 检查pod是否正在创建
                 String phase = pod.getStatus().getPhase();
                 if (phase.equals("Pending")) {
-                    logger.info("Pod {} is pending, waiting for it to be running...", podName);
+                    log.info("Pod {} is pending, waiting for it to be running...", podName);
                 } else if (phase.equals("Running")) {
-                    logger.info("Pod {} is running.", podName);
+                    log.info("Pod {} is running.", podName);
                     break;
                 }
             }
@@ -338,7 +336,7 @@ public class K8sUtil {
         return podName;
     }
 
-    private static void waitForDeleteJob(String namespace, String jobName, KubernetesClient client, long timeout, long startTime, Logger logger) {
+    private static void waitForDeleteJob(String namespace, String jobName, KubernetesClient client, long timeout, long startTime) {
 
 
         // 循环等待删除成功
@@ -354,7 +352,7 @@ public class K8sUtil {
                     .list().getItems();
 
             if (deletedJob == null && podList.isEmpty()) {
-                logger.info("Job {} has been deleted.", jobName);
+                log.info("Job {} has been deleted.", jobName);
                 return;
             }
 

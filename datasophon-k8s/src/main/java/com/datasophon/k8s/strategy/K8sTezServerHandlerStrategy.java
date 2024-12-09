@@ -109,7 +109,6 @@ public class K8sTezServerHandlerStrategy extends K8sAbstractHandlerStrategy impl
                         Constants.DATASOPHON,
                         kubeClient,
                         (command.getServiceName() + "-" + command.getServiceRoleName()).toLowerCase(),
-                        logger,
                         command.getHostname(),
                         fullCmd.toString()
                 );

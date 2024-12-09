@@ -151,7 +151,6 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
             runCmd(Constants.DATASOPHON,
                     client,
                     "kerberos-kadmin",
-                    logger,
                     hostname,
                     "/opt/datasophon/kerberos-1.15.1/createKeytab.sh " + principal + " " + keytabFilePath);
         } catch (Exception e) {

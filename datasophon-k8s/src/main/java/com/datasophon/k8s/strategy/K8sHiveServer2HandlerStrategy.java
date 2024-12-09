@@ -50,7 +50,6 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
                         allVolume,
                         DockerImageUtils.getString(command.getServiceName()),
                         jobCmd,
-                        logger,
                         command.getHostname()
                 );
                 logger.info("init hive schema success");
@@ -86,7 +85,6 @@ public class K8sHiveServer2HandlerStrategy extends K8sAbstractHandlerStrategy im
                         Constants.DATASOPHON,
                         kubeClient,
                         "hdfs-namenode",
-                        logger,
                         command.getNnHost(),
                         jobCmd);
                 logger.info("init hive dir success");
