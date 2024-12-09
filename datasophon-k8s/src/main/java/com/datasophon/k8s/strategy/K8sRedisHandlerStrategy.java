@@ -46,7 +46,6 @@ public class K8sRedisHandlerStrategy extends K8sAbstractHandlerStrategy implemen
                         Constants.DATASOPHON,
                         kubeClient,
                         (command.getServiceName()+"-"+command.getServiceRoleName()).toLowerCase(),
-                        logger,
                         command.getHostname(),
                         String.join(" ",commands));
                 logger.info("sh redis-cluster.sh success");

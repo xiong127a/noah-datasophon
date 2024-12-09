@@ -34,7 +34,6 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                         volumeMounts,
                         DockerImageUtils.getString(command.getServiceName()),
                         jobCmd,
-                        logger,
                         command.getHostname()
                 );
                 logger.info("zkfc format success");

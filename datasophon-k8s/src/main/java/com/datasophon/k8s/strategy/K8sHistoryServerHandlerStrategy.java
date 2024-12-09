@@ -66,7 +66,6 @@ public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy 
                         Constants.DATASOPHON,
                         kubeClient,
                         "hdfs-namenode",
-                        logger,
                         command.getNnHost(),
                         jobCmd);
                 logger.info("create jobhistoryserver dir success");

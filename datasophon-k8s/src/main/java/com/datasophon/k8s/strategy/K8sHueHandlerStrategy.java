@@ -52,7 +52,6 @@ public class K8sHueHandlerStrategy extends K8sAbstractHandlerStrategy implements
                         volumeMounts,
                         DockerImageUtils.getString(command.getServiceName()),
                         initCommand,
-                        logger,
                         command.getHostname()
                 );
                 logger.info("hue database init success");
