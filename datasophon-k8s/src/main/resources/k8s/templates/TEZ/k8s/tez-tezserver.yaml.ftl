@@ -39,6 +39,13 @@ spec:
       hostPID: false
       hostNetwork: true
       containers:
+        - env:
+            - name: USER
+              value: ${runAs}
+            - name: MEM_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           command:
