@@ -69,12 +69,15 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        handlerServiceRoleCheck(roleInstanceEntity, map);
+    }
+
+    @Override
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
         Map<String, String> globalVariables = GlobalVariables.get(roleInstanceEntity.getClusterId());
         String feMaster = globalVariables.get("${feMaster}");
-        if (roleInstanceEntity.getHostname().equals(feMaster)
-                && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
+        if (roleInstanceEntity.getHostname().equals(feMaster) && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
             try {
                 List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
@@ -85,8 +88,8 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
 
         }
     }
-    private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
-                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+
+    private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends, Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {
             ClusterServiceRoleInstanceEntity roleInstanceEntity = map.get(frontend.getHostName() + serviceRoleName);
             if (!frontend.getAlive()) {
