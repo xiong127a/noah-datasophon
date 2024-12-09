@@ -121,26 +121,15 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
             ClusterServiceRoleInstanceEntity roleInstanceEntity,
             Map<String, ClusterServiceRoleInstanceEntity> map) {
         // 调用通用方法，传递特定的actorPath
-        performRoleCheck(roleInstanceEntity, "rMStateActor");
+        performServiceRoleCheck(roleInstanceEntity, "rMStateActor");
     }
 
     @Override
     public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
         // 调用通用方法，传递特定的actorPath
-        performRoleCheck(roleInstanceEntity, "");
+        performServiceRoleCheck(roleInstanceEntity, "");
     }
 
-    // 提取出的通用方法
-    private void performRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, String actorPath) {
-        // 获取命令
-        ExecuteCmdCommand cmdCommand = getCommand(roleInstanceEntity);
-
-        // 执行命令
-        ExecResult execResult = executeCommand(roleInstanceEntity, cmdCommand, actorPath);
-
-        // 更新Web UI状态
-        handleExecResult(roleInstanceEntity, execResult);
-    }
 
 
     public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
