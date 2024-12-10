@@ -19,45 +19,25 @@
 
 package com.datasophon.api.load;
 
+import akka.actor.Props;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;
-import com.datasophon.api.load.ConfigBean;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
-import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
+import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.serviceCacheSyncActor;
+import com.datasophon.api.service.*;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.ConfigWriter;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.entity.FrameInfoEntity;
-import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.dao.entity.FrameServiceRoleEntity;
-
+import com.datasophon.common.model.*;
+import com.datasophon.dao.entity.*;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -67,14 +47,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.stream.Collectors;
 
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.file.FileReader;
-import cn.hutool.crypto.SecureUtil;
+import static com.datasophon.api.master.ActorUtils.getActorRefName;
 
 @Component
 public class LoadServiceMeta implements ApplicationRunner {
@@ -144,6 +123,8 @@ public class LoadServiceMeta implements ApplicationRunner {
                 }
             }
         }
+        ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
+                getActorRefName(serviceCacheSyncActor.class));
     }
 
 

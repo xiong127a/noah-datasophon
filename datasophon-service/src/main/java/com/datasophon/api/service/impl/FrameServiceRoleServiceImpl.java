@@ -23,8 +23,8 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -35,11 +35,7 @@ import com.datasophon.dao.mapper.FrameServiceRoleMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service("frameServiceRoleService")
@@ -78,8 +74,8 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
                 List<String> hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
                 role.setHosts(hosts);
-            } else if (CacheUtils.constainsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheUtils.get(key);
+            } else if (CacheOperateUtils.containsKey(key)) {
+                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
                 if (map.containsKey(role.getServiceRoleName())) {
                     role.setHosts(map.get(role.getServiceRoleName()));
                 }
@@ -123,8 +119,8 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
             if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
                 hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
 
-            } else if (CacheUtils.constainsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheUtils.get(key);
+            } else if (CacheOperateUtils.containsKey(key)) {
+                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
                 if (map.containsKey(role.getServiceRoleName())) {
                     hosts = map.get(role.getServiceRoleName());
                 }

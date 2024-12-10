@@ -44,6 +44,7 @@ import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.DAG;
@@ -92,6 +93,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 
 @Service("serviceInstallService")
 @Transactional
@@ -179,7 +182,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                                     Integer clusterId, String serviceName, List<ServiceConfig> list,
                                     Integer roleGroupId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        ServiceConfigMap.put(
+        ServiceConfigMap.put(clusterInfo.getClusterCode() + Constants.UNDERLINE + serviceName + Constants.CONFIG,
+                list);
+        putRemoteServiceConfigMap(
                 clusterInfo.getClusterCode() + Constants.UNDERLINE + serviceName + Constants.CONFIG,
                 list);
         HashMap<String, ServiceConfig> map = new HashMap<>();
@@ -288,8 +293,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = new HashMap<>();
-        if (CacheUtils.constainsKey(hostMapKey)) {
-            map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        if (CacheOperateUtils.containsKey(hostMapKey)) {
+            map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
         }
 
         for (ServiceRoleHostMapping serviceRoleHostMapping : list) {
@@ -332,7 +337,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public Result getServiceRoleDeployOverview(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map =
-                (HashMap<String, List<String>>) CacheUtils.get(
+                (HashMap<String, List<String>>) CacheOperateUtils.get(
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING);

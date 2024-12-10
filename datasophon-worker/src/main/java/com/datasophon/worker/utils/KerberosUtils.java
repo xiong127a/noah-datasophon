@@ -30,7 +30,7 @@ import cn.hutool.http.HttpUtil;
 public class KerberosUtils {
 
     public static void downloadKeytabFromMaster(String principal, String keytabName) {
-        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
+        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST).split(",")[0];
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
         Integer clusterId = PropertyUtils.getInt("clusterId");
         String hostname = CacheUtils.getString("hostname");

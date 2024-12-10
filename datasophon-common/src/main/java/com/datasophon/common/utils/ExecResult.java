@@ -27,6 +27,8 @@ public class ExecResult implements Serializable {
 
     private String execErrOut;
 
+    private Object object;
+
     public String getExecErrOut() {
         return execErrOut;
     }
@@ -49,5 +51,13 @@ public class ExecResult implements Serializable {
 
     public void setExecOut(String execOut) {
         this.execOut = execOut;
+    }
+
+    public Object getObject() {
+        return object;
+    }
+
+    public void setObject(Object object) {
+        this.object = object;
     }
 }

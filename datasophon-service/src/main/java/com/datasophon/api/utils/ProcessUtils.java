@@ -68,6 +68,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.datasophon.api.utils.CacheOperateUtils.putRemoteVariableCache;
+
 public class ProcessUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ProcessUtils.class);
@@ -402,6 +404,7 @@ public class ProcessUtils {
             variableService.save(newClusterVariable);
         }
         globalVariables.put(variableName, value);
+        putRemoteVariableCache(variableName,value,clusterId);
     }
 
     public static void hdfsEcMethond(Integer serviceInstanceId, ClusterServiceRoleInstanceService roleInstanceService,

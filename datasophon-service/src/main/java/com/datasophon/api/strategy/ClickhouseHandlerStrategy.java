@@ -3,6 +3,7 @@ package com.datasophon.api.strategy;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -34,7 +35,7 @@ public class ClickhouseHandlerStrategy implements ServiceRoleStrategy {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
         if (Objects.nonNull(hostMap)) {
             List<String> hostList = hostMap.get("ClickHouse");

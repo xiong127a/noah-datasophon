@@ -3,16 +3,13 @@ package com.datasophon.k8s.strategy;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.*;
-import io.fabric8.kubernetes.client.KubernetesClient;
+import com.datasophon.k8s.util.K8sKerberosUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class K8sResourceManagerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 

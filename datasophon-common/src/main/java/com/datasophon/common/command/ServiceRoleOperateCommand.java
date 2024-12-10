@@ -50,6 +50,8 @@ public class ServiceRoleOperateCommand extends BaseCommand implements Serializab
 
     private Boolean enableKerberos;
 
+    private String kaAdminHost;
+
     public ServiceRoleOperateCommand() {
         this.enableRangerPlugin = false;
         this.enableKerberos = false;

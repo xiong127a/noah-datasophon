@@ -25,10 +25,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.RunAs;
-import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.FileUtils;
-import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.common.utils.*;
 import com.datasophon.worker.utils.TaskConstants;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
@@ -37,7 +34,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
 public class InstallServiceHandler {
@@ -72,7 +72,7 @@ public class InstallServiceHandler {
             String packagePath = destDir + packageName;
 
             // 判断是否需要下载包文件
-            Boolean needDownLoad = !Objects.equals(PropertyUtils.getString(Constants.MASTER_HOST), CacheUtils.get(Constants.HOSTNAME))
+            Boolean needDownLoad = !GetMasterHost().contains(CacheUtils.get(Constants.HOSTNAME))
                     && isNeedDownloadPkg(packagePath, command.getPackageMd5());
 
             if (Boolean.TRUE.equals(needDownLoad)) {
@@ -117,30 +117,57 @@ public class InstallServiceHandler {
 
 
     private void downloadPkg(String packageName, String packagePath) {
-        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
+
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
-        String downloadUrl = "http://" + masterHost + ":" + masterPort
+
+        List<String> masterHosts = GetMasterHost();
+        String downloadUrl = "http://" + masterHosts.get(0) + ":" + masterPort
                 + "/ddh/service/install/downloadPackage?packageName=" + packageName;
 
-        logger.info("download url is {}", downloadUrl);
+        logger.info("default download url is {}", downloadUrl);
+        boolean downloadSuccess = false;
+        for (int i = 0; i < masterHosts.size(); i++) {
+            try {
+                String masterHost = masterHosts.get(i);
+                downloadUrl = "http://" + masterHost + ":" + masterPort
+                        + "/ddh/service/install/downloadPackage?packageName=" + packageName;
 
-        HttpUtil.downloadFile(downloadUrl, FileUtil.file(packagePath), new StreamProgress() {
+                logger.info("Trying to download from {}", downloadUrl);
 
-            @Override
-            public void start() {
-                Console.log("start to install。。。。");
+                // 下载文件
+                HttpUtil.downloadFile(downloadUrl, FileUtil.file(packagePath), new StreamProgress() {
+
+                    @Override
+                    public void start() {
+                        Console.log("start to install。。。。");
+                    }
+
+                    @Override
+                    public void progress(long progressSize, long l1) {
+                        Console.log("installed：{}", FileUtil.readableFileSize(progressSize));
+                    }
+
+                    @Override
+                    public void finish() {
+                        Console.log("install success！");
+                    }
+                });
+                downloadSuccess = true;
+                logger.info("Download package {} success from {}", packageName, masterHost);
+                break;  // 跳出循环，表示下载成功
+            } catch (Exception e) {
+                // 捕获异常并记录日志
+                logger.error("Download failed from {}. Error: {}", masterHosts.get(i), e.getMessage());
+
+                // 如果是最后一个主机，抛出异常
+                if (i == masterHosts.size() - 1) {
+                    throw new RuntimeException("Download failed from all hosts");
+                }
             }
-
-            @Override
-            public void progress(long progressSize, long l1) {
-                Console.log("installed：{}", FileUtil.readableFileSize(progressSize));
-            }
-
-            @Override
-            public void finish() {
-                Console.log("install success！");
-            }
-        });
+        }
+        if (!downloadSuccess) {
+            logger.error("Download package {} failed from all hosts", packageName);
+        }
         logger.info("download package {} success", packageName);
     }
 

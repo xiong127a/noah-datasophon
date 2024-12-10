@@ -1,13 +1,8 @@
 package com.datasophon.k8s.util;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.StreamProgress;
-import cn.hutool.core.lang.Console;
-import cn.hutool.http.HttpUtil;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.common.utils.ShellUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +14,7 @@ import static com.datasophon.k8s.util.K8sMinaUtils.uploadFile;
 public class K8sKerberosUtils {
 
     public static void downloadKeytabFromMaster(String hostname, String principal, String keytabName) {
-        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST);
+        String masterHost = PropertyUtils.getString(Constants.MASTER_HOST).split(",")[0];
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
         Integer clusterId = PropertyUtils.getInt("clusterId");
 

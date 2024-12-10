@@ -215,6 +215,36 @@ public class K8sMinaUtils {
     }
 
     /**
+     * 下载文件
+     * @param hostname
+     * @param remotePath
+     * @param fileName
+     * @return
+     */
+    public static InputStream downloadFile(String hostname, String remotePath, String fileName) {
+        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+            try {
+                // 拼接远程文件的完整路径
+                Path remoteFile = sftp.getDefaultDir().resolve(remotePath).resolve(fileName);
+
+                // 检查远程文件是否存在
+                if (!Files.exists(remoteFile)) {
+                    LOG.error("Remote file does not exist: {}", remoteFile);
+                    return null;  // 返回null表示文件不存在
+                }
+
+                // 返回远程文件的输入流
+                return Files.newInputStream(remoteFile);
+
+            } catch (IOException e) {
+                LOG.error("File download failed", e);
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+
+    /**
      * 创建目录
      */
     public static boolean createDir(String hostname, String path) throws IOException {
