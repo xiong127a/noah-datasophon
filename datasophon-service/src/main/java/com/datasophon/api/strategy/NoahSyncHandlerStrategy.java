@@ -1,25 +1,21 @@
 package com.datasophon.api.strategy;
 
-import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.HostUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -41,7 +37,7 @@ public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements S
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
         if (Objects.nonNull(hostMap)) {
             List<String> noahSyncServers = hostMap.get("NoahSyncServer");

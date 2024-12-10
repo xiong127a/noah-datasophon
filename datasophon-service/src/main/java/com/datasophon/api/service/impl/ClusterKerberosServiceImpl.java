@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 import static com.datasophon.k8s.util.K8sUtil.runCmd;
 
 @Service("clusterKerberosService")
@@ -142,11 +143,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
 
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(clusterId);
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        String hostname = globalVariables.get("${openldapIp}");
-        if (Objects.isNull(hostname)){
-            hostname= PropertyUtils.getString(Constants.MASTER_HOST);
-        }
+        String hostname =GetMasterHost().get(0);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
             runCmd(Constants.DATASOPHON,
                     client,

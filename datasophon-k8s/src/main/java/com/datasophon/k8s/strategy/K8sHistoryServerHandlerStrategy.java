@@ -17,21 +17,18 @@
 
 package com.datasophon.k8s.strategy;
 
-import cn.hutool.core.io.FileUtil;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
-import com.datasophon.k8s.util.*;
+import com.datasophon.k8s.util.K8sKerberosUtils;
+import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class K8sHistoryServerHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 

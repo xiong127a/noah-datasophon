@@ -8,9 +8,9 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.utils.KerberosUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.StringJoiner;
+
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 public class HIVEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 
@@ -103,7 +103,7 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         // /opt/datasophon/hadoop-3.3.3/bin/hdfs dfsadmin -setSpaceQuota 1024 /tenant/t1
         StringJoiner commands = new StringJoiner(" ");
         if (hiveResource.getEnableKerberos()) {
-            KerberosUtils.downloadKeytabFromMaster("nn/" + CacheUtils.get(Constants.HOSTNAME), "nn.service.keytab");
+            KerberosUtils.downloadKeytabFromMaster(GetMasterHost().get(0),"nn/" + CacheUtils.get(Constants.HOSTNAME), "nn.service.keytab");
             commands.add("sudo");
             commands.add("-u");
             commands.add("hdfs");

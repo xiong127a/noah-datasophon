@@ -1,9 +1,9 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -42,7 +42,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
         List<String> masterHostList = map.get("RedisMaster");
         List<String> workerHostList = map.get("RedisWorker");

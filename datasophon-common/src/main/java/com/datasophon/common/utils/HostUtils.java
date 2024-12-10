@@ -22,6 +22,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import com.datasophon.common.Constants;
 import com.google.common.net.InetAddresses;
 
 /**
@@ -83,5 +84,10 @@ public enum HostUtils {
             throw new RuntimeException(e);
         }
     }
+    public static List<String> GetMasterHost() {
+        String[] array = PropertyUtils.getArray(Constants.MASTER_HOST, ",");
+        return Arrays.asList(array);
+    }
+
 
 }

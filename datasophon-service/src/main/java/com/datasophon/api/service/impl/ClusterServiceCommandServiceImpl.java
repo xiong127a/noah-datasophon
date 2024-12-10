@@ -37,6 +37,7 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -116,7 +117,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
         List<String> commandIds = new ArrayList<String>();
 
-        Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheUtils
+        Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheOperateUtils
                 .get(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING);
 
         for (String serviceName : serviceNames) {

@@ -147,14 +147,11 @@ public class K8sServiceHandler {
 
     public ExecResult stop(String kubeConfig) {
         ExecResult execResult = new ExecResult();
-        Boolean status = (Boolean) CacheUtils.get(serviceRoleFullName);
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         logger.info("本地资源文件: {}", yamlFile);
 
         File yamlFileObj = new File(yamlFile);
-        if (Objects.isNull(status)) {
-            CacheUtils.put(serviceRoleFullName, false);
-        }
+
         if (!yamlFileObj.exists()) {
             logger.error("k8s资源文件不存在: {}", yamlFile);
             execResult.setExecErrOut("k8s资源文件不存在: " + yamlFile);
@@ -169,7 +166,6 @@ public class K8sServiceHandler {
                         .inNamespace(Constant.K8S_NAMESPACE)
                         .delete();
                 execResult.setExecResult(true);
-                CacheUtils.put(serviceRoleFullName, true);
                 CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
             } catch (Exception e) {
                 logger.error("停止deployment时发生异常: {}", e.getMessage(), e);
@@ -180,35 +176,7 @@ public class K8sServiceHandler {
         return execResult;
     }
 
-    /**
-     * @param timeoutDuration 等待时长
-     * @param timeUnit        市场单位
-     */
-    private boolean waitForCondition(long timeoutDuration, TimeUnit timeUnit) {
-        boolean conditionMet = false;
-        long startTime = System.currentTimeMillis();
-        long timeout = timeUnit.toMillis(timeoutDuration);
 
-        while (System.currentTimeMillis() - startTime < timeout) {
-            // 假设这里是检查条件是否变为 true 的逻辑
-            conditionMet = (Boolean) CacheUtils.get(serviceRoleFullName);
-
-            if (conditionMet) {
-                return true;
-            }
-
-            try {
-                TimeUnit.SECONDS.sleep(5); // 每隔5秒检查一次
-            } catch (InterruptedException e) {
-                logger.error("等待过程中被中断", e);
-                Thread.currentThread().interrupt(); // 保留中断状态
-                return false;
-            }
-        }
-
-        logger.info("超时等待结束，状态未变为 true，将 execResult 设为 false");
-        return false;
-    }
 
     private void addProcessStatus() {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);

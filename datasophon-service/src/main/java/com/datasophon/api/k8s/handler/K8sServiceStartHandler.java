@@ -49,7 +49,7 @@ public class K8sServiceStartHandler extends ServiceHandler {
         k8sServiceRoleOperateCommand.setClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setConfigFileMap(serviceRoleInfo.getConfigFileMap());
         k8sServiceRoleOperateCommand.setHostname(serviceRoleInfo.getHostname());
-        k8sServiceRoleOperateCommand.setGraphHost(globalVariables.get("${nebulaGraphHost}"));
+
         k8sServiceRoleOperateCommand.setRunAs(serviceRoleInfo.getRunAs());
         k8sServiceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
         k8sServiceRoleOperateCommand.setServiceRoleType(serviceRoleInfo.getRoleType());
@@ -57,8 +57,8 @@ public class K8sServiceStartHandler extends ServiceHandler {
                 SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         k8sServiceRoleOperateCommand.setKubeConfig(kubeConfig);
-        String nnHost = globalVariables.get("${nn1}");
-        k8sServiceRoleOperateCommand.setNnHost(nnHost);
+        k8sServiceRoleOperateCommand.setGraphHost(globalVariables.get("${nebulaGraphHost}"));
+        k8sServiceRoleOperateCommand.setNnHost(globalVariables.get("${nn1}"));
         Boolean enableKerberos = enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName());
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         k8sServiceRoleOperateCommand.setEnableKerberos(enableKerberos);

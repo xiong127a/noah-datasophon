@@ -6,15 +6,16 @@ import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.k8s.actor.K8sYamlDeploymentActor;
+import org.springframework.util.ObjectUtils;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -59,7 +60,10 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+        if (ObjectUtils.isEmpty(map)){
+
+        }
         List<String> hostList =
                 map==null?new ArrayList<>():map.get(serviceRoleInfo.getName());
         k8SGenerateDeploymentYamlCommand.setRoleNodeCnt(hostList==null?0:hostList.size());
