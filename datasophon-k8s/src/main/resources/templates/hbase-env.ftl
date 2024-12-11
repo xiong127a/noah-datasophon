@@ -122,6 +122,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE -javaag
 # The directory where pid files are stored. /tmp by default.
 # export HBASE_PID_DIR=/var/hadoop/pids
 export HBASE_PID_DIR=${hbasePidDir}
+export HBASE_LOG_DIR=${hbaseLogDir}
 # Seconds to sleep between slave commands.  Unset by default.  This
 # can be useful in large clusters, where, e.g., slave rsyncs can
 # otherwise arrive faster than the master can service them.
