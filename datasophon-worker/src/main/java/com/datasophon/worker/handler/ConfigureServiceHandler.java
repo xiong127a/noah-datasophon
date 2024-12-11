@@ -151,6 +151,10 @@ public class ConfigureServiceHandler {
                         customConfList.add(serviceConfig);
                         customConfList.add(serviceConfig1);
                     }
+                    if ("NoahJobServer".equals(serviceRoleName) && "noahjob.fs.defaultFS".equals(config.getName())) {
+                        config.setName("fs.defaultFS");
+                    }
+
 //                    if ("fe_priority_networks".equals(config.getName())
 //                            || "be_priority_networks".equals(config.getName())) {
 //                        config.setName("priority_networks");

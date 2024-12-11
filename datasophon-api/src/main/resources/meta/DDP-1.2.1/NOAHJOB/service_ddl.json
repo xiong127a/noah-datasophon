@@ -91,7 +91,7 @@
           "resource.alibaba.cloud.oss.bucket.name",
           "resource.alibaba.cloud.oss.endpoint",
           "hdfs.root.user",
-          "fs.defaultFS",
+          "noahjob.fs.defaultFS",
           "hadoop.security.authentication.startup.state",
           "java.security.krb5.conf.path",
           "login.user.keytab.username",
@@ -311,8 +311,8 @@
       "hidden": false,
       "defaultValue": "hdfs"
     },{
-      "name": "fs.defaultFS",
-      "label": "fs.defaultFS",
+      "name": "noahjob.fs.defaultFS",
+      "label": "noahjob.fs.defaultFS",
       "description": "",
       "required": true,
       "type": "input",
