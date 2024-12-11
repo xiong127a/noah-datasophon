@@ -105,8 +105,8 @@
             }
         },
         {
-            "name": "Phoenix QueryServer",
-            "label": "Phoenix QueryServer",
+            "name": "PhoenixQueryServer",
+            "label": "PhoenixQueryServer",
             "roleType": "master",
             "runAs": {
                 "user": "hbase",
