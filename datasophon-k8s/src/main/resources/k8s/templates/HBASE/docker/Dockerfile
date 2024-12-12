@@ -12,8 +12,8 @@ ENV BASE_URL=http://192.168.1.30
 WORKDIR /opt/datasophon
 
 # 下载 Hadoop 和 HBase 压缩包并设置权限
-ADD --checksum=sha256:90eed5e6f5a0575f85cd03eb806ef7ceba58286fe99a794bf90bf5bc99bfed86 --chown=hbase:hadoop --chmod=775 ${BASE_URL}/BDP/packages/1.2.1/hbase-2.2.7.tar.gz /opt/datasophon/
-ADD --checksum=sha256:5cb42b38d6064b6eaf920fb7d678b5bd3ea5a575210a1044b21543fc1b873548 --chown=hdfs:hadoop --chmod=775 ${BASE_URL}/BDP/packages/1.2.1/hadoop-3.3.3-mini.tar.gz /opt/datasophon/
+ADD  --chown=hbase:hadoop --chmod=775 ${BASE_URL}/BDP/packages/1.2.1/hbase-2.2.7.tar.gz /opt/datasophon/
+ADD  --chown=hdfs:hadoop --chmod=775 ${BASE_URL}/BDP/packages/1.2.1/hadoop-3.3.3-mini.tar.gz /opt/datasophon/
 
 # 设置工作目录
 
