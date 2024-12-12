@@ -166,6 +166,13 @@
                     "hbase.quota.enabled",
                     "phoenix.schema.mapSystemTablesToNamespace",
                     "phoenix.schema.isNamespaceMappingEnabled",
+                    "phoenix.queryserver.loadbalancer.enabled",
+                    "phoenix.queryserver.base.path",
+                    "phoenix.queryserver.service.name",
+                    "phoenix.queryserver.keytab.file",
+                    "phoenix.queryserver.kerberos.principal",
+                    "phoenix.queryserver.http.keytab.file",
+                    "phoenix.queryserver.http.kerberos.principal",
                     "custom.hbase.site.xml"
                 ]
             },
@@ -455,6 +462,58 @@
             "defaultValue": "-Djava.security.auth.login.config=${HBASE_HOME}/conf/zk-jaas.conf"
         },
         {
+            "name": "phoenix.queryserver.keytab.file",
+            "label": "phoenix.queryserver.keytab.file",
+            "description": "",
+            "configType": "map",
+            "configWithKerberos": true,
+            "required": false,
+            "type": "input",
+            "value": "/etc/security/keytab/hbase.keytab",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "/etc/security/keytab/hbase.keytab"
+        },
+        {
+            "name": "phoenix.queryserver.kerberos.principal",
+            "label": "phoenix.queryserver.kerberos.principal",
+            "description": "",
+            "configType": "map",
+            "configWithKerberos": true,
+            "required": false,
+            "type": "input",
+            "value": "hbase/_HOST@HADOOP.COM",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "hbase/_HOST@HADOOP.COM"
+        },
+        {
+            "name": "phoenix.queryserver.http.keytab.file",
+            "label": "phoenix.queryserver.http.keytab.file",
+            "description": "",
+            "configType": "map",
+            "configWithKerberos": true,
+            "required": false,
+            "type": "input",
+            "value": "/etc/security/keytab/hbase.keytab",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "/etc/security/keytab/hbase.keytab"
+        },
+        {
+            "name": "phoenix.queryserver.http.kerberos.principal",
+            "label": "phoenix.queryserver.http.kerberos.principal",
+            "description": "",
+            "configType": "map",
+            "configWithKerberos": true,
+            "required": false,
+            "type": "input",
+            "value": "hbase/_HOST@HADOOP.COM",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "hbase/_HOST@HADOOP.COM"
+        },
+        {
             "name": "hbaseHome",
             "label": "HBASE_HOME",
             "description": "HBase的安装目录",
@@ -498,6 +557,39 @@
             "configurableInWizard": true,
             "hidden": false,
             "defaultValue": "true"
+        },
+        {
+            "name": "phoenix.queryserver.loadbalancer.enabled",
+            "label": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
+            "description": "PQS 是否应该在 ZooKeeper 中为负载均衡器注册自身。",
+            "required": true,
+            "type": "input",
+            "value": "true",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "true"
+        },
+        {
+            "name": "phoenix.queryserver.base.path",
+            "label": "PQS 实例应将自身注册到的根 znode。",
+            "description": "PQS 实例应将自身注册到的根 znode。",
+            "required": true,
+            "type": "input",
+            "value": "/phoenix",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "/phoenix"
+        },
+        {
+            "name": "phoenix.queryserver.service.name",
+            "label": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
+            "description": "用于将此 PQS 实例与其他 PQS 实例区分开来的唯一名称。",
+            "required": true,
+            "type": "input",
+            "value": "${host}-queryserver",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "${host}-queryserver"
         },
         {
             "name": "esAuditEnable",
