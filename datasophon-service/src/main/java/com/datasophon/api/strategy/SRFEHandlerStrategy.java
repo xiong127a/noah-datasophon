@@ -115,8 +115,4 @@ public class SRFEHandlerStrategy implements ServiceRoleStrategy {
         return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }
 
-    @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        handlerServiceRoleCheck(roleInstanceEntity, map);
-    }
 }

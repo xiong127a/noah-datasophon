@@ -18,7 +18,6 @@
 package com.datasophon.api.strategy;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.util.StrUtil;
@@ -39,7 +38,6 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.k8s.util.K8sUtil;
-import org.omg.PortableInterceptor.ACTIVE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -94,6 +92,7 @@ public interface ServiceRoleStrategy {
      */
     default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
                                             Map<String, ClusterServiceRoleInstanceEntity> map) {
+        handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
     default String getKubeConfig(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
