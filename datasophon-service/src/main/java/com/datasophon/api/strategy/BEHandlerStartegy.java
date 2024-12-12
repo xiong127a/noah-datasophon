@@ -77,11 +77,6 @@ public class BEHandlerStartegy implements ServiceRoleStrategy {
 
     }
 
-    @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        handlerServiceRoleCheck(roleInstanceEntity, map);
-    }
-
     private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
                                       Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {

@@ -17,7 +17,6 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.ObjUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ProcInfo;
@@ -73,11 +72,6 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
             serviceRoleInfo.setSortNum(2);
         }
 
-    }
-
-    @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
     @Override

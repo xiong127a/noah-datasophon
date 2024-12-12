@@ -17,7 +17,6 @@
 
 package com.datasophon.api.strategy;
 
-import com.sun.corba.se.impl.ior.NewObjectKeyTemplateBase;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.Map;
@@ -79,6 +78,8 @@ public class ServiceRoleStrategyContext {
         map.put("HUE", new HueHandlerStrategy());
         map.put("NEBULAGRAPH", new NebulaGraphHandlerStrategy());
         map.put("KIBANA", new KibanaSearchHandlerStrategy());
+        map.put("KibanaServer", new KibanaSearchHandlerStrategy());
+        map.put("LOGSTASH", new LogstashHandlerStrategy());
         map.put("NOAHSYNC",new NoahSyncHandlerStrategy());
         map.put("REDISSENTINEL", new RedisSentinelHandlerStrategy());
     }

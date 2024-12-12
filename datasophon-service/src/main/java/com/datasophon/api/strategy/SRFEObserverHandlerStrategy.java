@@ -18,9 +18,7 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.host.impl.ClusterHostServiceImpl;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ProcInfo;
@@ -114,8 +112,4 @@ public class SRFEObserverHandlerStrategy implements ServiceRoleStrategy {
         return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }
 
-    @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        handlerServiceRoleCheck(roleInstanceEntity, map);
-    }
 }
