@@ -1,0 +1,86 @@
+{
+  "name": "PAIMON",
+  "label": "PAIMON",
+  "description": "数据存储引擎",
+  "version": "0.8.0",
+  "sortNum": 46,
+  "dependencies":[],
+  "packageName": "paimon-0.8.0.tar.gz",
+  "decompressPackageName": "paimon-0.8.0",
+  "roles": [
+    {
+      "name": "PaimonClient",
+      "label": "PaimonClient",
+      "roleType": "client",
+      "runAs": {},
+      "cardinality": "1",
+      "logFile": "paimon.log",
+      "jmxPort": "",
+      "sortNum": 1,
+      "startRunner": {
+        "timeout": "60",
+        "program": "start.sh",
+        "args": []
+      },
+      "stopRunner": {
+        "timeout": "60",
+        "program": "stop.sh",
+        "args": []
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "status.sh",
+        "args": []
+      }
+    }
+  ],
+  "configWriter": {
+    "generators": [
+      {
+        "filename": "config.properties",
+        "configFormat": "properties",
+        "outputDirectory": "",
+        "includeParams": [
+          "enableSpark",
+          "enableFlink",
+          "enableHive"
+        ]
+      }
+    ]
+  },
+  "parameters": [
+    {
+      "name": "enableSpark",
+      "label": "Spark集成Paimon",
+      "description": "Spark集成Paimon",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "enableFlink",
+      "label": "Flink集成Paimon",
+      "description": "Flink集成Paimon",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+      "name": "enableHive",
+      "label": "Hive集成Paimon",
+      "description": "Hive集成Paimon",
+      "required": true,
+      "type": "switch",
+      "value": false,
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    }
+  ]
+}
