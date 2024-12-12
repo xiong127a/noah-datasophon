@@ -31,9 +31,13 @@ public class ServiceCacheSyncHandler {
 
     public ExecResult serviceCacheSync(Object object) {
         ExecResult execResult = new ExecResult();
-
         execResult.setExecResult(false);
-        Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
+        boolean isHa = PropertyUtils.getBoolean("isHa");
+        if (!isHa){
+            return execResult;
+        }
+
+        Timeout timeout = new Timeout(Duration.create(5, TimeUnit.SECONDS));
         List<String> masterhosts = GetMasterHost();
 
         for (String hostname : masterhosts) {

@@ -305,7 +305,7 @@ public class K8sYamlDeploymentHandler {
             addConfigFile(volumePathSet, "openldap-data", "/var/lib/openldap/");
             addConfigFile(volumePathSet, "openldap-conf", "/etc/openldap/slapd.d");
         }
-
+        //redis数据目录
         if ("REDIS".equals(serviceName)) {
             addConfigFile(volumePathSet, "redis-cluster", appHome + "/cluster/");
         }
@@ -324,6 +324,10 @@ public class K8sYamlDeploymentHandler {
 
         if ("HUE".equals(serviceName)) {
             addConfigFile(volumePathSet, "hive-config", "/opt/datasophon/hive-3.1.0/conf");
+        }
+        //redisSentinel数据目录
+        if ("RedisSentinelMaster".equals(serviceRoleName)||"RedisSentinelSlave".equals(serviceRoleName)) {
+            addConfigFile(volumePathSet, "redis-sentinel-data", appHome + "/var/data/");
         }
 
     }
