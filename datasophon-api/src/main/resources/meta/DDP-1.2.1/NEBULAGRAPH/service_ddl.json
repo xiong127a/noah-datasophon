@@ -17,6 +17,7 @@
             "cardinality": "1+",
             "logFile": "logs/nebula-metad.INFO",
             "jmxPort": 19559,
+            "sortNum": 1,
             "startRunner": {
                 "timeout": "1200",
                 "program": "scripts/nebula.service",
@@ -47,6 +48,7 @@
             "label": "Graph",
             "roleType": "master",
             "cardinality": "1+",
+            "sortNum": 2,
             "logFile": "logs/nebula-graphd.INFO",
             "jmxPort": 19669,
             "startRunner": {
