@@ -78,8 +78,9 @@ public class ServiceRoleStrategyContext {
         map.put("HUE", new HueHandlerStrategy());
         map.put("NEBULAGRAPH", new NebulaGraphHandlerStrategy());
         map.put("KIBANA", new KibanaSearchHandlerStrategy());
-        map.put("KibanaServer", new KibanaSearchHandlerStrategy());
         map.put("LOGSTASH", new LogstashHandlerStrategy());
+        map.put("KibanaServer", new KibanaSearchHandlerStrategy());
+        map.put("LogstashServer", new LogstashHandlerStrategy());
         map.put("NOAHSYNC",new NoahSyncHandlerStrategy());
         map.put("REDISSENTINEL", new RedisSentinelHandlerStrategy());
     }
