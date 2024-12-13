@@ -19,7 +19,7 @@
       "cardinality": "1+",
       "logFile": "logs/hiveserver2.out",
       "jmxPort": 11000,
-      "sortNum": 1,
+      "sortNum": 2,
       "startRunner": {
         "timeout": "60",
         "program": "control_hive.sh",
@@ -69,7 +69,7 @@
       "cardinality": "1+",
       "logFile": "logs/hivemetastore.out",
       "jmxPort": 12000,
-      "sortNum": 2,
+      "sortNum": 1,
       "startRunner": {
         "timeout": "60",
         "program": "control_hive.sh",
