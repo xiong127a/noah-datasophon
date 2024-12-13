@@ -28,11 +28,6 @@ public class NebulaGraphHandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
@@ -50,13 +45,4 @@ public class NebulaGraphHandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

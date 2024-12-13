@@ -114,9 +114,4 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

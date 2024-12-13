@@ -19,15 +19,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ClickhouseHandlerStrategy implements ServiceRoleStrategy {
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -53,13 +44,4 @@ public class ClickhouseHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

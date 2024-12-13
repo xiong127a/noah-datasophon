@@ -41,21 +41,6 @@ public class KAdminHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-        // To be implemented, if needed.
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-        // To be implemented, if needed.
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-        // To be implemented, if needed.
-    }
-
 
     @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {

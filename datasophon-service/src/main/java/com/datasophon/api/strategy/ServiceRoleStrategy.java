@@ -60,32 +60,32 @@ public interface ServiceRoleStrategy {
     /**
      * 保存角色host映射关系时根据roleName调用
      */
-    void handler(Integer clusterId, List<String> hosts);
+    default void handler(Integer clusterId, List<String> hosts){}
 
     /**
      * 保存服务配置时根据ServiceName调用
      */
-    void handlerConfig(Integer clusterId, List<ServiceConfig> list);
+    default void handlerConfig(Integer clusterId, List<ServiceConfig> list){}
 
     /**
      * 获取服务配置时修改配置，根据ServiceName调用
      * handler之后handlerConfig之前调用
      * 提取角色本身配置和handler中自定义的变量
      */
-    void getConfig(Integer clusterId, List<ServiceConfig> list);
+    default void getConfig(Integer clusterId, List<ServiceConfig> list){}
 
     /**
      * 构建DAG时处理角色关系，例如设置主从角色，设置搭建顺序等。
      * <p>
      * 可以将自定义角色配置传递给worker
      */
-    void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname);
+    default void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname){}
 
     /**
      * 定期检查角色处理
      */
-    void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                 Map<String, ClusterServiceRoleInstanceEntity> map);
+    default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                 Map<String, ClusterServiceRoleInstanceEntity> map){}
 
     /**
      * 定期检查角色处理（K8S）

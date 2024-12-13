@@ -97,9 +97,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         list.addAll(kbConfigs);
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {

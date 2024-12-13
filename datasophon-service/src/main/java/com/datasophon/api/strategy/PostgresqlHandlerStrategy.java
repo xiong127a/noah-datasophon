@@ -21,15 +21,6 @@ public class PostgresqlHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
@@ -38,8 +29,4 @@ public class PostgresqlHandlerStrategy implements ServiceRoleStrategy {
         serviceRoleInfo.setMasterHost(postgresqlMaster);
     }
 
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }
