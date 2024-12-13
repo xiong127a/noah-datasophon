@@ -17,11 +17,6 @@ import java.util.stream.Collectors;
 
 public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         for (ServiceConfig config : list) {
@@ -48,10 +43,6 @@ public class KibanaSearchHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
 
     @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {

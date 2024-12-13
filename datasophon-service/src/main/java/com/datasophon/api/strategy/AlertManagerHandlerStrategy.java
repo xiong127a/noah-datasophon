@@ -38,10 +38,6 @@ import java.util.stream.Collectors;
 
 public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {

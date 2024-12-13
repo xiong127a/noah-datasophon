@@ -21,15 +21,6 @@ public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements S
 
     private static final Logger logger = LoggerFactory.getLogger(NoahSyncHandlerStrategy.class);
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -57,13 +48,4 @@ public class NoahSyncHandlerStrategy extends ServiceHandlerAbstract implements S
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

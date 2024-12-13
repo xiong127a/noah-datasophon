@@ -131,22 +131,6 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         list.addAll(kbConfigs);
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
-
     private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {
         ClusterServiceInstanceService serviceInstanceService =
                 SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);

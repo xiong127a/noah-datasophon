@@ -11,11 +11,6 @@ import java.util.Map;
 
 public class StarrocksHandlerStrategy implements ServiceRoleStrategy {
     @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
         getConfig(clusterId, list);
     }
@@ -31,13 +26,4 @@ public class StarrocksHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

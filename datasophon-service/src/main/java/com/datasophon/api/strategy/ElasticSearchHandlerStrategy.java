@@ -54,19 +54,4 @@ public class ElasticSearchHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

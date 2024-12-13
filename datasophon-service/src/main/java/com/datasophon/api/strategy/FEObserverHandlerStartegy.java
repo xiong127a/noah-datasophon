@@ -36,20 +36,6 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(FEObserverHandlerStartegy.class);
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
