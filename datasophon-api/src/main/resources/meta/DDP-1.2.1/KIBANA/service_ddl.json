@@ -44,6 +44,14 @@
                     "kibana"
                 ]
             },
+            "restartRunner": {
+                "timeout": "60",
+                "program": "control_kibana.sh",
+                "args": [
+                    "restart",
+                    "kibana"
+                ]
+            },
             "externalLink": {
               "name": "Kibana Home",
               "label": "Kibana Home",
