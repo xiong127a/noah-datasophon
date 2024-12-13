@@ -1,7 +1,7 @@
 {
   "name": "PAIMON",
   "label": "PAIMON",
-  "description": "数据存储引擎",
+  "description": "分布式数据存储引擎",
   "version": "0.8.0",
   "sortNum": 46,
   "dependencies":[],
