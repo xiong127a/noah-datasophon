@@ -1,0 +1,276 @@
+{
+    "name": "LOGSTASH",
+    "label": "Logstash",
+    "description": "一个开源的数据处理工具，主要用于日志的收集、处理和转发",
+    "version": "7.16.2",
+    "sortNum": 28,
+    "dependencies": [
+
+    ],
+    "packageName": "logstash-7.16.2.tar.gz",
+    "decompressPackageName": "logstash-7.16.2",
+    "roles": [
+        {
+            "name": "LogstashServer",
+            "label": "LogstashServer",
+            "roleType": "master",
+            "cardinality": "1",
+            "logFile": "logs/logstash.log",
+            "startRunner": {
+                "timeout": "60",
+                "program": "control_logstash.sh",
+                "args": [
+                    "start"
+                ]
+            },
+            "stopRunner": {
+                "timeout": "60",
+                "program": "control_logstash.sh",
+                "args": [
+                    "stop"
+                ]
+            },
+            "statusRunner": {
+                "timeout": "60",
+                "program": "control_logstash.sh",
+                "args": [
+                    "status"
+                ]
+            },
+            "restartRunner": {
+                "timeout": "60",
+                "program": "control_logstash.sh",
+                "args": [
+                    "restart"
+                ]
+            }
+        }
+    ],
+    "configWriter": {
+        "generators": [
+            {
+                "filename": "logstash.yml",
+                "configFormat": "properties3",
+                "outputDirectory": "config",
+                "includeParams": [
+                    "config.reload.automatic",
+                    "config.reload.interval",
+                    "queue.type: persisted",
+                    "queue.checkpoint.writes",
+                    "dead_letter_queue.enable",
+                    "xpack.monitoring.enabled",
+                    "xpack.monitoring.elasticsearch.username",
+                    "xpack.monitoring.elasticsearch.password",
+                    "xpack.monitoring.elasticsearch.hosts",
+                    "xpack.monitoring.elasticsearch.sniffing",
+                    "xpack.monitoring.collection.interval",
+                    "xpack.monitoring.collection.pipeline.details.enabled",
+                    "custom.logstash.yml"
+                ]
+            },
+            {
+                "filename": "pipelines.yml",
+                "configFormat": "properties3",
+                "outputDirectory": "config",
+                "includeParams": [
+                    "- pipeline.id",
+                    "  path.config",
+                    "custom.pipelines.yml"
+                ]
+            }
+        ]
+    },
+    "parameters": [
+        {
+            "name": "config.reload.automatic",
+            "label": "启用定时重新加载配置",
+            "description": "启用定时重新加载配置",
+            "required": true,
+            "type": "input",
+            "value": "true",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "true"
+        },
+        {
+            "name": "config.reload.interval",
+            "label": "配置重新加载间隔",
+            "description": "配置重新加载的时间间隔",
+            "required": true,
+            "type": "input",
+            "value": "3s",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "3s"
+        },
+        {
+            "name": "queue.type",
+            "label": "队列类型",
+            "description": "队列类型，可选值为 memory 或 persisted",
+            "required": true,
+            "type": "select",
+            "options": [
+                "memory",
+                "persisted"
+            ],
+            "value": "persisted",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "persisted"
+        },
+        {
+            "name": "queue.checkpoint.writes",
+            "label": "队列检查点写入频率",
+            "description": "队列检查点写入的频率（单位：条目数）",
+            "required": true,
+            "type": "input",
+            "value": "1",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "1"
+        },
+        {
+            "name": "dead_letter_queue.enable",
+            "label": "启用死信队列",
+            "description": "启用死信队列以捕获无法处理的事件",
+            "required": true,
+            "type": "input",
+            "value": "true",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "true"
+        },
+        {
+            "name": "xpack.monitoring.enabled",
+            "label": "启用 X-Pack 监控",
+            "description": "启用 X-Pack 监控功能",
+            "required": true,
+            "type": "input",
+            "value": "false",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "false"
+        },
+        {
+            "name": "xpack.monitoring.elasticsearch.username",
+            "label": "Elasticsearch 用户名",
+            "description": "用于监控的 Elasticsearch 用户名",
+            "required": false,
+            "type": "input",
+            "configType": "map2",
+            "value": "elastic",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "elastic"
+        },
+        {
+            "name": "xpack.monitoring.elasticsearch.password",
+            "label": "Elasticsearch 密码",
+            "description": "用于监控的 Elasticsearch 密码",
+            "required": false,
+            "type": "input",
+            "configType": "map2",
+            "value": "elasticpassword",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "elasticpassword"
+        },
+        {
+            "name": "xpack.monitoring.elasticsearch.hosts",
+            "label": "Elasticsearch 主机地址",
+            "description": "Elasticsearch 的主机地址列表",
+            "separator": ",",
+            "open": "[",
+            "close": "]",
+            "required": true,
+            "type": "multiple",
+            "value": " ",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "${host}"
+        },
+        {
+            "name": "xpack.monitoring.elasticsearch.sniffing",
+            "label": "启用 Elasticsearch 发现机制",
+            "description": "启用 Elasticsearch 自动发现机制",
+            "required": true,
+            "type": "input",
+            "value": "false",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "false"
+        },
+        {
+            "name": "xpack.monitoring.collection.interval",
+            "label": "监控数据收集间隔",
+            "description": "监控数据收集的时间间隔（单位：秒）",
+            "required": true,
+            "type": "input",
+            "value": "90",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "90"
+        },
+        {
+            "name": "xpack.monitoring.collection.pipeline.details.enabled",
+            "label": "启用管道详细信息收集",
+            "description": "启用管道详细信息的收集",
+            "required": true,
+            "type": "input",
+            "value": "false",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "false"
+        },
+        {
+            "name": "- pipeline.id",
+            "label": "管道 ID",
+            "description": "Logstash 管道的唯一标识符",
+            "required": true,
+            "type": "input",
+            "value": "main",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "main"
+        },
+        {
+            "name": "  path.config",
+            "label": "配置文件路径",
+            "description": "Logstash 配置文件的路径",
+            "required": true,
+            "type": "input",
+            "value": "/etc/logstash/conf.d/*.conf",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "/etc/logstash/conf.d/*.conf"
+        },
+        {
+            "name": "custom.logstash.yml",
+            "label": "自定义配置logstash.yml",
+            "description": "自定义配置",
+            "configType": "custom",
+            "required": false,
+            "type": "multipleWithKey",
+            "value": [
+
+            ],
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": ""
+        },
+        {
+            "name": "custom.pipelines.yml",
+            "label": "自定义配置pipelines.yml",
+            "description": "自定义配置",
+            "configType": "custom",
+            "required": false,
+            "type": "multipleWithKey",
+            "value": [
+
+            ],
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": ""
+        }
+    ]
+}
