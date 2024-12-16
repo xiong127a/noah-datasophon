@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterInfoService;
@@ -35,13 +36,17 @@ import com.datasophon.dao.mapper.FrameServiceRoleMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service("frameServiceRoleService")
 public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMapper, FrameServiceRoleEntity>
         implements
-            FrameServiceRoleService {
+        FrameServiceRoleService {
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -71,8 +76,8 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                             .eq(Constants.SERVICE_NAME, frameServiceEntity.getServiceName())
                             .eq(Constants.SERVICE_ROLE_NAME, role.getServiceRoleName())
                             .eq(Constants.CLUSTER_ID, clusterId));
-            if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
-                List<String> hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(roleInstanceList)) {
+                List<String> hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
                 role.setHosts(hosts);
             } else if (CacheOperateUtils.containsKey(key)) {
                 Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
@@ -116,8 +121,8 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                             .eq(Constants.SERVICE_NAME, frameServiceEntity.getServiceName())
                             .eq(Constants.SERVICE_ROLE_NAME, role.getServiceRoleName())
                             .eq(Constants.CLUSTER_ID, clusterId));
-            if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
-                hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(roleInstanceList)) {
+                hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
 
             } else if (CacheOperateUtils.containsKey(key)) {
                 Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
