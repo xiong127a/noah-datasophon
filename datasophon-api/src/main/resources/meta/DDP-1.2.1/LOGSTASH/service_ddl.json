@@ -11,46 +11,19 @@
     "decompressPackageName": "logstash-7.16.2",
     "roles": [
         {
-            "name": "LogstashServer",
-            "label": "LogstashServer",
-            "roleType": "master",
-            "cardinality": "1",
-            "logFile": "logs/logstash.log",
-            "startRunner": {
-                "timeout": "60",
-                "program": "control_logstash.sh",
-                "args": [
-                    "start"
-                ]
-            },
-            "stopRunner": {
-                "timeout": "60",
-                "program": "control_logstash.sh",
-                "args": [
-                    "stop"
-                ]
-            },
-            "statusRunner": {
-                "timeout": "60",
-                "program": "control_logstash.sh",
-                "args": [
-                    "status"
-                ]
-            },
-            "restartRunner": {
-                "timeout": "60",
-                "program": "control_logstash.sh",
-                "args": [
-                    "restart"
-                ]
-            }
+            "name": "LogstashClient",
+            "label": "LogstashClient",
+            "roleType": "client",
+            "cardinality": "1+",
+            "logFile": "logs/logstash-plain.log"
         }
     ],
     "configWriter": {
         "generators": [
             {
                 "filename": "logstash.yml",
-                "configFormat": "properties3",
+                "configFormat": "custom",
+                "templateName": "logstash.yml.ftl",
                 "outputDirectory": "config",
                 "includeParams": [
                     "config.reload.automatic",
@@ -66,16 +39,6 @@
                     "xpack.monitoring.collection.interval",
                     "xpack.monitoring.collection.pipeline.details.enabled",
                     "custom.logstash.yml"
-                ]
-            },
-            {
-                "filename": "pipelines.yml",
-                "configFormat": "properties3",
-                "outputDirectory": "config",
-                "includeParams": [
-                    "- pipeline.id",
-                    "  path.config",
-                    "custom.pipelines.yml"
                 ]
             }
         ]
@@ -155,9 +118,9 @@
             "name": "xpack.monitoring.elasticsearch.username",
             "label": "Elasticsearch 用户名",
             "description": "用于监控的 Elasticsearch 用户名",
+            "configType": "map2",
             "required": false,
             "type": "input",
-            "configType": "map2",
             "value": "elastic",
             "configurableInWizard": true,
             "hidden": false,
@@ -167,9 +130,9 @@
             "name": "xpack.monitoring.elasticsearch.password",
             "label": "Elasticsearch 密码",
             "description": "用于监控的 Elasticsearch 密码",
+            "configType": "map2",
             "required": false,
             "type": "input",
-            "configType": "map2",
             "value": "elasticpassword",
             "configurableInWizard": true,
             "hidden": false,
@@ -223,44 +186,8 @@
             "defaultValue": "false"
         },
         {
-            "name": "- pipeline.id",
-            "label": "管道 ID",
-            "description": "Logstash 管道的唯一标识符",
-            "required": true,
-            "type": "input",
-            "value": "main",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "main"
-        },
-        {
-            "name": "  path.config",
-            "label": "配置文件路径",
-            "description": "Logstash 配置文件的路径",
-            "required": true,
-            "type": "input",
-            "value": "/etc/logstash/conf.d/*.conf",
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": "/etc/logstash/conf.d/*.conf"
-        },
-        {
             "name": "custom.logstash.yml",
             "label": "自定义配置logstash.yml",
-            "description": "自定义配置",
-            "configType": "custom",
-            "required": false,
-            "type": "multipleWithKey",
-            "value": [
-
-            ],
-            "configurableInWizard": true,
-            "hidden": false,
-            "defaultValue": ""
-        },
-        {
-            "name": "custom.pipelines.yml",
-            "label": "自定义配置pipelines.yml",
             "description": "自定义配置",
             "configType": "custom",
             "required": false,

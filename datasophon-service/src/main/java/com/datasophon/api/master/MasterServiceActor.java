@@ -21,12 +21,9 @@ package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.handler.service.ServiceHandler;
-import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -44,7 +41,11 @@ import com.datasophon.dao.enums.ServiceRoleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class MasterServiceActor extends UntypedActor {
 

@@ -19,6 +19,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -199,7 +200,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         FrameServiceEntity frameServiceEntity =
                 frameService.getServiceByFrameCodeAndServiceName(
                         clusterInfo.getClusterFrame(), serviceName);
-        Boolean configUpdate = false;
+        boolean configUpdate = false;
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
             String variableName = "${" + configName + "}";
@@ -214,7 +215,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // update config-file
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
         buildConfigFileMap(serviceName, clusterInfo, map, configFileMap);
-        if (PROMETHEUS.equals(serviceName.toLowerCase())) {
+        if (PROMETHEUS.equalsIgnoreCase(serviceName)) {
             logger.info("add worker and node to prometheus");
             // add host node to prometheus
             addHostNodeToPrometheus(clusterId, configFileMap);
@@ -375,7 +376,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 serviceRoleInfo.setHostCommandId(hostCommand.getHostCommandId());
                 serviceRoleInfo.setClusterId(clusterId);
                 serviceRoleInfo.setParentName(command.getServiceName());
-                if (Constants.MASTER.equals(serviceRoleInfo.getRoleType())) {
+                if (Constants.MASTER.equals(serviceRoleInfo.getRoleType().getName())) {
                     masterRoles.add(serviceRoleInfo);
                 } else {
                     elseRoles.add(serviceRoleInfo);
@@ -384,7 +385,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceNode.setMasterRoles(masterRoles);
             serviceNode.setElseRoles(elseRoles);
             dag.addNode(command.getServiceName(), serviceNode);
-            if (serviceInfo.getDependencies().size() > 0) {
+            if (CollUtil.isNotEmpty(serviceInfo.getDependencies())) {
                 for (String dependency : serviceInfo.getDependencies()) {
                     dag.addEdge(dependency, command.getServiceName());
                 }
