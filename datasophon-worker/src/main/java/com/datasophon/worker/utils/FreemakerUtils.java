@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FreemakerUtils {
@@ -102,10 +103,10 @@ public class FreemakerUtils {
         if (Constants.CUSTOM.equals(configFormat)) {
             template = config.getTemplate(generators.getTemplateName());
             data = configs.stream().filter(e -> "map".equals(e.getConfigType()))
-                    .collect(Collectors.toMap(key -> key.getName(), value -> value.getValue()));
+                    .collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue));
             configs = configs.stream().filter(e -> !"map".equals(e.getConfigType())).collect(Collectors.toList());
         }
-        logger.info("load template: {} success.", template.getSourceName());
+        logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
         data.put("itemList", configs);
         // 3.产生输出
         processOut(generators, template, data, decompressPackageName);
