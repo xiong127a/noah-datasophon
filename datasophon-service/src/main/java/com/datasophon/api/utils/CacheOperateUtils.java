@@ -1,5 +1,7 @@
 package com.datasophon.api.utils;
 
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.api.master.handler.host.ServiceCacheSyncHandler;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -51,8 +53,12 @@ public class CacheOperateUtils {
     // 获取缓存对象，如果本地缓存没有，再去远程获取
     public static Object get(String key) {
         Object data = CacheUtils.get(key);
-        if (ObjectUtils.isEmpty(data)) {
-            data = getRemoteCache(key);
+        if (ObjUtil.isNotEmpty(data)) {
+            return data;
+        }
+        Object remoteCache = getRemoteCache(key);
+        if (ObjectUtil.isNotEmpty(remoteCache)) {
+            return getRemoteCache(key);
         }
         return data;
     }
