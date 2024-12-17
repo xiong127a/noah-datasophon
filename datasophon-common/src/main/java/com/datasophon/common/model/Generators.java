@@ -17,10 +17,10 @@
 
 package com.datasophon.common.model;
 
+import lombok.Data;
+
 import java.io.Serializable;
 import java.util.List;
-
-import lombok.Data;
 
 /**
  * 配置文件详情
@@ -52,6 +52,9 @@ public class Generators implements Serializable {
      * 自定义配置模板名称
      */
     private String templateName;
+
+    private boolean needMount = true;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
