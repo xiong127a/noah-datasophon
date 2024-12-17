@@ -25,6 +25,7 @@
                 "configFormat": "custom",
                 "templateName": "juicefs.ftl",
                 "outputDirectory": "bin",
+                "needMount" : false,
                 "includeParams": [
                     "logDir"
                 ]
