@@ -64,7 +64,7 @@ public class K8sServiceStartHandler extends ServiceHandler {
         k8sServiceRoleOperateCommand.setEnableKerberos(enableKerberos);
 
 
-        List<String> needClientService = Arrays.asList("SPARK3", "FLINK", "FLUME");
+        List<String> needClientService = Arrays.asList("SPARK3", "FLINK", "FLUME","JUICEFS","LOGSTASH");
         if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT&&!needClientService.contains(serviceRoleInfo.getParentName())) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);

@@ -1,6 +1,7 @@
 package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -265,6 +266,9 @@ public class K8sYamlDeploymentHandler {
             Generators generators = entry.getKey();
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();
+            if (BooleanUtil.isFalse(generators.isNeedMount())) {
+                continue;
+            }
             if (StrUtil.isNotBlank(outputDirectory)) {
                 for (String outPutDir : outputDirectory.split(StrUtil.COMMA)) {
                     configFilePath = generateConfigFilePath(outPutDir, generators, appHome);
@@ -326,7 +330,7 @@ public class K8sYamlDeploymentHandler {
             addConfigFile(volumePathSet, "hive-config", "/opt/datasophon/hive-3.1.0/conf");
         }
         //redisSentinel数据目录
-        if ("RedisSentinelMaster".equals(serviceRoleName)||"RedisSentinelSlave".equals(serviceRoleName)) {
+        if ("RedisSentinelMaster".equals(serviceRoleName) || "RedisSentinelSlave".equals(serviceRoleName)) {
             addConfigFile(volumePathSet, "redis-sentinel-data", appHome + "/var/data/");
         }
 
