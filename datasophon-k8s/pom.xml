@@ -86,4 +86,21 @@
         </dependency>
     </dependencies>
 
+
+    <build>
+        <resources>
+            <!-- 加载当前模块的 resources 目录 -->
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+
+            <resource>
+                <directory>../datasophon-worker/src/main/resources</directory>
+                <includes>
+                    <include>templates/**</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
 </project>
