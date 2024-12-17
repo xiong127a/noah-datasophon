@@ -39,20 +39,22 @@ spec:
       hostPID: false
       hostNetwork: true
       containers:
-        - env:
+        - name: "${serviceRoleFullName}"
+          image: "${dockerImage}"
+          imagePullPolicy: "Always"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - "${startCommand}"
+          env:
             - name: USER
               value: ${runAs}
             - name: MEM_LIMIT
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
-          image: "${dockerImage}"
-          imagePullPolicy: "Always"
-          command:
-            - "/bin/bash"
-            - "-c"
-            - |
-              echo "vm.max_map_count=655360" >> /etc/sysctl.conf && sysctl -p && ${startCommand}
+            - name: JUICEFS_BIN
+              value: "${appHome}/bin"
           readinessProbe:
             exec:
               command:
@@ -64,7 +66,6 @@ spec:
             periodSeconds: 30
             successThreshold: 1
             timeoutSeconds: 15
-          name: "${serviceRoleFullName}"
           resources:
             requests:
               memory: "2Gi"
@@ -86,10 +87,10 @@ spec:
       terminationGracePeriodSeconds: 30
       volumes:
         <#list itemList as item>
-        - hostPath:
+        - name: "${item.name}"
+          hostPath:
             path: "${item.value}"
-          name: "${item.name}"
         </#list>
-        - hostPath:
+        - name: "timezone"
+          hostPath:
             path: "/etc/localtime"
-          name: "timezone"
