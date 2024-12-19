@@ -66,7 +66,6 @@ public class ServiceStartHandler extends ServiceHandler {
                 Boolean.parseBoolean(globalVariables.get("${enable" + serviceRoleInfo.getParentName() + "Kerberos}"));
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         serviceRoleOperateCommand.setEnableKerberos(enableKerberos);
-        serviceRoleOperateCommand.setKaAdminHost(globalVariables.get("${kadminHost}"));
         if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);
