@@ -31,8 +31,18 @@ public class HiveMetaStroreHandlerStrategy implements ServiceRoleStrategy {
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        if (hosts.size() == 1) {
+        if (hosts.size() > 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.get(0));
+        }
+    }
+
+
+    @Override
+    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+        if (globalVariables.containsKey("${metastoreHost}")
+                && !hostname.equals(globalVariables.get("${metastoreHost}"))) {
+            serviceRoleInfo.setSlave(true);
         }
     }
 
