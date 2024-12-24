@@ -34,7 +34,6 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
