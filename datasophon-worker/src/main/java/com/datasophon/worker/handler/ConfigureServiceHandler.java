@@ -34,7 +34,6 @@ import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.utils.TaskConstants;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
-import org.apache.tools.ant.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -242,7 +241,7 @@ public class ConfigureServiceHandler {
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh");
         ExecResult execResult = ShellUtils
-                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L);
+                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L,logger);
 
         ArrayList<String> globalCommand = new ArrayList<>();
         globalCommand.add(
