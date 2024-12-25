@@ -18,11 +18,11 @@
 package com.datasophon.worker.strategy;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
@@ -30,7 +30,6 @@ import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
 
@@ -43,14 +42,35 @@ public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implem
         ExecResult startResult = new ExecResult();
         final String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
-
+        if (command.getEnableRangerPlugin()) {
+            logger.info("start to enable hive hdfs plugin");
+            ArrayList<String> commands = new ArrayList<>();
+            commands.add("sh");
+            commands.add("./enable-hive-plugin.sh");
+            if (!FileUtil.exist(Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName()
+                    + "/ranger-hive-plugin/success.id")) {
+                ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH + Constants.SLASH
+                        + command.getDecompressPackageName() + "/ranger-hive-plugin", commands, 30L, logger);
+                if (execResult.getExecResult()) {
+                    logger.info("enable ranger hive plugin success");
+                    FileUtil.writeUtf8String("success", Constants.INSTALL_PATH + Constants.SLASH
+                            + command.getDecompressPackageName() + "/ranger-hive-plugin/success.id");
+                } else {
+                    logger.info("enable ranger hive plugin failed");
+                    return execResult;
+                }
+            }
+        }
+        logger.info("command is slave : {}", command.isSlave());
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && !command.isSlave()) {
+            String dbType = JSONUtil.parseObj(command.getExtended()).getStr("dbType","mysql");
+
             // init hive database
             logger.info("start to init hive schema");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("bin/schematool");
             commands.add("-dbType");
-            commands.add("mysql");
+            commands.add(dbType);
             commands.add("-initSchema");
             ExecResult execResult = ShellUtils.execWithStatus(
                     Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName(), commands, 60L, logger);
@@ -89,5 +109,4 @@ public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implem
                 command.getDecompressPackageName(), command.getRunAs());
         return startResult;
     }
-
 }

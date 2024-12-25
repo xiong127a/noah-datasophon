@@ -17,11 +17,10 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,8 @@ public class HiveMetaStroreHandlerStrategy implements ServiceRoleStrategy {
         if (hosts.size() > 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.get(0));
         }
+        String metastoreHosts = StrUtil.join(",",CollUtil.map(hosts,ip -> "thrift://" + ip + ":9083",false));
+        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
     }
 
 
