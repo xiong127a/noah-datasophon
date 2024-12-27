@@ -127,7 +127,10 @@
         "templateName": "ranger-install.ftl",
         "outputDirectory": "",
         "includeParams": [
-          "rootPassword",
+          "databaseFlavor",
+          "separateDBA",
+          "dbaUser",
+          "dbaPassword",
           "dbHost",
           "database",
           "rangerUser",
@@ -200,8 +203,21 @@
   },
   "parameters": [
     {
-      "name": "rootPassword",
-      "label": "数据库root用户密码",
+      "name": "databaseFlavor",
+      "label": "数据库类型",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "select",
+      "value": "DM",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "MYSQL",
+      "selectValue" : ["MYSQL", "ORACLE", "POSTGRES","MSSQL","SQLA","DM"]
+    },
+    {
+      "name": "dbaUser",
+      "label": "数据库管理员用户",
       "description": "",
       "required": true,
       "configType": "map",
@@ -209,7 +225,31 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "123456"
+      "defaultValue": "SYSDBA"
+    },
+    {
+      "name": "dbaPassword",
+      "label": "数据库管理员密码",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "SYSDBA"
+    },
+    {
+      "name": "separateDBA",
+      "label": "DBA 步骤是否需要单独运行",
+      "description": "",
+      "required": true,
+      "configType": "map",
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
     },
     {
       "name": "dbHost",
@@ -221,7 +261,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "${apiHost}"
+      "defaultValue": "192.168.4.120"
     },{
       "name": "database",
       "label": "数据库名",
@@ -232,7 +272,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ranger"
+      "defaultValue": "RANGER_ADMIN"
     },
     {
       "name": "rangerUser",
@@ -244,7 +284,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ranger"
+      "defaultValue": "ranger_admin"
     },{
       "name": "rangerPassword",
       "label": "Ranger数据库密码",
@@ -255,7 +295,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ranger"
+      "defaultValue": "ranger_admin"
     },
     {
       "name": "rangerAdminUrl",
