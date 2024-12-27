@@ -21,20 +21,39 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.model.ServiceRoleInfo;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
 
-public class HiveMetaStroreHandlerStrategy implements ServiceRoleStrategy {
+@Slf4j
+public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
+        if(CollUtil.isEmpty(hosts)){
+            return;
+        }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         if (hosts.size() == 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.get(0));
         }
         String metastoreHosts = StrUtil.join(",",CollUtil.map(hosts,ip -> "thrift://" + ip + ":9083",false));
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
+        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.get(0));
+    }
+
+    @Override
+    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+        String key = "${masterHiveMetaStore}";
+        if (globalVariables.containsKey(key)
+                && !hostname.equals(globalVariables.get(key))) {
+            log.info("set to slave masterHiveMetaStore");
+            serviceRoleInfo.setSlave(true);
+        }
+        serviceRoleInfo.setMasterHost(globalVariables.get(key));
     }
 
 }
