@@ -18,6 +18,7 @@
 package com.datasophon.worker.strategy;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
@@ -30,9 +31,9 @@ import com.datasophon.worker.utils.KerberosUtils;
 
 import java.util.ArrayList;
 
-public class HiveServer2HandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
+public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
 
-    public HiveServer2HandlerStrategy(String serviceName, String serviceRoleName) {
+    public HiveMetaStoreHandlerStrategy(String serviceName, String serviceRoleName) {
         super(serviceName, serviceRoleName);
     }
 
@@ -62,12 +63,14 @@ public class HiveServer2HandlerStrategy extends AbstractHandlerStrategy implemen
         }
         logger.info("command is slave : {}", command.isSlave());
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && !command.isSlave()) {
+            String dbType = JSONUtil.parseObj(command.getExtended()).getStr("dbType","mysql");
+
             // init hive database
             logger.info("start to init hive schema");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("bin/schematool");
             commands.add("-dbType");
-            commands.add("mysql");
+            commands.add(dbType);
             commands.add("-initSchema");
             ExecResult execResult = ShellUtils.execWithStatus(
                     Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName(), commands, 60L, logger);
