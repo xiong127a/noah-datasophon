@@ -29,7 +29,7 @@ public class ServiceRoleStrategyContext {
     static {
         map.put("NameNode", new NameNodeHandlerStrategy());
         map.put("ResourceManager", new RMHandlerStrategy());
-        map.put("HiveMetaStore", new HiveMetaStroreHandlerStrategy());
+        map.put("HiveMetaStore", new HiveMetaStoreHandlerStrategy());
         map.put("HiveServer2", new HiveServer2HandlerStrategy());
         map.put("Grafana", new GrafanaHandlerStrategy());
         map.put("ZkServer", new ZkServerHandlerStrategy());

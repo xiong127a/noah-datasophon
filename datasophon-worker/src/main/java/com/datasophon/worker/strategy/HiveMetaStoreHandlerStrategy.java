@@ -18,6 +18,8 @@
 package com.datasophon.worker.strategy;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.net.NetUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -29,6 +31,8 @@ import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
@@ -62,8 +66,17 @@ public class HiveMetaStoreHandlerStrategy extends AbstractHandlerStrategy implem
             }
         }
         logger.info("command is slave : {}", command.isSlave());
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && !command.isSlave()) {
-            String dbType = JSONUtil.parseObj(command.getExtended()).getStr("dbType","mysql");
+        logger.info("hive schema initialize the node: {}", command.getMasterHost());
+        String localHostName = null;
+        try {
+            localHostName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            logger.error("Failed to retrieve the local host name. The system could not resolve the hostname.", e);
+        }
+        String ip = NetUtil.getIpByHost(localHostName);
+
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && !command.isSlave() && StrUtil.equalsAny(command.getMasterHost(), localHostName, ip)) {
+            String dbType = JSONUtil.parseObj(command.getExtended()).getStr("dbType", "mysql");
 
             // init hive database
             logger.info("start to init hive schema");
