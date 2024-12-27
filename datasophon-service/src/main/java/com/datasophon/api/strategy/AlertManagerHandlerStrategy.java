@@ -24,7 +24,6 @@ import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
 import com.datasophon.dao.entity.UserInfoEntity;
@@ -75,10 +74,6 @@ public class AlertManagerHandlerStrategy implements ServiceRoleStrategy {
 
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
 
     @Override
     public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
