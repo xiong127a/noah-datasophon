@@ -1,19 +1,14 @@
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -50,13 +45,4 @@ public class AlluxioHandlerStrategy implements ServiceRoleStrategy {
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }
