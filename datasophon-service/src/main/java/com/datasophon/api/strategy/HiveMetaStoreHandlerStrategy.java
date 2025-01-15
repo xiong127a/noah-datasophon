@@ -21,8 +21,11 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
+<<<<<<<< HEAD:datasophon-service/src/main/java/com/datasophon/api/strategy/HiveMetaStoreHandlerStrategy.java
 import com.datasophon.common.model.ServiceRoleInfo;
 import lombok.extern.slf4j.Slf4j;
+========
+>>>>>>>> 73ebb3dfc8792b84d1f9bbdc4b503c543cdc4475:datasophon-service/src/main/java/com/datasophon/api/strategy/HiveMetaStroreHandlerStrategy.java
 
 import java.util.List;
 import java.util.Map;
@@ -36,11 +39,12 @@ public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
             return;
         }
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        if (hosts.size() == 1) {
+        if (hosts.size() > 1) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHost}", hosts.get(0));
         }
         String metastoreHosts = StrUtil.join(",",CollUtil.map(hosts,ip -> "thrift://" + ip + ":9083",false));
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${metastoreHosts}",metastoreHosts);
+<<<<<<<< HEAD:datasophon-service/src/main/java/com/datasophon/api/strategy/HiveMetaStoreHandlerStrategy.java
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveMetaStore}", hosts.get(0));
     }
 
@@ -54,6 +58,18 @@ public class HiveMetaStoreHandlerStrategy implements ServiceRoleStrategy {
             serviceRoleInfo.setSlave(true);
         }
         serviceRoleInfo.setMasterHost(globalVariables.get(key));
+========
+    }
+
+
+    @Override
+    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+        if (globalVariables.containsKey("${metastoreHost}")
+                && !hostname.equals(globalVariables.get("${metastoreHost}"))) {
+            serviceRoleInfo.setSlave(true);
+        }
+>>>>>>>> 73ebb3dfc8792b84d1f9bbdc4b503c543cdc4475:datasophon-service/src/main/java/com/datasophon/api/strategy/HiveMetaStroreHandlerStrategy.java
     }
 
 }
