@@ -76,7 +76,7 @@ public class K8sServiceStartHandler extends ServiceHandler {
 
         ActorRef startActor =
                 ActorUtils.getLocalActor(K8sStartServiceActor.class, ActorUtils.getActorRefName(K8sStartServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+        Timeout timeout = new Timeout(Duration.create(300, TimeUnit.SECONDS));
         Future<Object> startFuture = Patterns.ask(startActor, k8sServiceRoleOperateCommand, timeout);
         try {
             ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
