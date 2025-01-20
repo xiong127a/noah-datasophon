@@ -73,6 +73,7 @@ public class ServiceStartHandler extends ServiceHandler {
         JSONObject jsonObject = JSONUtil.createObj();
         jsonObject.set("dbType",dbType);
         serviceRoleOperateCommand.setExtended(jsonObject.toString());
+        serviceRoleOperateCommand.setExtendConfig(serviceRoleInfo.getExtendConfig());
         if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);

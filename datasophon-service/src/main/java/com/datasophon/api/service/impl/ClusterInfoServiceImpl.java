@@ -18,6 +18,9 @@
 package com.datasophon.api.service.impl;
 
 import akka.actor.ActorRef;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
@@ -38,6 +41,7 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.ClusterState;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
+import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +64,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Autowired
     private ClusterInfoMapper clusterInfoMapper;
+
+    @Autowired
+    private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
 
     @Autowired
     private ClusterRoleUserService clusterUserService;
@@ -236,5 +243,16 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     @Override
     public String getKubeConfigByClusterId(Integer clusterId) {
         return this.getById(clusterId).getKubeConfig();
+    }
+
+    @Override
+    public String getKerberosInfo(String serviceRoleName) {
+        LambdaQueryWrapper<ClusterServiceRoleInstanceEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper.eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, serviceRoleName)
+                .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, 1);
+        Integer count = clusterServiceRoleInstanceMapper.selectCount(lambdaQueryWrapper);
+        JSONObject jsonObject = JSONUtil.createObj();
+        jsonObject.set(serviceRoleName, count);
+        return jsonObject.toString();
     }
 }

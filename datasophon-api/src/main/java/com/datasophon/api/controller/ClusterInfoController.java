@@ -22,14 +22,13 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("api/cluster")
@@ -97,6 +96,11 @@ public class ClusterInfoController {
         clusterInfoService.deleteCluster(Arrays.asList(ids));
 
         return Result.success();
+    }
+
+    @RequestMapping("/grafana/kerberos/{serviceRoleName}")
+    public String getKerberosInfo(@PathVariable String serviceRoleName) {
+        return clusterInfoService.getKerberosInfo(serviceRoleName);
     }
 
 }

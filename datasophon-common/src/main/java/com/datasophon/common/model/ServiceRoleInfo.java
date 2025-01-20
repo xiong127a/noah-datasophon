@@ -19,13 +19,12 @@ package com.datasophon.common.model;
 
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceRoleType;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import lombok.Data;
 
 @Data
 public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo> {
@@ -77,6 +76,8 @@ public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo
     private Integer serviceInstanceId;
 
     private RunAs runAs;
+
+    private String extendConfig;
 
     @Override
     public int compareTo(ServiceRoleInfo serviceRoleInfo) {

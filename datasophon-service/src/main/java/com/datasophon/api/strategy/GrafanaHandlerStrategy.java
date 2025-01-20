@@ -17,10 +17,15 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.HostUtils;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +38,35 @@ public class GrafanaHandlerStrategy implements ServiceRoleStrategy {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${grafanaHost}",
                     HostUtils.getHostName(hosts.get(0)));
         }
+    }
+
+    @Override
+    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+        String key = "${grafanaHost}";
+        if (globalVariables.containsKey(key)
+                && !hostname.equals(globalVariables.get(key))) {
+            log.info("set to slave Grafana");
+            serviceRoleInfo.setSlave(true);
+        }
+        ServerProperties serverProperties = SpringUtil.getApplicationContext().getBean(ServerProperties.class);
+
+        String localHostName = null;
+        try {
+            localHostName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            log.error("Failed to retrieve the local host name. The system could not resolve the hostname.", e);
+        }
+
+        // 获取服务器端口
+        int port = serverProperties.getPort();
+
+        // 获取上下文路径（context-path）
+        String contextPath = serverProperties.getServlet().getContextPath();
+
+        String url =  "http://" + localHostName + ":" + port + contextPath+"/api/cluster/grafana/kerberos/";
+        serviceRoleInfo.setExtendConfig(url);
+        serviceRoleInfo.setMasterHost(globalVariables.get(key));
     }
 
 }
