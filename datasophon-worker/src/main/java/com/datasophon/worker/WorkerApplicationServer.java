@@ -122,7 +122,7 @@ public class WorkerApplicationServer {
 
     private static void checkStopDate() {
         LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(2024, Month.NOVEMBER, 21);
+        LocalDate stopDate = LocalDate.of(2025, Month.MARCH, 21);
 
         if (today.isAfter(stopDate) || today.equals(stopDate)) {
             System.out.println("The application cannot start because the stop date has passed.");
