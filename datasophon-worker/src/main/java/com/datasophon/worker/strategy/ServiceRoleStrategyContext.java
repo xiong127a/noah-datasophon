@@ -50,6 +50,7 @@ public class ServiceRoleStrategyContext {
         map.put("SRCN", new SRCNHandlerStrategy("STARROCKS", "SRCN"));
         map.put("SRFE", new SRFEHandlerStrategy("STARROCKS", "SRFE"));
         map.put("SRFEObserver", new SRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
+        map.put("Grafana", new GrafanaHandlerStrategy("GRAFANA", "Grafana"));
         map.put("HistoryServer", new HistoryServerHandlerStrategy("YARN", "HistoryServer"));
         map.put("TimelineServer", new TimelineServerHandlerStrategy("YARN", "TimelineServer"));
 

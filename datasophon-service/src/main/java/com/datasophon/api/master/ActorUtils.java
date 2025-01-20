@@ -29,7 +29,6 @@ import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +78,8 @@ public class ActorUtils {
         actorSystem.actorOf(Props.create(MasterNodeProcessingActor.class),
                 getActorRefName(MasterNodeProcessingActor.class));
 
+        actorSystem.actorOf(Props.create(GrafanaProcessingActor.class),
+                getActorRefName(GrafanaProcessingActor.class));
         ActorRef clusterCheckActor =
                 actorSystem.actorOf(Props.create(ClusterActor.class), getActorRefName(ClusterActor.class));
 
