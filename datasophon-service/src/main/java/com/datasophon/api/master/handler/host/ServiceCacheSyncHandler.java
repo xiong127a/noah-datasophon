@@ -6,6 +6,7 @@ import akka.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,9 +14,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +46,7 @@ public class ServiceCacheSyncHandler {
                     continue;
                 }
                 //跳过不在线的服务
-                if (!isServiceOnline(hostname)){
+                if (!HostUtils.checkServiceOnlineWithRetry(hostname,PropertyUtils.getInt(Constants.MASTER_WEB_PORT),1,1000)){
                     logger.info("Service at host {} is offline.", hostname);
                     continue;
                 }
@@ -69,16 +68,7 @@ public class ServiceCacheSyncHandler {
         return execResult;
     }
 
-    //判断服务在线
-    public static boolean isServiceOnline(String host) {
-        String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
-        try (Socket socket = new Socket(host, Integer.parseInt(masterPort))) {
-            return true;  // 如果能够连接上，说明服务在线
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;  // 如果连接失败，认为服务不在线
-        }
-    }
+
 
 
 }

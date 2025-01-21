@@ -17,7 +17,9 @@
 
 package com.datasophon.common.utils;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -84,10 +86,49 @@ public enum HostUtils {
             throw new RuntimeException(e);
         }
     }
+
     public static List<String> GetMasterHost() {
         String[] array = PropertyUtils.getArray(Constants.MASTER_HOST, ",");
         return Arrays.asList(array);
     }
 
+    //判断服务在线
+    public static boolean isServiceOnline(String host, int port) {
+        try (Socket socket = new Socket(host, port)) {
+            return true;  // 如果能够连接上，说明服务在线
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;  // 如果连接失败，认为服务不在线
+        }
+    }
 
+
+    public static boolean checkServiceOnlineWithRetry(String host, int port, int retries, long waitTime) {
+        int attempts = 0;
+        while (attempts < retries) {
+            // 如果不是第一次尝试，等待一段时间
+            if (attempts > 0) {
+                try {
+                    Thread.sleep(waitTime);
+                } catch (InterruptedException e) {
+                    // 恢复中断状态
+                    Thread.currentThread().interrupt();
+                    System.err.println("线程被中断，退出重试。");
+                    return false;
+                }
+            }
+
+            // 检查服务是否在线
+            if (isServiceOnline(host, port)) {
+                System.out.println("端口 " + port + " 已启动!");
+                return true;
+            }
+
+            attempts++;
+        }
+
+        // 达到最大重试次数仍未成功
+        System.out.println("端口 " + port + " 未启动，已达到最大重试次数 " + retries);
+        return false;
+    }
 }

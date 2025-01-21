@@ -23,6 +23,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import com.datasophon.worker.utils.KerberosUtils;
@@ -39,9 +40,9 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
     public ExecResult handler(ServiceRoleOperateCommand command) {
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         String workPath = Constants.INSTALL_PATH + Constants.SLASH + command.getDecompressPackageName();
+        String hostname = CacheUtils.getString(Constants.HOSTNAME);
         if (command.getEnableKerberos()) {
             logger.info("Start to get namenode keytab file");
-            String hostname = CacheUtils.getString(Constants.HOSTNAME);
             KerberosUtils.createKeytabDir();
             if (!FileUtil.exist("/etc/security/keytab/nn.service.keytab")) {
                 KerberosUtils.downloadKeytabFromMaster("nn/" + hostname, "nn.service.keytab");
@@ -51,6 +52,8 @@ public class NameNodeHandlerStrategy extends AbstractHandlerStrategy implements 
             }
         }
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
+            //探测jn端口是否开启
+            HostUtils.checkServiceOnlineWithRetry(hostname, 8485,12,5000);
             if (command.isSlave()) {
                 // 执行hdfs namenode -bootstrapStandby
                 logger.info("Start to execute hdfs namenode -bootstrapStandby");
