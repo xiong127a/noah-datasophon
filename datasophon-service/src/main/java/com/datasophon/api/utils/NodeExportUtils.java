@@ -4,6 +4,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,6 @@ import java.util.ArrayList;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 @Component
-@Order(Ordered.LOWEST_PRECEDENCE)
 public class NodeExportUtils {
     @Autowired
     private  ClusterInfoService clusterInfoService;
@@ -25,11 +25,15 @@ public class NodeExportUtils {
     private static final String USER_DIR = "user.dir";
     @PostConstruct
     public void startNodeExporter() {
-        Integer clusterId = PropertyUtils.getInt("clusterId");
-        String depMode =  clusterInfoService.getById(clusterId).getDepType();
-        if (Constants.K8S_MODE.equals(depMode)) {
-            String workDir = System.getProperty(USER_DIR);
-            operateNodeExporter(workDir, "apply");
+        try {
+            Integer clusterId = PropertyUtils.getInt("clusterId");
+            String depMode =  clusterInfoService.getById(clusterId).getDepType();
+            if (Constants.K8S_MODE.equals(depMode)) {
+                String workDir = System.getProperty(USER_DIR);
+                operateNodeExporter(workDir, "apply");
+            }
+        } catch (Exception e) {
+            logger.error("Please check the clusterid", e);
         }
     }
 
