@@ -46,7 +46,9 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -120,7 +122,7 @@ public class WorkerApplicationServer {
 
     private static void checkStopDate() {
         LocalDate today = LocalDate.now();
-        LocalDate stopDate = LocalDate.of(2025, Month.JANUARY, 21);
+        LocalDate stopDate = LocalDate.of(2025, Month.MARCH, 21);
 
         if (today.isAfter(stopDate) || today.equals(stopDate)) {
             System.out.println("The application cannot start because the stop date has passed.");
