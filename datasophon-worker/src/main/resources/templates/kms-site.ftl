@@ -18,7 +18,7 @@
 
   <property>
     <name>hadoop.kms.key.provider.uri</name>
-    <value>dbks://http@hadoop1:9292/kms</value>
+    <value>${hadoopKmsKeyProviderUri!"kms://http@localhost:9600/kms"}</value>
     <description>
       URI of the backing KeyProvider for the KMS.
     </description>
@@ -81,7 +81,7 @@
 
   <property>
     <name>hadoop.kms.authentication.type</name>
-    <value>${kmsAuthenticationType}</value>
+    <value>${hadoopKmsAuthenticationType!"simple"}</value>
     <description>
       Authentication type for the KMS. Can be either &quot;simple&quot;
       or &quot;kerberos&quot;.
@@ -89,8 +89,8 @@
   </property>
 
   <property>
-    <name>hadoop.kms.authentication.kerberos.keytab</name>
-    <value><#if spnegoKeytab??>${spnegoKeytab}</#if></value>
+    <name>hadoopKmsAuthenticationKerberosKeytab</name>
+    <value>${hadoopKmsAuthenticationKerberosKeytab!""}</value>
     <description>
       Path to the keytab with credentials for the configured Kerberos principal.
     </description>
@@ -98,7 +98,7 @@
 
   <property>
     <name>hadoop.kms.authentication.kerberos.principal</name>
-    <value><#if spnegoPrincipal??>${spnegoPrincipal}</#if></value>
+    <value>${hadoopKmsAuthenticationKerberosPrincipal!""}</value>
     <description>
       The Kerberos principal to use for the HTTP endpoint.
       The principal must start with 'HTTP/' as per the Kerberos HTTP SPNEGO specification.
@@ -107,7 +107,7 @@
 
   <property>
     <name>hadoop.kms.authentication.kerberos.name.rules</name>
-    <value>DEFAULT</value>
+    <value>${hadoopKmsAuthenticationKerberosNameRules!"DEFAULT"}</value>
     <description>
       Rules used to resolve Kerberos principal names.
     </description>

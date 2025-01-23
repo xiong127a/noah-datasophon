@@ -24,7 +24,7 @@
 PYTHON_COMMAND_INVOKER=python
 
 #DB_FLAVOR=MYSQL|ORACLE|POSTGRES|MSSQL|SQLA
-DB_FLAVOR=MYSQL
+DB_FLAVOR=${databaseFlavor}
 
 #
 # Location of DB client library (please check the location of the jar file)
@@ -35,7 +35,7 @@ DB_FLAVOR=MYSQL
 #SQL_CONNECTOR_JAR=/usr/share/java/sqljdbc4.jar
 #SQL_CONNECTOR_JAR=/opt/sqlanywhere17/java/sajdbc4.jar
 #SQL_CONNECTOR_JAR=/opt/datasophon/ranger/mysql-connector-java-5.1.34.jar
-SQL_CONNECTOR_JAR=${rangerKmsJdbcJarPath}
+SQL_CONNECTOR_JAR=${rangerHome}/jdbc/${databaseFlavor}-connector.jar
 
 #
 # DB password for the DB admin user-id
@@ -49,9 +49,10 @@ SQL_CONNECTOR_JAR=${rangerKmsJdbcJarPath}
 #db_host=host:port:SID          # for DB_FLAVOR=ORACLE                          #for SID example: db_host=localhost:1521:ORCL
 #db_host=host:port/ServiceName  # for DB_FLAVOR=ORACLE                          #for Service example: db_host=localhost:1521/XE
 #db_host=host:port:GL           # for DB_FLAVOR=ORACLE                          #for TNSNAME example: db_host=localhost:1521:GL
-db_root_user=${rangerKmsDbRootUser}
-db_root_password=${rangerKmsDbRootPass}
-db_host=${rangerKmsDbHost}
+db_root_user=${dbaUser}
+db_root_password=${dbaPassword}
+db_host=${dbHost}
+#SSL config
 db_ssl_enabled=false
 db_ssl_required=false
 db_ssl_verifyServerCertificate=false
@@ -76,7 +77,7 @@ ranger_kms_https_keystore_keyalias=rangerkms
 ranger_kms_https_keystore_password=
 
 #------------------------- RANGER KMS Master Key Crypt Key ------------------
-KMS_MASTER_KEY_PASSWD=Str0ngPassw0rd
+KMS_MASTER_KEY_PASSWD=${rangerKmsMasterKeyPassword}
 
 #------------------------- Ranger KMS Kerberos Configuration ---------------------------
 kms_principal=<#if spnegoPrincipal??>${spnegoPrincipal}</#if>
@@ -119,9 +120,9 @@ AZURE_KEYVAULT_URL=https://shahkeyvault.vault.azure.net/
 #
 # ------- UNIX User CONFIG ----------------
 #
-unix_user=kms
-unix_user_pwd=kms
-unix_group=kms
+unix_user=${unixUser}
+unix_user_pwd=${unixUserPwd}
+unix_group=${unixGroup}
 #
 # ------- UNIX User CONFIG  - END ----------------
 #
@@ -285,6 +286,8 @@ JAVA_VERSION_REQUIRED='1.8'
 JAVA_ORACLE='Java(TM) SE Runtime Environment'
 
 mysql_core_file=db/mysql/kms_core_db.sql
+
+dm_core_file=db/dm/kms_core_db_dm.sql
 
 oracle_core_file=db/oracle/kms_core_db_oracle.sql
 
