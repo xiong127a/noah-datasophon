@@ -2,39 +2,31 @@ package com.datasophon.api.utils.ranger.client;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
-import cn.hutool.core.map.MapUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ranger.client.config.RangerAuthConfig;
 import com.datasophon.api.utils.ranger.client.config.RangerClientConfig;
-import com.datasophon.api.utils.ranger.client.model.*;
+import com.datasophon.api.utils.ranger.client.model.Policy;
+import com.datasophon.api.utils.ranger.client.model.PolicyItem;
+import com.datasophon.api.utils.ranger.client.model.PolicyItemAccess;
+import com.datasophon.api.utils.ranger.client.model.Role;
+import com.datasophon.api.utils.ranger.client.model.RoleMember;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class RangerUtil {
 
     private final static String SUPER_USER = "admin";
-
     private final static String SUPER_ROLE_NAME = "admin";
 
     // 创建一个缓存对象
     private static final Cache<Integer, RangerClient> clientCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
-
-    public static Service rangerKmsService(String serviceName, String rangerUrl) {
-        return Service.builder()
-                .name(serviceName)
-                .isEnabled(true)
-                .type("kms")
-                .configs(MapUtil.<String, String>builder()
-                        .put("username", "keyadmin")
-                        .put("password", "admin123")
-                        .put("provider", "kms://http@" + rangerUrl + ":9292/kms")
-                        .build()
-                )
-                .build();
-    }
 
     public static void updateDefaultPolicy(RangerClient rangerClient, String serviceName) {
         List<String> accessTypeList = new ArrayList<>();
@@ -55,6 +47,10 @@ public class RangerUtil {
             case "hbasedev":
                 accessTypeList = Arrays.asList("read", "write", "create", "admin", "execute");
                 policyName = "all - table, column-family, column";
+                break;
+            case "kmsdev":
+                accessTypeList = Arrays.asList("create", "delete", "rollover", "setkeymaterial", "get", "getkeys", "getmetadata", "generateeek", "decrypteek");
+                policyName = "all - keyname";
                 break;
             default:
                 return;
@@ -96,8 +92,7 @@ public class RangerUtil {
             rangerClient.getRoles().createRole(role);
             log.info("create ranger super role success");
         } catch (Exception e) {
-            log.error("create ranger super role failed");
-            log.error(e.getMessage());
+            log.error("create ranger super role failed", e);
         }
     }
 
@@ -115,29 +110,55 @@ public class RangerUtil {
     }
 
     public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
+        return getCachedOrNewClient(clusterTenant, "admin", "admin123");
+    }
+
+    public static RangerClient getRangerKmsClient(Integer clusterTenant) throws Exception {
+        return getCachedOrNewClient(clusterTenant, "keyadmin", "keyadmin");
+    }
+
+    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password) throws Exception {
+        if (clusterTenant == null) {
+            throw new IllegalArgumentException("Cluster tenant cannot be null");
+        }
+
         RangerClient cachedClient = clientCache.get(clusterTenant);
         if (cachedClient != null) {
             return cachedClient;
         }
 
         Map<String, String> globalVariables = GlobalVariables.get(clusterTenant);
+        if (globalVariables == null) {
+            throw new IllegalStateException("Global variables not found for cluster tenant: " + clusterTenant);
+        }
+
         String rangerAdminUrl = globalVariables.get("${rangerAdminUrl}");
+        if (rangerAdminUrl == null || rangerAdminUrl.isEmpty()) {
+            throw new IllegalStateException("Ranger admin URL not found for cluster tenant: " + clusterTenant);
+        }
+
         RangerClientConfig clientConfig = RangerClientConfig.builder()
                 .connectTimeoutMillis(1000)
                 .readTimeoutMillis(1000)
                 .logLevel(feign.Logger.Level.BASIC)
                 .authConfig(RangerAuthConfig.builder()
-                        .username("admin")
-                        .password("admin123")
+                        .username(username)
+                        .password(password)
                         .build())
                 .url(rangerAdminUrl)
                 .build();
+
         RangerClient rangerClient = new RangerClient(clientConfig);
-        rangerClient.start();
+        try {
+            rangerClient.start();
+        } catch (Exception e) {
+            // Ensure resources are closed in case of failure
+            rangerClient.stop();
+            throw new RuntimeException("Failed to start RangerClient for cluster tenant: " + clusterTenant, e);
+        }
 
         clientCache.put(clusterTenant, rangerClient);
 
         return rangerClient;
     }
-
 }

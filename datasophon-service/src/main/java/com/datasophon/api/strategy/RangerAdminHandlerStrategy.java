@@ -110,6 +110,16 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
             }
+            if ("enableKMSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+                logger.info("enableKMSPlugin");
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
+//                enableRangerPlugin(clusterId, "HDFS", "NameNode");
+                TenantRangerCommand kmsRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("KMS")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(kmsRangerCommand, ActorRef.noSender());
+            }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${" + configName + "}", "false");

@@ -60,5 +60,8 @@ public class TenantResource implements Serializable {
      * kafka资源列表
      */
     private List<TenantKafkaResource> kafkaResourceList;
-
+    /**
+     * kms资源列表
+     */
+    private List<TenantKmsResource> kmsResourceList;
 }
