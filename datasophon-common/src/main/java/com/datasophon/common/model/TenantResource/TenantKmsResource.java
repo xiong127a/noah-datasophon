@@ -8,9 +8,9 @@ import lombok.EqualsAndHashCode;
 public class TenantKmsResource extends TenantFrameResource {
 
     /**
-     * hdfs路径
+     * keyname
      */
-    private String hdfsPath;
+    private String keyname;
 
     /**
      * hdfs空间配额

@@ -8,6 +8,7 @@ import com.datasophon.api.utils.ranger.client.model.PolicyItem;
 import com.datasophon.api.utils.ranger.client.model.PolicyItemAccess;
 import com.datasophon.api.utils.ranger.client.model.PolicyResource;
 import com.datasophon.api.utils.ranger.client.model.Service;
+import com.datasophon.api.utils.ranger.client.model.User;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
 import com.datasophon.common.model.TenantResource.TenantKmsResource;
 import com.datasophon.common.model.TenantResource.TenantResource;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerStrategy {
@@ -29,22 +31,54 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
 
     @Override
     public ExecResult createService() throws Exception {
-        Service kmsService;
         try {
+            createRangerAdminUserIfNotExists();
+            if (isKmsServiceExists("kmsdev")) {
+                logger.info("kmsdev service already exists");
+                execResult.setExecResult(true);
+                RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
+                logger.info("Config KMS Ranger plugin successfully");
+                return execResult;
+            }
+
             String rangerKmsHost = globalVariables.get("${rangerKmsHost}");
-            String kmsUrl = "kms://http@"+rangerKmsHost+":9292/kms";
-            kmsService = kmsService("kmsdev", kmsUrl);
+            String kmsUrl = "kms://http@" + rangerKmsHost + ":9292/kms";
+            Service kmsService = createKmsService("kmsdev", kmsUrl);
 
             rangerKmsClient.getServices().createService(kmsService);
-            RangerUtil.updateDefaultPolicy(rangerClient, "kmsdev");
-            logger.info("config hdfs ranger plugin success");
+            RangerUtil.updateDefaultPolicy(rangerKmsClient, "kmsdev");
+            logger.info("Config KMS Ranger plugin successfully");
             execResult.setExecResult(true);
         } catch (RangerClientException e) {
-            logger.error("config hdfs ranger plugin failed");
-            logger.error(e.getMessage());
-            execResult.setExecErrOut(e.getMessage());
+            handleRangerClientException(e);
         }
         return execResult;
+    }
+
+    private void createRangerAdminUserIfNotExists() throws RangerClientException {
+        User rangeradmin = rangerKmsClient.getUsers().getUserByName("rangeradmin");
+        if (Objects.isNull(rangeradmin)) {
+            logger.info("rangeradmin user does not exist, creating rangeradmin user");
+            User user = User.builder()
+                    .firstName("rangeradmin")
+                    .name("rangeradmin")
+                    .password("rangeradmin123")
+                    .status(1)
+                    .userRoleList(Collections.singletonList("ROLE_SYS_ADMIN"))
+                    .build();
+            rangerKmsClient.getUsers().createUser(user);
+        }
+    }
+
+    private boolean isKmsServiceExists(String serviceName) throws RangerClientException {
+        Service kmsService = rangerKmsClient.getServices().getServiceByName(serviceName);
+        return Objects.nonNull(kmsService);
+    }
+
+
+    private void handleRangerClientException(RangerClientException e) {
+        logger.error("Failed to configure KMS Ranger plugin", e);
+        execResult.setExecErrOut(e.getMessage());
     }
 
     @Override
@@ -74,29 +108,29 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
         try {
             Policy returnPolicy = rangerClient.getPolicies().getPolicyByName("hadoopdev", policyName);
             rangerClient.getPolicies().deletePolicy(returnPolicy.getId());
-            logger.info("delete hdfs policy {} success", policyName);
+            logger.info("delete kms policy {} success", policyName);
             execResult.setExecResult(true);
         } catch (Exception e) {
-            logger.error("delete hdfs policy {} failed", policyName);
+            logger.error("delete kms policy {} failed", policyName);
             execResult.setExecErrOut(e.getMessage());
         }
         return execResult;
     }
 
     private Policy getKmsPolicy(TenantResource resource) {
-        List<String> hdfsPaths = resource.getKmsResourceList()
+        List<String> keynames = resource.getKmsResourceList()
                 .stream()
                 .map(t -> (TenantKmsResource) t)
-                .map(TenantKmsResource::getHdfsPath)
+                .map(TenantKmsResource::getKeyname)
                 .collect(Collectors.toList());
-        return simpleHdfsPolicy(
+        return simpleKmsPolicy(
                 "kmsdev",
                 resource.getTenantName(),
-                hdfsPaths,
+                keynames,
                 Collections.singletonList(resource.getTenantName()));
     }
 
-    public Service kmsService(String serviceName, String kmsUrl) {
+    public Service createKmsService(String serviceName, String kmsUrl) {
         return Service.builder()
                 .name(serviceName)
                 .isEnabled(true)
@@ -111,7 +145,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
                 .build();
     }
 
-    public Policy simpleHdfsPolicy(String serviceName, String policyName, List<String> keyNameList, List<String> roleList) {
+    public Policy simpleKmsPolicy(String serviceName, String policyName, List<String> keyNameList, List<String> roleList) {
         Map<String, PolicyResource> resources = new HashMap<>();
         PolicyResource policyResource = new PolicyResource();
         policyResource.setIsRecursive(true);

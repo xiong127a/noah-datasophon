@@ -2,6 +2,7 @@ package com.datasophon.api.utils.ranger.client;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ranger.client.config.RangerAuthConfig;
 import com.datasophon.api.utils.ranger.client.config.RangerClientConfig;
@@ -11,6 +12,7 @@ import com.datasophon.api.utils.ranger.client.model.PolicyItemAccess;
 import com.datasophon.api.utils.ranger.client.model.Role;
 import com.datasophon.api.utils.ranger.client.model.RoleMember;
 import com.datasophon.api.utils.ranger.client.utils.RangerClientException;
+import feign.Logger;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -26,11 +28,14 @@ public class RangerUtil {
     private final static String SUPER_ROLE_NAME = "admin";
 
     // 创建一个缓存对象
-    private static final Cache<Integer, RangerClient> clientCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
+    private static final Cache<Integer, RangerClient> clientAdminCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
+    private static final Cache<Integer, RangerClient> clientKmsCache = CacheUtil.newTimedCache(60 * 1000); // 设置缓存有效期为1分钟
 
     public static void updateDefaultPolicy(RangerClient rangerClient, String serviceName) {
         List<String> accessTypeList = new ArrayList<>();
         String policyName = "";
+        PolicyItem policyItem = new PolicyItem();
+        policyItem.setRoles(Collections.singletonList(SUPER_ROLE_NAME));
         switch (serviceName) {
             case "hadoopdev":
                 accessTypeList = Arrays.asList("read", "write", "execute");
@@ -51,15 +56,17 @@ public class RangerUtil {
             case "kmsdev":
                 accessTypeList = Arrays.asList("create", "delete", "rollover", "setkeymaterial", "get", "getkeys", "getmetadata", "generateeek", "decrypteek");
                 policyName = "all - keyname";
+                policyItem.setUsers(CollUtil.newHashSet("keyadmin", "rangeradmin"));
+                policyItem.setRoles(null);
                 break;
             default:
                 return;
         }
 
+
         Policy defaultPolicy = rangerClient.getPolicies().getPolicyByName(serviceName, policyName);
-        PolicyItem policyItem = new PolicyItem();
-        policyItem.setRoles(Collections.singletonList(SUPER_ROLE_NAME));
         policyItem.setDelegateAdmin(true);
+
         List<PolicyItemAccess> policyItemAccesses = new ArrayList<>();
         for (String access : accessTypeList) {
             PolicyItemAccess policyItemAccess = new PolicyItemAccess();
@@ -110,14 +117,14 @@ public class RangerUtil {
     }
 
     public static RangerClient getRangerClient(Integer clusterTenant) throws Exception {
-        return getCachedOrNewClient(clusterTenant, "admin", "admin123");
+        return getCachedOrNewClient(clusterTenant, "admin", "admin123", clientAdminCache);
     }
 
     public static RangerClient getRangerKmsClient(Integer clusterTenant) throws Exception {
-        return getCachedOrNewClient(clusterTenant, "keyadmin", "keyadmin");
+        return getCachedOrNewClient(clusterTenant, "keyadmin", "admin123", clientKmsCache);
     }
 
-    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password) throws Exception {
+    private static RangerClient getCachedOrNewClient(Integer clusterTenant, String username, String password, Cache<Integer, RangerClient> clientCache) throws Exception {
         if (clusterTenant == null) {
             throw new IllegalArgumentException("Cluster tenant cannot be null");
         }
@@ -140,7 +147,7 @@ public class RangerUtil {
         RangerClientConfig clientConfig = RangerClientConfig.builder()
                 .connectTimeoutMillis(1000)
                 .readTimeoutMillis(1000)
-                .logLevel(feign.Logger.Level.BASIC)
+                .logLevel(Logger.Level.BASIC)
                 .authConfig(RangerAuthConfig.builder()
                         .username(username)
                         .password(password)

@@ -89,7 +89,7 @@
   </property>
 
   <property>
-    <name>hadoopKmsAuthenticationKerberosKeytab</name>
+    <name>hadoop.kms.authentication.kerberos.keytab</name>
     <value>${hadoopKmsAuthenticationKerberosKeytab!""}</value>
     <description>
       Path to the keytab with credentials for the configured Kerberos principal.

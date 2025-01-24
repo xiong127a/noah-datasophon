@@ -134,10 +134,21 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
         if (enableKerberos) {
             addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
+            setHadoopKmsAuthenticationType(list, "kerberos");
         } else {
             removeConfigWithKerberos(list, map, configs);
+            setHadoopKmsAuthenticationType(list, "simple");
         }
         list.addAll(kbConfigs);
+    }
+
+    private void setHadoopKmsAuthenticationType(List<ServiceConfig> configs, String value) {
+        for (ServiceConfig config : configs) {
+            if ("hadoopKmsAuthenticationType".equals(config.getName())) {
+                config.setValue(value);
+                config.setDefaultValue(value);
+            }
+        }
     }
 
     private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {

@@ -19,7 +19,6 @@ package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.common.model.ServiceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +39,4 @@ public class RangerKmsHandlerStrategy extends ServiceHandlerAbstract implements 
         }
     }
 
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-
-        list.addAll(list);
-    }
 }

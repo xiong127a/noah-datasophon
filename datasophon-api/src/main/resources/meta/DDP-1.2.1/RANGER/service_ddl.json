@@ -487,11 +487,20 @@
             "configWithKerberos": true,
             "required": true,
             "configType": "map",
-            "type": "input",
-            "value": "DEFAULT",
+            "type": "multiple",
+            "separator": "\n",
+            "value": [
+                "DEFAULT",
+                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/",
+                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/"
+            ],
             "configurableInWizard": true,
             "hidden": true,
-            "defaultValue": "DEFAULT"
+            "defaultValue": [
+                "DEFAULT",
+                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/",
+                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/"
+            ]
         },
         {
             "name": "hadoopHome",
