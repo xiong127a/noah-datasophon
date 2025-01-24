@@ -45,18 +45,15 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
             logger.info("start to get ranger keytab file");
             String hostname = CacheUtils.getString(Constants.HOSTNAME);
             KerberosUtils.createKeytabDir();
-            if (!FileUtil.exist("/etc/security/keytab/spnego.service.keytab")) {
-                KerberosUtils.downloadKeytabFromMaster("HTTP/" + hostname, "spnego.service.keytab");
-            }
             if (!FileUtil.exist("/etc/security/keytab/rangeradmin.keytab")) {
                 KerberosUtils.downloadKeytabFromMaster("rangeradmin/" + hostname, "rangeradmin.keytab");
             }
         }
 
-        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
-            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
-            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+        ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+        ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
 
+        if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
             logger.info("setup ranger user sync");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sh");
@@ -73,11 +70,10 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
                     + workPath +
                     "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
         }
+        ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
+        ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
-            ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
-            ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
-
             logger.info("setup ranger kms");
             ArrayList<String> commands = new ArrayList<>();
             commands.add("sh");

@@ -24,8 +24,16 @@ public class UserApis {
         return client.searchUsers(stringSearch);
     }
 
-    public User getUserByName(@Param("name") String name) throws RangerClientException {
-        return client.getUserByName(name);
+    public User getUserByName(@Param("name") String name) {
+        try {
+            return client.getUserByName(name);
+        } catch (RangerClientException e) {
+            log.error("Failed to get user by name: {}. Error: {}", name, e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while getting user by name: {}. Error: {}", name, e.getMessage(), e);
+            return null;
+        }
     }
 
     public void setUserVisibility(Map<String, Integer> map) {
