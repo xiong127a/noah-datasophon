@@ -8,6 +8,7 @@ includedir /etc/krb5.conf.d/
 
 [libdefaults]
  dns_lookup_realm = false
+ dns_lookup_kdc = false
  ticket_lifetime = ${ticketLifetime}
  renew_lifetime = ${renewLifetime}
  forwardable = true
