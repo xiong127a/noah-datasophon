@@ -146,6 +146,8 @@
                     "spnegoKeytab",
                     "adminPrincipal",
                     "adminKeytab",
+                    "lookupPrincipal",
+                    "lookupKeytab",
                     "hadoopHome",
                     "rangerHome",
                     "esSingleHost",
@@ -189,8 +191,8 @@
                     "rangerKmsMasterKeyPassword",
                     "rangerKmsHadoopConfPath",
                     "rangerKmsRepositoryName",
-                    "spnegoPrincipal",
-                    "spnegoKeytab",
+                    "adminPrincipal",
+                    "adminKeytab",
                     "unixUser",
                     "unixUserPwd",
                     "unixGroup"
@@ -204,8 +206,8 @@
                 "includeParams": [
                     "hadoopKmsKeyProviderUri",
                     "hadoopKmsAuthenticationType",
-                    "hadoopKmsAuthenticationKerberosKeytab",
-                    "hadoopKmsAuthenticationKerberosPrincipal",
+                    "spnegoPrincipal",
+                    "spnegoKeytab",
                     "hadoopKmsAuthenticationKerberosNameRules"
                 ]
             },
@@ -416,21 +418,21 @@
             "defaultValue": "${host}"
         },
         {
-            "name": "hadoopKmsAuthenticationKerberosPrincipal",
-            "label": "kms kerberos principal",
+            "name": "spnegoPrincipal",
+            "label": "spnego_principal",
             "description": "用于 HTTP 端点的 Kerberos 主体。根据 Kerberos HTTP SPNEGO 规范，主体必须以HTTP开头。",
             "configWithKerberos": true,
             "required": false,
             "configType": "map",
             "type": "input",
-            "value": "HTTP/${host}@HADOOP.COM",
+            "value": "HTTP/_HOST@HADOOP.COM",
             "configurableInWizard": true,
             "hidden": true,
-            "defaultValue": "HTTP/${host}@HADOOP.COM"
+            "defaultValue": "HTTP/_HOST@HADOOP.COM"
         },
         {
-            "name": "hadoopKmsAuthenticationKerberosKeytab",
-            "label": "kms kerberos keytab文件路径",
+            "name": "spnegoKeytab",
+            "label": "spnego_keytab",
             "description": "包含已配置 Kerberos 主体凭据的密钥表路径。",
             "configWithKerberos": true,
             "required": false,
@@ -443,20 +445,46 @@
         },
         {
             "name": "adminPrincipal",
-            "label": "Ranger Admin Principal",
+            "label": "admin_principal",
             "description": "",
             "configWithKerberos": true,
             "required": false,
             "configType": "map",
             "type": "input",
-            "value": "rangeradmin/${host}@HADOOP.COM",
+            "value": "rangeradmin/_HOST@HADOOP.COM",
             "configurableInWizard": true,
             "hidden": true,
-            "defaultValue": "rangeradmin/${host}@HADOOP.COM"
+            "defaultValue": "rangeradmin/_HOST@HADOOP.COM"
         },
         {
             "name": "adminKeytab",
-            "label": "Ranger Admin Keytab",
+            "label": "admin_keytab",
+            "description": "",
+            "configWithKerberos": true,
+            "required": false,
+            "configType": "map",
+            "type": "input",
+            "value": "/etc/security/keytab/rangeradmin.keytab",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "/etc/security/keytab/rangeradmin.keytab"
+        },
+        {
+            "name": "lookupPrincipal",
+            "label": "lookup_principal",
+            "description": "",
+            "configWithKerberos": true,
+            "required": false,
+            "configType": "map",
+            "type": "input",
+            "value": "rangerlookup/_HOST@HADOOP.COM",
+            "configurableInWizard": true,
+            "hidden": true,
+            "defaultValue": "rangerlookup/_HOST@HADOOP.COM"
+        },
+        {
+            "name": "lookupKeytab",
+            "label": "lookup_keytab",
             "description": "",
             "configWithKerberos": true,
             "required": false,
@@ -491,15 +519,15 @@
             "separator": "\n",
             "value": [
                 "DEFAULT",
-                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/",
-                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/"
+                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangeradmin/",
+                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangeradmin/"
             ],
             "configurableInWizard": true,
             "hidden": true,
             "defaultValue": [
                 "DEFAULT",
-                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/",
-                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangerkms/"
+                "RULE:[2:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangeradmin/",
+                "RULE:[1:$1@$0](.*@.*HADOOP\\.COM)s/.*/rangeradmin/"
             ]
         },
         {

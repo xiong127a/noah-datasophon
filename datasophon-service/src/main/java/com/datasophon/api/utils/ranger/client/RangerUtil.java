@@ -84,6 +84,21 @@ public class RangerUtil {
      * 创建ranger默认超级用户组并添加系统内置用户
      */
     public static void createSuperRole(RangerClient rangerClient) {
+        Role roleByName = rangerClient.getRoles().getRoleByName(SUPER_ROLE_NAME);
+        if (roleByName != null) {
+            return;
+        }
+
+        Role role = getRole();
+        try {
+            rangerClient.getRoles().createRole(role);
+            log.info("create ranger super role success");
+        } catch (Exception e) {
+            log.error("create ranger super role failed", e);
+        }
+    }
+
+    private static Role getRole() {
         Role role = new Role();
         role.setName(SUPER_ROLE_NAME);
         List<RoleMember> defaultRoleMembers = new ArrayList<>();
@@ -95,13 +110,9 @@ public class RangerUtil {
             defaultRoleMembers.add(roleMember);
         }
         role.setUsers(defaultRoleMembers);
-        try {
-            rangerClient.getRoles().createRole(role);
-            log.info("create ranger super role success");
-        } catch (Exception e) {
-            log.error("create ranger super role failed", e);
-        }
+        return role;
     }
+
 
     public static void setRoleUser(RangerClient rangerClient, String roleName, List<String> userList) throws RangerClientException {
         Role role = rangerClient.getRoles().getRoleByName(roleName);

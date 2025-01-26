@@ -142,8 +142,8 @@ cookie_domain=
 cookie_path=/
 admin_principal=<#if adminPrincipal??>${adminPrincipal}</#if>
 admin_keytab=<#if adminKeytab??>${adminKeytab}</#if>
-lookup_principal=<#if adminPrincipal??>${adminPrincipal}</#if>
-lookup_keytab=<#if adminKeytab??>${adminKeytab}</#if>
+lookup_principal=<#if lookupPrincipal??>${lookupPrincipal}</#if>
+lookup_keytab=<#if lookupKeytab??>${lookupKeytab}</#if>
 hadoop_conf=<#if hadoopHome??>${hadoopHome}</#if>/etc/hadoop
 #
 #-------- SSO CONFIG - Start ------------------

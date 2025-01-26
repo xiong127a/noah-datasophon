@@ -73,15 +73,15 @@ db_password=${rangerKmsDbPass}
 #KMS Server config
 ranger_kms_http_enabled=true
 ranger_kms_https_keystore_file=
-ranger_kms_https_keystore_keyalias=rangerkms
+ranger_kms_https_keystore_keyalias=rangeradmin
 ranger_kms_https_keystore_password=
 
 #------------------------- RANGER KMS Master Key Crypt Key ------------------
 KMS_MASTER_KEY_PASSWD=${rangerKmsMasterKeyPassword}
 
 #------------------------- Ranger KMS Kerberos Configuration ---------------------------
-kms_principal=<#if spnegoPrincipal??>${spnegoPrincipal}</#if>
-kms_keytab=<#if spnegoKeytab??>${spnegoKeytab}</#if>
+kms_principal=<#if adminPrincipal??>${adminPrincipal}</#if>
+kms_keytab=<#if adminKeytab??>${adminKeytab}</#if>
 #hadoop_conf=/opt/datasophon/hadoop-3.3.3/etc/hadoop
 hadoop_conf=${rangerKmsHadoopConfPath}
 
@@ -299,3 +299,7 @@ sqlanywhere_core_file=db/sqlanywhere/kms_core_db_sqlanywhere.sql
 cred_keystore_filename=$app_home/WEB-INF/classes/conf/.jceks/rangerkms.jceks
 
 KMS_BLACKLIST_DECRYPT_EEK=hdfs
+
+<#if separateDBA == "true">
+setup_mode=SeparateDBA
+</#if>

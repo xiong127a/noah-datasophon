@@ -56,7 +56,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
     }
 
     private void createRangerAdminUserIfNotExists() throws RangerClientException {
-        User rangeradmin = rangerKmsClient.getUsers().getUserByName("rangeradmin");
+        User rangeradmin = rangerClient.getUsers().getUserByName("rangeradmin");
         if (Objects.isNull(rangeradmin)) {
             logger.info("rangeradmin user does not exist, creating rangeradmin user");
             User user = User.builder()
@@ -66,7 +66,7 @@ public class KMSRangerStrategy extends AbstractRangerStrategy implements RangerS
                     .status(1)
                     .userRoleList(Collections.singletonList("ROLE_SYS_ADMIN"))
                     .build();
-            rangerKmsClient.getUsers().createUser(user);
+            rangerClient.getUsers().createUser(user);
         }
     }
 
