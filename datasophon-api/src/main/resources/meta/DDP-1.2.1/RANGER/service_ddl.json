@@ -272,12 +272,11 @@
             "label": "DBA 步骤是否需要单独运行",
             "description": "",
             "required": true,
-            "configType": "map",
-            "type": "input",
-            "value": "true",
+            "type": "switch",
+            "value": true,
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "true"
+            "defaultValue": true
         },
         {
             "name": "dbHost",
