@@ -18,16 +18,12 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.convert.Convert;
-import cn.hutool.core.util.BooleanUtil;
-import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,47 +101,10 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         list.addAll(kbConfigs);
     }
 
-    private void handleConfig(List<ServiceConfig> list, boolean enableAcl, Map<String, String> globalVariables, Map<String, ServiceConfig> map, List<ServiceConfig> configs, String configType) {
-        List<ServiceConfig> toProcessConfigs = new ArrayList<>();
-        if (enableAcl) {
-            addConfigWithConfigType(globalVariables, map, configs, toProcessConfigs, configType);
-        } else {
-            removeConfigWithConfigType(list, map, configs, configType);
-        }
-        list.addAll(toProcessConfigs);
-    }
 
-    public boolean isEnableConfig(ServiceConfig config) {
-        return BooleanUtil.toBoolean(StrUtil.toString(config.getValue()));
-    }
 
-    /**
-     * 将所有service_ddl.json中configType是acl的配置项加入到当前配置列表
-     * isConfigWithAcl判定条件在 service_ddl.json 中设置 cluster1.zk.acl.enable = true
-     *
-     * @param globalVariables 全局变量
-     * @param map             当前前端传入的配置项
-     * @param configs         所有service_ddl.json中设置的所有配置项
-     * @param aclConfigs      需要添加到当前的配置项
-     */
-    public void addConfigWithConfigType(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                        List<ServiceConfig> configs, List<ServiceConfig> aclConfigs, String configType) {
-        for (ServiceConfig serviceConfig : configs) {
-            if (StrUtil.equals(serviceConfig.getConfigType(), configType)) {
-                addConfig(globalVariables, map, aclConfigs, serviceConfig);
-            }
-        }
-    }
 
-    public void removeConfigWithConfigType(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                           List<ServiceConfig> configs, String configType) {
-        for (ServiceConfig serviceConfig : configs) {
-            if (StrUtil.equals(serviceConfig.getConfigType(), configType)) {
-                if (map.containsKey(serviceConfig.getName())) {
-                    list.remove(map.get(serviceConfig.getName()));
-                }
-            }
-        }
-    }
+
+
 
 }

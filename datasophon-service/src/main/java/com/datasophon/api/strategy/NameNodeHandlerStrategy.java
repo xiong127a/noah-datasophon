@@ -26,7 +26,6 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +42,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     private static final String ENABLE_RACK = "enableRack";
 
     private static final String ENABLE_KERBEROS = "enableKerberos";
+    private static final String ENABLE_RANGER = "dfs.permissions";
 
 
     @Override
@@ -61,6 +61,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
         boolean enableRack = false;
         boolean enableKerberos = false;
+        boolean enableRanger = false;
         Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
 
         String key =
@@ -78,6 +79,11 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                         isEnableKerberos(
                                 clusterId, globalVariables, enableKerberos, config, "HDFS");
             }
+            if (ENABLE_RANGER.equals(config.getName())) {
+                if ((Boolean) config.getValue()) {
+                    enableRanger = isEnableConfig(config);
+                }
+            }
         }
         List<ServiceConfig> rackConfigs = new ArrayList<>();
         if (enableRack) {
@@ -88,13 +94,25 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         }
         list.addAll(rackConfigs);
 
+        List<ServiceConfig> rangerConfigs = new ArrayList<>();
+        if (enableRanger) {
+            log.info("start to add ranger config");
+            addConfigWithRack(globalVariables, map, configs, rangerConfigs);
+        } else {
+            removeConfigWithRack(list, map, configs);
+        }
+        list.addAll(rangerConfigs);
+
         ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
         if (enableKerberos) {
             addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
         } else {
             removeConfigWithKerberos(list, map, configs);
         }
+        handleConfig(list, enableRanger, globalVariables, map, configs, "permission");
+
         list.addAll(kbConfigs);
+
     }
 
 
