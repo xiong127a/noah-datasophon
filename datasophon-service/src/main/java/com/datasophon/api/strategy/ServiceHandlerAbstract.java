@@ -167,19 +167,19 @@ public abstract class ServiceHandlerAbstract {
      * @param configs         所有service_ddl.json中设置的所有配置项
      * @param aclConfigs      需要添加到当前的配置项
      */
-    public void addConfigWithConfigType(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                        List<ServiceConfig> configs, List<ServiceConfig> aclConfigs, String configType) {
+    public void addConfigWithConfigureGroupName(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
+                                                List<ServiceConfig> configs, List<ServiceConfig> aclConfigs, String ConfigureGroupName) {
         for (ServiceConfig serviceConfig : configs) {
-            if (StrUtil.equals(serviceConfig.getConfigType(), configType)) {
+            if (StrUtil.equals(serviceConfig.getConfigureGroupName(), ConfigureGroupName)) {
                 addConfig(globalVariables, map, aclConfigs, serviceConfig);
             }
         }
     }
 
-    public void removeConfigWithConfigType(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                           List<ServiceConfig> configs, String configType) {
+    public void removeConfigWithConfigureGroupName(List<ServiceConfig> list, Map<String, ServiceConfig> map,
+                                                   List<ServiceConfig> configs, String ConfigureGroupName) {
         for (ServiceConfig serviceConfig : configs) {
-            if (StrUtil.equals(serviceConfig.getConfigType(), configType)) {
+            if (StrUtil.equals(serviceConfig.getConfigureGroupName(), ConfigureGroupName)) {
                 if (map.containsKey(serviceConfig.getName())) {
                     list.remove(map.get(serviceConfig.getName()));
                 }
@@ -187,12 +187,12 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
-    public void handleConfig(List<ServiceConfig> list, boolean enableAcl, Map<String, String> globalVariables, Map<String, ServiceConfig> map, List<ServiceConfig> configs, String configType) {
+    public void handleConfig(List<ServiceConfig> list, boolean enableAcl, Map<String, String> globalVariables, Map<String, ServiceConfig> map, List<ServiceConfig> configs, String ConfigureGroupName) {
         List<ServiceConfig> toProcessConfigs = new ArrayList<>();
         if (enableAcl) {
-            addConfigWithConfigType(globalVariables, map, configs, toProcessConfigs, configType);
+            addConfigWithConfigureGroupName(globalVariables, map, configs, toProcessConfigs, ConfigureGroupName);
         } else {
-            removeConfigWithConfigType(list, map, configs, configType);
+            removeConfigWithConfigureGroupName(list, map, configs, ConfigureGroupName);
         }
         list.addAll(toProcessConfigs);
     }
