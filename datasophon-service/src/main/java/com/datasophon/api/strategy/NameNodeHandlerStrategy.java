@@ -52,6 +52,8 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn1}", hosts.get(0));
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn2}", hosts.get(1));
+        ProcessUtils.generateClusterVariable(
+                globalVariables, clusterId, "${nameNodes}", String.join(",", hosts));
     }
 
     @Override
@@ -124,6 +126,8 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             serviceRoleInfo.setSlave(true);
             serviceRoleInfo.setSortNum(5);
         }
+
+        serviceRoleInfo.setExtendConfig(globalVariables.get("${journalNodes}"));
     }
 
     @Override

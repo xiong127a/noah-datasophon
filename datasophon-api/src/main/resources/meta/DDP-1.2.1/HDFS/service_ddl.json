@@ -106,7 +106,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "sortNum": 5,
+      "sortNum": 4,
       "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${host}.log",
       "jmxPort": "27002",
       "startRunner": {
@@ -180,7 +180,7 @@
         "group": "hadoop"
       },
       "cardinality": "1+",
-      "sortNum": 7,
+      "sortNum": 5,
       "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${host}.log",
       "jmxPort": "",
       "startRunner": {
