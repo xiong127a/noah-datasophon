@@ -43,7 +43,7 @@ public class DSHandlerStrategy extends AbstractHandlerStrategy implements Servic
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
             logger.info("init ds");
-            ShellUtils.exceShell("bash " + workPath + "/tools/bin/upgrade-schema.sh");
+            ShellUtils.execShell("bash " + workPath + "/tools/bin/upgrade-schema.sh");
         }
         startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());

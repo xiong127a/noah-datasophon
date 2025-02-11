@@ -80,7 +80,7 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         command.add(Constants.INSTALL_PATH + "/hive/bin/hive");
         command.add("-e");
         command.add("\"CREATE DATABASE IF NOT EXISTS " + databaseName + " LOCATION '" + dbPathDir + "'\"");
-        return ShellUtils.exceShell(command.toString());
+        return ShellUtils.execShell(command.toString());
     }
 
     private ExecResult dropHiveDatabase(String databaseName) {
@@ -93,7 +93,7 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         command.add(Constants.INSTALL_PATH + "/hive/bin/hive");
         command.add("-e");
         command.add("\"DROP DATABASE IF EXISTS " + databaseName + " CASCADE\"");
-        return ShellUtils.exceShell(command.toString());
+        return ShellUtils.execShell(command.toString());
     }
 
     /**
@@ -118,6 +118,6 @@ public class HIVEResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-setSpaceQuota");
         commands.add(size);
         commands.add(hdfsPath);
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 }

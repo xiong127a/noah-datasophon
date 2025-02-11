@@ -20,16 +20,16 @@ public class PostgresqlHandlerStrategy extends AbstractHandlerStrategy implement
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE ) {
 
-            ShellUtils.exceShell("chmod -R 700 /opt/datasophon/postgresql-16.1/data/");
+            ShellUtils.execShell("chmod -R 700 /opt/datasophon/postgresql-16.1/data/");
 
             if ("PostgresqlWorker".equals(command.getServiceRoleName())) {
-                ShellUtils.exceShell("rm -rf /opt/datasophon/postgresql-16.1/data/*");
+                ShellUtils.execShell("rm -rf /opt/datasophon/postgresql-16.1/data/*");
                 String backupShell =
                         "sudo -u postgres /opt/datasophon/postgresql-16.1/bin/pg_basebackup -h "
                                 + command.getMasterHost() +
                                 " -U postgres -F p -X s -v -P -R -D /opt/datasophon/postgresql-16.1/data";
                 logger.info(backupShell);
-                execResult = ShellUtils.exceShell(backupShell);
+                execResult = ShellUtils.execShell(backupShell);
                 if (!execResult.getExecResult()) {
                     logger.error("copy data from master failed --> " + execResult.getExecErrOut());
                     return execResult;

@@ -24,7 +24,7 @@ public class RedisHandlerStrategy extends AbstractHandlerStrategy implements Ser
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
             startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                     command.getDecompressPackageName(), command.getRunAs());
-            ShellUtils.exceShell("bash " + workPath + "/redis-cluster.sh");
+            ShellUtils.execShell("bash " + workPath + "/redis-cluster.sh");
         }
 
         startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),

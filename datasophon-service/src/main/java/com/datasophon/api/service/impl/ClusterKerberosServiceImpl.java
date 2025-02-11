@@ -27,7 +27,6 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -44,7 +43,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
-import java.util.Objects;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
@@ -163,12 +161,12 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         String kadminPrincipal = globalVariables.get("${kadminPrincipal}");
         String kadminPassword = globalVariables.get("${kadminPassword}");
         String listPrinc = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"listprincs\"";
-        ExecResult execResult = ShellUtils.exceShell(listPrinc);
+        ExecResult execResult = ShellUtils.execShell(listPrinc);
         String execOut = execResult.getExecOut();
         if (!execOut.contains(principal)) {
             String addprinc = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"addprinc -randkey " + principal + "\"";
             logger.info("add principal cmd is : {}", addprinc);
-            ShellUtils.exceShell(addprinc);
+            ShellUtils.execShell(addprinc);
         }
         if (!FileUtil.exist(keytabFilePath)) {
             FileUtil.mkParentDirs(keytabFilePath);
@@ -176,7 +174,7 @@ public class ClusterKerberosServiceImpl implements ClusterKerberosService {
         String keytabCmd = "kadmin -p" + kadminPrincipal + " -w" + kadminPassword + " -q \"xst -k " + keytabFilePath + " "
                 + principal + "\"";
         logger.info("generate keytab file cmd is : {}", keytabCmd);
-        ShellUtils.exceShell(keytabCmd);
+        ShellUtils.execShell(keytabCmd);
 
     }
 }

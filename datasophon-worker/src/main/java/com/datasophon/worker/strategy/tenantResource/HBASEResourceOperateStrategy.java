@@ -56,7 +56,7 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
     private ExecResult alertHbaseNamespace(TenantHbaseResource hbaseResource) {
         ExecResult execResult;
         // echo "alter_namespace 'test4'; set_quota TYPE => SPACE, NAMESPACE => 'test4', LIMIT => '1G', POLICY => NO_INSERTS; " | hbase shell
-        execResult = ShellUtils.exceShell(
+        execResult = ShellUtils.execShell(
                 kinitHbaseStr(hbaseResource) +
                         ";" +
                         "echo \"alter_namespace '" +
@@ -75,7 +75,7 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
 
     private ExecResult createHbaseNamespace(String hbaseNamespace, String hbaseCapacity) {
         // echo "create_namespace 'test4'; set_quota TYPE => SPACE, NAMESPACE => 'test4', LIMIT => '1G', POLICY => NO_INSERTS; " | hbase shell
-        return ShellUtils.exceShell(
+        return ShellUtils.execShell(
                 kinitHbaseStr(hbaseResource) +
                         ";" +
                         "echo \"create_namespace '" +
@@ -93,7 +93,7 @@ public class HBASEResourceOperateStrategy extends AbstractOperateStrategy implem
 
     private ExecResult dropHbaseNamespace(String hbaseNamespace) {
         // echo "drop_namespace 'test4';" | hbase shell
-        return ShellUtils.exceShell(
+        return ShellUtils.execShell(
                 kinitHbaseStr(hbaseResource) +
                         ";" +
                         "echo \"drop_namespace '" +

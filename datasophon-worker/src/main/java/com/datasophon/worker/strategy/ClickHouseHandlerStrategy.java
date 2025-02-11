@@ -45,11 +45,11 @@ public class ClickHouseHandlerStrategy extends AbstractHandlerStrategy implement
             ShellUtils.execWithStatus(workPath, commands, 300L, logger);
 
             // 配置文件操作
-            ShellUtils.exceShell("rm -rf /etc/clickhouse-server/config.xml");
-            ShellUtils.exceShell("rm -rf /etc/clickhouse-server/users.xml");
-            ShellUtils.exceShell("cp " + workPath + "/etc/config.xml /etc/clickhouse-server");
-            ShellUtils.exceShell("cp " + workPath + "/etc/users.xml /etc/clickhouse-server");
-            ShellUtils.exceShell("chown clickhouse:clickhouse /etc/clickhouse-server/config.xml /etc/clickhouse-server/users.xml");
+            ShellUtils.execShell("rm -rf /etc/clickhouse-server/config.xml");
+            ShellUtils.execShell("rm -rf /etc/clickhouse-server/users.xml");
+            ShellUtils.execShell("cp " + workPath + "/etc/config.xml /etc/clickhouse-server");
+            ShellUtils.execShell("cp " + workPath + "/etc/users.xml /etc/clickhouse-server");
+            ShellUtils.execShell("chown clickhouse:clickhouse /etc/clickhouse-server/config.xml /etc/clickhouse-server/users.xml");
             logger.info("clickhouse server install success");
 
 

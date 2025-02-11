@@ -31,13 +31,13 @@ public class HueHandlerStrategy extends AbstractHandlerStrategy implements Servi
             KerberosUtils.createKeytabDir();
             if (!FileUtil.exist("/opt/datasophon/hue/hue.service.keytab")) {
                 KerberosUtils.downloadKeytabFromMaster("hue/" + hostname, "hue.service.keytab");
-                ShellUtils.exceShell("cp /etc/security/keytab/hue.service.keytab /opt/datasophon/hue/hue.service.keytab");
-                ShellUtils.exceShell("chmod 777 /opt/datasophon/hue/hue.service.keytab");
+                ShellUtils.execShell("cp /etc/security/keytab/hue.service.keytab /opt/datasophon/hue/hue.service.keytab");
+                ShellUtils.execShell("chmod 777 /opt/datasophon/hue/hue.service.keytab");
             }
         }
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            ShellUtils.exceShell("yum -y install cyrus-sasl-plain  cyrus-sasl-devel  cyrus-sasl-gssapi --skip-broken");
+            ShellUtils.execShell("yum -y install cyrus-sasl-plain  cyrus-sasl-devel  cyrus-sasl-gssapi --skip-broken");
 
             logger.info("init hue database");
             ArrayList<String> commands = new ArrayList<>();

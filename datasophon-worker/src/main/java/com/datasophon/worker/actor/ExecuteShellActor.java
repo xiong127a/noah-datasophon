@@ -9,7 +9,7 @@ public class ExecuteShellActor extends UntypedActor {
     public void onReceive(Object message) throws Throwable {
         if (message instanceof String) {
             String command = (String) message;
-            ExecResult execResult = ShellUtils.exceShell(command);
+            ExecResult execResult = ShellUtils.execShell(command);
             getSender().tell(execResult, getSelf());
         } else {
             unhandled(message);

@@ -71,7 +71,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
                         topicName +
                         "  --alter --add-config retention.bytes=" +
                         convertGBToByte(topicCapacity);
-        return ShellUtils.exceShell(shell);
+        return ShellUtils.execShell(shell);
     }
 
     private ExecResult createKafkaTopic(String topicName, String topicReplicas, String topicCapacity) {
@@ -93,7 +93,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
         commands.add("--config");
         commands.add("retention.bytes=" + convertGBToByte(topicCapacity));
 
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 
     private ExecResult deleteKafkaTopic(String topicName) {
@@ -110,7 +110,7 @@ public class KAFKAResourceOperateStrategy extends AbstractOperateStrategy implem
         commands.add("--bootstrap-server");
         commands.add(CacheUtils.get(Constants.HOSTNAME) + ":9092");
 
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 
     private String kinitKafkaStr(TenantKafkaResource kafkaResource) {

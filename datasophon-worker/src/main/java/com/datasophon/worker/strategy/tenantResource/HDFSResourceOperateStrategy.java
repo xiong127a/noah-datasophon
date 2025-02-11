@@ -91,7 +91,7 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-chmod");
         commands.add("777");
         commands.add(hdfsPath);
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 
     /**
@@ -115,7 +115,7 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-setSpaceQuota");
         commands.add(size);
         commands.add(hdfsPath);
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 
     private ExecResult deleteHdfsPath(String hdfsPath) {
@@ -135,6 +135,6 @@ public class HDFSResourceOperateStrategy extends AbstractOperateStrategy impleme
         commands.add("-rm");
         commands.add("-r");
         commands.add(hdfsPath);
-        return ShellUtils.exceShell(commands.toString());
+        return ShellUtils.execShell(commands.toString());
     }
 }

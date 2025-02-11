@@ -152,7 +152,7 @@ public class WorkerApplicationServer {
         ActorSelection workerStartActor =
                 system.actorSelection(
                         "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
-        ExecResult result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
+        ExecResult result = ShellUtils.execShell(workDir + "/script/host-info-collect.sh");
         logger.info("host info collect result:{}", result);
         StartWorkerMessage startWorkerMessage =
                 JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
