@@ -64,9 +64,9 @@ public class InstallServiceActor extends UntypedActor {
                 ExecResult execResult = ShellUtils.execWithStatus(Constants.INSTALL_PATH, commands, 180, logger);
                 if (execResult.getExecResult()) {
                     if ("aarch64".equals(ShellUtils.getCpuArchitecture())) {
-                        ShellUtils.exceShell("sudo sed -i 's/^/#/' /etc/krb5.conf.d/kcm_default_ccache");
-                        ShellUtils.exceShell("sudo systemctl restart krb5kdc");
-                        ShellUtils.exceShell("sudo systemctl restart kadmin");
+                        ShellUtils.execShell("sudo sed -i 's/^/#/' /etc/krb5.conf.d/kcm_default_ccache");
+                        ShellUtils.execShell("sudo systemctl restart krb5kdc");
+                        ShellUtils.execShell("sudo systemctl restart kadmin");
                     }
                     installResult = serviceHandler.install(command);
                 }
@@ -77,7 +77,7 @@ public class InstallServiceActor extends UntypedActor {
                 String appLinkHome = Constants.INSTALL_PATH + Constants.SLASH + StringUtils.lowerCase(command.getServiceName());
                 if (!new File(appLinkHome).exists()) {
                     ShellUtils
-                            .exceShell("ln -s " + appHome + " " + appLinkHome);
+                            .execShell("ln -s " + appHome + " " + appLinkHome);
                     logger.info("Create symbolic dir: {}", appLinkHome);
                 }
             }

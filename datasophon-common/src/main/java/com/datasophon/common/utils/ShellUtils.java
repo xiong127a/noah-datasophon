@@ -17,17 +17,17 @@
 
 package com.datasophon.common.utils;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,270 +36,191 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class ShellUtils {
 
-    private static ProcessBuilder processBuilder = new ProcessBuilder();
+    private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
-
-
-    public static Process exec(List<String> command) {
-        Process process = null;
-        try {
-            String[] commands = new String[command.size()];
-            command.toArray(commands);
-            processBuilder.command(commands);
-            process = processBuilder.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return process;
+    private ShellUtils() {
+        throw new UnsupportedOperationException("This class should not be instantiated");
     }
 
-    /**
-     * @param pathOrCommand 脚本路径或者命令
-     * @return
-     */
-    public static ExecResult exceShell(String pathOrCommand) {
+    public static ExecResult execShell(String pathOrCommand) {
         ExecResult result = new ExecResult();
-        StringBuffer outputBuffer = new StringBuffer();
-        StringBuffer errorBuffer = new StringBuffer();
+        StringBuilder outputBuffer = new StringBuilder();
+        StringBuilder errorBuffer = new StringBuilder();
 
+        Process process = null;
         try {
-            // 执行脚本
-            Process ps = Runtime.getRuntime().exec(new String[]{"sh", "-c", pathOrCommand});
+            ProcessBuilder processBuilder = new ProcessBuilder();
+            processBuilder.command("sh", "-c", pathOrCommand);
+            process = processBuilder.start();
 
-            // 读取标准输出流
-            try (BufferedReader outputReader = new BufferedReader(new InputStreamReader(ps.getInputStream()));
-                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(ps.getErrorStream()))) {
+            try (InputStream inputStream = process.getInputStream();
+                 InputStream errorStream = process.getErrorStream()) {
 
-                String line;
-                while ((line = outputReader.readLine()) != null) {
-                    outputBuffer.append(line);
-                    outputBuffer.append(System.lineSeparator());
-                }
+                // 使用并行读取避免阻塞
+                Thread outputThread = readStream(inputStream, outputBuffer, log);
+                Thread errorThread = readStream(errorStream, errorBuffer, log);
 
-                // 读取错误输出流
-                while ((line = errorReader.readLine()) != null) {
-                    errorBuffer.append(line);
-                    errorBuffer.append(System.lineSeparator());
-                }
+                outputThread.join();
+                errorThread.join();
             }
 
-            // 等待进程结束
-            int exitValue = ps.waitFor();
+            int exitValue = process.waitFor();
             String execOut = outputBuffer.toString();
 
             if (exitValue == 0) {
-                log.info("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
+                log.info("Command [{}] executed successfully\nOutput: {}", pathOrCommand, execOut);
                 result.setExecResult(true);
                 result.setExecOut(execOut);
             } else {
-                result.setExecOut("call shell failed. error code is :" + exitValue + ", error: " + errorBuffer.toString());
-                log.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
-                log.error("Error output: {}", errorBuffer.toString());
+                String errorMsg = String.format("Command failed with code %d\nError: %s",
+                        exitValue, errorBuffer.toString());
+                log.error("Command [{}] failed\nOutput: {}\nError: {}",
+                        pathOrCommand, execOut, errorBuffer.toString());
+                result.setExecOut(errorMsg);
             }
-
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            handleException(result, "Command execution interrupted", e);
         } catch (Exception e) {
-            result.setExecOut(e.getMessage());
-            e.printStackTrace();
+            handleException(result, "Command execution error", e);
+        } finally {
+            safeDestroyProcess(process);
         }
         return result;
     }
-
-    // 获取cpu架构 arm或x86
-    public static String getCpuArchitecture() {
-        try {
-            Process ps = Runtime.getRuntime().exec("arch");
-            StringBuffer stringBuffer = new StringBuffer();
-            int exitValue = ps.waitFor();
-            if (0 == exitValue) {
-                // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
-                BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    log.info("脚本返回的数据如下： " + line);
-                    stringBuffer.append(line);
-                }
-                in.close();
-                br.close();
-                return stringBuffer.toString();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
 
     public static ExecResult execWithStatus(String workPath, List<String> command, long timeout) {
-        Process process = null;
+        return execWithStatus(workPath, command, timeout, log);
+    }
+
+    public static ExecResult execWithStatus(String workPath, List<String> command,
+                                            long timeout, Logger logger) {
         ExecResult result = new ExecResult();
+        Process process = null;
         try {
-            processBuilder.directory(new File(workPath));
-            processBuilder.command(command);
-            processBuilder.redirectErrorStream(true);
-            process = processBuilder.start();
-            getOutput(process);
-            boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
-            if (execResult && process.exitValue() == 0) {
-                log.info("script execute success --> " + String.join(" ", command));
-                result.setExecResult(true);
-                result.setExecOut("script execute success");
-            } else {
-                result.setExecOut("script execute failed --> " + String.join(" ", command));
-                log.error(getError(process));
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            if (workPath != null) {
+                processBuilder.directory(new File(workPath));
             }
-            return result;
+            processBuilder.redirectErrorStream(true);
+
+            process = processBuilder.start();
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+
+            StringBuilder outputBuffer = new StringBuilder();
+            Process finalProcess = process;
+            executor.submit(() -> readOutput(finalProcess.getInputStream(), outputBuffer, logger));
+
+            boolean finished = process.waitFor(timeout, TimeUnit.SECONDS);
+            executor.shutdown();
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                logger.warn("Process output reading timed out");
+            }
+
+            if (finished && process.exitValue() == 0) {
+                logger.info("Command executed successfully: {}", String.join(" ", command));
+                result.setExecResult(true);
+                result.setExecOut(outputBuffer.toString());
+            } else {
+                String errorMsg = finished ?
+                        "Exited with code: " + process.exitValue() : "Process timed out";
+                logger.error("Command failed: {} - {}", String.join(" ", command), errorMsg);
+                result.setExecOut(errorMsg);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            handleException(result, "Command execution interrupted", e);
         } catch (Exception e) {
-            result.setExecErrOut(e.getMessage());
-            e.printStackTrace();
+            handleException(result, "Command execution error", e);
+        } finally {
+            safeDestroyProcess(process);
         }
         return result;
     }
 
-    public static ExecResult execWithStatus(String workPath, List<String> command, long timeout, Logger logger) {
-        Process process = null;
-        ExecResult result = new ExecResult();
-        try {
-            processBuilder.directory(new File(workPath));
-            processBuilder.command(command);
-            processBuilder.redirectErrorStream(true);
-            process = processBuilder.start();
-            getOutput(process, logger);
-            boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
-            if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success --> " + String.join(" ", command));
-                result.setExecResult(true);
-                result.setExecOut("script execute success --> " + String.join(" ", command));
-            } else {
-                result.setExecOut("script execute failed --> " + String.join(" ", command));
-            }
-            return result;
-        } catch (Exception e) {
-            result.setExecErrOut(e.getMessage());
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    public static void getOutput(Process process, Logger logger) {
-
-        ExecutorService getOutputLogService = Executors.newSingleThreadExecutor();
-
-        getOutputLogService.submit(() -> {
-            BufferedReader inReader = null;
-            try {
-                inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    private static Thread readStream(InputStream inputStream, StringBuilder buffer, Logger logger) {
+        Thread thread = new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
                 String line;
-                StringBuffer stringBuffer = new StringBuffer();
-                while ((line = inReader.readLine()) != null) {
-                    stringBuffer.append(line);
-                    stringBuffer.append(System.lineSeparator());
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line).append(System.lineSeparator());
+                    logger.debug(line);
                 }
-                if (stringBuffer.length() != 0) {
-                    logger.info(stringBuffer.toString());
-                }
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            } finally {
-                closeQuietly(inReader);
-            }
-            BufferedReader errorReader = null;
-            try {
-                errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                String line;
-                StringBuffer stringBuffer = new StringBuffer();
-                while ((line = errorReader.readLine()) != null) {
-                    stringBuffer.append(line);
-                    stringBuffer.append(System.lineSeparator());
-                }
-                if (stringBuffer.length() != 0) {
-                    logger.error(stringBuffer.toString());
-                }
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            } finally {
-                closeQuietly(errorReader);
+            } catch (IOException e) {
+                logger.error("Error reading stream", e);
             }
         });
-        getOutputLogService.shutdown();
+        thread.start();
+        return thread;
     }
 
-    public static void getOutput(Process process) {
-
-        ExecutorService getOutputLogService = Executors.newSingleThreadExecutor();
-
-        getOutputLogService.submit(() -> {
-            BufferedReader inReader = null;
-            try {
-                inReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                String line;
-                StringBuffer stringBuffer = new StringBuffer();
-                while ((line = inReader.readLine()) != null) {
-                    stringBuffer.append(line);
-                    stringBuffer.append(System.lineSeparator());
-                }
-                if (stringBuffer.length() != 0) {
-                    log.trace(stringBuffer.toString());
-                }
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-            } finally {
-                closeQuietly(inReader);
+    private static void readOutput(InputStream inputStream, StringBuilder buffer, Logger logger) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line).append(System.lineSeparator());
+                logger.info(line);
             }
-        });
-        getOutputLogService.shutdown();
+        } catch (IOException e) {
+            logger.error("Error reading output stream", e);
+        }
     }
 
-    public static String getError(Process process) {
-        String errput = null;
-        BufferedReader reader = null;
+    public static String getCpuArchitecture() {
         try {
-            if (process != null) {
-                StringBuffer stringBuffer = new StringBuffer();
-                reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                while (reader.read() != -1) {
-                    stringBuffer.append("\n" + reader.readLine());
+            Process process = new ProcessBuilder("arch").start();
+            StringBuilder output = new StringBuilder();
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line);
                 }
-                errput = stringBuffer.toString();
+            }
+
+            if (process.waitFor() == 0) {
+                return output.toString().trim();
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to get CPU architecture", e);
         }
-        closeQuietly(reader);
-        return errput;
-    }
-
-    public static void closeQuietly(Reader reader) {
-        try {
-            if (reader != null) {
-                reader.close();
-            }
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-    }
-
-    public static void destroy(Process process) {
-        if (process != null) {
-            process.destroyForcibly();
-        }
+        return "unknown";
     }
 
     public static void addChmod(String path, String chmod) {
-        ArrayList<String> command = new ArrayList<>();
-        command.add("chmod");
-        command.add("-R");
-        command.add(chmod);
-        command.add(path);
-        execWithStatus(Constants.INSTALL_PATH, command, 60, log);
+        executePrivilegeCommand("chmod", "-R", chmod, path);
     }
 
     public static void addChown(String path, String user, String group) {
-        ArrayList<String> command = new ArrayList<>();
-        command.add("chown");
-        command.add("-R");
-        command.add(user + ":" + group);
-        command.add(path);
-        execWithStatus(Constants.INSTALL_PATH, command, 60, log);
+        executePrivilegeCommand("chown", "-R", user + ":" + group, path);
+    }
+
+    private static void executePrivilegeCommand(String... commandParts) {
+        List<String> command = CollUtil.newArrayList(commandParts);
+        ExecResult result = execWithStatus(Constants.INSTALL_PATH, command, DEFAULT_TIMEOUT_SECONDS);
+        if (!result.getExecResult()) {
+            log.error("Failed to execute command: {}", String.join(" ", command));
+        }
+    }
+
+    private static void handleException(ExecResult result, String message, Exception e) {
+        log.error(message, e);
+        result.setExecResult(false);
+        result.setExecErrOut(message + ": " + e.getMessage());
+    }
+
+    private static void safeDestroyProcess(Process process) {
+        if (process != null) {
+            try {
+                if (process.isAlive()) {
+                    process.destroyForcibly();
+                }
+            } catch (Exception e) {
+                log.warn("Error destroying process", e);
+            }
+        }
     }
 }

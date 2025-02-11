@@ -17,7 +17,6 @@
 
 package com.datasophon.common.utils;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.ProcInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +117,7 @@ public class OlapUtils {
                         + hostname
                         + ":9010\"';";
         // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+        return ShellUtils.execShell(sqlCommand);
     }
 
     public static ExecResult addObserverBySqlClient(String feMaster,
@@ -131,7 +130,7 @@ public class OlapUtils {
                         + hostname
                         + ":9010\"';";
         // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+        return ShellUtils.execShell(sqlCommand);
     }
 
     public static ExecResult addBackendBySqlClient(String feMaster,
@@ -144,7 +143,7 @@ public class OlapUtils {
                         + hostname
                         + ":9050\"';";
         // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+        return ShellUtils.execShell(sqlCommand);
     }
 
     public static ExecResult addCnBySqlClient(String feMaster,
@@ -157,7 +156,7 @@ public class OlapUtils {
                         + hostname
                         + ":9050\"';";
         // logger.info("sqlCommand is {}", sqlCommand);
-        return ShellUtils.exceShell(sqlCommand);
+        return ShellUtils.execShell(sqlCommand);
     }
 
     private static Connection getConnection(String feMaster) throws ClassNotFoundException, SQLException {

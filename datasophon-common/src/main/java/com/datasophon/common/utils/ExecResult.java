@@ -17,47 +17,43 @@
 
 package com.datasophon.common.utils;
 
+import lombok.Data;
+import lombok.experimental.Accessors;
+
 import java.io.Serializable;
 
+@Accessors(chain = true)
+@Data
 public class ExecResult implements Serializable {
 
     private boolean execResult = false;
-
     private String execOut;
-
     private String execErrOut;
-
     private Object object;
 
-    public String getExecErrOut() {
-        return execErrOut;
+    // 新增静态工厂方法
+    public static ExecResult error(String errorMessage) {
+        ExecResult result = new ExecResult();
+        result.setExecResult(false);
+        result.setExecErrOut(errorMessage);
+        return result;
     }
 
-    public void setExecErrOut(String execErrOut) {
-        this.execErrOut = execErrOut;
+    // 可选：添加带错误输出和详细输出的重载方法
+    public static ExecResult error(String errorMessage, String detailOutput) {
+        ExecResult result = error(errorMessage);
+        result.setExecOut(detailOutput);
+        return result;
+    }
+
+    // 可选：添加成功状态的快捷方法
+    public static ExecResult success() {
+        ExecResult result = new ExecResult();
+        result.setExecResult(true);
+        return result;
     }
 
     public boolean getExecResult() {
         return execResult;
-    }
-
-    public void setExecResult(boolean execResult) {
-        this.execResult = execResult;
-    }
-
-    public String getExecOut() {
-        return execOut;
-    }
-
-    public void setExecOut(String execOut) {
-        this.execOut = execOut;
-    }
-
-    public Object getObject() {
-        return object;
-    }
-
-    public void setObject(Object object) {
-        this.object = object;
     }
 }

@@ -171,7 +171,7 @@ public class ConfigureServiceHandler {
                         final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
                         if (!FileUtil.exist(targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            ExecResult result = ShellUtils.exceShell("ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            ExecResult result = ShellUtils.execShell("ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
                             if (!result.getExecResult()) {
                                 logger.warn("Add hive-site.xml link failed,msg: " + result.getExecErrOut());
                             }

@@ -72,25 +72,18 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         List<ServiceConfig> configs = ServiceConfigMap.get(key);
         ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
 
+        // 根据 enableKerberos 的值更新配置
         if (enableKerberos) {
-            addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
             //TODO  当kafka开启kerberos认证时，efak也要开启
-            enableSasl = true;
-            for (ServiceConfig config : list) {
-                if ("cluster1.efak.sasl.enable".equals(config.getName())) {
-                    config.setValue(enableSasl);
-                }
-            }
+            addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
         } else {
-            removeConfigWithKerberos(list, map, configs);
             //TODO  当kafka关闭kerberos认证时，efak也要关闭
-            enableSasl = false;
-            for (ServiceConfig config : list) {
-                if ("cluster1.efak.sasl.enable".equals(config.getName())) {
-                    config.setValue(enableSasl);
-                }
-            }
+            removeConfigWithKerberos(list, map, configs);
         }
+
+        // 更新 EFAK 的 SASL 配置
+        enableSasl = enableKerberos;
+        updateEfakSaslConfig(list, enableSasl);
 
         handleConfig(list, enableAcl, globalVariables, map, configs, "acl");
         handleConfig(list, enableDistributed, globalVariables, map, configs, "efak-ha");
@@ -101,7 +94,13 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
         list.addAll(kbConfigs);
     }
 
-
+    private void updateEfakSaslConfig(List<ServiceConfig> list, boolean enableSasl) {
+        for (ServiceConfig config : list) {
+            if ("cluster1.efak.sasl.enable".equals(config.getName())) {
+                config.setValue(enableSasl);
+            }
+        }
+    }
 
 
 

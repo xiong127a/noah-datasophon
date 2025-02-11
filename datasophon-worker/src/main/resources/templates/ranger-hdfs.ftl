@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-POLICY_MGR_URL=<#if rangerAdminUrl??>${rangerAdminUrl}</#if>
+POLICY_MGR_URL=${rangerAdminUrl!"NONE"}
 REPOSITORY_NAME=hadoopdev
 COMPONENT_INSTALL_DIR_NAME=<#if hadoopHome??>${hadoopHome}</#if>
 
@@ -39,11 +39,11 @@ XAAUDIT.SOLR.FILE_SPOOL_DIR=/var/log/hadoop/hdfs/audit/solr/spool
 #XAAUDIT.ELASTICSEARCH.INDEX=audit
 
 XAAUDIT.ELASTICSEARCH.ENABLE=<#if esAuditEnable?? && esAuditEnable?has_content>${esAuditEnable}<#else>false</#if>
-XAAUDIT.ELASTICSEARCH.URL=<#if esSingleHost??>${esSingleHost}</#if>
+XAAUDIT.ELASTICSEARCH.URL=${esSingleHost!"NONE"}
 XAAUDIT.ELASTICSEARCH.USER=NONE
 XAAUDIT.ELASTICSEARCH.PASSWORD=NONE
 XAAUDIT.ELASTICSEARCH.INDEX=ranger_audits
-XAAUDIT.ELASTICSEARCH.PORT=<#if esHttpPort??>${esHttpPort}</#if>
+XAAUDIT.ELASTICSEARCH.PORT=${esHttpPort!"NONE"}
 XAAUDIT.ELASTICSEARCH.PROTOCOL=http
 
 XAAUDIT.HDFS.ENABLE=false

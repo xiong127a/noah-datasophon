@@ -67,6 +67,8 @@ public class ServiceConfig implements Serializable {
     private boolean configWithRack;
 
     private boolean configWithHA;
+
+    private String configureGroupName;
     /**
      * 用于设置分隔符，即生成类似 [1, 2, 3] 这样的格式。
      */

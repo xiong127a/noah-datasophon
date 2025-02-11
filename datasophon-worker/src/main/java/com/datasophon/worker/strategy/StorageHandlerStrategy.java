@@ -62,7 +62,7 @@ public class StorageHandlerStrategy extends AbstractHandlerStrategy implements S
             startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                     command.getDecompressPackageName(), command.getRunAs());
             if (startResult.getExecResult()) {
-                ShellUtils.exceShell(String.join(" ",commands));
+                ShellUtils.execShell(String.join(" ",commands));
             } else {
                 logger.error("add storage failed");
             }

@@ -50,8 +50,8 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
             }
         }
 
-        ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
-        ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+        ShellUtils.execShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
+        ShellUtils.execShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
             logger.info("setup ranger user sync");
@@ -66,12 +66,12 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
                 return execResult;
             }
 
-            ShellUtils.exceShell("sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n;s/<value>false<\\/value>/<value>true<\\/value>/}' "
+            ShellUtils.execShell("sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n;s/<value>false<\\/value>/<value>true<\\/value>/}' "
                     + workPath +
                     "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
         }
-        ShellUtils.exceShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
-        ShellUtils.exceShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
+        ShellUtils.execShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
+        ShellUtils.execShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
             logger.info("setup ranger kms");

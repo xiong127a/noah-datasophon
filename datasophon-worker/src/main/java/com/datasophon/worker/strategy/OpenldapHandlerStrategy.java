@@ -24,24 +24,24 @@ public class OpenldapHandlerStrategy extends AbstractHandlerStrategy implements 
             //String cpuArchitecture = ShellUtils.getCpuArchitecture();
 
             // 开启日志
-            ShellUtils.exceShell("echo \"local4.* /var/log/slapd/slapd.log >> /etc/rsyslog.conf");
-            ShellUtils.exceShell("systemctl restart rsyslog");
+            ShellUtils.execShell("echo \"local4.* /var/log/slapd/slapd.log >> /etc/rsyslog.conf");
+            ShellUtils.execShell("systemctl restart rsyslog");
 
             // 初始化OpenLDAP
             logger.info("start OpenLDAP");
-            ShellUtils.exceShell("ln -s " + workPath + "/bin/* /usr/bin/");
-            ShellUtils.exceShell("ln -s " + workPath + "/sbin/* /usr/sbin/");
-            ShellUtils.exceShell("sh " + workPath + "/setup_tls.sh");
+            ShellUtils.execShell("ln -s " + workPath + "/bin/* /usr/bin/");
+            ShellUtils.execShell("ln -s " + workPath + "/sbin/* /usr/sbin/");
+            ShellUtils.execShell("sh " + workPath + "/setup_tls.sh");
             logger.info("init success");
 
             // 启动
-            ShellUtils.exceShell("sh " + workPath + "/control_openldap.sh start");
-            ShellUtils.exceShell(" ldapadd -Q -Y EXTERNAL -H ldapi:/// -f " + workPath + "/refint2.ldif");
+            ShellUtils.execShell("sh " + workPath + "/control_openldap.sh start");
+            ShellUtils.execShell(" ldapadd -Q -Y EXTERNAL -H ldapi:/// -f " + workPath + "/refint2.ldif");
 
 
             // 添加基础用户
-            ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/base.ldif");
-            ShellUtils.exceShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/default-user.ldif");
+            ShellUtils.execShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/base.ldif");
+            ShellUtils.execShell("ldapadd -x -D cn=root,dc=ldap,dc=com -w 123456 -f " + workPath + "/default-user.ldif");
         }
         ExecResult startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                 command.getDecompressPackageName(), command.getRunAs());
