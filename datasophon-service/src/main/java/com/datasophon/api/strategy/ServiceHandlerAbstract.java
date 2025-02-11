@@ -187,9 +187,9 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
-    public void handleConfig(List<ServiceConfig> list, boolean enableAcl, Map<String, String> globalVariables, Map<String, ServiceConfig> map, List<ServiceConfig> configs, String ConfigureGroupName) {
+    public void handleConfig(List<ServiceConfig> list, boolean isEnable, Map<String, String> globalVariables, Map<String, ServiceConfig> map, List<ServiceConfig> configs, String ConfigureGroupName) {
         List<ServiceConfig> toProcessConfigs = new ArrayList<>();
-        if (enableAcl) {
+        if (isEnable) {
             addConfigWithConfigureGroupName(globalVariables, map, configs, toProcessConfigs, ConfigureGroupName);
         } else {
             removeConfigWithConfigureGroupName(list, map, configs, ConfigureGroupName);
