@@ -295,9 +295,21 @@ public class K8sYamlDeploymentHandler {
 
         }
         if ("RANGER".equals(serviceName)) {
-            volumePathSet.clear();
-            addConfigFile(volumePathSet, "rangerdir", "/opt/datasophon/ranger-2.1.0");
             addConfigFile(volumePathSet, "adminconf", "/etc/ranger/admin");
+            volumePathSet.removeIf(x->x.getValue().equals("/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties2"));
+            volumePathSet.removeIf(x->x.getValue().equals("/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf/ranger-kms-site.xml"));
+            volumePathSet.removeIf(x->x.getValue().equals("/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf/kms-site.xml"));
+            volumePathSet.removeIf(x->x.getValue().equals("/opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties1"));
+            volumePathSet.removeIf(x->x.getValue().equals("/opt/datasophon/ranger-2.1.0/conf/install.properties"));
+            if ("RangerKms".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-kms-conf1", "/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties2");
+            }
+            if ("RangerUsersync".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-usersync-conf", "/opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties1");
+            }
+            if ("RangerAdmin".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-admin-conf", "/opt/datasophon/ranger-2.1.0/conf/install.properties");
+            }
         }
 
         if ("Krb5Kdc".equals(serviceRoleName) || "KAdmin".equals(serviceRoleName)) {

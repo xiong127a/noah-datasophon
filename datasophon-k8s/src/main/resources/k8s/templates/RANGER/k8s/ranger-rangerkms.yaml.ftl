@@ -1,5 +1,5 @@
-apiVersion: "apps/v1"
-kind: "Deployment"
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -11,7 +11,7 @@ spec:
     matchLabels:
       app: "${serviceRoleFullName}"
   strategy:
-    type: "RollingUpdate"
+    type: RollingUpdate
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1
@@ -35,7 +35,7 @@ spec:
                   podConflictName: "${serviceRoleFullName}"
               namespaces:
                 - "${namespace}"
-              topologyKey: "kubernetes.io/hostname"
+              topologyKey: kubernetes.io/hostname
       hostPID: false
       hostNetwork: true
       containers:
@@ -47,23 +47,20 @@ spec:
                 resourceFieldRef:
                   resource: limits.memory
           image: "${dockerImage}"
-          imagePullPolicy: "Always"
+          imagePullPolicy: Always
           command:
-            - "/bin/bash"
-            - "-c"
+            - /bin/bash
+            - -c
             - |
-              ln -s /opt/datasophon/ranger-2.1.0 /opt/datasophon/ranger \
-              && cp /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties2 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties \
-              && chmod 755 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/install.properties \
-              && cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms \
+              cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms \
               && sh ./setup.sh \
               && sh ./enable-kms-plugin.sh
               ${startCommand}
           readinessProbe:
             exec:
               command:
-                - "/bin/bash"
-                - "-c"
+                - /bin/bash
+                - -c
                 - "${statusCommand}"
             failureThreshold: 3
             initialDelaySeconds: 10
@@ -73,10 +70,10 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
+              memory: 2Gi
               cpu: "1"
             limits:
-              memory: "4Gi"
+              memory: 4Gi
               cpu: "2"
           securityContext:
             privileged: true
@@ -85,6 +82,8 @@ spec:
             - mountPath: "${item.value}"
               name: "${item.name}"
             </#list>
+            - mountPath: /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf
+              name: ranger-kms-conf
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -95,5 +94,9 @@ spec:
           name: "${item.name}"
         </#list>
         - hostPath:
-            path: "/etc/localtime"
-          name: "timezone"
+            path: /etc/localtime
+          name: timezone
+        - hostPath:
+            path: /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf
+            type: DirectoryOrCreate
+          name: ranger-kms-conf

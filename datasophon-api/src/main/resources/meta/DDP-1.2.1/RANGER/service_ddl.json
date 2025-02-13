@@ -124,7 +124,7 @@
     "configWriter": {
         "generators": [
             {
-                "filename": "install.properties",
+                "filename": "conf/install.properties",
                 "configFormat": "custom",
                 "templateName": "ranger-install.ftl",
                 "outputDirectory": "",

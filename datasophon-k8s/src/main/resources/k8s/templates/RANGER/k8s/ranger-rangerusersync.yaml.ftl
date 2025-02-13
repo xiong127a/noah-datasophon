@@ -52,9 +52,7 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              cp /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties1 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties \
-              && chmod 755 /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/install.properties \
-              && cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync \
+              cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync \
               && sh ./setup.sh \
               && sh ./set_globals.sh
               #literal#sed -i '/<name>ranger\\.usersync\\.enabled<\\/name>/{n; s/<value>false<\\/value>/<value>true<\\/value>/}' /opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml#end#
