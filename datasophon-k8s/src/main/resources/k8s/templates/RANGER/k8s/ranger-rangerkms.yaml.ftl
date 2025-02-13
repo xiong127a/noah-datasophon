@@ -52,9 +52,6 @@ spec:
             - /bin/bash
             - -c
             - |
-              cd /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms \
-              && sh ./setup.sh \
-              && sh ./enable-kms-plugin.sh
               ${startCommand}
           readinessProbe:
             exec:
@@ -82,8 +79,6 @@ spec:
             - mountPath: "${item.value}"
               name: "${item.name}"
             </#list>
-            - mountPath: /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf
-              name: ranger-kms-conf
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -91,12 +86,11 @@ spec:
         <#list itemList as item>
         - hostPath:
             path: "${item.value}"
+            <#if item.type??>
+            type: ${item.type}
+            </#if>
           name: "${item.name}"
         </#list>
         - hostPath:
             path: /etc/localtime
           name: timezone
-        - hostPath:
-            path: /opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf
-            type: DirectoryOrCreate
-          name: ranger-kms-conf

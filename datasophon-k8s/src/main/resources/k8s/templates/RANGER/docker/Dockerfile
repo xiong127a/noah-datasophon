@@ -7,7 +7,7 @@ RUN groupadd -r -g 2002 ranger && \
     useradd -r -u 2012 -g ranger -m rangerusersync && \
     useradd -r -u 2013 -g ranger -m rangerkms
 
-ADD --checksum=sha256:ed5413fb13ebd4b216f1aa49693c83212b8214a4910b065c1dff35ddd20335ae --chmod=755 http://192.168.1.30/BDP/packages/1.2.1/ranger-2.1.0.tar.gz /opt/datasophon/
+ADD --checksum=sha256:f30b4e7eeb536ef0e2f22d489db8bf38144c231cbeeb3df8ce112ec6c4f47893 --chmod=755 http://192.168.1.30/BDP/packages/1.2.1/ranger-2.1.0.tar.gz /opt/datasophon/
 WORKDIR /opt/datasophon
 RUN tar -zxvf ranger-2.1.0.tar.gz  && \
     chown -R ranger:ranger /opt/datasophon/ranger-2.1.0.tar.gz && \
