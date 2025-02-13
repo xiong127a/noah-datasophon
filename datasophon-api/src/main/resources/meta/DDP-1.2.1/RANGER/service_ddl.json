@@ -124,7 +124,7 @@
     "configWriter": {
         "generators": [
             {
-                "filename": "conf/install.properties",
+                "filename": "conf/ranger-install.properties",
                 "configFormat": "custom",
                 "templateName": "ranger-install.ftl",
                 "outputDirectory": "",
@@ -155,7 +155,7 @@
                 ]
             },
             {
-                "filename": "install.properties1",
+                "filename": "ranger-usersync-install.properties",
                 "configFormat": "custom",
                 "templateName": "ranger-usersync-install.ftl",
                 "outputDirectory": "ranger-2.1.0-usersync",
@@ -173,7 +173,7 @@
                 ]
             },
             {
-                "filename": "install.properties2",
+                "filename": "ranger-kms-install.properties",
                 "configFormat": "custom",
                 "templateName": "ranger-kms-install.ftl",
                 "outputDirectory": "ranger-2.1.0-kms",

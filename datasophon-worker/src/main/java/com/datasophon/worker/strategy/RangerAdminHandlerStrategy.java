@@ -50,9 +50,6 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
             }
         }
 
-        ShellUtils.execShell("mv " + workPath + "/ranger-2.1.0-usersync/install.properties1 " + workPath + "/ranger-2.1.0-usersync/install.properties");
-        ShellUtils.execShell("chmod 755 " + workPath + "/ranger-2.1.0-usersync/install.properties");
-
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerUsersync")) {
             logger.info("setup ranger user sync");
             ArrayList<String> commands = new ArrayList<>();
@@ -70,8 +67,6 @@ public class RangerAdminHandlerStrategy extends AbstractHandlerStrategy implemen
                     + workPath +
                     "/ranger-2.1.0-usersync/conf/ranger-ugsync-site.xml");
         }
-        ShellUtils.execShell("mv " + workPath + "/ranger-2.1.0-kms/install.properties2 " + workPath + "/ranger-2.1.0-kms/install.properties");
-        ShellUtils.execShell("chmod 755 " + workPath + "/ranger-2.1.0-kms/install.properties");
 
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE) && command.getServiceRoleName().equals("RangerKms")) {
             logger.info("setup ranger kms");
