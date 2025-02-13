@@ -103,6 +103,10 @@ public class K8sYamlDeploymentHandler {
     }
 
     public static void addConfigFile(Set<ServiceConfig> volumePathSet, String configFileName, String configFilePath) {
+        addConfigFile(volumePathSet, configFileName, configFilePath, "");
+    }
+
+    public static void addConfigFile(Set<ServiceConfig> volumePathSet, String configFileName, String configFilePath, String type) {
         // 创建新的 ServiceConfig 对象
         ServiceConfig fileConfig = new ServiceConfig();
 
@@ -111,6 +115,9 @@ public class K8sYamlDeploymentHandler {
 
         // 设置文件路径
         fileConfig.setValue(configFilePath);
+        if (StrUtil.isNotBlank(type)) {
+            fileConfig.setType(type);
+        }
 
         // 将新的 ServiceConfig 对象添加到 volumePathSet
         volumePathSet.add(fileConfig);
@@ -295,9 +302,18 @@ public class K8sYamlDeploymentHandler {
 
         }
         if ("RANGER".equals(serviceName)) {
-            volumePathSet.clear();
-            addConfigFile(volumePathSet, "rangerdir", "/opt/datasophon/ranger-2.1.0");
             addConfigFile(volumePathSet, "adminconf", "/etc/ranger/admin");
+            volumePathSet.clear();
+            if ("RangerKms".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-kms-conf1", "/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ranger-kms-install.properties");
+                addConfigFile(volumePathSet, "ranger-kms-conf2", "/opt/datasophon/ranger-2.1.0/ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf","DirectoryOrCreate");
+            }
+            if ("RangerUsersync".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-usersync-conf", "/opt/datasophon/ranger-2.1.0/ranger-2.1.0-usersync/ranger-usersync-install.properties");
+            }
+            if ("RangerAdmin".equals(serviceRoleName)) {
+                addConfigFile(volumePathSet, "ranger-admin-conf", "/opt/datasophon/ranger-2.1.0/conf/ranger-install.properties");
+            }
         }
 
         if ("Krb5Kdc".equals(serviceRoleName) || "KAdmin".equals(serviceRoleName)) {

@@ -52,10 +52,6 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if [ ! -f /opt/datasophon/ranger-2.1.0/bin/ranger_admin.sh ]; then
-                rsync -av --ignore-existing /opt/datasophon/ranger-2.1.0/ /opt/ranger-2.1.0/ && rsync -av --ignore-existing /opt/ranger-2.1.0/ /opt/datasophon/ranger-2.1.0/
-              fi
-              cd /opt/datasophon/ranger-2.1.0 && sh /opt/datasophon/ranger-2.1.0/setup.sh  && sh /opt/datasophon/ranger-2.1.0/set_globals.sh
               ${startCommand}
           readinessProbe:
             exec:
