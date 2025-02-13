@@ -1,4 +1,4 @@
-FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333
+FROM harbor.norintech.com/bdp/jdk:1.8.0_333
 
 RUN groupadd -r -g 2001 hadoop \
     && useradd -r -u 2002 -g 2001 -m yarn \

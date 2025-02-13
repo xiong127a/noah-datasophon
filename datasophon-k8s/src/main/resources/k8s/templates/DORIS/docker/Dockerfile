@@ -1,5 +1,5 @@
 # 第一阶段
-FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333
+FROM harbor.norintech.com/bdp/jdk:1.8.0_333
 
 RUN mkdir -p /opt/datasophon
 

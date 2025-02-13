@@ -1,5 +1,5 @@
 # 第一阶段
-FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333 AS builder
+FROM harbor.norintech.com/bdp/jdk:1.8.0_333 AS builder
 
 RUN groupadd -r -g 2002 ranger \
     && useradd -r -u 2011 -g 2002 -m ranger \

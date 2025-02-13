@@ -1,21 +1,24 @@
 # 第一阶段
-FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333 AS builder
+FROM harbor.norintech.com/bdp/jdk:1.8.0_333 AS builder
 
 RUN groupadd -r -g 2007 elastic \
     && useradd -r -u 2007 -g 2007 elastic \
     && mkdir -p /opt/datasophon
 
-WORKDIR /opt/datasophon
-
 ENV ELASTICSEARCH_VERSION 7.16.2
 
-ADD elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz /opt/datasophon/
+ADD http://192.168.1.30/BDP/packages/1.2.1/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz /opt/datasophon/
 
-RUN chmod -R 755 /opt/datasophon/elasticsearch-${ELASTICSEARCH_VERSION} \
+WORKDIR /opt/datasophon
+
+RUN tar -zxvf elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
+    && rm -rf elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
+    && ln -s elasticsearch-${ELASTICSEARCH_VERSION} elasticsearch \
+    && chmod -R 755 /opt/datasophon/elasticsearch-${ELASTICSEARCH_VERSION} \
     && chown -R elastic:elastic /opt/datasophon/elasticsearch-${ELASTICSEARCH_VERSION}
 
 # 第二阶段
-FROM 192.168.5.200:5000/bdp/jdk:1.8.0_333
+FROM harbor.norintech.com/bdp/jdk:1.8.0_333
 
 RUN groupadd -r -g 2007 elastic \
     && useradd -r -u 2007 -g 2007 elastic
