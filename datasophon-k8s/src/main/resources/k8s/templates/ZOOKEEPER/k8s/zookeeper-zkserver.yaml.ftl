@@ -1,11 +1,12 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -17,6 +18,7 @@ spec:
       maxUnavailable: 1
   minReadySeconds: 5
   revisionHistoryLimit: 10
+  podManagementPolicy: Parallel
   template:
     metadata:
       labels:
@@ -37,7 +39,6 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: true
       containers:
         - env:
             - name: "ZOOCFGDIR"
@@ -49,11 +50,20 @@ spec:
                 resourceFieldRef:
                   resource: limits.memory
           image: "${dockerImage}"
+          ports:
+            - containerPort: 2181
+              name: client-port
+            - containerPort: 2888
+              name: election-port
+            - containerPort: 3888
+              name: quorum-port
           imagePullPolicy: "Always"
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              echo $(( $(echo $HOSTNAME | sed 's/.*-\([0-9]*\)$/\1/') + 1 )) > ${dataDir}/myid
+              ${startCommand}
           readinessProbe:
             tcpSocket:
               port: 2181
@@ -73,21 +83,31 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
+            <#list volumePathSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
             </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list itemList as item>
-        - hostPath:
-            path: "${item.value}"
-          name: "${item.name}"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
         </#list>
-        - hostPath:
+        <#list volumePathSet as item>
+        - name: "${item.name}"
+          hostPath:
+            path: "${item.value}"
+        </#list>
+        - name: "timezone"
+          hostPath:
             path: "/etc/localtime"
-          name: "timezone"
