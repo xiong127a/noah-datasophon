@@ -34,6 +34,8 @@ public final class Constants {
     public static final String TOTAL = "total";
 
     public static final String DATASOPHON = "datasophon";
+    public static final String DEPLOYMENT = "Deployment";
+    public static final String STATEFULSET = "StatefulSet";
 
     public static final String HOST_MAP = "_host_map";
     public static final String COMMAND_HOST_ID = "command_host_id";
@@ -122,6 +124,7 @@ public final class Constants {
     public static final String RACK = "rack";
     public static final String SERVICE_STATE = "service_state";
     public static final String EQUAL_SIGN = "=";
+    public static final String K8S_DNS_SUFFIX = "."+DATASOPHON;
 
     private Constants() {
         throw new IllegalStateException("Constants Exception");

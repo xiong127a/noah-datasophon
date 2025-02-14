@@ -5,10 +5,7 @@ import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.RunAs;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleRunner;
+import com.datasophon.common.model.*;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
@@ -47,7 +44,7 @@ public class K8sYamlDeploymentHandler {
     }
 
     private static void volumeLog(
-            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfig> volumePathSet, String serviceName, RunAs runAs) {
+            Map<Generators, List<ServiceConfig>> configFileMap, String logFile, String hostname, String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceName, RunAs runAs) {
         String logStr;
         Map<String, String> paramMap = configFileMap.values().stream()
                 .flatMap(List::stream)
@@ -88,9 +85,9 @@ public class K8sYamlDeploymentHandler {
         }
     }
 
-    public static void addConfigFile(Set<ServiceConfig> volumePathSet, int count, String configFilePath) {
-        // 创建新的 ServiceConfig 对象
-        ServiceConfig fileConfig = new ServiceConfig();
+    public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, int count, String configFilePath) {
+        // 创建新的 ServiceConfigVolume 对象
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
 
         // 设置名字为 "config" + fileCount
         fileConfig.setName("config" + count);
@@ -98,27 +95,51 @@ public class K8sYamlDeploymentHandler {
         // 设置文件路径
         fileConfig.setValue(configFilePath);
 
-        // 将新的 ServiceConfig 对象添加到 volumePathSet
+        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
         volumePathSet.add(fileConfig);
     }
 
-    public static void addConfigFile(Set<ServiceConfig> volumePathSet, String configFileName, String configFilePath) {
-        // 创建新的 ServiceConfig 对象
-        ServiceConfig fileConfig = new ServiceConfig();
+    public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath,boolean containsHost) {
 
-        // 设置名字为 "config" + fileCount
+        String configMapName = generateConfigMapName(generators);
+        // 创建新的 ServiceConfigVolume 对象
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+        configMapName = configMapName.replace('.', '-');
+        fileConfig.setName(configMapName);
+
+
+        String filename = generators.getFilename();
+        if (containsHost) {
+            filename+=".example";
+            configFilePath+=".example";
+        }
+
+
+        // 设置文件路径
+        fileConfig.setValue(configFilePath);
+        fileConfig.setFileName(filename);
+
+        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
+        volumePathSet.add(fileConfig);
+    }
+
+    public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, String configFileName, String configFilePath) {
+        // 创建新的 ServiceConfigVolume 对象
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+        configFileName = configFileName.replace('.', '-');
         fileConfig.setName(configFileName);
 
         // 设置文件路径
         fileConfig.setValue(configFilePath);
 
-        // 将新的 ServiceConfig 对象添加到 volumePathSet
+
+        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
         volumePathSet.add(fileConfig);
     }
 
-    public static void addConfigPath(Set<ServiceConfig> volumePathSet, int count, String configFilePath) {
-        // 创建新的 ServiceConfig 对象
-        ServiceConfig fileConfig = new ServiceConfig();
+    public static void addConfigPath(Set<ServiceConfigVolume> volumePathSet, int count, String configFilePath) {
+        // 创建新的 ServiceConfigVolume 对象
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
 
         // 设置名字为 "config" + fileCount
         fileConfig.setName("path" + count);
@@ -126,7 +147,7 @@ public class K8sYamlDeploymentHandler {
         // 设置文件路径
         fileConfig.setValue(configFilePath);
 
-        // 将新的 ServiceConfig 对象添加到 volumePathSet
+        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
         volumePathSet.add(fileConfig);
     }
 
@@ -160,17 +181,19 @@ public class K8sYamlDeploymentHandler {
 
         String appHome = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName;
         try {
-            Set<ServiceConfig> volumePathSet = new HashSet<>();
+            Set<ServiceConfigVolume> volumePathSet = new HashSet<>();
 
-            volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName);
+            Set<ServiceConfigVolume> volumeConfigMapSet = new HashSet<>();
+
+            volumeConfig(configFileMap, appHome, volumePathSet, serviceRoleName, volumeConfigMapSet);
 
             volumeLog(configFileMap, logFile, hostname, appHome, volumePathSet, serviceName, runAs);
 
-            volumeHadoopConfig(volumePathSet, hostname);
+            volumeHadoopConfig(volumePathSet);
 
             volumeEnableKerberosConfig(volumePathSet, appHome, serviceRoleName, enableKerberos);
 
-            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin);
+            Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin);
 
             Template template = generateTemplate();
 
@@ -186,15 +209,15 @@ public class K8sYamlDeploymentHandler {
         return execResult;
     }
 
-    private void volumeEnableKerberosConfig(Set<ServiceConfig> volumePathSet, String appHome, String serviceRoleName, boolean enableKerberos) {
+    private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumePathSet, String appHome, String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
             addConfigFile(volumePathSet, "keytab", "/etc/security/keytab/");
             addConfigFile(volumePathSet, "krd5conf", "/etc/krb5.conf");
         } else {
             if (serviceRoleName.equals("KafkaBroker") || serviceRoleName.equals("efak")) {
-                Iterator<ServiceConfig> iterator = volumePathSet.iterator();
+                Iterator<ServiceConfigVolume> iterator = volumePathSet.iterator();
                 while (iterator.hasNext()) {
-                    ServiceConfig config = iterator.next();
+                    ServiceConfigVolume config = iterator.next();
                     String value = (String) config.getValue();
                     if (value.endsWith(".sh")) {
                         String fileName = value.substring(value.lastIndexOf('/') + 1);
@@ -223,13 +246,15 @@ public class K8sYamlDeploymentHandler {
                                                    ServiceRoleRunner statusRunner,
                                                    Integer roleNodeCnt,
                                                    String appHome,
-                                                   Set<ServiceConfig> volumePathSet,
+                                                   Set<ServiceConfigVolume> volumePathSet,
+                                                   Set<ServiceConfigVolume> volumeConfigMapSet,
                                                    Map<Generators, List<ServiceConfig>> configFileMap,
                                                    String masterHost,
                                                    Boolean enableKerberos,
                                                    Boolean enableRangerPlugin) {
         Map<String, Object> data = new HashMap<>();
-        data.put("itemList", new ArrayList<>(volumePathSet));
+        data.put("volumePathSet", new ArrayList<>(volumePathSet));
+        data.put("volumeConfigMapSet", new ArrayList<>(volumeConfigMapSet));
         data.put("serviceRoleFullName", serviceRoleFullName);
         data.put("serviceName", serviceName);
         data.put("namespace", Constant.K8S_NAMESPACE);
@@ -255,28 +280,41 @@ public class K8sYamlDeploymentHandler {
         if (Objects.nonNull(namenodeDir)) {
             data.put("journalnodeDir", namenodeDir);
         }
+
+        String dataDir = getConfigDirectory(configFileMap, "dataDir");
+        if (Objects.nonNull(dataDir)) {
+            data.put("dataDir", dataDir);
+        }
+
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
         return data;
     }
 
-    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfig> volumePathSet, String serviceRoleName) {
-        int fileCount = 1;
+    private void volumeConfig(Map<Generators, List<ServiceConfig>> configFileMap, String appHome, Set<ServiceConfigVolume> volumePathSet, String serviceRoleName, Set<ServiceConfigVolume> volumeConfigMapSet) {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
+            boolean containsHost = entry.getValue().stream()
+                    .anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}"));
+
             String configFilePath;
             String outputDirectory = generators.getOutputDirectory();
+
+
+
             if (BooleanUtil.isFalse(generators.isNeedMount())) {
                 continue;
             }
             if (StrUtil.isNotBlank(outputDirectory)) {
                 for (String outPutDir : outputDirectory.split(StrUtil.COMMA)) {
+
                     configFilePath = generateConfigFilePath(outPutDir, generators, appHome);
-                    addConfigFile(volumePathSet, fileCount++, configFilePath);
+
+                    addConfigFile(volumeConfigMapSet, generators, configFilePath,containsHost);
                 }
             } else {
                 configFilePath = String.join(Constants.SLASH, appHome, generators.getFilename());
-                addConfigFile(volumePathSet, fileCount++, configFilePath);
+                addConfigFile(volumeConfigMapSet, generators, configFilePath,containsHost);
             }
 
             if (generators.getOutputDirectory().startsWith("/var/kerberos/krb5kdc")) {
@@ -284,12 +322,12 @@ public class K8sYamlDeploymentHandler {
             }
 
             // path配置目录挂载
-            for (ServiceConfig serviceConfig : entry.getValue()) {
-                if (volumePathSet.stream().anyMatch(item -> serviceConfig.getValue().equals(item.getValue()))) {
+            for (ServiceConfig ServiceConfig : entry.getValue()) {
+                if (volumePathSet.stream().anyMatch(item -> ServiceConfig.getValue().equals(item.getValue()))) {
                     continue;
                 }
-                if (Constants.PATH.equals(serviceConfig.getConfigType())) {
-                    addConfigPath(volumePathSet, pathCount++, serviceConfig.getValue().toString());
+                if (Constants.PATH.equals(ServiceConfig.getConfigType())) {
+                    addConfigPath(volumePathSet, pathCount++, ServiceConfig.getValue().toString());
                 }
             }
 
@@ -336,7 +374,7 @@ public class K8sYamlDeploymentHandler {
 
     }
 
-    private void volumeHadoopConfig(Set<ServiceConfig> volumePathSet, String hostname) {
+    private void volumeHadoopConfig(Set<ServiceConfigVolume> volumePathSet) {
         List<String> needHadoopService = Arrays.asList("HIVE", "HBASE", "TRINO", "YARN", "SPARK3", "FLINK", "RANGER", "HUE", "ALLUXIO", "TEZ", "ZEPPELIN");
         if (needHadoopService.contains(serviceName)) {
             List<String> hadoopConf = Arrays.asList(
@@ -369,5 +407,12 @@ public class K8sYamlDeploymentHandler {
                 .map(t -> Convert.toStr(t.getValue()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    public String generateConfigMapName(Generators generators) {
+        if (serviceRoleName == null || generators == null) {
+            throw new IllegalArgumentException("serviceRoleName and generators must not be null");
+        }
+        return serviceRoleName.toLowerCase() + "-" + generators.getFilename();
     }
 }

@@ -15,36 +15,28 @@
  *  limitations under the License.
  */
 
-package com.datasophon.common.command;
+package com.datasophon.common.model;
 
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.RunAs;
-import com.datasophon.common.model.ServiceConfig;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
-import lombok.Data;
-
+/**
+ * 配置参数卷详情
+ */
 @Data
-public class GenerateServiceConfigCommand implements Serializable {
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class ServiceConfigVolume implements Serializable {
 
-    private static final long serialVersionUID = -4211566568993105684L;
+    private String name;
 
-    private String serviceName;
+    private Object value;
 
-    private String decompressPackageName;
-
-    private Integer myid;
-
-    Map<Generators, List<ServiceConfig>> cofigFileMap;
-
-    private String serviceRoleName;
-
-    private RunAs runAs;
-
-    private String hostName;
-
-    private String kubeConfig;
+    private String fileName;
 }

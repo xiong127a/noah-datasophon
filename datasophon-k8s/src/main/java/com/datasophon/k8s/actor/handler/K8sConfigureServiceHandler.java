@@ -39,6 +39,8 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.*;
 
+import static com.datasophon.k8s.util.K8sFreemakerUtils.*;
+
 @Data
 public class K8sConfigureServiceHandler {
 
@@ -64,11 +66,12 @@ public class K8sConfigureServiceHandler {
                                 Integer myid,
                                 String serviceRoleName,
                                 RunAs runAs,
-                                String hostName) {
+                                String hostName,
+                                String kubeConfig) throws Exception {
         ExecResult execResult = new ExecResult();
         try {
             HashMap<String, String> paramMap = new HashMap<>();
-            paramMap.put("${host}", hostName);
+            paramMap.put("${host}", "{{HOST}}");
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);
@@ -172,9 +175,6 @@ public class K8sConfigureServiceHandler {
                     }
                 }
 
-                if (Objects.nonNull(myid) && StringUtils.isNotBlank(dataDir)) {
-                    K8sMinaUtils.writeUtf8String(hostName, myid + "", dataDir + Constants.SLASH + "myid");
-                }
 
                 if ("node.properties".equals(generators.getFilename())) {
                     ServiceConfig serviceConfig = new ServiceConfig();
@@ -192,21 +192,19 @@ public class K8sConfigureServiceHandler {
                         K8sFreemakerUtils.generateConfigFile(
                                 generators,
                                 configs,
-                                decompressPackageName,
+                                serviceRoleName,
                                 path,
-                                hostName);
+                                kubeConfig);
                     } else {
                         K8sFreemakerUtils.generateConfigFile(
                                 generators,
                                 configs,
-                                decompressPackageName,
-                                hostName);
+                                serviceRoleName,
+                                kubeConfig);
                     }
                 } else if (!generators.getFilename().endsWith(SH)) {
-                    String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
-                    String outputFile =
-                            packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-                    K8sMinaUtils.writeUtf8String(hostName, "", outputFile);
+                    String configMapName = generateConfigMapName(serviceRoleName,generators);
+                    createConfigMap(configMapName, "", kubeConfig, generators.getFilename());
                 }
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
