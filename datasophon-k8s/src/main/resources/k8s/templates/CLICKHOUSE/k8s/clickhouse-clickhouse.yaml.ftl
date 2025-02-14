@@ -85,9 +85,13 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
+            <#list volumePathSet as item>
+            - mountPath: ${item.value}
+              name: ${item.name}
+            </#list>
+            <#list volumeConfigMapSet as item>
+            - mountPath: ${item.value}
+              name: ${item.name}
             </#list>
             - mountPath: "/etc/localtime"
               name: "timezone"
@@ -95,10 +99,15 @@ spec:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list itemList as item>
-        - name: "${item.name}"
+        <#list volumeConfigMapSet as item>
+        - name: ${item.name}
+          configMap:
+            name: ${item.name}
+        </#list>
+        <#list volumePathSet as item>
+        - name: ${item.name}
           hostPath:
-            path: "${item.value}"
+            path: ${item.value}
         </#list>
         - name: "timezone"
           hostPath:
