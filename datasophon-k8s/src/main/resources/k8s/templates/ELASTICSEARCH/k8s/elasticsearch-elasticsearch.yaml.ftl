@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -7,6 +7,7 @@ metadata:
   namespace: ${namespace}
 spec:
   replicas: ${roleNodeCnt}
+  serviceName: elasticsearch-elasticsearch
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
@@ -37,10 +38,10 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: true
+      dnsPolicy: ClusterFirst
       containers:
         - env:
-            - name: "JAVA_HOME"
+            - name: "ES_JAVA_HOME"
               value: "/opt/datasophon/elasticsearch-7.16.2/jdk"
             - name: USER
               value: ${runAs}
@@ -54,6 +55,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
+              echo 'y'|cp /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml.example /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml && \
+              sed -i "s/{{HOST}}/$HOSTNAME/g" /opt/datasophon/elasticsearch-7.16.2/config/elasticsearch.yml && \
               echo "vm.max_map_count=655360" >> /etc/sysctl.conf && sysctl -p && ${startCommand}
           readinessProbe:
             exec:
@@ -77,21 +80,31 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
+            <#list volumePathSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
             </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
       volumes:
-        <#list itemList as item>
-        - hostPath:
-            path: "${item.value}"
-          name: "${item.name}"
+        <#list volumeConfigMapSet as item>
+        - name: "${item.name}"
+          configMap:
+            name: "${item.name}"
         </#list>
-        - hostPath:
+        <#list volumePathSet as item>
+        - name: "${item.name}"
+          hostPath:
+            path: "${item.value}"
+        </#list>
+        - name: "timezone"
+          hostPath:
             path: "/etc/localtime"
-          name: "timezone"

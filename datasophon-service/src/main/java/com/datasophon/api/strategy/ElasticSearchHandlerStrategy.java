@@ -21,22 +21,32 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.common.Constants.DATASOPHON;
 
 public class ElasticSearchHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-
+        String depMode = getDepMode(clusterId);
+        if (!Constants.PVM_MODE.equals(depMode)) {
+            hosts = IntStream.range(0, hosts.size())
+                    .mapToObj(i -> "elasticsearch-elasticsearch-" + (i) + ".elasticsearch-elasticsearch" + "." + DATASOPHON)
+                    .collect(Collectors.toList());
+        }
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}", String.join(",", hosts));
-        String join = String.join(":9300,", hosts);
-        String seedHosts = join + ":9300";
+        String seedHosts = hosts.stream()
+                .map(host -> host + ":9300")
+                .collect(Collectors.joining(","));
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${seedHosts}", seedHosts);
         if (CollUtil.isNotEmpty(hosts)) {
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${esSingleHost}", hosts.get(0));
