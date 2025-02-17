@@ -191,7 +191,7 @@ public class K8sYamlDeploymentHandler {
 
             volumeHadoopConfig(volumePathSet);
 
-            volumeEnableKerberosConfig(volumePathSet, appHome, serviceRoleName, enableKerberos);
+            volumeEnableKerberosConfig(volumeConfigMapSet, appHome, serviceRoleName, enableKerberos);
 
             Map<String, Object> data = prepareTemplateMap(runAs, startRunner, statusRunner, roleNodeCnt, appHome, volumePathSet, volumeConfigMapSet, configFileMap, masterHost, enableKerberos, enableRangerPlugin);
 
@@ -209,13 +209,13 @@ public class K8sYamlDeploymentHandler {
         return execResult;
     }
 
-    private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumePathSet, String appHome, String serviceRoleName, boolean enableKerberos) {
+    private void volumeEnableKerberosConfig(Set<ServiceConfigVolume> volumeConfigMapSet, String appHome, String serviceRoleName, boolean enableKerberos) {
         if (enableKerberos) {
-            addConfigFile(volumePathSet, "keytab", "/etc/security/keytab/");
-            addConfigFile(volumePathSet, "krd5conf", "/etc/krb5.conf");
+            addConfigFile(volumeConfigMapSet, "keytab", "/etc/security/keytab/");
+            addConfigFile(volumeConfigMapSet, "krd5conf", "/etc/krb5.conf");
         } else {
             if (serviceRoleName.equals("KafkaBroker") || serviceRoleName.equals("efak")) {
-                Iterator<ServiceConfigVolume> iterator = volumePathSet.iterator();
+                Iterator<ServiceConfigVolume> iterator = volumeConfigMapSet.iterator();
                 while (iterator.hasNext()) {
                     ServiceConfigVolume config = iterator.next();
                     String value = (String) config.getValue();

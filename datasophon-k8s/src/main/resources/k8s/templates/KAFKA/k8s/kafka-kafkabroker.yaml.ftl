@@ -37,7 +37,6 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: true
       containers:
         - name: "${serviceRoleFullName}"
           image: "${dockerImage}"
