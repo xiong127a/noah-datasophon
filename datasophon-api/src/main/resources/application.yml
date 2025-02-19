@@ -9,6 +9,9 @@ security:
     type: PASSWORD
 # mysql
 spring:
+  config:
+    import:
+      - optional:classpath:license.yml
   datasource:
     driver-class-name: ${datasource.driver:com.mysql.cj.jdbc.Driver}
     type: com.alibaba.druid.pool.DruidDataSource
@@ -31,7 +34,13 @@ spring:
     allow-circular-references: true
   web:
     resources:
-      static-locations: classpath:/front/views/
+      static-locations:
+        classpath:/META-INF/resources/,
+        classpath:/resources/,
+        classpath:/static/,
+        classpath:/public/,
+        classpath:/front/views/,
+        classpath*:/lic/
 #mybatis
 mybatis-plus:
   mapper-locations: classpath*:/mapper/*.xml
