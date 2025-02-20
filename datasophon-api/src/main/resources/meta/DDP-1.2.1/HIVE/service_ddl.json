@@ -19,7 +19,7 @@
       "cardinality": "1+",
       "logFile": "logs/hiveserver2.out",
       "jmxPort": 11000,
-      "sortNum": 1,
+      "sortNum": 2,
       "startRunner": {
         "timeout": "60",
         "program": "control_hive.sh",
@@ -69,7 +69,7 @@
       "cardinality": "1+",
       "logFile": "logs/hivemetastore.out",
       "jmxPort": 12000,
-      "sortNum": 2,
+      "sortNum": 1,
       "startRunner": {
         "timeout": "60",
         "program": "control_hive.sh",
@@ -285,7 +285,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "thrift://${metastoreHost}:9083"
+      "defaultValue": "${metastoreHosts}"
     },
     {
       "name": "hive.server2.map.fair.scheduler.queue",
@@ -750,15 +750,15 @@
     },
     {
       "name": "hive.server2.active.passive.ha.enable",
-      "label": "hive.stats.autogather",
+      "label": "hive.server2.active.passive.ha.enable",
       "description": "hive.server2.active.passive.ha.enable",
       "required": true,
       "configType": "map",
       "type": "switch",
-      "value": true,
+      "value": false,
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": true
+      "defaultValue": false
     }
   ]
 }

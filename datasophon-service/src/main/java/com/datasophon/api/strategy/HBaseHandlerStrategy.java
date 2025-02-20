@@ -32,10 +32,6 @@ import java.util.Map;
 
 public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -59,19 +55,4 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
         list.addAll(kbConfigs);
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

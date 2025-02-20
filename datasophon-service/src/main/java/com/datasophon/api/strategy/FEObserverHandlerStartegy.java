@@ -17,7 +17,6 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.ObjUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ProcInfo;
@@ -37,20 +36,6 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(FEObserverHandlerStartegy.class);
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
@@ -69,12 +54,10 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
     }
 
     @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
         Map<String, String> globalVariables = GlobalVariables.get(roleInstanceEntity.getClusterId());
         String feMaster = globalVariables.get("${feMaster}");
-        if (roleInstanceEntity.getHostname().equals(feMaster)
-                && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
+        if (roleInstanceEntity.getHostname().equals(feMaster) && roleInstanceEntity.getServiceRoleState() == ServiceRoleState.RUNNING) {
             try {
                 List<ProcInfo> frontends = OlapUtils.showFrontends(feMaster);
                 resolveProcInfoAlert(roleInstanceEntity.getServiceRoleName(), frontends, map);
@@ -85,8 +68,8 @@ public class FEObserverHandlerStartegy implements ServiceRoleStrategy {
 
         }
     }
-    private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
-                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+
+    private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends, Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {
             ClusterServiceRoleInstanceEntity roleInstanceEntity = map.get(frontend.getHostName() + serviceRoleName);
             if (!frontend.getAlive()) {

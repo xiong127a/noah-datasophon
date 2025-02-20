@@ -19,44 +19,25 @@
 
 package com.datasophon.api.load;
 
-import com.datasophon.api.load.ConfigBean;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
-import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
+import akka.actor.Props;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.file.FileReader;
+import cn.hutool.core.net.NetUtil;
+import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.serviceCacheSyncActor;
+import com.datasophon.api.service.*;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.PackageUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.ConfigWriter;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.entity.FrameInfoEntity;
-import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.dao.entity.FrameServiceRoleEntity;
-
+import com.datasophon.common.model.*;
+import com.datasophon.dao.entity.*;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -66,14 +47,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.stream.Collectors;
 
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.file.FileReader;
-import cn.hutool.crypto.SecureUtil;
+import static com.datasophon.api.master.ActorUtils.getActorRefName;
 
 @Component
 public class LoadServiceMeta implements ApplicationRunner {
@@ -143,6 +123,8 @@ public class LoadServiceMeta implements ApplicationRunner {
                 }
             }
         }
+        ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
+                getActorRefName(serviceCacheSyncActor.class));
     }
 
 
@@ -378,6 +360,9 @@ public class LoadServiceMeta implements ApplicationRunner {
                 globalVariables.put("${apiPort}", configBean.getServerPort());
                 globalVariables.put("${INSTALL_PATH}", Constants.INSTALL_PATH);
 
+                String priorityNetworks = getPriorityNetworks(NetUtil.getIpByHost(InetAddress.getLocalHost().getHostName()));
+                globalVariables.put("${priority_networks}", priorityNetworks);
+
                 GlobalVariables.put(cluster.getId(), globalVariables);
 
                 ProcessUtils.createServiceActor(cluster);
@@ -452,4 +437,50 @@ public class LoadServiceMeta implements ApplicationRunner {
         serviceEntity.setConfigFileJsonMd5(SecureUtil.md5(serviceEntity.getConfigFileJson()));
         serviceEntity.setSortNum(serviceInfo.getSortNum());
     }
+
+
+    // 根据 IP 地址推断子网掩码
+    public static String getSubnetFromIp(String ip) {
+        if (ip == null) {
+            return null;
+        }
+
+        // 拆分 IP 地址
+        String[] ipParts = ip.split("\\.");  // 将 IP 地址分割为四个部分
+        if (ipParts.length != 4) {
+            return null;  // 无效的 IP 地址
+        }
+
+        int firstOctet = Integer.parseInt(ipParts[0]);
+
+        // 根据 IP 地址的第一部分推断出适当的子网掩码
+        String subnetMask;
+        if (firstOctet >= 1 && firstOctet <= 126) {
+            // A 类地址，使用 /8
+            subnetMask = "/8";
+        } else if (firstOctet >= 128 && firstOctet <= 191) {
+            // B 类地址，使用 /16
+            subnetMask = "/16";
+        } else if (firstOctet >= 192 && firstOctet <= 223) {
+            // C 类地址，使用 /24
+            subnetMask = "/24";
+        } else {
+            // 其他情况，暂不处理
+            subnetMask = "/24"; // 默认返回 /24
+        }
+
+        // 构造网络前缀
+        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
+        return networkPrefix + subnetMask;
+    }
+
+    // 设置 priority_networks 参数
+    public static String getPriorityNetworks(String ipAddress) {
+        if (ipAddress != null) {
+            // 根据 IP 地址获取子网
+            return getSubnetFromIp(ipAddress);
+        }
+        return null;
+    }
+
 }

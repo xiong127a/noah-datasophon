@@ -5,6 +5,8 @@
 filePath=$1
 GROUP=hadoop
 USER=hadoop
+GROUP_ID=2001
+USER_ID=2000
 
 if [ -L $0 ]; then
     BASE_DIR=$(dirname $(readlink $0))
@@ -25,14 +27,15 @@ PACKAGES_PATH=${INIT_PATH}/packages
 echo "PACKAGES_PATH: ${PACKAGES_PATH}"
 egrep "^$GROUP" /etc/group >&/dev/null
 if [ $? -ne 0 ]; then
-    groupadd $GROUP
+    groupadd -g $GROUP_ID $GROUP
     echo "Successfully added GROUP: hadoop"
 fi
 egrep "^$USER" /etc/passwd >&/dev/null
 if [ $? -ne 0 ]; then
-    useradd -g ${USER} ${USER}
+    useradd -u $USER_ID -g $GROUP_ID -m $USER
     echo "Successfully added USER: hadoop passwd: hadoop"
 fi
 
 echo "init-add-hadoop-user.sh."
 echo "Done."
+

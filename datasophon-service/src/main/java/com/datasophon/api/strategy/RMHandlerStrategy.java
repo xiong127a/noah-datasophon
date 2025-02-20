@@ -37,6 +37,8 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.ClusterYarnScheduler;
+import com.datasophon.k8s.util.K8sUtil;
+import org.checkerframework.checker.units.qual.C;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -52,7 +54,6 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
 
     private static final Logger logger = LoggerFactory.getLogger(RMHandlerStrategy.class);
 
-    private static final String ACTIVE = "active";
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
@@ -107,55 +108,37 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         list.addAll(kbConfigs);
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-    }
 
     @Override
     public void handlerServiceRoleCheck(
             ClusterServiceRoleInstanceEntity roleInstanceEntity,
             Map<String, ClusterServiceRoleInstanceEntity> map) {
+        // 调用通用方法，传递特定的actorPath
+        performServiceRoleCheck(roleInstanceEntity, "rMStateActor");
+    }
 
+    @Override
+    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        // 调用通用方法，传递特定的actorPath
+        performServiceRoleCheck(roleInstanceEntity, "");
+    }
+
+
+
+    public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
         Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
         String rm2 = globalVariable.get("${rm2}");
         String commandLine =
                 globalVariable.get("${HADOOP_HOME}") + "/bin/yarn rmadmin -getServiceState rm1";
-
         if (rm2.equals(roleInstanceEntity.getHostname())) {
             commandLine =
                     globalVariable.get("${HADOOP_HOME}") + "/bin/yarn rmadmin -getServiceState rm2";
         }
-        getRMState(roleInstanceEntity, commandLine);
+        ExecuteCmdCommand command = new ExecuteCmdCommand();
+        command.setCommandLine(commandLine);
+        return command;
     }
 
-    private void getRMState(
-            ClusterServiceRoleInstanceEntity roleInstanceEntity, String commandLine) {
-        ClusterServiceRoleInstanceWebuisService webuisService =
-                SpringTool.getApplicationContext()
-                        .getBean(ClusterServiceRoleInstanceWebuisService.class);
-        ActorRef execCmdActor =
-                ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), "rMStateActor");
-        ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
-        cmdCommand.setCommandLine(commandLine);
-        Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(execCmdActor, cmdCommand, timeout);
-        try {
-            ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                if (execResult.getExecOut().contains(ACTIVE)) {
-                    webuisService.updateWebUiToActive(roleInstanceEntity.getId());
-                } else {
-                    webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
-                }
-            } else {
-                webuisService.updateWebUiToStandby(roleInstanceEntity.getId());
-            }
-        } catch (Exception e) {
-            logger.info(e.getMessage());
-        }
-    }
+
+
 }

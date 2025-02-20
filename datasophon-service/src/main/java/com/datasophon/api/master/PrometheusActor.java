@@ -25,8 +25,10 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.datasophon.api.k8s.handler.K8sServiceConfigureHandler;
 import com.datasophon.api.load.ServiceRoleJmxMap;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -81,6 +83,9 @@ public class PrometheusActor extends UntypedActor {
                     roleInstanceService.getOneServiceRole(
                             "Prometheus", null, command.getClusterId());
 
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
+
             logger.info("start to genetate {} prometheus config", serviceInstance.getServiceName());
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
@@ -129,8 +134,14 @@ public class PrometheusActor extends UntypedActor {
             serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
             if (Objects.nonNull(prometheusInstance)) {
                 serviceRoleInfo.setHostname(prometheusInstance.getHostname());
-                ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-                ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
+                ExecResult execResult;
+                if (Constants.K8S_MODE.equals(depType)) {
+                    K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                    execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+                } else {
+                    ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
+                    execResult = configureHandler.handlerRequest(serviceRoleInfo);
+                }
                 if (execResult.getExecResult()) {
                     // 重新加载prometheus配置
                     HttpUtil.post("http://" + prometheusInstance.getHostname() + ":9090/-/reload", "");
@@ -145,6 +156,8 @@ public class PrometheusActor extends UntypedActor {
             ClusterServiceRoleInstanceService roleInstanceService =
                     SpringTool.getApplicationContext()
                             .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             List<ClusterHostDO> hostList =
                     hostService.list(
                             new QueryWrapper<ClusterHostDO>()
@@ -206,8 +219,15 @@ public class PrometheusActor extends UntypedActor {
                 serviceRoleInfo.setConfigFileMap(configFileMap);
                 serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
                 serviceRoleInfo.setHostname(prometheusInstance.getHostname());
-                ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-                ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
+
+                ExecResult execResult;
+                if (Constants.K8S_MODE.equals(depType)) {
+                    K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                    execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+                } else {
+                    ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
+                    execResult = configureHandler.handlerRequest(serviceRoleInfo);
+                }
                 if (execResult.getExecResult()) {
                     // reload prometheus config
                     HttpUtil.post(
@@ -224,16 +244,23 @@ public class PrometheusActor extends UntypedActor {
             ClusterServiceRoleInstanceEntity prometheusInstance =
                     roleInstanceService.getOneServiceRole(
                             "Prometheus", null, command.getClusterId());
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
             if (Objects.nonNull(prometheusInstance)) {
-                ActorSelection alertConfigActor =
-                        ActorUtils.actorSystem.actorSelection(
-                                "akka.tcp://datasophon@"
-                                        + prometheusInstance.getHostname()
-                                        + ":2552/user/worker/alertConfigActor");
-                Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-                Future<Object> configureFuture = Patterns.ask(alertConfigActor, command, timeout);
-                ExecResult configResult =
-                        (ExecResult) Await.result(configureFuture, timeout.duration());
+                ExecResult configResult;
+                if (Constants.K8S_MODE.equals(depType)) {
+                    return;
+                } else {
+                    ActorSelection alertConfigActor =
+                            ActorUtils.actorSystem.actorSelection(
+                                    "akka.tcp://datasophon@"
+                                            + prometheusInstance.getHostname()
+                                            + ":2552/user/worker/alertConfigActor");
+                    Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
+                    Future<Object> configureFuture = Patterns.ask(alertConfigActor, command, timeout);
+                    configResult =
+                            (ExecResult) Await.result(configureFuture, timeout.duration());
+                }
                 if (configResult.getExecResult()) {
                     logger.info("Generate prometheus alert config success , now start to reload prometheus");
                     // reload prometheus config
@@ -258,6 +285,9 @@ public class PrometheusActor extends UntypedActor {
             ClusterServiceRoleInstanceEntity prometheusInstance =
                     roleInstanceService.getOneServiceRole(
                             "Prometheus", null, command.getClusterId());
+
+            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+            String depType = clusterInfoService.getById(command.getClusterId()).getDepType();
 
             logger.info("start to genetate {} prometheus config", serviceInstance.getServiceName());
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
@@ -313,8 +343,15 @@ public class PrometheusActor extends UntypedActor {
             serviceRoleInfo.setConfigFileMap(configFileMap);
             serviceRoleInfo.setDecompressPackageName("prometheus-2.17.2");
             serviceRoleInfo.setHostname(prometheusInstance.getHostname());
-            ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
-            ExecResult execResult = configureHandler.handlerRequest(serviceRoleInfo);
+
+            ExecResult execResult;
+            if (Constants.K8S_MODE.equals(depType)) {
+                K8sServiceConfigureHandler k8sServiceConfigureHandler = new K8sServiceConfigureHandler();
+                execResult = k8sServiceConfigureHandler.handlerRequest(serviceRoleInfo);
+            } else {
+                ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
+                execResult = configureHandler.handlerRequest(serviceRoleInfo);
+            }
             if (execResult.getExecResult()) {
                 // reload prometheus
                 HttpUtil.post("http://" + prometheusInstance.getHostname() + ":9090/-/reload", "");

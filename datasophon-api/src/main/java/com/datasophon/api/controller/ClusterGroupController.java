@@ -18,6 +18,7 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.service.ClusterGroupService;
+import com.datasophon.common.Constants;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterGroup;
 
@@ -25,6 +26,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 
 @RestController
 @RequestMapping("cluster/group")
@@ -57,15 +60,16 @@ public class ClusterGroupController {
      */
     @RequestMapping("/save")
     public Result save(Integer clusterId, String groupName) {
-        return clusterGroupService.saveClusterGroup(clusterId, groupName);
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterGroupService.saveClusterGroup(clusterId, groupName):clusterGroupService.saveClusterGroupOnK8s(clusterId, groupName);
     }
 
     /**
      * 删除用户组
      */
     @RequestMapping("/delete")
-    public Result delete(Integer id) {
-        return clusterGroupService.deleteUserGroup(id);
+    public Result delete(Integer clusterId,Integer id) {
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterGroupService.deleteUserGroup(id):clusterGroupService.deleteUserGroupOnK8s(id);
+
     }
 
     /**

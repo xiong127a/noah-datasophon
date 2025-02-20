@@ -20,6 +20,8 @@ package com.datasophon.api.master.handler.service;
 import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.Constants;
@@ -57,7 +59,7 @@ public class ServiceStartHandler extends ServiceHandler {
         serviceRoleOperateCommand.setCommandType(serviceRoleInfo.getCommandType());
         serviceRoleOperateCommand.setMasterHost(serviceRoleInfo.getMasterHost());
         serviceRoleOperateCommand.setManagerHost(CacheUtils.getString(Constants.HOSTNAME));
-
+        serviceRoleOperateCommand.setGraphHost(globalVariables.get("${nebulaGraphHost}"));
         logger.info("service master host is {}", serviceRoleInfo.getMasterHost());
 
         serviceRoleOperateCommand.setEnableRangerPlugin(serviceRoleInfo.getEnableRangerPlugin());
@@ -66,6 +68,11 @@ public class ServiceStartHandler extends ServiceHandler {
                 Boolean.parseBoolean(globalVariables.get("${enable" + serviceRoleInfo.getParentName() + "Kerberos}"));
         logger.info("{} enable kerberos is {}", serviceRoleInfo.getParentName(), enableKerberos);
         serviceRoleOperateCommand.setEnableKerberos(enableKerberos);
+
+        String dbType = globalVariables.get("${HiveMetaStore-dbType}");
+        JSONObject jsonObject = JSONUtil.createObj();
+        jsonObject.set("dbType",dbType);
+        serviceRoleOperateCommand.setExtended(jsonObject.toString());
         if (serviceRoleInfo.getRoleType() == ServiceRoleType.CLIENT) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);

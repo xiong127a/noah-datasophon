@@ -40,20 +40,6 @@ public class SRBEHandlerStrategy implements ServiceRoleStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(SRBEHandlerStrategy.class);
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
@@ -103,4 +89,5 @@ public class SRBEHandlerStrategy implements ServiceRoleStrategy {
         List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
         return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }
+
 }

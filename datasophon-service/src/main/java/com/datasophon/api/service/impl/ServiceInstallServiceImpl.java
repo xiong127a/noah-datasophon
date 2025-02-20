@@ -19,6 +19,7 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -44,6 +45,7 @@ import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.DAG;
@@ -92,6 +94,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 
 @Service("serviceInstallService")
 @Transactional
@@ -179,7 +183,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                                     Integer clusterId, String serviceName, List<ServiceConfig> list,
                                     Integer roleGroupId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        ServiceConfigMap.put(
+        ServiceConfigMap.put(clusterInfo.getClusterCode() + Constants.UNDERLINE + serviceName + Constants.CONFIG,
+                list);
+        putRemoteServiceConfigMap(
                 clusterInfo.getClusterCode() + Constants.UNDERLINE + serviceName + Constants.CONFIG,
                 list);
         HashMap<String, ServiceConfig> map = new HashMap<>();
@@ -194,7 +200,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         FrameServiceEntity frameServiceEntity =
                 frameService.getServiceByFrameCodeAndServiceName(
                         clusterInfo.getClusterFrame(), serviceName);
-        Boolean configUpdate = false;
+        boolean configUpdate = false;
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
             String variableName = "${" + configName + "}";
@@ -209,7 +215,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // update config-file
         HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
         buildConfigFileMap(serviceName, clusterInfo, map, configFileMap);
-        if (PROMETHEUS.equals(serviceName.toLowerCase())) {
+        if (PROMETHEUS.equalsIgnoreCase(serviceName)) {
             logger.info("add worker and node to prometheus");
             // add host node to prometheus
             addHostNodeToPrometheus(clusterId, configFileMap);
@@ -288,8 +294,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = new HashMap<>();
-        if (CacheUtils.constainsKey(hostMapKey)) {
-            map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        if (CacheOperateUtils.containsKey(hostMapKey)) {
+            map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
         }
 
         for (ServiceRoleHostMapping serviceRoleHostMapping : list) {
@@ -332,7 +338,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public Result getServiceRoleDeployOverview(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map =
-                (HashMap<String, List<String>>) CacheUtils.get(
+                (HashMap<String, List<String>>) CacheOperateUtils.get(
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING);
@@ -370,7 +376,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 serviceRoleInfo.setHostCommandId(hostCommand.getHostCommandId());
                 serviceRoleInfo.setClusterId(clusterId);
                 serviceRoleInfo.setParentName(command.getServiceName());
-                if (Constants.MASTER.equals(serviceRoleInfo.getRoleType())) {
+                if (Constants.MASTER.equals(serviceRoleInfo.getRoleType().getName())) {
                     masterRoles.add(serviceRoleInfo);
                 } else {
                     elseRoles.add(serviceRoleInfo);
@@ -379,7 +385,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceNode.setMasterRoles(masterRoles);
             serviceNode.setElseRoles(elseRoles);
             dag.addNode(command.getServiceName(), serviceNode);
-            if (serviceInfo.getDependencies().size() > 0) {
+            if (CollUtil.isNotEmpty(serviceInfo.getDependencies())) {
                 for (String dependency : serviceInfo.getDependencies()) {
                     dag.addEdge(dependency, command.getServiceName());
                 }
@@ -417,54 +423,55 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public Result checkServiceDependency(Integer clusterId, String serviceIds) {
-        //
-        List<ClusterServiceInstanceEntity> serviceInstanceList =
-                serviceInstanceService.listRunningServiceInstance(clusterId);
-        Map<String, ClusterServiceInstanceEntity> instanceMap =
-                serviceInstanceList.stream()
-                        .collect(
-                                Collectors.toMap(
-                                        ClusterServiceInstanceEntity::getServiceName,
-                                        e -> e,
-                                        (v1, v2) -> v1));
-
-        List<FrameServiceEntity> list = frameService.listServices(serviceIds);
-        Map<String, FrameServiceEntity> serviceMap =
-                list.stream()
-                        .collect(
-                                Collectors.toMap(
-                                        FrameServiceEntity::getServiceName,
-                                        e -> e,
-                                        (v1, v2) -> v1));
-        if (!instanceMap.containsKey("ALERTMANAGER") && !serviceMap.containsKey("ALERTMANAGER")) {
-            return Result.error(
-                    "service install depends on alertmanager ,please make sure you have selected it or that alertmanager is normal and running");
-        }
-        if (!instanceMap.containsKey("GRAFANA") && !serviceMap.containsKey("GRAFANA")) {
-            return Result.error(
-                    "service install depends on grafana ,please make sure you have selected it or that grafana is normal and running");
-        }
-        if (!instanceMap.containsKey("PROMETHEUS") && !serviceMap.containsKey("PROMETHEUS")) {
-            return Result.error(
-                    "service install depends on prometheus ,please make sure you have selected it or that prometheus is normal and running");
-        }
-
-        for (FrameServiceEntity frameServiceEntity : list) {
-            for (String dependService : frameServiceEntity.getDependencies().split(",")) {
-                if (StringUtils.isNotBlank(dependService)
-                        && !instanceMap.containsKey(dependService)
-                        && !serviceMap.containsKey(dependService)) {
-                    return Result.error(
-                            ""
-                                    + frameServiceEntity.getServiceName()
-                                    + " install depends on "
-                                    + dependService
-                                    + ",please make sure that you have selected it or that "
-                                    + dependService
-                                    + " is normal and running");
-                }
-            }
-        }
+        // TODO 解除注释
+//        //
+//        List<ClusterServiceInstanceEntity> serviceInstanceList =
+//                serviceInstanceService.listRunningServiceInstance(clusterId);
+//        Map<String, ClusterServiceInstanceEntity> instanceMap =
+//                serviceInstanceList.stream()
+//                        .collect(
+//                                Collectors.toMap(
+//                                        ClusterServiceInstanceEntity::getServiceName,
+//                                        e -> e,
+//                                        (v1, v2) -> v1));
+//
+//        List<FrameServiceEntity> list = frameService.listServices(serviceIds);
+//        Map<String, FrameServiceEntity> serviceMap =
+//                list.stream()
+//                        .collect(
+//                                Collectors.toMap(
+//                                        FrameServiceEntity::getServiceName,
+//                                        e -> e,
+//                                        (v1, v2) -> v1));
+//        if (!instanceMap.containsKey("ALERTMANAGER") && !serviceMap.containsKey("ALERTMANAGER")) {
+//            return Result.error(
+//                    "service install depends on alertmanager ,please make sure you have selected it or that alertmanager is normal and running");
+//        }
+//        if (!instanceMap.containsKey("GRAFANA") && !serviceMap.containsKey("GRAFANA")) {
+//            return Result.error(
+//                    "service install depends on grafana ,please make sure you have selected it or that grafana is normal and running");
+//        }
+//        if (!instanceMap.containsKey("PROMETHEUS") && !serviceMap.containsKey("PROMETHEUS")) {
+//            return Result.error(
+//                    "service install depends on prometheus ,please make sure you have selected it or that prometheus is normal and running");
+//        }
+//
+//        for (FrameServiceEntity frameServiceEntity : list) {
+//            for (String dependService : frameServiceEntity.getDependencies().split(",")) {
+//                if (StringUtils.isNotBlank(dependService)
+//                        && !instanceMap.containsKey(dependService)
+//                        && !serviceMap.containsKey(dependService)) {
+//                    return Result.error(
+//                            ""
+//                                    + frameServiceEntity.getServiceName()
+//                                    + " install depends on "
+//                                    + dependService
+//                                    + ",please make sure that you have selected it or that "
+//                                    + dependService
+//                                    + " is normal and running");
+//                }
+//            }
+//        }
         return Result.success();
     }
 

@@ -17,7 +17,6 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.ObjUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.model.ProcInfo;
@@ -49,15 +48,6 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
 //        }
     }
 
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
@@ -92,6 +82,7 @@ public class FEHandlerStartegy implements ServiceRoleStrategy {
 
         }
     }
+
     private void resolveProcInfoAlert(String serviceRoleName, List<ProcInfo> frontends,
                                       Map<String, ClusterServiceRoleInstanceEntity> map) {
         for (ProcInfo frontend : frontends) {

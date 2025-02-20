@@ -18,8 +18,8 @@
 package com.datasophon.common.utils;
 
 import com.datasophon.common.Constants;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -33,11 +33,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class ShellUtils {
 
     private static ProcessBuilder processBuilder = new ProcessBuilder();
 
-    private static final Logger logger = LoggerFactory.getLogger(ShellUtils.class);
+
 
     public static Process exec(List<String> command) {
         Process process = null;
@@ -58,29 +59,42 @@ public class ShellUtils {
      */
     public static ExecResult exceShell(String pathOrCommand) {
         ExecResult result = new ExecResult();
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuffer outputBuffer = new StringBuffer();
+        StringBuffer errorBuffer = new StringBuffer();
+
         try {
             // 执行脚本
             Process ps = Runtime.getRuntime().exec(new String[]{"sh", "-c", pathOrCommand});
-            // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
-            BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            String line;
-            while ((line = br.readLine()) != null) {
-                stringBuffer.append(line);
-                stringBuffer.append(System.lineSeparator());
+
+            // 读取标准输出流
+            try (BufferedReader outputReader = new BufferedReader(new InputStreamReader(ps.getInputStream()));
+                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(ps.getErrorStream()))) {
+
+                String line;
+                while ((line = outputReader.readLine()) != null) {
+                    outputBuffer.append(line);
+                    outputBuffer.append(System.lineSeparator());
+                }
+
+                // 读取错误输出流
+                while ((line = errorReader.readLine()) != null) {
+                    errorBuffer.append(line);
+                    errorBuffer.append(System.lineSeparator());
+                }
             }
-            in.close();
-            br.close();
-            String execOut = stringBuffer.toString();
+
+            // 等待进程结束
             int exitValue = ps.waitFor();
-            if (0 == exitValue) {
-                logger.info("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
+            String execOut = outputBuffer.toString();
+
+            if (exitValue == 0) {
+                log.info("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
                 result.setExecResult(true);
                 result.setExecOut(execOut);
             } else {
-                result.setExecOut("call shell failed. error code is :" + exitValue);
-                logger.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
+                result.setExecOut("call shell failed. error code is :" + exitValue + ", error: " + errorBuffer.toString());
+                log.error("{} command exec out is : {} {}", pathOrCommand, System.lineSeparator(), execOut);
+                log.error("Error output: {}", errorBuffer.toString());
             }
 
         } catch (Exception e) {
@@ -102,7 +116,7 @@ public class ShellUtils {
                 BufferedReader br = new BufferedReader(new InputStreamReader(in));
                 String line;
                 while ((line = br.readLine()) != null) {
-                    logger.info("脚本返回的数据如下： " + line);
+                    log.info("脚本返回的数据如下： " + line);
                     stringBuffer.append(line);
                 }
                 in.close();
@@ -127,12 +141,12 @@ public class ShellUtils {
             getOutput(process);
             boolean execResult = process.waitFor(timeout, TimeUnit.SECONDS);
             if (execResult && process.exitValue() == 0) {
-                logger.info("script execute success --> " + String.join(" ", command));
+                log.info("script execute success --> " + String.join(" ", command));
                 result.setExecResult(true);
                 result.setExecOut("script execute success");
             } else {
                 result.setExecOut("script execute failed --> " + String.join(" ", command));
-                logger.error(getError(process));
+                log.error(getError(process));
             }
             return result;
         } catch (Exception e) {
@@ -225,10 +239,10 @@ public class ShellUtils {
                     stringBuffer.append(System.lineSeparator());
                 }
                 if (stringBuffer.length() != 0) {
-                    logger.trace(stringBuffer.toString());
+                    log.trace(stringBuffer.toString());
                 }
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                log.error(e.getMessage(), e);
             } finally {
                 closeQuietly(inReader);
             }
@@ -277,7 +291,7 @@ public class ShellUtils {
         command.add("-R");
         command.add(chmod);
         command.add(path);
-        execWithStatus(Constants.INSTALL_PATH, command, 60, logger);
+        execWithStatus(Constants.INSTALL_PATH, command, 60, log);
     }
 
     public static void addChown(String path, String user, String group) {
@@ -286,6 +300,6 @@ public class ShellUtils {
         command.add("-R");
         command.add(user + ":" + group);
         command.add(path);
-        execWithStatus(Constants.INSTALL_PATH, command, 60, logger);
+        execWithStatus(Constants.INSTALL_PATH, command, 60, log);
     }
 }

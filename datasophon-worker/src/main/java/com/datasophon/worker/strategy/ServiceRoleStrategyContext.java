@@ -36,19 +36,20 @@ public class ServiceRoleStrategyContext {
         map.put("RangerAdmin", new RangerAdminHandlerStrategy("RANGER", "RangerAdmin"));
         map.put("RangerUsersync", new RangerAdminHandlerStrategy("RANGER", "RangerUsersync"));
         map.put("RangerKms", new RangerAdminHandlerStrategy("RANGER", "RangerKms"));
-        map.put("HiveServer2", new HiveServer2HandlerStrategy("HIVE", "HiveServer2"));
+        map.put("HiveMetaStore", new HiveMetaStoreHandlerStrategy("HIVE", "HiveMetaStore"));
         map.put("HbaseMaster", new HbaseHandlerStrategy("HBASE", "HbaseMaster"));
         map.put("RegionServer", new HbaseHandlerStrategy("HBASE", "RegionServer"));
         map.put("Krb5Kdc", new Krb5KdcHandlerStrategy("KERBEROS", "Krb5Kdc"));
         map.put("KAdmin", new KAdminHandlerStrategy("KERBEROS", "KAdmin"));
-        map.put("SRFE", new FEHandlerStrategy("STARROCKS", "SRFE"));
         map.put("DorisFE", new FEHandlerStrategy("DORIS", "DorisFE"));
         map.put("DorisFEObserver", new FEObserverHandlerStrategy("DORIS", "DorisFEObserver"));
-        map.put("SRFEObserver", new FEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
+        map.put("DorisBE", new BEHandlerStrategy("DORIS", "DorisBE"));
         map.put("ZkServer", new ZkServerHandlerStrategy("ZOOKEEPER", "ZkServer"));
         map.put("KafkaBroker", new KafkaHandlerStrategy("KAFKA", "KafkaBroker"));
-        map.put("SRBE", new BEHandlerStrategy("STARROCKS", "SRBE"));
-        map.put("DorisBE", new BEHandlerStrategy("DORIS", "DorisBE"));
+        map.put("SRBE", new SRBEHandlerStrategy("STARROCKS", "SRBE"));
+        map.put("SRCN", new SRCNHandlerStrategy("STARROCKS", "SRCN"));
+        map.put("SRFE", new SRFEHandlerStrategy("STARROCKS", "SRFE"));
+        map.put("SRFEObserver", new SRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
         map.put("HistoryServer", new HistoryServerHandlerStrategy("YARN", "HistoryServer"));
         map.put("TimelineServer", new TimelineServerHandlerStrategy("YARN", "TimelineServer"));
 
@@ -73,6 +74,11 @@ public class ServiceRoleStrategyContext {
 
         map.put("PostgresqlMaster", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlMaster"));
         map.put("PostgresqlWorker", new PostgresqlHandlerStrategy("POSTGRESQL", "PostgresqlWorker"));
+
+
+        map.put("Storage", new StorageHandlerStrategy("NEBULAGRAPH", "Storage"));
+
+        map.put("ApiServer", new DSHandlerStrategy("DS", "ApiServer"));
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

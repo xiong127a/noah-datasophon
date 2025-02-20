@@ -18,9 +18,7 @@
 package com.datasophon.api.strategy;
 
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.host.impl.ClusterHostServiceImpl;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.ProcInfo;
@@ -42,20 +40,6 @@ public class SRFEObserverHandlerStrategy implements ServiceRoleStrategy {
 
     private static final Logger logger = LoggerFactory.getLogger(SRFEObserverHandlerStrategy.class);
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
-
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
@@ -113,4 +97,5 @@ public class SRFEObserverHandlerStrategy implements ServiceRoleStrategy {
         List<ClusterHostDO> hostList = clusterHostService.getHostListByClusterId(clusterId);
         return hostList.stream().collect(Collectors.toMap(ClusterHostDO::getIp, ClusterHostDO::getHostname));
     }
+
 }

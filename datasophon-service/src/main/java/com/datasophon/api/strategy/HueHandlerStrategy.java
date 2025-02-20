@@ -27,12 +27,6 @@ import java.util.concurrent.TimeUnit;
 
 public class HueHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(HueHandlerStrategy.class);
-
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
 
     @Override
     public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -79,20 +73,7 @@ public class HueHandlerStrategy extends ServiceHandlerAbstract implements Servic
         execCmdActor.tell(commands.toString(), ActorRef.noSender());
     }
 
-    @Override
-    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
 
-    }
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 
     public String kinitKbStr(String user) {
         return "kinit -kt /etc/security/keytab/" + user + ".service.keytab " + user + "/" + Convert.toStr(CacheUtils.get(Constants.HOSTNAME)) + "@HADOOP.COM";

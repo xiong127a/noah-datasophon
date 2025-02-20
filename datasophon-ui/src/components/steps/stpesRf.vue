@@ -27,9 +27,10 @@
   <div class="steps-rf">
     <div class="steps-rf-container">
       <Steps1 ref="steps1Ref" v-if="stepsNumber === 1" :steps1="steps1Data" />
-      <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" />
-      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3" />
-      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"/>
+      <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" :depType="depType" />
+      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3 " />
+      <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"
+        :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
       <Steps6 ref="steps6Ref" v-if="stepsNumber === 6" :steps4Data="steps4Data" />
       <Steps7 ref="steps7Ref" v-if="stepsNumber === 7" :steps4Data="steps4Data" />
@@ -38,7 +39,8 @@
     <div class="footer">
       <a-button class="mgr10" @click="closeModal">取消</a-button>
       <a-button v-if="stepsNumber > 1 && stepsNumber !== 8" class="mgr10" type="primary" @click="back">上一步</a-button>
-      <a-button class="mgr10" type="primary" :loading="nextLoading" @click="next">{{ currentSteps !== stepsList.length ? '下一步' : '完成'}}</a-button>
+      <a-button class="mgr10" type="primary" :loading="nextLoading" @click="next">{{ currentSteps !== stepsList.length ?
+        '下一步' : '完成'}}</a-button>
     </div>
   </div>
 </template>
@@ -68,7 +70,7 @@ export default {
     Steps7,
     Steps8,
   },
-  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object },
+  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object, depType:String, },
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId" , 'onSearch'],
   data() {
     return {
@@ -99,7 +101,23 @@ export default {
   },
   computed: {
     stepsNumber () {
-      return this.currentSteps + this.interval
+      if (this.currentSteps === 4 && this.depType == 'K8S'){
+        return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 5 && this.depType == 'K8S') {
+        return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 6 && this.depType == 'K8S') {
+        return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 7 && this.depType == 'K8S') {
+      return this.currentSteps + 1
+      }//暂时的
+      if (this.currentSteps === 3 && this.depType == 'K8S'){
+        return this.currentSteps + 1
+      }else{
+        return this.currentSteps + this.interval
+      }
     }
   },
   methods: {
@@ -140,7 +158,7 @@ export default {
           this.nextLoading = false;
           flag = res.dispatcherHostAgentCompleted;
           if (!flag) self.$message.warning("存在为未分发完成的主机");
-          if (!flag) return false;
+          // if (!flag) return false;
           if (this.stepsList.length === this.currentSteps) {
             this.handleCancel();
             this.onSearch()
@@ -154,15 +172,17 @@ export default {
         this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
         this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        arr.map((item, index) => {
-          let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
-          if (curIndex !== -1) {
-            let serviceId = this.steps4Data.serviceIds[curIndex]
-            let nameIndex = this.steps4Data.serviceNames.findIndex(nameItem => nameItem.serviceId === serviceId)
-            this.steps4Data.serviceIds.splice(curIndex, 1)
-            this.steps4Data.serviceNames.splice(nameIndex, 1)
-          }
-        })
+        if (this.depType!=='K8S'){
+          arr.map((item, index) => {
+            let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
+            if (curIndex !== -1) {
+              let serviceId = this.steps4Data.serviceIds[curIndex]
+              let nameIndex = this.steps4Data.serviceNames.findIndex(nameItem => nameItem.serviceId === serviceId)
+              this.steps4Data.serviceIds.splice(curIndex, 1)
+              this.steps4Data.serviceNames.splice(nameIndex, 1)
+            }
+          })
+        }
         // && arr.length < 1
         if (this.steps4Data.serviceIds.length < 1) {
           this.$message.warning("请至少选择一个服务");
@@ -172,8 +192,9 @@ export default {
         await this.$axiosPost('/ddh/service/install/checkServiceDependency', {
           clusterId: this.clusterId,
           serviceIds:this.steps4Data.serviceIds.join(',')
-        }).then((res) => {
+        }).then((res) => { 
           flag = res.code == 200
+          // flag = res.code == 500//暂时的
           if(res.code != 200)return true
         })
       }

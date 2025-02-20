@@ -29,7 +29,7 @@ public class ServiceRoleStrategyContext {
     static {
         map.put("NameNode", new NameNodeHandlerStrategy());
         map.put("ResourceManager", new RMHandlerStrategy());
-        map.put("HiveMetaStore", new HiveMetaStroreHandlerStrategy());
+        map.put("HiveMetaStore", new HiveMetaStoreHandlerStrategy());
         map.put("HiveServer2", new HiveServer2HandlerStrategy());
         map.put("Grafana", new GrafanaHandlerStrategy());
         map.put("ZkServer", new ZkServerHandlerStrategy());
@@ -39,12 +39,15 @@ public class ServiceRoleStrategyContext {
         map.put("JournalNode", new JournalNodeHandlerStrategy());
         map.put("ZKFC", new ZKFCHandlerStrategy());
         map.put("HttpFs", new HttpFsHandlerStrategy());
+        map.put("DORIS", new DorisHandlerStrategy());
         map.put("DorisFE", new FEHandlerStartegy());
-        map.put("SRFE", new SRFEHandlerStrategy());
         map.put("DorisFEObserver", new FEObserverHandlerStartegy());
-        map.put("SRFEObserver", new SRFEObserverHandlerStrategy());
         map.put("DorisBE", new BEHandlerStartegy());
+        map.put("STARROCKS", new StarrocksHandlerStrategy());
+        map.put("SRFE", new SRFEHandlerStrategy());
+        map.put("SRFEObserver", new SRFEObserverHandlerStrategy());
         map.put("SRBE", new SRBEHandlerStrategy());
+        map.put("SRCN", new SRCNHandlerStrategy());
         map.put("Krb5Kdc", new Krb5KdcHandlerStrategy());
         map.put("KAdmin", new KAdminHandlerStrategy());
         map.put("RangerAdmin", new RangerAdminHandlerStrategy());
@@ -52,6 +55,8 @@ public class ServiceRoleStrategyContext {
         map.put("ELASTICSEARCH", new ElasticSearchHandlerStrategy());
         map.put("Prometheus", new PrometheusHandlerStrategy());
         map.put("ALERTMANAGER", new AlertManagerHandlerStrategy());
+        map.put("Graph", new NebulaGraphHandlerStrategy());
+        map.put("RedisSentinelMaster", new RedisSentinelMasterHandlerStrategy());
 
         map.put("RANGER", new RangerAdminHandlerStrategy());
         map.put("ZOOKEEPER", new ZkServerHandlerStrategy());
@@ -71,6 +76,13 @@ public class ServiceRoleStrategyContext {
         map.put("Pushgateway", new PushgatewayHandlerStrategy());
         map.put("MINIO", new MinioHandlerStrategy());
         map.put("HUE", new HueHandlerStrategy());
+        map.put("NEBULAGRAPH", new NebulaGraphHandlerStrategy());
+        map.put("KIBANA", new KibanaSearchHandlerStrategy());
+        map.put("LOGSTASH", new LogstashHandlerStrategy());
+        map.put("KibanaServer", new KibanaSearchHandlerStrategy());
+        map.put("LogstashServer", new LogstashHandlerStrategy());
+        map.put("NOAHSYNC",new NoahSyncHandlerStrategy());
+        map.put("REDISSENTINEL", new RedisSentinelHandlerStrategy());
     }
 
     public static ServiceRoleStrategy getServiceRoleHandler(String type) {

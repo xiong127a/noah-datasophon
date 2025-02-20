@@ -1,11 +1,11 @@
 PYTHON_COMMAND_INVOKER=python
 #DB_FLAVOR=MYSQL|ORACLE|POSTGRES|MSSQL|SQLA
-DB_FLAVOR=MYSQL
+DB_FLAVOR=${databaseFlavor}
 
-SQL_CONNECTOR_JAR=${rangerHome}/mysql-connector-java-5.1.34.jar
+SQL_CONNECTOR_JAR=${rangerHome}/jdbc/${databaseFlavor}-connector.jar
 
-db_root_user=root
-db_root_password=${rootPassword}
+db_root_user=${dbaUser}
+db_root_password=${dbaPassword}
 db_host=${dbHost}
 #SSL config
 db_ssl_enabled=false
@@ -200,3 +200,10 @@ sqlserver_audit_file=db/sqlserver/xa_audit_db_sqlserver.sql
 sqlanywhere_core_file=db/sqlanywhere/optimized/current/ranger_core_db_sqlanywhere.sql
 sqlanywhere_audit_file=db/sqlanywhere/xa_audit_db_sqlanywhere.sql
 cred_keystore_filename=$app_home/WEB-INF/classes/conf/.jceks/rangeradmin.jceks
+
+dm_core_file=db/dm/optimized/current/ranger_core_db_dm.sql
+dm_audit_file=db/oracle/xa_audit_db_dm.sql
+
+<#if separateDBA == "true">
+setup_mode=SeparateDBA
+</#if>

@@ -1,0 +1,49 @@
+{
+    "name": "JUICEFS",
+    "label": "JuiceFS",
+    "description": "高性能、云原生分布式文件系统",
+    "version": "1.2.2",
+    "sortNum": 12,
+    "dependencies": [
+
+    ],
+    "packageName": "juicefs-1.2.2.tar.gz",
+    "decompressPackageName": "juicefs-1.2.2",
+    "roles": [
+        {
+            "name": "JuiceFSClient",
+            "label": "JuiceFSClient",
+            "roleType": "client",
+            "cardinality": "1+",
+            "logFile": "logs/juicefs-${host}.log"
+        }
+    ],
+    "configWriter": {
+        "generators": [
+            {
+                "filename": "juicefs",
+                "configFormat": "custom",
+                "templateName": "juicefs.ftl",
+                "outputDirectory": "bin",
+                "needMount" : false,
+                "includeParams": [
+                    "logDir"
+                ]
+            }
+        ]
+    },
+    "parameters": [
+        {
+            "name": "logDir",
+            "label": "日志文件保存目录",
+            "description": "日志文件保存目录",
+            "configType": "map",
+            "required": true,
+            "type": "input",
+            "value": "${JUICEFS_HOME}/logs",
+            "configurableInWizard": true,
+            "hidden": false,
+            "defaultValue": "${JUICEFS_HOME}/logs"
+        }
+    ]
+}

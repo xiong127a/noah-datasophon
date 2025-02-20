@@ -37,9 +37,9 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.RollingRestartInfo;
@@ -116,7 +116,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
         List<String> commandIds = new ArrayList<String>();
 
-        Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheUtils
+        Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheOperateUtils
                 .get(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING);
 
         for (String serviceName : serviceNames) {
@@ -178,15 +178,12 @@ public class ClusterServiceCommandServiceImpl
     private boolean alreadyExistsServiceRole(String serviceRoleName, String hostname, Integer clusterId) {
         ClusterServiceRoleInstanceEntity serviceRole =
                 roleInstanceService.getOneServiceRole(serviceRoleName, hostname, clusterId);
-        if (Objects.nonNull(serviceRole)) {
-            return true;
-        }
-        return false;
+        return Objects.nonNull(serviceRole);
     }
 
     @Override
     public Result getServiceCommandlist(Integer clusterId, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
+        int offset = (page - 1) * pageSize;
         List<ClusterServiceCommandEntity> list = this.list(new QueryWrapper<ClusterServiceCommandEntity>()
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .orderByDesc(Constants.CREATE_TIME).last("limit " + offset + "," + pageSize));

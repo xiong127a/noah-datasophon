@@ -132,7 +132,9 @@ public class HostCheckActor extends UntypedActor {
               if (StringUtils.isNotBlank(cpuLoad)) {
                 clusterHostDO.setAverageLoad(cpuLoad);
               }
+              clusterHostDO.setHostState(HostState.RUNNING);
             } catch (Exception e) {
+
               logger.warn("check cluster state error, cause: {}", e.getMessage());
             }
           }

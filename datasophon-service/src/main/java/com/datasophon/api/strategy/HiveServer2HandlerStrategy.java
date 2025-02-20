@@ -17,32 +17,30 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.alibaba.druid.util.JdbcUtils;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    private static final Logger logger = LoggerFactory.getLogger(HiveServer2HandlerStrategy.class);
+
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         CacheUtils.put("enableHiveServer2HA", false);
-        if (hosts.size() > 1) {
+        if (CollUtil.isNotEmpty(hosts)) {
             CacheUtils.put("enableHiveServer2HA", true);
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${masterHiveServer2}", hosts.get(0));
             ProcessUtils.generateClusterVariable(globalVariables, clusterId,
@@ -59,6 +57,13 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         for (ServiceConfig config : list) {
             if ("enableKerberos".equals(config.getName())) {
                 enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "HIVE");
+            }
+            if (StrUtil.equals("javax.jdo.option.ConnectionURL", config.getName())) {
+                String jdbcUrl = config.getValue().toString();
+                String dbType = JdbcUtils.getDbType(jdbcUrl, "");
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${HiveMetaStore-dbType}",
+                        dbType);
+                config.setValue(jdbcUrl);
             }
 
         }
@@ -104,19 +109,6 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
-        if (globalVariables.containsKey("${masterHiveServer2}")
-                && !hostname.equals(globalVariables.get("${masterHiveServer2}"))) {
-            logger.info("set to slave hiveserver2");
-            serviceRoleInfo.setSlave(true);
-        }
-    }
 
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                        Map<String, ClusterServiceRoleInstanceEntity> map) {
 
-    }
 }

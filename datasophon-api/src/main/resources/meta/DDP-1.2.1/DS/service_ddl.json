@@ -15,6 +15,7 @@
       "cardinality": "1",
       "logFile": "api-server/logs/dolphinscheduler-api.log",
       "jmxPort": 12356,
+      "sortNum": 2,
       "startRunner": {
         "timeout": "60",
         "program": "bin/dolphinscheduler-daemon.sh",
@@ -58,6 +59,7 @@
       "label": "MasterServer",
       "roleType": "master",
       "cardinality": "1+",
+      "sortNum": 1,
       "logFile": "master-server/logs/dolphinscheduler-master.log",
       "jmxPort": 12357,
       "startRunner": {
@@ -140,6 +142,7 @@
       "cardinality": "1",
       "logFile": "alert-server/logs/dolphinscheduler-alert.log",
       "jmxPort": 12359,
+      "sortNum": 2,
       "startRunner": {
         "timeout": "60",
         "program": "bin/dolphinscheduler-daemon.sh",
@@ -245,7 +248,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "jdbc:mysql://${apiHost}:3306/dolphinscheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false"
+      "defaultValue": "jdbc:mysql://${apiHost}:3306/dolphinscheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
     },
     {
       "name": "username",

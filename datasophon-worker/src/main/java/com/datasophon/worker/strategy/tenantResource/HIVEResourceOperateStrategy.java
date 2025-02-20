@@ -8,9 +8,9 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.utils.KerberosUtils;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.StringJoiner;
+
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 public class HIVEResourceOperateStrategy extends AbstractOperateStrategy implements ResourceOperateStrategy {
 

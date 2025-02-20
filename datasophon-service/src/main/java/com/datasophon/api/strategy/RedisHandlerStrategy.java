@@ -1,10 +1,9 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -17,28 +16,25 @@ import java.util.stream.Collectors;
 
 public class RedisHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        String masterPort = globalVariables.get("${redisMasterPort}");
-        String slavePort = globalVariables.get("${redisSlavePort}");
-
+        List<ServiceConfig> collect = list.stream()
+                .filter(config -> "redisMasterPort".equals(config.getName()) || "redisSlavePort".equals(config.getName())).collect(Collectors.toList());
+        Map<String, Object> portConfigValues =   collect.stream().collect(Collectors.toMap(
+                        ServiceConfig::getName, // 键：配置名称
+                        ServiceConfig::getValue // 值：相应的端口值
+                ));
+        // 直接从 Map 中提取 masterPort 和 slavePort
+        String masterPort = (String) portConfigValues.get("redisMasterPort");
+        String slavePort = (String) portConfigValues.get("redisSlavePort");
         ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
         String hostMapKey =
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+
         List<String> masterHostList = map.get("RedisMaster");
         List<String> workerHostList = map.get("RedisWorker");
 
@@ -66,13 +62,4 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
         }
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

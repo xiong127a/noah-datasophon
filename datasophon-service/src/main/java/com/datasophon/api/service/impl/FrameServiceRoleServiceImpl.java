@@ -17,14 +17,15 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
 @Service("frameServiceRoleService")
 public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMapper, FrameServiceRoleEntity>
         implements
-            FrameServiceRoleService {
+        FrameServiceRoleService {
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -75,11 +76,11 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                             .eq(Constants.SERVICE_NAME, frameServiceEntity.getServiceName())
                             .eq(Constants.SERVICE_ROLE_NAME, role.getServiceRoleName())
                             .eq(Constants.CLUSTER_ID, clusterId));
-            if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
-                List<String> hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(roleInstanceList)) {
+                List<String> hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
                 role.setHosts(hosts);
-            } else if (CacheUtils.constainsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheUtils.get(key);
+            } else if (CacheOperateUtils.containsKey(key)) {
+                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
                 if (map.containsKey(role.getServiceRoleName())) {
                     role.setHosts(map.get(role.getServiceRoleName()));
                 }
@@ -120,11 +121,11 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                             .eq(Constants.SERVICE_NAME, frameServiceEntity.getServiceName())
                             .eq(Constants.SERVICE_ROLE_NAME, role.getServiceRoleName())
                             .eq(Constants.CLUSTER_ID, clusterId));
-            if (Objects.nonNull(roleInstanceList) && roleInstanceList.size() > 0) {
-                hosts = roleInstanceList.stream().map(e -> e.getHostname()).collect(Collectors.toList());
+            if (CollUtil.isNotEmpty(roleInstanceList)) {
+                hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
 
-            } else if (CacheUtils.constainsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheUtils.get(key);
+            } else if (CacheOperateUtils.containsKey(key)) {
+                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
                 if (map.containsKey(role.getServiceRoleName())) {
                     hosts = map.get(role.getServiceRoleName());
                 }

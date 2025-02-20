@@ -18,7 +18,9 @@
 package com.datasophon.worker.handler;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.Constants;
@@ -75,8 +77,10 @@ public class ConfigureServiceHandler {
         try {
 
             String hostName = InetAddress.getLocalHost().getHostName();
+            String ip = NetUtil.getIpByHost(hostName);
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", hostName);
+            paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);
@@ -111,7 +115,11 @@ public class ConfigureServiceHandler {
                         addToCustomList(iterator, customConfList, config);
                     }
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
-                        iterator.remove();
+                        if (StrUtil.equals("map2", config.getConfigType())) {
+                            config.setConfigType("map");
+                        }else {
+                            iterator.remove();
+                        }
                     }
                     if (config.getValue() instanceof Boolean || config.getValue() instanceof Integer) {
                         logger.info("Convert boolean and integer to string");
@@ -142,19 +150,30 @@ public class ConfigureServiceHandler {
                         customConfList.add(serviceConfig);
                         customConfList.add(serviceConfig1);
                     }
-                    if ("fe_priority_networks".equals(config.getName())
-                            || "be_priority_networks".equals(config.getName())) {
-                        config.setName("priority_networks");
+                    if ("NoahJobServer".equals(serviceRoleName) && "noahjob.fs.defaultFS".equals(config.getName())) {
+                        config.setName("fs.defaultFS");
                     }
 
-                    if("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())){
+//                    if ("fe_priority_networks".equals(config.getName())
+//                            || "be_priority_networks".equals(config.getName())) {
+//                        config.setName("priority_networks");
+//                    }
+//                    if (("SRFE".equals(serviceRoleName)
+//                            || "SRBE".equals(serviceRoleName)
+//                            || "SRFEObserver".equals(serviceRoleName)
+//                            || "SRCN".equals(serviceRoleName))
+//                            && "priority_networks".equals(config.getName())) {
+//                        config.setValue(InetAddress.getLocalHost().getHostAddress());
+//                    }
+
+                    if ("KyuubiServer".equals(serviceRoleName) && "sparkHome".equals(config.getName())) {
                         // add hive-site.xml link in kerberos module
-                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName+"/conf/hive-site.xml";
-                        if(!FileUtil.exist(targetPath)){
+                        final String targetPath = Constants.INSTALL_PATH + File.separator + decompressPackageName + "/conf/hive-site.xml";
+                        if (!FileUtil.exist(targetPath)) {
                             logger.info("Add hive-site.xml link");
-                            ExecResult result = ShellUtils.exceShell("ln -s "+config.getValue()+"/conf/hive-site.xml "+targetPath);
-                            if(!result.getExecResult()){
-                                logger.warn("Add hive-site.xml link failed,msg: "+result.getExecErrOut());
+                            ExecResult result = ShellUtils.exceShell("ln -s " + config.getValue() + "/conf/hive-site.xml " + targetPath);
+                            if (!result.getExecResult()) {
+                                logger.warn("Add hive-site.xml link failed,msg: " + result.getExecErrOut());
                             }
                         }
                     }
@@ -222,7 +241,7 @@ public class ConfigureServiceHandler {
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh");
         ExecResult execResult = ShellUtils
-                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L);
+                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L,logger);
 
         ArrayList<String> globalCommand = new ArrayList<>();
         globalCommand.add(
@@ -288,9 +307,13 @@ public class ConfigureServiceHandler {
         List<String> strs = value.toJavaList(String.class);
         logger.info("size is :{}", strs.size());
         String joinValue = String.join(config.getSeparator(), strs);
-        config.setValue(joinValue);
+        String finalValue = joinValue;
+        if (StrUtil.isAllNotBlank(config.getOpen(), config.getClose())) {
+            finalValue = config.getOpen() + joinValue + config.getClose();
+        }
+        config.setValue(finalValue);
         logger.info("config set value to {}", config.getValue());
-        return joinValue;
+        return finalValue;
     }
 
     private void mkdir(String path, RunAs runAs) {

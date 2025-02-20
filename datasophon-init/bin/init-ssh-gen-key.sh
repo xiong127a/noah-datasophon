@@ -22,8 +22,8 @@ echo "INIT_SBIN_PATH: ${INIT_SBIN_PATH}"
 PACKAGES_PATH=${INIT_PATH}/packages
 echo "PACKAGES_PATH: ${PACKAGES_PATH}"
 
-sh ${INIT_BIN_PATH}/init-sshpackage.sh
-sh ${INIT_BIN_PATH}/init-expect.sh
+bash ${INIT_BIN_PATH}/init-sshpackage.sh
+bash ${INIT_BIN_PATH}/init-expect.sh
 
 removeSSHAsk() {
   echo "begin removeSSHAsk....."

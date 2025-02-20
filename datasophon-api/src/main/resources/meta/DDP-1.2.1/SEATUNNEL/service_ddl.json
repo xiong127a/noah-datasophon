@@ -41,8 +41,7 @@
         "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "backupCount",
-          "custom.checkPoint"
+          "backupCount"
         ]
       },
       {
@@ -51,7 +50,8 @@
         "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       },
       {
@@ -60,7 +60,8 @@
         "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
         "includeParams": [
-          "hosts"
+          "hosts",
+          "port"
         ]
       }
     ]
@@ -79,18 +80,6 @@
       "defaultValue": "1"
     },
     {
-      "name": "custom.checkPoint",
-      "label": "自定义配置检查点存储",
-      "description": "自定义配置",
-      "configType": "custom",
-      "required": false,
-      "type": "multipleWithKey",
-      "value": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}],
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": [{"namespace":"/tmp/seatunnel/checkpoint_snapshot"},{"storage.type":"hdfs"},{"fs.defaultFS":"file:///tmp/"}]
-    },
-    {
       "name": "hosts",
       "label": "集群节点ip",
       "description": "集群节点ip",
@@ -101,6 +90,18 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "port",
+      "label": "集群节点port",
+      "description": "集群节点port",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "5801",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "5801"
     }
   ]
 }

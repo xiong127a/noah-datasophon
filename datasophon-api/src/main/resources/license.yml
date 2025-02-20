@@ -1,0 +1,10 @@
+lic:
+  cloud:
+    # 产品编码（需与认证系统servicecode一致）
+    productCode: bdp
+    # 部署模式: local(本地)/group(集团)
+    mode: local
+    #授权服务地址，在线激活时(有网)为必填项，否则为空
+    serverUrl: http://192.168.6.20:8080/licserver
+    #当前系统回调地址，在线激活时(有网)为必填项，否则为空
+    callbackUrl:

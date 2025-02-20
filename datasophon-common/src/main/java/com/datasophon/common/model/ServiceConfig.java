@@ -17,13 +17,13 @@
 
 package com.datasophon.common.model;
 
-import java.io.Serializable;
-import java.util.List;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.util.List;
 
 /**
  * 配置参数详情
@@ -67,7 +67,17 @@ public class ServiceConfig implements Serializable {
     private boolean configWithRack;
 
     private boolean configWithHA;
-
+    /**
+     * 用于设置分隔符，即生成类似 [1, 2, 3] 这样的格式。
+     */
     private String separator;
+    /**
+     * 用于设置开始和结束符号，即生成类似 [1, 2, 3] 这样的格式。
+     */
+    private String open;
+    /**
+     * 用于设置开始和结束符号，即生成类似 [1, 2, 3] 这样的格式。
+     */
+    private String close;
 
 }

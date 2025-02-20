@@ -29,6 +29,7 @@ import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+
 
 public class ActorUtils {
 
@@ -124,7 +126,7 @@ public class ActorUtils {
             logger.info("create actor {}", actorName);
             actorRef = createActor(actorClass, actorName);
         } else {
-            logger.info("find actor {}", actorName);
+            //logger.info("find actor {}", actorName);
         }
         return actorRef;
     }

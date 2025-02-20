@@ -17,9 +17,6 @@
 
 package com.datasophon.common.cache;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 
@@ -28,12 +25,11 @@ import cn.hutool.cache.CacheUtil;
  */
 public class CacheUtils {
 
-    private static Logger logger = LoggerFactory.getLogger(CacheUtils.class);
+
     private static Cache<String, Object> cache = CacheUtil.newLRUCache(4096);
 
     public static Object get(String key) {
-        Object data = cache.get(key);
-        return data;
+        return cache.get(key);
     };
 
     public static void put(String key, Object value) {

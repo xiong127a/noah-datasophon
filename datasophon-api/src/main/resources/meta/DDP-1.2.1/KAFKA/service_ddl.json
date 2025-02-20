@@ -4,7 +4,9 @@
   "description": "高吞吐量的分布式发布订阅消息系统",
   "version": "2.4.1",
   "sortNum": 4,
-  "dependencies":["ZOOKEEPER"],
+  "dependencies": [
+    "ZOOKEEPER"
+  ],
   "packageName": "kafka-2.4.1.tar.gz",
   "decompressPackageName": "kafka-2.4.1",
   "roles": [
@@ -27,12 +29,14 @@
         "timeout": "600",
         "program": "bin/kafka-server-stop.sh",
         "args": [
+
         ]
       },
       "statusRunner": {
         "timeout": "60",
         "program": "bin/kafka-server-status.sh",
         "args": [
+
         ]
       },
       "restartRunner": {
@@ -42,6 +46,47 @@
           "restart",
           "namenode"
         ]
+      }
+    },
+    {
+      "name": "efak",
+      "label": "efak",
+      "roleType": "worker",
+      "cardinality": "1",
+      "logFile": "efak/logs/log.log",
+      "jmxPort": 18048,
+      "startRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "start"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "stop"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "status"
+        ]
+      },
+      "restartRunner": {
+        "timeout": "60",
+        "program": "efak/bin/ke.sh",
+        "args": [
+          "restart"
+        ]
+      },
+      "externalLink": {
+        "name": "efak Ui",
+        "label": "efak Ui",
+        "url": "http://${host}:8048"
       }
     }
   ],
@@ -81,14 +126,61 @@
         ]
       },
       {
+        "filename": "system-config.properties",
+        "configFormat": "properties",
+        "outputDirectory": "efak/conf",
+        "includeParams": [
+          "efak.zk.cluster.alias",
+          "cluster1.zk.list",
+          "cluster1.zk.acl.enable",
+          "cluster1.zk.acl.schema",
+          "cluster1.zk.acl.username",
+          "cluster1.zk.acl.password",
+          "cluster1.efak.broker.size",
+          "kafka.zk.limit.size",
+          "efak.webui.port",
+          "efak.distributed.enable",
+          "efak.cluster.mode.status",
+          "efak.worknode.master.host",
+          "efak.worknode.port",
+          "cluster1.efak.jmx.acl",
+          "cluster1.efak.jmx.user",
+          "cluster1.efak.jmx.password",
+          "cluster1.efak.jmx.ssl",
+          "cluster1.efak.jmx.truststore.location",
+          "cluster1.efak.jmx.truststore.password",
+          "cluster1.efak.offset.storage",
+          "cluster1.efak.jmx.uri",
+          "efak.metrics.charts",
+          "efak.metrics.retain",
+          "efak.sql.topic.records.max",
+          "efak.sql.topic.preview.records.max",
+          "efak.topic.token",
+          "cluster1.efak.sasl.enable",
+          "cluster1.efak.sasl.protocol",
+          "cluster1.efak.sasl.mechanism",
+          "cluster1.efak.sasl.jaas.config",
+          "cluster1.efak.sasl.client.id",
+          "cluster1.efak.blacklist.topics",
+          "cluster1.efak.sasl.cgroup.enable",
+          "cluster1.efak.sasl.cgroup.topics",
+          "efak.driver",
+          "efak.url",
+          "efak.username",
+          "efak.password"
+        ]
+      },
+      {
         "filename": "kafka-server-start.sh",
         "configFormat": "custom",
         "outputDirectory": "bin",
         "templateName": "kafka-server-start.ftl",
         "includeParams": [
-          "kafkaHeapSize"
+          "kafkaHeapSize",
+          "JMX_PORT"
         ]
       },
+
       {
         "filename": "kafka-run-class.sh",
         "configFormat": "custom",
@@ -176,7 +268,9 @@
       "required": true,
       "type": "multiple",
       "separator": ",",
-      "value": ["/data/kafka-logs"],
+      "value": [
+        "/data/kafka-logs"
+      ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
@@ -206,7 +300,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "8"
-    },{
+    },
+    {
       "name": "offsets.topic.replication.factor",
       "label": "内置topic副本数",
       "description": "",
@@ -216,7 +311,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "3"
-    },{
+    },
+    {
       "name": "log.retention.hours",
       "label": "数据保留的最长时间",
       "description": "",
@@ -237,7 +333,21 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
-    },{
+    },
+    {
+      "name": "securityProtocol",
+      "label": "securityProtocol",
+      "description": "",
+      "configType": "map",
+      "configWithKerberos": true,
+      "required": false,
+      "type": "input",
+      "value": "SASL_PLAINTEXT",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "SASL_PLAINTEXT"
+    },
+    {
       "name": "default.replication.factor",
       "label": "topic副本数",
       "description": "",
@@ -546,19 +656,6 @@
       "defaultValue": "${realm}"
     },
     {
-      "name": "securityProtocol",
-      "label": "securityProtocol",
-      "description": "",
-      "configType": "map",
-      "configWithKerberos": true,
-      "required": false,
-      "type": "input",
-      "value": "SASL_PLAINTEXT",
-      "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "SASL_PLAINTEXT"
-    },
-    {
       "name": "saslMechanism",
       "label": "saslMechanism",
       "description": "",
@@ -585,13 +682,480 @@
       "defaultValue": "kafka"
     },
     {
+      "name": "JMX_PORT",
+      "label": "Kafka JMX 端口",
+      "description": "Kafka JMX 端口",
+      "configType": "map2",
+      "required": false,
+      "type": "input",
+      "value": "9999",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "9999"
+    },
+    {
       "name": "custom.server.properties",
       "label": "自定义配置server.properties",
       "description": "自定义配置",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
-      "value": [],
+      "value": [
+
+      ],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": ""
+    },
+    {
+      "name": "efak.zk.cluster.alias",
+      "label": "Kafka 多集群别名属性",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "cluster1",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "cluster1"
+    },
+    {
+      "name": "cluster1.zk.list",
+      "label": "Kafka 集群 zookeeper 地址",
+      "description": "",
+      "configType": "map",
+      "required": true,
+      "type": "input",
+      "value": "${zkUrls}/kafka",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "${zkUrls}/kafka"
+    },
+    {
+      "name": "cluster1.zk.acl.enable",
+      "label": "启用/禁用 zookeeper 访问控制列表 (ACL)",
+      "description": "",
+      "required": true,
+      "type": "switch",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": false
+    },
+    {
+       "name": "cluster1.zk.acl.schema",
+       "label": "用于 ACL 连接的schema",
+       "description": "",
+       "required": true,
+       "configType": "acl",
+       "type": "input",
+       "value": "digest",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "digest"
+    },
+    {
+       "name": "cluster1.zk.acl.username",
+       "label": "用于 ACL 连接的用户名",
+       "description": "",
+       "required": true,
+       "configType": "acl",
+       "type": "input",
+       "value": "test",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "test"
+    },
+    {
+       "name": "cluster1.zk.acl.password",
+       "label": "用于 ACL 连接的密码",
+       "description": "",
+       "required": true,
+       "configType": "acl",
+       "type": "input",
+       "value": "test123",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "test123"
+    },
+    {
+       "name": "cluster1.efak.broker.size",
+       "label": "Kafka 集群 在线 Broker 数量",
+       "description": "指定该集群的在线 Broker 数量。",
+       "required": true,
+       "type": "input",
+       "value": "20",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "20"
+    },
+    {
+       "name": "kafka.zk.limit.size",
+       "label": "Kafka ZK 客户端线程数限制",
+       "description": "设置连接 Zookeeper 的客户端线程数限制。",
+       "required": true,
+       "type": "input",
+       "value": "16",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "16"
+    },
+    {
+       "name": "efak.webui.port",
+       "label": "EFAK Web UI 端口",
+       "description": "EFAK Web UI 服务的端口号。",
+       "required": true,
+       "type": "input",
+       "value": "8048",
+       "configurableInWizard": true,
+       "hidden": false,
+       "defaultValue": "8048"
+    },
+{
+        "name": "efak.distributed.enable",
+        "label": "启用/禁用 EFAK 分布式模式",
+        "description": "是否启用分布式模式。",
+        "required": true,
+        "type": "switch",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": false
+    },
+    {
+        "name": "efak.cluster.mode.status",
+        "label": "EFAK 集群模式状态",
+        "description": "设置 EFAK 集群的工作模式。",
+        "configType": "efak-ha",
+        "required": true,
+        "type": "input",
+        "value": "master",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "master"
+    },
+    {
+        "name": "efak.worknode.master.host",
+        "label": "EFAK 主节点主机地址",
+        "description": "EFAK 集群主节点的主机地址。",
+        "configType": "efak-ha",
+        "required": true,
+        "type": "input",
+        "value": "localhost",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "localhost"
+    },
+    {
+        "name": "efak.worknode.port",
+        "label": "EFAK 工作节点端口",
+        "description": "EFAK 工作节点的端口号。",
+        "configType": "efak-ha",
+        "required": true,
+        "type": "input",
+        "value": "8085",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "8085"
+    },
+{
+        "name": "cluster1.efak.jmx.acl",
+        "label": "启用/禁用 Kafka JMX 访问控制列表 (ACL)",
+        "description": "",
+        "required": true,
+        "type": "switch",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": false
+    },
+    {
+        "name": "cluster1.efak.jmx.user",
+        "label": "Kafka JMX 连接用户名",
+        "description": "",
+        "required": true,
+        "configType": "jmx-acl",
+        "type": "input",
+        "value": "keadmin",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "keadmin"
+    },
+    {
+        "name": "cluster1.efak.jmx.password",
+        "label": "Kafka JMX 连接密码",
+        "description": "",
+        "required": true,
+        "configType": "jmx-acl",
+        "type": "input",
+        "value": "keadmin123",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "keadmin123"
+    },
+    {
+        "name": "cluster1.efak.jmx.ssl",
+        "label": "启用/禁用 Kafka JMX SSL 认证",
+        "description": "",
+        "required": true,
+        "configType": "jmx-acl",
+        "type": "input",
+        "value": "false",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "false"
+    },
+    {
+        "name": "cluster1.efak.jmx.truststore.location",
+        "label": "Kafka JMX 信任库位置",
+        "description": "指定 Kafka JMX 连接时的信任库路径。",
+        "required": true,
+        "type": "input",
+        "configType": "jmx-acl",
+        "value": "/data/ssl/certificates/kafka.truststore",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "/data/ssl/certificates/kafka.truststore"
+    },
+    {
+        "name": "cluster1.efak.jmx.truststore.password",
+        "label": "Kafka JMX 信任库密码",
+        "description": "指定 Kafka JMX 信任库的密码。",
+        "required": true,
+        "type": "input",
+        "configType": "jmx-acl",
+        "value": "ke123456",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "ke123456"
+    },
+    {
+        "name": "cluster1.efak.offset.storage",
+        "label": "Kafka 偏移量存储方式",
+        "description": "指定 Kafka 使用的偏移量存储方式。",
+        "required": true,
+        "type": "select",
+        "value": "kafka",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "kafka",
+        "selectValue": [
+            "kafka",
+            "zk"
+        ]
+    },
+    {
+        "name": "cluster1.efak.jmx.uri",
+        "label": "Kafka JMX URI",
+        "description": "Kafka JMX 连接的 URI。",
+        "required": true,
+        "type": "input",
+        "value": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "service:jmx:rmi:///jndi/rmi://%s/jmxrmi"
+    },
+    {
+        "name": "efak.metrics.charts",
+        "label": "启用/禁用 Kafka Metrics 图表",
+        "description": "启用 Kafka 集群的 Metrics 图表功能。",
+        "required": true,
+        "type": "switch",
+        "value": "true",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": true
+    },
+    {
+        "name": "efak.metrics.retain",
+        "label": "Kafka Metrics 保留天数",
+        "description": "指定 Kafka Metrics 图表保留的天数。",
+        "required": true,
+        "type": "input",
+        "value": "15",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "15"
+    },
+    {
+        "name": "efak.sql.topic.records.max",
+        "label": "Kafka SQL 查询最大记录数",
+        "description": "指定每次 Kafka SQL 查询返回的最大记录数。",
+        "required": true,
+        "type": "input",
+        "value": "5000",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "5000"
+    },
+    {
+        "name": "efak.sql.topic.preview.records.max",
+        "label": "Kafka SQL 查询预览最大记录数",
+        "description": "指定 Kafka SQL 查询预览返回的最大记录数。",
+        "required": true,
+        "type": "input",
+        "value": "10",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "10"
+    },
+    {
+        "name": "efak.topic.token",
+        "label": "Kafka Topic 删除令牌",
+        "description": "指定用于 Kafka Topic 删除的验证令牌。",
+        "required": true,
+        "type": "input",
+        "value": "keadmin",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "keadmin"
+    },
+    {
+        "name": "cluster1.efak.sasl.enable",
+        "label": "启用/禁用 Kafka SASL 认证",
+        "description": "启用或禁用 Kafka SASL 认证。",
+        "required": true,
+        "type": "switch",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": false
+    },
+    {
+        "name": "cluster1.efak.sasl.protocol",
+        "label": "Kafka SASL 协议",
+        "description": "指定 Kafka SASL 使用的协议。",
+        "configType": "sasl",
+        "required": true,
+        "type": "input",
+        "value": "${securityProtocol}",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "${securityProtocol}"
+    },
+    {
+        "name": "cluster1.efak.sasl.mechanism",
+        "label": "Kafka SASL 认证机制",
+        "description": "指定 Kafka SASL 使用的认证机制。",
+        "configType": "sasl",
+        "required": true,
+        "type": "input",
+        "value": "${saslMechanism}",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "${saslMechanism}"
+    },
+    {
+        "name": "cluster1.efak.sasl.jaas.config",
+        "label": "Kafka SASL JAAS 配置",
+        "description": "Kafka SASL 的 JAAS 配置字符串。",
+        "configType": "sasl",
+        "required": true,
+        "type": "input",
+        "value": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "com.sun.security.auth.module.Krb5LoginModule required useKeyTab=true storeKey=true keyTab=\"/etc/security/keytab/kafka.service.keytab\" useTicketCache=false serviceName=kafka principal=\"kafka/${kafkaHost}@${kafkaRealm}\";"
+    },
+    {
+        "name": "cluster1.efak.sasl.client.id",
+        "label": "Kafka SASL 客户端 ID",
+        "description": "指定 Kafka SASL 客户端的 ID。",
+        "required": true,
+        "configType": "sasl",
+        "type": "input",
+        "value": "${host}",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "${host}"
+    },
+    {
+        "name": "cluster1.efak.blacklist.topics",
+        "label": "Kafka 黑名单 Topic",
+        "description": "指定 Kafka 集群中不允许访问的 Topic 列表。",
+        "required": false,
+        "type": "input",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": ""
+    },
+    {
+        "name": "cluster1.efak.sasl.cgroup.enable",
+        "label": "启用/禁用 Kafka SASL Consumer Group",
+        "description": "是否启用 Kafka SASL Consumer Group 功能。",
+        "required": true,
+        "type": "switch",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": false
+    },
+{
+        "name": "cluster1.efak.sasl.cgroup.topics",
+        "label": "Kafka SASL Consumer Group Topics",
+        "description": "指定 Kafka SASL 消费者组使用的 Topic 列表。",
+        "required": false,
+        "type": "input",
+        "value": "",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": ""
+    },
+    {
+        "name": "efak.driver",
+        "label": "数据库驱动",
+        "description": "指定数据库的 JDBC 驱动类。",
+        "required": true,
+        "type": "input",
+        "value": "com.mysql.cj.jdbc.Driver",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "com.mysql.cj.jdbc.Driver"
+    },
+    {
+        "name": "efak.url",
+        "label": "数据库连接 URL",
+        "description": "指定 MySQL 数据库的 JDBC 连接 URL。",
+        "required": true,
+        "type": "input",
+        "value": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "jdbc:mysql://127.0.0.1:3306/ke?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull"
+    },
+    {
+        "name": "efak.username",
+        "label": "数据库用户名",
+        "description": "指定连接数据库的用户名。",
+        "required": true,
+        "type": "input",
+        "value": "root",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "root"
+    },
+    {
+        "name": "efak.password",
+        "label": "数据库密码",
+        "description": "指定连接数据库的密码。",
+        "required": true,
+        "type": "input",
+        "value": "123456",
+        "configurableInWizard": true,
+        "hidden": false,
+        "defaultValue": "123456"
+    },
+    {
+      "name": "custom.system-config.properties",
+      "label": "自定义配置system-config.properties",
+      "description": "自定义配置",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+
+      ],
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""

@@ -23,20 +23,18 @@ import akka.util.Timeout;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.api.service.ClusterServiceCommandService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.service.*;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostCommandMapper;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +43,7 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -52,9 +51,9 @@ import java.util.concurrent.TimeUnit;
 @Service("clusterServiceCommandHostCommandService")
 public class ClusterServiceCommandHostCommandServiceImpl
         extends
-            ServiceImpl<ClusterServiceCommandHostCommandMapper, ClusterServiceCommandHostCommandEntity>
+        ServiceImpl<ClusterServiceCommandHostCommandMapper, ClusterServiceCommandHostCommandEntity>
         implements
-            ClusterServiceCommandHostCommandService {
+        ClusterServiceCommandHostCommandService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostCommandServiceImpl.class);
 
@@ -121,26 +120,35 @@ public class ClusterServiceCommandHostCommandServiceImpl
     @Override
     public Result getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-
         ClusterServiceCommandHostCommandEntity hostCommand =
                 this.getOne(new QueryWrapper<ClusterServiceCommandHostCommandEntity>().eq(Constants.HOST_COMMAND_ID,
                         hostCommandId));
-
         ClusterServiceCommandEntity commandEntity = commandService.getCommandById(hostCommand.getCommandId());
 
+        ExecResult logResult = new ExecResult();
         String serviceName = commandEntity.getServiceName();
         String serviceRoleName = hostCommand.getServiceRoleName();
-        String logFile = String.format("%s/%s/%s.log","logs",serviceName,serviceRoleName);
+        String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
 
-        GetLogCommand command = new GetLogCommand();
-        command.setLogFile(logFile);
-        command.setDecompressPackageName("datasophon-worker");
-        logger.info("Start to get {} install log from host {}", serviceRoleName, hostCommand.getHostname());
-        ActorSelection configActor = ActorUtils.actorSystem
-                .actorSelection("akka.tcp://datasophon@" + hostCommand.getHostname() + ":2552/user/worker/logActor");
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
-        ExecResult logResult = (ExecResult) Await.result(logFuture, timeout.duration());
+        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+            String baseDir = System.getProperty("user.dir");
+            String logStr = K8sMinaUtils
+                    .readLastRows(
+                            baseDir + Constants.SLASH + logFile,
+                            Charset.defaultCharset(), PropertyUtils.getInt("rows"));
+            logResult.setExecResult(true);
+            logResult.setExecOut(logStr);
+        } else {
+            GetLogCommand command = new GetLogCommand();
+            command.setLogFile(logFile);
+            command.setDecompressPackageName("datasophon-worker");
+            logger.info("Start to get {} install log from host {}", serviceRoleName, hostCommand.getHostname());
+            ActorSelection configActor = ActorUtils.actorSystem
+                    .actorSelection("akka.tcp://datasophon@" + hostCommand.getHostname() + ":2552/user/worker/logActor");
+            Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
+            logResult = (ExecResult) Await.result(logFuture, timeout.duration());
+        }
         if (Objects.nonNull(logResult) && logResult.getExecResult()) {
             return Result.success(logResult.getExecOut());
         }

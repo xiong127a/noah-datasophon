@@ -4,6 +4,9 @@ if [ $UID -ne 0 ]; then
   echo Non root user. Please run as root.
   exit 1
 fi
+
+. /etc/os-release
+
 if [ -L $0 ]; then
   BASE_DIR=$(dirname $(readlink $0))
 else
@@ -18,13 +21,17 @@ echo "INIT_PATH: ${INIT_PATH}"
 
 GCC_FOLDER_NAME=gcc-c++
 GCC_TAR_NAME=gcc-c++.tar.gz
-rpm -qa | grep gcc-c++
-if [ "$?" == "0" ]; then
-  echo "rpm -qa | grep gcc-c++ exists"
+if [[ "$ID" == "ubuntu" || "$ID" == "debian" ]]; then
+  apt -y install gcc make
 else
-  yum -y install gcc-c++
   rpm -qa | grep gcc-c++
   if [ "$?" == "0" ]; then
-    echo "gcc-c++ install successfully"
+    echo "rpm -qa | grep gcc-c++ exists"
+  else
+    yum -y install gcc-c++
+    rpm -qa | grep gcc-c++
+    if [ "$?" == "0" ]; then
+      echo "gcc-c++ install successfully"
+    fi
   fi
 fi

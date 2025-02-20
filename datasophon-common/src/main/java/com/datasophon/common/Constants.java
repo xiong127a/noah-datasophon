@@ -19,6 +19,8 @@ package com.datasophon.common;
 
 import com.datasophon.common.utils.PropertyUtils;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -46,6 +48,7 @@ public final class Constants {
 
     public static final String WORKER_PACKAGE_NAME = "datasophon-worker.tar.gz";
     public static final String WORKER_SCRIPT_PATH = INSTALL_PATH + "/datasophon-worker/script/";
+    public static final String K8S_SCRIPT_PATH = INSTALL_PATH + "/opt/datasophon/script/";
     public static final String WORKER_PATH = INSTALL_PATH + "/datasophon-worker";
 
     public static final String CLUSTER_ID = "cluster_id";
@@ -257,4 +260,13 @@ public final class Constants {
     public static final String ROOT = "root";
 
     public static final String DORIS_PW = "";
+
+    public static final String PVM_MODE = "PVM";
+
+    public static final String K8S_MODE = "K8S";
+
+
+    public static final String SERVICE_CHECK_NAMES="Prometheus,AlertManager,Krb5Kdc,KAdmin,SRFE,SRBE,SRFEObserver,DorisFE,DorisFEObserver,DorisBE,NameNode,ResourceManager,KibanaServer";
+
+    public static final List<String> STATUS_CHECK_SERVICES = Arrays.asList(SERVICE_CHECK_NAMES.split(","));
 }

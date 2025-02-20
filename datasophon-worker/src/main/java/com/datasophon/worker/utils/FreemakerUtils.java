@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FreemakerUtils {
@@ -54,7 +55,6 @@ public class FreemakerUtils {
     }
 
     /**
-     *
      * 支持 从附加的目录加载 模版
      *
      * @param generators
@@ -101,11 +101,12 @@ public class FreemakerUtils {
         }
         if (Constants.CUSTOM.equals(configFormat)) {
             template = config.getTemplate(generators.getTemplateName());
-            data = configs.stream().filter(e -> "map".equals(e.getConfigType()))
-                    .collect(Collectors.toMap(key -> key.getName(), value -> value.getValue()));
-            configs = configs.stream().filter(e -> !"map".equals(e.getConfigType())).collect(Collectors.toList());
+            Map<Boolean, List<ServiceConfig>> partitionedConfigs = configs.stream()
+                    .collect(Collectors.partitioningBy(e -> "map".equals(e.getConfigType())));
+            data = partitionedConfigs.get(true).stream().collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue));
+            configs = partitionedConfigs.get(false);
         }
-        logger.info("load template: {} success.", template.getSourceName());
+        logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
         data.put("itemList", configs);
         // 3.产生输出
         processOut(generators, template, data, decompressPackageName);
@@ -183,10 +184,10 @@ public class FreemakerUtils {
     /**
      * 将数据写入模板并生成输出文件
      *
-     * @param template 模板对象
-     * @param data 数据映射
+     * @param template   模板对象
+     * @param data       数据映射
      * @param outputFile 输出文件路径
-     * @throws IOException 当写入文件过程中发生 I/O 错误时抛出
+     * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
     private static void writeToTemplate(Template template, Map<String, Object> data,

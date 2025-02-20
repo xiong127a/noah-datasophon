@@ -47,4 +47,6 @@ public interface ClusterInfoService extends IService<ClusterInfoEntity> {
     Result updateCluster(ClusterInfoEntity clusterInfo);
 
     void deleteCluster(List<Integer> asList);
+
+    String getKubeConfigByClusterId(Integer clusterId);
 }

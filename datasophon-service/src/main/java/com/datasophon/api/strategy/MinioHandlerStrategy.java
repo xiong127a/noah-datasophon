@@ -1,11 +1,9 @@
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -19,15 +17,6 @@ import java.util.stream.Collectors;
 
 public class MinioHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
-
-    }
-
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-
-    }
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -35,7 +24,7 @@ public class MinioHandlerStrategy extends ServiceHandlerAbstract implements Serv
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheUtils.get(hostMapKey);
+        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
         if (Objects.nonNull(hostMap)) {
             List<String> hostList = hostMap.get("MinioService");
@@ -48,13 +37,4 @@ public class MinioHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
     }
 
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-
-    }
-
-    @Override
-    public void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-
-    }
 }

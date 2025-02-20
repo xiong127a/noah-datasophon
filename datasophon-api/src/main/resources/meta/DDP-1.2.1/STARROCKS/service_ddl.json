@@ -2,11 +2,11 @@
   "name": "STARROCKS",
   "label": "STARROCKS",
   "description": "简单易用、高性能和统一的分析数据库",
-  "version": "3.2.1",
+  "version": "3.3.2",
   "sortNum": 41,
   "dependencies": [],
-  "packageName": "starRocks-3.2.1.tar.gz",
-  "decompressPackageName": "starRocks-3.2.1",
+  "packageName": "starRocks-3.3.2.tar.gz",
+  "decompressPackageName": "starRocks-3.3.2",
   "roles": [
     {
       "name": "SRFE",
@@ -33,7 +33,8 @@
         "timeout": "60",
         "program": "fe/bin/status_fe.sh",
         "args": [
-          "status"
+          "status",
+          "fe"
         ]
       },
       "externalLink": {
@@ -64,9 +65,10 @@
       },
       "statusRunner": {
         "timeout": "60",
-        "program": "fe/bin/status_fe.sh",
+        "program": "fe/bin/status_observer.sh",
         "args": [
-          "status"
+          "status",
+          "fe"
         ]
       }
     },
@@ -95,7 +97,38 @@
         "timeout": "60",
         "program": "be/bin/status_be.sh",
         "args": [
-          "status"
+          "status",
+          "be"
+        ]
+      }
+    },
+    {
+      "name": "SRCN",
+      "label": "SRCN",
+      "roleType": "worker",
+      "cardinality": "1+",
+      "logFile": "be/log/cn.INFO",
+      "jmxPort": 8070,
+      "startRunner": {
+        "timeout": "600",
+        "program": "be/bin/start_cn.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "stopRunner": {
+        "timeout": "600",
+        "program": "be/bin/stop_cn.sh",
+        "args": [
+          "--daemon"
+        ]
+      },
+      "statusRunner": {
+        "timeout": "60",
+        "program": "be/bin/status_cn.sh",
+        "args": [
+          "status",
+          "cn"
         ]
       }
     }
@@ -125,16 +158,41 @@
         ]
       },
       {
+        "filename": "cn.conf",
+        "configFormat": "properties",
+        "outputDirectory": "be/conf",
+        "templateName": "starRocks-be.ftl",
+        "includeParams": [
+          "be_port",
+          "be_http_port",
+          "heartbeat_service_port",
+          "brpc_port",
+          "priority_networks",
+          "mem_limit",
+          "starlet_port",
+          "storage_root_path",
+          "query_cache_capacity",
+          "spill_local_storage_dir",
+          "block_cache_enable",
+          "block_cache_disk_path",
+          "block_cache_mem_size",
+          "block_cache_disk_size"
+        ]
+      },
+      {
         "filename": "fe.conf",
         "configFormat": "custom",
         "outputDirectory": "fe/conf",
         "templateName": "starRocks-fe.ftl",
         "includeParams": [
+          "run_mode",
           "meta_dir",
           "http_port",
           "rpc_port",
           "query_port",
           "edit_log_port",
+          "cloud_native_meta_port",
+          "enable_load_volume_from_conf",
           "mysql_service_nio_enabled",
           "priority_networks",
           "qe_max_connection",
@@ -149,6 +207,18 @@
   },
   "parameters": [
     {
+      "name": "run_mode",
+      "label": "运行模式：存算一体/存算分离",
+      "description": "shared_nothing：存算一体 shared_data：存算分离",
+      "required": true,
+      "type": "select",
+      "value": "shared_nothing",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "shared_nothing",
+      "selectValue" : ["shared_nothing", "shared_data"]
+    },
+    {
       "name": "meta_dir",
       "label": "FE元数据的保存目录",
       "description": "FE元数据的保存目录",
@@ -158,7 +228,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "/data/fe/metastore"
+      "defaultValue": "/data/starrocks/fe/metastore"
     },
     {
       "name": "http_port",
@@ -205,6 +275,28 @@
       "defaultValue": "9010"
     },
     {
+      "name": "cloud_native_meta_port",
+      "label": "云原生元数据服务监听端口",
+      "description": "云原生元数据服务监听端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "6090"
+    },
+    {
+      "name": "enable_load_volume_from_conf",
+      "label": "创建默认存储卷",
+      "description": "创建默认存储卷",
+      "required": true,
+      "type": "input",
+      "value": "false",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "false"
+    },
+    {
       "name": "mysql_service_nio_enabled",
       "label": "FE节点mysql nio 配置 ",
       "description": "FE节点mysql nio 配置 ",
@@ -217,7 +309,7 @@
     },
     {
       "name": "priority_networks",
-      "label": "FE优先网段",
+      "label": "FE/BE优先网段",
       "description": "为那些有多个 IP 地址的服务器声明一个选择策略。\n请注意，最多应该有一个 IP 地址与此列表匹配。这是一个以分号分隔格式的列表，用 CIDR 表示法，例如 10.10.10.0/24。 如果没有匹配这条规则的ip，会随机选择一个。",
       "required": true,
       "type": "input",
@@ -236,17 +328,6 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "5000"
-    },
-    {
-      "name": "run_mode",
-      "label": "FE节点运行模式 ",
-      "description": "FE节点运行模式",
-      "required": true,
-      "type": "input",
-      "value": "",
-      "configurableInWizard": true,
-      "hidden": false,
-      "defaultValue": "shared_nothing"
     },
     {
       "name": "enable_query_cache",
@@ -367,7 +448,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/storage"
+        "/data/starrocks/be/storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
@@ -393,7 +474,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/spill_storage"
+        "/data/starrocks/be/spill_storage"
       ],
       "configurableInWizard": true,
       "hidden": false,
@@ -419,7 +500,7 @@
       "required": true,
       "type": "multiple",
       "value": [
-        "/data/be/cache_data/"
+        "/data/starrocks/be/cache_data/"
       ],
       "configurableInWizard": true,
       "hidden": false,
