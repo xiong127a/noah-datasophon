@@ -11,7 +11,7 @@ import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.DockerImageUtils;
-import com.datasophon.k8s.util.K8sFreemakerUtils;
+import com.datasophon.k8s.util.K8sFreeMakerUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
@@ -201,7 +201,7 @@ public class K8sYamlDeploymentHandler {
 
             String yamlFilePath = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
 
-            K8sFreemakerUtils.writeToTemplateLocal(template, data, yamlFilePath);
+            K8sFreeMakerUtils.writeToTemplateLocal(template, data, yamlFilePath);
 
         } catch (Exception e) {
             execResult.setExecErrOut(e.getMessage());
@@ -236,7 +236,7 @@ public class K8sYamlDeploymentHandler {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         config.setTemplateLoader(new MultiTemplateLoader(
                 new TemplateLoader[]{
-                        new ClassTemplateLoader(K8sFreemakerUtils.class,
+                        new ClassTemplateLoader(K8sFreeMakerUtils.class,
                                 "/k8s" + Constants.SLASH + "templates" + Constants.SLASH + serviceName + Constants.SLASH + "k8s")
                 }
         ));
@@ -261,6 +261,7 @@ public class K8sYamlDeploymentHandler {
         data.put("serviceName", serviceName);
         data.put("namespace", Constant.K8S_NAMESPACE);
         data.put("dockerImage", DockerImageUtils.getString(serviceName));
+        data.put("dockerBusyboxImage", DockerImageUtils.getString("BUSYBOX"));
         data.put("enableKerberos", enableKerberos.toString());
         data.put("enableRangerPlugin", enableRangerPlugin.toString());
         data.put("appHome", appHome);
