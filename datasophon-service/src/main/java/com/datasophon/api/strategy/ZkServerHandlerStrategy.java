@@ -26,17 +26,17 @@ import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-
-import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+
+import java.util.*;
+
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.common.utils.HostUtils.generateHosts;
 
 public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
 
@@ -50,7 +50,7 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
         String zkUrls = join + ":2181";
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${zkUrls}", zkUrls);
         // 保存hbaseZkUrls到全局变量
-        String hbaseZkUrls=String.join(",", hosts);
+        String hbaseZkUrls = String.join(",", hosts);
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${zkHostsUrl}", hbaseZkUrls);
     }
 
@@ -109,8 +109,8 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
         }
         list.addAll(kbConfigs);
     }
+
     /**
-     *
      * @param clusterId
      * @param list
      */
@@ -123,8 +123,15 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
+
         if (Objects.nonNull(hostMap)) {
             List<String> zkServers = hostMap.get("ZkServer");
+
+            String depMode = getDepMode(clusterId);
+
+            if (!Constants.PVM_MODE.equals(depMode)) {
+                zkServers = generateHosts(zkServers, "zookeeper-zkserver");
+            }
 
             Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
 

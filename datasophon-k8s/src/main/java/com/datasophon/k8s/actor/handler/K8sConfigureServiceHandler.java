@@ -39,6 +39,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.*;
 
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
 import static com.datasophon.k8s.util.K8sFreemakerUtils.*;
 
 @Data
@@ -61,7 +62,7 @@ public class K8sConfigureServiceHandler {
         logger = LoggerFactory.getLogger(loggerName);
     }
 
-    public ExecResult configure(Map<Generators, List<ServiceConfig>> cofigFileMap,
+    public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap,
                                 String decompressPackageName,
                                 Integer myid,
                                 String serviceRoleName,
@@ -75,8 +76,11 @@ public class K8sConfigureServiceHandler {
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);
-            for (Generators generators : cofigFileMap.keySet()) {
-                List<ServiceConfig> configs = cofigFileMap.get(generators);
+            for (Generators generators : configFileMap.keySet()) {
+                List<ServiceConfig> configs = configFileMap.get(generators);
+                if (generators.getFilename().equals(K8S_SVC_CONF)) {
+                    continue;
+                }
                 String dataDir = "";
                 Iterator<ServiceConfig> iterator = configs.iterator();
                 ArrayList<ServiceConfig> customConfList = new ArrayList<>();

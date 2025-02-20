@@ -23,9 +23,13 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.datasophon.common.Constants;
 import com.google.common.net.InetAddresses;
+
+import static com.datasophon.common.Constants.DATASOPHON;
 
 /**
  * 读取hosts文件
@@ -83,7 +87,7 @@ public enum HostUtils {
             InetAddress byName = InetAddress.getByName(hostName);
             return byName.getHostAddress();
         } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
+            return hostName;
         }
     }
 
@@ -130,5 +134,11 @@ public enum HostUtils {
         // 达到最大重试次数仍未成功
         System.out.println("端口 " + port + " 未启动，已达到最大重试次数 " + retries);
         return false;
+    }
+
+    public static List<String> generateHosts(List<String> host, String serviceRoleFullName) {
+        return IntStream.range(0, host.size())
+                .mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON)
+                .collect(Collectors.toList());
     }
 }

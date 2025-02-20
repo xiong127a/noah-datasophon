@@ -1,9 +1,10 @@
 package com.datasophon.k8s.actor.handler;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
@@ -22,13 +23,10 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.datasophon.common.Constants.DEPLOYMENT;
-import static com.datasophon.common.Constants.STATEFULSET;
+import static com.datasophon.common.Constants.*;
 
 @Data
 public class K8sServiceHandler {
@@ -86,6 +84,7 @@ public class K8sServiceHandler {
     public ExecResult install(K8sServiceRoleOperateCommand command) {
         ExecResult execResult = new ExecResult();
         execResult.setExecResult(true);
+        Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
              InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
@@ -94,10 +93,12 @@ public class K8sServiceHandler {
             String kind = (String) yamlData.get("kind");
             logger.info("kind: {}", kind);
 
+            List<ServiceConfig> svcConfigs = generateSvcConfig(configFileMap);
+
             if (DEPLOYMENT.equals(kind)) {
-                handleDeployment(client, yamlData, yamlInputStream);
+                handleDeployment(client, yamlData, yamlInputStream, svcConfigs);
             } else if (STATEFULSET.equals(kind)) {
-                handleStatefulSet(client, yamlData, yamlInputStream);
+                handleStatefulSet(client, yamlData, yamlInputStream, svcConfigs);
             } else {
                 throw new IllegalArgumentException("Unsupported resource kind: " + kind);
             }
@@ -114,6 +115,28 @@ public class K8sServiceHandler {
         return execResult;
     }
 
+    private List<ServiceConfig> generateSvcConfig(Map<Generators, List<ServiceConfig>> configFileMap) {
+        configFileMap.entrySet().removeIf(entry -> !entry.getKey().getFilename().equals(K8S_SVC_CONF));
+        if (configFileMap.size() == 1) {
+            return configFileMap.values().stream().findFirst().get();
+        }
+        return new ArrayList<>();
+    }
+
+    private void handleNewSvc(List<ServiceConfig> configFileMap, String kind, KubernetesClient client) {
+        if (configFileMap.size() > 0) {
+            /*for (ServiceConfig svcConfig : configFileMap) {
+                String svcName = svcConfig.getName();
+                String svcFullName = CommonUtil.generateServiceRoleFullName(serviceName, svcName);
+                logger.info("创建 Service: {}", svcFullName);
+                client.services()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .createOrReplace(svcConfig);
+            }*/
+        }
+
+    }
+
     private Map<String, Object> loadYamlData(String yamlFile) {
         try (InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
             Yaml yaml = new Yaml();
@@ -123,21 +146,21 @@ public class K8sServiceHandler {
         }
     }
 
-    private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream) throws Exception {
+    private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream, List<ServiceConfig> svcConfigs) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().deployments()
                 .inNamespace(Constant.K8S_NAMESPACE)
-                .withName(serviceRoleFullName), DEPLOYMENT);
+                .withName(serviceRoleFullName), DEPLOYMENT, svcConfigs);
 
     }
 
-    private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream) throws Exception {
+    private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream, List<ServiceConfig> svcConfigs) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().statefulSets()
                 .inNamespace(Constant.K8S_NAMESPACE)
-                .withName(serviceRoleFullName), STATEFULSET);
+                .withName(serviceRoleFullName), STATEFULSET, svcConfigs);
     }
 
     private <T extends HasMetadata> void handleResource(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
-                                                        RollableScalableResource<T> resource, String resourceKind) throws Exception {
+                                                        RollableScalableResource<T> resource, String resourceKind, List<ServiceConfig> svcConfigs) throws Exception {
         T existingResource = resource.get();
         boolean isExistingResource = existingResource != null;
 
@@ -150,6 +173,7 @@ public class K8sServiceHandler {
         } else {
             addProcessStatus();
             if (isFinalNode()) {
+                handleNewSvc(svcConfigs, resourceKind, client);
                 handleNewResource(client, yamlInputStream, resource);
             }
         }
@@ -187,16 +211,15 @@ public class K8sServiceHandler {
 
     private <T extends HasMetadata> void handleNewResource(KubernetesClient client, InputStream yamlInputStream, RollableScalableResource<T> resource) {
 
-            logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-            CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
-            List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
-            String resourceName = metadata.get(0).getMetadata().getName();
-            logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
+        logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
+        List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
+        String resourceName = metadata.get(0).getMetadata().getName();
+        logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
 
-            resource.waitUntilReady(20, TimeUnit.MINUTES);
-            logger.info(resource.getLog());
-        }
-
+        resource.waitUntilReady(20, TimeUnit.MINUTES);
+        logger.info(resource.getLog());
+    }
 
 
     private void handleException(ExecResult execResult, String message, Exception e) {

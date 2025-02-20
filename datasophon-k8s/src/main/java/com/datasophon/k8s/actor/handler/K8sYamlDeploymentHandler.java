@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
+
 @Data
 public class K8sYamlDeploymentHandler {
 
@@ -294,6 +296,9 @@ public class K8sYamlDeploymentHandler {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
+            if (generators.getFilename().equals(K8S_SVC_CONF)) {
+                continue;
+            }
             boolean containsHost = entry.getValue().stream()
                     .anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}"));
 

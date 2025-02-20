@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.common.Constants.DATASOPHON;
+import static com.datasophon.common.utils.HostUtils.generateHosts;
 
 public class ElasticSearchHandlerStrategy implements ServiceRoleStrategy {
 
@@ -39,9 +40,7 @@ public class ElasticSearchHandlerStrategy implements ServiceRoleStrategy {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String depMode = getDepMode(clusterId);
         if (!Constants.PVM_MODE.equals(depMode)) {
-            hosts = IntStream.range(0, hosts.size())
-                    .mapToObj(i -> "elasticsearch-elasticsearch-" + (i) + ".elasticsearch-elasticsearch" + "." + DATASOPHON)
-                    .collect(Collectors.toList());
+            hosts = generateHosts(hosts, "elasticsearch-elasticsearch");
         }
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}", String.join(",", hosts));
         String seedHosts = hosts.stream()

@@ -9,7 +9,9 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
+import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -21,8 +23,12 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 public class K8sServiceInstallHandler extends ServiceHandler {
 
@@ -34,6 +40,7 @@ public class K8sServiceInstallHandler extends ServiceHandler {
                 SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
         ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
                 serviceRoleInfo.getHostname(), serviceRoleInfo.getClusterId());
+        Map<Generators, List<ServiceConfig>> configFileMap = serviceRoleInfo.getConfigFileMap();
         if (Objects.nonNull(serviceRole)) {
             ExecResult execResult = new ExecResult();
             execResult.setExecResult(true);
