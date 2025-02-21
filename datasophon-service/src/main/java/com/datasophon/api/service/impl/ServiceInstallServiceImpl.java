@@ -230,7 +230,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         FrameServiceEntity frameServiceEntity =
                 frameService.getServiceByFrameCodeAndServiceName(
                         clusterInfo.getClusterFrame(), serviceName);
-        boolean configUpdate = false;
+        boolean configUpdate;
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
             String variableName = "${" + configName + "}";
