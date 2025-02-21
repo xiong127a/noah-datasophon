@@ -143,7 +143,7 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
                 ServiceConfig serviceConfig = new ServiceConfig();
                 serviceConfig.setName("server." + myid);
                 serviceConfig.setLabel("server." + myid);
-                serviceConfig.setValue(HostUtils.getIp(server) + ":2888:3888");
+                serviceConfig.setValue(HostUtils.getIpByHost(server) + ":2888:3888");
                 serviceConfig.setHidden(false);
                 serviceConfig.setRequired(true);
                 serviceConfig.setType("input");
