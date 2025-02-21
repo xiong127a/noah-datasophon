@@ -91,7 +91,16 @@
           "hostname",
           "zkRealm"
         ]
-      }
+      },
+        {
+          "filename": "pvc.config.k8s",
+          "configFormat": "properties",
+          "outputDirectory": "",
+          "includeParams": [
+            "storageClasses",
+            "mountPath"
+          ]
+        }
     ]
   },
   "parameters": [
@@ -105,6 +114,30 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "2181"
+    },
+    {
+      "name": "storageClasses",
+      "label": "存储类(Storage Classes)",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "k8s",
+      "required": true,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client"
+    },
+    {
+      "name": "mountPath",
+      "label": "容器挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为ZooKeeper的数据存储位置（如/data/zookeeper）的父目录",
+      "configType": "k8s",
+      "required": true,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data"
     },
     {
       "name": "dataDir",

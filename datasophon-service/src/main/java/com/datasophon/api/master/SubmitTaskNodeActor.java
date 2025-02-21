@@ -17,6 +17,7 @@
 
 package com.datasophon.api.master;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.RollingRestartUtils;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
@@ -30,7 +31,6 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import scala.Option;
 
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +59,7 @@ public class SubmitTaskNodeActor extends UntypedActor {
             Map<String, String> readyToSubmitTaskList = submitActiveTaskNodeCommand.getReadyToSubmitTaskList();
             Map<String, String> completeTaskList = submitActiveTaskNodeCommand.getCompleteTaskList();
             // dag
-            if (readyToSubmitTaskList.size() > 0) {
+            if (CollUtil.isNotEmpty(readyToSubmitTaskList)) {
                 for (String node : readyToSubmitTaskList.keySet()) {
                     Set<String> previousNodes = dag.getPreviousNodes(node);
                     for (String previousNode : previousNodes) {
@@ -82,7 +82,7 @@ public class SubmitTaskNodeActor extends UntypedActor {
 
                     activeTaskList.put(node, ServiceExecuteState.RUNNING);
 
-                    if (masterRoles.size() > 0) {
+                    if (CollUtil.isNotEmpty(masterRoles)) {
                         logger.info("start to submit {} master roles", node);
                         ActorRef serviceActor = ActorUtils.getLocalActor(MasterServiceActor.class,
                                 submitActiveTaskNodeCommand.getClusterCode() + "-serviceActor-" + node);
@@ -101,7 +101,7 @@ public class SubmitTaskNodeActor extends UntypedActor {
                                 serviceActor,
                                 ServiceRoleType.MASTER);
 
-                    } else if (serviceNode.getElseRoles().size() > 0) {
+                    } else if (CollUtil.isNotEmpty(serviceNode.getElseRoles())) {
                         logger.info("{} does not has master roles , start to submit worker or client roles", node);
 
                         //滚动重启

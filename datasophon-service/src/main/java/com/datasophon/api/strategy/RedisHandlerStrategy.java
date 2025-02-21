@@ -5,9 +5,8 @@ import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +32,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
 
         List<String> masterHostList = map.get("RedisMaster");
         List<String> workerHostList = map.get("RedisWorker");

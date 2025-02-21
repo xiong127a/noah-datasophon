@@ -17,17 +17,23 @@
 
 package com.datasophon.common.utils;
 
+import cn.hutool.core.net.NetUtil;
+import com.datasophon.common.Constants;
+import com.google.common.net.InetAddresses;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.security.Security;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import com.datasophon.common.Constants;
-import com.google.common.net.InetAddresses;
 
 import static com.datasophon.common.Constants.DATASOPHON;
 
@@ -36,8 +42,9 @@ import static com.datasophon.common.Constants.DATASOPHON;
  *
  * @author gaodayu
  */
-public enum HostUtils {
-    ;
+@Slf4j
+@UtilityClass
+public class HostUtils {
 
     public static final Pattern HOST_NAME_STR = Pattern.compile("[0-9a-zA-Z-.]{1,64}");
 
@@ -69,7 +76,7 @@ public enum HostUtils {
 
     public static String findIp(String hostname) {
         validHostname(hostname);
-        String ip = getIp(hostname);
+        String ip = getIpByHost(hostname);
         return ip;
     }
 
@@ -82,13 +89,22 @@ public enum HostUtils {
         }
     }
 
-    public static String getIp(String hostName) {
-        try {
-            InetAddress byName = InetAddress.getByName(hostName);
-            return byName.getHostAddress();
-        } catch (UnknownHostException e) {
-            return hostName;
-        }
+
+    /**
+     * 根据主机名获取IP地址
+     * 此方法通过查询主机名来获取对应的IP地址为了确保获取的是最新的IP地址信息，
+     * 方法在查询前设置JVM的系统属性，以禁用网络地址缓存
+     *
+     * @param hostName 主机名，用于查询对应的IP地址
+     * @return 返回查询到的IP地址如果查询失败或无法解析主机名，则返回空字符串
+     */
+    public static String getIpByHost(String hostName) {
+        // 设置系统属性以禁用负缓存，以便立即尝试重新解析最近查询失败的主机
+        System.setProperty("networkaddress.cache.negative.ttl", "0");
+        // 设置系统属性以禁用正缓存，确保每次查询都直接对网络进行请求，获取最新的IP地址信息
+        System.setProperty("networkaddress.cache.ttl", "0");
+        Security.setProperty("networkaddress.cache.negative.ttl", "0");
+        return NetUtil.getIpByHost(hostName);
     }
 
     public static List<String> GetMasterHost() {
@@ -137,8 +153,6 @@ public enum HostUtils {
     }
 
     public static List<String> generateHosts(List<String> host, String serviceRoleFullName) {
-        return IntStream.range(0, host.size())
-                .mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON)
-                .collect(Collectors.toList());
+        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON).collect(Collectors.toList());
     }
 }
