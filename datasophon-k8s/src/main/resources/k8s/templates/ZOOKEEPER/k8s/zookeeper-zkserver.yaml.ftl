@@ -16,7 +16,7 @@ spec:
         name: nfs-pvc
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: "nfs-client"
+        storageClassName: ${storageClasses}
         resources:
           requests:
             storage: 10Gi
@@ -44,15 +44,18 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: ZOO_DATA_DIR
+              value: ${dataDir}
           command:
             - /bin/sh
             - -c
             - |-
+              mkdir -p ${dataDir}
               MY_ID=${r"${HOSTNAME##*-}"}
               echo $((MY_ID + 1)) > ${dataDir}/myid
           volumeMounts:
             - name: nfs-pvc
-              mountPath: ${dataDir}
+              mountPath: ${mountPath}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       affinity:
         podAntiAffinity:
@@ -117,7 +120,7 @@ spec:
             privileged: true
           volumeMounts:
             - name: nfs-pvc
-              mountPath: ${dataDir}
+              mountPath: ${mountPath}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
