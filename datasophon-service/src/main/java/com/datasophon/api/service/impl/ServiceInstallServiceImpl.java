@@ -102,7 +102,7 @@ import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.Constants.*;
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 @Service("serviceInstallService")
 @Transactional
@@ -139,42 +139,28 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterServiceRoleInstanceService roleInstanceService;
 
     private static JSONObject getGenerators() {
-        Generators generators = new Generators();
-        generators.setFilename(K8S_SVC_CONF);
-        generators.setIncludeParams(new ArrayList<>(Arrays.asList(K8S_CLUSTER_IP,K8S_NODE_PORT)));
-        generators.setTemplateName("properties2.ftl");
-        generators.setConfigFormat("custom");
-        generators.setOutputDirectory("");
-        return JSONObject.parseObject(JSONObject.toJSONString(generators));
+        Generators headlessService = new Generators();
+        headlessService.setFilename(K8S_SVC_CONF);
+        headlessService.setIncludeParams(new ArrayList<>(Arrays.asList("service.config")));
+        headlessService.setTemplateName("properties2.ftl");
+        headlessService.setConfigFormat("custom");
+        headlessService.setOutputDirectory("");
+        return JSONObject.parseObject(JSONObject.toJSONString(headlessService));
     }
 
-    private static ServiceConfig getClusterIPConfig() {
-        ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setName(K8S_CLUSTER_IP);
-        serviceConfig.setValue(new ArrayList<Map<String, String>>());
-        serviceConfig.setLabel("clusterIp配置");
-        serviceConfig.setDescription("clusterIp配置，key填svc的port，value填svc的targetPort");
-        serviceConfig.setRequired(false);
-        serviceConfig.setHidden(false);
-        serviceConfig.setConfigType("map");
-        serviceConfig.setType("multipleWithKey");
-        serviceConfig.setConfigurableInWizard(true);
-        serviceConfig.setDefaultValue(new ArrayList<Map<String, String>>());
-        return serviceConfig;
-    }
-    private static ServiceConfig getNodePortConfig() {
-        ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setName(K8S_NODE_PORT);
-        serviceConfig.setValue(new ArrayList<Map<String, String>>());
-        serviceConfig.setLabel("nodePort配置");
-        serviceConfig.setDescription("nodePort配置，key填svc的roleFullName，value填svc的targetPort:nodePort（默认范围30000-32767）");
-        serviceConfig.setRequired(false);
-        serviceConfig.setHidden(false);
-        serviceConfig.setConfigType("map");
-        serviceConfig.setType("multipleWithKey");
-        serviceConfig.setConfigurableInWizard(true);
-        serviceConfig.setDefaultValue(new ArrayList<Map<String, String>>());
-        return serviceConfig;
+    private static ServiceConfig getServiceConfig() {
+        ServiceConfig headlessService = new ServiceConfig();
+        headlessService.setName("service.config");
+        headlessService.setValue(new ArrayList<Map<String, String>>());
+        headlessService.setLabel("port:nodePort");
+        headlessService.setDescription("svc配置，value为空表示");
+        headlessService.setRequired(false);
+        headlessService.setHidden(false);
+        headlessService.setConfigType("map");
+        headlessService.setType("multipleWithKey");
+        headlessService.setConfigurableInWizard(true);
+        headlessService.setDefaultValue(new ArrayList<Map<String, String>>());
+        return headlessService;
     }
 
     @Override

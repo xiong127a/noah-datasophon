@@ -125,10 +125,7 @@ public final class Constants {
     public static final String SERVICE_STATE = "service_state";
     public static final String EQUAL_SIGN = "=";
     public static final String K8S_DNS_SUFFIX = "."+DATASOPHON;
-
     public static final String K8S_SVC_CONF = "svc.conf";
-    public static final String K8S_CLUSTER_IP = "ClusterIp";
-    public static final String K8S_NODE_PORT = "NodePort";
 
     private Constants() {
         throw new IllegalStateException("Constants Exception");
