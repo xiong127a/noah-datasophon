@@ -15,6 +15,8 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.k8s.actor.K8sYamlDeploymentActor;
+import com.fasterxml.jackson.core.type.TypeReference;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
@@ -29,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import static com.datasophon.api.utils.ProcessUtils.enableKerberos;
 import static com.datasophon.api.utils.ProcessUtils.enableRangerPlugin;
 
+@Slf4j
 public class K8sDeploymentYamlHandler extends ServiceHandler {
 
     @Override
@@ -60,9 +63,9 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
                 clusterInfo.getClusterCode()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+        HashMap<String, List<String>> map = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
         if (ObjectUtils.isEmpty(map)){
-
+            log.warn("hostMapKey is empty");
         }
         List<String> hostList =
                 map==null?new ArrayList<>():map.get(serviceRoleInfo.getName());
