@@ -21,8 +21,12 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson.parser.Feature;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
@@ -46,7 +50,6 @@ import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.DAG;
@@ -73,11 +76,9 @@ import com.datasophon.dao.entity.ClusterVariable;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
-import com.sun.security.auth.login.ConfigFile;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,6 +91,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -97,11 +99,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.Constants.DATASOPHON;
 import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 @Service("serviceInstallService")
@@ -167,7 +167,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public Result getServiceConfigOption(Integer clusterId, String serviceName) {
         String depMode = getDepMode(clusterId);
 
-        List<ServiceConfig> list = null;
+        List<ServiceConfig> list;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -189,9 +189,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             list = JSONArray.parseArray(serviceConfig, ServiceConfig.class);
             if (Constants.K8S_MODE.equals(depMode)) {
                 Map<JSONObject, JSONArray> configMap =
-                        JSONObject.parseObject(frameService.getConfigFileJson(), Map.class);
-                list.add(getServiceConfig());
-                configMap.put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Arrays.asList(getServiceConfig()))));
+                        JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>() {
+                        }, Feature.SupportAutoType);
+                Objects.requireNonNull(list).add(getServiceConfig());
+                Objects.requireNonNull(configMap).put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Collections.singletonList(getServiceConfig()))));
                 frameService.setConfigFileJson(JSONObject.toJSONString(configMap));
                 frameService.setConfigFileJsonMd5(SecureUtil.md5(JSONObject.toJSONString(configMap)));
                 this.frameService.updateById(frameService);
@@ -638,37 +639,80 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private void buildConfigFileMap(
             String serviceName,
             ClusterInfoEntity clusterInfo,
-            HashMap<String, ServiceConfig> map,
-            HashMap<Generators, List<ServiceConfig>> configFileMap) {
+            Map<String, ServiceConfig> existingConfigMap,
+            Map<Generators, List<ServiceConfig>> resultConfigMap) {
 
+        final FrameServiceEntity frameService = this.frameService.getServiceByFrameCodeAndServiceName(
+                clusterInfo.getClusterFrame(), serviceName);
 
-        FrameServiceEntity frameService =
-                this.frameService.getServiceByFrameCodeAndServiceName(
-                        clusterInfo.getClusterFrame(), serviceName);
-        if (StringUtils.isNotBlank(frameService.getConfigFileJson())) {
-            Map<JSONObject, JSONArray> configMap =
-                    JSONObject.parseObject(frameService.getConfigFileJson(), Map.class);
-            for (JSONObject fileJson : configMap.keySet()) {
-                Generators generators = fileJson.toJavaObject(Generators.class);
-                List<ServiceConfig> serviceConfigs =
-                        configMap.get(fileJson).toJavaList(ServiceConfig.class);
-                for (ServiceConfig config : serviceConfigs) {
-                    logger.info(config.getName());
-                    if (map.containsKey(config.getName())) {
-                        ServiceConfig newConfig = map.get(config.getName());
-                        config.setValue(map.get(config.getName()).getValue());
-                        config.setHidden(newConfig.isHidden());
-                        config.setRequired(newConfig.isRequired());
-                    }
-                }
-                if (ALERTMANAGER.equalsIgnoreCase(serviceName)) {
-                    configFileMap.put(generators, new ArrayList<>(map.values()));
-                } else {
-                    configFileMap.put(generators, serviceConfigs);
-                }
+        if (frameService == null || StringUtils.isBlank(frameService.getConfigFileJson())) {
+            return;
+        }
 
+        try {
+            final Map<Generators, List<ServiceConfig>> parsedConfigMap = parseConfigJson(frameService.getConfigFileJson());
+            processConfigEntries(serviceName, existingConfigMap, resultConfigMap, parsedConfigMap);
+        } catch (JSONException e) {
+            logger.error("Failed to parse config JSON for service: {}", serviceName, e);
+        }
+    }
+
+    /**
+     * 解析JSON配置为结构化Map
+     */
+    private Map<Generators, List<ServiceConfig>> parseConfigJson(String configJson) {
+        return JSON.parseObject(configJson,
+                new TypeReference<Map<Generators, List<ServiceConfig>>>() {
+                });
+    }
+
+    /**
+     * 处理配置条目
+     */
+    private void processConfigEntries(
+            String serviceName,
+            Map<String, ServiceConfig> existingConfigMap,
+            Map<Generators, List<ServiceConfig>> resultConfigMap,
+            Map<Generators, List<ServiceConfig>> parsedConfigMap) {
+
+        for (Map.Entry<Generators, List<ServiceConfig>> entry : parsedConfigMap.entrySet()) {
+            final Generators generator = entry.getKey();
+            final List<ServiceConfig> configs = new ArrayList<>(entry.getValue());
+
+            updateConfigsWithExistingValues(existingConfigMap, configs);
+
+            if (isAlertManagerService(serviceName)) {
+                resultConfigMap.put(generator, new ArrayList<>(existingConfigMap.values()));
+            } else {
+                resultConfigMap.put(generator, configs);
             }
         }
+    }
+
+    /**
+     * 用已有配置更新当前配置
+     */
+    private void updateConfigsWithExistingValues(
+            Map<String, ServiceConfig> existingConfigMap,
+            List<ServiceConfig> currentConfigs) {
+
+        for (ServiceConfig config : currentConfigs) {
+            final String configName = config.getName();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Processing config: {}", configName);
+            }
+
+            if (existingConfigMap.containsKey(configName)) {
+                final ServiceConfig existingConfig = existingConfigMap.get(configName);
+                config.setValue(existingConfig.getValue());
+                config.setHidden(existingConfig.isHidden());
+                config.setRequired(existingConfig.isRequired());
+            }
+        }
+    }
+
+    private boolean isAlertManagerService(String serviceName) {
+        return "ALERTMANAGER".equalsIgnoreCase(serviceName);
     }
 
     private void addToGlobalVariable(Integer clusterId, String variableName, String value) {
