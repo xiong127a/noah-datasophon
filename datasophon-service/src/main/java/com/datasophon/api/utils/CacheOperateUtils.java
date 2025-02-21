@@ -53,7 +53,7 @@ public class CacheOperateUtils {
     }
 
     // 获取缓存对象，如果本地缓存没有，再去远程获取
-    public static Object get(String key) {
+    private static Object get(String key) {
         Object data = CacheUtils.get(key);
         if (ObjUtil.isNotEmpty(data)) {
             return data;
