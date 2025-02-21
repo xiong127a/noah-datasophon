@@ -26,8 +26,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import cn.hutool.core.net.NetUtil;
 import com.datasophon.common.Constants;
 import com.google.common.net.InetAddresses;
+import lombok.extern.slf4j.Slf4j;
 
 import static com.datasophon.common.Constants.DATASOPHON;
 
@@ -36,6 +38,7 @@ import static com.datasophon.common.Constants.DATASOPHON;
  *
  * @author gaodayu
  */
+@Slf4j
 public enum HostUtils {
     ;
 
@@ -84,9 +87,13 @@ public enum HostUtils {
 
     public static String getIp(String hostName) {
         try {
+            System.setProperty("networkaddress.cache.ttl", "0");
+            System.setProperty("sun.net.spi.nameservice.provider.1", "dns,sun");
+            System.setProperty("sun.net.spi.nameservice.provider.2", "default");
             InetAddress byName = InetAddress.getByName(hostName);
             return byName.getHostAddress();
         } catch (UnknownHostException e) {
+            log.warn("hostname:{} not found", hostName);
             return hostName;
         }
     }
