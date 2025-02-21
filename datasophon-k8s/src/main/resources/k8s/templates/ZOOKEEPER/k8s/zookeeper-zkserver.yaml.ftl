@@ -1,5 +1,5 @@
-apiVersion: "apps/v1"
-kind: "StatefulSet"
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -11,11 +11,15 @@ spec:
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
+  volumeClaimTemplates:
+    - metadata:
+        name: nfs-pvc
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: ${storageClasses}
+        resources:
+          requests:
+            storage: 10Gi
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
@@ -28,6 +32,31 @@ spec:
       annotations:
         serviceInstanceName: "${serviceName}"
     spec:
+      initContainers:
+        - name: init-myid
+          image: ${dockerBusyboxImage}
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ZOO_DATA_DIR
+              value: ${dataDir}
+          command:
+            - /bin/sh
+            - -c
+            - |-
+              mkdir -p ${dataDir}
+              MY_ID=${r"${HOSTNAME##*-}"}
+              echo $((MY_ID + 1)) > ${dataDir}/myid
+          volumeMounts:
+            - name: nfs-pvc
+              mountPath: ${mountPath}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -37,12 +66,21 @@ spec:
                   podConflictName: "${serviceRoleFullName}"
               namespaces:
                 - "${namespace}"
-              topologyKey: "kubernetes.io/hostname"
-      hostPID: false
+              topologyKey: kubernetes.io/hostname
       containers:
         - env:
-            - name: "ZOOCFGDIR"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ZOOCFGDIR
               value: "/opt/datasophon/zookeeper-3.5.10/conf"
+            - name: ZOO_DATA_DIR
+              value: ${dataDir}
             - name: USER
               value: ${runAs}
             - name: MEM_LIMIT
@@ -57,13 +95,11 @@ spec:
               name: election-port
             - containerPort: 3888
               name: quorum-port
-          imagePullPolicy: "Always"
+          imagePullPolicy: Always
           command:
             - "/bin/bash"
             - "-c"
-            - |
-              echo $(( $(echo $HOSTNAME | sed 's/.*-\([0-9]*\)$/\1/') + 1 )) > ${dataDir}/myid
-              ${startCommand}
+            - ${startCommand}
           readinessProbe:
             tcpSocket:
               port: 2181
@@ -83,10 +119,9 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
+            - name: nfs-pvc
+              mountPath: ${mountPath}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -102,11 +137,6 @@ spec:
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:

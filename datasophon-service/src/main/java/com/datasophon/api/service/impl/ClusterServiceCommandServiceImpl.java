@@ -53,6 +53,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.mapper.ClusterServiceCommandMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,8 +117,9 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
         List<String> commandIds = new ArrayList<String>();
 
-        Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheOperateUtils
-                .get(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING);
+        Map<String, List<String>> serviceRoleHostMap = CacheOperateUtils
+                .getWithType(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING, new TypeReference<Map<String, List<String>>>() {
+                });
 
         for (String serviceName : serviceNames) {
             // 1、生成操作指令
@@ -314,7 +316,7 @@ public class ClusterServiceCommandServiceImpl
         // 通知commandActor执行命令
         ActorRef dagBuildActor =
                 ActorUtils.getLocalActor(DAGBuildActor.class, ActorUtils.getActorRefName(DAGBuildActor.class));
-        dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType,rollingRestartInfo), ActorRef.noSender());
+        dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType, rollingRestartInfo), ActorRef.noSender());
         return Result.success(String.join(",", commandIds));
     }
 

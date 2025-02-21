@@ -24,11 +24,15 @@ import akka.dispatch.OnComplete;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.bean.BeanUtil;
+
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson.parser.Feature;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.k8s.handler.*;
 import com.datasophon.api.load.GlobalVariables;
@@ -184,7 +188,7 @@ public class ProcessUtils {
         clusterHostDO.setRack("/default-rack");
         clusterHostDO.setNodeLabel("default");
         clusterHostDO.setCreateTime(new Date());
-        clusterHostDO.setIp(HostUtils.getIp(message.getHostname()));
+        clusterHostDO.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostDO.setHostState(HostState.RUNNING);
         clusterHostDO.setManaged(MANAGED.YES);
         clusterHostService.save(clusterHostDO);
@@ -404,7 +408,7 @@ public class ProcessUtils {
             variableService.save(newClusterVariable);
         }
         globalVariables.put(variableName, value);
-        putRemoteVariableCache(variableName,value,clusterId);
+        putRemoteVariableCache(variableName, value, clusterId);
     }
 
     public static void hdfsEcMethond(Integer serviceInstanceId, ClusterServiceRoleInstanceService roleInstanceService,
@@ -628,7 +632,8 @@ public class ProcessUtils {
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
                                              ClusterServiceRoleGroupConfig config, Integer clusterId) {
-        Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(), Map.class);
+        Map<JSONObject, JSONArray> map =
+        JSONObject.parseObject(config.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>(){}, Feature.SupportAutoType);
         for (JSONObject fileJson : map.keySet()) {
             Generators generators = fileJson.toJavaObject(Generators.class);
             List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
@@ -820,10 +825,11 @@ public class ProcessUtils {
         return clusterInfoService.getById(clusterId).getDepType();
     }
 
-    public static Boolean enableKerberos(Integer clusterId,String serviceParentName) {
+    public static Boolean enableKerberos(Integer clusterId, String serviceParentName) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Kerberos}"));
     }
+
     public static boolean enableRangerPlugin(Integer clusterId, String serviceParentName) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Plugin}"));

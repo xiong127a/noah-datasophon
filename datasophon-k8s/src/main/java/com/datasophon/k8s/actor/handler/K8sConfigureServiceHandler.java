@@ -28,7 +28,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.k8s.constants.Constant;
-import com.datasophon.k8s.util.K8sFreemakerUtils;
+import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.K8sFreeMakerUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
@@ -40,7 +41,7 @@ import java.net.InetAddress;
 import java.util.*;
 
 import static com.datasophon.common.Constants.K8S_SVC_CONF;
-import static com.datasophon.k8s.util.K8sFreemakerUtils.*;
+import static com.datasophon.k8s.util.K8sFreeMakerUtils.*;
 
 @Data
 public class K8sConfigureServiceHandler {
@@ -52,12 +53,14 @@ public class K8sConfigureServiceHandler {
     private String serviceName;
 
     private String serviceRoleName;
+    private String serviceRoleFullName;
 
     private Logger logger;
 
     public K8sConfigureServiceHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
+        this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
@@ -193,22 +196,22 @@ public class K8sConfigureServiceHandler {
                     if (K8sMinaUtils.checkPathExists(hostName, path) && K8sMinaUtils.isDirectory(hostName, path)) {
                         // 3rd app, load ext templates
                         logger.info("Add ext app template path: {} to loader path.", path);
-                        K8sFreemakerUtils.generateConfigFile(
+                        K8sFreeMakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 serviceRoleName,
                                 path,
                                 kubeConfig);
                     } else {
-                        K8sFreemakerUtils.generateConfigFile(
+                        K8sFreeMakerUtils.generateConfigFile(
                                 generators,
                                 configs,
                                 serviceRoleName,
-                                kubeConfig);
+                                kubeConfig,serviceRoleFullName);
                     }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String configMapName = generateConfigMapName(serviceRoleName,generators);
-                    createConfigMap(configMapName, "", kubeConfig, generators.getFilename());
+                    createConfigMap(configMapName, "", kubeConfig, generators.getFilename(),serviceRoleFullName);
                 }
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
