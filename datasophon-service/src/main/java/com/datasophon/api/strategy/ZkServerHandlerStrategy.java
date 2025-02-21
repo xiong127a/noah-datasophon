@@ -29,6 +29,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -113,8 +114,8 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
     }
 
     /**
-     * @param clusterId
-     * @param list
+     * @param clusterId 集群ID
+     * @param list      服务配置列表
      */
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
@@ -123,9 +124,11 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
-
-
+//        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
+                hostMapKey,
+                new TypeReference<HashMap<String, List<String>>>() {}
+        );
         if (Objects.nonNull(hostMap)) {
             List<String> zkServers = hostMap.get("ZkServer");
 
