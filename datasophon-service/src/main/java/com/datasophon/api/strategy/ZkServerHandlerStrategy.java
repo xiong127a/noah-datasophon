@@ -26,7 +26,6 @@ import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,7 +33,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.common.utils.HostUtils.generateHosts;
@@ -125,7 +128,8 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
 //        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
         HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(
                 hostMapKey,
-                new TypeReference<HashMap<String, List<String>>>() {}
+                new TypeReference<HashMap<String, List<String>>>() {
+                }
         );
         if (Objects.nonNull(hostMap)) {
             List<String> zkServers = hostMap.get("ZkServer");
@@ -143,7 +147,8 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
                 ServiceConfig serviceConfig = new ServiceConfig();
                 serviceConfig.setName("server." + myid);
                 serviceConfig.setLabel("server." + myid);
-                serviceConfig.setValue(HostUtils.getIpByHost(server) + ":2888:3888");
+                //TODO: 在PVM环境中使用域名通信，在K8S中使用DNS域名通信，避免直接使用IP地址。为了提高系统的灵活性和可维护性，因为直接使用IP地址可能会导致在IP变更时需要大量修改配置，而使用域名可以通过DNS解析动态获取IP，减少维护成本。
+                serviceConfig.setValue(server + ":2888:3888");
                 serviceConfig.setHidden(false);
                 serviceConfig.setRequired(true);
                 serviceConfig.setType("input");
