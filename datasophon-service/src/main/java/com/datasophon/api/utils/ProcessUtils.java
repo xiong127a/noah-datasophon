@@ -188,7 +188,7 @@ public class ProcessUtils {
         clusterHostDO.setRack("/default-rack");
         clusterHostDO.setNodeLabel("default");
         clusterHostDO.setCreateTime(new Date());
-        clusterHostDO.setIp(HostUtils.getIp(message.getHostname()));
+        clusterHostDO.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostDO.setHostState(HostState.RUNNING);
         clusterHostDO.setManaged(MANAGED.YES);
         clusterHostService.save(clusterHostDO);

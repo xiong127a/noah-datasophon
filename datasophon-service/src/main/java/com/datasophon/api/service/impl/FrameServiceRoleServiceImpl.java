@@ -33,6 +33,7 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.mapper.FrameServiceRoleMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -80,7 +81,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                 List<String> hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
                 role.setHosts(hosts);
             } else if (CacheOperateUtils.containsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
+                Map<String, List<String>> map = CacheOperateUtils.getWithType(key, new TypeReference<Map<String, List<String>>>() {});
                 if (map.containsKey(role.getServiceRoleName())) {
                     role.setHosts(map.get(role.getServiceRoleName()));
                 }
@@ -125,7 +126,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
                 hosts = roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getHostname).collect(Collectors.toList());
 
             } else if (CacheOperateUtils.containsKey(key)) {
-                Map<String, List<String>> map = (Map<String, List<String>>) CacheOperateUtils.get(key);
+                Map<String, List<String>> map = CacheOperateUtils.getWithType(key,new TypeReference<Map<String, List<String>>>() {});
                 if (map.containsKey(role.getServiceRoleName())) {
                     hosts = map.get(role.getServiceRoleName());
                 }

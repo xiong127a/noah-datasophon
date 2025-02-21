@@ -344,7 +344,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = new HashMap<>();
         if (CacheOperateUtils.containsKey(hostMapKey)) {
-            map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+            map = CacheOperateUtils.getWithType(hostMapKey, new com.fasterxml.jackson.core.type.TypeReference<HashMap<String, List<String>>>() {
+            });
         }
 
         for (ServiceRoleHostMapping serviceRoleHostMapping : list) {
@@ -387,10 +388,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     public Result getServiceRoleDeployOverview(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map =
-                (HashMap<String, List<String>>) CacheOperateUtils.get(
+                CacheOperateUtils.getWithType(
                         clusterInfo.getClusterCode()
                                 + Constants.UNDERLINE
-                                + Constants.SERVICE_ROLE_HOST_MAPPING);
+                                + Constants.SERVICE_ROLE_HOST_MAPPING,new com.fasterxml.jackson.core.type.TypeReference<HashMap<String, List<String>>>(){});
         return Result.success(map);
     }
 
