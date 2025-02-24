@@ -23,7 +23,8 @@ public interface InstallService {
 
     Result getInstallStep(Integer type);
 
-    Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, Integer page,
+    Result analysisHostList(Integer clusterId, String hosts, String sshUser,  String sshPassword,
+                            String sshPrivateKey,Integer sshPort, Integer page,
                             Integer pageSize);
 
     Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);

@@ -20,12 +20,19 @@ package com.datasophon.api.controller;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
-
-import javax.validation.constraints.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 
 @Validated
 @RestController
@@ -51,10 +58,12 @@ public class HostInstallController {
     public Result analysisHostList(@RequestParam Integer clusterId,
                                    @RequestParam @NotBlank(message = "主机列表不能为空") String hosts,
                                    @RequestParam @Pattern(regexp = "(?=.*?[a-z_])[a-zA-Z0-9._\\-]{1,30}", message = "非法的SSH用户名") String sshUser,
+                                   @RequestParam String sshPassword,
+                                   @RequestParam String sshPrivateKey,
                                    @RequestParam @NotNull(message = "SSH端口必填") @Min(value = 1, message = "非法的SSH端口") @Max(value = 65535, message = "非法的SSH端口") Integer sshPort,
                                    @RequestParam Integer page,
                                    @RequestParam Integer pageSize) {
-        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, page, pageSize);
+        return installService.analysisHostList(clusterId, hosts, sshUser,sshPassword, sshPrivateKey, sshPort, page, pageSize);
     }
 
     /**

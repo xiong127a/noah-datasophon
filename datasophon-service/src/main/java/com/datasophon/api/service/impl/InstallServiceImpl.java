@@ -106,12 +106,14 @@ public class InstallServiceImpl implements InstallService {
      */
     @Override
     public Result analysisHostList(
-                                   Integer clusterId,
-                                   String hosts,
-                                   String sshUser,
-                                   Integer sshPort,
-                                   Integer page,
-                                   Integer pageSize) {
+            Integer clusterId,
+            String hosts,
+            String sshUser,
+            String sshPassword,  // 新增
+            String sshPrivateKey,
+            Integer sshPort,
+            Integer page,
+            Integer pageSize) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, SSHUSER, sshUser);
 
@@ -144,7 +146,7 @@ public class InstallServiceImpl implements InstallService {
                                 PlaceholderUtils.getNewEquipmentNoList(preStr, endStr);
                         for (String next : newEquipmentNoList) {
                             HostInfo hostInfo =
-                                    createHostInfo(pre + next, sshPort, sshUser, clusterCode);
+                                    createHostInfo(pre + next, sshPort, sshUser, sshPassword, sshPrivateKey, clusterCode);
                             if (ObjectUtil.isNotNull(hostInfo)) {
                                 map.put(hostInfo.getHostname(), hostInfo);
                                 if (!hostInfo.isManaged()) {
@@ -157,7 +159,7 @@ public class InstallServiceImpl implements InstallService {
                         int limit = Integer.parseInt(split[1]);
                         for (int i = offset; i <= limit; i++) {
                             HostInfo hostInfo =
-                                    createHostInfo(pre + i, sshPort, sshUser, clusterCode);
+                                    createHostInfo(pre + i, sshPort, sshUser, sshPassword, sshPrivateKey, clusterCode);
                             if (ObjectUtil.isNotNull(hostInfo)) {
                                 map.put(hostInfo.getHostname(), hostInfo);
                                 if (!hostInfo.isManaged()) {
@@ -167,7 +169,7 @@ public class InstallServiceImpl implements InstallService {
                         }
                     }
                 } else {
-                    HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, clusterCode);
+                    HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, sshPrivateKey, clusterCode);
                     if (ObjectUtil.isNotNull(hostInfo)) {
                         map.put(hostInfo.getHostname(), hostInfo);
                         if (!hostInfo.isManaged()) {
@@ -184,8 +186,8 @@ public class InstallServiceImpl implements InstallService {
         // list分页
         list =
                 map.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getKey()))
-                        .map(e -> e.getValue())
+                        .sorted(Comparator.comparing(Map.Entry::getKey))
+                        .map(Map.Entry::getValue)
                         .collect(Collectors.toList());
         Integer offset = (page - 1) * pageSize;
         List<HostInfo> result = getListPage(list, offset, pageSize);
@@ -199,7 +201,8 @@ public class InstallServiceImpl implements InstallService {
     }
 
     public HostInfo createHostInfo(
-                                   String host, Integer sshPort, String sshUser, String clusterCode) {
+            String host, Integer sshPort, String sshUser, String sshPassword,
+            String sshPrivateKey, String clusterCode) {
         HostInfo hostInfo = new HostInfo();
 
         hostInfo.setHostname(HostUtils.getHostName(host));
@@ -227,6 +230,8 @@ public class InstallServiceImpl implements InstallService {
         }
         hostInfo.setSshPort(sshPort);
         hostInfo.setSshUser(sshUser);
+        hostInfo.setSshPassword(sshPassword);
+        hostInfo.setSshPrivateKey(sshPrivateKey);
         hostInfo.setClusterCode(clusterCode);
         hostInfo.setCreateTime(new Date());
         return hostInfo;
@@ -248,7 +253,7 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result rehostCheck(
-                              Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
+            Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
         // 开启主机校验
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String clusterCode = clusterInfo.getClusterCode();
@@ -271,7 +276,7 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result dispatcherHostAgentList(
-                                          Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
+            Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String clusterCode = clusterInfo.getClusterCode();
@@ -380,7 +385,7 @@ public class InstallServiceImpl implements InstallService {
             HostInfo value = hostInfoEntry.getValue();
             if (Objects.isNull(value.getCheckResult())
                     || (Objects.nonNull(value.getCheckResult())
-                            && value.getCheckResult().getCode() != 10001)) {
+                    && value.getCheckResult().getCode() != 10001)) {
                 return Result.success().put("hostCheckCompleted", false);
             }
         }
@@ -389,7 +394,7 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result cancelDispatcherHostAgent(
-                                            Integer clusterId, String hostname, Integer installStateCode) {
+            Integer clusterId, String hostname, Integer installStateCode) {
 
         return null;
     }
@@ -430,7 +435,7 @@ public class InstallServiceImpl implements InstallService {
             MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);
             if (ObjectUtil.isNotEmpty(session)) {
-                    session.close();
+                session.close();
             }
         }
         return Result.success();
@@ -456,7 +461,7 @@ public class InstallServiceImpl implements InstallService {
         CommandType serviceCommandType = "start".equalsIgnoreCase(commandType) ? CommandType.START_SERVICE : CommandType.STOP_SERVICE;
         for (ClusterHostDO clusterHostDO : clusterHostList) {
             WorkerServiceMessage serviceMessage = new WorkerServiceMessage(
-                clusterHostDO.getHostname(), clusterHostDO.getClusterId(), serviceCommandType);
+                    clusterHostDO.getHostname(), clusterHostDO.getClusterId(), serviceCommandType);
             try {
                 ActorRef actor =
                         ActorUtils.getLocalActor(WorkerStartActor.class, "workerStartActor");

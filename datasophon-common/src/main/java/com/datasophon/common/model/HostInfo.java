@@ -18,10 +18,9 @@
 package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
+import lombok.Data;
 
 import java.util.Date;
-
-import lombok.Data;
 
 @Data
 public class HostInfo {
@@ -42,6 +41,9 @@ public class HostInfo {
     private String sshUser;
 
     private Integer sshPort;
+    private String sshPassword;
+    private String  sshPrivateKey;
+
     /**
      * 安装进度
      */
