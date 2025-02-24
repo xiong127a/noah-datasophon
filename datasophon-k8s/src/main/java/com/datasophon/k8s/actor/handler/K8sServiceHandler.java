@@ -67,7 +67,7 @@ public class K8sServiceHandler {
                 currentMap = (Map<String, Object>) currentMap.get(key);
             } else {
                 // 如果路径不存在，直接返回
-                logger.info("Field path does not exist: " + fieldPath);
+                logger.info("Field path does not exist: {}", fieldPath);
                 return;
             }
         }
