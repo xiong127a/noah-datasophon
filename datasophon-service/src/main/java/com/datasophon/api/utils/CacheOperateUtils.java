@@ -10,6 +10,8 @@ import com.datasophon.common.command.ConfigMapCacheCommand;
 import com.datasophon.common.command.VariableCacheCommand;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.ObjectUtils;
 
 import java.util.List;
@@ -51,7 +53,7 @@ public class CacheOperateUtils {
     }
 
     // 获取缓存对象，如果本地缓存没有，再去远程获取
-    public static Object get(String key) {
+    private static Object get(String key) {
         Object data = CacheUtils.get(key);
         if (ObjUtil.isNotEmpty(data)) {
             return data;
@@ -61,6 +63,11 @@ public class CacheOperateUtils {
             return getRemoteCache(key);
         }
         return data;
+    }
+
+    public static <T> T getWithType(String key, TypeReference<T> typeRef) {
+        Object value = get(key);
+        return new ObjectMapper().convertValue(value, typeRef);  // Jackson实现
     }
 
     public static boolean containsKey(String key) {

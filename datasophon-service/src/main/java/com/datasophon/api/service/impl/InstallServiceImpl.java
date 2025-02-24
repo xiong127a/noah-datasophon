@@ -203,7 +203,7 @@ public class InstallServiceImpl implements InstallService {
         HostInfo hostInfo = new HostInfo();
 
         hostInfo.setHostname(HostUtils.getHostName(host));
-        hostInfo.setIp(HostUtils.getIp(host));
+        hostInfo.setIp(HostUtils.getIpByHost(host));
 
         // 判断是否受管zhe'cai'shi
         ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
