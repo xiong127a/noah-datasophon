@@ -21,7 +21,6 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
@@ -34,7 +33,6 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandService;
@@ -47,6 +45,7 @@ import com.datasophon.api.service.ClusterVariableService;
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.service.ServiceInstallService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
@@ -91,7 +90,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -102,7 +100,9 @@ import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.Constants.*;
+import static com.datasophon.common.Constants.K8S_CLUSTER_IP;
+import static com.datasophon.common.Constants.K8S_NODE_PORT;
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 @Service("serviceInstallService")
 @Transactional
@@ -205,8 +205,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 Map<JSONObject, JSONArray> configMap =
                         JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>() {
                         }, Feature.SupportAutoType);
-                Objects.requireNonNull(list).add(getServiceConfig());
-                Objects.requireNonNull(configMap).put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Collections.singletonList(getServiceConfig()))));
+                ServiceConfig clusterIPConfig = getClusterIPConfig();ServiceConfig nodePortConfig = getNodePortConfig();
+
+                Objects.requireNonNull(list).add(clusterIPConfig);
+                list.add(nodePortConfig);
+                Objects.requireNonNull(configMap).put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Arrays.asList(clusterIPConfig,nodePortConfig))));
+
                 frameService.setConfigFileJson(JSONObject.toJSONString(configMap));
                 frameService.setConfigFileJsonMd5(SecureUtil.md5(JSONObject.toJSONString(configMap)));
                 this.frameService.updateById(frameService);
@@ -676,7 +680,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * 解析JSON配置为结构化Map
      */
     private Map<Generators, List<ServiceConfig>> parseConfigJson(String configJson) {
-        return JSON.parseObject(configJson,
+        return com.alibaba.fastjson.JSON.parseObject(configJson,
                 new TypeReference<Map<Generators, List<ServiceConfig>>>() {
                 });
     }
