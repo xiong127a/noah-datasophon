@@ -202,13 +202,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             list = JSONArray.parseArray(serviceConfig, ServiceConfig.class);
             if (Constants.K8S_MODE.equals(depMode)) {
                 Map<JSONObject, JSONArray> configMap =
-                        JSONObject.parseObject(frameService.getConfigFileJson(), Map.class);
+                        JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>(){});
                 ServiceConfig clusterIPConfig = getClusterIPConfig();
                 ServiceConfig nodePortConfig = getNodePortConfig();
 
-                list.add(clusterIPConfig);
+                Objects.requireNonNull(list).add(clusterIPConfig);
                 list.add(nodePortConfig);
-                configMap.put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Arrays.asList(clusterIPConfig,nodePortConfig))));
+                Objects.requireNonNull(configMap).put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Arrays.asList(clusterIPConfig,nodePortConfig))));
 
                 frameService.setConfigFileJson(JSONObject.toJSONString(configMap));
                 frameService.setConfigFileJsonMd5(SecureUtil.md5(JSONObject.toJSONString(configMap)));
