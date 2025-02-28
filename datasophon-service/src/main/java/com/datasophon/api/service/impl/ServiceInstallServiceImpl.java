@@ -25,6 +25,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson.parser.Feature;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
@@ -202,9 +203,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             list = JSONArray.parseArray(serviceConfig, ServiceConfig.class);
             if (Constants.K8S_MODE.equals(depMode)) {
                 Map<JSONObject, JSONArray> configMap =
-                        JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>(){});
-                ServiceConfig clusterIPConfig = getClusterIPConfig();
-                ServiceConfig nodePortConfig = getNodePortConfig();
+                        JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>() {
+                        }, Feature.SupportAutoType);
+                ServiceConfig clusterIPConfig = getClusterIPConfig();ServiceConfig nodePortConfig = getNodePortConfig();
 
                 Objects.requireNonNull(list).add(clusterIPConfig);
                 list.add(nodePortConfig);
