@@ -205,7 +205,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 Map<JSONObject, JSONArray> configMap =
                         JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>() {
                         }, Feature.SupportAutoType);
-                ServiceConfig clusterIPConfig = getClusterIPConfig();ServiceConfig nodePortConfig = getNodePortConfig();
+                ServiceConfig clusterIPConfig = getClusterIPConfig();
+                ServiceConfig nodePortConfig = getNodePortConfig();
 
                 Objects.requireNonNull(list).add(clusterIPConfig);
                 list.add(nodePortConfig);
