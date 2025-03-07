@@ -502,7 +502,7 @@ export default {
     },
     handStartHost() {
       let params = {
-        clusterHostIds: this.hostnames.join(","),
+        clusterHostIds: this.selectedRowKeys.join(","),
         commandType: "start",
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
@@ -515,7 +515,7 @@ export default {
     },
     handStopHost() {
       let params = {
-        clusterHostIds: this.hostnames.join(","),
+        clusterHostIds: this.selectedRowKeys.join(","),
         commandType: "stop",
       };
       this.$axiosPost(global.API.generateHostAgentCommand, params).then((resp) => {
@@ -534,7 +534,7 @@ export default {
     },
     handCommand(op){
       let params = {
-        clusterHostIds: this.hostnames.join(","),
+        clusterHostIds: this.selectedRowKeys.join(","),
         commandType: op,
       };
       this.$axiosPost(global.API.generateHostServiceCommand, params).then((resp) => {
