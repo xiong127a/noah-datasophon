@@ -45,7 +45,10 @@
           ]" placeholder="请输入SSH用户名" />
         </a-form-item>
         <a-form-item label="SSH端口">
-          <a-input v-decorator="['sshPort', {initialValue: steps1.sshPort, rules: [{ required: true, message: 'SSH端口不能为空!' }] }]" placeholder="请输入SSH端口" />
+          <a-input-number v-decorator="['sshPort', {initialValue: steps1.sshPort || 22, rules: [{ required: true, message: 'SSH端口不能为空!' }] }]" :min="1" :max="65535" placeholder="请输入SSH端口" />
+        </a-form-item>
+        <a-form-item label="SSH密码">
+          <a-input-password v-decorator="['sshPassword', {initialValue: steps1.sshPassword, rules: [{ required: true, message: 'SSH密码不能为空!' }] }]" placeholder="请输入SSH密码" />
         </a-form-item>
       </a-form>
     </div>
@@ -79,6 +82,15 @@ export default {
       form: this.$form.createForm(this),
     };
   },
+  created() {
+    // 设置默认值
+    setTimeout(() => {
+      this.form.setFieldsValue({
+        sshUser: 'root',
+        sshPort: 22
+      });
+    });
+  }
 };
 </script>
 <style lang="less" scoped>

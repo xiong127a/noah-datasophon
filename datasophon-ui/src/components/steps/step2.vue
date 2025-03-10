@@ -151,6 +151,7 @@ export default {
         clusterId: this.clusterId,
         ...this.steps1Data,
       };
+      
       this.$axiosPost(global.API.analysisHostList, params).then((res) => {
         this.loading = false;
         this.dataSource = res.data;

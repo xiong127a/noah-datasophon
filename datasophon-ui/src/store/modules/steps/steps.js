@@ -23,7 +23,8 @@ const state = {
   steps1: {
     hosts: '',
     sshUser: '',
-    sshPort: ''
+    sshPort: '',
+    sshPassword: ''
   },
   steps7: {},
   commandType: 'INSTALL_SERVICE',

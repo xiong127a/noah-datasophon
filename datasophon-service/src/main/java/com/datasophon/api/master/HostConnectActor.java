@@ -34,6 +34,8 @@ import org.slf4j.LoggerFactory;
 
 import akka.actor.UntypedActor;
 import cn.hutool.core.util.ObjectUtil;
+import org.apache.commons.lang3.StringUtils;
+import java.util.Objects;
 
 public class HostConnectActor extends UntypedActor {
 
@@ -50,23 +52,73 @@ public class HostConnectActor extends UntypedActor {
         if (message instanceof HostCheckCommand) {
             HostCheckCommand hostCheckCommand = (HostCheckCommand) message;
             HostInfo hostInfo = hostCheckCommand.getHostInfo();
-            logger.info("start host check:{}", hostInfo.getHostname());
-            ClientSession session =
-                    MinaUtils.openConnection(
-                            hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
-            if (ObjectUtil.isNotNull(session)) {
-                hostInfo.setCheckResult(
-                        new CheckResult(
-                                Status.CHECK_HOST_SUCCESS.getCode(),
-                                Status.CHECK_HOST_SUCCESS.getMsg()));
-            } else {
-                hostInfo.setCheckResult(
-                        new CheckResult(
+            logger.info("开始主机检查:{}", hostInfo.getHostname());
+
+            ClientSession session = null;
+            try {
+                // 1. 先尝试免密登录
+                session = MinaUtils.openConnection(
+                        hostInfo.getHostname(), 
+                        hostInfo.getSshPort(), 
+                        hostInfo.getSshUser());
+
+                if (Objects.isNull(session) && StringUtils.isNotBlank(hostInfo.getSshPassword())) {
+                    // 2. 免密失败且密码不为空，尝试密码登录
+                    logger.info("免密登录失败，尝试密码登录:{}", hostInfo.getHostname());
+                    session = MinaUtils.openConnectionWithPassword(
+                            hostInfo.getHostname(),
+                            hostInfo.getSshPort(),
+                            hostInfo.getSshUser(),
+                            hostInfo.getSshPassword());
+
+                    if (Objects.nonNull(session)) {
+                        // 3. 密码登录成功，设置免密
+                        logger.info("开始设置免密登录:{}", hostInfo.getHostname());
+                        boolean success = MinaUtils.setupPasswordlessLogin(session, 
+                                hostInfo.getSshUser(),
+                                hostInfo.getSshPassword());
+                        
+                        if (success) {
+                            logger.info("免密设置成功:{}", hostInfo.getHostname());
+                            hostInfo.setCheckResult(new CheckResult(
+                                    Status.CHECK_HOST_SUCCESS.getCode(),
+                                    Status.CHECK_HOST_SUCCESS.getMsg()));
+                        } else {
+                            logger.error("免密设置失败:{}", hostInfo.getHostname());
+                            hostInfo.setCheckResult(new CheckResult(
+                                    Status.CONNECTION_FAILED.getCode(),
+                                    "免密设置失败"));
+                        }
+                    } else {
+                        logger.error("密码登录失败:{}", hostInfo.getHostname());
+                        hostInfo.setCheckResult(new CheckResult(
                                 Status.CONNECTION_FAILED.getCode(),
-                                Status.CONNECTION_FAILED.getMsg()));
-                MinaUtils.closeConnection(session);
+                                "密码登录失败"));
+                    }
+                } else if (Objects.nonNull(session)) {
+                    // 4. 免密登录成功
+                    logger.info("免密登录成功:{}", hostInfo.getHostname());
+                    hostInfo.setCheckResult(new CheckResult(
+                            Status.CHECK_HOST_SUCCESS.getCode(),
+                            Status.CHECK_HOST_SUCCESS.getMsg()));
+                } else {
+                    // 5. 所有登录方式都失败
+                    logger.error("所有登录方式均失败:{}", hostInfo.getHostname());
+                    hostInfo.setCheckResult(new CheckResult(
+                            Status.CONNECTION_FAILED.getCode(),
+                            "无法建立SSH连接"));
+                }
+            } catch (Exception e) {
+                logger.error("主机连接异常:" + hostInfo.getHostname(), e);
+                hostInfo.setCheckResult(new CheckResult(
+                        Status.CONNECTION_FAILED.getCode(),
+                        "连接异常: " + e.getMessage()));
+            } finally {
+                if (Objects.nonNull(session)) {
+                    MinaUtils.closeConnection(session);
+                }
+                logger.info("完成主机检查:{}", hostInfo.getHostname());
             }
-            logger.info("end host check:{}", hostInfo.getHostname());
         } else {
             unhandled(message);
         }

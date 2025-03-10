@@ -52,9 +52,10 @@ public class HostInstallController {
                                    @RequestParam @NotBlank(message = "主机列表不能为空") String hosts,
                                    @RequestParam @Pattern(regexp = "(?=.*?[a-z_])[a-zA-Z0-9._\\-]{1,30}", message = "非法的SSH用户名") String sshUser,
                                    @RequestParam @NotNull(message = "SSH端口必填") @Min(value = 1, message = "非法的SSH端口") @Max(value = 65535, message = "非法的SSH端口") Integer sshPort,
+                                   @RequestParam @NotBlank(message = "SSH密码不能为空") String sshPassword,
                                    @RequestParam Integer page,
                                    @RequestParam Integer pageSize) {
-        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, page, pageSize);
+        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, sshPassword, page, pageSize);
     }
 
     /**

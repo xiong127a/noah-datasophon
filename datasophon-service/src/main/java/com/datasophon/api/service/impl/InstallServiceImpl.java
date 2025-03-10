@@ -96,140 +96,260 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * 1、查询缓存是否存在当前主机列表 2、存在则根据分页返回数据 3、不存在则解析hosts，产生主机列表并放入缓存中
+     * 解析主机列表并进行环境检测
+     * 
+     * 处理流程：
+     * 1. 获取全局变量并设置SSH用户
+     * 2. 检查缓存中是否存在主机列表
+     * 3. 解析主机列表（支持IP、主机名、IP域格式）
+     * 4. 对未受管主机进行环境检测
+     * 5. 分页返回结果
      *
-     * @param clusterId
-     * @param hosts
-     * @param sshUser
-     * @param sshPort
-     * @return
+     * @param clusterId   集群ID
+     * @param hosts       主机列表字符串，支持格式：单个IP/主机名，逗号分隔的列表，IP域如[1-5]
+     * @param sshUser     SSH用户名
+     * @param sshPort     SSH端口
+     * @param sshPassword SSH密码
+     * @param page       当前页码
+     * @param pageSize   每页大小
+     * @return 分页后的主机列表结果
      */
     @Override
-    public Result analysisHostList(
-                                   Integer clusterId,
-                                   String hosts,
-                                   String sshUser,
-                                   Integer sshPort,
-                                   Integer page,
-                                   Integer pageSize) {
+    public Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword, Integer page, Integer pageSize) {
+        // 1. 获取全局变量并设置SSH用户
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         ProcessUtils.generateClusterVariable(globalVariables, clusterId, SSHUSER, sshUser);
 
-        List<HostInfo> list = new ArrayList<>();
-        hosts = hosts.replace(" ", "");
-        String md5 = SecureUtil.md5(hosts);
+        // 2. 初始化结果列表和缓存key
+        List<HostInfo> resultList = new ArrayList<>();
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        if (Objects.isNull(clusterInfo)) {
+            return Result.error("集群信息不存在");
+        }
         String clusterCode = clusterInfo.getClusterCode();
-        HashMap<String, HostInfo> map = new HashMap<>();
-        if (CacheUtils.constainsKey(clusterCode + Constants.HOST_MAP)
-                && CacheUtils.constainsKey(clusterCode + Constants.HOST_MD5)
-                && md5.equals(CacheUtils.getString(clusterCode + Constants.HOST_MD5))) {
-            logger.info("get host list from cache");
-            map = (HashMap<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        
+        // 3. 生成主机列表的MD5，用于缓存验证
+        hosts = StringUtils.deleteWhitespace(hosts);
+        String hostsMd5 = SecureUtil.md5(hosts);
+        
+        // 4. 处理主机信息Map
+        Map<String, HostInfo> hostInfoMap = processHostList(clusterCode, hosts, hostsMd5, sshPort, sshUser, sshPassword);
+        
+        // 5. 对结果进行排序和分页
+        resultList = hostInfoMap.values().stream()
+                .sorted(Comparator.comparing(HostInfo::getHostname))
+                .collect(Collectors.toList());
+        
+        // 6. 计算分页参数
+        Integer offset = (page - 1) * pageSize;
+        List<HostInfo> pagedResult = getPagedList(resultList, offset, pageSize);
+        
+        return Result.success(pagedResult).put(Constants.TOTAL, resultList.size());
+    }
 
-        } else {
-            logger.info("analysis host list");
-            String[] hostsArr = hosts.split(",");
-            for (String host : hostsArr) {
-                // 解析ip域
-                if (host.contains("[") && host.contains("-")) {
-                    int start = host.indexOf("[");
-                    String pre = host.substring(0, start);
-                    String str = host.substring(start + 1, host.length() - 1);
-                    String[] split = str.split("-");
-                    if (host.matches(Constants.HAS_EN)) {
-                        String preStr = split[0];
-                        String endStr = split[1];
-                        List<String> newEquipmentNoList =
-                                PlaceholderUtils.getNewEquipmentNoList(preStr, endStr);
-                        for (String next : newEquipmentNoList) {
-                            HostInfo hostInfo =
-                                    createHostInfo(pre + next, sshPort, sshUser, clusterCode);
-                            if (ObjectUtil.isNotNull(hostInfo)) {
-                                map.put(hostInfo.getHostname(), hostInfo);
-                                if (!hostInfo.isManaged()) {
-                                    tellHostCheck(clusterCode, hostInfo);
-                                }
-                            }
-                        }
-                    } else {
-                        int offset = Integer.parseInt(split[0]);
-                        int limit = Integer.parseInt(split[1]);
-                        for (int i = offset; i <= limit; i++) {
-                            HostInfo hostInfo =
-                                    createHostInfo(pre + i, sshPort, sshUser, clusterCode);
-                            if (ObjectUtil.isNotNull(hostInfo)) {
-                                map.put(hostInfo.getHostname(), hostInfo);
-                                if (!hostInfo.isManaged()) {
-                                    tellHostCheck(clusterCode, hostInfo);
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, clusterCode);
-                    if (ObjectUtil.isNotNull(hostInfo)) {
-                        map.put(hostInfo.getHostname(), hostInfo);
-                        if (!hostInfo.isManaged()) {
-                            tellHostCheck(clusterCode, hostInfo);
-                        }
-                    }
+    /**
+     * 处理主机列表，返回主机信息Map
+     * 
+     * @param clusterCode 集群编码
+     * @param hosts      主机列表
+     * @param hostsMd5   主机列表MD5
+     * @param sshPort    SSH端口
+     * @param sshUser    SSH用户名
+     * @param sshPassword SSH密码
+     * @return 主机信息Map
+     */
+    private Map<String, HostInfo> processHostList(String clusterCode, String hosts, String hostsMd5, 
+            Integer sshPort, String sshUser, String sshPassword) {
+        HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
+        
+        // 1. 检查缓存中是否存在有效的主机列表
+        if (isCacheValid(clusterCode, hostsMd5)) {
+            logger.info("从缓存获取主机列表");
+            return (HashMap<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        }
+
+        logger.info("解析主机列表");
+        String[] hostArray = hosts.split(Constants.COMMA);
+        
+        // 2. 遍历处理每个主机
+        for (String host : hostArray) {
+            processHost(host, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+        }
+        
+        // 3. 将结果存入缓存
+        CacheUtils.put(clusterCode + Constants.HOST_MAP, hostInfoMap);
+        CacheUtils.put(clusterCode + Constants.HOST_MD5, hostsMd5);
+        logger.info("主机列表已存入缓存");
+        
+        return hostInfoMap;
+    }
+
+    /**
+     * 检查缓存是否有效
+     */
+    private boolean isCacheValid(String clusterCode, String hostsMd5) {
+        return CacheUtils.constainsKey(clusterCode + Constants.HOST_MAP)
+                && CacheUtils.constainsKey(clusterCode + Constants.HOST_MD5)
+                && hostsMd5.equals(CacheUtils.getString(clusterCode + Constants.HOST_MD5));
+    }
+
+    /**
+     * 处理单个主机信息
+     */
+    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword,
+            String clusterCode, Map<String, HostInfo> hostInfoMap) {
+        // 添加参数日志
+        logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", 
+                host, sshPort, sshUser, 
+                StringUtils.isNotBlank(sshPassword) ? "******" : "null", 
+                clusterCode);
+                
+        // 1. 处理IP域格式 [x-y]
+        if (host.contains("[") && host.contains("-")) {
+            processIpRange(host, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+            return;
+        }
+        
+        // 2. 处理单个主机
+        HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterCode);
+        if (Objects.nonNull(hostInfo)) {
+            hostInfoMap.put(hostInfo.getHostname(), hostInfo);
+            if (!hostInfo.isManaged()) {
+                tellHostCheck(clusterCode, hostInfo);
+            }
+        }
+    }
+
+    /**
+     * 处理IP范围
+     */
+    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword,
+            String clusterCode, Map<String, HostInfo> hostInfoMap) {
+        int start = host.indexOf("[");
+        String prefix = host.substring(0, start);
+        String range = host.substring(start + 1, host.length() - 1);
+        String[] split = range.split("-");
+
+        // 1. 处理字母范围，如[a-e]
+        if (host.matches(Constants.HAS_EN)) {
+            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+            return;
+        }
+
+        // 2. 处理数字范围，如[1-5]
+        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+    }
+
+    /**
+     * 处理字母范围的主机名
+     */
+    private void processLetterRange(String prefix, String start, String end, Integer sshPort,
+            String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+        List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
+        for (String suffix : hostList) {
+            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterCode);
+            if (Objects.nonNull(hostInfo)) {
+                hostInfoMap.put(hostInfo.getHostname(), hostInfo);
+                if (!hostInfo.isManaged()) {
+                    tellHostCheck(clusterCode, hostInfo);
                 }
             }
-            // 主机列表放入缓存
-            CacheUtils.put(clusterCode + Constants.HOST_MAP, map);
-            CacheUtils.put(clusterCode + Constants.HOST_MD5, md5);
-            logger.info("put host list in cache");
         }
-        // list分页
-        list =
-                map.entrySet().stream()
-                        .sorted(Comparator.comparing(e -> e.getKey()))
-                        .map(e -> e.getValue())
-                        .collect(Collectors.toList());
-        Integer offset = (page - 1) * pageSize;
-        List<HostInfo> result = getListPage(list, offset, pageSize);
-        return Result.success(result).put(Constants.TOTAL, list.size());
+    }
+
+    /**
+     * 处理数字范围的主机名
+     */
+    private void processNumberRange(String prefix, String[] range, Integer sshPort,
+            String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+        int start = Integer.parseInt(range[0]);
+        int end = Integer.parseInt(range[1]);
+        for (int i = start; i <= end; i++) {
+            HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterCode);
+            if (Objects.nonNull(hostInfo)) {
+                hostInfoMap.put(hostInfo.getHostname(), hostInfo);
+                if (!hostInfo.isManaged()) {
+                    tellHostCheck(clusterCode, hostInfo);
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取分页后的列表
+     */
+    private List<HostInfo> getPagedList(List<HostInfo> list, Integer offset, Integer pageSize) {
+        List<HostInfo> result = new ArrayList<>();
+        int limit = Math.min(offset + pageSize, list.size());
+        for (int i = offset; i < limit; i++) {
+            result.add(list.get(i));
+        }
+        return result;
+    }
+
+    /**
+     * 创建主机信息对象
+     *
+     * @param host       主机地址
+     * @param sshPort    SSH端口
+     * @param sshUser    SSH用户名
+     * @param sshPassword SSH密码
+     * @param clusterCode 集群编码
+     * @return 主机信息对象
+     */
+    private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode) {
+        HostInfo hostInfo = new HostInfo();
+        
+        // 1. 设置基本信息
+        hostInfo.setHostname(HostUtils.getHostName(host));
+        hostInfo.setIp(HostUtils.getIp(host));
+        hostInfo.setSshPort(sshPort);
+        hostInfo.setSshUser(sshUser);
+        hostInfo.setSshPassword(sshPassword);
+        hostInfo.setClusterCode(clusterCode);
+        hostInfo.setCreateTime(new Date());
+
+        // 2. 检查主机是否已受管
+        ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
+        if (Objects.nonNull(hostEntity)) {
+            setManagedHostInfo(hostInfo);
+        } else {
+            setUnmanagedHostInfo(hostInfo);
+        }
+
+        return hostInfo;
+    }
+
+    /**
+     * 设置已受管主机的信息
+     */
+    private void setManagedHostInfo(HostInfo hostInfo) {
+        hostInfo.setManaged(true);
+        hostInfo.setInstallState(InstallState.SUCCESS);
+        hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
+        hostInfo.setProgress(Constants.ONE_HUNDRRD);
+        hostInfo.setCheckResult(new CheckResult(
+                Status.CHECK_HOST_SUCCESS.getCode(),
+                Status.CHECK_HOST_SUCCESS.getMsg()));
+    }
+
+    /**
+     * 设置未受管主机的信息
+     */
+    private void setUnmanagedHostInfo(HostInfo hostInfo) {
+        hostInfo.setManaged(false);
+        hostInfo.setInstallState(InstallState.RUNNING);
+        hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+        hostInfo.setProgress(0);
+        hostInfo.setCheckResult(new CheckResult(
+                Status.START_CHECK_HOST.getCode(),
+                Status.START_CHECK_HOST.getMsg()));
     }
 
     private void tellHostCheck(String clusterCode, HostInfo hostInfo) {
         ActorRef actor =
                 ActorUtils.getLocalActor(HostConnectActor.class, "hostActor-" + hostInfo.getHostname());
         actor.tell(new HostCheckCommand(hostInfo, clusterCode), ActorRef.noSender());
-    }
-
-    public HostInfo createHostInfo(
-                                   String host, Integer sshPort, String sshUser, String clusterCode) {
-        HostInfo hostInfo = new HostInfo();
-
-        hostInfo.setHostname(HostUtils.getHostName(host));
-        hostInfo.setIp(HostUtils.getIp(host));
-
-        // 判断是否受管zhe'cai'shi
-        ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
-        if (ObjectUtil.isNotNull(hostEntity)) {
-            hostInfo.setManaged(true);
-            hostInfo.setInstallState(InstallState.SUCCESS);
-            hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
-            hostInfo.setProgress(Constants.ONE_HUNDRRD);
-            hostInfo.setCheckResult(
-                    new CheckResult(
-                            Status.CHECK_HOST_SUCCESS.getCode(),
-                            Status.CHECK_HOST_SUCCESS.getMsg()));
-        } else {
-            hostInfo.setManaged(false);
-            hostInfo.setInstallState(InstallState.RUNNING);
-            hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-            hostInfo.setProgress(0);
-            hostInfo.setCheckResult(
-                    new CheckResult(
-                            Status.START_CHECK_HOST.getCode(), Status.START_CHECK_HOST.getMsg()));
-        }
-        hostInfo.setSshPort(sshPort);
-        hostInfo.setSshUser(sshUser);
-        hostInfo.setClusterCode(clusterCode);
-        hostInfo.setCreateTime(new Date());
-        return hostInfo;
     }
 
     @Override
