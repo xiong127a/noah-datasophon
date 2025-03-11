@@ -371,6 +371,7 @@ CREATE TABLE "DATASOPHON"."t_ddh_frame_service_role"
  "service_role_name" VARCHAR(32) NULL,
  "service_role_type" INT NULL,
  "cardinality" VARCHAR(32) NULL,
+ "service_config" TEXT NULL,
  "service_role_json" TEXT NULL,
  "service_role_json_md5" VARCHAR(255) NULL,
  "frame_code" VARCHAR(255) NULL,
