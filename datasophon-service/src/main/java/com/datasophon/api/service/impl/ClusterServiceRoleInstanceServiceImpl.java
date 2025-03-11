@@ -404,9 +404,19 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String name) {
+    public List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String serviceRoleName) {
         return this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                .eq(Constants.SERVICE_ROLE_NAME, name));
+                .eq(Constants.SERVICE_ROLE_NAME, serviceRoleName));
+    }
+    @Override
+    public ClusterServiceRoleInstanceEntity listServiceRoleByNameAndClusterId(Integer clusterId,String serviceRoleName) {
+        List<ClusterServiceRoleInstanceEntity> list = this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+                .eq(Constants.CLUSTER_ID, clusterId)
+                .eq(Constants.SERVICE_ROLE_NAME, serviceRoleName));
+        if (Objects.nonNull(list) && !list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
     }
 
     @Override
