@@ -86,8 +86,10 @@ export default {
     // 设置默认值
     setTimeout(() => {
       this.form.setFieldsValue({
+        hosts: '192.168.200.21',
         sshUser: 'root',
-        sshPort: 22
+        sshPort: 22,
+        sshPassword: 'root'
       });
     });
   }

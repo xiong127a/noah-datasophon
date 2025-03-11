@@ -36,4 +36,7 @@ export default {
   getRoleListByHostname: path + '/api/cluster/host/getRoleListByHostname', // 根据主机查询角色列表
   generateHostAgentCommand: path + '/host/install/generateHostAgentCommand', // 主机 Worker 管理
   generateHostServiceCommand: path + '/host/install/generateHostServiceCommand', // 主机 Worker Service 管理
+  fixCheckItem: path + '/host/install/fixCheckItem', // 修复单个检查项
+  fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
+  startCheckItem: path + '/host/install/startCheckItem',
 }

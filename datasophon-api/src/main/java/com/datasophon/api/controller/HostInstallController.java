@@ -20,12 +20,11 @@ package com.datasophon.api.controller;
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
-
-import javax.validation.constraints.*;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.constraints.*;
 
 @Validated
 @RestController
@@ -143,6 +142,33 @@ public class HostInstallController {
             @RequestParam String clusterHostIds,
             @RequestParam String commandType) throws Exception {
         return installService.generateHostServiceCommand(clusterHostIds, commandType);
+    }
+
+    /**
+     * 修复单个检查项
+     */
+    @PostMapping("/fixCheckItem")
+    @UserPermission
+    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId) {
+        return installService.fixCheckItem(clusterId, hostname, itemId);
+    }
+
+    /**
+     * 修复选中的多个检查项
+     */
+    @PostMapping("/fixSelectedCheckItems")
+    @UserPermission
+    public Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds) {
+        return installService.fixSelectedCheckItems(clusterId, hostname, itemIds);
+    }
+
+    /**
+     * 修复所有检查项
+     */
+    @PostMapping("/fixAllCheckItems")
+    @UserPermission
+    public Result fixAllCheckItems(Integer clusterId, String hostname) {
+        return installService.fixAllCheckItems(clusterId, hostname);
     }
 
 }

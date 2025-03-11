@@ -18,11 +18,14 @@
 package com.datasophon.common.command;
 
 import com.datasophon.common.model.HostInfo;
+import java.io.Serializable;
 
 import lombok.Data;
 
 @Data
-public class HostCheckCommand {
+public class HostCheckCommand implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private HostInfo hostInfo;
 

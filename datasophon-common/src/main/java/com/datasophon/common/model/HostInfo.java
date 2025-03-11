@@ -19,12 +19,16 @@ package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
 
+import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 import lombok.Data;
 
 @Data
-public class HostInfo {
+public class HostInfo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String hostname;
 
@@ -38,6 +42,11 @@ public class HostInfo {
      * 检测结果
      */
     private CheckResult checkResult;
+
+    /**
+     * 检查项列表
+     */
+    private List<CheckItem> checkItems;
 
     private String sshUser;
 

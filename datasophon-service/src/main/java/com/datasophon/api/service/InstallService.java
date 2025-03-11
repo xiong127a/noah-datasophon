@@ -42,6 +42,31 @@ public interface InstallService {
 
     Result generateHostAgentCommand(String clusterHostIds, String commandType) throws Exception;
 
+    /**
+     * 修复单个检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @return 修复结果
+     */
+    Result fixCheckItem(Integer clusterId, String hostname, Integer itemId);
+
+    /**
+     * 修复选中的多个检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemIds 检查项ID列表,逗号分隔
+     * @return 修复结果
+     */
+    Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds);
+
+    /**
+     * 修复主机上所有可自动修复的检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @return 修复结果
+     */
+    Result fixAllCheckItems(Integer clusterId, String hostname);
 
     /**
      * 启动/停止 主机上安装的服务启动
@@ -51,4 +76,14 @@ public interface InstallService {
      * @throws Exception
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
+
+    /**
+     * 获取主机检查项列表
+     * @param hostname 主机名
+     * @param clusterId 集群ID
+     * @return 检查项列表
+     */
+    Result getHostCheckItems(String hostname, Integer clusterId);
+
+
 }
