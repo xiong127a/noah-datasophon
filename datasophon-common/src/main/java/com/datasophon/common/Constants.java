@@ -55,7 +55,7 @@ public final class Constants {
 
     public static final String CLUSTER_ID = "cluster_id";
     public static final String MANAGED = "managed";
-    public static final String JSON = "json";
+    public static final String JSON_EXTENSION  = "json";
     public static final String CONFIG = "_config";
     public static final String SERVICE_ROLE_HOST_MAPPING = "service_role_host_mapping";
     public static final String UNDERLINE = "_";
@@ -129,6 +129,9 @@ public final class Constants {
     public static final String K8S_SVC_CONF = "svc.conf";
     public static final String K8S_CLUSTER_IP = "ClusterIp";
     public static final String K8S_NODE_PORT = "NodePort";
+    public static final String CONFIG_TARGET_ROLES="configTargetRoles";
+
+    public static final String  COMMON_CONFIG="CommonConfig";
 
     private Constants() {
         throw new IllegalStateException("Constants Exception");

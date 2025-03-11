@@ -75,7 +75,7 @@ public class FrameServiceEntity implements Serializable {
     private String serviceJsonMd5;
 
     /**
-     * 所有配置参数详情数组
+     * 通用配置参数详情数组
      */
     private String serviceConfig;
 

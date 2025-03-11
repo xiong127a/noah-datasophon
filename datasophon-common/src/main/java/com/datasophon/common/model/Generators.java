@@ -55,6 +55,8 @@ public class Generators implements Serializable {
 
     private boolean needMount = true;
 
+    private String configTargetRoles;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
