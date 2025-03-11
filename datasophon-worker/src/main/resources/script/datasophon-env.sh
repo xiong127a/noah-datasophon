@@ -13,8 +13,12 @@ export FLINK_HOME=/opt/datasophon/flink-1.16.2
 export HADOOP_HOME=/opt/datasophon/hadoop-3.3.3
 export HADOOP_CONF_DIR=/opt/datasophon/hadoop-3.3.3/etc/hadoop
 export PATH=$PATH:$JAVA_HOME/bin:$SPARK_HOME/bin:$HADOOP_HOME/bin:$HIVE_HOME/bin:$FLINK_HOME/bin:$KAFKA_HOME/bin:$HBASE_HOME/bin
-export HADOOP_CLASSPATH=`hadoop classpath`
 
-export TEZ_CONF_DIR=$HADOOP_CONF_DIR
-export TEZ_JARS=/opt/datasophon/tez/*:/opt/datasophon/tez/lib/*
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$TEZ_CONF_DIR:$TEZ_JARS
+# 只在hadoop命令可用时设置HADOOP_CLASSPATH
+if command -v hadoop >/dev/null 2>&1; then
+    export HADOOP_CLASSPATH=`hadoop classpath`
+    
+    export TEZ_CONF_DIR=$HADOOP_CONF_DIR
+    export TEZ_JARS=/opt/datasophon/tez/*:/opt/datasophon/tez/lib/*
+    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$TEZ_CONF_DIR:$TEZ_JARS
+fi

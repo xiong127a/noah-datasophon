@@ -200,6 +200,15 @@
             <outputDirectory>conf/k8s</outputDirectory>
             <lineEnding>unix</lineEnding>
         </fileSet>
-
+        <fileSet>
+            <directory>${basedir}/src/main/resources</directory>
+            <includes>
+                <include>**/*.properties</include>
+                <include>**/*.xml</include>
+                <include>init-scripts.properties</include>
+            </includes>
+            <outputDirectory>conf</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
     </fileSets>
 </assembly>

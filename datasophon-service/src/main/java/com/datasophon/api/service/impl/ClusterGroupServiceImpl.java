@@ -340,7 +340,8 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
     }
 
     public static boolean isGroupExists(String groupName,String hostname) {
-        String result = K8sMinaUtils.execCmdWithResult(hostname, "egrep \"" + groupName + "\" /etc/group >& /dev/null");
+        // 检查组是否存在
+        String result = K8sMinaUtils.execCmdWithResult(hostname, "grep -q \"" + groupName + "\" /etc/group");
         return !result.equals(Constants.FAILED);
     }
 }

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #  Licensed to the Apache Software Foundation (ASF) under one or more
 #  contributor license agreements.  See the NOTICE file distributed with
@@ -16,7 +16,7 @@
 #  limitations under the License.
 #
 
-usage="Usage: start.sh (start|stop|restart) <command> "
+usage="Usage: datasophon-worker.sh (start|stop|restart) <command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -25,16 +25,16 @@ if [ $# -le 1 ]; then
 fi
 
 startStop=$1
-shift
-command=$1
-shift
+if [ $# -gt 0 ]; then shift; fi
 
+command=$1
+if [ $# -gt 0 ]; then shift; fi
 
 JAVA_DEBUG_OPTS=""
 if [ "$1" = "debug" ]; then
     JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8001,server=y,suspend=n "
+    if [ $# -gt 0 ]; then shift; fi
 fi
-shift
 
 echo "Begin $startStop $command......"
 source /etc/profile
@@ -52,22 +52,33 @@ while [ -h "$SCRIPT" ] ; do
   fi
 done
 
-# some Java parameters
-JAVA=`which java 2>/dev/null`
-if [[ $JAVA_HOME != "" ]]; then
-    JAVA=$JAVA_HOME/bin/java
-fi
-if test -z "$JAVA"; then
-    echo "No java found in the PATH. Please set JAVA_HOME."
-    exit 1
-fi
-
+# 设置基础目录
 BIN_DIR=`dirname "$SCRIPT"`/..
 BIN_DIR=`cd "$BIN_DIR"; pwd`
 export DDH_HOME=$BIN_DIR
 
-# export JAVA_HOME=$JAVA_HOME
-#export JAVA_HOME=/opt/soft/jdk
+# 使用本地JDK，不再依赖系统环境变量
+export JAVA_HOME=$DDH_HOME/jdk/current
+export PATH=$JAVA_HOME/bin:$PATH
+JAVA=$JAVA_HOME/bin/java
+
+# 检查本地JDK是否存在
+if [ ! -d "$JAVA_HOME" ]; then
+  echo "警告: 本地JDK未找到: $JAVA_HOME"
+  # 尝试使用系统JDK
+  JAVA=`which java 2>/dev/null`
+  if [[ -z "$JAVA" && -n "$JAVA_HOME" ]]; then
+    JAVA=$JAVA_HOME/bin/java
+  fi
+  if [[ -z "$JAVA" ]]; then
+    echo "错误: 未找到可用的Java! 请设置JAVA_HOME环境变量或安装JDK到本地目录。"
+    exit 1
+  fi
+  echo "使用系统JDK: $JAVA"
+else
+  echo "使用本地JDK: $JAVA_HOME"
+fi
+
 export HOSTNAME=`hostname`
 
 export DDH_PID_DIR=$DDH_HOME/pid
@@ -112,8 +123,8 @@ case $startStop in
 
     exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-    echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
-    nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &
+    echo "nohup $JAVA $exec_command > $log 2>&1 &"
+    nohup $JAVA $exec_command > $log 2>&1 &
     echo $! > $pid
     ;;
 
@@ -178,8 +189,8 @@ case $startStop in
 
       exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-      echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
-      nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &
+      echo "nohup $JAVA $exec_command > $log 2>&1 &"
+      nohup $JAVA $exec_command > $log 2>&1 &
       echo $! > $pid
       ;;
   (*)

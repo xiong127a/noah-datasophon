@@ -36,28 +36,45 @@ public class InstallJDKHandler implements DispatcherWorkerHandler {
     public boolean handle(ClientSession session, HostInfo hostInfo) {
         hostInfo.setProgress(60);
         String arch = MinaUtils.execCmdWithResult(session, "arch");
-        String testResult = MinaUtils.execCmdWithResult(session, "test -d /usr/local/jdk1.8.0_333");
-        boolean exists = true;
-        if (StringUtils.isNotBlank(testResult) && "failed".equals(testResult)) {
-            exists = false;
+        
+        // 使用Constants.INSTALL_PATH作为基础安装路径
+        String installPath = Constants.INSTALL_PATH;
+        String jdkInstallPath = installPath + "/datasophon-worker/jdk";
+        
+        // 创建JDK安装目录
+        MinaUtils.execCmdWithResult(session, "mkdir -p " + jdkInstallPath);
+        
+        // 检查JDK是否已经安装
+        String checkJdkCmd = "[ -d " + jdkInstallPath + "/jdk1.8.0_333 ] && echo 'exists' || echo 'not exists'";
+        String testResult = MinaUtils.execCmdWithResult(session, checkJdkCmd);
+        boolean exists = "exists".equals(testResult.trim());
+        
+        if (!exists) {
+            logger.info("JDK目录不存在，需要安装JDK");
+            hostInfo.setMessage(MessageResolverUtils.getMessage("start.install.jdk"));
+            // 上传JDK到worker目录
+            MinaUtils.uploadFile(session, jdkInstallPath,
+                    Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.X86JDK);
+            // 解压JDK到worker目录
+            MinaUtils.execCmdWithResult(session, "tar -zxvf " + jdkInstallPath + "/jdk-8u333-linux-x64.tar.gz -C " + jdkInstallPath + "/");
+            // 创建符号链接便于引用
+            MinaUtils.execCmdWithResult(session, "ln -sf " + jdkInstallPath + "/jdk1.8.0_333 " + jdkInstallPath + "/current");
         }
-        if ("x86_64".equals(arch)) {
-            if (!exists) {
-                hostInfo.setMessage(MessageResolverUtils.getMessage("start.install.jdk"));
-                MinaUtils.uploadFile(session, "/usr/local",
-                        Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.X86JDK);
-                MinaUtils.execCmdWithResult(session, "tar -zxvf /usr/local/jdk-8u333-linux-x64.tar.gz -C /usr/local/");
-            }
-        }
+        
         if ("aarch64".equals(arch)) {
             if (!exists) {
                 hostInfo.setMessage(MessageResolverUtils.getMessage("start.install.jdk"));
-                MinaUtils.uploadFile(session, "/usr/local",
+                // 上传JDK到worker目录
+                MinaUtils.uploadFile(session, jdkInstallPath,
                         Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.ARMJDK);
+                // 解压JDK到worker目录
                 MinaUtils.execCmdWithResult(session,
-                        "tar -zxvf /usr/local/jdk-8u333-linux-aarch64.tar.gz -C /usr/local/");
+                        "tar -zxvf " + jdkInstallPath + "/jdk-8u333-linux-aarch64.tar.gz -C " + jdkInstallPath + "/");
+                // 创建符号链接便于引用
+                MinaUtils.execCmdWithResult(session, "ln -sf " + jdkInstallPath + "/jdk1.8.0_333 " + jdkInstallPath + "/current");
             }
         }
+        
         return true;
     }
 }

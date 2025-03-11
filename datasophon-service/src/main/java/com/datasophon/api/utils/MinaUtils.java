@@ -77,7 +77,7 @@ public class MinaUtils {
             if (rsaKeyFile.exists()) {
                 try {
                     String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPathRSA)));
-                    session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
+            session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
                     LOG.info("已添加RSA密钥认证");
                     authAdded = true;
                 } catch (Exception e) {
@@ -149,43 +149,67 @@ public class MinaUtils {
         LOG.info("exe cmd: {}", command);
         // 命令返回的结果
         ChannelExec ce = null;
-        // 返回结果流
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        // 错误信息
         ByteArrayOutputStream err = new ByteArrayOutputStream();
         try {
             ce = session.createExecChannel(command);
             ce.setOut(out);
             ce.setErr(err);
-            // 执行并等待
+            // 打开通道并执行命令
             ce.open();
-            Set<ClientChannelEvent> events =
-                    ce.waitFor(
-                            EnumSet.of(ClientChannelEvent.CLOSED),
-                            TimeUnit.SECONDS.toMillis(100000));
-            // 检查请求是否超时
+
+            // 等待命令执行完成或超时
+            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
+
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                throw new Exception("mina 连接超时");
+                LOG.error("命令执行超时: {}", command);
+                return "ERROR: Command timed out";
             }
+
             int exitStatus = ce.getExitStatus();
             LOG.info("mina result {}", exitStatus);
-            if (exitStatus == 1) {
-                return "failed";
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            if (ce.isClosed()) {
-                try {
-                    ce.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            
+            String outResult = out.toString();
+            String errResult = err.toString();
+            
+            if (exitStatus != 0) {
+                // 处理常见的错误并尝试替代解决方案
+                if (command.contains("chkconfig") && exitStatus == 127) {
+                    LOG.warn("chkconfig命令不存在，尝试使用systemctl替代...");
+                    String serviceName = command.substring(command.lastIndexOf(" ") + 1);
+                    return execCmdWithResult(session, "systemctl enable " + serviceName);
+                } 
+                else if (command.contains("\\cp") && exitStatus == 1) {
+                    LOG.warn("复制文件失败，尝试使用sudo...");
+                    return execCmdWithResult(session, "sudo " + command);
+                }
+                else if (command.contains("service") && command.contains("restart")) {
+                    LOG.warn("service命令启动服务失败，尝试使用systemctl...");
+                    String serviceName = command.substring(command.indexOf("service ") + 8, command.lastIndexOf(" "));
+                    LOG.info("尝试使用systemctl重启服务: {}", serviceName);
+                    return execCmdWithResult(session, "systemctl restart " + serviceName);
+                }
+                
+                if (!errResult.isEmpty()) {
+                    LOG.error("命令执行失败: {} - 错误信息: {}", command, errResult);
+                    return "ERROR: " + errResult;
                 }
             }
+
+            LOG.info("exe cmd return : {}", outResult);
+            return outResult;
+        } catch (IOException e) {
+            LOG.error("执行命令异常: {} - {}", command, e.getMessage());
+            return "ERROR: " + e.getMessage();
+        } finally {
+                try {
+                if (ce != null) {
+                    ce.close();
+                }
+            } catch (IOException e) {
+                LOG.error("关闭命令通道异常", e);
+            }
         }
-        LOG.info("exe cmd return : {}", out);
-        return out.toString().trim();
     }
     public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
         session.resetAuthTimeout();
@@ -597,7 +621,7 @@ public class MinaUtils {
             }
             
             LOG.info("SSH免密登录配置完成");
-            
+
             return true;
         } catch (Exception e) {
             LOG.error("设置免密登录失败", e);
@@ -714,6 +738,224 @@ public class MinaUtils {
             return success;
         } catch (Exception e) {
             LOG.error("修复SSH密钥权限失败", e);
+            return false;
+        }
+    }
+    
+    /**
+     * 检测Linux发行版类型
+     * @param session SSH会话
+     * @return 发行版信息，如"CentOS 7"、"Ubuntu 20.04"等
+     */
+    public static String detectLinuxDistro(ClientSession session) {
+        // 尝试多种方法检测发行版
+        String[] commands = {
+            "cat /etc/os-release | grep -E '^(NAME|VERSION_ID)' | tr '\\n' ' '",
+            "cat /etc/redhat-release",
+            "cat /etc/issue | head -n 1",
+            "uname -a"
+        };
+        
+        for (String cmd : commands) {
+            String result = execCmdWithResult(session, cmd);
+            if (result != null && !result.startsWith("ERROR:") && !result.isEmpty()) {
+                return result.trim();
+            }
+        }
+        
+        return "Unknown Linux";
+    }
+    
+    /**
+     * 根据Linux发行版调整命令
+     * @param session SSH会话
+     * @param command 原始命令
+     * @return 调整后的命令
+     */
+    public static String adaptCommandToDistro(ClientSession session, String command) {
+        // 缓存的发行版信息
+        String distroInfo = detectLinuxDistro(session);
+        LOG.info("检测到Linux发行版: {}", distroInfo);
+        
+        // 根据发行版调整命令
+        if (command.startsWith("chkconfig")) {
+            if (distroInfo.toLowerCase().contains("ubuntu") || 
+                distroInfo.toLowerCase().contains("debian") ||
+                distroInfo.toLowerCase().contains("centos 8") ||
+                distroInfo.toLowerCase().contains("rhel 8")) {
+                
+                // 替换为systemctl命令
+                if (command.contains("--add")) {
+                    String serviceName = command.substring(command.lastIndexOf(" ") + 1);
+                    return "systemctl enable " + serviceName;
+                }
+            }
+        } 
+        else if (command.startsWith("service")) {
+            if (distroInfo.toLowerCase().contains("ubuntu") || 
+                distroInfo.toLowerCase().contains("debian") ||
+                distroInfo.toLowerCase().contains("centos 8") ||
+                distroInfo.toLowerCase().contains("rhel 8")) {
+                
+                // 替换为systemctl命令
+                String[] parts = command.split(" ");
+                if (parts.length >= 3) {
+                    String serviceName = parts[1];
+                    String action = parts[2];
+                    return "systemctl " + action + " " + serviceName;
+                }
+            }
+        }
+        
+        // 默认返回原命令
+        return command;
+    }
+    
+    /**
+     * 安全执行命令，自动适应不同Linux发行版
+     * @param session SSH会话
+     * @param command 要执行的命令
+     * @return 命令执行结果
+     */
+    public static String safeExecCommand(ClientSession session, String command) {
+        // 首先执行路径替换
+        String modifiedCommand = command;
+        
+        // 替换rc.d路径 (Ubuntu使用/etc/init.d，CentOS使用/etc/rc.d/init.d)
+        if (command.contains("/etc/rc.d/init.d/")) {
+            // 检查目标目录是否存在
+            String checkDir = "[ -d /etc/rc.d/init.d/ ] && echo 'exists' || echo 'not exists'";
+            String dirCheck = execCmdWithResult(session, checkDir);
+            
+            if ("not exists".equals(dirCheck.trim())) {
+                LOG.warn("/etc/rc.d/init.d/ 目录不存在，尝试使用 /etc/init.d/");
+                modifiedCommand = command.replace("/etc/rc.d/init.d/", "/etc/init.d/");
+            }
+        }
+        
+        // 处理chmod命令特殊情况，确保应用了正确的路径
+        if (modifiedCommand.contains("chmod") && modifiedCommand.contains("datasophon-worker")) {
+            if (modifiedCommand.contains("/etc/rc.d/init.d/") && !command.equals(modifiedCommand)) {
+                // 如果已经做了路径替换，确保chmod命令也使用正确的路径
+                modifiedCommand = modifiedCommand.replace("/etc/rc.d/init.d/", "/etc/init.d/");
+            }
+        }
+        
+        // 调整命令以适应不同发行版
+        String adaptedCommand = adaptCommandToDistro(session, modifiedCommand);
+        if (!adaptedCommand.equals(modifiedCommand)) {
+            LOG.info("命令已适配: {} -> {}", modifiedCommand, adaptedCommand);
+        }
+        
+        // 执行调整后的命令
+        String result = execCmdWithResult(session, adaptedCommand);
+        
+        // 如果是启用服务失败，尝试修复LSB头信息后再重试
+        if (result != null && result.startsWith("ERROR:") && 
+            (adaptedCommand.contains("systemctl enable") || adaptedCommand.contains("chkconfig --add")) &&
+            result.contains("Default-Start contains no runlevels")) {
+            
+            LOG.warn("服务启动脚本缺少正确的LSB头信息，尝试修复...");
+            
+            // 获取脚本路径
+            String scriptPath = "/etc/init.d/datasophon-worker";
+            if (adaptedCommand.contains("/etc/rc.d/init.d/")) {
+                scriptPath = "/etc/rc.d/init.d/datasophon-worker";
+            }
+            
+            // 添加正确的LSB头信息
+            String fixCmd = "sudo sed -i '2i### BEGIN INIT INFO\\n# Provides:          datasophon-worker\\n# Required-Start:    $remote_fs $syslog\\n# Required-Stop:     $remote_fs $syslog\\n# Default-Start:     2 3 4 5\\n# Default-Stop:      0 1 6\\n# Short-Description: Datasophon Worker Service\\n# Description:       Datasophon Worker Service for Big Data Platform\\n### END INIT INFO' " + scriptPath;
+            
+            execCmdWithResult(session, fixCmd);
+            LOG.info("已添加LSB头信息，重试启用服务...");
+            
+            // 重试启用服务
+            return execCmdWithResult(session, adaptedCommand);
+        }
+        
+        // 如果执行失败，尝试添加sudo再次执行
+        if (result != null && result.startsWith("ERROR:") && !adaptedCommand.startsWith("sudo")) {
+            LOG.warn("命令执行失败，尝试使用sudo: {}", adaptedCommand);
+            return execCmdWithResult(session, "sudo " + adaptedCommand);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 为Ubuntu/Debian系统创建systemd服务单元文件
+     * @param session SSH会话
+     * @param scriptPath 脚本路径
+     * @param installPath 安装路径
+     * @return 是否创建成功
+     */
+    public static boolean createSystemdServiceForDebian(ClientSession session, String scriptPath, String installPath) {
+        LOG.info("为Ubuntu/Debian创建systemd服务单元文件");
+        
+        // 1. 检查脚本是否存在
+        String checkScript = "[ -f " + scriptPath + " ] && echo 'exists' || echo 'not exists'";
+        String scriptExists = execCmdWithResult(session, checkScript);
+        if (!"exists".equals(scriptExists.trim())) {
+            LOG.error("找不到启动脚本: {}", scriptPath);
+            return false;
+        }
+        
+        // 2. 确保脚本有执行权限
+        String chmodCmd = "chmod 755 " + scriptPath;
+        execCmdWithResult(session, chmodCmd);
+        
+        // 3. 为systemd创建服务文件
+        String systemdDir = "/etc/systemd/system";
+        String checkSystemd = "[ -d " + systemdDir + " ] && echo 'exists' || echo 'not exists'";
+        String systemdExists = execCmdWithResult(session, checkSystemd);
+        
+        if ("exists".equals(systemdExists.trim())) {
+            LOG.info("创建systemd服务单元文件");
+            
+            // 创建服务单元文件内容
+            String serviceContent = "[Unit]\n"
+                    + "Description=Datasophon Worker Service\n"
+                    + "After=network.target\n\n"
+                    + "[Service]\n"
+                    + "Type=forking\n"
+                    + "Environment=\"JAVA_HOME=" + installPath + "/datasophon-worker/jdk/current\"\n"
+                    + "ExecStart=" + scriptPath + " start worker\n"
+                    + "ExecStop=" + scriptPath + " stop worker\n"
+                    + "ExecReload=" + scriptPath + " restart worker\n"
+                    + "KillMode=process\n"
+                    + "Restart=on-failure\n\n"
+                    + "[Install]\n"
+                    + "WantedBy=multi-user.target\n";
+            
+            // 将内容写入临时文件
+            String tempFile = "/tmp/datasophon-worker.service." + System.currentTimeMillis();
+            try (FileWriter fw = new FileWriter(tempFile)) {
+                fw.write(serviceContent);
+            } catch (IOException e) {
+                LOG.error("创建临时服务文件失败", e);
+                return false;
+            }
+            
+            // 上传服务文件
+            boolean uploadResult = uploadFile(session, "/tmp/", tempFile);
+            if (!uploadResult) {
+                LOG.error("上传服务文件失败");
+                return false;
+            }
+            
+            // 移动到系统目录
+            String moveCmd = "sudo mv /tmp/" + new File(tempFile).getName() + " " + systemdDir + "/datasophon-worker.service";
+            execCmdWithResult(session, moveCmd);
+            
+            // 重新加载systemd
+            execCmdWithResult(session, "sudo systemctl daemon-reload");
+            execCmdWithResult(session, "sudo systemctl enable datasophon-worker.service");
+            
+            new File(tempFile).delete();
+            LOG.info("已创建systemd服务单元文件");
+            return true;
+        } else {
+            LOG.warn("systemd目录不存在，无法创建服务单元文件");
             return false;
         }
     }
