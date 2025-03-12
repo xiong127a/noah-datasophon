@@ -77,13 +77,6 @@ public interface InstallService {
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
 
-    /**
-     * 获取主机检查项列表
-     * @param hostname 主机名
-     * @param clusterId 集群ID
-     * @return 检查项列表
-     */
-    Result getHostCheckItems(String hostname, Integer clusterId);
 
 
 }

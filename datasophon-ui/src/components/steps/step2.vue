@@ -27,7 +27,6 @@
   <div class="steps2 steps">
     <div class="steps-title flex-bewteen-container pdr30">
       <span>主机环境校验</span>
-      <a-button type="primary" @click="retryEnvironment('all')">全部重试</a-button>
     </div>
     <div class="table-info mgt16 steps-body pdr30">
       <a-table 
@@ -44,6 +43,57 @@
       >
       </a-table>
     </div>
+
+    <!-- 日志查看弹窗 -->
+    <a-modal
+      v-model="logVisible"
+      :title="logModalTitle"
+      width="80%"
+      :footer="null"
+      @cancel="closeLogModal"
+      class="log-modal"
+      :bodyStyle="{ padding: '0' }"
+    >
+      <div class="log-container">
+        <div class="log-header">
+          <div class="refresh-options">
+            <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
+              <a-icon type="reload" />手动刷新
+            </a-button>
+            <a-dropdown>
+              <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
+                <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
+                <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
+                <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
+                <a-icon type="down" style="margin-left: 4px" />
+              </a-button>
+              <a-menu slot="overlay" @click="handleAutoRefreshChange">
+                <a-menu-item key="0">
+                  <a-icon type="stop" />关闭自动刷新
+                </a-menu-item>
+                <a-menu-divider />
+                <a-menu-item key="1">
+                  <a-icon type="sync" />每秒刷新
+                </a-menu-item>
+                <a-menu-item key="3">
+                  <a-icon type="sync" />每3秒刷新
+                </a-menu-item>
+                <a-menu-item key="5">
+                  <a-icon type="sync" />每5秒刷新
+                </a-menu-item>
+                <a-menu-item key="10">
+                  <a-icon type="sync" />每10秒刷新
+                </a-menu-item>
+              </a-menu>
+            </a-dropdown>
+          </div>
+        </div>
+        <div class="log-content" v-loading="logLoading">
+          <pre v-if="logContent">{{ logContent }}</pre>
+          <div v-else class="no-log">暂无日志数据</div>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 <script>
@@ -65,8 +115,10 @@ export default {
         showTotal: (total) => `共 ${total} 条`,
       },
       timer: null,
+      isRequesting: false,
       dataSource: [],
       loading: false,
+      firstDataLoaded: false,
       checkItemsMap: {}, // 存储每个主机的校验项
       columns: [
         {
@@ -74,17 +126,13 @@ export default {
           key: "index",
           width: 70,
           customRender: (text, row, index) => {
-            return (
-              <span>
-                {parseInt(
-                  this.pagination.current === 1
-                    ? index + 1
-                    : index +
-                        1 +
-                        this.pagination.pageSize * (this.pagination.current - 1)
-                )}
-              </span>
+            const h = this.$createElement;
+            const displayIndex = parseInt(
+              this.pagination.current === 1
+                ? index + 1
+                : index + 1 + this.pagination.pageSize * (this.pagination.current - 1)
             );
+            return h('span', {}, [displayIndex]);
           },
         },
         { title: "主机", key: "hostname", dataIndex: "hostname" },
@@ -93,60 +141,109 @@ export default {
           key: "managed",
           dataIndex: "managed",
           customRender: (text, row, index) => {
-            return <span>{text ? "是" : "否"}</span>;
+            const h = this.$createElement;
+            return h('span', {}, [text ? "是" : "否"]);
           },
         },
         {
-          title: "检测结果",
-          key: "phone",
-          dataIndex: "phone",
+          title: "状态",
+          key: "hostStatus",
+          width: "15%",
           customRender: (text, row) => {
-            // 获取该主机的所有检查项
-            const checkItems = this.checkItemsMap[row.hostname] || [];
-            
-            // 如果还没有检查项数据,显示加载状态
-            if (checkItems.length === 0) {
-              return <span>-</span>;
-            }
+            const h = this.$createElement;
 
-            // 使用字符串类型的状态映射
+            // 状态映射
             const statusMap = {
-              'WAITING': { color: '#1890ff', icon: 'clock-circle' },
-              'SUCCESS': { color: '#52c41a', icon: 'check-circle' },
-              'FAILED': { color: '#f5222d', icon: 'close-circle' },
-              'CHECKING': { color: '#1890ff', icon: 'loading' },
-              'SKIPPED': { color: '#faad14', icon: 'warning' }
+              CHECKING: { text: '检查中', color: '#1890ff', icon: 'loading' },
+              WAITING: { text: '等待检查', color: '#faad14', icon: 'clock-circle' },
+              SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
+              FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
+              SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
             };
 
-            // 找到当前正在检查的项目
-            const currentItem = checkItems.find(item => 
-              item.status === 'CHECKING'
-            );
+            // 使用主机的状态
+            const hostStatus = row.statusStr || row.status || '';
+            
+            // 如果主机有状态，直接显示
+            if (hostStatus && statusMap[hostStatus]) {
+              const status = statusMap[hostStatus];
+              return h('span', { 
+                class: 'flex-container',
+                style: { 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  color: status.color 
+                }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [status.text])
+              ]);
+            }
+            
+            return h('span', {}, ['-']);
+          },
+        },
+        {
+          title: "检查项",
+          key: "checkItem",
+          width: "20%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
 
-            // 如果没有正在检查的项目,找待检查的项目
-            const waitingItem = !currentItem && checkItems.find(item => 
-              item.status === 'WAITING'
-            );
-
+            // 状态映射
+            const statusMap = {
+              CHECKING: { text: '检查中', color: '#1890ff', icon: 'loading' },
+              WAITING: { text: '等待检查', color: '#faad14', icon: 'clock-circle' },
+              SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
+              FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
+              SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
+            };
+            
+            // 检查主机是否有检查项
+            const checkItems = row.checkItems || [];
+            
+            // 找到当前检查的项目
+            const currentItem = checkItems.find(item => item.status === 'CHECKING');
+            
+            // 找到等待检查的项目
+            const waitingItem = checkItems.find(item => item.status === 'WAITING');
+            
             // 如果都没有,显示最后一个检查项的状态
-            const itemToShow = currentItem || waitingItem || checkItems[checkItems.length - 1];
-
-            if (!itemToShow) return <span>-</span>;
-
-            const status = statusMap[itemToShow.status];
-
-            return (
-              <span class="flex-container" style={{ display: 'flex', alignItems: 'center', color: status.color }}>
-                <span style={{ marginRight: '4px' }}>{itemToShow.itemName}</span>
-                <a-icon 
-                  type={status.icon}
-                  theme={!['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined}
-                  twoToneColor={status.color}
-                  style={{ fontSize: '14px' }}
-                  spin={status.icon === 'loading'}
-                />
-              </span>
-            );
+            const itemToShow = currentItem || waitingItem || (checkItems.length > 0 ? checkItems[checkItems.length - 1] : null);
+            
+            if (!itemToShow) return h('span', {}, ['-']);
+            
+            const status = statusMap[itemToShow.status] || statusMap.WAITING;
+            
+            return h('span', { 
+              class: 'flex-container',
+              style: { 
+                display: 'flex', 
+                alignItems: 'center', 
+                color: status.color 
+              }
+            }, [
+              h('a-icon', { 
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.icon === 'loading'
+                },
+                style: { fontSize: '14px', marginRight: '4px' }
+              }),
+              h('span', {}, [itemToShow.itemName])
+            ]);
           },
         },
         {
@@ -154,22 +251,71 @@ export default {
           key: "action",
           width: "15%",
           customRender: (text, row) => {
-            return (
-              <span class="action-buttons">
-                <a-button
-                  type="link"
-                  size="small"
-                  onClick={() => this.retryEnvironment(row)}
-                >
-                  重试
-                </a-button>
-              </span>
-            );
+            const h = this.$createElement;
+            return h('div', { class: 'action-buttons' }, [
+              // 终止按钮 - 检查中时可用
+              h('a-button', {
+                attrs: {
+                  type: 'danger',
+                  size: 'small',
+                  disabled: row.status !== 'CHECKING' && row.statusStr !== 'CHECKING'
+                },
+                on: {
+                  click: () => this.stopCheck(row)
+                }
+              }, ["终止"]),
+              
+              // 重试按钮 - 失败或成功时可用
+              h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  disabled: !['FAILED', 'SUCCESS'].includes(row.status || row.statusStr)
+                },
+                on: {
+                  click: () => this.retryCheck(row)
+                }
+              }, ["重试"]),
+              
+              // 日志按钮 - 非等待状态时可用
+              h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  disabled: row.status === 'WAITING' || row.statusStr === 'WAITING'
+                },
+                on: {
+                  click: () => this.viewItemLog(row.hostname, row.id, row.itemName)
+                }
+              }, ["查看日志"])
+            ]);
           },
         },
       ],
       selectedCheckItems: {}, // 存储每个主机选中的检查项 { hostname: [itemName1, itemName2] }
+      logVisible: false,
+      logModalTitle: '',
+      logContent: '',
+      logLoading: false,
+      autoRefreshInterval: 0,
+      currentLogHostname: null,
+      currentLogItemId: null,
+      currentLogItemName: null,
+      refreshTimer: null
     };
+  },
+  computed: {
+    // 计算是否有任何主机的检查项正在检查中
+    hasAnyCheckingItems() {
+      if (!this.dataSource || this.dataSource.length === 0) {
+        return false;
+      }
+      
+      return this.dataSource.some(host => {
+        const checkItems = this.checkItemsMap[host.hostname] || [];
+        return checkItems.some(item => item.status === 'CHECKING');
+      });
+    }
   },
   methods: {
     tableChange(pagination) {
@@ -178,6 +324,12 @@ export default {
       this.pollingSearch();
     },
     getEnvironmentList(flag) {
+      // 只在请求进行中时跳过新的请求
+      if (this.isRequesting) {
+        console.log('上一次请求还在进行中，跳过本次请求');
+        return;
+      }
+      
       if (!flag) this.loading = true;
       const params = {
         pageSize: this.pagination.pageSize,
@@ -186,44 +338,128 @@ export default {
         ...this.steps1Data,
       };
       
-      this.$axiosPost(global.API.analysisHostList, params).then((res) => {
-        this.loading = false;
-        if (res.code === 200) {
-          this.dataSource = res.data;
-          this.pagination.total = res.total;
-          
-          // 将返回的checkItems数据保存到checkItemsMap中
-          if (res.data && res.data.length > 0) {
-            res.data.forEach(host => {
-              if (host.checkItems) {
-                this.$set(this.checkItemsMap, host.hostname, host.checkItems);
+      this.isRequesting = true;
+      
+      this.$axiosPost(global.API.analysisHostList, params)
+        .then((res) => {
+          if (res.code === 200) {
+            // 处理主机状态
+            if (res.data && res.data.length > 0) {
+              res.data.forEach(host => {
+                // 计算主机状态
+                host.status = this.calculateHostStatus(host);
+                
+                // 将返回的checkItems数据保存到checkItemsMap中
+                if (host.checkItems) {
+                  this.$set(this.checkItemsMap, host.hostname, host.checkItems);
+                }
+              });
+              
+              // 只在第一次成功获取数据时调用批量检查
+              if (!this.firstDataLoaded) {
+                this.startBatchCheckHosts(res.data);
+                this.firstDataLoaded = true; // 标记已经加载过数据
               }
-            });
-          }
-        }
+            }
+            
+            this.dataSource = res.data;
+            this.pagination.total = res.total;
 
-        if (res.code === 200 && this.depType=='K8S'){
-          let data = JSON.parse(JSON.stringify(res.data))
-          data && data.forEach(e => {
-            if (e.checkResult.code=='10001'){
-              e['CheckResult'] = e.checkResult
-              delete e.checkResult
-              let arr=[]
-              arr[0] = e
-              this.saveK8sHostApi(arr)
-            } 
-          })
-        }
-      });
+            if (this.depType=='K8S'){
+              let data = JSON.parse(JSON.stringify(res.data))
+              data && data.forEach(e => {
+                if (e.checkResult.code=='10001'){
+                  e['CheckResult'] = e.checkResult
+                  delete e.checkResult
+                  let arr=[]
+                  arr[0] = e
+                  this.saveK8sHostApi(arr)
+                } 
+              })
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('请求失败:', error);
+        })
+        .finally(() => {
+          // 无论成功还是失败，都要重置状态
+          this.loading = false;
+          this.isRequesting = false;
+        });
     },
-    // 五秒去刷一下
-    pollingSearch() {
-      this.getEnvironmentList(); // 先立马刷一次
-      let self = this;
-      if (self.timer) clearInterval(self.timer);
-      self.timer = setInterval(() => {
-        self.getEnvironmentList(true);
-      }, 5000);
+    
+    /**
+     * 启动批量检查主机
+     * 提取主机名列表，调用后端接口开始检查
+     */
+    startBatchCheckHosts(hosts) {
+      if (!hosts || hosts.length === 0) {
+        return;
+      }
+      
+      // 提取需要检查的主机名列表
+      // 只对未受管或状态为WAITING的主机进行检查
+      const hostnamesToCheck = hosts
+        .filter(host => !host.managed || host.status === 'WAITING')
+        .map(host => host.hostname);
+      
+      if (hostnamesToCheck.length === 0) {
+        console.log('没有需要检查的主机');
+        return;
+      }
+      
+      // 调用批量检查API
+      this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, hostnamesToCheck)
+        .then(res => {
+          if (res.code === 200) {
+            console.log('成功启动主机检查:', res.msg);
+          } else {
+            console.warn('启动主机检查失败:', res.msg);
+          }
+        })
+        .catch(err => {
+          console.error('调用批量检查API失败:', err);
+        });
+    },
+    
+    // 计算主机的整体状态
+    calculateHostStatus(host) {
+      // 如果主机已经有状态则返回
+      if (host.statusStr || host.status) return host.statusStr || host.status;
+      
+      // 没有检查项则返回空状态
+      const checkItems = host.checkItems || [];
+      if (checkItems.length === 0) return null;
+      
+      // 如果有检查中的项，则状态为"检查中"
+      if (checkItems.some(item => item.status === 'CHECKING')) {
+        return 'CHECKING';
+      }
+      
+      // 如果有等待检查的项，则状态为"等待检查"
+      if (checkItems.some(item => item.status === 'WAITING')) {
+        return 'WAITING';
+      }
+      
+      // 如果有失败的项，则状态为"未通过"
+      if (checkItems.some(item => item.status === 'FAILED')) {
+        return 'FAILED';
+      }
+      
+      // 如果所有项都是"跳过"，则状态为"已跳过"
+      if (checkItems.every(item => item.status === 'SKIPPED')) {
+        return 'SKIPPED';
+      }
+      
+      // 如果有的是跳过有的是成功，则状态为"部分通过"
+      if (checkItems.some(item => item.status === 'SKIPPED') && 
+          checkItems.some(item => item.status === 'SUCCESS')) {
+        return 'MIXED';
+      }
+      
+      // 默认情况：所有项都通过
+      return 'SUCCESS';
     },
     saveK8sHostApi (params){
       this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
@@ -270,6 +506,7 @@ export default {
     },
     // 展开行渲染函数
     expandedRowRender(record) {
+      const h = this.$createElement;
       const checkItems = this.checkItemsMap[record.hostname] || [];
       
       const columns = [
@@ -285,29 +522,30 @@ export default {
           key: 'status',
           width: '15%',
           customRender: (text) => {
+            const h = this.$createElement;
             // 使用字符串类型的状态映射
             const statusMap = {
-              'WAITING': { text: '待检查', color: '#1890ff', icon: 'clock-circle' },
+              'WAITING': { text: '待检查', color: '#faad14', icon: 'clock-circle' },
               'SUCCESS': { text: '通过', color: '#52c41a', icon: 'check-circle' },
               'FAILED': { text: '未通过', color: '#f5222d', icon: 'close-circle' },
               'CHECKING': { text: '检查中', color: '#1890ff', icon: 'loading' },
-              'SKIPPED': { text: '已跳过', color: '#faad14', icon: 'warning' }
+              'SKIPPED': { text: '已跳过', color: '#d9d9d9', icon: 'warning' }
             };
 
             const status = statusMap[text] || { text: '未知', color: '#999999', icon: 'question-circle' };
 
-            return (
-              <span style={{ color: status.color }}>
-                <a-icon 
-                  type={status.icon}
-                  theme={!['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined}
-                  twoToneColor={status.color}
-                  style={{ marginRight: '4px' }}
-                  spin={status.icon === 'loading'}
-                />
-                {status.text}
-              </span>
-            );
+            return h('span', { style: { color: status.color } }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.icon === 'loading'
+                },
+                style: { marginRight: '4px' }
+              }),
+              status.text
+            ]);
           }
         },
         {
@@ -321,111 +559,205 @@ export default {
           key: 'action',
           width: '20%',
           customRender: (text, row) => {
-            return (
-              <span class="action-buttons">
-                <a-button 
-                  type="link" 
-                  size="small"
-                  onClick={() => this.fixCheckItem(record.hostname, row.id)}
-                  disabled={!row.canAutoFix || row.status !== 'FAILED'}
-                >
-                  修复
-                </a-button>
-                <a-button 
-                  type="link" 
-                  size="small"
-                  onClick={() => this.skipCheckItem(record.hostname, row.id)}
-                  disabled={row.status !== 'FAILED'}
-                >
-                  跳过
-                </a-button>
-                <a-button
-                  type="link"
-                  size="small"
-                  onClick={() => this.retryCheckItem(record.hostname, row.id)}
-                  disabled={!(row.status === 'FAILED' || row.status === 'SUCCESS') || row.status === 'SKIPPED'}
-                >
-                  重试
-                </a-button>
-              </span>
-            );
+            const h = this.$createElement;
+            const buttons = [];
+            
+            // 检查中的状态
+            if (row.status === 'CHECKING' || row.statusStr === 'CHECKING') {
+              buttons.push(
+                h('a-button', {
+                  attrs: {
+                    type: 'danger',
+                    size: 'small'
+                  },
+                  on: {
+                    click: () => this.stopCheckItem(record.hostname, row.id)
+                  }
+                }, ["终止"]),
+                h('a-button', {
+                  attrs: {
+                    type: 'link',
+                    size: 'small'
+                  },
+                  on: {
+                    click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
+                  }
+                }, ["查看日志"])
+              );
+            } else {
+              // 失败状态显示修复按钮
+              if ((row.status === 'FAILED' || row.statusStr === 'FAILED') && row.canAutoFix) {
+                buttons.push(
+                  h('a-button', {
+                    attrs: {
+                      type: 'link',
+                      size: 'small'
+                    },
+                    on: {
+                      click: () => this.fixCheckItem(record.hostname, row.id)
+                    }
+                  }, ["修复"])
+                );
+              }
+              
+              // 失败状态显示跳过按钮
+              if (row.status === 'FAILED' || row.statusStr === 'FAILED') {
+                buttons.push(
+                  h('a-button', {
+                    attrs: {
+                      type: 'link',
+                      size: 'small'
+                    },
+                    on: {
+                      click: () => this.skipCheckItem(record.hostname, row.id)
+                    }
+                  }, ["跳过"])
+                );
+              }
+              
+              // 失败或成功状态显示重试按钮（跳过的不显示）
+              if (((row.status === 'FAILED' || row.statusStr === 'FAILED') || 
+                   (row.status === 'SUCCESS' || row.statusStr === 'SUCCESS')) && 
+                   !(row.status === 'SKIPPED' || row.statusStr === 'SKIPPED')) {
+                buttons.push(
+                  h('a-button', {
+                    attrs: {
+                      type: 'link',
+                      size: 'small'
+                    },
+                    on: {
+                      click: () => this.retryCheckItem(record.hostname, row.id)
+                    }
+                  }, ["重试"])
+                );
+              }
+              
+              // 非等待状态显示日志按钮
+              if (row.status !== 'WAITING' && row.statusStr !== 'WAITING') {
+                buttons.push(
+                  h('a-button', {
+                    attrs: {
+                      type: 'link',
+                      size: 'small'
+                    },
+                    on: {
+                      click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
+                    }
+                  }, ["查看日志"])
+                );
+              }
+            }
+            
+            return h('span', { class: 'action-buttons' }, buttons);
           }
         }
       ];
 
-      return (
-        <div class="check-items-container">
-          <div class="check-items-header">
-            <div class="header-summary">
-              <span>共 {checkItems.length} 项检查</span>
-              <a-divider type="vertical" />
-              <span style={{ color: '#52c41a' }}>
-                <a-icon type="check-circle" theme="twoTone" twoToneColor="#52c41a" style={{ marginRight: '4px' }} />
-                {checkItems.filter(item => item.status === 'SUCCESS').length} 项通过
-              </span>
-              <a-divider type="vertical" />
-              <span style={{ color: '#f5222d' }}>
-                <a-icon type="close-circle" theme="twoTone" twoToneColor="#f5222d" style={{ marginRight: '4px' }} />
-                {checkItems.filter(item => item.status === 'FAILED').length} 项失败
-              </span>
-              <a-divider type="vertical" />
-              <span style={{ color: '#1890ff' }}>
-                <a-icon type="clock-circle" style={{ marginRight: '4px' }} />
-                {checkItems.filter(item => item.status === 'WAITING').length} 项待检查
-              </span>
-              <a-divider type="vertical" />
-              <span style={{ color: '#1890ff' }}>
-                <a-icon type="loading" style={{ marginRight: '4px' }} spin />
-                {checkItems.filter(item => item.status === 'CHECKING').length} 项检查中
-              </span>
-              <a-divider type="vertical" />
-              <span style={{ color: '#faad14' }}>
-                <a-icon type="warning" theme="twoTone" twoToneColor="#faad14" style={{ marginRight: '4px' }} />
-                {checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过
-              </span>
-            </div>
-            <div class="header-actions">
-              <a-button 
-                type="primary" 
-                size="small"
-                onClick={() => this.retrySelectedItems(record.hostname)}
-                disabled={!this.hasRetryableSelectedItems(record.hostname)}
-                style={{ marginRight: '8px' }}
-              >
-                重试选中项
-              </a-button>
-              <a-button 
-                type="primary" 
-                size="small"
-                onClick={() => this.fixSelectedItems(record.hostname)}
-                disabled={!this.hasFixableSelectedItems(record.hostname)}
-                style={{ marginRight: '8px' }}
-              >
-                修复选中项
-              </a-button>
-              <a-button 
-                type="primary" 
-                size="small"
-                onClick={() => this.fixAllCheckItems(record.hostname)}
-                disabled={!checkItems.some(item => item.status === 'FAILED')}
-              >
-                一键修复所有问题
-              </a-button>
-            </div>
-          </div>
-          <a-table
-            columns={columns}
-            dataSource={checkItems}
-            pagination={false}
-            size="middle"
-            rowKey="id"
-            rowSelection={{
+      // 创建header-summary部分
+      const headerSummary = h('div', { class: 'header-summary' }, [
+        h('span', {}, [`共 ${checkItems.length} 项检查`]),
+        h('a-divider', { props: { type: 'vertical' } }),
+        h('span', { style: { color: '#52c41a' } }, [
+          h('a-icon', { 
+            props: { 
+              type: 'check-circle', 
+              theme: 'twoTone', 
+              twoToneColor: '#52c41a' 
+            }, 
+            style: { marginRight: '4px' } 
+          }),
+          `${checkItems.filter(item => item.status === 'SUCCESS').length} 项通过`
+        ]),
+        h('a-divider', { props: { type: 'vertical' } }),
+        h('span', { style: { color: '#f5222d' } }, [
+          h('a-icon', { 
+            props: { 
+              type: 'close-circle', 
+              theme: 'twoTone', 
+              twoToneColor: '#f5222d' 
+            }, 
+            style: { marginRight: '4px' } 
+          }),
+          `${checkItems.filter(item => item.status === 'FAILED').length} 项失败`
+        ]),
+        h('a-divider', { props: { type: 'vertical' } }),
+        h('span', { style: { color: '#faad14' } }, [
+          h('a-icon', { 
+            props: { type: 'clock-circle' }, 
+            style: { marginRight: '4px' } 
+          }),
+          `${checkItems.filter(item => item.status === 'WAITING').length} 项待检查`
+        ]),
+        h('a-divider', { props: { type: 'vertical' } }),
+        h('span', { style: { color: '#1890ff' } }, [
+          h('a-icon', { 
+            props: { 
+              type: 'loading',
+              spin: true
+            }, 
+            style: { marginRight: '4px' } 
+          }),
+          `${checkItems.filter(item => item.status === 'CHECKING').length} 项检查中`
+        ]),
+        h('a-divider', { props: { type: 'vertical' } }),
+        h('span', { style: { color: '#d9d9d9' } }, [
+          h('a-icon', { 
+            props: { 
+              type: 'warning', 
+              theme: 'twoTone', 
+              twoToneColor: '#d9d9d9' 
+            }, 
+            style: { marginRight: '4px' } 
+          }),
+          `${checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过`
+        ])
+      ]);
+
+      // 创建header-actions部分
+      const headerActions = h('div', { class: 'header-actions' }, [
+        h('a-button', {
+          attrs: {
+            type: 'primary',
+            size: 'small',
+            disabled: !this.hasRetryableSelectedItems(record.hostname)
+          },
+          style: { marginRight: '8px' },
+          on: {
+            click: () => this.retrySelectedItems(record.hostname)
+          }
+        }, ['重试选中项']),
+        h('a-button', {
+          attrs: {
+            type: 'primary',
+            size: 'small',
+            disabled: !this.hasFixableSelectedItems(record.hostname)
+          },
+          on: {
+            click: () => this.fixSelectedItems(record.hostname)
+          }
+        }, ['修复选中项'])
+      ]);
+
+      // 创建表格
+      return h('div', { class: 'check-items-container' }, [
+        h('div', { class: 'check-items-header' }, [
+          headerSummary,
+          headerActions
+        ]),
+        h('a-table', {
+          props: {
+            columns: columns,
+            dataSource: checkItems,
+            pagination: false,
+            size: 'middle',
+            rowKey: 'id',
+            rowSelection: {
               selectedRowKeys: this.selectedCheckItems[record.hostname] || [],
               onChange: (selectedRowKeys) => this.onCheckItemSelect(record.hostname, selectedRowKeys)
-            }}
-          />
-        </div>
-      );
+            }
+          }
+        })
+      ]);
     },
 
     // 选择检查项
@@ -502,21 +834,24 @@ export default {
 
     // 修复单个检查项
     async fixCheckItem(hostname, itemId) {
-      try {
-        const res = await this.$axiosPost(global.API.fixCheckItem, {
-          clusterId: this.clusterId,
-          hostname,
-          itemId
-        });
-        if (res.code === 200) {
-          this.$message.success('修复指令已发送');
-          // 通过轮询获取最新状态
-          this.pollingSearch();
+      this.$confirm({
+        title: '确认修复',
+        content: '确定要修复该检查项吗？',
+        onOk: () => {
+          this.$axiosPost(global.API.fixCheckItem, {
+            clusterId: this.clusterId,
+            hostname: hostname,
+            itemId: itemId
+          }).then(res => {
+            if (res.code === 200) {
+              this.$message.success('修复指令已发送');
+              this.refreshHostList();
+            } else {
+              this.$message.error(res.msg || '修复检查项失败');
+            }
+          });
         }
-      } catch (error) {
-        console.error('修复检查项失败:', error);
-        this.$message.error('修复检查项失败');
-      }
+      });
     },
 
     // 修复所有检查项
@@ -539,38 +874,49 @@ export default {
 
     // 添加重试单个检查项的方法
     async retryCheckItem(hostname, itemId) {
-      try {
-        const res = await this.$axiosPost(global.API.retryCheckItem, {
-          clusterId: this.clusterId,
-          hostname,
-          itemId
-        });
-        if (res.code === 200) {
-          this.$message.success('重试指令已发送');
-          // 通过轮询获取最新状态
-          this.pollingSearch();
+      // 将检查项状态修改为待检查，然后重新发起主机检查
+      this.$confirm({
+        title: '确认重试',
+        content: '确定要重新检查该项吗？',
+        onOk: () => {
+          // 查找主机和检查项
+          const host = this.dataSource.find(h => h.hostname === hostname);
+          if (host && host.checkItems) {
+            const item = host.checkItems.find(i => i.id === itemId);
+            if (item) {
+              // 修改状态为待检查
+              item.status = 'WAITING';
+              item.message = '等待检查';
+              
+              // 重新发起主机检查
+              this.retryCheck({ hostname });
+            }
+          }
         }
-      } catch (error) {
-        console.error('重试检查项失败:', error);
-        this.$message.error('重试检查项失败');
-      }
+      });
     },
 
     // 自定义展开图标
     customExpandIcon({ expanded, onExpand, record }) {
-      return (
-        <div class="expand-icon-wrapper" onClick={e => {
-          onExpand(record, e);
-        }}>
-          <a-icon 
-            type={expanded ? 'down' : 'right'} 
-            class="expand-icon"
-          />
-          <span class="expand-text">
-            {expanded ? '收起详情' : '查看详情'}
-          </span>
-        </div>
-      );
+      const h = this.$createElement;
+      return h('div', {
+        class: 'expand-icon-wrapper',
+        on: {
+          click: (e) => {
+            onExpand(record, e);
+          }
+        }
+      }, [
+        h('a-icon', {
+          class: 'expand-icon',
+          props: {
+            type: expanded ? 'down' : 'right'
+          }
+        }),
+        h('span', { class: 'expand-text' }, [
+          expanded ? '收起详情' : '查看详情'
+        ])
+      ]);
     },
 
     // 检查是否有可修复的选中项
@@ -619,10 +965,224 @@ export default {
         return item && (item.status === 'FAILED' || item.status === 'SUCCESS') && item.status !== 'SKIPPED';
       });
     },
+
+    // 终止单个主机的所有检查
+    stopItemCheck(hostname, itemId = null) {
+      this.$axiosPost(global.API.stopItemCheck, {
+        clusterId: this.clusterId,
+        hostname: hostname,
+        itemId: itemId
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('已终止检查项');
+          this.refreshHostList();
+        } else {
+          this.$message.error(res.msg || '终止检查项失败');
+        }
+      });
+    },
+    
+    // 终止所有检查
+    stopAllChecks() {
+      const params = {
+        clusterId: this.clusterId
+      };
+      
+      this.$axiosPost(global.API.stopAllChecks, params).then((res) => {
+        if (res.code === 200) {
+          this.$message.success('已终止所有检查');
+          this.pollingSearch(); // 立即刷新数据
+        } else {
+          this.$message.error('终止所有检查失败: ' + (res.msg || '未知错误'));
+        }
+      }).catch(error => {
+        console.error('终止所有检查请求失败:', error);
+        this.$message.error('终止所有检查请求失败');
+      });
+    },
+
+    // 检查主机是否有检查项在检查中
+    isHostChecking(hostname) {
+      const checkItems = this.checkItemsMap[hostname] || [];
+      return checkItems.some(item => item.status === 'CHECKING');
+    },
+
+    /**
+     * 停止主机检查
+     */
+    stopCheck(row) {
+      this.$axiosPost(global.API.stopHostCheck, { 
+        clusterId: this.clusterId,
+        hostname: row.hostname
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('已终止主机检查');
+          this.refreshHostList();
+        } else {
+          this.$message.error(res.msg || '终止检查失败');
+        }
+      });
+    },
+    
+    /**
+     * 重试主机检查
+     */
+    retryCheck(row) {
+      this.$axiosPost(global.API.rehostCheck, { 
+        clusterId: this.clusterId,
+        hostnames: row.hostname
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('已重新开始检查');
+          this.refreshHostList();
+        } else {
+          this.$message.error(res.msg || '重新检查失败');
+        }
+      });
+    },
+    
+    /**
+     * 刷新主机列表
+     */
+    refreshHostList() {
+      // 刷新主机列表数据
+      this.getEnvironmentList();
+    },
+
+    /** 
+     * 检查所有主机
+     */
+    checkAllHosts() {
+    },
+
+    // 五秒去刷一下
+    pollingSearch() {
+      this.getEnvironmentList(); // 先立马刷一次
+      let self = this;
+      if (self.timer) clearInterval(self.timer);
+      self.timer = setInterval(() => {
+        self.getEnvironmentList(true);
+      }, 5000);
+    },
+
+    // 添加查看日志按钮
+    viewItemLog(hostname, itemId, itemName) {
+      // 保存当前选择的检查项信息
+      this.currentLogHostname = hostname;
+      this.currentLogItemId = itemId;
+      this.currentLogItemName = itemName;
+      
+      // 打开日志弹窗并加载日志
+      this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
+      this.logVisible = true;
+      this.logContent = '';
+      
+      // 初始停止之前可能存在的自动刷新定时器
+      this.stopAutoRefresh();
+      
+      // 获取日志数据
+      this.fetchItemLog();
+    },
+    
+    // 获取检查项日志
+    async fetchItemLog() {
+      if (!this.currentLogHostname || !this.currentLogItemId) {
+        return;
+      }
+      
+      this.logLoading = true;
+      
+      try {
+        const res = await this.$axiosPost(global.API.getCheckItemLog, { 
+          clusterId: this.clusterId,
+          hostname: this.currentLogHostname,
+          itemId: this.currentLogItemId
+        });
+        
+        if (res.code === 200) {
+          this.logContent = res.data || '暂无日志数据';
+        } else {
+          this.logContent = `获取日志失败: ${res.msg || '未知错误'}`;
+          if (this.autoRefreshInterval > 0) {
+            this.stopAutoRefresh(); // 如果获取失败，停止自动刷新
+            this.$message.error('日志获取失败，已停止自动刷新');
+          }
+        }
+      } catch (error) {
+        console.error('获取日志失败:', error);
+        this.logContent = '获取日志失败，请稍后重试';
+        if (this.autoRefreshInterval > 0) {
+          this.stopAutoRefresh(); // 如果获取失败，停止自动刷新
+          this.$message.error('日志获取失败，已停止自动刷新');
+        }
+      } finally {
+        this.logLoading = false;
+      }
+    },
+    
+    // 手动刷新日志
+    refreshLog() {
+      this.fetchItemLog();
+    },
+    
+    // 处理自动刷新间隔变化
+    handleAutoRefreshChange(e) {
+      const value = parseInt(e.key);
+      
+      // 停止之前的自动刷新
+      this.stopAutoRefresh();
+      
+      // 设置新的自动刷新间隔
+      this.autoRefreshInterval = value;
+      
+      // 如果选择了自动刷新，启动定时器
+      if (value > 0) {
+        this.$message.success(`已开启自动刷新(${value}秒)`);
+        this.startAutoRefresh();
+      } else {
+        this.$message.info('已关闭自动刷新');
+      }
+    },
+    
+    // 启动自动刷新
+    startAutoRefresh() {
+      if (this.autoRefreshInterval > 0) {
+        this.refreshTimer = setInterval(() => {
+          this.fetchItemLog();
+        }, this.autoRefreshInterval * 1000);
+      }
+    },
+    
+    // 停止自动刷新
+    stopAutoRefresh() {
+      if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+      }
+    },
+    
+    // 关闭日志查看弹窗
+    closeLogModal() {
+      this.logVisible = false;
+      this.stopAutoRefresh();
+      this.currentLogHostname = null;
+      this.currentLogItemId = null;
+      this.currentLogItemName = null;
+    },
   },
   mounted() {
     // 直接开始轮询
     this.pollingSearch();
+  },
+  beforeDestroy() {
+    // 清理定时器
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    
+    // 清理日志刷新定时器
+    this.stopAutoRefresh();
   },
 };
 </script>
@@ -706,13 +1266,136 @@ export default {
 }
 
 .action-buttons {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  position: relative;
+  display: grid;  // 使用grid布局
+  grid-template-columns: repeat(3, 48px);  // 三列等宽
+  gap: 8px;  // 统一间距
+  width: 160px;  // 固定宽度
   
   .ant-btn {
-    padding: 0 4px;
-    min-width: 40px;
+    padding: 0 8px;
+    min-width: 48px;
+    text-align: center;
+  }
+
+  // 移除绝对定位，让所有按钮使用grid布局
+  .ant-btn:last-child {
+    position: static;
+    transform: none;
+  }
+}
+
+.log-container {
+  padding: 20px;
+  height: calc(90vh - 150px);
+  display: flex;
+  flex-direction: column;
+
+  .log-header {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background-color: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .log-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #d4d4d4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+
+    .no-log {
+      text-align: center;
+      padding: 12px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #2c2c2c;
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+      
+      &:hover {
+        background: #666;
+      }
+    }
+  }
+}
+
+:global(.log-modal) {
+  top: 5vh;
+}
+
+.refresh-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .refresh-btn, .auto-refresh-btn {
+    height: 32px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    
+    .anticon {
+      font-size: 14px;
+      margin-right: 6px;
+    }
+  }
+
+  .refresh-btn {
+    min-width: 100px;
+    padding: 0 16px;
+    background: #1890ff;
+    border-color: #1890ff;
+    
+    &:hover {
+      background: #40a9ff;
+      border-color: #40a9ff;
+    }
+  }
+
+  .auto-refresh-btn {
+    min-width: 130px;
+    padding: 0 12px;
+    background: #fff;
+    border-color: #d9d9d9;
+    color: rgba(0, 0, 0, 0.65);
+
+    &.ant-btn-primary {
+      background: #1890ff;
+      border-color: #1890ff;
+      color: #fff;
+    }
+    
+    .anticon-down {
+      font-size: 12px;
+      margin-left: 4px;
+      margin-right: 0;
+    }
   }
 }
 </style>

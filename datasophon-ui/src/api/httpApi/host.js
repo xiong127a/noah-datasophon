@@ -38,5 +38,6 @@ export default {
   generateHostServiceCommand: path + '/host/install/generateHostServiceCommand', // 主机 Worker Service 管理
   fixCheckItem: path + '/host/install/fixCheckItem', // 修复单个检查项
   fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
-  startCheckItem: path + '/host/install/startCheckItem',
+  batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
+  getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
 }
