@@ -50,3 +50,4 @@ node/
 /datasophon-service/src/main/resources/rebel.xml
 /datasophon-ui/src/main/resources/rebel.xml
 /datasophon-worker/src/main/resources/rebel.xml
+/rebel.xml
