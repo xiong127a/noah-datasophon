@@ -30,7 +30,9 @@ public class CacheUtils {
 
     public static Object get(String key) {
         return cache.get(key);
-    };
+    }
+
+    ;
 
     public static void put(String key, Object value) {
         cache.put(key, value);
@@ -43,6 +45,11 @@ public class CacheUtils {
     public static void removeKey(String key) {
         cache.remove(key);
     }
+
+    public static void clear() {
+        cache.clear();
+    }
+
 
     public static Integer getInteger(String key) {
         Object data = cache.get(key);

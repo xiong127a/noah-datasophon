@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.nio.file.attribute.PosixFilePermission;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 public class MinaUtils {
     
@@ -957,6 +958,37 @@ public class MinaUtils {
         } else {
             LOG.warn("systemd目录不存在，无法创建服务单元文件");
             return false;
+        }
+    }
+    
+    /**
+     * 执行本地命令并返回结果
+     * @param command 要执行的命令
+     * @return 命令执行结果
+     */
+    public static String execLocalCmdWithResult(String command) {
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            StringBuilder output = new StringBuilder();
+            
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+            
+            int exitCode = process.waitFor();
+            if (exitCode == 0) {
+                return output.toString().trim();
+            } else {
+                LOG.error("命令执行失败，退出码: {}", exitCode);
+                return "ERROR: " + exitCode;
+            }
+        } catch (Exception e) {
+            LOG.error("执行本地命令失败: {}", e.getMessage());
+            return "ERROR: " + e.getMessage();
         }
     }
     

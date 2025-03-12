@@ -1,10 +1,11 @@
 package com.datasophon.common.model;
 
-import java.io.Serializable;
-import lombok.Data;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
 
 @Data
 @Builder
@@ -51,6 +52,8 @@ public class CheckItem implements Serializable {
      * 检查项ID
      */
     private Integer id;
+
+    private String itemCode;
 
     /**
      * 检查项名称

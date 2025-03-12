@@ -43,8 +43,10 @@ public enum Status {
     IP_IS_EMPTY(10125, "ip is empty", "IP地址不能为空"),
     DELETE_USER_BY_ID_ERROR(10093, "delete user by id error", "删除用户错误"),
 
+    WAITING_CHECK_HOST(9999, "waiting check host", "等待主机校验"),
     START_CHECK_HOST(10000, "start check host", "开始主机校验"),
     CHECK_HOST_SUCCESS(10001, "check host success", "主机校验成功"),
+    CHECK_HOST_FAILED(10043, "check host failed", "主机校验不通过"),
     NEED_JAVA_ENVIRONMENT(10002, "need java environment", "缺少Java环境"),
     CONNECTION_FAILED(10003, "connection failed", "主机连接失败"),
     NEED_HOSTNAME(10004, "need hostname", "无法获取主机名"),
