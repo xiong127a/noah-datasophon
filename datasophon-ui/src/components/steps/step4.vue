@@ -157,7 +157,7 @@ export default {
     },
     //表格选择
     onSelectChange (selectedRowKeys, row) {
-      this.selectedRowNamesArr = [] 
+      // this.selectedRowNamesArr = [] 
       this.selectedRowKeys = selectedRowKeys
       this.selectedRowKeysArr = selectedRowKeys
       // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
@@ -201,14 +201,14 @@ export default {
           }
         })
 
-        self.steps4Data.serviceNames.map(item => {
-          if (this.depType !== 'K8S') {
-          this.selectedRowNamesArr.push({
-            serviceId: item.id,
-            serviceName: item.serviceName
-          })
-        }
-        })
+        // self.steps4Data.serviceNames.map(item => {
+        //   if (this.depType !== 'K8S') {
+        //   this.selectedRowNamesArr.push({
+        //     serviceId: item.id,
+        //     serviceName: item.serviceName
+        //   })
+        // }
+        // })
       });
     },
   },

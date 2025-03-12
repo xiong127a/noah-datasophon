@@ -410,6 +410,7 @@ export default {
     position: absolute;
     right: 32px;
     z-index: 1000;
+    top: 15px;
   }
 }
 </style> 

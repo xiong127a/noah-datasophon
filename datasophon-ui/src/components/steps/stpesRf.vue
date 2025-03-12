@@ -28,7 +28,7 @@
     <div class="steps-rf-container">
       <Steps1 ref="steps1Ref" v-if="stepsNumber === 1" :steps1="steps1Data" />
       <Steps2 ref="steps2Ref" v-if="stepsNumber === 2" :steps1Data="steps1Data" :depType="depType" />
-      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3 " />
+      <Steps3 ref="steps3Ref" v-if="stepsNumber === 3" />
       <Steps4 ref="steps4Ref" v-if="stepsNumber === 4" :steps4Data="steps4Data" :stepsType="stepsType"
         :depType="depType" />
       <Steps5 ref="steps5Ref" v-if="stepsNumber === 5" :steps4Data="steps4Data" />
@@ -38,9 +38,9 @@
     </div>
     <div class="footer">
       <a-button class="mgr10" @click="closeModal">取消</a-button>
-      <a-button v-if="stepsNumber > 1 && stepsNumber !== 8" class="mgr10" type="primary" @click="back">上一步</a-button>
+      <a-button v-if="stepsNumber > 1 " class="mgr10" type="primary" @click="back">上一步</a-button>
       <a-button class="mgr10" type="primary" :loading="nextLoading" @click="next">{{ currentSteps !== stepsList.length ?
-        '下一步' : '完成'}}</a-button>
+        '下一步' : '完成' }}</a-button>
     </div>
   </div>
 </template>
@@ -70,9 +70,9 @@ export default {
     Steps7,
     Steps8,
   },
-  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object, depType:String, },
-  inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId" , 'onSearch'],
-  data() {
+  props: { currentSteps: Number, stepsList: Array, interval: Number, stepsType: String, serviceData: Object, depType: String, },
+  inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId", 'onSearch'],
+  data () {
     return {
       nextLoading: false,
       steps1Data: {
@@ -87,13 +87,13 @@ export default {
     };
   },
   watch: {
-    currentSteps(val) {
-      console.log(val, "asdsdsa");
+    currentSteps (val) {
+      // console.log(val, "asdsdsa");
     },
     stepsType: {
       handler (val) {
-        if (val === 'service-example')  this.steps4Data = {...this.serviceData}
-        if (val === 'hostManage')  this.steps1Data = {...this.steps1Data, sshUser: 'root', 'sshPort': '22'} 
+        if (val === 'service-example') this.steps4Data = { ...this.serviceData }
+        if (val === 'hostManage') this.steps1Data = { ...this.steps1Data, sshUser: 'root', 'sshPort': '22' }
 
       },
       immediate: true
@@ -101,7 +101,7 @@ export default {
   },
   computed: {
     stepsNumber () {
-      if (this.currentSteps === 4 && this.depType == 'K8S'){
+      if (this.currentSteps === 4 && this.depType == 'K8S') {
         return this.currentSteps + 1
       }//暂时的
       if (this.currentSteps === 5 && this.depType == 'K8S') {
@@ -111,11 +111,11 @@ export default {
         return this.currentSteps + 1
       }//暂时的
       if (this.currentSteps === 7 && this.depType == 'K8S') {
-      return this.currentSteps + 1
-      }//暂时的
-      if (this.currentSteps === 3 && this.depType == 'K8S'){
         return this.currentSteps + 1
-      }else{
+      }//暂时的
+      if (this.currentSteps === 3 && this.depType == 'K8S') {
+        return this.currentSteps + 1
+      } else {
         return this.currentSteps + this.interval
       }
     }
@@ -123,13 +123,13 @@ export default {
   methods: {
     ...mapActions("steps", ["setClusterId"]),
     ...mapMutations("setting", ["setIsCluster", "setMenuData"]),
-    closeModal() {
+    closeModal () {
       this.handleCancel();
     },
-    back() {
+    back () {
       this.currentStepsSub();
     },
-    async next() {
+    async next () {
       // this.nextLoading = true
       let flag = true;
       if (this.stepsNumber === 1) {
@@ -169,10 +169,10 @@ export default {
       }
       if (this.stepsNumber === 4) {
         //  这个地方过滤掉已经回显的服务 只传递给下一步新选的服务
-        this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
-        this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
+        this.steps4Data.serviceIds = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowKeysArr : this.$refs.steps4Ref.selectedRowKeys);
+        this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr : this.$refs.steps4Ref.selectedRowNames);
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
-        if (this.depType!=='K8S'){
+        if (this.depType !== 'K8S') {
           arr.map((item, index) => {
             let curIndex = this.steps4Data.serviceIds.indexOf(item.id)
             if (curIndex !== -1) {
@@ -188,14 +188,14 @@ export default {
           this.$message.warning("请至少选择一个服务");
           flag = false;
         }
-        this.steps4Data.serviceIds=[...new Set(this.steps4Data.serviceIds)]
+        this.steps4Data.serviceIds = [...new Set(this.steps4Data.serviceIds)]
         await this.$axiosPost('/ddh/service/install/checkServiceDependency', {
           clusterId: this.clusterId,
-          serviceIds:this.steps4Data.serviceIds.join(',')
-        }).then((res) => { 
+          serviceIds: this.steps4Data.serviceIds.join(',')
+        }).then((res) => {
           flag = res.code == 200
           // flag = res.code == 500//暂时的
-          if(res.code != 200)return true
+          if (res.code != 200) return true
         })
       }
       if (this.stepsNumber === 5) {
@@ -278,6 +278,7 @@ export default {
   display: flex;
   justify-content: space-between;
   flex-direction: column;
+
   .footer {
     // margin: 0 32px 0 auto;
     // margin: 0 32px 0 0;
@@ -288,11 +289,12 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+
     button {
       width: 86px;
     }
-    /deep/
-      .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
+
+    /deep/ .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
       padding-left: 20px;
     }
   }
