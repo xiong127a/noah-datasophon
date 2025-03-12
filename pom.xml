@@ -416,6 +416,35 @@
                 <mavenCentralUrl>https://maven-central.storage-download.googleapis.com/maven2</mavenCentralUrl>
             </properties>
         </profile>
+        
+        <!-- 控制是否构建前端的 profile
+             默认情况下，此 profile 是启用的
+             若要禁用前端构建，使用参数：-P !frontend-build 
+             例如：mvn clean package -P !frontend-build
+         -->
+        <profile>
+            <id>frontend-build</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- 此属性会传递给子模块，标记是否需要构建前端 -->
+                <skip.frontend.build>false</skip.frontend.build>
+            </properties>
+        </profile>
+        
+        <!-- 显式禁用前端构建的 profile
+             当手动指定此 profile 时，前端构建将被跳过
+             使用参数：-P skip-frontend
+             例如：mvn clean package -P skip-frontend
+         -->
+        <profile>
+            <id>skip-frontend</id>
+            <properties>
+                <skip.frontend.build>true</skip.frontend.build>
+            </properties>
+        </profile>
+        
 <!--        <profile>-->
 <!--            <id>sonar</id>-->
 <!--            <activation>-->
