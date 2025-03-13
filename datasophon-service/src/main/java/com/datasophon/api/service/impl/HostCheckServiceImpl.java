@@ -375,12 +375,10 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 执行具体的主机检查项
      */
     private boolean executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        Future<Boolean> checkFuture = null;
         try {
-            // 在单独的线程中执行检查，这样可以被中断
-            checkFuture = checkQueueManager.getExecutorService().submit(() -> {
+            // 使用检查项线程池异步执行检查，并保存Future以便取消
+            Future<Boolean> checkFuture = checkQueueManager.getItemCheckExecutorService().submit(() -> {
                 try {
-                    // 使用工厂模式获取对应的检查器
                     ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
                     if (checker == null) {
                         checkItem.setMessage("未知的检查项");
@@ -397,27 +395,37 @@ public class HostCheckServiceImpl implements HostCheckService {
                 }
             });
 
-            // 等待检查完成或被中断
+            // 保存Future到缓存，以便后续可以取消
+            String futureKey = CHECK_TASK_FUTURE_PREFIX + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
+            CacheUtils.put(futureKey, checkFuture);
+            
             try {
-                return checkFuture.get(30, TimeUnit.SECONDS); // 设置超时时间为30秒
+                // 等待结果，超时时间为30秒
+                return checkFuture.get(30, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 logger.error("检查超时: {}", checkItem.getItemName());
                 checkItem.setMessage("检查超时");
+                checkFuture.cancel(true);
                 return false;
             } catch (CancellationException e) {
                 logger.info("检查被取消: {}", checkItem.getItemName());
                 checkItem.setMessage("检查已终止");
                 return false;
+            } catch (InterruptedException e) {
+                logger.info("检查被中断: {}", checkItem.getItemName());
+                checkItem.setMessage("检查已中断");
+                Thread.currentThread().interrupt();
+                return false;
+            } finally {
+                // 完成后从缓存中移除Future
+                if (checkFuture.isDone()) {
+                    CacheUtils.removeKey(futureKey);
+                }
             }
         } catch (Exception e) {
-            logger.error("执行检查失败", e);
+            logger.error("执行检查失败: {}", e.getMessage(), e);
             checkItem.setMessage("检查失败: " + e.getMessage());
             return false;
-        } finally {
-            // 如果任务还在运行，尝试取消它
-            if (checkFuture != null && !checkFuture.isDone()) {
-                checkFuture.cancel(true);
-            }
         }
     }
 
@@ -474,15 +482,37 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return Result.error("主机不存在");
             }
 
-            // 查找并更新检查项状态
+            // 查找检查项
+            CheckItem checkItem = findCheckItemById(hostInfo, itemId);
+            if (checkItem == null) {
+                return Result.error("检查项不存在");
+            }
+
+            // 如果检查项正在检查中，取消任务
+            if (checkItem.getStatus() == CheckItem.Status.CHECKING) {
+                // 获取任务Future并取消
+                String futureKey = CHECK_TASK_FUTURE_PREFIX + clusterId + "_" + hostname + "_" + itemId;
+                Future<?> future = (Future<?>) CacheUtils.get(futureKey);
+                if (future != null && !future.isDone()) {
+                    logger.info("正在取消检查项任务: clusterId={}, hostname={}, itemId={}", clusterId, hostname, itemId);
+                    boolean cancelled = future.cancel(true);
+                    logger.info("取消检查项任务结果: {}", cancelled ? "成功" : "失败");
+                    CacheUtils.removeKey(futureKey);
+                }
+                
+                // 同时通知队列管理器取消任务
+                checkQueueManager.cancelTask(clusterId, hostname);
+            }
+
+            // 更新检查项状态为失败
             boolean updated = hostInfo.updateCheckItemStatus(
                     itemId,
-                    CheckItem.Status.SKIPPED,
+                    CheckItem.Status.FAILED,
                     "检查已终止"
             );
 
             if (!updated) {
-                return Result.error("检查项不存在或已完成检查");
+                return Result.error("检查项状态更新失败");
             }
 
             // 更新缓存

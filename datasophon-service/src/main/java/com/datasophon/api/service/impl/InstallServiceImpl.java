@@ -315,7 +315,7 @@ public class InstallServiceImpl implements InstallService {
         HostInfo hostInfo = new HostInfo();
 
         // 1. 设置基本信息
-        hostInfo.setHostname(HostUtils.getHostName(host));
+        hostInfo.setHostname(host);
         hostInfo.setIp(HostUtils.getIp(host));
         hostInfo.setSshPort(sshPort);
         hostInfo.setSshUser(sshUser);

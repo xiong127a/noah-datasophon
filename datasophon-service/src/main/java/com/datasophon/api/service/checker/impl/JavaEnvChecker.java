@@ -20,7 +20,6 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = hostInfo.getSession();
         try {
             // 步骤1: 检查是否有java命令
             logger.info("开始检查主机 {} 的Java环境", hostInfo.getHostname());
@@ -101,7 +100,6 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = hostInfo.getSession();
         try {
             // 设置进度为60%
             hostInfo.setProgress(60);
@@ -230,16 +228,6 @@ public class JavaEnvChecker extends AbstractItemChecker {
     @Override
     protected ItemCode getCheckerType() {
         return ItemCode.JAVA_ENV;
-    }
-
-    private String execCommand(ClientSession session, String command) {
-        try {
-            // TODO: 实现命令执行逻辑
-            return "java version \"1.8.0_333\"\nJava(TM) SE Runtime Environment (build 1.8.0_333-b02)\nJava HotSpot(TM) 64-Bit Server VM (build 25.333-b02, mixed mode)"; // 返回模拟的Java版本信息
-        } catch (Exception e) {
-            logger.error("执行命令 {} 失败: {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
-        }
     }
 
     private void uploadFile(ClientSession session,String remoteDir, String localFile) {

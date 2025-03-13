@@ -40,4 +40,5 @@ export default {
   fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
   batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
+  stopCheckItem: path + '/host/check/stopCheckItem', // 终止检查项
 }

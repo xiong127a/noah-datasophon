@@ -249,24 +249,25 @@ export default {
         {
           title: "操作",
           key: "action",
-          width: "15%",
+          width: "25%",
           customRender: (text, row) => {
             const h = this.$createElement;
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            
             return h('div', { class: 'action-buttons' }, [
-              // 终止按钮 - 检查中时可用
-              h('a-button', {
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('a-button', {
                 attrs: {
                   type: 'danger',
-                  size: 'small',
-                  disabled: row.status !== 'CHECKING' && row.statusStr !== 'CHECKING'
+                  size: 'small'
                 },
                 on: {
                   click: () => this.stopCheck(row)
                 }
-              }, ["终止"]),
+              }, ["终止"]) : null,
               
-              // 重试按钮 - 失败或成功时可用
-              h('a-button', {
+              // 重试按钮 - 非检查中时显示
+              !isChecking ? h('a-button', {
                 attrs: {
                   type: 'link',
                   size: 'small',
@@ -275,20 +276,8 @@ export default {
                 on: {
                   click: () => this.retryCheck(row)
                 }
-              }, ["重试"]),
-              
-              // 日志按钮 - 非等待状态时可用
-              h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  disabled: row.status === 'WAITING' || row.statusStr === 'WAITING'
-                },
-                on: {
-                  click: () => this.viewItemLog(row.hostname, row.id, row.itemName)
-                }
-              }, ["查看日志"])
-            ]);
+              }, ["重试"]) : null
+            ].filter(Boolean));
           },
         },
       ],
@@ -552,103 +541,83 @@ export default {
           title: '检查结果',
           dataIndex: 'message',
           key: 'message',
-          width: '40%'
+          width: '20%'
         },
         {
           title: '操作',
           key: 'action',
-          width: '20%',
+          width: '25%',
           customRender: (text, row) => {
             const h = this.$createElement;
-            const buttons = [];
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            const isFailed = row.status === 'FAILED' || row.statusStr === 'FAILED';
             
-            // 检查中的状态
-            if (row.status === 'CHECKING' || row.statusStr === 'CHECKING') {
-              buttons.push(
-                h('a-button', {
-                  attrs: {
-                    type: 'danger',
-                    size: 'small'
-                  },
-                  on: {
-                    click: () => this.stopCheckItem(record.hostname, row.id)
-                  }
-                }, ["终止"]),
-                h('a-button', {
-                  attrs: {
-                    type: 'link',
-                    size: 'small'
-                  },
-                  on: {
-                    click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
-                  }
-                }, ["查看日志"])
-              );
-            } else {
-              // 失败状态显示修复按钮
-              if ((row.status === 'FAILED' || row.statusStr === 'FAILED') && row.canAutoFix) {
-                buttons.push(
-                  h('a-button', {
-                    attrs: {
-                      type: 'link',
-                      size: 'small'
-                    },
-                    on: {
-                      click: () => this.fixCheckItem(record.hostname, row.id)
-                    }
-                  }, ["修复"])
-                );
-              }
+            return h('div', { class: 'action-buttons' }, [
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('a-button', {
+                attrs: {
+                  type: 'danger',
+                  size: 'small'
+                },
+                on: {
+                  click: () => this.stopCheckItem(record.hostname, row.id)
+                }
+              }, ["终止"]) : null,
               
-              // 失败状态显示跳过按钮
-              if (row.status === 'FAILED' || row.statusStr === 'FAILED') {
-                buttons.push(
-                  h('a-button', {
-                    attrs: {
-                      type: 'link',
-                      size: 'small'
-                    },
-                    on: {
-                      click: () => this.skipCheckItem(record.hostname, row.id)
-                    }
-                  }, ["跳过"])
-                );
-              }
+              // 重试按钮 - 非检查中时显示
+              !isChecking ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  disabled: !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
+                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS') && 
+                             !(row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
+                },
+                on: {
+                  click: () => this.retryCheckItem(record.hostname, row.id)
+                }
+              }, ["重试"]) : null,
               
-              // 失败或成功状态显示重试按钮（跳过的不显示）
-              if (((row.status === 'FAILED' || row.statusStr === 'FAILED') || 
-                   (row.status === 'SUCCESS' || row.statusStr === 'SUCCESS')) && 
-                   !(row.status === 'SKIPPED' || row.statusStr === 'SKIPPED')) {
-                buttons.push(
-                  h('a-button', {
-                    attrs: {
-                      type: 'link',
-                      size: 'small'
-                    },
-                    on: {
-                      click: () => this.retryCheckItem(record.hostname, row.id)
-                    }
-                  }, ["重试"])
-                );
-              }
+              // 修复按钮 - 失败时可用
+              isFailed ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small'
+                },
+                on: {
+                  click: () => this.fixCheckItem(record.hostname, row.id)
+                }
+              }, ["修复"]) : null,
               
-              // 非等待状态显示日志按钮
-              if (row.status !== 'WAITING' && row.statusStr !== 'WAITING') {
-                buttons.push(
-                  h('a-button', {
-                    attrs: {
-                      type: 'link',
-                      size: 'small'
-                    },
-                    on: {
-                      click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
-                    }
-                  }, ["查看日志"])
-                );
+              // 跳过按钮 - 失败时可用
+              isFailed ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small'
+                },
+                on: {
+                  click: () => this.skipCheckItem(record.hostname, row.id)
+                }
+              }, ["跳过"]) : null
+            ].filter(Boolean));
+          }
+        },
+        {
+          title: '日志',
+          key: 'log',
+          width: '15%',
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            return h('a-button', {
+              attrs: {
+                type: 'link',
+                size: 'small',
+                disabled: row.status === 'WAITING' || row.statusStr === 'WAITING'
+              },
+              on: {
+                click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
               }
-            }
-            
-            return h('span', { class: 'action-buttons' }, buttons);
+            }, ["查看日志"]);
           }
         }
       ];
@@ -834,24 +803,21 @@ export default {
 
     // 修复单个检查项
     async fixCheckItem(hostname, itemId) {
-      this.$confirm({
-        title: '确认修复',
-        content: '确定要修复该检查项吗？',
-        onOk: () => {
-          this.$axiosPost(global.API.fixCheckItem, {
-            clusterId: this.clusterId,
-            hostname: hostname,
-            itemId: itemId
-          }).then(res => {
-            if (res.code === 200) {
-              this.$message.success('修复指令已发送');
-              this.refreshHostList();
-            } else {
-              this.$message.error(res.msg || '修复检查项失败');
-            }
-          });
+      try {
+        const res = await this.$axiosPost(global.API.fixCheckItem, {
+          clusterId: this.clusterId,
+          hostname: hostname,
+          itemId: itemId
+        });
+        
+        if (res.code === 200) {
+          this.$message.success('修复指令已发送');
+          this.refreshHostList();
         }
-      });
+      } catch (error) {
+        // 异常情况的日志记录，但不显示错误弹窗
+        console.error('修复检查项失败:', error);
+      }
     },
 
     // 修复所有检查项
@@ -874,26 +840,26 @@ export default {
 
     // 添加重试单个检查项的方法
     async retryCheckItem(hostname, itemId) {
-      // 将检查项状态修改为待检查，然后重新发起主机检查
-      this.$confirm({
-        title: '确认重试',
-        content: '确定要重新检查该项吗？',
-        onOk: () => {
-          // 查找主机和检查项
-          const host = this.dataSource.find(h => h.hostname === hostname);
-          if (host && host.checkItems) {
-            const item = host.checkItems.find(i => i.id === itemId);
-            if (item) {
-              // 修改状态为待检查
-              item.status = 'WAITING';
-              item.message = '等待检查';
-              
-              // 重新发起主机检查
-              this.retryCheck({ hostname });
-            }
-          }
+      try {
+        const res = await this.$axiosPost(global.API.retryCheckItems, {
+          clusterId: this.clusterId,
+          hostname,
+          itemNames: [itemId]  // 只重试选中的单个检查项
+        });
+        
+        if (res.code === 200) {
+          this.$message.success('重试指令已发送');
+          // 重新获取校验项状态
+          setTimeout(() => {
+            this.getHostCheckItems(hostname);
+          }, 2000);
+        } else {
+          this.$message.error(res.msg || '重试检查项失败');
         }
-      });
+      } catch (error) {
+        console.error('重试检查项失败:', error);
+        this.$message.error('重试检查项失败');
+      }
     },
 
     // 自定义展开图标
@@ -943,6 +909,7 @@ export default {
           hostname,
           itemIds: selectedItems.join(',')
         });
+        
         if (res.code === 200) {
           this.$message.success('修复指令已发送');
           // 清空选择
@@ -951,8 +918,8 @@ export default {
           this.pollingSearch();
         }
       } catch (error) {
+        // 异常情况的日志记录，但不显示错误弹窗
         console.error('修复选中检查项失败:', error);
-        this.$message.error('修复选中检查项失败');
       }
     },
 
@@ -964,47 +931,6 @@ export default {
         const item = items.find(i => i.id === itemId);
         return item && (item.status === 'FAILED' || item.status === 'SUCCESS') && item.status !== 'SKIPPED';
       });
-    },
-
-    // 终止单个主机的所有检查
-    stopItemCheck(hostname, itemId = null) {
-      this.$axiosPost(global.API.stopItemCheck, {
-        clusterId: this.clusterId,
-        hostname: hostname,
-        itemId: itemId
-      }).then(res => {
-        if (res.code === 200) {
-          this.$message.success('已终止检查项');
-          this.refreshHostList();
-        } else {
-          this.$message.error(res.msg || '终止检查项失败');
-        }
-      });
-    },
-    
-    // 终止所有检查
-    stopAllChecks() {
-      const params = {
-        clusterId: this.clusterId
-      };
-      
-      this.$axiosPost(global.API.stopAllChecks, params).then((res) => {
-        if (res.code === 200) {
-          this.$message.success('已终止所有检查');
-          this.pollingSearch(); // 立即刷新数据
-        } else {
-          this.$message.error('终止所有检查失败: ' + (res.msg || '未知错误'));
-        }
-      }).catch(error => {
-        console.error('终止所有检查请求失败:', error);
-        this.$message.error('终止所有检查请求失败');
-      });
-    },
-
-    // 检查主机是否有检查项在检查中
-    isHostChecking(hostname) {
-      const checkItems = this.checkItemsMap[hostname] || [];
-      return checkItems.some(item => item.status === 'CHECKING');
     },
 
     /**
@@ -1022,6 +948,45 @@ export default {
           this.$message.error(res.msg || '终止检查失败');
         }
       });
+    },
+
+    /**
+     * 停止检查项
+     */
+    stopCheckItem(hostname, itemId) {
+      if (!hostname || !itemId) {
+        this.$message.error('参数错误：主机名和检查项ID不能为空');
+        return;
+      }
+
+      // 将参数作为 URL 参数传递
+      const params = new URLSearchParams({
+        clusterId: this.clusterId,
+        hostname: hostname,
+        itemId: itemId
+      });
+
+      try {
+        this.$axiosPost(global.API.stopCheckItem + '?' + params.toString())
+          .then(res => {
+            if (res && res.code === 200) {
+              this.$message.success('已终止检查项');
+              // 更新检查项状态
+              const items = this.checkItemsMap[hostname];
+              if (items) {
+                const targetItem = items.find(item => item.id === itemId);
+                if (targetItem) {
+                  targetItem.status = 'WAITING';
+                  this.$set(this.checkItemsMap, hostname, [...items]);
+                }
+              }
+            }
+            // 不再处理错误情况，因为拦截器已经显示了错误消息
+          });
+      } catch (error) {
+        // 异常情况的日志记录，但不显示错误弹窗
+        console.error('终止检查项失败:', error);
+      }
     },
     
     /**
@@ -1267,22 +1232,25 @@ export default {
 
 .action-buttons {
   position: relative;
-  display: grid;  // 使用grid布局
-  grid-template-columns: repeat(3, 48px);  // 三列等宽
+  display: flex;  // 改回flex布局
   gap: 8px;  // 统一间距
-  width: 160px;  // 固定宽度
+  flex-wrap: nowrap;  // 不换行
   
   .ant-btn {
     padding: 0 8px;
     min-width: 48px;
     text-align: center;
+    height: 24px;  // 统一按钮高度
+    line-height: 22px;  // 统一文字行高
   }
+}
 
-  // 移除绝对定位，让所有按钮使用grid布局
-  .ant-btn:last-child {
-    position: static;
-    transform: none;
-  }
+// 主列表的操作按钮样式保持不变
+.ant-table-row:not(.ant-table-expanded-row) .action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 48px);
+  gap: 8px;
+  width: 160px;
 }
 
 .log-container {

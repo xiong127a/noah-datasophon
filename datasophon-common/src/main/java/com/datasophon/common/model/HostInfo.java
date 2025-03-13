@@ -37,8 +37,6 @@ public class HostInfo implements Serializable {
 
     private String ip;
 
-    private ClientSession session;
-
     /**
      * 是否受管
      */

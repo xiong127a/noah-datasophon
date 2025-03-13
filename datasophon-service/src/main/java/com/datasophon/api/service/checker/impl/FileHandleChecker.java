@@ -18,7 +18,7 @@ public class FileHandleChecker extends AbstractItemChecker {
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            String result = execCommand(hostInfo.getSession(), "ulimit -n");
+            String result = execCommand(session, "ulimit -n");
             if (result.startsWith("ERROR")) {
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("检查失败: " + result);
@@ -41,7 +41,6 @@ public class FileHandleChecker extends AbstractItemChecker {
 
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = hostInfo.getSession();
         try {
             // 修改 /etc/security/limits.conf 文件
             String cmd = String.format("grep -q '* soft nofile %d' /etc/security/limits.conf || echo '* soft nofile %d' >> /etc/security/limits.conf && " +
@@ -68,16 +67,6 @@ public class FileHandleChecker extends AbstractItemChecker {
     private boolean isSystemdExists(ClientSession session) {
         String result = execCommand(session, "[ -d /etc/systemd ] && echo 'true' || echo 'false'");
         return "true".equals(result.trim());
-    }
-
-    protected String execCommand(ClientSession session, String command) {
-        try {
-            // TODO: 实现命令执行逻辑
-            return "65535"; // 临时返回一个模拟值
-        } catch (Exception e) {
-            logger.error("执行命令 {} 失败: {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
-        }
     }
 
     @Override

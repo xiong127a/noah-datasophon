@@ -21,7 +21,6 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
         try {
             // 检查是否可以免密登录
             String result = execCommand(session, "echo 'SSH连接成功'");
@@ -29,7 +28,6 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             if (result.contains("SSH连接成功")) {
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
                 checkItem.setMessage("SSH免密登录配置正确");
-                hostInfo.setSession(session);
             } else {
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("SSH免密登录配置失败");
@@ -44,8 +42,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser(), hostInfo.getSshPassword());
-        try {
+        try (ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser(), hostInfo.getSshPassword())) {
             // 生成SSH密钥对（如果不存在）
             String homeDir = System.getProperty("user.home");
             File sshDir = new File(homeDir, ".ssh");
@@ -85,13 +82,4 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         return ItemCode.PASSWORD_FREE;
     }
 
-    private String execCommand(ClientSession session, String command) {
-        try {
-            // TODO: 实现命令执行逻辑
-            return "SSH连接成功"; // 临时返回模拟值
-        } catch (Exception e) {
-            logger.error("执行命令 {} 失败: {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
-        }
-    }
 } 

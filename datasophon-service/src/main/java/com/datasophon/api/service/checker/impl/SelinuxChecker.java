@@ -16,7 +16,6 @@ public class SelinuxChecker extends AbstractItemChecker {
     
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = hostInfo.getSession();
         try {
             // 检查SELinux状态
             String selinuxStatus = execCommand(session, "getenforce");
@@ -48,7 +47,6 @@ public class SelinuxChecker extends AbstractItemChecker {
     
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = hostInfo.getSession();
         try {
             // 临时设置SELinux为宽容模式
             execCommand(session, "setenforce 0");
@@ -66,15 +64,5 @@ public class SelinuxChecker extends AbstractItemChecker {
     @Override
     protected ItemCode getCheckerType() {
         return ItemCode.SELINUX;
-    }
-    
-    private String execCommand(ClientSession session, String command) {
-        try {
-            // TODO: 实现命令执行逻辑
-            return "Disabled"; // 临时返回模拟值
-        } catch (Exception e) {
-            logger.error("执行命令 {} 失败: {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
-        }
     }
 } 

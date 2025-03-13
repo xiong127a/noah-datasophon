@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.common.model.HostInfo;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import javax.annotation.PreDestroy;
 import java.util.concurrent.*;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class HostCheckQueueManager {
@@ -18,22 +20,56 @@ public class HostCheckQueueManager {
     private final BlockingQueue<CheckTask> checkQueue = new LinkedBlockingQueue<>();
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
     private final Map<String, Future<?>> runningTasks = new ConcurrentHashMap<>();
+    
+    // 主线程池 - 用于执行主机级别的检查任务
+    @Getter
     private final ExecutorService executorService;
+    
+    // 检查项线程池 - 专门用于执行单个检查项
+    @Getter
+    private final ExecutorService itemCheckExecutorService;
+    
     private Thread queueProcessorThread;
 
     public HostCheckQueueManager() {
-        // 创建一个可以动态调整大小的线程池
+        // 创建主线程池 - 负责主机级别的检查任务
         this.executorService = new ThreadPoolExecutor(
-            1, // 核心线程数
-            10, // 最大线程数
+            4, // 核心线程数 - 支持多主机并行检查
+            8, // 最大线程数
             60L, // 空闲线程存活时间
             TimeUnit.SECONDS, // 时间单位
-            new LinkedBlockingQueue<>(), // 工作队列
-            r -> {
-                Thread t = new Thread(r);
-                t.setName("host-check-worker-" + t.getId());
-                return t;
-            }
+            new LinkedBlockingQueue<>(50), // 有界工作队列，避免无限堆积
+            new ThreadFactory() {
+                private final AtomicInteger counter = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setName("host-check-worker-" + counter.getAndIncrement());
+                    t.setDaemon(true); // 设置为守护线程，避免阻止JVM退出
+                    return t;
+                }
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：调用者运行
+        );
+        
+        // 创建检查项线程池 - 负责检查项级别的任务
+        this.itemCheckExecutorService = new ThreadPoolExecutor(
+            8, // 核心线程数
+            16, // 最大线程数
+            30L, // 空闲线程存活时间
+            TimeUnit.SECONDS, // 时间单位
+            new LinkedBlockingQueue<>(100), // 有界工作队列
+            new ThreadFactory() {
+                private final AtomicInteger counter = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setName("item-checker-" + counter.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
+                }
+            },
+            new ThreadPoolExecutor.AbortPolicy() // 拒绝策略：抛出异常
         );
     }
 
@@ -146,10 +182,6 @@ public class HostCheckQueueManager {
             }
         }
         logger.info("Queue processing stopped");
-    }
-
-    public ExecutorService getExecutorService() {
-        return executorService;
     }
 
     private static class CheckTask {

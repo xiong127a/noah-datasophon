@@ -34,46 +34,26 @@ public class HostCheckController {
     }
 
     /**
-     * 终止检查任务（针对集群中所有主机）
+     * 终止主机检查
      */
-    @PostMapping("/stopAllChecks")
+    @PostMapping("/stopHostCheck")
     @UserPermission
-    public Result stopAllChecks(@RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId) {
-        try {
-            // 获取该集群所有主机
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || hostMap.isEmpty()) {
-                return Result.error("主机列表为空");
-            }
-            
-            // 循环对每个主机停止检查
-            for (String hostname : hostMap.keySet()) {
-                hostCheckService.stopHostCheck(clusterId, hostname);
-            }
-            
-            return Result.success("已停止所有主机检查");
-        } catch (Exception e) {
-            return Result.error("停止检查失败: " + e.getMessage());
-        }
+    public Result stopHostCheck(
+            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam String hostname) {
+        return hostCheckService.stopHostCheck(clusterId, hostname);
     }
 
     /**
-     * 终止主机检查
+     * 终止单个检查项
      */
     @PostMapping("/stopCheckItem")
     @UserPermission
     public Result stopCheckItem(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
             @RequestParam String hostname,
-            @RequestParam(required = false) Integer itemId) {
-        
-        if (itemId != null) {
-            // 终止指定检查项
-            return hostCheckService.stopItemCheck(clusterId, hostname, itemId);
-        } else {
-            // 终止指定主机的所有检查
-            return hostCheckService.stopHostCheck(clusterId, hostname);
-        }
+            @RequestParam Integer itemId) {
+        return hostCheckService.stopItemCheck(clusterId, hostname, itemId);
     }
 
     /**
