@@ -19,23 +19,42 @@ package com.datasophon.common.cache;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Cache工具类
  */
 public class CacheUtils {
+    private static final Logger logger = LoggerFactory.getLogger(CacheUtils.class);
+    private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
+    
+    // 默认缓存过期时间为1小时
+    private static final long DEFAULT_TIMEOUT = 3600000;
+    
+    // 日志缓存过期时间为24小时
+    private static final long LOG_TIMEOUT = 24 * 3600000;
 
-
-    private static Cache<String, Object> cache = CacheUtil.newLRUCache(4096);
+    // 使用定时缓存替代LRU缓存
+    private static Cache<String, Object> cache = CacheUtil.newTimedCache(DEFAULT_TIMEOUT);
 
     public static Object get(String key) {
-        return cache.get(key);
+        Object value = cache.get(key);
+        if (key != null && key.startsWith(CHECK_ITEM_LOG_PREFIX)) {
+            logger.debug("获取日志缓存: {}, 是否存在: {}", key, value != null);
+        }
+        return value;
     }
 
-    ;
-
     public static void put(String key, Object value) {
-        cache.put(key, value);
+        // 对于日志缓存项，使用更长的过期时间
+        if (key != null && key.startsWith(CHECK_ITEM_LOG_PREFIX)) {
+            logger.debug("保存日志缓存: {}, 内容长度: {}", key, 
+                        value instanceof String ? ((String) value).length() : "非字符串");
+            cache.put(key, value, LOG_TIMEOUT);
+        } else {
+            cache.put(key, value);
+        }
     }
 
     public static boolean constainsKey(String key) {
@@ -49,7 +68,6 @@ public class CacheUtils {
     public static void clear() {
         cache.clear();
     }
-
 
     public static Integer getInteger(String key) {
         Object data = cache.get(key);
@@ -65,5 +83,4 @@ public class CacheUtils {
         Object data = cache.get(key);
         return (String) data;
     }
-
 }

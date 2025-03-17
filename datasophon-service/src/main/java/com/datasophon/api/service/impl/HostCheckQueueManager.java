@@ -130,6 +130,16 @@ public class HostCheckQueueManager {
         }
     }
 
+    public void cancelItemTask(Integer clusterId, String hostname, Integer itemId) {
+        logger.info("Cancelling specific check item task: clusterId={}, hostname={}, itemId={}", 
+                    clusterId, hostname, itemId);
+        // 方法不需要取消整个主机任务
+        // 具体取消逻辑在HostCheckServiceImpl中通过Future处理
+    }
+
+    /**
+     * 取消指定主机的所有检查任务
+     */
     public void cancelTask(Integer clusterId, String hostname) {
         String taskKey = getTaskKey(clusterId, hostname);
         Future<?> future = runningTasks.get(taskKey);
@@ -142,6 +152,31 @@ public class HostCheckQueueManager {
         // 同时从队列中移除待执行的任务
         checkQueue.removeIf(task -> 
             getTaskKey(task.getClusterId(), task.getHostInfo().getHostname()).equals(taskKey));
+    }
+
+    /**
+     * 取消所有检查任务
+     * 当需要开始新一轮批量检查时调用此方法
+     */
+    public void cancelAllTasks() {
+        logger.info("正在取消所有检查任务，当前运行任务数: {}, 队列中任务数: {}", 
+                    runningTasks.size(), checkQueue.size());
+        
+        // 取消所有运行中的任务
+        runningTasks.forEach((key, future) -> {
+            logger.info("取消运行中的任务: {}", key);
+            future.cancel(true);
+        });
+        
+        // 清空运行任务映射
+        runningTasks.clear();
+        
+        // 清空队列
+        int queueSize = checkQueue.size();
+        checkQueue.clear();
+        
+        logger.info("成功取消所有检查任务，清空了 {} 个运行中任务和 {} 个队列中任务", 
+                    runningTasks.size(), queueSize);
     }
 
     private String getTaskKey(Integer clusterId, String hostname) {

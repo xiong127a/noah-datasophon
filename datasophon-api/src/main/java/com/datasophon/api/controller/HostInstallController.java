@@ -67,15 +67,6 @@ public class HostInstallController {
     }
 
     /**
-     * 重新进行主机环境校验
-     */
-    @PostMapping("/rehostCheck")
-    @UserPermission
-    public Result rehostCheck(Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
-        return installService.rehostCheck(clusterId, hostnames, sshUser, sshPort);
-    }
-
-    /**
      * 查询主机校验是否全部完成
      */
     @PostMapping("/hostCheckCompleted")

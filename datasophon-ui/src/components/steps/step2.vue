@@ -48,60 +48,57 @@
     <a-modal
       v-model="logVisible"
       :title="logModalTitle"
-      width="80%"
+      :width="900"
       :footer="null"
-      @cancel="closeLogModal"
-      class="log-modal"
-      :bodyStyle="{ padding: '0' }"
+      destroyOnClose
     >
-      <div class="log-container">
+      <template v-if="useNewLogViewer">
+        <LogViewer
+          :clusterId="clusterId"
+          :hostname="currentLogHostname"
+          :itemId="currentLogItemId"
+          :refreshInterval="autoRefreshInterval"
+        />
+      </template>
+      <template v-else>
+        <!-- 旧的日志显示方式 -->
         <div class="log-header">
-          <div class="refresh-options">
-            <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
-              <a-icon type="reload" />手动刷新
+          <a-button type="primary" icon="reload" :loading="logLoading" @click="refreshLog">刷新</a-button>
+          <a-dropdown :trigger="['click']">
+            <a-button style="margin-left: 8px">
+              自动刷新 <a-icon type="down" />
             </a-button>
-            <a-dropdown>
-              <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
-                <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
-                <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
-                <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
-                <a-icon type="down" style="margin-left: 4px" />
-              </a-button>
-              <a-menu slot="overlay" @click="handleAutoRefreshChange">
-                <a-menu-item key="0">
-                  <a-icon type="stop" />关闭自动刷新
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="1">
-                  <a-icon type="sync" />每秒刷新
-                </a-menu-item>
-                <a-menu-item key="3">
-                  <a-icon type="sync" />每3秒刷新
-                </a-menu-item>
-                <a-menu-item key="5">
-                  <a-icon type="sync" />每5秒刷新
-                </a-menu-item>
-                <a-menu-item key="10">
-                  <a-icon type="sync" />每10秒刷新
-                </a-menu-item>
-              </a-menu>
-            </a-dropdown>
+            <a-menu slot="overlay" @click="handleAutoRefreshChange">
+              <a-menu-item key="0">关闭自动刷新</a-menu-item>
+              <a-menu-item key="3">每 3 秒刷新</a-menu-item>
+              <a-menu-item key="5">每 5 秒刷新</a-menu-item>
+              <a-menu-item key="10">每 10 秒刷新</a-menu-item>
+            </a-menu>
+          </a-dropdown>
+          <span v-if="autoRefreshInterval > 0" class="refresh-indicator">
+            <a-icon type="sync" spin /> 自动刷新中 ({{autoRefreshInterval}}秒)
+          </span>
+        </div>
+        <a-spin :spinning="logLoading">
+          <div class="log-content">
+            <pre v-html="logContent"></pre>
           </div>
-        </div>
-        <div class="log-content" v-loading="logLoading">
-          <pre v-if="logContent">{{ logContent }}</pre>
-          <div v-else class="no-log">暂无日志数据</div>
-        </div>
-      </div>
+        </a-spin>
+      </template>
     </a-modal>
   </div>
 </template>
 <script>
+import LogViewer from "../log/LogViewer.vue";
+
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
     steps1Data: Object,
     depType:String,
+  },
+  components: {
+    LogViewer
   },
   data() {
     return {
@@ -159,6 +156,7 @@ export default {
               SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
               FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
               SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              TERMINATING: { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
               MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
             };
 
@@ -206,44 +204,125 @@ export default {
               SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
               FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
               SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              TERMINATING: { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
               MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
             };
             
             // 检查主机是否有检查项
             const checkItems = row.checkItems || [];
             
-            // 找到当前检查的项目
+            // 优先级处理：检查中 > 待检查 > 失败 > 跳过 > 成功
+            
+            // 1. 先检查是否有正在检查中的项目
             const currentItem = checkItems.find(item => item.status === 'CHECKING');
+            if (currentItem) {
+              const status = statusMap[currentItem.status];
+              return h('span', { 
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [currentItem.itemName])
+              ]);
+            }
             
-            // 找到等待检查的项目
+            // 2. 其次检查是否有待检查的项目
             const waitingItem = checkItems.find(item => item.status === 'WAITING');
+            if (waitingItem) {
+              const status = statusMap[waitingItem.status];
+              return h('span', { 
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [waitingItem.itemName])
+              ]);
+            }
             
-            // 如果都没有,显示最后一个检查项的状态
-            const itemToShow = currentItem || waitingItem || (checkItems.length > 0 ? checkItems[checkItems.length - 1] : null);
+            // 3. 查找失败的项目，并显示最后一个失败项
+            const failedItems = checkItems.filter(item => item.status === 'FAILED');
+            if (failedItems.length > 0) {
+              const lastFailedItem = failedItems[failedItems.length - 1];
+              const status = statusMap[lastFailedItem.status];
+              return h('span', { 
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastFailedItem.itemName])
+              ]);
+            }
             
-            if (!itemToShow) return h('span', {}, ['-']);
+            // 4. 查找跳过的项目，显示最后一个跳过项
+            const skippedItems = checkItems.filter(item => item.status === 'SKIPPED');
+            if (skippedItems.length > 0) {
+              const lastSkippedItem = skippedItems[skippedItems.length - 1];
+              const status = statusMap[lastSkippedItem.status];
+              return h('span', { 
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastSkippedItem.itemName])
+              ]);
+            }
             
-            const status = statusMap[itemToShow.status] || statusMap.WAITING;
+            // 5. 最后查找成功的项目，显示最后一个成功项
+            const successItems = checkItems.filter(item => item.status === 'SUCCESS');
+            if (successItems.length > 0) {
+              const lastSuccessItem = successItems[successItems.length - 1];
+              const status = statusMap[lastSuccessItem.status];
+              return h('span', { 
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', { 
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastSuccessItem.itemName])
+              ]);
+            }
             
-            return h('span', { 
-              class: 'flex-container',
-              style: { 
-                display: 'flex', 
-                alignItems: 'center', 
-                color: status.color 
-              }
-            }, [
-              h('a-icon', { 
-                props: {
-                  type: status.icon,
-                  theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
-                  twoToneColor: status.color,
-                  spin: status.icon === 'loading'
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [itemToShow.itemName])
-            ]);
+            // 如果没有任何检查项，则显示占位符
+            return h('span', {}, ['-']);
           },
         },
         {
@@ -271,10 +350,12 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  disabled: !['FAILED', 'SUCCESS'].includes(row.status || row.statusStr)
+                  disabled: !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
+                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS' || 
+                             row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
                 },
                 on: {
-                  click: () => this.retryCheck(row)
+                  click: () => this.retryEnvironment(row)
                 }
               }, ["重试"]) : null
             ].filter(Boolean));
@@ -290,7 +371,8 @@ export default {
       currentLogHostname: null,
       currentLogItemId: null,
       currentLogItemName: null,
-      refreshTimer: null
+      logTimer: null,
+      useNewLogViewer: true, // 默认使用新的日志查看器
     };
   },
   computed: {
@@ -518,7 +600,8 @@ export default {
               'SUCCESS': { text: '通过', color: '#52c41a', icon: 'check-circle' },
               'FAILED': { text: '未通过', color: '#f5222d', icon: 'close-circle' },
               'CHECKING': { text: '检查中', color: '#1890ff', icon: 'loading' },
-              'SKIPPED': { text: '已跳过', color: '#d9d9d9', icon: 'warning' }
+              'SKIPPED': { text: '已跳过', color: '#d9d9d9', icon: 'warning' },
+              'TERMINATING': { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true }
             };
 
             const status = statusMap[text] || { text: '未知', color: '#999999', icon: 'question-circle' };
@@ -570,8 +653,8 @@ export default {
                   type: 'link',
                   size: 'small',
                   disabled: !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
-                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS') && 
-                             !(row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
+                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS' || 
+                             row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
                 },
                 on: {
                   click: () => this.retryCheckItem(record.hostname, row.id)
@@ -752,10 +835,8 @@ export default {
           this.$message.success('重试指令已发送');
           // 清空选择
           this.$set(this.selectedCheckItems, hostname, []);
-          // 重新获取校验项状态
-          setTimeout(() => {
-            this.getHostCheckItems(hostname);
-          }, 2000);
+          // 直接调用pollingSearch刷新整个列表，而不是单独获取检查项
+          this.pollingSearch();
         }
       } catch (error) {
         console.error('重试检查项失败:', error);
@@ -773,12 +854,23 @@ export default {
         });
         if (res.code === 200) {
           this.$message.success('已跳过该检查项');
+          
           // 更新检查项状态
           const items = this.checkItemsMap[hostname];
-          const targetItem = items.find(item => item.id === itemId);
-          if (targetItem) {
-            targetItem.status = 'SKIPPED';
-            this.$set(this.checkItemsMap, hostname, [...items]);
+          if (items) {
+            const targetItem = items.find(item => item.id === itemId);
+            if (targetItem) {
+              targetItem.status = 'SKIPPED';
+              targetItem.message = '已手动跳过此检查项';
+              
+              // 使用...items创建新数组，确保Vue能检测到变化
+              this.$set(this.checkItemsMap, hostname, [...items]);
+              
+              // 延迟1秒后刷新列表获取服务器最新状态
+              setTimeout(() => {
+                this.refreshHostList();
+              }, 1000);
+            }
           }
         }
       } catch (error) {
@@ -849,10 +941,8 @@ export default {
         
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
-          // 重新获取校验项状态
-          setTimeout(() => {
-            this.getHostCheckItems(hostname);
-          }, 2000);
+          // 直接调用pollingSearch刷新整个列表，而不是单独获取检查项
+          this.pollingSearch();
         } else {
           this.$message.error(res.msg || '重试检查项失败');
         }
@@ -937,55 +1027,56 @@ export default {
      * 停止主机检查
      */
     stopCheck(row) {
-      this.$axiosPost(global.API.stopHostCheck, { 
-        clusterId: this.clusterId,
-        hostname: row.hostname
-      }).then(res => {
-        if (res.code === 200) {
-          this.$message.success('已终止主机检查');
-          this.refreshHostList();
-        } else {
-          this.$message.error(res.msg || '终止检查失败');
-        }
-      });
-    },
-
-    /**
-     * 停止检查项
-     */
-    stopCheckItem(hostname, itemId) {
-      if (!hostname || !itemId) {
-        this.$message.error('参数错误：主机名和检查项ID不能为空');
+      if (!row || !row.hostname) {
+        this.$message.error('参数错误：主机名不能为空');
         return;
       }
 
-      // 将参数作为 URL 参数传递
-      const params = new URLSearchParams({
-        clusterId: this.clusterId,
-        hostname: hostname,
-        itemId: itemId
-      });
-
       try {
-        this.$axiosPost(global.API.stopCheckItem + '?' + params.toString())
-          .then(res => {
-            if (res && res.code === 200) {
-              this.$message.success('已终止检查项');
-              // 更新检查项状态
-              const items = this.checkItemsMap[hostname];
-              if (items) {
-                const targetItem = items.find(item => item.id === itemId);
-                if (targetItem) {
-                  targetItem.status = 'WAITING';
-                  this.$set(this.checkItemsMap, hostname, [...items]);
-                }
-              }
+        // 立即将该主机所有正在检查的项状态更新为"终止中"
+        const items = this.checkItemsMap[row.hostname] || [];
+        let hasUpdated = false;
+        
+        if (items && items.length > 0) {
+          items.forEach(item => {
+            if (item.status === 'CHECKING') {
+              item.status = 'TERMINATING';
+              item.message = '正在终止检查...';
+              hasUpdated = true;
             }
-            // 不再处理错误情况，因为拦截器已经显示了错误消息
           });
+          
+          if (hasUpdated) {
+            // 更新本地缓存，确保UI立即显示变化
+            this.$set(this.checkItemsMap, row.hostname, [...items]);
+          }
+        }
+
+        // 调用后端API
+        this.$axiosPost(global.API.stopHostCheck, { 
+          clusterId: this.clusterId,
+          hostname: row.hostname
+        }).then(res => {
+          if (res && res.code === 200) {
+            this.$message.success('已终止主机检查');
+            
+            // 延迟1秒后刷新列表，获取最新状态
+            setTimeout(() => {
+              this.refreshHostList();
+            }, 1000);
+          } else {
+            this.$message.error(res.msg || '终止检查失败');
+            this.refreshHostList(); // 还是需要刷新，恢复状态
+          }
+        }).catch(error => {
+          console.error('终止主机检查失败:', error);
+          this.$message.error('终止主机检查失败，请检查网络连接');
+          this.refreshHostList(); // 出错时也刷新，恢复状态
+        });
       } catch (error) {
-        // 异常情况的日志记录，但不显示错误弹窗
-        console.error('终止检查项失败:', error);
+        console.error('终止主机检查异常:', error);
+        this.$message.error('终止主机检查出现异常');
+        this.refreshHostList();
       }
     },
     
@@ -1030,23 +1121,23 @@ export default {
       }, 5000);
     },
 
-    // 添加查看日志按钮
+    // 查看日志
     viewItemLog(hostname, itemId, itemName) {
       // 保存当前选择的检查项信息
       this.currentLogHostname = hostname;
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
       
-      // 打开日志弹窗并加载日志
+      // 打开日志弹窗
       this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
       this.logVisible = true;
-      this.logContent = '';
       
-      // 初始停止之前可能存在的自动刷新定时器
-      this.stopAutoRefresh();
-      
-      // 获取日志数据
-      this.fetchItemLog();
+      // 如果使用旧的日志查看器，则加载日志
+      if (!this.useNewLogViewer) {
+        this.logContent = '';
+        this.stopAutoRefresh();
+        this.fetchItemLog();
+      }
     },
     
     // 获取检查项日志
@@ -1112,7 +1203,7 @@ export default {
     // 启动自动刷新
     startAutoRefresh() {
       if (this.autoRefreshInterval > 0) {
-        this.refreshTimer = setInterval(() => {
+        this.logTimer = setInterval(() => {
           this.fetchItemLog();
         }, this.autoRefreshInterval * 1000);
       }
@@ -1120,19 +1211,54 @@ export default {
     
     // 停止自动刷新
     stopAutoRefresh() {
-      if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
+      if (this.logTimer) {
+        clearInterval(this.logTimer);
+        this.logTimer = null;
       }
     },
     
-    // 关闭日志查看弹窗
-    closeLogModal() {
-      this.logVisible = false;
-      this.stopAutoRefresh();
-      this.currentLogHostname = null;
-      this.currentLogItemId = null;
-      this.currentLogItemName = null;
+    // 终止单个检查项
+    async stopCheckItem(hostname, itemId) {
+      if (!hostname || !itemId) {
+        this.$message.error('参数错误：主机名或检查项ID不能为空');
+        return;
+      }
+
+      try {
+        // 立即将检查项状态更新为"终止中"，提供用户视觉反馈
+        const items = this.checkItemsMap[hostname] || [];
+        const targetItem = items.find(item => item.id === itemId);
+        
+        if (targetItem && targetItem.status === 'CHECKING') {
+          targetItem.status = 'TERMINATING';
+          targetItem.message = '正在终止检查...';
+          // 更新本地缓存，确保UI立即显示变化
+          this.$set(this.checkItemsMap, hostname, [...items]);
+        }
+
+        // 调用后端API
+        const res = await this.$axiosPost(global.API.stopCheckItem, { 
+          clusterId: this.clusterId,
+          hostname: hostname,
+          itemId: itemId
+        });
+        
+        if (res && res.code === 200) {
+          this.$message.success('已终止检查项');
+          
+          // 延迟1秒后刷新列表，获取最新状态
+          setTimeout(() => {
+            this.refreshHostList();
+          }, 1000);
+        } else {
+          this.$message.error(res.msg || '终止检查失败');
+          this.refreshHostList(); // 还是需要刷新，恢复状态
+        }
+      } catch (error) {
+        console.error('终止检查项失败:', error);
+        this.$message.error('终止检查项失败，请检查网络连接');
+        this.refreshHostList(); // 出错时也刷新，恢复状态
+      }
     },
   },
   mounted() {

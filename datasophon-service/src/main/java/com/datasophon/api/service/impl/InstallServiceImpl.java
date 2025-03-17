@@ -358,24 +358,10 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream().sorted(Comparator.comparing(e -> e.getKey())).map(e -> e.getValue()).collect(Collectors.toList());
-        return Result.success(list);
-    }
-
-    @Override
-    public Result rehostCheck(Integer clusterId, String hostnames, String sshUser, Integer sshPort) {
-        // 对每台主机单独启动检查，不使用HostConnectActor
+        // 获取检查结果列表
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map == null) {
-            return Result.error("找不到主机信息");
-        }
-
-        List<String> hostnameList = StrUtil.split(hostnames, ",");
-
-        return hostCheckService.batchCheckHosts(clusterId, hostnameList);
+        List<HostInfo> list = map.values().stream().collect(Collectors.toList());
+        return Result.success(list);
     }
 
     @Override

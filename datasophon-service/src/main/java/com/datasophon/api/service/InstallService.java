@@ -28,8 +28,6 @@ public interface InstallService {
 
     Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);
 
-    Result rehostCheck(Integer clusterId, String hostnames, String sshUser, Integer sshPort);
-
     Result dispatcherHostAgentList(Integer id, Integer installStateCode, Integer page, Integer clusterId);
 
     Result reStartDispatcherHostAgent(Integer clusterId, String hostnames);
@@ -76,7 +74,5 @@ public interface InstallService {
      * @throws Exception
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
-
-
 
 }

@@ -24,7 +24,7 @@ let path = paths.path() + '/ddh'
 export default {
   reStartDispatcherHostAgent: path + '/host/install/reStartDispatcherHostAgent', // 主机agent分发重试
   dispatcherHostAgentList: path + '/host/install/dispatcherHostAgentList', // 主机agent分发进度列表
-  rehostCheck: path + '/host/install/rehostCheck', // 重试主机环境校验
+  rehostCheck: path + '/host/check/rehostCheck', // 重试主机环境校验
   analysisHostList: path + '/host/install/analysisHostList', // 解析主机列表
   saveK8sHost: path + '/api/cluster/host/saveK8sHost', // 保存k8s主机
   hostCheckCompleted: path + '/host/install/hostCheckCompleted', // 查询主机环境校验是否完成
@@ -40,5 +40,10 @@ export default {
   fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
   batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
+  getCheckItemLogs: path + '/host/check/getCheckItemLogs', // 获取检查项日志列表（支持筛选）
+  getHostCheckItems: path + '/host/check/getHostCheckItems', // 获取主机检查项列表
   stopCheckItem: path + '/host/check/stopCheckItem', // 终止检查项
+  stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
+  retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
+  executeHostCheck: path + '/host/check/executeHostCheck', // 执行指定主机检查
 }

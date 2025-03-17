@@ -64,7 +64,7 @@ public class FileHandleChecker extends AbstractItemChecker {
         }
     }
 
-    private boolean isSystemdExists(ClientSession session) {
+    private boolean isSystemdExists(ClientSession session) throws InterruptedException {
         String result = execCommand(session, "[ -d /etc/systemd ] && echo 'true' || echo 'false'");
         return "true".equals(result.trim());
     }
