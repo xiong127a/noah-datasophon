@@ -91,11 +91,9 @@ public interface HostCheckService {
      * @param clusterId 集群ID
      * @param hostname 主机名
      * @param itemId 检查项ID
-     * @param page 页码（可选）
-     * @param pageSize 每页条数（可选）
      * @return 检查项日志
      */
-    Result getCheckItemLog(Integer clusterId, String hostname, Integer itemId, Integer page, Integer pageSize);
+    Result getCheckItemLog(Integer clusterId, String hostname, Integer itemId);
 
     /**
      * 取消所有当前运行的检查任务
@@ -112,13 +110,4 @@ public interface HostCheckService {
      * @return 操作结果
      */
     Result retryCheckItems(Integer clusterId, String hostname, List<String> itemNames);
-
-    /**
-     * 执行主机检查
-     * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
-     * @return 检查结果
-     */
-    Result executeHostCheck(Integer clusterId, String hostname, Integer itemId);
 } 

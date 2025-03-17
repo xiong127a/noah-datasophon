@@ -6,8 +6,6 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
-import com.datasophon.common.model.CheckItemLog;
-import com.datasophon.api.service.CheckItemLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 
 /**
  * 主机检查控制器
@@ -33,9 +28,6 @@ public class HostCheckController {
 
     @Autowired
     private HostCheckService hostCheckService;
-
-    @Autowired
-    private CheckItemLogService checkItemLogService;
 
     /**
      * 获取主机检查项列表
@@ -147,10 +139,8 @@ public class HostCheckController {
     public Result getCheckItemLog(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
             @RequestParam("hostname") String hostname,
-            @RequestParam("itemId") Integer itemId,
-            @RequestParam(value = "page", required = false) Integer page,
-            @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return hostCheckService.getCheckItemLog(clusterId, hostname, itemId, page, pageSize);
+            @RequestParam("itemId") Integer itemId) {
+        return hostCheckService.getCheckItemLog(clusterId, hostname, itemId);
     }
 
     /**
@@ -184,77 +174,5 @@ public class HostCheckController {
         }
         
         return hostCheckService.retryCheckItems(clusterId, hostname, itemIds);
-    }
-
-    /**
-     * 获取检查项日志列表（支持筛选）
-     */
-    @PostMapping("/getCheckItemLogs")
-    @UserPermission
-    public Result getCheckItemLogs(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam(value = "hostname", required = false) String hostname,
-            @RequestParam(value = "itemId", required = false) Integer itemId,
-            @RequestParam(value = "level", required = false) String level,
-            @RequestParam(value = "startTime", required = false) String startTime,
-            @RequestParam(value = "endTime", required = false) String endTime,
-            @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
-            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        
-        // 解析日志级别
-        CheckItemLog.LogLevel logLevel = null;
-        if (level != null) {
-            try {
-                logLevel = CheckItemLog.LogLevel.valueOf(level);
-            } catch (IllegalArgumentException e) {
-                return Result.error("无效的日志级别");
-            }
-        }
-        
-        // 解析时间范围
-        Date startDate = null;
-        Date endDate = null;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        
-        if (startTime != null) {
-            try {
-                startDate = sdf.parse(startTime);
-            } catch (ParseException e) {
-                return Result.error("开始时间格式无效，请使用 yyyy-MM-dd HH:mm:ss 格式");
-            }
-        }
-        
-        if (endTime != null) {
-            try {
-                endDate = sdf.parse(endTime);
-            } catch (ParseException e) {
-                return Result.error("结束时间格式无效，请使用 yyyy-MM-dd HH:mm:ss 格式");
-            }
-        }
-        
-        // 调用服务获取日志
-        return checkItemLogService.getCheckItemLogs(
-                clusterId, 
-                hostname, 
-                itemId, 
-                logLevel, 
-                startDate, 
-                endDate, 
-                keyword, 
-                page, 
-                pageSize);
-    }
-
-    /**
-     * 执行主机检查
-     */
-    @PostMapping("/executeHostCheck")
-    @UserPermission
-    public Result executeHostCheck(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
-            @RequestParam(value = "itemId", required = false) Integer itemId) {
-        return hostCheckService.executeHostCheck(clusterId, hostname, itemId);
     }
 } 

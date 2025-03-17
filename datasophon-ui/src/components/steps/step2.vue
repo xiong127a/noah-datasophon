@@ -48,49 +48,55 @@
     <a-modal
       v-model="logVisible"
       :title="logModalTitle"
-      :width="900"
+      width="80%"
       :footer="null"
-      destroyOnClose
+      @cancel="closeLogModal"
+      class="log-modal"
+      :bodyStyle="{ padding: '0' }"
     >
-      <template v-if="useNewLogViewer">
-        <LogViewer
-          :clusterId="clusterId"
-          :hostname="currentLogHostname"
-          :itemId="currentLogItemId"
-          :refreshInterval="autoRefreshInterval"
-        />
-      </template>
-      <template v-else>
-        <!-- 旧的日志显示方式 -->
+      <div class="log-container">
         <div class="log-header">
-          <a-button type="primary" icon="reload" :loading="logLoading" @click="refreshLog">刷新</a-button>
-          <a-dropdown :trigger="['click']">
-            <a-button style="margin-left: 8px">
-              自动刷新 <a-icon type="down" />
+          <div class="refresh-options">
+            <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
+              <a-icon type="reload" />手动刷新
             </a-button>
-            <a-menu slot="overlay" @click="handleAutoRefreshChange">
-              <a-menu-item key="0">关闭自动刷新</a-menu-item>
-              <a-menu-item key="3">每 3 秒刷新</a-menu-item>
-              <a-menu-item key="5">每 5 秒刷新</a-menu-item>
-              <a-menu-item key="10">每 10 秒刷新</a-menu-item>
-            </a-menu>
-          </a-dropdown>
-          <span v-if="autoRefreshInterval > 0" class="refresh-indicator">
-            <a-icon type="sync" spin /> 自动刷新中 ({{autoRefreshInterval}}秒)
-          </span>
-        </div>
-        <a-spin :spinning="logLoading">
-          <div class="log-content">
-            <pre v-html="logContent"></pre>
+            <a-dropdown>
+              <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
+                <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
+                <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
+                <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
+                <a-icon type="down" style="margin-left: 4px" />
+              </a-button>
+              <a-menu slot="overlay" @click="handleAutoRefreshChange">
+                <a-menu-item key="0">
+                  <a-icon type="stop" />关闭自动刷新
+                </a-menu-item>
+                <a-menu-divider />
+                <a-menu-item key="1">
+                  <a-icon type="sync" />每秒刷新
+                </a-menu-item>
+                <a-menu-item key="3">
+                  <a-icon type="sync" />每3秒刷新
+                </a-menu-item>
+                <a-menu-item key="5">
+                  <a-icon type="sync" />每5秒刷新
+                </a-menu-item>
+                <a-menu-item key="10">
+                  <a-icon type="sync" />每10秒刷新
+                </a-menu-item>
+              </a-menu>
+            </a-dropdown>
           </div>
-        </a-spin>
-      </template>
+        </div>
+        <div class="log-content" v-loading="logLoading">
+          <pre v-if="logContent">{{ logContent }}</pre>
+          <div v-else class="no-log">暂无日志数据</div>
+        </div>
+      </div>
     </a-modal>
   </div>
 </template>
 <script>
-import LogViewer from "../log/LogViewer.vue";
-
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
@@ -98,7 +104,7 @@ export default {
     depType:String,
   },
   components: {
-    LogViewer
+    // LogViewer
   },
   data() {
     return {
@@ -371,8 +377,7 @@ export default {
       currentLogHostname: null,
       currentLogItemId: null,
       currentLogItemName: null,
-      logTimer: null,
-      useNewLogViewer: true, // 默认使用新的日志查看器
+      refreshTimer: null,
     };
   },
   computed: {
@@ -1128,16 +1133,16 @@ export default {
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
       
-      // 打开日志弹窗
+      // 打开日志弹窗并加载日志
       this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
       this.logVisible = true;
+      this.logContent = '';
       
-      // 如果使用旧的日志查看器，则加载日志
-      if (!this.useNewLogViewer) {
-        this.logContent = '';
-        this.stopAutoRefresh();
-        this.fetchItemLog();
-      }
+      // 初始停止之前可能存在的自动刷新定时器
+      this.stopAutoRefresh();
+      
+      // 获取日志数据
+      this.fetchItemLog();
     },
     
     // 获取检查项日志
@@ -1203,7 +1208,7 @@ export default {
     // 启动自动刷新
     startAutoRefresh() {
       if (this.autoRefreshInterval > 0) {
-        this.logTimer = setInterval(() => {
+        this.refreshTimer = setInterval(() => {
           this.fetchItemLog();
         }, this.autoRefreshInterval * 1000);
       }
@@ -1211,9 +1216,9 @@ export default {
     
     // 停止自动刷新
     stopAutoRefresh() {
-      if (this.logTimer) {
-        clearInterval(this.logTimer);
-        this.logTimer = null;
+      if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
       }
     },
     
@@ -1259,6 +1264,15 @@ export default {
         this.$message.error('终止检查项失败，请检查网络连接');
         this.refreshHostList(); // 出错时也刷新，恢复状态
       }
+    },
+
+    // 关闭日志查看弹窗
+    closeLogModal() {
+      this.logVisible = false;
+      this.stopAutoRefresh();
+      this.currentLogHostname = null;
+      this.currentLogItemId = null;
+      this.currentLogItemName = null;
     },
   },
   mounted() {

@@ -40,10 +40,8 @@ export default {
   fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
   batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
-  getCheckItemLogs: path + '/host/check/getCheckItemLogs', // 获取检查项日志列表（支持筛选）
   getHostCheckItems: path + '/host/check/getHostCheckItems', // 获取主机检查项列表
   stopCheckItem: path + '/host/check/stopCheckItem', // 终止检查项
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
-  executeHostCheck: path + '/host/check/executeHostCheck', // 执行指定主机检查
 }
