@@ -17,12 +17,15 @@
 
 package com.datasophon.api.service.impl;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
@@ -32,6 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -51,9 +55,9 @@ public class ClusterServiceInstanceConfigServiceImpl
         ClusterServiceRoleGroupConfig roleGroupConfig =
                 roleGroupConfigService.getConfigByRoleGroupIdAndVersion(roleGroupId, version);
         if (Objects.nonNull(roleGroupConfig)) {
-            String configJson = roleGroupConfig.getConfigJson();
-            List<ServiceConfig> serviceConfigs = JSONObject.parseArray(configJson, ServiceConfig.class);
-            return Result.success(serviceConfigs);
+            String configFileJson = roleGroupConfig.getConfigFileJson();
+            Map<Generators, List<ServiceConfig>> generatorsListMap = CommonUtils.parseConfigJson(configFileJson);
+            return Result.success(generatorsListMap);
         }
         return Result.success();
     }

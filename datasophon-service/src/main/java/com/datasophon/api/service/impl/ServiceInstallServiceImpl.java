@@ -666,7 +666,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         for (Map.Entry<Generators, List<ServiceConfig>> entry : parsedConfigMap.entrySet()) {
             final Generators generator = entry.getKey();
             final List<ServiceConfig> configs = new ArrayList<>(entry.getValue());
-
             updateConfigsWithExistingValues(existingConfigMap, configs);
 
             if (isAlertManagerService(serviceName)) {
@@ -804,59 +803,5 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 
-    private List<ServiceConfig> listServiceConfigByFrameServiceAndServiceRoleName(
-            FrameServiceEntity frameService, String serviceRoleName) {
 
-        // 1. 预处理构建角色配置映射
-        Map<String, List<ServiceConfig>> roleConfigMap = buildRoleConfigMap(frameService);
-
-        // 2. 直接获取目标角色的配置列表
-        return roleConfigMap.getOrDefault(serviceRoleName, Collections.emptyList());
-    }
-
-    /**
-     * 预处理构建角色到配置的映射关系
-     */
-    private Map<String, List<ServiceConfig>> buildRoleConfigMap(FrameServiceEntity frameService) {
-        Map<JSONObject, JSONArray> rawConfigMap = parseConfigMap(frameService.getConfigFileJson());
-
-        return rawConfigMap.entrySet().stream()
-                .flatMap(entry -> {
-                    JSONObject roleConfig = entry.getKey();
-                    JSONArray configArray = entry.getValue();
-
-                    List<String> roles = extractRoles(roleConfig);
-                    List<ServiceConfig> configs = parseServiceConfigs(configArray);
-
-                    return roles.stream()
-                            .map(role -> new AbstractMap.SimpleEntry<String, List<ServiceConfig>>(role, configs));
-                })
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (existing, newList) -> {
-                            existing.addAll(newList);
-                            return existing;
-                        }
-                ));
-    }
-
-
-    private Map<JSONObject, JSONArray> parseConfigMap(String json) {
-        return JSONObject.parseObject(json,
-                new TypeReference<Map<JSONObject, JSONArray>>() {},
-                Feature.SupportAutoType
-        );
-    }
-
-    private List<String> extractRoles(JSONObject jsonObject) {
-        String roleJson = (String) jsonObject.getOrDefault(CONFIG_TARGET_ROLES, "[\"CommonConfig\"]");
-        return JSONObject.parseObject(roleJson, new TypeReference<List<String>>() {});
-    }
-
-    private List<ServiceConfig> parseServiceConfigs(JSONArray jsonArray) {
-        return JSONObject.parseObject(jsonArray.toJSONString(),
-                new TypeReference<List<ServiceConfig>>() {}
-        );
-    }
 }
