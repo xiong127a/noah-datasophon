@@ -243,7 +243,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
     }
     
     @Override
-    protected ItemCode getCheckerType() {
+    public ItemCode getCheckerType() {
         return ItemCode.TIME_SYNC;
     }
 } 

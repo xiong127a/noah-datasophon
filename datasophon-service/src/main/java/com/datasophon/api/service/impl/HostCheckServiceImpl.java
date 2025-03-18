@@ -93,9 +93,9 @@ public class HostCheckServiceImpl implements HostCheckService {
             } catch (Exception e) {
                 slf4jLogger.error("添加日志记录失败: {}", e.getMessage(), e);
             }
-    }
+        }
 
-    @Override
+        @Override
         public void info(String message) {
             addLogEntry("INFO", message);
         }
@@ -381,7 +381,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             
             // 按顺序遍历检查项，确保串行执行
             logger.info("队列中待检查项数量: {}", itemQueue.size());
-            while (!itemQueue.isEmpty() && !Thread.currentThread().isInterrupted()) {
+            while (!itemQueue.isEmpty()) {
                 CheckItem item = itemQueue.poll();
                 if (item == null) break;
                 
@@ -405,14 +405,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                     logger.info("开始串行执行检查项: {}", item.getItemName());
                     boolean success = executeHostCheck(clusterId, hostInfo, item);
                     logger.info("检查项 {} 执行完成，结果: {}", item.getItemName(), success ? "成功" : "失败");
-
-                    // 如果线程被中断，说明整个主机检查被终止
-                    if (Thread.currentThread().isInterrupted()) {
-                        logger.info("整个主机检查任务被终止，主机: {}, 检查项: {}", hostInfo.getHostname(), item.getItemName());
-                        hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.SKIPPED, "检查已终止");
-                        hostCheckCancelled = true;
-                        break;
-                    }
 
                     // 检查完成后获取最新状态 - 可能已被手动终止
                     CheckItem updatedItem = findCheckItemById(hostInfo, item.getId());
@@ -495,8 +487,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             cacheLog.info("正在执行检查任务...");
             
             // 获取检查器
-                    ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-                    if (checker == null) {
+            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
+            if (checker == null) {
                 String errorMsg = "未知的检查项: " + checkItem.getItemCode();
                 logger.error(errorMsg);
                 cacheLog.error("错误: " + errorMsg);
@@ -504,8 +496,8 @@ public class HostCheckServiceImpl implements HostCheckService {
                 
                 checkItem.setMessage(errorMsg);
                 updateHostInfoCache(clusterId, hostInfo);
-                        return false;
-                    }
+                return false;
+            }
 
             // 记录检查开始
             cacheLog.info("正在执行检查 " + checkItem.getItemName() + "...");
@@ -527,14 +519,14 @@ public class HostCheckServiceImpl implements HostCheckService {
                 }
                 updateHostInfoCache(clusterId, hostInfo);
                 return true;
-                } catch (Exception e) {
+            } catch (Exception e) {
                 String errorMsg = "执行检查过程中发生异常: " + e.getMessage();
                 logger.error(errorMsg, e);
                 cacheLog.error("错误: " + errorMsg);
                 cacheLog.error("==== 检查失败 ====");
                 
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("检查失败: " + e.getMessage());
+                checkItem.setMessage("检查失败: " + e.getMessage());
                 updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
@@ -872,7 +864,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result getCheckItemLog(Integer clusterId, String hostname, Integer itemId) {
         // 构建日志缓存键
-            String logKey = getLogKey(clusterId, hostname, itemId);
+        String logKey = getLogKey(clusterId, hostname, itemId);
         logger.info("获取检查项日志, clusterId: {}, hostname: {}, itemId: {}, 缓存键: {}",
             clusterId, hostname, itemId, logKey);
         

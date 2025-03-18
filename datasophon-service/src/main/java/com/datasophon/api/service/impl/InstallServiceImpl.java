@@ -575,9 +575,9 @@ public class InstallServiceImpl implements InstallService {
 
             switch (checkItem.getId()) {
                 case 1: // 主机免密检查
-                    result = MinaUtils.execCmdWithResult(session, "ssh -o BatchMode=yes localhost echo OK");
-                    success = "OK".equals(result.trim());
-                    message = success ? "免密登录配置正确" : "未配置免密登录";
+                    MinaUtils.CheckResult checkResult = MinaUtils.checkPasswordlessStatus(session);
+                    success = checkResult.isSuccess();
+                    message = checkResult.getMessage();
                     break;
 
                 case 2: // Java环境检查

@@ -297,7 +297,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
     }
 
     @Override
-    protected ItemCode getCheckerType() {
+    public ItemCode getCheckerType() {
         return ItemCode.JAVA_ENV;
     }
 

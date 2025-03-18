@@ -21,7 +21,8 @@ public class CheckItem implements Serializable {
         FAILED(2, "未通过"),
         CHECKING(3, "检查中"),
         SKIPPED(4, "已跳过"),
-        TERMINATING(5, "终止中");
+        TERMINATING(5, "终止中"),
+        FIXING(6, "修复中");
         
         private final int code;
         private final String desc;

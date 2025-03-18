@@ -170,7 +170,7 @@ public class SelinuxChecker extends AbstractItemChecker {
     }
     
     @Override
-    protected ItemCode getCheckerType() {
+    public ItemCode getCheckerType() {
         return ItemCode.SELINUX;
     }
 } 
