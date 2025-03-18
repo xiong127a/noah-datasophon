@@ -34,7 +34,7 @@ public class HostCheckQueueManager {
     public HostCheckQueueManager() {
         // 创建主线程池 - 负责主机级别的检查任务
         this.executorService = new ThreadPoolExecutor(
-            4, // 核心线程数 - 支持多主机并行检查
+            1, // 核心线程数 - 支持多主机并行检查
             8, // 最大线程数
             60L, // 空闲线程存活时间
             TimeUnit.SECONDS, // 时间单位
@@ -75,21 +75,21 @@ public class HostCheckQueueManager {
 
     @PostConstruct
     public void init() {
-        logger.info("Initializing host check queue manager...");
+        logger.info("正在初始化主机检查队列管理器...");
         queueProcessorThread = new Thread(this::processQueueTasks);
         queueProcessorThread.setName("host-check-queue-processor");
         queueProcessorThread.start();
-        logger.info("Host check queue processor thread started");
+        logger.info("主机检查队列处理线程已启动");
     }
 
     @PreDestroy
     public void shutdown() {
-        logger.info("Shutting down host check queue manager...");
+        logger.info("正在关闭主机检查队列管理器...");
         isRunning.set(false);
         
         // 取消所有运行中的任务
         runningTasks.forEach((key, future) -> {
-            logger.info("Cancelling task: {}", key);
+            logger.info("正在取消任务: {}", key);
             future.cancel(true);
         });
         
@@ -100,7 +100,7 @@ public class HostCheckQueueManager {
         executorService.shutdownNow();
         try {
             if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                logger.warn("Executor service did not terminate in time");
+                logger.warn("线程池未能在指定时间内完全终止");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -115,23 +115,23 @@ public class HostCheckQueueManager {
         try {
             // 如果任务已在运行，则不添加
             if (runningTasks.containsKey(taskKey)) {
-                logger.info("Task for host {} is already running, skipping", hostInfo.getHostname());
+                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
                 return;
             }
             
-            logger.info("Adding check task to queue for host: {}, current queue size: {}", 
+            logger.info("正在将主机 {} 的检查任务添加到队列，当前队列大小: {}", 
                 hostInfo.getHostname(), checkQueue.size());
             checkQueue.put(new CheckTask(clusterId, hostInfo, hostCheckService));
-            logger.info("Successfully added check task for host {} to queue, new queue size: {}", 
+            logger.info("成功添加主机 {} 的检查任务到队列，新队列大小: {}", 
                 hostInfo.getHostname(), checkQueue.size());
         } catch (InterruptedException e) {
-            logger.error("Failed to add check task to queue for host {}", hostInfo.getHostname(), e);
+            logger.error("添加主机 {} 的检查任务到队列时失败", hostInfo.getHostname(), e);
             Thread.currentThread().interrupt();
         }
     }
 
     public void cancelItemTask(Integer clusterId, String hostname, Integer itemId) {
-        logger.info("Cancelling specific check item task: clusterId={}, hostname={}, itemId={}", 
+        logger.info("正在取消指定检查项任务: 集群ID={}, 主机名={}, 检查项ID={}", 
                     clusterId, hostname, itemId);
         // 方法不需要取消整个主机任务
         // 具体取消逻辑在HostCheckServiceImpl中通过Future处理
@@ -144,7 +144,7 @@ public class HostCheckQueueManager {
         String taskKey = getTaskKey(clusterId, hostname);
         Future<?> future = runningTasks.get(taskKey);
         if (future != null) {
-            logger.info("Forcibly cancelling task for host: {}", hostname);
+            logger.info("正在强制取消主机 {} 的检查任务", hostname);
             future.cancel(true);
             runningTasks.remove(taskKey);
         }
@@ -164,7 +164,7 @@ public class HostCheckQueueManager {
         
         // 取消所有运行中的任务
         runningTasks.forEach((key, future) -> {
-            logger.info("取消运行中的任务: {}", key);
+            logger.info("正在取消运行中的任务: {}", key);
             future.cancel(true);
         });
         
@@ -175,7 +175,7 @@ public class HostCheckQueueManager {
         int queueSize = checkQueue.size();
         checkQueue.clear();
         
-        logger.info("成功取消所有检查任务，清空了 {} 个运行中任务和 {} 个队列中任务", 
+        logger.info("已成功取消所有检查任务，清理了 {} 个运行中任务和 {} 个队列中任务", 
                     runningTasks.size(), queueSize);
     }
 
@@ -184,19 +184,19 @@ public class HostCheckQueueManager {
     }
 
     private void processQueueTasks() {
-        logger.info("Starting to process queue tasks...");
+        logger.info("开始处理队列任务...");
         while (isRunning.get()) {
             try {
-                logger.debug("Waiting for next task, current queue size: {}", checkQueue.size());
+                logger.debug("等待下一个任务，当前队列大小: {}", checkQueue.size());
                 CheckTask task = checkQueue.take();
                 String taskKey = getTaskKey(task.getClusterId(), task.getHostInfo().getHostname());
                 
-                logger.info("Submitting check task for host: {}", task.getHostInfo().getHostname());
+                logger.info("正在提交主机 {} 的检查任务", task.getHostInfo().getHostname());
                 Future<?> future = executorService.submit(() -> {
                     try {
                         task.getHostCheckService().processHostCheck(task.getClusterId(), task.getHostInfo());
                     } catch (Exception e) {
-                        logger.error("Error executing check task for host {}: {}", 
+                        logger.error("执行主机 {} 的检查任务时发生错误: {}", 
                             task.getHostInfo().getHostname(), e.getMessage(), e);
                     } finally {
                         runningTasks.remove(taskKey);
@@ -208,15 +208,15 @@ public class HostCheckQueueManager {
                 
             } catch (InterruptedException e) {
                 if (isRunning.get()) {
-                    logger.error("Queue processing interrupted", e);
+                    logger.error("队列处理被中断", e);
                 }
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                logger.error("Unexpected error in queue processing", e);
+                logger.error("队列处理过程中发生意外错误", e);
             }
         }
-        logger.info("Queue processing stopped");
+        logger.info("队列处理已停止");
     }
 
     private static class CheckTask {

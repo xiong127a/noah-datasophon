@@ -6,6 +6,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
+import com.datasophon.common.model.LogEntry;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,65 +37,85 @@ public abstract class AbstractItemChecker implements ItemChecker {
             this.slf4jLogger = LoggerFactory.getLogger(AbstractItemChecker.this.getClass());
         }
 
-        private String formatLogMessage(String level, String message) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String timestamp = sdf.format(new Date());
-            String threadName = Thread.currentThread().getName();
-            // 标准系统日志格式：2025-03-17 19:57:50 [INFO ] [host-check-work] HostCheckServiceImpl:461 - 消息
-            // 使用String.format确保日志级别有5个字符宽度（右填充空格）
-            return String.format("%s [%-5s] [%s] %s - %s", timestamp, level, threadName, className, message);
+        private void addLogEntry(String levelStr, String message) {
+            if (currentLogKey != null) {
+                try {
+                    // 创建结构化日志记录
+                    Date timestamp = new Date();
+                    String threadName = Thread.currentThread().getName();
+                    LogEntry.Level level = LogEntry.Level.valueOf(levelStr);
+                    
+                    LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message);
+                    
+                    // 添加到日志管理器
+                    LogEntryManager.addLogEntry(currentLogKey, logEntry);
+                    
+                    // 同时输出到标准日志
+                    switch (level) {
+                        case INFO:
+                            slf4jLogger.info(message);
+                            break;
+                        case WARN:
+                            slf4jLogger.warn(message);
+                            break;
+                        case ERROR:
+                            slf4jLogger.error(message);
+                            break;
+                        case DEBUG:
+                            slf4jLogger.debug(message);
+                            break;
+                    }
+                } catch (Exception e) {
+                    slf4jLogger.error("添加日志记录失败: {}", e.getMessage(), e);
+                }
+            } else {
+                // 如果没有设置日志键，只输出到标准日志
+                slf4jLogger.debug("缓存日志未存储(currentLogKey为空): {}", message);
+            }
         }
 
         @Override
         public void info(String message) {
-            appendCacheLog(formatLogMessage("INFO", message));
-            slf4jLogger.info(message);
+            addLogEntry("INFO", message);
         }
 
         @Override
         public void info(String format, Object... args) {
             String message = String.format(format, args);
-            appendCacheLog(formatLogMessage("INFO", message));
-            slf4jLogger.info(message);
+            addLogEntry("INFO", message);
         }
 
         @Override
         public void warn(String message) {
-            appendCacheLog(formatLogMessage("WARN", message));
-            slf4jLogger.warn(message);
+            addLogEntry("WARN", message);
         }
 
         @Override
         public void warn(String format, Object... args) {
             String message = String.format(format, args);
-            appendCacheLog(formatLogMessage("WARN", message));
-            slf4jLogger.warn(message);
+            addLogEntry("WARN", message);
         }
 
         @Override
         public void error(String message) {
-            appendCacheLog(formatLogMessage("ERROR", message));
-            slf4jLogger.error(message);
+            addLogEntry("ERROR", message);
         }
 
         @Override
         public void error(String format, Object... args) {
             String message = String.format(format, args);
-            appendCacheLog(formatLogMessage("ERROR", message));
-            slf4jLogger.error(message);
+            addLogEntry("ERROR", message);
         }
 
         @Override
         public void debug(String message) {
-            appendCacheLog(formatLogMessage("DEBUG", message));
-            slf4jLogger.debug(message);
+            addLogEntry("DEBUG", message);
         }
 
         @Override
         public void debug(String format, Object... args) {
             String message = String.format(format, args);
-            appendCacheLog(formatLogMessage("DEBUG", message));
-            slf4jLogger.debug(message);
+            addLogEntry("DEBUG", message);
         }
     }
     
@@ -106,18 +127,6 @@ public abstract class AbstractItemChecker implements ItemChecker {
         this.currentLogKey = CHECK_ITEM_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId;
     }
     
-    // 记录日志到当前检查项的缓存
-    protected void appendCacheLog(String message) {
-        if (currentLogKey != null) {
-            String logContent = (String) CacheUtils.get(currentLogKey);
-            if (logContent == null) {
-                logContent = "";
-            }
-            logContent += message + "\n";
-            CacheUtils.put(currentLogKey, logContent);
-        }
-    }
-
     /**
      * 格式化日期为中文格式
      * @param date 日期对象
@@ -273,12 +282,48 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected void openSession(HostInfo hostInfo) {
         try {
             // 通过Mina工具打开SSH连接
+            cacheLog.info("开始连接到主机 %s, 端口: %d, 用户: %s", hostInfo.getHostname(), 
+                    hostInfo.getSshPort(), hostInfo.getSshUser());
+            
+            // 明确初始化为null，确保之前可能的有效session被清理
+            session = null;
+            
+            // 尝试建立会话连接
             session = MinaUtils.openConnection(hostInfo.getHostname(), 
                     hostInfo.getSshPort(), hostInfo.getSshUser());
             
-            // cacheLog是final字段，已经在类初始化时创建
+            // 验证session是否成功建立
+            if (session == null) {
+                cacheLog.error("建立SSH连接失败：会话对象为null");
+                throw new RuntimeException("无法建立SSH连接：会话对象为null");
+            }
+            
+            cacheLog.info("成功建立SSH连接");
+            
+            // 确保cacheLog在日志记录前被设置的currentLogKey
+            if (currentLogKey == null) {
+                logger.warn("检测到currentLogKey未设置，日志可能无法正确存储到缓存");
+            }
             
         } catch (Exception e) {
+            // 记录详细的异常信息到缓存日志
+            cacheLog.error("建立SSH连接失败: %s", e.getMessage());
+            cacheLog.error("异常详情: %s", e.toString());
+            
+            // 获取错误堆栈并记录
+            try {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+                e.printStackTrace(pw);
+                cacheLog.error("错误堆栈: %s", sw.toString());
+            } catch (Exception ex) {
+                // 忽略获取堆栈时的错误
+            }
+            
+            // 确保session为null
+            session = null;
+            
+            // 再抛出异常给上层处理
             throw new RuntimeException("打开SSH连接失败: " + e.getMessage(), e);
         }
     }
@@ -292,7 +337,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     session.getConnectAddress() != null ? session.getConnectAddress() : "未知地址");
                 
                 long startTime = System.currentTimeMillis();
-                session.close();
+            session.close();
                 long endTime = System.currentTimeMillis();
                 
                 logger.debug("SSH会话关闭成功，耗时: {}ms", (endTime - startTime));
@@ -333,7 +378,27 @@ public abstract class AbstractItemChecker implements ItemChecker {
             
             logger.info("开始建立SSH连接到主机: {}, 端口: {}, 用户: {}", 
                 hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
-            openSession(hostInfo);
+            cacheLog.info("开始建立SSH连接到主机: %s, 端口: %d, 用户: %s", 
+                hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                
+            try {
+                openSession(hostInfo);
+            } catch (Exception e) {
+                logger.error("SSH连接失败: {}", e.getMessage(), e);
+                cacheLog.error("SSH连接失败: %s", e.getMessage());
+                
+                // 明确设置状态为失败
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("无法建立SSH连接: " + e.getMessage());
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+                
+                // 记录详细的状态信息
+                logger.info("检查项 {} 状态已设置为FAILED, 消息: {}", 
+                    checkItem.getItemName(), checkItem.getMessage());
+                cacheLog.info("检查项状态已设置为FAILED, 详细信息: %s", checkItem.getMessage());
+                
+                return checkItem;
+            }
             
             // 再次检查是否被中断 - 新增
             if (Thread.currentThread().isInterrupted()) {
@@ -345,23 +410,45 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 return checkItem;
             }
             
+            // 明确检查session是否成功建立 - 增强处理
             if (session == null) {
-                logger.error("无法建立SSH连接到主机: {}", hostInfo.getHostname());
+                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getHostname();
+                logger.error(errorMsg);
+                cacheLog.error(errorMsg);
+                
+                // 确保状态被设置为失败
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("无法建立SSH连接");
+                
+                // 立即更新缓存状态
                 updateCheckStatus(clusterId, hostInfo, checkItem);
+                
+                // 记录详细的状态信息
+                logger.info("检查项 {} 状态已设置为FAILED (session为null), 消息: {}", 
+                    checkItem.getItemName(), checkItem.getMessage());
+                cacheLog.info("检查项状态已设置为FAILED (session为null), 详细信息: %s", 
+                    checkItem.getMessage());
+                
                 return checkItem;
             }
             
             logger.info("成功连接到主机: {}, 开始执行检查项: {}", hostInfo.getHostname(), checkItem.getItemName());
             
             try {
+                // 确保cacheLog记录日志
+                cacheLog.info("开始执行检查 %s...", checkItem.getItemName());
+                
                 // 执行具体检查逻辑，确保捕获InterruptedException
                 try {
                     doCheck(hostInfo, checkItem);
-                } catch (InterruptedException e) {
+                    // 添加日志确认状态
+                    logger.info("doCheck执行后检查项状态: {}, 消息: {}", checkItem.getStatus(), checkItem.getMessage());
+                    // 立即更新一次状态
+                    updateCheckStatus(clusterId, hostInfo, checkItem);
+        } catch (InterruptedException e) {
                     // 捕获中断异常
                     logger.info("检查项在执行过程中被中断: {}", checkItem.getItemName());
+                    cacheLog.info("检查项在执行过程中被中断");
                     checkItem.setStatus(CheckItem.Status.SKIPPED);
                     checkItem.setMessage("检查已终止");
                     updateCheckStatus(clusterId, hostInfo, checkItem);
@@ -379,6 +466,17 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     }
                     updateCheckStatus(clusterId, hostInfo, checkItem);
                     return checkItem;
+                }
+                
+                // 特殊检查：如果doCheck执行完成后状态仍为CHECKING，则强制设置为FAILED
+                if (checkItem.getStatus() == CheckItem.Status.CHECKING) {
+                    logger.warn("检查项 {} 执行完毕但状态仍为CHECKING，强制设置为FAILED", 
+                        checkItem.getItemName());
+                    cacheLog.warn("检查执行完毕但状态未更新，强制设置为失败");
+                    
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("检查执行过程中状态未正确更新");
+                    updateCheckStatus(clusterId, hostInfo, checkItem);
                 }
                 
                 logger.info("检查项 {} 执行完成, 状态: {}, 消息: {}", 
@@ -515,20 +613,55 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     private void updateCheckStatus(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         String cacheKey = clusterId + Constants.HOST_MAP;
+        logger.debug("更新检查状态: 主机={}, 检查项ID={}, 状态={}, 消息={}", 
+                hostInfo.getHostname(), checkItem.getId(), checkItem.getStatus(), checkItem.getMessage());
+        
+        try {
+            // 记录更新前的状态
+            logger.info("正在更新检查项状态 - 主机: {}, 检查项: {}, 当前状态: {}, 新状态: {}", 
+                hostInfo.getHostname(), checkItem.getItemName(), 
+                "更新前", checkItem.getStatus());
+                
         Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
         if (hostInfoMap != null) {
             HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getHostname());
             if (cachedHostInfo != null) {
-                cachedHostInfo.getCheckItems().stream()
-                        .filter(item -> item.getId().equals(checkItem.getId()))
-                        .findFirst()
-                        .ifPresent(item -> {
+                    boolean updated = false;
+                    for (CheckItem item : cachedHostInfo.getCheckItems()) {
+                        if (item.getId().equals(checkItem.getId())) {
+                            // 记录状态变化
+                            logger.info("检查项状态变更: {} -> {}, 消息: {} -> {}", 
+                                item.getStatus(), checkItem.getStatus(),
+                                item.getMessage(), checkItem.getMessage());
+                            
                             item.setStatus(checkItem.getStatus());
                             item.setMessage(checkItem.getMessage());
-                        });
+                            updated = true;
+                            logger.debug("检查项状态已更新: ID={}, 新状态={}", item.getId(), item.getStatus());
+                            break;
+                        }
+                    }
+                    
+                    if (!updated) {
+                        logger.warn("未找到要更新的检查项: 主机={}, 检查项ID={}", hostInfo.getHostname(), checkItem.getId());
+                    } else {
+                        // 更新主机的整体状态（根据检查项状态计算）
+                        cachedHostInfo.calculateStatus();
                 hostInfoMap.put(hostInfo.getHostname(), cachedHostInfo);
                 CacheUtils.put(cacheKey, hostInfoMap);
+                        logger.debug("缓存已更新: cacheKey={}, 主机状态={}", 
+                            cacheKey, cachedHostInfo.getStatus());
+                    }
+                } else {
+                    logger.warn("缓存中未找到主机信息: hostname={}", hostInfo.getHostname());
+                }
+            } else {
+                logger.warn("缓存中未找到主机映射: cacheKey={}", cacheKey);
             }
+        } catch (Exception e) {
+            logger.error("更新检查状态时发生异常: {}", e.getMessage(), e);
+            // 记录更多异常信息
+            cacheLog.error("更新检查状态失败，请检查系统日志: %s", e.getMessage());
         }
     }
 } 

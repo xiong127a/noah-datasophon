@@ -5,12 +5,14 @@ import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.checker.CheckLogger;
 import com.datasophon.api.service.checker.ItemChecker;
 import com.datasophon.api.service.checker.ItemCheckerFactory;
+import com.datasophon.api.service.checker.LogEntryManager;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
+import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.Result;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -39,7 +41,7 @@ import java.util.Optional;
 public class HostCheckServiceImpl implements HostCheckService {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
-    // 使用CheckLogger接口中定义的日志前缀常量
+    private static final String CHECK_ITEM_LOG_PREFIX = CheckLogger.CHECK_ITEM_LOG_PREFIX;
 
     @Autowired
     private ItemCheckerFactory itemCheckerFactory;
@@ -47,22 +49,10 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Autowired
     private HostCheckQueueManager checkQueueManager;
 
-    private String cacheKey = CHECK_TASK_STATUS_PREFIX;
-
-    /**
-     * 日志接口，定义日志记录方法
-     */
-    public interface Logable {
-        void info(String message);
-        void warn(String message);
-        void error(String message);
-        void debug(String message);
-    }
-
     /**
      * 基于检查项的日志实现
      */
-    public class ItemLogger implements Logable {
+    public class ItemLogger implements CheckLogger {
         private final String logKey;
         private final String className;
         private final org.slf4j.Logger slf4jLogger;
@@ -73,28 +63,80 @@ public class HostCheckServiceImpl implements HostCheckService {
             this.slf4jLogger = org.slf4j.LoggerFactory.getLogger(className);
         }
 
-        @Override
+        private void addLogEntry(String levelStr, String message) {
+            try {
+                // 创建结构化日志记录
+                Date timestamp = new Date();
+                String threadName = Thread.currentThread().getName();
+                LogEntry.Level level = LogEntry.Level.valueOf(levelStr);
+                
+                LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message);
+                
+                // 添加到日志管理器
+                LogEntryManager.addLogEntry(logKey, logEntry);
+                
+                // 同时输出到标准日志
+                switch (level) {
+                    case INFO:
+                        slf4jLogger.info(message);
+                        break;
+                    case WARN:
+                        slf4jLogger.warn(message);
+                        break;
+                    case ERROR:
+                        slf4jLogger.error(message);
+                        break;
+                    case DEBUG:
+                        slf4jLogger.debug(message);
+                        break;
+                }
+            } catch (Exception e) {
+                slf4jLogger.error("添加日志记录失败: {}", e.getMessage(), e);
+            }
+    }
+
+    @Override
         public void info(String message) {
-            appendLog(logKey, "INFO", message, className, Thread.currentThread().getStackTrace()[2].getLineNumber());
-            slf4jLogger.info(message);
+            addLogEntry("INFO", message);
+        }
+
+        @Override
+        public void info(String format, Object... args) {
+            String message = String.format(format, args);
+            addLogEntry("INFO", message);
         }
 
         @Override
         public void warn(String message) {
-            appendLog(logKey, "WARN", message, className, Thread.currentThread().getStackTrace()[2].getLineNumber());
-            slf4jLogger.warn(message);
+            addLogEntry("WARN", message);
+        }
+
+        @Override
+        public void warn(String format, Object... args) {
+            String message = String.format(format, args);
+            addLogEntry("WARN", message);
         }
 
         @Override
         public void error(String message) {
-            appendLog(logKey, "ERROR", message, className, Thread.currentThread().getStackTrace()[2].getLineNumber());
-            slf4jLogger.error(message);
+            addLogEntry("ERROR", message);
+        }
+
+        @Override
+        public void error(String format, Object... args) {
+            String message = String.format(format, args);
+            addLogEntry("ERROR", message);
         }
 
         @Override
         public void debug(String message) {
-            appendLog(logKey, "DEBUG", message, className, Thread.currentThread().getStackTrace()[2].getLineNumber());
-            slf4jLogger.debug(message);
+            addLogEntry("DEBUG", message);
+        }
+
+        @Override
+        public void debug(String format, Object... args) {
+            String message = String.format(format, args);
+            addLogEntry("DEBUG", message);
         }
     }
 
@@ -105,7 +147,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         /**
          * 创建检查项日志记录器
          */
-        public static Logable getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return service.new ItemLogger(logKey, service.getClass().getSimpleName());
         }
@@ -113,7 +155,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         /**
          * 创建检查项日志记录器，使用自定义类名
          */
-        public static Logable getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId, String className) {
+        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId, String className) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return service.new ItemLogger(logKey, className);
         }
@@ -149,7 +191,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             // 创建日志记录器
             String logKey = getLogKey(clusterId, hostname, itemId);
-            Logable cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
+            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
             
             // 记录日志
             cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
@@ -305,6 +347,10 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 清空该主机的检查项状态
         List<CheckItem> checkItems = getHostCheckItems();
         for (CheckItem item : checkItems) {
+            // 清除该检查项的旧日志
+            String logKey = getLogKey(clusterId, hostname, item.getId());
+            LogEntryManager.clearLogEntries(logKey);
+            
             item.setStatus(CheckItem.Status.WAITING);
             item.setMessage("等待检查");
         }
@@ -375,19 +421,12 @@ public class HostCheckServiceImpl implements HostCheckService {
                         continue;
                     }
 
-                    // 设置检查结果
-                    if (success) {
-                        hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.SUCCESS, "检查通过");
-                    } else {
-                        hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "检查未通过");
-                    }
-
                     // 更新缓存，使前端能立即看到检查结果
                     updateHostInfoCache(clusterId, hostInfo);
 
-                    // 为了避免连续执行过快，添加一个短暂延迟
-                    logger.info("检查项 {} 执行完成，暂停1秒后继续执行下一个检查项", item.getItemName());
-                    Thread.sleep(1000);
+                    // 每个检查项执行完后等待3秒
+                    logger.info("检查项 {} 执行完成，等待3秒后继续执行下一个检查项", item.getItemName());
+                    Thread.sleep(3000);
                 } catch (InterruptedException e) {
                     logger.info("主机检查被中断，主机: {}, 检查项: {}", hostInfo.getHostname(), item.getItemName());
                     hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.SKIPPED, "检查已终止");
@@ -398,14 +437,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                     logger.error("执行检查项 {} 失败: {}", item.getId(), e.getMessage(), e);
                     hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "检查失败: " + e.getMessage());
                     updateHostInfoCache(clusterId, hostInfo);
-                    
-                    // 即使某个检查项失败，也暂停一下再继续
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
                 }
             }
             
@@ -449,10 +480,10 @@ public class HostCheckServiceImpl implements HostCheckService {
             String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
             
             // 清除可能存在的旧日志
-            CacheUtils.removeKey(logKey);
+            LogEntryManager.clearLogEntries(logKey);
             
             // 创建日志记录器
-            Logable cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
             
             // 添加日志头部信息
             cacheLog.info("==== 开始串行检查: " + checkItem.getItemName() + " ====");
@@ -464,8 +495,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             cacheLog.info("正在执行检查任务...");
             
             // 获取检查器
-            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-            if (checker == null) {
+                    ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
+                    if (checker == null) {
                 String errorMsg = "未知的检查项: " + checkItem.getItemCode();
                 logger.error(errorMsg);
                 cacheLog.error("错误: " + errorMsg);
@@ -473,74 +504,38 @@ public class HostCheckServiceImpl implements HostCheckService {
                 
                 checkItem.setMessage(errorMsg);
                 updateHostInfoCache(clusterId, hostInfo);
-                return false;
-            }
+                        return false;
+                    }
 
             // 记录检查开始
             cacheLog.info("正在执行检查 " + checkItem.getItemName() + "...");
             
+            // 执行检查并记录结果
             try {
-                // 执行检查并获取结果
-                CheckItem resultItem = null;
-                try {
-                    // 检查当前线程是否已被中断
-                    if (Thread.currentThread().isInterrupted()) {
-                        throw new InterruptedException("检查任务已被中断");
-                    }
-                    
-                    resultItem = checker.check(clusterId, hostInfo, checkItem);
-                    
-                    // 检查结束后再次检查中断状态
-                    if (Thread.currentThread().isInterrupted()) {
-                        throw new InterruptedException("检查任务在完成后被中断");
-                    }
-                } catch (Exception e) {
-                    // 处理检查过程中的一般异常
-                    if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
-                        // 如果是中断异常或者线程已被中断，重新抛出InterruptedException
-                        throw new InterruptedException("检查过程中被中断: " + e.getMessage());
-                    } else {
-                        // 其他异常直接抛出
-                        throw e;
-                    }
-                }
+                checker.check(clusterId, hostInfo, checkItem);
                 
-                // 记录检查结果
-                if (resultItem.getStatus() == CheckItem.Status.SUCCESS) {
-                    cacheLog.info("检查执行成功");
+                // 检查结果
+                if (checkItem.getStatus() == CheckItem.Status.SUCCESS) {
+                    cacheLog.info("检查结果: " + checkItem.getStatus());
+                    cacheLog.info("详细信息: " + checkItem.getMessage());
+                    cacheLog.info("==== 检查通过 ====");
                 } else {
                     cacheLog.warn("检查执行失败");
-                }
-                cacheLog.info("检查结果: " + resultItem.getStatus());
-                cacheLog.info("详细信息: " + resultItem.getMessage());
-                
-                if (resultItem.getStatus() == CheckItem.Status.SUCCESS) {
-                    cacheLog.info("==== 检查成功完成 ====");
-                } else {
+                    cacheLog.info("检查结果: " + checkItem.getStatus());
+                    cacheLog.info("详细信息: " + checkItem.getMessage());
                     cacheLog.warn("==== 检查未通过 ====");
                 }
-                
-                return resultItem.getStatus() == CheckItem.Status.SUCCESS;
-            } catch (InterruptedException e) {
-                // 现在这个catch块是可达的，因为我们在try块中可能会抛出InterruptedException
-                String interruptMsg = "检查任务被中断: " + e.getMessage();
-                logger.info(interruptMsg);
-                cacheLog.warn(interruptMsg);
-                cacheLog.warn("==== 检查已终止 ====");
-                
-                Thread.currentThread().interrupt(); // 重置中断状态
-                return false;
-            } catch (Exception e) {
-                logger.error("执行检查失败: " + e.getMessage(), e);
-                
-                checkItem.setMessage("检查失败: " + e.getMessage());
                 updateHostInfoCache(clusterId, hostInfo);
-                
-                // 记录异常信息
-                cacheLog.error("检查过程中发生异常: " + e.getMessage());
-                cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
+                return true;
+                } catch (Exception e) {
+                String errorMsg = "执行检查过程中发生异常: " + e.getMessage();
+                logger.error(errorMsg, e);
+                cacheLog.error("错误: " + errorMsg);
                 cacheLog.error("==== 检查失败 ====");
                 
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("检查失败: " + e.getMessage());
+                updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
         } catch (Exception e) {
@@ -550,7 +545,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             updateHostInfoCache(clusterId, hostInfo);
             
             // 记录异常信息
-            Logable cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
             cacheLog.error("执行检查时发生异常: " + e.getMessage());
             cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
             cacheLog.error("==== 检查失败 ====");
@@ -609,12 +604,12 @@ public class HostCheckServiceImpl implements HostCheckService {
             if (Objects.isNull(map)) {
                 return Result.error("主机信息不存在");
             }
-            
+
             HostInfo hostInfo = map.get(hostname);
             if (Objects.isNull(hostInfo)) {
                 return Result.error("主机不存在");
             }
-            
+
             // 查找检查项
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
@@ -859,7 +854,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 failedHosts.add(hostname);
             }
         }
-        
+
         // 更新主机信息缓存
         CacheUtils.put(clusterId + Constants.HOST_MAP, map);
 
@@ -877,12 +872,12 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result getCheckItemLog(Integer clusterId, String hostname, Integer itemId) {
         // 构建日志缓存键
-        String logKey = getLogKey(clusterId, hostname, itemId);
+            String logKey = getLogKey(clusterId, hostname, itemId);
         logger.info("获取检查项日志, clusterId: {}, hostname: {}, itemId: {}, 缓存键: {}",
             clusterId, hostname, itemId, logKey);
         
-        // 从缓存中获取日志
-        String log = (String) CacheUtils.get(logKey);
+        // 从日志管理器获取日志
+        String log = LogEntryManager.getLogContent(logKey);
         
         if (log == null || log.isEmpty()) {
             logger.warn("未找到检查项日志, 缓存键: {}", logKey);
@@ -991,6 +986,10 @@ public class HostCheckServiceImpl implements HostCheckService {
                         continue;
                     }
                     
+                    // 清除旧日志
+                    String logKey = getLogKey(clusterId, hostname, id);
+                    LogEntryManager.clearLogEntries(logKey);
+                    
                     // 将检查项状态设置为等待检查
                     item.setStatus(CheckItem.Status.WAITING);
                     item.setMessage("等待检查");
@@ -1024,80 +1023,20 @@ public class HostCheckServiceImpl implements HostCheckService {
      * @return 日志键
      */
     private String getLogKey(Integer clusterId, String hostname, Integer itemId) {
-        return CheckLogger.CHECK_ITEM_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId;
+        return CHECK_ITEM_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId;
     }
 
     /**
      * 创建日志记录器
-     * 此方法现在返回Logable接口，而不是旧的ItemLogger
+     * 此方法现在返回CheckLogger接口，而不是旧的ItemLogger
      *
      * @param clusterId 集群ID
      * @param hostname 主机名
      * @param itemId 检查项ID
      * @return 日志记录器
      */
-    private Logable createLogger(Integer clusterId, String hostname, Integer itemId) {
+    private CheckLogger createLogger(Integer clusterId, String hostname, Integer itemId) {
         return LoggerFactory.getLogger(this, clusterId, hostname, itemId);
-    }
-
-    /**
-     * 记录日志（已弃用）
-     * 请使用Logable接口记录日志
-     *
-     * @param logKey 日志键
-     * @param level 日志级别
-     * @param msg 日志消息
-     * @deprecated 请使用Logable接口记录日志
-     */
-    @Deprecated
-    private void appendLog(String logKey, String level, String msg) {
-        String log = (String) CacheUtils.get(logKey);
-        log = (log == null ? "" : log);
-        
-        // 获取调用者信息
-        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        String className = stackTraceElements[2].getClassName();
-        className = className.substring(className.lastIndexOf(".") + 1);
-        int lineNumber = stackTraceElements[2].getLineNumber();
-        
-        // 获取时间和线程
-        String timestamp = formatDateToChinese(new Date());
-        String threadName = Thread.currentThread().getName();
-        
-        // 格式化日志
-        log += String.format("%s [%-5s] [%-15.15s] %s:%d - %s\n", 
-                timestamp, level, threadName, className, lineNumber, msg);
-        
-        // 更新缓存
-        CacheUtils.put(logKey, log);
-    }
-
-    /**
-     * 记录日志（已弃用）
-     * 请使用Logable接口记录日志
-     *
-     * @param logKey 日志键
-     * @param level 日志级别
-     * @param msg 日志消息
-     * @param className 类名
-     * @param lineNumber 行号
-     * @deprecated 请使用Logable接口记录日志
-     */
-    @Deprecated
-    private void appendLog(String logKey, String level, String msg, String className, int lineNumber) {
-        String log = (String) CacheUtils.get(logKey);
-        log = (log == null ? "" : log);
-        
-        // 获取时间和线程
-        String timestamp = formatDateToChinese(new Date());
-        String threadName = Thread.currentThread().getName();
-        
-        // 格式化日志
-        log += String.format("%s [%-5s] [%-15.15s] %s:%d - %s\n", 
-                timestamp, level, threadName, className, lineNumber, msg);
-        
-        // 更新缓存
-        CacheUtils.put(logKey, log);
     }
 
     // 添加格式化日期的工具方法
@@ -1139,7 +1078,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 创建日志记录器
-            Logable cacheLog = createLogger(clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = createLogger(clusterId, hostInfo.getHostname(), checkItem.getId());
             
             // 清空之前的日志
             CacheUtils.put(logKey, "");
@@ -1219,7 +1158,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 创建日志记录器
                 String logKey = getLogKey(clusterId, hostname, itemId);
-                Logable cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
+                CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
                 
                 // 记录日志
                 cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");

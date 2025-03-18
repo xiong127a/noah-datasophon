@@ -20,23 +20,28 @@ public class FileHandleChecker extends AbstractItemChecker {
         try {
             cacheLog.debug("开始检查文件句柄数 - 主机: %s", hostInfo.getHostname());
             cacheLog.debug("最小建议文件句柄数: %d", MIN_FILE_HANDLES);
+            cacheLog.info("正在检查系统最大文件句柄数限制...");
             
             // 执行ulimit命令获取当前最大文件句柄数
             cacheLog.debug("执行命令: ulimit -n");
+            cacheLog.info("执行命令: ulimit -n 获取当前文件句柄数...");
             String result = execCommand(session, "ulimit -n");
             
             if (result.startsWith("ERROR")) {
                 cacheLog.debug("命令执行失败: %s", result);
+                cacheLog.error("获取文件句柄数失败: %s", result);
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("检查失败: " + result);
                 return checkItem;
             }
 
             cacheLog.debug("命令返回值: %s", result.trim());
+            cacheLog.info("当前系统最大文件句柄数: %s", result.trim());
             int fileHandles = Integer.parseInt(result.trim());
             boolean success = fileHandles >= MIN_FILE_HANDLES;
             
             cacheLog.debug("当前文件句柄数: %d, 是否满足最小要求: %s", fileHandles, success ? "是" : "否");
+            cacheLog.info("检查结果: 当前文件句柄数为 %d, 最小建议值为 %d", fileHandles, MIN_FILE_HANDLES);
 
             checkItem.setStatus(success ? CheckItem.Status.SUCCESS : CheckItem.Status.FAILED);
             checkItem.setMessage(success ?
@@ -44,8 +49,10 @@ public class FileHandleChecker extends AbstractItemChecker {
                     String.format("当前最大文件句柄数(%d)小于建议值(%d)", fileHandles, MIN_FILE_HANDLES));
             
             cacheLog.debug("检查结果: %s, 消息: %s", checkItem.getStatus(), checkItem.getMessage());
+            cacheLog.info("文件句柄数检查%s", success ? "通过" : "未通过");
         } catch (Exception e) {
             cacheLog.debug("检查过程异常: %s", e.getMessage());
+            cacheLog.error("检查文件句柄数过程中发生异常: %s", e.getMessage());
             checkItem.setStatus(CheckItem.Status.FAILED);
             checkItem.setMessage("检查失败: " + e.getMessage());
         }

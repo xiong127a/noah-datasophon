@@ -40,6 +40,7 @@
         expandable
         :expandedRowRender="expandedRowRender"
         :expandIcon="customExpandIcon"
+        :class="'host-check-table'"
       >
       </a-table>
     </div>
@@ -87,16 +88,26 @@
               </a-menu>
             </a-dropdown>
           </div>
+          
+          <!-- 添加日志筛选组件 -->
+          <log-filter 
+            v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
+            :clusterId="checkItem.clusterId" 
+            :hostname="checkItem.hostname" 
+            :itemId="checkItem.id"
+            v-model="logContent"
+          ></log-filter>
         </div>
         <div class="log-content" v-loading="logLoading">
-          <pre v-if="logContent">{{ logContent }}</pre>
-          <div v-else class="no-log">暂无日志数据</div>
+          <pre>{{ logContent }}</pre>
         </div>
       </div>
     </a-modal>
   </div>
 </template>
 <script>
+import LogFilter from '../log/LogFilter.vue';
+
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
@@ -104,7 +115,7 @@ export default {
     depType:String,
   },
   components: {
-    // LogViewer
+    LogFilter
   },
   data() {
     return {
@@ -123,6 +134,8 @@ export default {
       loading: false,
       firstDataLoaded: false,
       checkItemsMap: {}, // 存储每个主机的校验项
+      checkItem: null, // 当前查看日志的检查项
+      showLogFilterOptions: true, // 是否显示日志筛选选项
       columns: [
         {
           title: "序号",
@@ -629,7 +642,39 @@ export default {
           title: '检查结果',
           dataIndex: 'message',
           key: 'message',
-          width: '20%'
+          width: '20%',
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            
+            // 检查文本是否存在
+            if (!text) return h('span', {}, ['-']);
+            
+            // 检查文本长度，如果超过20个字符就截断并显示省略号
+            const isLongText = text.length > 20;
+            const displayText = isLongText ? text.substr(0, 20) + '...' : text;
+            
+            // 使用a-tooltip组件提供鼠标悬浮显示完整内容的功能
+            return h('a-tooltip', {
+              props: {
+                // 只有当文本较长时才显示tooltip
+                title: isLongText ? text : '',
+                placement: 'topLeft',
+                // 只有当文本较长时才启用tooltip
+                mouseEnterDelay: isLongText ? 0.5 : 100000
+              }
+            }, [
+              h('span', {
+                style: {
+                  cursor: isLongText ? 'pointer' : 'default',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block',
+                  maxWidth: '100%'
+                }
+              }, [displayText])
+            ]);
+          }
         },
         {
           title: '操作',
@@ -1133,6 +1178,14 @@ export default {
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
       
+      // 设置当前检查项信息，用于日志筛选组件
+      this.checkItem = {
+        clusterId: this.clusterId,
+        hostname: hostname,
+        id: itemId,
+        itemName: itemName
+      };
+      
       // 打开日志弹窗并加载日志
       this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
       this.logVisible = true;
@@ -1273,6 +1326,8 @@ export default {
       this.currentLogHostname = null;
       this.currentLogItemId = null;
       this.currentLogItemName = null;
+      // 清理checkItem
+      this.checkItem = null;
     },
   },
   mounted() {
@@ -1516,6 +1571,22 @@ export default {
       margin-left: 4px;
       margin-right: 0;
     }
+  }
+}
+
+/* 主表格行高控制 */
+:deep(.host-check-table) {
+  .ant-table-thead > tr > th {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+  
+  .ant-table-tbody > tr > td {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    line-height: 1.5 !important;
   }
 }
 </style>
