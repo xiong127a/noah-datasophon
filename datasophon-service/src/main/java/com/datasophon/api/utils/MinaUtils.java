@@ -10,32 +10,27 @@ import org.apache.sshd.sftp.client.SftpClientFactory;
 import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.nio.file.attribute.PosixFilePermission;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 public class MinaUtils {
     
@@ -989,6 +984,71 @@ public class MinaUtils {
         } catch (Exception e) {
             LOG.error("执行本地命令失败: {}", e.getMessage());
             return "ERROR: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * 检查SSH免密配置状态
+     * @param session SSH会话
+     * @return 检查结果，包含是否成功和详细消息
+     */
+    public static CheckResult checkPasswordlessStatus(ClientSession session) {
+        try {
+            // 1. 检查SSH服务状态
+            String result = execCmdWithResult(session, "systemctl status sshd | grep Active");
+            if (result == null || !result.contains("active")) {
+                return new CheckResult(false, "SSH服务未运行");
+            }
+
+            // 2. 检查.ssh目录权限
+            result = execCmdWithResult(session, "ls -ld ~/.ssh");
+            if (result == null || !result.contains("drwx------")) {
+                return new CheckResult(false, "SSH目录权限不正确");
+            }
+
+            // 3. 检查authorized_keys文件权限
+            result = execCmdWithResult(session, "ls -l ~/.ssh/authorized_keys");
+            if (result == null || !result.contains("-rw-------")) {
+                return new CheckResult(false, "authorized_keys文件权限不正确");
+            }
+
+            // 4. 检查SSH配置
+            result = execCmdWithResult(session, "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
+            if (result == null || result.isEmpty()) {
+                return new CheckResult(false, "SSH配置未启用公钥认证");
+            }
+
+            // 5. 测试免密登录
+            result = execCmdWithResult(session, "ssh -o BatchMode=yes -o StrictHostKeyChecking=no localhost echo OK");
+            if (result == null || !"OK".equals(result.trim())) {
+                return new CheckResult(false, "免密登录测试失败");
+            }
+
+            return new CheckResult(true, "免密登录配置正确");
+        } catch (Exception e) {
+            LOG.error("免密检查过程发生异常", e);
+            return new CheckResult(false, "免密检查过程发生异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 检查结果类
+     */
+    public static class CheckResult {
+        private final boolean success;
+        private final String message;
+
+        public CheckResult(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getMessage() {
+            return message;
         }
     }
     
