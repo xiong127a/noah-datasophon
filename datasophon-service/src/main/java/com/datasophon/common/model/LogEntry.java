@@ -57,6 +57,8 @@ public class LogEntry implements Serializable {
     private String className;
     // 日志内容
     private String message;
+    // 源代码行号
+    private int lineNumber = -1;
     
     public LogEntry() {
     }
@@ -67,6 +69,15 @@ public class LogEntry implements Serializable {
         this.threadName = threadName;
         this.className = className;
         this.message = message;
+    }
+    
+    public LogEntry(Date timestamp, Level level, String threadName, String className, String message, int lineNumber) {
+        this.timestamp = timestamp;
+        this.level = level;
+        this.threadName = threadName;
+        this.className = className;
+        this.message = message;
+        this.lineNumber = lineNumber;
     }
     
     public Date getTimestamp() {
@@ -109,6 +120,14 @@ public class LogEntry implements Serializable {
         this.message = message;
     }
     
+    public int getLineNumber() {
+        return lineNumber;
+    }
+    
+    public void setLineNumber(int lineNumber) {
+        this.lineNumber = lineNumber;
+    }
+    
     /**
      * 将日志格式化为字符串
      * 包含完整信息：时间戳、级别、线程名、类名和消息
@@ -116,7 +135,11 @@ public class LogEntry implements Serializable {
     @Override
     public String toString() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        String classInfo = className;
+        if (lineNumber > 0) {
+            classInfo = String.format("%s:[%d]", className, lineNumber);
+        }
         return String.format("%s [%-5s] [%-20s] %-30s - %s", 
-                sdf.format(timestamp), level, threadName, className, message);
+                sdf.format(timestamp), level, threadName, classInfo, message);
     }
 } 
