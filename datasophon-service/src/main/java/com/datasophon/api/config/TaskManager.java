@@ -4,78 +4,63 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PreDestroy;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 任务管理器
- * 用于管理和监控异步任务
+ * 用于管理和跟踪异步任务的执行
  */
 @Component
 public class TaskManager {
     private static final Logger logger = LoggerFactory.getLogger(TaskManager.class);
     
-    // 任务ID生成器
-    private final AtomicInteger taskIdGenerator = new AtomicInteger(0);
-    
-    // 任务映射表
-    private final Map<String, TaskInfo> taskMap = new ConcurrentHashMap<>();
+    // 正在运行的任务列表
+    private final Map<String, TaskInfo> tasks = new ConcurrentHashMap<>();
     
     /**
-     * 注册一个新任务
-     * @param taskType 任务类型
+     * 注册任务
+     * @param type 任务类型
      * @param description 任务描述
-     * @param future 任务Future对象
+     * @param future 任务Future
      * @return 任务ID
      */
-    public String registerTask(String taskType, String description, Future<?> future) {
-        String taskId = generateTaskId(taskType);
-        TaskInfo taskInfo = new TaskInfo(taskId, taskType, description, future, System.currentTimeMillis());
-        taskMap.put(taskId, taskInfo);
+    public String registerTask(String type, String description, CompletableFuture<?> future) {
+        String taskId = generateTaskId(type);
+        
+        TaskInfo taskInfo = new TaskInfo();
+        taskInfo.type = type;
+        taskInfo.description = description;
+        taskInfo.future = future;
+        taskInfo.startTime = System.currentTimeMillis();
+        
+        tasks.put(taskId, taskInfo);
         logger.info("注册任务: {}, 描述: {}", taskId, description);
+        
         return taskId;
     }
     
     /**
-     * 取消指定任务
+     * 取消任务
      * @param taskId 任务ID
-     * @return 取消是否成功
+     * @return 是否成功取消
      */
     public boolean cancelTask(String taskId) {
-        TaskInfo taskInfo = taskMap.get(taskId);
-        if (taskInfo != null && !taskInfo.future.isDone() && !taskInfo.future.isCancelled()) {
+        TaskInfo taskInfo = tasks.get(taskId);
+        if (taskInfo != null && !taskInfo.future.isDone()) {
+            logger.info("取消任务: {}, 描述: {}", taskId, taskInfo.description);
             boolean result = taskInfo.future.cancel(true);
             if (result) {
-                logger.info("成功取消任务: {}", taskId);
                 taskInfo.endTime = System.currentTimeMillis();
-                taskInfo.status = TaskStatus.CANCELLED;
-            } else {
-                logger.warn("无法取消任务: {}", taskId);
+                taskInfo.success = false;
+                taskInfo.completed = true;
             }
             return result;
         }
         return false;
-    }
-    
-    /**
-     * 取消指定类型的所有任务
-     * @param taskType 任务类型
-     * @return 取消的任务数量
-     */
-    public int cancelTasksByType(String taskType) {
-        int count = 0;
-        for (Map.Entry<String, TaskInfo> entry : taskMap.entrySet()) {
-            if (entry.getValue().taskType.equals(taskType)) {
-                if (cancelTask(entry.getKey())) {
-                    count++;
-                }
-            }
-        }
-        logger.info("取消了 {} 个 {} 类型的任务", count, taskType);
-        return count;
     }
     
     /**
@@ -84,113 +69,106 @@ public class TaskManager {
      * @param success 是否成功
      */
     public void markTaskCompleted(String taskId, boolean success) {
-        TaskInfo taskInfo = taskMap.get(taskId);
+        TaskInfo taskInfo = tasks.get(taskId);
         if (taskInfo != null) {
             taskInfo.endTime = System.currentTimeMillis();
-            taskInfo.status = success ? TaskStatus.COMPLETED : TaskStatus.FAILED;
-            logger.info("任务 {} {}", taskId, success ? "完成" : "失败");
+            taskInfo.success = success;
+            taskInfo.completed = true;
+            logger.info("任务完成: {}, 结果: {}", taskId, success ? "成功" : "失败");
         }
     }
     
     /**
      * 清理已完成的任务
-     * @param maxAgeMs 任务最大保留时间（毫秒）
+     * @param olderThanMs 清理多久之前完成的任务（毫秒）
      * @return 清理的任务数量
      */
-    public int cleanCompletedTasks(long maxAgeMs) {
-        int count = 0;
-        long now = System.currentTimeMillis();
-        for (Map.Entry<String, TaskInfo> entry : taskMap.entrySet()) {
-            TaskInfo info = entry.getValue();
-            if (info.isDone() && (now - info.endTime > maxAgeMs)) {
-                taskMap.remove(entry.getKey());
-                count++;
-            }
+    public int cleanCompletedTasks(long olderThanMs) {
+        long current = System.currentTimeMillis();
+        long threshold = current - olderThanMs;
+        
+        // 找出需要清理的任务
+        Map<String, TaskInfo> tasksToRemove = tasks.entrySet().stream()
+                .filter(entry -> entry.getValue().completed && entry.getValue().endTime < threshold)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        
+        // 清理任务
+        for (String taskId : tasksToRemove.keySet()) {
+            tasks.remove(taskId);
         }
+        
+        int count = tasksToRemove.size();
         if (count > 0) {
-            logger.info("清理了 {} 个已完成/取消的任务", count);
+            logger.info("清理了 {} 个已完成的任务", count);
         }
+        
         return count;
     }
     
     /**
-     * 检查任务是否正在运行
+     * 获取任务信息
      * @param taskId 任务ID
-     * @return 是否在运行
+     * @return 任务信息
      */
-    public boolean isTaskRunning(String taskId) {
-        TaskInfo taskInfo = taskMap.get(taskId);
-        return taskInfo != null && !taskInfo.isDone();
+    public TaskInfo getTaskInfo(String taskId) {
+        return tasks.get(taskId);
+    }
+    
+    /**
+     * 检查任务是否完成
+     * @param taskId 任务ID
+     * @return 是否完成
+     */
+    public boolean isTaskCompleted(String taskId) {
+        TaskInfo taskInfo = tasks.get(taskId);
+        return taskInfo != null && taskInfo.completed;
+    }
+    
+    /**
+     * 检查任务是否成功
+     * @param taskId 任务ID
+     * @return 是否成功
+     */
+    public boolean isTaskSuccessful(String taskId) {
+        TaskInfo taskInfo = tasks.get(taskId);
+        return taskInfo != null && taskInfo.completed && taskInfo.success;
+    }
+    
+    /**
+     * 获取任务执行时间
+     * @param taskId 任务ID
+     * @return 执行时间（毫秒）
+     */
+    public long getTaskExecutionTime(String taskId) {
+        TaskInfo taskInfo = tasks.get(taskId);
+        if (taskInfo == null) {
+            return -1;
+        }
+        
+        if (taskInfo.completed) {
+            return taskInfo.endTime - taskInfo.startTime;
+        } else {
+            return System.currentTimeMillis() - taskInfo.startTime;
+        }
     }
     
     /**
      * 生成任务ID
-     * @param taskType 任务类型
-     * @return 任务ID
      */
-    private String generateTaskId(String taskType) {
-        return taskType + "-" + taskIdGenerator.incrementAndGet();
+    private String generateTaskId(String type) {
+        return type + "_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 10000);
     }
     
     /**
-     * 应用关闭时尝试取消所有运行中的任务
-     */
-    @PreDestroy
-    public void shutdown() {
-        logger.info("应用关闭，取消所有运行中的任务...");
-        int count = 0;
-        for (TaskInfo taskInfo : taskMap.values()) {
-            if (!taskInfo.isDone()) {
-                taskInfo.future.cancel(true);
-                count++;
-            }
-        }
-        logger.info("已取消 {} 个运行中的任务", count);
-    }
-    
-    /**
-     * 任务状态枚举
-     */
-    public enum TaskStatus {
-        RUNNING,    // 运行中
-        COMPLETED,  // 已完成
-        FAILED,     // 失败
-        CANCELLED   // 已取消
-    }
-    
-    /**
-     * 任务信息类
+     * 任务信息内部类
      */
     public static class TaskInfo {
-        private final String taskId;
-        private final String taskType;
-        private final String description;
-        private final Future<?> future;
-        private final long startTime;
-        private long endTime;
-        private TaskStatus status;
-        
-        public TaskInfo(String taskId, String taskType, String description, Future<?> future, long startTime) {
-            this.taskId = taskId;
-            this.taskType = taskType;
-            this.description = description;
-            this.future = future;
-            this.startTime = startTime;
-            this.status = TaskStatus.RUNNING;
-        }
-        
-        public boolean isDone() {
-            return future.isDone() || future.isCancelled() || 
-                   status == TaskStatus.COMPLETED || 
-                   status == TaskStatus.FAILED || 
-                   status == TaskStatus.CANCELLED;
-        }
-        
-        public long getRunningTimeMs() {
-            if (endTime > 0) {
-                return endTime - startTime;
-            }
-            return System.currentTimeMillis() - startTime;
-        }
+        String type;
+        String description;
+        CompletableFuture<?> future;
+        long startTime;
+        long endTime;
+        boolean completed;
+        boolean success;
     }
 } 

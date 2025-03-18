@@ -12,30 +12,32 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 异步任务线程池配置
+ * 任务配置
+ * 配置异步任务执行器
  */
 @Configuration
 @EnableAsync
 @EnableScheduling
 public class TaskConfig {
     private static final Logger logger = LoggerFactory.getLogger(TaskConfig.class);
-
+    
+    /**
+     * 通用任务执行器
+     */
     @Bean("taskExecutor")
     public Executor taskExecutor() {
-        logger.info("初始化异步任务线程池...");
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        
-        // 核心线程池大小
+        // 核心线程数
         executor.setCorePoolSize(10);
         // 最大线程数
         executor.setMaxPoolSize(20);
         // 队列容量
-        executor.setQueueCapacity(200);
-        // 线程活跃时间（秒）
+        executor.setQueueCapacity(100);
+        // 线程名前缀
+        executor.setThreadNamePrefix("task-exec-");
+        // 线程空闲时间（秒）
         executor.setKeepAliveSeconds(60);
-        // 线程名称前缀
-        executor.setThreadNamePrefix("async-task-");
-        // 拒绝策略
+        // 拒绝策略：由调用线程处理
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         // 等待所有任务结束后再关闭线程池
         executor.setWaitForTasksToCompleteOnShutdown(true);
@@ -43,25 +45,29 @@ public class TaskConfig {
         executor.setAwaitTerminationSeconds(60);
         
         executor.initialize();
+        logger.info("初始化通用任务执行器: 核心线程={}, 最大线程={}, 队列容量={}",
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), 100);
+        
         return executor;
     }
-
+    
+    /**
+     * 检查任务专用执行器
+     */
     @Bean("checkExecutor")
     public Executor checkExecutor() {
-        logger.info("初始化检查任务线程池...");
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        
-        // 核心线程池大小
+        // 核心线程数
         executor.setCorePoolSize(5);
         // 最大线程数
         executor.setMaxPoolSize(10);
         // 队列容量
-        executor.setQueueCapacity(100);
-        // 线程活跃时间（秒）
-        executor.setKeepAliveSeconds(300);
-        // 线程名称前缀
-        executor.setThreadNamePrefix("check-task-");
-        // 拒绝策略
+        executor.setQueueCapacity(50);
+        // 线程名前缀
+        executor.setThreadNamePrefix("check-exec-");
+        // 线程空闲时间（秒）
+        executor.setKeepAliveSeconds(120);
+        // 拒绝策略：由调用线程处理
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         // 等待所有任务结束后再关闭线程池
         executor.setWaitForTasksToCompleteOnShutdown(true);
@@ -69,6 +75,9 @@ public class TaskConfig {
         executor.setAwaitTerminationSeconds(60);
         
         executor.initialize();
+        logger.info("初始化检查任务执行器: 核心线程={}, 最大线程={}, 队列容量={}",
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), 50);
+        
         return executor;
     }
 } 
