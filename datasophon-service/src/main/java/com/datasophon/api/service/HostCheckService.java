@@ -110,4 +110,13 @@ public interface HostCheckService {
      * @return 操作结果
      */
     Result retryCheckItems(Integer clusterId, String hostname, List<String> itemNames);
+
+    /**
+     * 批量修复检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemIds 检查项ID列表
+     * @return 修复结果
+     */
+    Result batchFixCheckItem(Integer clusterId, String hostname, List<Integer> itemIds);
 } 

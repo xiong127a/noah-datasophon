@@ -10,43 +10,166 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractItemChecker implements ItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(AbstractItemChecker.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
+    private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
 
     protected ClientSession session;
+    // 当前检查项的日志缓存键
+    protected String currentLogKey;
+    
+    /**
+     * 基于检查项的日志实现，同时写入缓存和控制台日志
+     */
+    protected class CacheItemLogger implements CheckLogger {
+        private final String className;
+        private final Logger slf4jLogger;
+
+        public CacheItemLogger() {
+            this.className = AbstractItemChecker.this.getClass().getSimpleName();
+            this.slf4jLogger = LoggerFactory.getLogger(AbstractItemChecker.this.getClass());
+        }
+
+        private String formatLogMessage(String level, String message) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String timestamp = sdf.format(new Date());
+            String threadName = Thread.currentThread().getName();
+            // 标准系统日志格式：2025-03-17 19:57:50 [INFO ] [host-check-work] HostCheckServiceImpl:461 - 消息
+            // 使用String.format确保日志级别有5个字符宽度（右填充空格）
+            return String.format("%s [%-5s] [%s] %s - %s", timestamp, level, threadName, className, message);
+        }
+
+        @Override
+        public void info(String message) {
+            appendCacheLog(formatLogMessage("INFO", message));
+            slf4jLogger.info(message);
+        }
+
+        @Override
+        public void info(String format, Object... args) {
+            String message = String.format(format, args);
+            appendCacheLog(formatLogMessage("INFO", message));
+            slf4jLogger.info(message);
+        }
+
+        @Override
+        public void warn(String message) {
+            appendCacheLog(formatLogMessage("WARN", message));
+            slf4jLogger.warn(message);
+        }
+
+        @Override
+        public void warn(String format, Object... args) {
+            String message = String.format(format, args);
+            appendCacheLog(formatLogMessage("WARN", message));
+            slf4jLogger.warn(message);
+        }
+
+        @Override
+        public void error(String message) {
+            appendCacheLog(formatLogMessage("ERROR", message));
+            slf4jLogger.error(message);
+        }
+
+        @Override
+        public void error(String format, Object... args) {
+            String message = String.format(format, args);
+            appendCacheLog(formatLogMessage("ERROR", message));
+            slf4jLogger.error(message);
+        }
+
+        @Override
+        public void debug(String message) {
+            appendCacheLog(formatLogMessage("DEBUG", message));
+            slf4jLogger.debug(message);
+        }
+
+        @Override
+        public void debug(String format, Object... args) {
+            String message = String.format(format, args);
+            appendCacheLog(formatLogMessage("DEBUG", message));
+            slf4jLogger.debug(message);
+        }
+    }
+    
+    // 供子类使用的日志记录器实例，同时记录到缓存和控制台
+    protected final CheckLogger cacheLog = new CacheItemLogger();
+
+    // 设置当前检查项的日志缓存键
+    protected void setCurrentLogKey(Integer clusterId, String hostname, Integer itemId) {
+        this.currentLogKey = CHECK_ITEM_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId;
+    }
+    
+    // 记录日志到当前检查项的缓存
+    protected void appendCacheLog(String message) {
+        if (currentLogKey != null) {
+            String logContent = (String) CacheUtils.get(currentLogKey);
+            if (logContent == null) {
+                logContent = "";
+            }
+            logContent += message + "\n";
+            CacheUtils.put(currentLogKey, logContent);
+        }
+    }
+
+    /**
+     * 格式化日期为中文格式
+     * @param date 日期对象
+     * @return 格式化后的中文日期字符串
+     */
+    protected String formatDateToChinese(Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日 HH时mm分ss秒");
+        return sdf.format(date);
+    }
+
+    /**
+     * 获取当前时间的中文格式
+     * @return 当前时间的中文格式字符串
+     */
+    protected String getCurrentTimeInChinese() {
+        return formatDateToChinese(new Date());
+    }
 
     protected String execCommand(ClientSession session, String command) throws InterruptedException {
         // 检查线程是否已被中断
         if (Thread.currentThread().isInterrupted()) {
             logger.info("命令执行被中断: {}", command);
+            cacheLog.info("命令执行被中断: %s", command);
             throw new InterruptedException("命令执行被中断");
         }
         
         try {
             if (session == null) {
                 logger.error("SSH会话为空，无法执行命令");
+                cacheLog.error("SSH会话为空，无法执行命令");
                 return "ERROR: SSH会话为空";
             }
             
             logger.debug("准备执行命令: {} 在主机: {}", command, session.getConnectAddress());
+            cacheLog.debug("准备执行命令: %s 在主机: %s", command, session.getConnectAddress());
             
             // 创建执行命令的通道
             try (org.apache.sshd.client.channel.ClientChannel channel = session.createExecChannel(command)) {
                 logger.debug("命令通道已创建，正在打开通道");
+                cacheLog.debug("命令通道已创建，正在打开通道");
                 
                 // 再次检查线程是否已被中断
                 if (Thread.currentThread().isInterrupted()) {
                     logger.info("命令通道创建后执行被中断: {}", command);
+                    cacheLog.info("命令通道创建后执行被中断: %s", command);
                     throw new InterruptedException("命令执行被中断");
                 }
                 
                 // 启动命令
                 channel.open().verify(30, TimeUnit.SECONDS);
                 logger.debug("命令通道已打开，开始执行命令");
+                cacheLog.debug("命令通道已打开，开始执行命令");
                 
                 // 读取命令输出
                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
@@ -57,6 +180,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 // 等待命令完成
                 long waitTime = TimeUnit.SECONDS.toMillis(30);
                 logger.debug("等待命令执行完成，超时时间: {}ms", waitTime);
+                cacheLog.debug("等待命令执行完成，超时时间: %dms", waitTime);
                 
                 long startTime = System.currentTimeMillis();
                 long remainingTime = waitTime;
@@ -66,6 +190,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     // 检查线程是否已被中断
                     if (Thread.currentThread().isInterrupted()) {
                         logger.info("命令执行等待过程中被中断: {}", command);
+                        cacheLog.info("命令执行等待过程中被中断: %s", command);
                         throw new InterruptedException("命令执行被中断");
                     }
                     
@@ -92,16 +217,21 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 if (System.currentTimeMillis() - startTime >= waitTime) {
                     logger.warn("命令执行超时: {}, 主机: {}, 已等待时间: {}ms", 
                         command, session.getConnectAddress(), (endTime - startTime));
+                    cacheLog.warn("命令执行超时: %s, 主机: %s, 已等待时间: %dms", 
+                        command, session.getConnectAddress(), (endTime - startTime));
                     return "ERROR: 命令执行超时，请检查网络或主机状态";
                 }
                 
                 logger.debug("命令执行完成，耗时: {}ms", (endTime - startTime));
+                cacheLog.debug("命令执行完成，耗时: %dms", (endTime - startTime));
                 
                 // 获取命令执行的退出状态
                 Integer exitStatus = channel.getExitStatus();
                 if (exitStatus != null && exitStatus != 0) {
                     String errorMsg = err.toString();
                     logger.warn("命令执行失败，退出状态: {}, 错误信息: {}, 主机: {}", 
+                        exitStatus, errorMsg, session.getConnectAddress());
+                    cacheLog.warn("命令执行失败，退出状态: %d, 错误信息: %s, 主机: %s", 
                         exitStatus, errorMsg, session.getConnectAddress());
                     return "ERROR: " + (errorMsg.isEmpty() ? "未知错误，退出状态: " + exitStatus : errorMsg);
                 }
@@ -110,8 +240,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 String result = out.toString();
                 if (result.length() > 100) {
                     logger.debug("命令执行成功，输出(前100字符): {}", result.substring(0, 100) + "...");
+                    cacheLog.debug("命令执行成功，输出(前100字符): %s", result.substring(0, 100) + "...");
                 } else {
                     logger.debug("命令执行成功，输出: {}", result);
+                    cacheLog.debug("命令执行成功，输出: %s", result);
                 }
                 return result;
             }
@@ -122,6 +254,8 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } catch (Exception e) {
             logger.error("执行命令 {} 失败: {}, 异常类型: {}", 
                 command, e.getMessage(), e.getClass().getName(), e);
+            cacheLog.error("执行命令 %s 失败: %s, 异常类型: %s", 
+                command, e.getMessage(), e.getClass().getName());
             
             // 检查是否是由于中断导致的异常
             if (e.getCause() instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
@@ -133,66 +267,19 @@ public abstract class AbstractItemChecker implements ItemChecker {
         }
     }
 
-    protected void openSession(HostInfo hostInfo) throws InterruptedException {
-        // 检查线程是否已被中断
-        if (Thread.currentThread().isInterrupted()) {
-            logger.info("建立SSH连接被中断, 主机: {}", hostInfo.getHostname());
-            throw new InterruptedException("建立SSH连接被中断");
-        }
-        
-        // 记录开始尝试建立连接
-        logger.info("尝试建立SSH连接: {}@{}:{}", 
-            hostInfo.getSshUser(), hostInfo.getHostname(), hostInfo.getSshPort());
-        
-        // 等待5秒，防止过快发送请求导致检查失败
-        logger.info("等待5秒后开始连接主机 {}", hostInfo.getHostname());
+    /**
+     * 打开SSH会话
+     */
+    protected void openSession(HostInfo hostInfo) {
         try {
-            // 分成5次，每次等待1秒，这样可以更频繁地检查中断状态
-            for (int i = 0; i < 5; i++) {
-                // 在每次等待前检查中断状态
-                if (Thread.currentThread().isInterrupted()) {
-                    logger.info("建立SSH连接等待过程被中断, 主机: {}", hostInfo.getHostname());
-                    throw new InterruptedException("建立SSH连接被中断");
-                }
-                Thread.sleep(1000);
-            }
-        } catch (InterruptedException e) {
-            logger.error("连接等待被中断", e);
-            Thread.currentThread().interrupt(); // 重置中断状态
-            throw e; // 重新抛出中断异常
-        }
-        
-        try {
-            // 再次检查中断状态
-            if (Thread.currentThread().isInterrupted()) {
-                logger.info("建立SSH连接准备连接时被中断, 主机: {}", hostInfo.getHostname());
-                throw new InterruptedException("建立SSH连接被中断");
-            }
+            // 通过Mina工具打开SSH连接
+            session = MinaUtils.openConnection(hostInfo.getHostname(), 
+                    hostInfo.getSshPort(), hostInfo.getSshUser());
             
-            long startTime = System.currentTimeMillis();
-            session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
-            long endTime = System.currentTimeMillis();
+            // cacheLog是final字段，已经在类初始化时创建
             
-            if (session != null && session.isOpen()) {
-                logger.info("SSH连接建立成功: {}@{}:{}, 耗时: {}ms", 
-                    hostInfo.getSshUser(), hostInfo.getHostname(), hostInfo.getSshPort(), 
-                    (endTime - startTime));
-            } else {
-                logger.error("SSH连接建立失败: {}@{}:{}, MinaUtils.openConnection方法返回null或未打开的会话", 
-                    hostInfo.getSshUser(), hostInfo.getHostname(), hostInfo.getSshPort());
-            }
         } catch (Exception e) {
-            logger.error("SSH连接建立异常: {}@{}:{}, 错误信息: {}", 
-                hostInfo.getSshUser(), hostInfo.getHostname(), hostInfo.getSshPort(), 
-                e.getMessage(), e);
-            
-            // 检查是否是由于中断导致的异常
-            if (e.getCause() instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
-                Thread.currentThread().interrupt();
-                throw new InterruptedException("建立SSH连接过程中被中断: " + e.getMessage());
-            }
-            
-            session = null;
+            throw new RuntimeException("打开SSH连接失败: " + e.getMessage(), e);
         }
     }
 
@@ -201,16 +288,21 @@ public abstract class AbstractItemChecker implements ItemChecker {
             try {
                 logger.debug("正在关闭SSH会话: {}", 
                     session.getConnectAddress() != null ? session.getConnectAddress() : "未知地址");
+                cacheLog.debug("正在关闭SSH会话: %s", 
+                    session.getConnectAddress() != null ? session.getConnectAddress() : "未知地址");
                 
                 long startTime = System.currentTimeMillis();
                 session.close();
                 long endTime = System.currentTimeMillis();
                 
                 logger.debug("SSH会话关闭成功，耗时: {}ms", (endTime - startTime));
+                cacheLog.debug("SSH会话关闭成功，耗时: %dms", (endTime - startTime));
             } catch (java.io.IOException e) {
                 logger.error("关闭SSH会话异常: {}", e.getMessage(), e);
+                cacheLog.error("关闭SSH会话异常: %s", e.getMessage());
             } catch (Exception e) {
                 logger.error("关闭SSH会话时发生未预期的异常: {}", e.getMessage(), e);
+                cacheLog.error("关闭SSH会话时发生未预期的异常: %s", e.getMessage());
             } finally {
                 session = null;
             }
@@ -220,6 +312,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
     @Override
     public final CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        
+        // 设置当前检查项的日志缓存键
+        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
         
         // 先将状态设置为检查中
         checkItem.setStatus(CheckItem.Status.CHECKING);
@@ -317,16 +412,88 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     @Override
     public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        
+        // 设置当前检查项的日志缓存键
+        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        
+        // 记录修复开始
+        cacheLog.info("===============================================");
+        cacheLog.info("开始修复检查项: " + checkItem.getItemName());
+        cacheLog.info("主机: " + hostInfo.getHostname());
+        cacheLog.info("检查项ID: " + checkItem.getId());
+        cacheLog.info("开始时间: " + getCurrentTimeInChinese());
+        cacheLog.info("===============================================");
+        
         try {
-            // 获取SSH会话并执行具体修复逻辑
+            // 建立SSH连接
+            cacheLog.info("正在建立SSH连接...");
             openSession(hostInfo);
-            boolean doFix = doFix(hostInfo, checkItem);
-            doCheck(hostInfo,checkItem);
+            
+            if (session == null) {
+                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getHostname();
+                logger.error(errorMsg);
+                cacheLog.error("错误: " + errorMsg);
+                cacheLog.error("修复失败: 无法连接到主机");
+                return false;
+            }
+            
+            cacheLog.info("SSH连接建立成功，开始执行修复操作");
+            
+            // 执行具体修复逻辑
+            boolean doFixResult = false;
+            try {
+                cacheLog.info("正在执行修复逻辑...");
+                doFixResult = doFix(hostInfo, checkItem);
+                cacheLog.info("修复逻辑执行" + (doFixResult ? "成功" : "失败"));
+            } catch (Exception e) {
+                String errorMsg = "执行修复逻辑时发生异常: " + e.getMessage();
+                logger.error(errorMsg, e);
+                cacheLog.error("错误: " + errorMsg);
+                return false;
+            }
+            
+            // 再次检查，验证修复结果
+            try {
+                cacheLog.info("正在验证修复结果...");
+                CheckItem checkResult = doCheck(hostInfo, checkItem);
+                cacheLog.info("验证结果: " + (checkResult.getStatus() == CheckItem.Status.SUCCESS ? "成功" : "失败"));
+                cacheLog.info("验证信息: " + checkResult.getMessage());
+            } catch (Exception e) {
+                String errorMsg = "验证修复结果时发生异常: " + e.getMessage();
+                logger.error(errorMsg, e);
+                cacheLog.warn("警告: " + errorMsg);
+                // 不因为验证异常而影响修复结果
+            }
+            
+            // 关闭会话
+            cacheLog.info("正在关闭SSH连接...");
             closeSession();
-            return doFix;
+            cacheLog.info("SSH连接已关闭");
+            
+            // 记录最终结果
+            cacheLog.info("修复操作" + (doFixResult ? "成功完成" : "失败"));
+            
+            return doFixResult;
         } catch (Exception e) {
-            logger.error("修复失败", e);
+            String errorMsg = "修复过程中发生异常: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error("错误: " + errorMsg);
+            
+            // 确保会话被关闭
+            if (session != null) {
+                cacheLog.info("正在关闭SSH连接...");
+                closeSession();
+                cacheLog.info("SSH连接已关闭");
+            }
+            
             return false;
+        } finally {
+            // 记录修复结束
+            cacheLog.info("===============================================");
+            cacheLog.info("修复操作结束");
+            cacheLog.info("结束时间: " + getCurrentTimeInChinese());
+            cacheLog.info("===============================================");
         }
     }
 
@@ -364,7 +531,4 @@ public abstract class AbstractItemChecker implements ItemChecker {
             }
         }
     }
-
-    
-
 } 

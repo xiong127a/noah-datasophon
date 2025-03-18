@@ -1398,6 +1398,7 @@ export default {
   height: calc(90vh - 150px);
   display: flex;
   flex-direction: column;
+  position: relative; /* 添加相对定位，作为滚动容器的参考点 */
 
   .log-header {
     margin-bottom: 16px;
@@ -1414,6 +1415,7 @@ export default {
   .log-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: auto;
     padding: 16px;
     background-color: #1e1e1e;
     border-radius: 4px;
@@ -1421,15 +1423,25 @@ export default {
     font-size: 14px;
     line-height: 1.5;
     color: #d4d4d4;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 0;
+      overflow-x: visible; /* 内容可见，滚动由外层容器控制 */
+      flex: 1;
+    }
 
     .no-log {
       text-align: center;
       padding: 12px;
       color: rgba(255, 255, 255, 0.45);
     }
-
+    
+    /* 滚动条样式 */
     &::-webkit-scrollbar {
       width: 8px;
       height: 8px;

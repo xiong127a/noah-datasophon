@@ -19,81 +19,152 @@ public class JavaEnvChecker extends AbstractItemChecker {
     private static final String DEFAULT_JDK_PATH = "/usr/local/jdk1.8.0_333";
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
         try {
+            cacheLog.info("==== Java环境检查开始 ====");
+            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("最低Java版本要求: " + MIN_JAVA_VERSION);
+            cacheLog.info("默认JDK路径: " + DEFAULT_JDK_PATH);
+            
             // 步骤1: 检查是否有java命令
+            cacheLog.info("\n步骤1: 检查系统是否存在java命令");
             logger.info("开始检查主机 {} 的Java环境", hostInfo.getHostname());
+            
             String javaExistsResult = execCommand(session, "command -v java || echo 'NOT_FOUND'");
             boolean javaCommandExists = !javaExistsResult.contains("NOT_FOUND") && !javaExistsResult.startsWith("ERROR");
+            
+            cacheLog.info("检查结果: " + (javaCommandExists ? "找到java命令" : "未找到java命令"));
 
             if (javaCommandExists) {
                 // 步骤2: 检查java -version是否显示为Java 8
+                cacheLog.info("\n步骤2: 检查java版本是否符合要求");
                 logger.info("主机 {} 存在java命令，检查java版本", hostInfo.getHostname());
+                
                 String javaVersionOutput = execCommand(session, "java -version 2>&1");
                 if (!javaVersionOutput.startsWith("ERROR")) {
                     String version = parseJavaVersion(javaVersionOutput);
-                    if (isVersionMeetRequirement(version, MIN_JAVA_VERSION)) {
+                    cacheLog.info("解析到的Java版本: " + version);
+                    
+                    boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
+                    cacheLog.info("版本检查结果: " + (versionMeetRequirement ? "符合要求" : "不符合要求"));
+                    
+                    if (versionMeetRequirement) {
+                        cacheLog.info("\n==== Java环境检查通过 ====");
+                        cacheLog.info("Java环境正常，版本: " + version);
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
                         checkItem.setMessage("Java环境正常，版本: " + version);
                         return checkItem;
                     } else {
+                        cacheLog.info("java版本 " + version + " 低于要求的 " + MIN_JAVA_VERSION);
                         logger.info("主机 {} 的java版本 {} 低于要求的 {}", hostInfo.getHostname(), version, MIN_JAVA_VERSION);
                     }
+                } else {
+                    cacheLog.info("获取Java版本失败: " + javaVersionOutput);
                 }
             }
 
             // 步骤3: 检查JAVA_HOME环境变量是否存在
+            cacheLog.info("\n步骤3: 检查JAVA_HOME环境变量");
             logger.info("检查主机 {} 的JAVA_HOME环境变量", hostInfo.getHostname());
+            
             String javaHomeResult = execCommand(session, "echo $JAVA_HOME");
-            if (!javaHomeResult.isEmpty() && !javaHomeResult.startsWith("ERROR")) {
+            boolean javaHomeExists = !javaHomeResult.isEmpty() && !javaHomeResult.startsWith("ERROR");
+            cacheLog.info("JAVA_HOME检查结果: " + (javaHomeExists ? "存在，值为: " + javaHomeResult : "不存在或为空"));
+            
+            if (javaHomeExists) {
                 // 步骤4: 检查JAVA_HOME指向的路径是否是Java 8
+                cacheLog.info("\n步骤4: 检查JAVA_HOME指向的Java是否符合要求");
                 logger.info("主机 {} 存在JAVA_HOME: {}, 检查该路径下的Java版本", hostInfo.getHostname(), javaHomeResult);
+                
                 String javaHomeVersionCmd = "[ -f " + javaHomeResult + "/bin/java ] && " + javaHomeResult + "/bin/java -version 2>&1 || echo 'NOT_EXECUTABLE'";
+                cacheLog.info("执行检查命令: " + javaHomeVersionCmd);
+                
                 String javaHomeVersionOutput = execCommand(session, javaHomeVersionCmd);
+                boolean javaHomeExecutable = !javaHomeVersionOutput.contains("NOT_EXECUTABLE") && !javaHomeVersionOutput.startsWith("ERROR");
+                cacheLog.info("JAVA_HOME下Java可执行性检查: " + (javaHomeExecutable ? "可执行" : "不可执行"));
 
-                if (!javaHomeVersionOutput.contains("NOT_EXECUTABLE") && !javaHomeVersionOutput.startsWith("ERROR")) {
+                if (javaHomeExecutable) {
                     String version = parseJavaVersion(javaHomeVersionOutput);
-                    if (isVersionMeetRequirement(version, MIN_JAVA_VERSION)) {
+                    cacheLog.info("JAVA_HOME下Java版本: " + version);
+                    
+                    boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
+                    cacheLog.info("版本检查结果: " + (versionMeetRequirement ? "符合要求" : "不符合要求"));
+                    
+                    if (versionMeetRequirement) {
+                        cacheLog.info("\n==== Java环境检查通过 ====");
+                        cacheLog.info("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult);
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
                         checkItem.setMessage("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult);
                         return checkItem;
                     } else {
+                        cacheLog.info("JAVA_HOME指向的Java版本 " + version + " 低于要求的 " + MIN_JAVA_VERSION);
                         logger.info("主机 {} 的JAVA_HOME指向的Java版本 {} 低于要求的 {}", hostInfo.getHostname(), version, MIN_JAVA_VERSION);
                     }
+                } else {
+                    cacheLog.info("JAVA_HOME指向的路径不包含可执行的Java");
                 }
             }
 
             // 步骤5: 检查/usr/local/jdk1.8.0_333目录是否存在
+            cacheLog.info("\n步骤5: 检查默认JDK路径是否存在");
             logger.info("检查主机 {} 的默认JDK路径 {}", hostInfo.getHostname(), DEFAULT_JDK_PATH);
+            
             String jdkPathExistsCmd = "[ -d " + DEFAULT_JDK_PATH + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
+            cacheLog.info("执行检查命令: " + jdkPathExistsCmd);
+            
             String jdkPathResult = execCommand(session, jdkPathExistsCmd);
+            boolean jdkPathExists = jdkPathResult.contains("EXISTS");
+            cacheLog.info("默认JDK路径检查结果: " + (jdkPathExists ? "存在" : "不存在"));
 
-            if (jdkPathResult.contains("EXISTS")) {
+            if (jdkPathExists) {
                 // 步骤6: 检查该目录是否是Java 8
+                cacheLog.info("\n步骤6: 检查默认JDK路径的Java版本");
                 logger.info("主机 {} 存在默认JDK路径，检查该路径下的Java版本", hostInfo.getHostname());
+                
                 String defaultPathVersionCmd = "[ -f " + DEFAULT_JDK_PATH + "/bin/java ] && " + DEFAULT_JDK_PATH + "/bin/java -version 2>&1 || echo 'NOT_EXECUTABLE'";
+                cacheLog.info("执行检查命令: " + defaultPathVersionCmd);
+                
                 String defaultPathVersionOutput = execCommand(session, defaultPathVersionCmd);
+                boolean defaultPathExecutable = !defaultPathVersionOutput.contains("NOT_EXECUTABLE") && !defaultPathVersionOutput.startsWith("ERROR");
+                cacheLog.info("默认JDK路径下Java可执行性检查: " + (defaultPathExecutable ? "可执行" : "不可执行"));
 
-                if (!defaultPathVersionOutput.contains("NOT_EXECUTABLE") && !defaultPathVersionOutput.startsWith("ERROR")) {
+                if (defaultPathExecutable) {
                     String version = parseJavaVersion(defaultPathVersionOutput);
-                    if (isVersionMeetRequirement(version, MIN_JAVA_VERSION)) {
+                    cacheLog.info("默认JDK路径下Java版本: " + version);
+                    
+                    boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
+                    cacheLog.info("版本检查结果: " + (versionMeetRequirement ? "符合要求" : "不符合要求"));
+                    
+                    if (versionMeetRequirement) {
+                        cacheLog.info("\n==== Java环境检查通过 ====");
+                        cacheLog.info("默认JDK路径正常，版本: " + version + ", 路径: " + DEFAULT_JDK_PATH);
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
                         checkItem.setMessage("默认JDK路径正常，版本: " + version + ", 路径: " + DEFAULT_JDK_PATH);
                         return checkItem;
                     } else {
+                        cacheLog.info("默认JDK路径的Java版本 " + version + " 低于要求的 " + MIN_JAVA_VERSION);
                         logger.info("主机 {} 默认JDK路径的Java版本 {} 低于要求的 {}", hostInfo.getHostname(), version, MIN_JAVA_VERSION);
                     }
+                } else {
+                    cacheLog.info("默认JDK路径不包含可执行的Java");
                 }
             }
 
             // 所有检查都不通过，报告Java未安装或版本不符
+            cacheLog.info("\n==== Java环境检查未通过 ====");
+            cacheLog.info("所有检查路径都未找到符合要求的Java 8环境");
             checkItem.setStatus(CheckItem.Status.FAILED);
             checkItem.setMessage("未检测到符合要求的Java环境(Java 8)，请安装或配置Java 8");
 
         } catch (Exception e) {
-            logger.error("Java环境检查失败: {}", e.getMessage());
+            String errorMsg = "Java环境检查失败: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.info("\n==== Java环境检查出错 ====");
+            cacheLog.error("错误: " + errorMsg);
             checkItem.setStatus(CheckItem.Status.FAILED);
             checkItem.setMessage("Java环境检查失败: " + e.getMessage());
+        } finally {
+            cacheLog.info("\n==== Java环境检查结束 ====");
         }
         return checkItem;
     }
