@@ -1099,12 +1099,15 @@ export default {
           setTimeout(() => {
             this.getHostCheckItems(hostname);
           }, 1000);
-        } else {
-          this.$message.error(res.msg || '修复失败');
-        }
+        } 
+        // 注释掉前端额外的错误提示，只依赖后端返回的错误消息
+        // else {
+        //   this.$message.error(res.msg || '修复失败');
+        // }
       }).catch(err => {
         console.error('修复失败:', err);
-        this.$message.error('修复失败');
+        // 只在网络错误等前端异常情况下显示通用错误消息
+        this.$message.error('请求失败，请检查网络连接');
       }).finally(() => {
         // Clear loading state
         this.$set(item, 'fixing', false);
