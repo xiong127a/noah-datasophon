@@ -446,23 +446,27 @@ public class InstallServiceImpl implements InstallService {
         
         // 收集未通过检查的主机信息
         List<Map<String, Object>> failedHosts = new ArrayList<>();
-        StringBuilder msgBuilder = new StringBuilder();
+        Map<String, List<String>> hostToFailedItems = new HashMap<>();
+        int totalFailedItems = 0;
         
         // 检查是否存在未完成的主机
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
             
             // 检查主机整体状态
-            if (Objects.isNull(hostInfo.getCheckResult()) || 
-                (Objects.nonNull(hostInfo.getCheckResult()) && hostInfo.getCheckResult().getCode() != 10001)) {
+            CheckResult checkResult = hostInfo.getCheckResult();
+            if (checkResult == null) {
                 Map<String, Object> failInfo = new HashMap<>();
                 failInfo.put("hostname", hostInfo.getHostname());
                 failInfo.put("reason", "主机整体检查状态未完成");
                 failInfo.put("code", Objects.nonNull(hostInfo.getCheckResult()) ? hostInfo.getCheckResult().getCode() : "未知");
                 failedHosts.add(failInfo);
                 
-                // 添加到错误消息
-                msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 检查未完成\n");
+                // 添加到错误映射
+                List<String> failedItemsList = new ArrayList<>();
+                failedItemsList.add("检查未完成");
+                hostToFailedItems.put(hostInfo.getHostname(), failedItemsList);
+                totalFailedItems++;
                 
                 logger.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getHostname());
                 continue;
@@ -474,6 +478,7 @@ public class InstallServiceImpl implements InstallService {
                 List<Map<String, Object>> failedItems = new ArrayList<>();
                 List<String> failedItemNames = new ArrayList<>();
                 
+                // 先统计该主机上未通过的检查项
                 for (CheckItem item : checkItems) {
                     // 只有 SUCCESS 或 SKIPPED 状态被视为通过
                     if (item.getStatus() != CheckItem.Status.SUCCESS && 
@@ -486,7 +491,17 @@ public class InstallServiceImpl implements InstallService {
                         failedItems.add(itemInfo);
                         
                         // 收集失败的检查项名称
-                        failedItemNames.add(item.getItemName() + "(" + item.getStatus() + ")");
+                        String statusText = "";
+                        if (item.getStatus() == CheckItem.Status.FAILED) {
+                            statusText = "未通过";
+                        } else if (item.getStatus() == CheckItem.Status.CHECKING) {
+                            statusText = "检查中";
+                        } else if (item.getStatus() == CheckItem.Status.WAITING) {
+                            statusText = "待检查";
+                        } else {
+                            statusText = item.getStatus().toString();
+                        }
+                        failedItemNames.add(item.getItemName() + "(" + statusText + ")");
                         
                         logger.info("主机 {} 的检查项 {} 状态为 {}，主机检查不通过", 
                             hostInfo.getHostname(), item.getItemName(), item.getStatus());
@@ -500,11 +515,10 @@ public class InstallServiceImpl implements InstallService {
                     failInfo.put("failedItems", failedItems);
                     failedHosts.add(failInfo);
                     
-                    // 添加主机及其失败检查项到错误消息
-                    msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 检查未通过:\n");
-                    for (String itemName : failedItemNames) {
-                        msgBuilder.append("  - ").append(itemName).append("\n");
-                    }
+                    // 添加到错误映射
+                    hostToFailedItems.put(hostInfo.getHostname(), failedItemNames);
+                    // 将该主机的未通过项数量加到总数中
+                    totalFailedItems += failedItemNames.size();
                 }
             } else {
                 // 如果检查项列表为空，也视为未完成
@@ -513,22 +527,58 @@ public class InstallServiceImpl implements InstallService {
                 failInfo.put("reason", "没有检查项");
                 failedHosts.add(failInfo);
                 
-                // 添加到错误消息
-                msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 没有检查项\n");
+                // 添加到错误映射
+                List<String> noItemsList = new ArrayList<>();
+                noItemsList.add("没有检查项");
+                hostToFailedItems.put(hostInfo.getHostname(), noItemsList);
+                totalFailedItems++;
                 
                 logger.info("主机 {} 没有检查项，主机检查不通过", hostInfo.getHostname());
             }
         }
         
         if (!failedHosts.isEmpty()) {
-            String errorMsg = "以下主机检查未通过:\n" + msgBuilder.toString();
+            // 生成简洁的错误消息
+            StringBuilder msgBuilder = new StringBuilder();
             
-            // 如果消息太长，截断它
-            if (errorMsg.length() > 500) {
-                errorMsg = errorMsg.substring(0, 497) + "...";
+            // 格式化错误信息
+            int hostCount = hostToFailedItems.size();
+            msgBuilder.append("共有 ").append(hostCount).append(" 台主机检查未通过，").append(totalFailedItems).append(" 项未通过检查\n\n");
+            
+            // 限制显示的主机数量
+            int hostDisplayLimit = 3;
+            int hostDisplayCount = 0;
+            
+            for (Map.Entry<String, List<String>> entry : hostToFailedItems.entrySet()) {
+                if (hostDisplayCount >= hostDisplayLimit && hostCount > hostDisplayLimit) {
+                    msgBuilder.append("\n还有 ").append(hostCount - hostDisplayLimit).append(" 台主机存在问题...");
+                    break;
+                }
+                
+                String hostname = entry.getKey();
+                List<String> items = entry.getValue();
+                
+                msgBuilder.append("• ").append(hostname).append("：")
+                         .append(items.size()).append("项未通过 - ");
+                
+                // 限制每台主机显示的检查项数量
+                int itemLimit = 2;
+                if (items.size() <= itemLimit) {
+                    msgBuilder.append(String.join("、", items));
+                } else {
+                    List<String> displayItems = items.subList(0, itemLimit);
+                    msgBuilder.append(String.join("、", displayItems))
+                             .append(" 等 ").append(items.size()).append(" 项");
+                }
+                
+                msgBuilder.append("\n");
+                hostDisplayCount++;
             }
             
-            logger.info("存在未通过检查的主机，总数: {}, 错误信息: {}", failedHosts.size(), errorMsg);
+            String errorMsg = msgBuilder.toString().trim();
+            logger.info("存在未通过检查的主机，总数: {}, 失败项总数: {}, 错误信息: {}", 
+                    failedHosts.size(), totalFailedItems, errorMsg);
+            
             return Result.success(errorMsg)  // 将错误信息放在msg字段
                     .put("hostCheckCompleted", false)
                     .put("failedHosts", failedHosts);
