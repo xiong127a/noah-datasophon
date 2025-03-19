@@ -1,6 +1,8 @@
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.config.TaskManager;
+import com.datasophon.api.service.checker.ItemChecker;
+import com.datasophon.api.service.checker.ItemCheckerFactory;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import org.slf4j.Logger;

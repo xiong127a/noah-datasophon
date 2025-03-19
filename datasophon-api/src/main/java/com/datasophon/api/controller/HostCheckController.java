@@ -2,20 +2,24 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
-import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.Result;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -181,7 +185,7 @@ public class HostCheckController {
     /**
      * 统一的日志获取API
      */
-    @PostMapping("/getLog")
+    @PostMapping(value = "/getLog", produces = MediaType.APPLICATION_JSON_VALUE)
     @UserPermission
     public Result getLog(
             @RequestParam Integer clusterId,
@@ -190,9 +194,9 @@ public class HostCheckController {
             @RequestParam(required = false) String logType,
             @RequestParam(required = false) String logLevel,
             @RequestParam(required = false, defaultValue = "all") String filterMode) {
-        return hostCheckService.getLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
+        return hostCheckService.getFormattedLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
     }
-
+    
     /**
      * 获取可用的日志级别
      * @return 日志级别列表
@@ -200,12 +204,7 @@ public class HostCheckController {
     @GetMapping("/log-levels")
     @UserPermission
     public Result getLogLevels() {
-        try {
-            return Result.success(LogEntry.Level.values());
-        } catch (Exception e) {
-            log.error("获取日志级别列表失败: {}", e.getMessage(), e);
-            return Result.error("获取日志级别列表失败: " + e.getMessage());
-        }
+        return Result.success(hostCheckService.getLogLevels());
     }
     
     /**
@@ -215,15 +214,6 @@ public class HostCheckController {
     @GetMapping("/log-types")
     @UserPermission
     public Result getLogTypes() {
-        try {
-            Map<String, String> types = new LinkedHashMap<>();
-            types.put("all", "全部日志");
-            types.put("check", "检查日志");
-            types.put("fix", "修复日志");
-            return Result.success(types);
-        } catch (Exception e) {
-            log.error("获取日志类型列表失败: {}", e.getMessage(), e);
-            return Result.error("获取日志类型列表失败: " + e.getMessage());
-        }
+        return Result.success(hostCheckService.getLogTypes());
     }
 } 

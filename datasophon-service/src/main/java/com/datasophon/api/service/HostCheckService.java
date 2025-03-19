@@ -2,9 +2,11 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.Result;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 主机检查服务
@@ -104,9 +106,9 @@ public interface HostCheckService {
      * @param logType 日志类型，支持 "all", "check", "fix"
      * @param logLevel 日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
      * @param filterMode 筛选模式，"all"=全部日志, "exact"=精确级别, "min"=指定级别及以上
-     * @return Result 包含筛选后的日志
+     * @return 筛选后的LogEntry列表
      */
-    Result getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode);
+    List<LogEntry> getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode);
 
     /**
      * 取消所有当前运行的检查任务
@@ -132,4 +134,28 @@ public interface HostCheckService {
      * @return 修复结果
      */
     Result batchFixCheckItem(Integer clusterId, String hostname, List<Integer> itemIds);
+
+    /**
+     * 获取格式化后的HTML日志
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param logType 日志类型，支持 "all", "check", "fix"
+     * @param logLevel 日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
+     * @param filterMode 筛选模式，"all"=全部日志, "exact"=精确级别, "min"=指定级别及以上
+     * @return Result 包含格式化后的HTML日志
+     */
+    Result getFormattedLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode);
+
+    /**
+     * 获取系统支持的日志类型
+     * @return 日志类型映射，key为类型编码，value为显示名称
+     */
+    Map<String, String> getLogTypes();
+
+    /**
+     * 获取可用的日志级别
+     * @return 日志级别数组
+     */
+    LogEntry.Level[] getLogLevels();
 } 

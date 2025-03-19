@@ -22,46 +22,13 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractItemChecker implements ItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(AbstractItemChecker.class);
-    private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
     private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
-    private static final String CHECK_LOG_PREFIX = "CHECK_LOG_";
-    private static final String FIX_LOG_PREFIX = "FIX_LOG_";
     
-    /**
-     * 操作类型枚举，用于区分不同类型的日志
-     * 可以在未来轻松扩展添加更多日志类型
-     */
-    public enum OperationType {
-        CHECK("检查", CHECK_LOG_PREFIX),
-        FIX("修复", FIX_LOG_PREFIX),
-        // 将来可以添加更多类型，如:
-        // UPGRADE("升级", "UPGRADE_LOG_"),
-        // CONFIG("配置", "CONFIG_LOG_"),
-        // DIAGNOSE("诊断", "DIAGNOSE_LOG_")
-        ;
-        
-        private final String displayName;
-        private final String logPrefix;
-        
-        OperationType(String displayName, String logPrefix) {
-            this.displayName = displayName;
-            this.logPrefix = logPrefix;
-        }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
-        
-        public String getLogPrefix() {
-            return logPrefix;
-        }
-    }
-
     protected ClientSession session;
     // 当前检查项的日志缓存键
     protected String currentLogKey;
     // 当前操作类型
-    protected OperationType operationType = OperationType.CHECK;
+    protected LogEntry.Type operationType = LogEntry.Type.CHECK;
     
     // 供子类使用的日志记录器实例，同时记录到缓存和控制台
     protected final CheckLogger cacheLog;
@@ -78,13 +45,14 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     // 设置当前检查项的日志缓存键
     protected void setCurrentLogKey(Integer clusterId, String hostname, Integer itemId) {
-        // 根据当前是否为修复操作选择前缀
-        String prefix = operationType.getLogPrefix();
-        this.currentLogKey = prefix + clusterId + "_" + hostname + "_" + itemId;
+        // 使用统一的日志键格式
+        this.currentLogKey = String.format("%s%d_%s_%d", CHECK_ITEM_LOG_PREFIX, clusterId, hostname, itemId);
         logger.debug("设置日志键: {}, 类型: {}", this.currentLogKey, operationType.getDisplayName());
         
-        // 更新日志记录器的logKey
-        ((CheckLogger.LoggerImpl)this.cacheLog).updateLogKey(this.currentLogKey);
+        // 更新日志记录器的logKey和类型
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        loggerImpl.updateLogKey(this.currentLogKey);
+        loggerImpl.setLogType(operationType);
     }
     
     /**
@@ -345,7 +313,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
         
         // 设置为检查操作
-        operationType = OperationType.CHECK;
+        operationType = LogEntry.Type.CHECK;
         
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
@@ -471,7 +439,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
         
         // 设置为修复操作
-        operationType = OperationType.FIX;
+        operationType = LogEntry.Type.FIX;
         
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
@@ -660,5 +628,18 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 记录更多异常信息
             cacheLog.error("更新检查状态失败，请检查系统日志: %s", e.getMessage());
         }
+    }
+
+    /**
+     * 创建日志记录器
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param operationType 操作类型
+     * @return 日志记录器
+     */
+    protected CheckLogger createLogger(Integer clusterId, String hostname, Integer itemId, LogEntry.Type operationType) {
+        String logKey = String.format("%s%d_%s_%d", CHECK_ITEM_LOG_PREFIX, clusterId, hostname, itemId);
+        return CheckLogger.createLogger(logKey, getClass().getSimpleName(), operationType);
     }
 } 

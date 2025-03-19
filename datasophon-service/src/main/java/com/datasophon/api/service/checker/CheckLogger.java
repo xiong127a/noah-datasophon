@@ -1,6 +1,7 @@
 package com.datasophon.api.service.checker;
 
 import com.datasophon.common.model.LogEntry;
+import lombok.Setter;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
@@ -10,20 +11,6 @@ import java.util.Date;
  * 提供类似log4j的日志记录方法，支持不同日志级别
  */
 public interface CheckLogger {
-    
-    /**
-     * 日志分隔符常量
-     */
-    String LOG_SEPARATOR = "====";
-    String LOG_SECTION_BEGIN = LOG_SEPARATOR + " ";
-    String LOG_SECTION_END = " " + LOG_SEPARATOR;
-    
-    /**
-     * 日志前缀常量，用于缓存键等
-     */
-    String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
-    String CHECK_LOG_PREFIX = "CHECK_LOG_";
-    String FIX_LOG_PREFIX = "FIX_LOG_";
     
     /**
      * 创建通用的日志记录器实例
@@ -36,6 +23,17 @@ public interface CheckLogger {
     }
     
     /**
+     * 创建具有特定类型的日志记录器实例
+     * @param logKey 日志缓存键
+     * @param className 类名
+     * @param logType 日志类型
+     * @return 日志记录器实例
+     */
+    static CheckLogger createLogger(String logKey, String className, LogEntry.Type logType) {
+        return new LoggerImpl(logKey, className, logType);
+    }
+    
+    /**
      * 日志记录器统一实现
      * 此实现可以同时被AbstractItemChecker和HostCheckServiceImpl共享使用
      */
@@ -43,11 +41,25 @@ public interface CheckLogger {
         private String logKey;
         private final String className;
         private final org.slf4j.Logger slf4jLogger;
+        /**
+         * -- SETTER --
+         *  设置日志类型
+         *
+         */
+        @Setter
+        private LogEntry.Type logType = LogEntry.Type.CHECK;
 
         public LoggerImpl(String logKey, String className) {
             this.logKey = logKey;
             this.className = className;
             this.slf4jLogger = LoggerFactory.getLogger(className);
+        }
+        
+        public LoggerImpl(String logKey, String className, LogEntry.Type logType) {
+            this.logKey = logKey;
+            this.className = className;
+            this.slf4jLogger = LoggerFactory.getLogger(className);
+            this.logType = logType;
         }
         
         /**
@@ -66,12 +78,14 @@ public interface CheckLogger {
                 String threadName = Thread.currentThread().getName();
                 LogEntry.Level level = LogEntry.Level.valueOf(levelStr);
                 
-                LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message);
+                LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message, this.logType);
                 
                 // 获取调用者的行号作为元数据
                 StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
                 if (stackTrace.length >= 4) {
                     logEntry.setLineNumber(stackTrace[3].getLineNumber());
+                    // 设置堆栈信息的日志级别
+                    logEntry.setStackTraceLevel(level);
                 }
                 
                 // 添加到日志管理器

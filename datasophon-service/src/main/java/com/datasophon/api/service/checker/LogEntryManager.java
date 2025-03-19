@@ -54,73 +54,66 @@ public class LogEntryManager {
     }
     
     /**
-     * 获取日志内容
+     * 获取日志条目列表
      * @param logKey 日志键
-     * @return 格式化的日志内容
+     * @return 日志条目列表的副本
      */
-    public static String getLogContent(String logKey) {
+    public static List<LogEntry> getLogEntries(String logKey) {
         if (logKey == null) {
-            return "";
+            return Collections.emptyList();
         }
         
         List<LogEntry> entries = logMap.get(logKey);
-        if (entries == null || entries.isEmpty()) {
-            return "";
+        if (entries == null) {
+            return Collections.emptyList();
         }
         
-        // 复制一份日志列表，避免并发修改
-        List<LogEntry> entriesCopy;
+        // 返回副本，避免并发修改
         synchronized (entries) {
-            entriesCopy = new ArrayList<>(entries);
+            return new ArrayList<>(entries);
         }
-        
-        // 格式化日志内容
-        return entriesCopy.stream()
-            .map(LogEntry::toString)  // 使用toString方法格式化日志
-            .collect(Collectors.joining("\n"));
     }
     
     /**
-     * 获取按日志级别筛选的日志内容
+     * 获取按条件筛选的日志条目
      * @param logKey 日志键
-     * @param level 日志级别
-     * @param exactMatch 是否精确匹配级别（true表示只显示指定级别，false表示显示指定级别及以上）
-     * @return 筛选后的日志内容
+     * @param type 日志类型 (可以为null表示全部类型)
+     * @param level 日志级别 (可以为null表示全部级别)
+     * @param filterMode 过滤模式 ("exact", "min", "all")
+     * @return 过滤后的日志条目列表
      */
-    public static String getFilteredLogContent(String logKey, LogEntry.Level level, Boolean exactMatch) {
-        if (logKey == null || level == null) {
-            return "";
+    public static List<LogEntry> getFilteredLogEntries(String logKey, LogEntry.Type type, 
+                                                      LogEntry.Level level, String filterMode) {
+        List<LogEntry> entries = getLogEntries(logKey);
+        if (entries.isEmpty()) {
+            return entries;
         }
         
-        List<LogEntry> entries = logMap.get(logKey);
-        if (entries == null || entries.isEmpty()) {
-            return "";
-        }
-        
-        // 复制一份日志列表，避免并发修改
-        List<LogEntry> entriesCopy;
-        synchronized (entries) {
-            entriesCopy = new ArrayList<>(entries);
-        }
-        
-        // 根据日志级别筛选
-        List<LogEntry> filteredEntries;
-        if (exactMatch) {
-            // 精确匹配指定级别
-            filteredEntries = entriesCopy.stream()
-                .filter(entry -> entry.getLevel() == level)
-                .collect(Collectors.toList());
-        } else {
-            // 显示指定级别及以上级别
-            filteredEntries = entriesCopy.stream()
-                .filter(entry -> entry.getLevel().isHigherOrEqual(level))
+        // 按类型过滤
+        List<LogEntry> filteredEntries = entries;
+        if (type != null) {
+            filteredEntries = filteredEntries.stream()
+                .filter(entry -> entry.getType() == type)
                 .collect(Collectors.toList());
         }
         
-        // 格式化日志内容
-        return filteredEntries.stream()
-            .map(LogEntry::toString)  // 使用toString方法格式化日志
-            .collect(Collectors.joining("\n"));
+        // 按级别过滤
+        if (level != null && filterMode != null) {
+            if ("exact".equals(filterMode)) {
+                // 精确匹配级别
+                filteredEntries = filteredEntries.stream()
+                    .filter(entry -> entry.getLevel() == level)
+                    .collect(Collectors.toList());
+            } else if ("min".equals(filterMode)) {
+                // 最小级别（当前级别及更高级别）
+                filteredEntries = filteredEntries.stream()
+                    .filter(entry -> entry.getLevel().isHigherOrEqual(level))
+                    .collect(Collectors.toList());
+            }
+            // "all"模式不需要过滤
+        }
+        
+        return filteredEntries;
     }
     
     /**
@@ -143,24 +136,19 @@ public class LogEntryManager {
     }
     
     /**
-     * 获取日志条目列表
+     * 获取日志内容
      * @param logKey 日志键
-     * @return 日志条目列表的副本
+     * @return 格式化的日志内容字符串
      */
-    public static List<LogEntry> getLogEntries(String logKey) {
-        if (logKey == null) {
-            return Collections.emptyList();
+    public static String getLogContent(String logKey) {
+        List<LogEntry> entries = getLogEntries(logKey);
+        if (entries.isEmpty()) {
+            return "";
         }
         
-        List<LogEntry> entries = logMap.get(logKey);
-        if (entries == null) {
-            return Collections.emptyList();
-        }
-        
-        // 返回副本，避免并发修改
-        synchronized (entries) {
-            return new ArrayList<>(entries);
-        }
+        return entries.stream()
+            .map(LogEntry::toString)
+            .collect(Collectors.joining("\n"));
     }
     
     /**

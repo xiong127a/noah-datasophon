@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,9 +43,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     // 静态常量，日志相关
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
-    private static final String CHECK_ITEM_LOG_PREFIX = CheckLogger.CHECK_ITEM_LOG_PREFIX;
-    private static final String CHECK_LOG_PREFIX = CheckLogger.CHECK_LOG_PREFIX;
-    private static final String FIX_LOG_PREFIX = CheckLogger.FIX_LOG_PREFIX;
+
 
     @Autowired
     private ItemCheckerFactory itemCheckerFactory;
@@ -70,6 +69,22 @@ public class HostCheckServiceImpl implements HostCheckService {
         public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId, String className) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, className);
+        }
+        
+        /**
+         * 创建检查日志记录器
+         */
+        public static CheckLogger getCheckLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+            String logKey = service.getLogKey(clusterId, hostname, itemId);
+            return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.CHECK);
+        }
+        
+        /**
+         * 创建修复日志记录器
+         */
+        public static CheckLogger getFixLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+            String logKey = service.getLogKey(clusterId, hostname, itemId);
+            return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.FIX);
         }
     }
 
@@ -1227,107 +1242,91 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
-     * 实现统一的日志获取API
+     * 获取检查项日志（统一接口）
+     * 整合了所有日志筛选功能
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param logType 日志类型，支持 "all", "check", "fix"
+     * @param logLevel 日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
+     * @param filterMode 筛选模式，"all"=全部日志, "exact"=精确级别, "min"=指定级别及以上
+     * @return 筛选后的LogEntry列表
      */
     @Override
-    public Result getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode) {
+    public List<LogEntry> getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode) {
         if (clusterId == null) {
-            return Result.error("集群ID不能为空");
+            logger.error("获取日志失败：集群ID不能为空");
+            return Collections.emptyList();
         }
         
         if (StrUtil.isBlank(hostname)) {
-            return Result.error("主机名不能为空");
+            logger.error("获取日志失败：主机名不能为空");
+            return Collections.emptyList();
         }
         
         if (itemId == null) {
-            return Result.error("检查项ID不能为空");
+            logger.error("获取日志失败：检查项ID不能为空");
+            return Collections.emptyList();
         }
         
         // 设置默认值
         if (logType == null || logType.isEmpty()) {
-            logType = "all"; // 默认获取全部日志
+            logType = "all";
         }
         
         if (filterMode == null || filterMode.isEmpty()) {
-            filterMode = "all"; // 默认不筛选日志级别
+            filterMode = "all";
         }
         
-        logger.info("获取检查项日志(统一接口), clusterId: {}, hostname: {}, itemId: {}, 日志类型: {}, 日志级别: {}, 筛选模式: {}",
+        logger.info("获取检查项日志, clusterId: {}, hostname: {}, itemId: {}, 日志类型: {}, 日志级别: {}, 筛选模式: {}",
             clusterId, hostname, itemId, logType, logLevel, filterMode);
         
-        // 获取主机和检查项信息（用于默认响应）
+        // 获取主机和检查项信息
         HostInfo hostInfo = getHostInfo(clusterId, hostname);
         CheckItem checkItem = hostInfo != null ? findCheckItemById(hostInfo, itemId) : null;
         
-        // 构建日志键
-        List<String> logKeys = new ArrayList<>();
-        
-        // 根据日志类型选择不同的处理方式
-        if ("all".equals(logType) || logType == null) {
-            // 构建所有可能的日志类型
-            logKeys.add(CHECK_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId);
-            logKeys.add(FIX_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId);
-        } else if ("check".equals(logType)) {
-            logKeys.add(CHECK_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId);
-        } else if ("fix".equals(logType)) {
-            logKeys.add(FIX_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId);
-        } else {
-            return Result.error("不支持的日志类型: " + logType + "，支持的类型有: check, fix, all");
+        if (checkItem == null) {
+            logger.error("获取日志失败：未找到指定的检查项");
+            return Collections.emptyList();
         }
         
-        // 是否需要基于级别筛选
-        boolean needLevelFilter = !"all".equals(filterMode);
+        // 构建日志键 - 使用统一的日志键
+        String logKey = getLogKey(clusterId, hostname, itemId);
         
-        // 如果需要级别筛选，但未提供级别，则使用INFO作为默认级别
-        if (needLevelFilter && (logLevel == null || logLevel.isEmpty())) {
-            logLevel = "INFO";
+        // 转换日志类型
+        LogEntry.Type type = null;
+        if (!"all".equals(logType)) {
+            try {
+                type = LogEntry.Type.valueOf(logType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.error("不支持的日志类型: {}", logType);
+                return Collections.emptyList();
+            }
         }
         
-        // 转换日志级别字符串为枚举值
+        // 转换日志级别
         LogEntry.Level level = null;
-        if (needLevelFilter) {
+        if (!"all".equals(filterMode) && logLevel != null && !logLevel.isEmpty()) {
             try {
                 level = LogEntry.Level.valueOf(logLevel.toUpperCase());
             } catch (IllegalArgumentException e) {
-                return Result.error("不支持的日志级别: " + logLevel + "，支持的级别有: DEBUG, INFO, WARN, ERROR");
+                logger.error("不支持的日志级别: {}", logLevel);
+                return Collections.emptyList();
             }
         }
         
-        // 组合日志
-        StringBuilder combinedLog = new StringBuilder();
-        boolean hasAnyLog = false;
+        // 获取过滤后的日志条目
+        List<LogEntry> logEntries = LogEntryManager.getFilteredLogEntries(logKey, type, level, filterMode);
         
-        for (String logKey : logKeys) {
-            String logContent;
-            
-            // 根据筛选模式获取日志内容
-            if ("all".equals(filterMode)) {
-                // 不筛选级别
-                logContent = LogEntryManager.getLogContent(logKey);
-            } else {
-                // 筛选级别（exact=精确匹配，min=指定级别及以上）
-                boolean exactMatch = "exact".equals(filterMode);
-                logContent = LogEntryManager.getFilteredLogContent(logKey, level, exactMatch);
-            }
-            
-            if (!logContent.isEmpty()) {
-                if (hasAnyLog) combinedLog.append("\n\n");
-                
-                // 添加日志类型标题
-                String logTypeTitle = logKey.startsWith(CHECK_LOG_PREFIX) ? "检查日志" : "修复日志";
-                combinedLog.append("===== ").append(logTypeTitle).append(" =====\n");
-                combinedLog.append(logContent);
-                hasAnyLog = true;
-            }
+        if (logEntries.isEmpty()) {
+            // 如果没有找到日志，使用默认日志响应
+            logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}", 
+                clusterId, hostname, itemId);
+            return Collections.emptyList();
         }
         
-        if (!hasAnyLog) {
-            // 如果都没有日志，返回基本信息
-            return createDefaultLogResponse(clusterId, hostname, itemId);
-        }
-        
-        logger.info("成功获取检查项日志, 长度: {}", combinedLog.length());
-        return Result.success(combinedLog.toString());
+        logger.info("成功获取检查项日志, 条目数: {}", logEntries.size());
+        return logEntries;
     }
 
     /**
@@ -1340,5 +1339,341 @@ public class HostCheckServiceImpl implements HostCheckService {
         
         // 直接返回空字符串，不再生成假日志
         return Result.success("");
+    }
+
+    /**
+     * 实现获取格式化后的HTML日志
+     */
+    @Override
+    public Result getFormattedLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode) {
+        // 先获取原始日志数据
+        List<LogEntry> logEntries = getLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
+        
+        // 如果是空列表，返回空日志提示
+        if (logEntries.isEmpty()) {
+            return Result.success("<div class=\"empty-log\">暂无日志数据</div>");
+        }
+        
+        // 转换LogLevel和LogType (如果存在)
+        LogEntry.Level level = null;
+        LogEntry.Type type = null;
+        
+        if (logLevel != null && !logLevel.isEmpty() && !"all".equals(logLevel)) {
+            try {
+                level = LogEntry.Level.valueOf(logLevel.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("无效的日志级别: {}", logLevel);
+            }
+        }
+        
+        if (logType != null && !logType.isEmpty() && !"all".equals(logType)) {
+            try {
+                type = LogEntry.Type.valueOf(logType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                logger.warn("无效的日志类型: {}", logType);
+            }
+        }
+        
+        // 使用服务层的格式化和筛选功能
+        String coloredHtml = formatFilteredLogsToColoredHtml(
+                logEntries, type, level, filterMode);
+        
+        return Result.success(coloredHtml);
+    }
+
+    /**
+     * 将LogEntry列表转换为HTML格式的彩色日志
+     * @param logEntries 日志条目列表
+     * @return HTML格式的彩色日志内容
+     */
+    private String formatLogsToColoredHtml(List<LogEntry> logEntries) {
+        if (logEntries == null || logEntries.isEmpty()) {
+            return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
+        
+        // 先添加日志统计摘要
+        int errorCount = 0;
+        int warnCount = 0;
+        int infoCount = 0;
+        int debugCount = 0;
+        
+        for (LogEntry entry : logEntries) {
+            switch (entry.getLevel()) {
+                case ERROR: errorCount++; break;
+                case WARN: warnCount++; break;
+                case INFO: infoCount++; break;
+                case DEBUG: debugCount++; break;
+            }
+        }
+        
+        sb.append("<div class=\"log-summary\" style=\"margin-bottom: 16px; padding: 8px; background-color: #f5f5f5; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 12px;\">");
+        sb.append("<span style=\"font-weight: bold;\">共 ").append(logEntries.size()).append(" 条日志:</span>");
+        
+        if (errorCount > 0) {
+            sb.append("<span style=\"color: #FF5252;\">")
+              .append("<span style=\"font-weight: bold;\">").append(errorCount).append("</span> 条错误")
+              .append("</span>");
+        }
+        
+        if (warnCount > 0) {
+            sb.append("<span style=\"color: #FFD740;\">")
+              .append("<span style=\"font-weight: bold;\">").append(warnCount).append("</span> 条警告")
+              .append("</span>");
+        }
+        
+        if (infoCount > 0) {
+            sb.append("<span style=\"color: #4CAF50;\">")
+              .append("<span style=\"font-weight: bold;\">").append(infoCount).append("</span> 条信息")
+              .append("</span>");
+        }
+        
+        if (debugCount > 0) {
+            sb.append("<span style=\"color: #2196F3;\">")
+              .append("<span style=\"font-weight: bold;\">").append(debugCount).append("</span> 条调试")
+              .append("</span>");
+        }
+        
+        sb.append("</div>");
+        
+        // 添加所有日志条目
+        for (LogEntry entry : logEntries) {
+            sb.append(entry.toColoredHtml());
+        }
+        
+        sb.append("</div>");
+        
+        return sb.toString();
+    }
+    
+    /**
+     * 将文本日志内容转换为HTML格式的彩色日志
+     * @param logContent 原始文本日志内容
+     * @return HTML格式的彩色日志内容
+     */
+    private String formatTextToColoredHtml(String logContent) {
+        if (logContent == null || logContent.isEmpty()) {
+            return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
+        String[] lines = logContent.split("\n");
+        
+        // 判断是否包含堆栈跟踪
+        boolean containsStackTrace = false;
+        StringBuilder stackTrace = new StringBuilder();
+        StringBuilder currentLine = new StringBuilder();
+        
+        for (String line : lines) {
+            // 判断是否是新的堆栈开始
+            if (line.contains("Exception") || line.contains("Error")) {
+                if (containsStackTrace) {
+                    // 如果已经在处理堆栈，先输出之前的堆栈
+                    sb.append(formatStackTraceLines(stackTrace.toString()));
+                    stackTrace.setLength(0); // 清空
+                }
+                containsStackTrace = true;
+                stackTrace.append(line).append("\n");
+            } else if (containsStackTrace && (line.contains("at ") || line.trim().isEmpty() || line.contains("Caused by:"))) {
+                // 继续追加到当前堆栈
+                stackTrace.append(line).append("\n");
+            } else {
+                // 非堆栈行
+                if (containsStackTrace) {
+                    // 处理之前累积的堆栈
+                    sb.append(formatStackTraceLines(stackTrace.toString()));
+                    stackTrace.setLength(0); // 清空
+                    containsStackTrace = false;
+                }
+                // 处理普通行
+                sb.append(applyColorToLogLine(line));
+            }
+        }
+        
+        // 处理剩余的堆栈
+        if (containsStackTrace && stackTrace.length() > 0) {
+            sb.append(formatStackTraceLines(stackTrace.toString()));
+        }
+        
+        sb.append("</div>");
+        
+        return sb.toString();
+    }
+    
+    /**
+     * 格式化堆栈跟踪行
+     */
+    private String formatStackTraceLines(String stackTrace) {
+        if (stackTrace == null || stackTrace.isEmpty()) {
+            return "";
+        }
+        
+        StringBuilder formatted = new StringBuilder();
+        formatted.append("<div class=\"stack-trace\" style=\"margin: 8px 0; padding: 12px; background-color: #FFF1F0; border-left: 4px solid #FF5252; border-radius: 4px;\">");
+        
+        String[] lines = stackTrace.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            String line = escapeHtml(lines[i].trim());
+            
+            if (i == 0) {
+                // 异常标题
+                formatted.append("<div style=\"color: #FF5252; font-weight: bold; font-size: 14px; margin-bottom: 8px;\">")
+                       .append(line)
+                       .append("</div>");
+            } else if (line.contains("at com.datasophon")) {
+                // 项目相关行
+                formatted.append("<div style=\"color: #FF5252; padding-left: 20px; margin-bottom: 2px;\">")
+                       .append(line)
+                       .append("</div>");
+            } else if (line.contains("at ")) {
+                // 普通堆栈行
+                formatted.append("<div style=\"color: #777; padding-left: 20px; margin-bottom: 2px;\">")
+                       .append(line)
+                       .append("</div>");
+            } else if (line.contains("Caused by:")) {
+                // 内部异常
+                formatted.append("<div style=\"color: #FF9800; font-weight: bold; margin-top: 8px; margin-bottom: 4px;\">")
+                       .append(line)
+                       .append("</div>");
+            } else if (!line.trim().isEmpty()) {
+                // 其他非空行
+                formatted.append("<div style=\"margin-bottom: 2px;\">")
+                       .append(line)
+                       .append("</div>");
+            }
+        }
+        
+        formatted.append("</div>");
+        return formatted.toString();
+    }
+    
+    /**
+     * 根据日志类型和级别筛选并格式化日志
+     * @param logEntries 日志条目列表
+     * @param type 日志类型，可为null
+     * @param level 日志级别，可为null
+     * @param filterMode 筛选模式，"exact" - 精确匹配, "min" - 最低级别, "all" - 所有级别
+     * @return HTML格式的彩色日志内容
+     */
+    private String formatFilteredLogsToColoredHtml(List<LogEntry> logEntries, 
+            LogEntry.Type type, LogEntry.Level level, String filterMode) {
+        
+        if (logEntries == null || logEntries.isEmpty()) {
+            return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
+        }
+        
+        List<LogEntry> filteredEntries = logEntries;
+        
+        // 根据类型过滤
+        if (type != null) {
+            filteredEntries = filteredEntries.stream()
+                .filter(entry -> entry.getType() == type)
+                .collect(Collectors.toList());
+        }
+        
+        // 按级别过滤
+        if (level != null && filterMode != null) {
+            if ("exact".equals(filterMode)) {
+                // 精确匹配级别
+                filteredEntries = filteredEntries.stream()
+                    .filter(entry -> entry.getLevel() == level)
+                    .collect(Collectors.toList());
+            } else if ("min".equals(filterMode)) {
+                // 最小级别（当前级别及更高级别）
+                filteredEntries = filteredEntries.stream()
+                    .filter(entry -> entry.getLevel().isHigherOrEqual(level))
+                    .collect(Collectors.toList());
+            }
+            // "all"模式不需要过滤
+        }
+        
+        if (filteredEntries.isEmpty()) {
+            return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无符合条件的日志数据</div>";
+        }
+        
+        // 使用彩色HTML格式化
+        return formatLogsToColoredHtml(filteredEntries);
+    }
+    
+    /**
+     * 为日志行应用颜色高亮
+     * 根据日志级别或关键字应用不同的颜色样式
+     * @param line 日志行内容
+     * @return 应用颜色样式的HTML格式日志行
+     */
+    private String applyColorToLogLine(String line) {
+        if (line == null || line.isEmpty()) {
+            return "<div></div>";
+        }
+        
+        line = escapeHtml(line);
+        
+        // 识别日志级别并应用颜色
+        if (line.contains(" ERROR ") || line.contains("[ERROR]") || line.contains("<e>")) {
+            // 错误级别 - 红色
+            return String.format("<div style=\"color: #FF5252; margin-bottom: 4px; padding: 4px 8px; background-color: #FFF1F0; border-radius: 2px;\">%s</div>", line);
+        } else if (line.contains(" WARN ") || line.contains("[WARN]") || line.contains("<WARN>")) {
+            // 警告级别 - 黄色
+            return String.format("<div style=\"color: #FFD740; margin-bottom: 4px; padding: 4px 8px; background-color: #FFFBE6; border-radius: 2px;\">%s</div>", line);
+        } else if (line.contains(" INFO ") || line.contains("[INFO]") || line.contains("<INFO>")) {
+            // 信息级别 - 绿色
+            return String.format("<div style=\"color: #4CAF50; margin-bottom: 4px; padding: 4px 8px; background-color: #F6FFED; border-radius: 2px;\">%s</div>", line);
+        } else if (line.contains(" DEBUG ") || line.contains("[DEBUG]") || line.contains("<DEBUG>")) {
+            // 调试级别 - 蓝色
+            return String.format("<div style=\"color: #2196F3; margin-bottom: 4px; padding: 4px 8px; background-color: #E6F7FF; border-radius: 2px;\">%s</div>", line);
+        } else if (line.contains(" TRACE ") || line.contains("[TRACE]") || line.contains("<TRACE>")) {
+            // 跟踪级别 - 灰色
+            return String.format("<div style=\"color: #9E9E9E; margin-bottom: 4px; padding: 4px 8px; background-color: #F5F5F5; border-radius: 2px;\">%s</div>", line);
+        } else {
+            // 无法识别级别 - 默认样式
+            return String.format("<div style=\"margin-bottom: 4px; padding: 4px 8px;\">%s</div>", line);
+        }
+    }
+    
+    /**
+     * HTML特殊字符转义
+     */
+    private String escapeHtml(String content) {
+        if (content == null) {
+            return "";
+        }
+        
+        return content
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
+    }
+
+    /**
+     * 获取可用的日志级别
+     * @return 日志级别数组
+     */
+    @Override
+    public LogEntry.Level[] getLogLevels() {
+        return LogEntry.Level.values();
+    }
+
+    /**
+     * 获取可用的日志类型
+     * @return 日志类型映射，key为类型编码，value为显示名称
+     */
+    @Override
+    public Map<String, String> getLogTypes() {
+        Map<String, String> logTypes = new LinkedHashMap<>();
+        
+        // 添加全部选项
+        logTypes.put("all", "全部");
+        
+        // 添加枚举中的所有类型
+        for (LogEntry.Type type : LogEntry.Type.values()) {
+            logTypes.put(type.name().toLowerCase(), type.getDisplayName());
+        }
+        
+        return logTypes;
     }
 }

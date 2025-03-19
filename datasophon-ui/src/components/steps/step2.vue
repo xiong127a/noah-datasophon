@@ -1436,6 +1436,26 @@ export default {
     if (!global.API.getLog) {
       global.API.getLog = '/ddh/host/check/getLog';
     }
+
+    // 添加复制功能到window对象
+    window.copyToClipboard = (text) => {
+      navigator.clipboard.writeText(text).then(() => {
+        this.$message.success('已复制到剪贴板');
+      }).catch(() => {
+        // 如果clipboard API失败，使用传统方法
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          this.$message.success('已复制到剪贴板');
+        } catch (err) {
+          this.$message.error('复制失败');
+        }
+        document.body.removeChild(textarea);
+      });
+    };
   },
   beforeDestroy() {
     // 清理定时器
@@ -1446,6 +1466,9 @@ export default {
     
     // 清理日志刷新定时器
     this.stopAutoRefresh();
+
+    // 清理window对象上的方法
+    window.copyToClipboard = undefined;
   },
 };
 </script>
@@ -1556,7 +1579,7 @@ export default {
   height: calc(90vh - 150px);
   display: flex;
   flex-direction: column;
-  position: relative; /* 添加相对定位，作为滚动容器的参考点 */
+  position: relative;
 
   .log-header {
     margin-bottom: 16px;
@@ -1568,6 +1591,10 @@ export default {
     flex-direction: column;
     flex-shrink: 0;
     gap: 16px;
+    position: sticky;  // 添加sticky定位
+    top: 0;          // 固定在顶部
+    z-index: 10;     // 确保在内容之上
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
   
   .header-section {
@@ -1582,21 +1609,24 @@ export default {
     overflow-y: auto;
     overflow-x: auto;
     padding: 16px;
-    background-color: #1e1e1e;
+    background-color: #ffffff;
+    border: 1px solid #f0f0f0;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 14px;
     line-height: 1.5;
-    color: #d4d4d4;
+    color: #000000;
     position: relative;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-top: 8px;  // 添加顶部间距
     
     pre {
       white-space: pre-wrap;
       word-wrap: break-word;
       margin: 0;
-      overflow-x: visible; /* 内容可见，滚动由外层容器控制 */
+      overflow-x: visible;
       flex: 1;
       padding: 0;
     }
@@ -1604,7 +1634,7 @@ export default {
     .no-log {
       text-align: center;
       padding: 12px;
-      color: rgba(255, 255, 255, 0.45);
+      color: rgba(0, 0, 0, 0.45);
     }
     
     /* 滚动条样式 */
@@ -1614,16 +1644,32 @@ export default {
     }
 
     &::-webkit-scrollbar-track {
-      background: #2c2c2c;
+      background: #f5f5f5;
       border-radius: 4px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #555;
+      background: #e8e8e8;
       border-radius: 4px;
       
       &:hover {
-        background: #666;
+        background: #d9d9d9;
+      }
+    }
+
+    .log-source {
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 2px 6px;
+      border-radius: 2px;
+      
+      &:hover {
+        background-color: #f5f5f5;
+        color: #1890ff !important;
+      }
+      
+      &:active {
+        background-color: #e6f7ff;
       }
     }
   }
@@ -1631,6 +1677,13 @@ export default {
 
 :global(.log-modal) {
   top: 5vh;
+  
+  .ant-modal-body {
+    position: relative;  // 添加相对定位
+    padding: 0;         // 移除默认内边距
+    max-height: 90vh;   // 限制最大高度
+    overflow: hidden;   // 隐藏溢出内容
+  }
 }
 
 .refresh-options {
