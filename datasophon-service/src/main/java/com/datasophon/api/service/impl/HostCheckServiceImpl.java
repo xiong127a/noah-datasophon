@@ -106,6 +106,11 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Override
     public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId) {
+        return fixCheckItem(clusterId, hostname, itemId, false);
+    }
+
+    @Override
+    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
         try {
             HostInfo hostInfo = getHostInfo(clusterId, hostname);
             if (hostInfo == null) {
@@ -749,7 +754,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         CheckItem item = new CheckItem();
         item.setId(id);
         item.setItemCode(itemCode.getCode());
-        item.setItemName(itemCode.getDesc());
+        item.setItemName(itemCode.getName());
         item.setStatus(CheckItem.Status.WAITING);
         item.setMessage("等待检查");
         return item;
@@ -1745,6 +1750,21 @@ public class HostCheckServiceImpl implements HostCheckService {
         } catch (Exception e) {
             logger.error("跳过检查项时出错: " + e.getMessage(), e);
             return Result.error("跳过检查项失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result getCheckItemConfirmInfo(Integer clusterId, String hostname, Integer itemId) {
+        try {
+            ItemCode itemCode = ItemCode.getBySequence(itemId);
+            // 封装结果返回
+            return Result.success()
+                    .put("needConfirm", itemCode.isNeedConfirm())
+                    .put("confirmMessage", itemCode.isNeedConfirm() ? itemCode.getConfirmMessage() : "确定要修复该检查项吗？")
+                    .put("itemName", itemCode.getName());
+        } catch (Exception e) {
+            logger.error("获取检查项确认信息失败: {}", e.getMessage(), e);
+            return Result.error("获取确认信息失败: " + e.getMessage());
         }
     }
 }

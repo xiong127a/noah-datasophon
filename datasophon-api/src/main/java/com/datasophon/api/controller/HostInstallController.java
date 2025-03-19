@@ -140,8 +140,12 @@ public class HostInstallController {
      */
     @PostMapping("/fixCheckItem")
     @UserPermission
-    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId) {
-        return installService.fixCheckItem(clusterId, hostname, itemId);
+    public Result fixCheckItem(
+            @RequestParam("clusterId") Integer clusterId, 
+            @RequestParam("hostname") String hostname, 
+            @RequestParam("itemId") Integer itemId,
+            @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
+        return installService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);
     }
 
     /**

@@ -38,6 +38,25 @@ public interface HostCheckService {
     Result fixCheckItem(Integer clusterId, String hostname, Integer itemId);
 
     /**
+     * 修复指定检查项（支持跳过确认）
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param skipConfirm 是否跳过确认
+     * @return 修复结果
+     */
+    Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm);
+
+    /**
+     * 获取检查项的确认信息
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @return 确认信息
+     */
+    Result getCheckItemConfirmInfo(Integer clusterId, String hostname, Integer itemId);
+
+    /**
      * 修复选中的检查项
      * @param clusterId 集群ID
      * @param hostname 主机名

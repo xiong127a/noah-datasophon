@@ -36,8 +36,9 @@ export default {
   getRoleListByHostname: path + '/api/cluster/host/getRoleListByHostname', // 根据主机查询角色列表
   generateHostAgentCommand: path + '/host/install/generateHostAgentCommand', // 主机 Worker 管理
   generateHostServiceCommand: path + '/host/install/generateHostServiceCommand', // 主机 Worker Service 管理
-  fixCheckItem: path + '/host/install/fixCheckItem', // 修复单个检查项
-  fixAllCheckItems: path + '/host/install/fixAllCheckItems', // 修复所有检查项
+  fixCheckItem: path + '/host/check/fixCheckItem', // 修复单个检查项
+  fixAllCheckItems: path + '/host/check/fixAllCheckItems', // 修复所有检查项
+  fixSelectedCheckItems: path + '/host/check/fixSelectedCheckItems', // 修复选中的检查项
   batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
   getHostCheckItems: path + '/host/check/getHostCheckItems', // 获取主机检查项列表
@@ -45,4 +46,5 @@ export default {
   skipCheckItem: path + '/host/check/skipCheckItem', // 跳过检查项
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
+  getCheckItemConfirmInfo: path + '/host/check/getCheckItemConfirmInfo', // 获取检查项确认信息
 }

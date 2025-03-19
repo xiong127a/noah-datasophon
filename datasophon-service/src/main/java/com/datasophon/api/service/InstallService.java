@@ -50,6 +50,16 @@ public interface InstallService {
     Result fixCheckItem(Integer clusterId, String hostname, Integer itemId);
 
     /**
+     * 修复单个检查项（支持跳过确认）
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param skipConfirm 是否跳过确认提示
+     * @return 修复结果
+     */
+    Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm);
+
+    /**
      * 修复选中的多个检查项
      * @param clusterId 集群ID
      * @param hostname 主机名

@@ -80,10 +80,11 @@ public class HostCheckController {
     @PostMapping("/fixCheckItem")
     @UserPermission
     public Result fixCheckItem(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostname,
-            @RequestParam Integer itemId) {
-        return hostCheckService.fixCheckItem(clusterId, hostname, itemId);
+            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam("hostname") String hostname,
+            @RequestParam("itemId") Integer itemId,
+            @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
+        return hostCheckService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);
     }
 
     /**
@@ -227,5 +228,17 @@ public class HostCheckController {
     @UserPermission
     public Result getLogTypes() {
         return Result.success(hostCheckService.getLogTypes());
+    }
+
+    /**
+     * 获取检查项的确认信息
+     */
+    @GetMapping("/getCheckItemConfirmInfo")
+    @UserPermission
+    public Result getCheckItemConfirmInfo(
+            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam("hostname") String hostname,
+            @RequestParam("itemId") Integer itemId) {
+        return hostCheckService.getCheckItemConfirmInfo(clusterId, hostname, itemId);
     }
 } 

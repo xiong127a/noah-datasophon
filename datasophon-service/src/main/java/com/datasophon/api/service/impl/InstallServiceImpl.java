@@ -682,6 +682,11 @@ public class InstallServiceImpl implements InstallService {
     }
 
     @Override
+    public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
+        return hostCheckService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);
+    }
+
+    @Override
     public Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds) {
         return hostCheckService.fixSelectedCheckItems(clusterId, hostname, itemIds);
     }

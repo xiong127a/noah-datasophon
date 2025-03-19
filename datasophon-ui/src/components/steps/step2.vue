@@ -162,10 +162,10 @@ export default {
       selectedRowKeys: [],
       pagination: {
         total: 0,
-        pageSize: 100,
+        pageSize: 10,
         current: 1,
         showSizeChanger: true,
-        pageSizeOptions: ["100", "200", "500", "1000"],
+        pageSizeOptions: ["10", "50", "100", "500", "1000"],
         showTotal: (total) => `共 ${total} 条`,
       },
       timer: null,
@@ -404,12 +404,12 @@ export default {
                 }
               }, ["终止"]) : null,
               
-              // 重试按钮 - 非检查中时显示
+              // 重试按钮 - 非检查中时显示，检查中则禁用
               !isChecking ? h('a-button', {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  disabled: !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
+                  disabled: isChecking || !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
                              row.status === 'SUCCESS' || row.statusStr === 'SUCCESS' || 
                              row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
                 },
@@ -642,6 +642,9 @@ export default {
       const h = this.$createElement;
       const checkItems = this.checkItemsMap[record.hostname] || [];
       
+      // 判断主机是否处于检查中状态
+      const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
+      
       const columns = [
         {
           title: '检查项',
@@ -726,8 +729,8 @@ export default {
           width: '25%',
           customRender: (text, row) => {
             const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
-            const isFailed = row.status === 'FAILED' || row.statusStr === 'FAILED';
+            const isChecking = row.status === 'CHECKING';
+            const isFailed = row.status === 'FAILED';
             
             return h('div', { class: 'action-buttons' }, [
               // 终止按钮 - 检查中时显示
@@ -746,31 +749,36 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  disabled: !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
-                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS' || 
-                             row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
+                  // 当主机整体状态为检查中时，禁用按钮
+                  disabled: isHostChecking || !((row.status === 'FAILED' || 
+                             row.status === 'SUCCESS' || 
+                             row.status === 'SKIPPED'))
                 },
                 on: {
                   click: () => this.retryCheckItem(record.hostname, row.id)
                 }
               }, ["重试"]) : null,
               
-              // 修复按钮 - 失败时可用
+              // 修复按钮 - 失败时可用，主机整体检查中时禁用
               isFailed ? h('a-button', {
                 attrs: {
                   type: 'link',
-                  size: 'small'
+                  size: 'small',
+                  // 当主机整体状态为检查中时，禁用按钮
+                  disabled: isHostChecking
                 },
                 on: {
-                  click: () => this.fixCheckItem(record.hostname, row.id)
+                  click: () => this.fixCheckItem(record.hostname, row)
                 }
               }, ["修复"]) : null,
               
-              // 跳过按钮 - 失败时可用
+              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
               isFailed ? h('a-button', {
                 attrs: {
                   type: 'link',
-                  size: 'small'
+                  size: 'small',
+                  // 当主机整体状态为检查中时，禁用按钮
+                  disabled: isHostChecking
                 },
                 on: {
                   click: () => this.skipCheckItem(record.hostname, row.id)
@@ -789,7 +797,7 @@ export default {
               attrs: {
                 type: 'link',
                 size: 'small',
-                disabled: row.status === 'WAITING' || row.statusStr === 'WAITING'
+                disabled: row.status === 'WAITING'
               },
               on: {
                 click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
@@ -865,7 +873,8 @@ export default {
           attrs: {
             type: 'primary',
             size: 'small',
-            disabled: !this.hasRetryableSelectedItems(record.hostname)
+            // 当主机整体状态为检查中时，禁用按钮
+            disabled: isHostChecking || !this.hasRetryableSelectedItems(record.hostname)
           },
           style: { marginRight: '8px' },
           on: {
@@ -876,7 +885,8 @@ export default {
           attrs: {
             type: 'primary',
             size: 'small',
-            disabled: !this.hasFixableSelectedItems(record.hostname)
+            // 当主机整体状态为检查中时，禁用按钮
+            disabled: isHostChecking || !this.hasFixableSelectedItems(record.hostname)
           },
           on: {
             click: () => this.fixSelectedItems(record.hostname)
@@ -941,6 +951,15 @@ export default {
 
     // 跳过检查项
     async skipCheckItem(hostname, itemId) {
+      // 查找对应的主机信息
+      const host = this.dataSource.find(h => h.hostname === hostname);
+      
+      // 检查主机是否处于检查中状态
+      if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
+        this.$message.warning('主机当前正在检查中，请稍后再尝试跳过');
+        return;
+      }
+      
       try {
         const res = await this.$axiosPost(global.API.skipCheckItem, {
           clusterId: this.clusterId,
@@ -989,22 +1008,107 @@ export default {
     },
 
     // 修复单个检查项
-    async fixCheckItem(hostname, itemId) {
-      try {
-        const res = await this.$axiosPost(global.API.fixCheckItem, {
-          clusterId: this.clusterId,
-          hostname: hostname,
-          itemId: itemId
-        });
-        
-        if (res.code === 200) {
-          this.$message.success('修复指令已发送');
-          this.refreshHostList();
-        }
-      } catch (error) {
-        // 异常情况的日志记录，但不显示错误弹窗
-        console.error('修复检查项失败:', error);
+    async fixCheckItem(hostname, item) {
+      if (item.status !== 'FAILED') return;
+      
+      // 查找对应的主机信息
+      const host = this.dataSource.find(h => h.hostname === hostname);
+      
+      // 检查主机是否处于检查中状态
+      if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
+        this.$message.warning('主机当前正在检查中，请稍后再尝试修复');
+        return;
       }
+      
+      // First get confirmation info
+      this.$axiosGet(global.API.getCheckItemConfirmInfo, {
+        clusterId: this.clusterId,
+        hostname: hostname,
+        itemId: item.id
+      }).then(res => {
+        if (res.code === 200) {
+          const needConfirm = res.needConfirm;
+          const confirmMessage = res.confirmMessage;
+          
+          if (needConfirm) {
+            // 创建渲染函数
+            const h = this.$createElement;
+            
+            // Show confirmation dialog with improved styling
+            this.$confirm({
+              title: '确认修复 - ' + item.itemName,
+              content: h('div', {
+                style: {
+                  padding: '12px',
+                  backgroundColor: '#fff7e6',
+                  border: '1px solid #ffe58f',
+                  borderRadius: '4px',
+                  wordBreak: 'break-all',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.6',
+                  boxShadow: 'none',
+                  overflow: 'auto',
+                  maxHeight: '300px'
+                },
+                class: 'confirmation-content'
+              }, confirmMessage),
+              width: 560,
+              icon: 'exclamation-circle',
+              okText: '确认修复',
+              cancelText: '取消',
+              maskClosable: false,
+              centered: true,
+              class: 'check-item-confirm-modal custom-confirm-dialog',
+              okType: 'danger',
+              okButtonProps: { props: { size: 'large' } },
+              cancelButtonProps: { props: { size: 'large' } },
+              onOk: () => {
+                // User confirmed, proceed with fix
+                this.doFixCheckItem(hostname, item, true);
+              }
+            });
+          } else {
+            // No confirmation needed, proceed directly
+            this.doFixCheckItem(hostname, item, false);
+          }
+        } else {
+          // Handle API error
+          this.$message.error(res.msg || '获取确认信息失败');
+        }
+      }).catch(err => {
+        console.error('获取确认信息失败:', err);
+        this.$message.error('获取确认信息失败');
+      });
+    },
+    
+    // 执行实际的修复操作
+    async doFixCheckItem(hostname, item, skipConfirm) {
+      // Set loading state
+      this.$set(item, 'fixing', true);
+      
+      // Call fix API
+      this.$axiosPost(global.API.fixCheckItem, {
+        clusterId: this.clusterId,
+        hostname: hostname,
+        itemId: item.id,
+        skipConfirm: skipConfirm
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('修复操作已提交');
+          // Refresh check item status after a delay
+          setTimeout(() => {
+            this.getHostCheckItems(hostname);
+          }, 1000);
+        } else {
+          this.$message.error(res.msg || '修复失败');
+        }
+      }).catch(err => {
+        console.error('修复失败:', err);
+        this.$message.error('修复失败');
+      }).finally(() => {
+        // Clear loading state
+        this.$set(item, 'fixing', false);
+      });
     },
 
     // 修复所有检查项
@@ -1027,6 +1131,15 @@ export default {
 
     // 添加重试单个检查项的方法
     async retryCheckItem(hostname, itemId) {
+      // 查找对应的主机信息
+      const host = this.dataSource.find(h => h.hostname === hostname);
+      
+      // 检查主机是否处于检查中状态
+      if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
+        this.$message.warning('主机当前正在检查中，请稍后再尝试重试');
+        return;
+      }
+      
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
           clusterId: this.clusterId,
@@ -1847,5 +1960,233 @@ export default {
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
+}
+
+/* 确认弹窗样式定制 */
+:global(.check-item-confirm-modal) {
+  min-height: 200px;
+  
+  .ant-modal-content {
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    overflow: visible;
+    min-height: 200px;
+  }
+  
+  .ant-modal-confirm-body-wrapper {
+    padding: 24px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .ant-modal-confirm-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    
+    .anticon {
+      font-size: 22px;
+      margin-right: 16px;
+      color: #faad14;
+      flex-shrink: 0;
+    }
+    
+    .ant-modal-confirm-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.85);
+      line-height: 1.4;
+      display: block;
+      margin-bottom: 16px;
+    }
+    
+    .ant-modal-confirm-content {
+      margin-top: 16px;
+      margin-left: 38px !important;
+      word-break: break-all;
+      white-space: pre-wrap;
+      min-height: 100px;
+      max-height: 300px;
+      overflow: auto;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(0, 0, 0, 0.85);
+      padding: 16px;
+      background-color: #fff7e6;
+      border-radius: 4px;
+      border: 1px solid #ffe58f;
+      box-sizing: border-box;
+      width: calc(100% - 38px);
+      
+      /* 自定义滚动条样式 */
+      &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: #f5f5f5;
+        border-radius: 3px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 3px;
+        
+        &:hover {
+          background: #ccc;
+        }
+      }
+    }
+  }
+  
+  .ant-modal-confirm-btns {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    padding-bottom: 12px;
+    
+    .ant-btn {
+      height: 36px;
+      padding: 0 24px;
+      font-size: 14px;
+      border-radius: 4px;
+      margin-left: 8px;
+      visibility: visible !important;
+      opacity: 1 !important;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .ant-btn-primary {
+      background-color: #1890ff;
+      border-color: #1890ff;
+      
+      &:hover {
+        background-color: #40a9ff;
+        border-color: #40a9ff;
+      }
+    }
+    
+    .ant-btn-danger {
+      background-color: #ff4d4f;
+      border-color: #ff4d4f;
+      color: #fff;
+      
+      &:hover {
+        background-color: #ff7875;
+        border-color: #ff7875;
+      }
+    }
+    
+    .ant-btn-default {
+      border-color: #d9d9d9;
+      
+      &:hover {
+        color: #40a9ff;
+        border-color: #40a9ff;
+      }
+    }
+  }
+  
+  /* 确保按钮组显示正确 */
+  .ant-modal-confirm-body-wrapper > .ant-modal-confirm-btns {
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    bottom: 0 !important;
+    display: flex !important;
+  }
+}
+
+/* 自定义确认对话框样式 */
+.custom-confirm-dialog {
+  .ant-modal-confirm-content {
+    margin-left: 38px !important;
+    margin-top: 16px !important;
+    width: calc(100% - 38px) !important;
+    padding: 0 !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    
+    .confirmation-content {
+      /* 这个类直接应用于内容div */
+      width: 100% !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+    }
+  }
+}
+</style>
+
+<style lang="less">
+/* 全局样式修复确认弹窗按钮问题 */
+.ant-modal-confirm .ant-modal-confirm-btns {
+  margin-top: 24px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  position: relative !important;
+  height: auto !important;
+  min-height: 36px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  
+  button {
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px !important;
+    height: 36px !important;
+    padding: 0 15px !important;
+    font-size: 14px !important;
+    margin-left: 8px !important;
+  }
+  
+  .ant-btn-danger {
+    background-color: #ff4d4f !important;
+    border-color: #ff4d4f !important;
+    color: white !important;
+  }
+  
+  .ant-btn-primary {
+    background-color: #1890ff !important;
+    border-color: #1890ff !important;
+    color: white !important;
+  }
+}
+
+/* 调整确认弹窗内容高度 */
+.ant-modal-confirm .ant-modal-confirm-body-wrapper {
+  max-height: calc(90vh - 48px) !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-body {
+  flex: 1 !important;
+  margin-bottom: 16px !important;
+}
+
+.ant-modal-confirm .ant-modal-confirm-content {
+  min-height: 80px !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  margin-top: 16px !important;
+  padding: 12px !important;
+  background-color: #fff7e6 !important;
+  border: 1px solid #ffe58f !important;
+  border-radius: 4px !important;
+  border-left: 1px solid #ffe58f !important; /* 确保左边框和其他边一致 */
+  box-shadow: none !important; /* 移除可能的阴影效果 */
+  margin-left: 38px !important; /* 保持左边距 */
+  width: calc(100% - 38px) !important; /* 保持宽度 */
 }
 </style>

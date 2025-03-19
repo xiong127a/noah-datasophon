@@ -1,35 +1,74 @@
 package com.datasophon.common.model;
 
+import lombok.Getter;
+
+@Getter
 public enum ItemCode {
-    PASSWORD_FREE("PASSWORD_FREE", "主机免密检查", 1),
-    DISK("DISK", "磁盘空间检查", 2),
-    MEMORY("MEMORY", "内存检查", 3),
-    CPU("CPU", "CPU检查", 4),
-    JAVA_ENV("JAVA_ENV", "Java环境检查", 5),
-    FILE_HANDLE("FILE_HANDLE", "最大文件句柄数检查", 6),
-    FIREWALL("FIREWALL", "防火墙检查", 7),
-    SELINUX("SELINUX", "SELinux检查", 8),
-    TIME_SYNC("TIME_SYNC", "时间同步检查", 9);
+    PASSWORD_FREE("PASSWORD_FREE", "主机免密检查", 1, false, null),
+    DISK("DISK", "磁盘空间检查", 2, true, "磁盘空间不足无法自动修复，需要您手动增加磁盘空间。确定要继续尝试修复吗？"),
+    MEMORY("MEMORY", "内存检查", 3, true, "内存不足无法自动修复，需要您手动增加内存。确定要继续尝试修复吗？"),
+    CPU("CPU", "CPU检查", 4, true, "CPU核心数不足无法自动修复，需要您手动增加CPU资源。确定要继续尝试修复吗？"),
+    JAVA_ENV("JAVA_ENV", "Java环境检查", 5, false, null),
+    FILE_HANDLE("FILE_HANDLE", "最大文件句柄数检查", 6, false, null),
+    FIREWALL("FIREWALL", "防火墙检查", 7, false, null),
+    SELINUX("SELINUX", "SELinux检查", 8, false, null),
+    TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null);
 
     private final String code;
-    private final String desc;
+    private final String name;
     private final int sequence;
+    /**
+     * -- GETTER --
+     * 是否需要二次确认
+     *
+     * @return 是否需要二次确认
+     */
+    private final boolean needConfirm; // 是否需要二次确认
+    /**
+     * -- GETTER --
+     * 获取确认消息
+     *
+     * @return 确认消息
+     */
+    private final String confirmMessage; // 确认消息
 
-    ItemCode(String code, String desc, int sequence) {
+    ItemCode(String code, String name, int sequence, boolean needConfirm, String confirmMessage) {
         this.code = code;
-        this.desc = desc;
+        this.name = name;
         this.sequence = sequence;
+        this.needConfirm = needConfirm;
+        this.confirmMessage = confirmMessage;
     }
 
-    public String getCode() {
-        return code;
+    /**
+     * 通过代码查找检查项
+     *
+     * @param code 检查项代码
+     * @return 检查项
+     */
+    public static ItemCode getByCode(String code) {
+        for (ItemCode itemCode : values()) {
+            if (itemCode.getCode().equals(code)) {
+                return itemCode;
+            }
+        }
+        return null;
     }
 
-    public String getDesc() {
-        return desc;
+
+    /**
+     * 通过序列号查找检查项
+     *
+     * @param sequence 检查项的序列号
+     * @return 对应序列号的检查项，如果未找到则返回 null
+     */
+    public static ItemCode getBySequence(int sequence) {
+        for (ItemCode itemCode : values()) {
+            if (itemCode.getSequence() == sequence) {
+                return itemCode;
+            }
+        }
+        return null;
     }
-    
-    public int getSequence() {
-        return sequence;
-    }
+
 } 
