@@ -5,6 +5,7 @@ import com.datasophon.api.service.HostCheckService;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -144,19 +146,6 @@ public class HostCheckController {
     }
 
     /**
-     * 获取检查项的实时日志（支持筛选日志类型）
-     */
-    @PostMapping("/getCheckItemLogWithType")
-    @UserPermission
-    public Result getCheckItemLogWithType(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
-            @RequestParam("itemId") Integer itemId,
-            @RequestParam(value = "logType", required = false, defaultValue = "check") String logType) {
-        return hostCheckService.getCheckItemLogWithType(clusterId, hostname, itemId, logType);
-    }
-
-    /**
      * 重试指定的检查项
      */
     @PostMapping("/retryCheckItems")
@@ -187,5 +176,54 @@ public class HostCheckController {
         }
         
         return hostCheckService.retryCheckItems(clusterId, hostname, itemIds);
+    }
+
+    /**
+     * 统一的日志获取API
+     */
+    @PostMapping("/getLog")
+    @UserPermission
+    public Result getLog(
+            @RequestParam Integer clusterId,
+            @RequestParam String hostname,
+            @RequestParam Integer itemId,
+            @RequestParam(required = false) String logType,
+            @RequestParam(required = false) String logLevel,
+            @RequestParam(required = false, defaultValue = "all") String filterMode) {
+        return hostCheckService.getLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
+    }
+
+    /**
+     * 获取可用的日志级别
+     * @return 日志级别列表
+     */
+    @GetMapping("/log-levels")
+    @UserPermission
+    public Result getLogLevels() {
+        try {
+            return Result.success(LogEntry.Level.values());
+        } catch (Exception e) {
+            log.error("获取日志级别列表失败: {}", e.getMessage(), e);
+            return Result.error("获取日志级别列表失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取可用的日志类型
+     * @return 日志类型列表
+     */
+    @GetMapping("/log-types")
+    @UserPermission
+    public Result getLogTypes() {
+        try {
+            Map<String, String> types = new LinkedHashMap<>();
+            types.put("all", "全部日志");
+            types.put("check", "检查日志");
+            types.put("fix", "修复日志");
+            return Result.success(types);
+        } catch (Exception e) {
+            log.error("获取日志类型列表失败: {}", e.getMessage(), e);
+            return Result.error("获取日志类型列表失败: " + e.getMessage());
+        }
     }
 } 

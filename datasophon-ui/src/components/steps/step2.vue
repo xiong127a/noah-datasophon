@@ -57,55 +57,86 @@
     >
       <div class="log-container">
         <div class="log-header">
-          <div class="refresh-options">
-            <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
-              <a-icon type="reload" />手动刷新
-            </a-button>
-            <a-dropdown>
-              <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
-                <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
-                <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
-                <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
-                <a-icon type="down" style="margin-left: 4px" />
+          <!-- 刷新控制区域 -->
+          <div class="header-section">
+            <div class="refresh-options">
+              <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
+                <a-icon type="reload" />手动刷新
               </a-button>
-              <a-menu slot="overlay" @click="handleAutoRefreshChange">
-                <a-menu-item key="0">
-                  <a-icon type="stop" />关闭自动刷新
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="1">
-                  <a-icon type="sync" />每秒刷新
-                </a-menu-item>
-                <a-menu-item key="3">
-                  <a-icon type="sync" />每3秒刷新
-                </a-menu-item>
-                <a-menu-item key="5">
-                  <a-icon type="sync" />每5秒刷新
-                </a-menu-item>
-                <a-menu-item key="10">
-                  <a-icon type="sync" />每10秒刷新
-                </a-menu-item>
-              </a-menu>
-            </a-dropdown>
+              <a-dropdown>
+                <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
+                  <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
+                  <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
+                  <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
+                  <a-icon type="down" style="margin-left: 4px" />
+                </a-button>
+                <a-menu slot="overlay" @click="handleAutoRefreshChange">
+                  <a-menu-item key="0">
+                    <a-icon type="stop" />关闭自动刷新
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="1">
+                    <a-icon type="sync" />每秒刷新
+                  </a-menu-item>
+                  <a-menu-item key="3">
+                    <a-icon type="sync" />每3秒刷新
+                  </a-menu-item>
+                  <a-menu-item key="5">
+                    <a-icon type="sync" />每5秒刷新
+                  </a-menu-item>
+                  <a-menu-item key="10">
+                    <a-icon type="sync" />每10秒刷新
+                  </a-menu-item>
+                </a-menu>
+              </a-dropdown>
+            </div>
           </div>
           
-          <!-- 添加日志类型选择 -->
-          <div class="log-type-selector">
-            <a-radio-group v-model="currentLogType" button-style="solid" @change="handleLogTypeChange">
-              <a-radio-button value="check">检查日志</a-radio-button>
-              <a-radio-button value="fix">修复日志</a-radio-button>
-              <a-radio-button value="all">全部日志</a-radio-button>
-            </a-radio-group>
+          <!-- 筛选控制区域 -->
+          <div class="header-section filter-area">
+            <!-- 日志类型选择 -->
+            <div class="log-type-selector">
+              <div class="filter-title">日志类型筛选：</div>
+              <a-radio-group v-model="currentLogType" button-style="solid" @change="handleLogTypeChange">
+                <a-radio-button value="all">全部日志</a-radio-button>
+                <a-radio-button value="check">检查日志</a-radio-button>
+                <a-radio-button value="fix">修复日志</a-radio-button>
+              </a-radio-group>
+            </div>
+            
+            <!-- 添加日志筛选组件 -->
+            <log-filter 
+              ref="logFilter"
+              v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
+              :clusterId="checkItem.clusterId" 
+              :hostname="checkItem.hostname" 
+              :itemId="checkItem.id"
+              v-model="logContent"
+              hide-reset-button
+              @filter-change="handleFilterChange"
+            ></log-filter>
           </div>
           
-          <!-- 添加日志筛选组件 -->
-          <log-filter 
-            v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
-            :clusterId="checkItem.clusterId" 
-            :hostname="checkItem.hostname" 
-            :itemId="checkItem.id"
-            v-model="logContent"
-          ></log-filter>
+          <!-- 合并的筛选状态显示区域 -->
+          <div class="combined-filter-status">
+            <div class="filter-description">
+              当前显示: 
+              <span class="highlight">{{ currentLogType === 'all' ? '全部' : (currentLogType === 'check' ? '检查' : '修复') }}</span> 类型，
+              <span v-if="checkItem && $refs.logFilter">
+                <template v-if="$refs.logFilter.filterType === 'exact'">
+                  <span class="highlight">{{ $refs.logFilter.selectedLevel }}</span> 级别
+                </template>
+                <template v-else-if="$refs.logFilter.filterType === 'min'">
+                  <span class="highlight">{{ $refs.logFilter.selectedLevel }}</span> 及以上级别
+                </template>
+                <template v-else>
+                  <span class="highlight">全部</span> 级别
+                </template>
+              </span>
+              <span v-else>加载中...</span>
+              的日志
+            </div>
+          </div>
         </div>
         <div class="log-content" v-loading="logLoading">
           <pre v-html="logContent"></pre>
@@ -400,7 +431,7 @@ export default {
       currentLogItemId: null,
       currentLogItemName: null,
       refreshTimer: null,
-      currentLogType: 'check',
+      currentLogType: 'all',
       forceUseTypedApi: false,
     };
   },
@@ -1206,8 +1237,8 @@ export default {
       this.logVisible = true;
       this.logContent = '';
       
-      // 设置初始日志类型为检查日志
-      this.currentLogType = 'check';
+      // 设置初始日志类型为全部日志
+      this.currentLogType = 'all';
       
       // 初始停止之前可能存在的自动刷新定时器
       this.stopAutoRefresh();
@@ -1225,24 +1256,31 @@ export default {
       this.logLoading = true;
       
       try {
-        // 所有非默认日志类型都使用带类型的API
-        const useTypedApi = this.currentLogType !== 'check' || this.forceUseTypedApi;
-        const apiUrl = useTypedApi ? 
-          global.API.getCheckItemLogWithType : 
-          global.API.getCheckItemLog;
+        // 统一使用一个API进行所有筛选
+        const apiUrl = '/ddh/host/check/getLog';
+        
+        // 获取级别筛选参数
+        let logLevel = null;
+        let filterMode = 'all';
+        
+        if (this.$refs.logFilter) {
+          filterMode = this.$refs.logFilter.filterType;
+          if (filterMode !== 'all') {
+            logLevel = this.$refs.logFilter.selectedLevel;
+          }
+        }
           
         // 准备请求参数
         const params = { 
           clusterId: this.clusterId,
           hostname: this.currentLogHostname,
-          itemId: this.currentLogItemId
+          itemId: this.currentLogItemId,
+          logType: this.currentLogType,
+          logLevel: logLevel,
+          filterMode: filterMode
         };
         
-        // 如果使用带类型的API，添加logType参数
-        if (useTypedApi) {
-          params.logType = this.currentLogType;
-        }
-        
+        console.log('API请求:', apiUrl, params);
         const res = await this.$axiosPost(apiUrl, params);
         
         if (res.code === 200) {
@@ -1307,6 +1345,17 @@ export default {
       }
     },
     
+    // 重置日志筛选，显示INFO级以上的全部类型日志
+    resetLogFilter() {
+      this.currentLogType = 'all';
+      if (this.$refs.logFilter) {
+        this.$refs.logFilter.filterType = 'min';
+        this.$refs.logFilter.selectedLevel = 'INFO';
+        this.$refs.logFilter.applyFilter();
+      }
+      this.fetchItemLog();
+    },
+
     // 终止单个检查项
     async stopCheckItem(hostname, itemId) {
       if (!hostname || !itemId) {
@@ -1372,14 +1421,20 @@ export default {
       // 2. 确保后端OperationType枚举中添加了相应的类型
       // 3. 确保HostCheckServiceImpl.getCheckItemLogWithType方法支持新的日志类型
     },
+
+    // 处理筛选变化
+    handleFilterChange(filterData) {
+      // 直接刷新日志以应用新的筛选条件
+      this.fetchItemLog();
+    },
   },
   mounted() {
     // 直接开始轮询
     this.pollingSearch();
     
-    // 确保API路径已定义
-    if (!global.API.getCheckItemLogWithType) {
-      global.API.getCheckItemLogWithType = '/host/check/getCheckItemLogWithType';
+    // 注册新的统一日志API
+    if (!global.API.getLog) {
+      global.API.getLog = '/ddh/host/check/getLog';
     }
   },
   beforeDestroy() {
@@ -1510,15 +1565,16 @@ export default {
     border: 1px solid #f0f0f0;
     border-radius: 4px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
     flex-shrink: 0;
-    gap: 10px;
-    
-    .refresh-options, .log-type-selector {
-      flex-shrink: 0;
-    }
+    gap: 16px;
+  }
+  
+  .header-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
   }
 
   .log-content {
@@ -1542,6 +1598,7 @@ export default {
       margin: 0;
       overflow-x: visible; /* 内容可见，滚动由外层容器控制 */
       flex: 1;
+      padding: 0;
     }
 
     .no-log {
@@ -1629,7 +1686,16 @@ export default {
 }
 
 .log-type-selector {
-  margin: 0 15px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  
+  .filter-title {
+    white-space: nowrap;
+    margin-right: 10px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.85);
+  }
   
   .ant-radio-group {
     display: flex;
@@ -1638,6 +1704,26 @@ export default {
       text-align: center;
       min-width: 80px;
     }
+  }
+}
+
+.combined-filter-status {
+  margin: 4px 0;
+  padding: 8px 12px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border-left: 3px solid #1890ff;
+  width: 100%;
+}
+
+.filter-description {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  
+  .highlight {
+    color: #1890ff;
+    font-weight: 500;
   }
 }
 
@@ -1655,5 +1741,50 @@ export default {
     padding-bottom: 12px !important;
     line-height: 1.5 !important;
   }
+}
+
+.log-filter-container {
+  margin-bottom: 0;
+  padding: 0;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.reset-filter {
+  display: none; /* 隐藏原有的重置筛选按钮 */
+}
+
+.log-type-selector {
+  display: flex;
+  align-items: center;
+  
+  .filter-title {
+    white-space: nowrap;
+    margin-right: 10px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.85);
+  }
+  
+  .ant-radio-group {
+    display: flex;
+    
+    .ant-radio-button-wrapper {
+      text-align: center;
+      min-width: 80px;
+    }
+  }
+}
+
+.filter-area {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
 }
 </style>

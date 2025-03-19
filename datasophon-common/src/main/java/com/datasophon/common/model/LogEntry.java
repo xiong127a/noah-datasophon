@@ -1,5 +1,7 @@
 package com.datasophon.common.model;
 
+import lombok.Getter;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.text.SimpleDateFormat;
@@ -7,12 +9,14 @@ import java.text.SimpleDateFormat;
 /**
  * 结构化日志记录
  */
+@Getter
 public class LogEntry implements Serializable {
     private static final long serialVersionUID = 1L;
     
     /**
      * 日志级别枚举
      */
+    @Getter
     public enum Level {
         DEBUG(0),
         INFO(1),
@@ -24,11 +28,7 @@ public class LogEntry implements Serializable {
         Level(int value) {
             this.value = value;
         }
-        
-        public int getValue() {
-            return value;
-        }
-        
+
         /**
          * 判断当前级别是否包含目标级别
          * 例如: INFO.includes(DEBUG) 返回 false
@@ -79,51 +79,27 @@ public class LogEntry implements Serializable {
         this.message = message;
         this.lineNumber = lineNumber;
     }
-    
-    public Date getTimestamp() {
-        return timestamp;
-    }
-    
+
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }
-    
-    public Level getLevel() {
-        return level;
-    }
-    
+
     public void setLevel(Level level) {
         this.level = level;
     }
-    
-    public String getThreadName() {
-        return threadName;
-    }
-    
+
     public void setThreadName(String threadName) {
         this.threadName = threadName;
     }
-    
-    public String getClassName() {
-        return className;
-    }
-    
+
     public void setClassName(String className) {
         this.className = className;
     }
-    
-    public String getMessage() {
-        return message;
-    }
-    
+
     public void setMessage(String message) {
         this.message = message;
     }
-    
-    public int getLineNumber() {
-        return lineNumber;
-    }
-    
+
     public void setLineNumber(int lineNumber) {
         this.lineNumber = lineNumber;
     }

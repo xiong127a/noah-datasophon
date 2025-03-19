@@ -24,151 +24,67 @@ public abstract class AbstractItemChecker implements ItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(AbstractItemChecker.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
     private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
+    private static final String CHECK_LOG_PREFIX = "CHECK_LOG_";
+    private static final String FIX_LOG_PREFIX = "FIX_LOG_";
+    
+    /**
+     * 操作类型枚举，用于区分不同类型的日志
+     * 可以在未来轻松扩展添加更多日志类型
+     */
+    public enum OperationType {
+        CHECK("检查", CHECK_LOG_PREFIX),
+        FIX("修复", FIX_LOG_PREFIX),
+        // 将来可以添加更多类型，如:
+        // UPGRADE("升级", "UPGRADE_LOG_"),
+        // CONFIG("配置", "CONFIG_LOG_"),
+        // DIAGNOSE("诊断", "DIAGNOSE_LOG_")
+        ;
+        
+        private final String displayName;
+        private final String logPrefix;
+        
+        OperationType(String displayName, String logPrefix) {
+            this.displayName = displayName;
+            this.logPrefix = logPrefix;
+        }
+        
+        public String getDisplayName() {
+            return displayName;
+        }
+        
+        public String getLogPrefix() {
+            return logPrefix;
+        }
+    }
 
     protected ClientSession session;
     // 当前检查项的日志缓存键
     protected String currentLogKey;
-    
-    /**
-     * 基于检查项的日志实现，同时写入缓存和控制台日志
-     */
-    protected class CacheItemLogger implements CheckLogger {
-        private final String className;
-        private final Logger slf4jLogger;
-
-        public CacheItemLogger() {
-            this.className = AbstractItemChecker.this.getClass().getSimpleName();
-            this.slf4jLogger = LoggerFactory.getLogger(AbstractItemChecker.this.getClass());
-        }
-
-        /**
-         * 获取调用者的代码位置信息
-         * 
-         * @return 包含类名、方法名和行号的StackTraceElement
-         */
-        private StackTraceElement getCallerStackTraceElement() {
-            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-            // 需要跳过直到找到实际调用日志方法的代码位置
-            // 0 - getStackTrace
-            // 1 - getCallerStackTraceElement (当前方法)
-            // 2 - addLogEntry 
-            // 3 - info/warn/error/debug 方法
-            // 4 - 实际的调用者
-
-            // 注意：根据JVM的实现，调用栈的深度可能不同，需要安全检查
-            if (stackTraceElements.length >= 5) {
-                return stackTraceElements[4];
-            } else if (stackTraceElements.length >= 1) {
-                // 如果没有足够深的调用栈，返回最深的可用元素
-                return stackTraceElements[stackTraceElements.length - 1];
-            }
-            
-            // 极端情况下，创建一个空的栈元素
-            return new StackTraceElement(className, "unknown", "unknown", -1);
-        }
-
-        private void addLogEntry(String levelStr, String message) {
-            if (currentLogKey != null) {
-                try {
-                    // 获取真实的调用位置
-                    StackTraceElement caller = getCallerStackTraceElement();
-                    String callerClassName = caller.getClassName();
-                    int lineNumber = caller.getLineNumber();
-                    
-                    // 从完整类名中提取简单类名
-                    String simpleClassName = callerClassName;
-                    int lastDot = callerClassName.lastIndexOf('.');
-                    if (lastDot >= 0) {
-                        simpleClassName = callerClassName.substring(lastDot + 1);
-                    }
-                    
-                    // 创建结构化日志记录
-                    Date timestamp = new Date();
-                    String threadName = Thread.currentThread().getName();
-                    LogEntry.Level level = LogEntry.Level.valueOf(levelStr);
-                    
-                    // 将行号和类名作为元数据传递到LogEntry
-                    LogEntry logEntry = new LogEntry(timestamp, level, threadName, simpleClassName, message);
-                    logEntry.setLineNumber(lineNumber);
-                    
-                    // 添加到日志管理器
-                    LogEntryManager.addLogEntry(currentLogKey, logEntry);
-                    
-                    // 同时输出到标准日志
-                    switch (level) {
-                        case INFO:
-                            slf4jLogger.info(message);
-                            break;
-                        case WARN:
-                            slf4jLogger.warn(message);
-                            break;
-                        case ERROR:
-                            slf4jLogger.error(message);
-                            break;
-                        case DEBUG:
-                            slf4jLogger.debug(message);
-                            break;
-                    }
-                } catch (Exception e) {
-                    slf4jLogger.error("添加日志记录失败: {}", e.getMessage(), e);
-                }
-            } else {
-                // 如果没有设置日志键，只输出到标准日志
-                slf4jLogger.debug("缓存日志未存储(currentLogKey为空): {}", message);
-            }
-        }
-
-        @Override
-        public void info(String message) {
-            addLogEntry("INFO", message);
-        }
-
-        @Override
-        public void info(String format, Object... args) {
-            String message = String.format(format, args);
-            addLogEntry("INFO", message);
-        }
-
-        @Override
-        public void warn(String message) {
-            addLogEntry("WARN", message);
-        }
-
-        @Override
-        public void warn(String format, Object... args) {
-            String message = String.format(format, args);
-            addLogEntry("WARN", message);
-        }
-
-        @Override
-        public void error(String message) {
-            addLogEntry("ERROR", message);
-        }
-
-        @Override
-        public void error(String format, Object... args) {
-            String message = String.format(format, args);
-            addLogEntry("ERROR", message);
-        }
-
-        @Override
-        public void debug(String message) {
-            addLogEntry("DEBUG", message);
-        }
-
-        @Override
-        public void debug(String format, Object... args) {
-            String message = String.format(format, args);
-            addLogEntry("DEBUG", message);
-        }
-    }
+    // 当前操作类型
+    protected OperationType operationType = OperationType.CHECK;
     
     // 供子类使用的日志记录器实例，同时记录到缓存和控制台
-    protected final CheckLogger cacheLog = new CacheItemLogger();
+    protected final CheckLogger cacheLog;
+    
+    /**
+     * 构造函数
+     */
+    public AbstractItemChecker() {
+        // 初始化一个默认的日志记录器
+        // 注意：此时currentLogKey为null，初始日志会发送到slf4j但不会缓存
+        // 在setCurrentLogKey方法调用后，日志会正确缓存
+        this.cacheLog = CheckLogger.createLogger(null, this.getClass().getSimpleName());
+    }
 
     // 设置当前检查项的日志缓存键
     protected void setCurrentLogKey(Integer clusterId, String hostname, Integer itemId) {
-        this.currentLogKey = CHECK_ITEM_LOG_PREFIX + clusterId + "_" + hostname + "_" + itemId;
+        // 根据当前是否为修复操作选择前缀
+        String prefix = operationType.getLogPrefix();
+        this.currentLogKey = prefix + clusterId + "_" + hostname + "_" + itemId;
+        logger.debug("设置日志键: {}, 类型: {}", this.currentLogKey, operationType.getDisplayName());
+        
+        // 更新日志记录器的logKey
+        ((CheckLogger.LoggerImpl)this.cacheLog).updateLogKey(this.currentLogKey);
     }
     
     /**
@@ -428,6 +344,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
     public final CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
         logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
         
+        // 设置为检查操作
+        operationType = OperationType.CHECK;
+        
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
         
@@ -550,6 +469,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
     @Override
     public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
         logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        
+        // 设置为修复操作
+        operationType = OperationType.FIX;
         
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
