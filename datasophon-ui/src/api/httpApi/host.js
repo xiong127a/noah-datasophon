@@ -42,6 +42,7 @@ export default {
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
   getHostCheckItems: path + '/host/check/getHostCheckItems', // 获取主机检查项列表
   stopCheckItem: path + '/host/check/stopCheckItem', // 终止检查项
+  skipCheckItem: path + '/host/check/skipCheckItem', // 跳过检查项
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
 }

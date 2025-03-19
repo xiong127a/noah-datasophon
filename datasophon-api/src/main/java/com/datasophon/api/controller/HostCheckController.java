@@ -208,6 +208,18 @@ public class HostCheckController {
     }
     
     /**
+     * 跳过指定检查项
+     */
+    @PostMapping("/skipCheckItem")
+    @UserPermission
+    public Result skipCheckItem(
+            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam("hostname") String hostname,
+            @RequestParam("itemId") Integer itemId) {
+        return hostCheckService.skipCheckItem(clusterId, hostname, itemId);
+    }
+    
+    /**
      * 获取可用的日志类型
      * @return 日志类型列表
      */

@@ -1699,16 +1699,52 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Map<String, String> getLogTypes() {
-        Map<String, String> logTypes = new LinkedHashMap<>();
-        
-        // 添加全部选项
-        logTypes.put("all", "全部");
-        
-        // 添加枚举中的所有类型
-        for (LogEntry.Type type : LogEntry.Type.values()) {
-            logTypes.put(type.name().toLowerCase(), type.getDisplayName());
+        Map<String, String> types = new LinkedHashMap<>();
+        types.put("all", "全部日志");
+        types.put("check", "检查日志");
+        types.put("fix", "修复日志");
+        return types;
+    }
+
+    /**
+     * 跳过指定检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @return 跳过结果
+     */
+    @Override
+    public Result skipCheckItem(Integer clusterId, String hostname, Integer itemId) {
+        // 获取主机信息
+        HostInfo hostInfo = getHostInfo(clusterId, hostname);
+        if (hostInfo == null) {
+            return Result.error("找不到指定主机: " + hostname);
         }
         
-        return logTypes;
+        // 查找对应的检查项
+        CheckItem checkItem = findCheckItemById(hostInfo, itemId);
+        if (checkItem == null) {
+            return Result.error("找不到检查项: " + itemId);
+        }
+        
+        try {
+            // 先尝试停止检查项如果正在运行
+            stopItemCheck(clusterId, hostname, itemId);
+            
+            // 更新检查项状态为已跳过
+            hostInfo.updateCheckItemStatus(itemId, CheckItem.Status.SKIPPED, "用户已跳过该检查项");
+            
+            // 更新缓存
+            updateHostInfoCache(clusterId, hostInfo);
+            
+            // 记录日志
+            LoggerFactory.getCheckLogger(this, clusterId, hostname, itemId)
+                .info("用户跳过了该检查项");
+                
+            return Result.success("已跳过该检查项");
+        } catch (Exception e) {
+            logger.error("跳过检查项时出错: " + e.getMessage(), e);
+            return Result.error("跳过检查项失败: " + e.getMessage());
+        }
     }
 }

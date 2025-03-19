@@ -154,6 +154,15 @@ public interface HostCheckService {
     Map<String, String> getLogTypes();
 
     /**
+     * 跳过指定检查项
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @return 跳过结果
+     */
+    Result skipCheckItem(Integer clusterId, String hostname, Integer itemId);
+
+    /**
      * 获取可用的日志级别
      * @return 日志级别数组
      */
