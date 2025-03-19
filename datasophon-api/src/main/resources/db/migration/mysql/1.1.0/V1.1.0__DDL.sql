@@ -524,7 +524,6 @@ CREATE TABLE `t_ddh_frame_service_role`  (
   `service_role_name` varchar(32)  DEFAULT NULL COMMENT '角色名称',
   `service_role_type` int(11) DEFAULT NULL COMMENT '角色类型 1:master2:worker3:client',
   `cardinality` varchar(32)  DEFAULT NULL,
-  `service_config` text  NULL,
   `service_role_json` text  NULL,
   `service_role_json_md5` varchar(255)  DEFAULT NULL,
   `frame_code` varchar(255)  DEFAULT NULL,

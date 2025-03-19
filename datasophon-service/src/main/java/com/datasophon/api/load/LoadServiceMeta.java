@@ -38,6 +38,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.*;
 import com.datasophon.dao.entity.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -54,6 +55,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
+import static com.datasophon.api.utils.CommonUtils.buildNameToRoleMap;
 import static com.datasophon.common.Constants.COMMON_CONFIG;
 
 @Component
@@ -66,66 +68,32 @@ public class LoadServiceMeta implements ApplicationRunner {
     private static final String HADOOP = "HADOOP";
     @Autowired
     private FrameServiceService frameServiceService;
+
     @Autowired
     private FrameInfoService frameInfoService;
+
     @Autowired
     private FrameServiceRoleService roleService;
+
     @Autowired
     private ClusterVariableService variableService;
+
     @Autowired
     private ClusterInfoService clusterInfoService;
+
     @Autowired
     private ConfigBean configBean;
+
     @Autowired
     private ClusterServiceInstanceService serviceInstanceService;
+
     @Autowired
     private ClusterServiceInstanceRoleGroupService roleGroupService;
+
     @Autowired
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-    // 根据 IP 地址推断子网掩码
-    public static String getSubnetFromIp(String ip) {
-        if (ip == null) {
-            return null;
-        }
 
-        // 拆分 IP 地址
-        String[] ipParts = ip.split("\\.");  // 将 IP 地址分割为四个部分
-        if (ipParts.length != 4) {
-            return null;  // 无效的 IP 地址
-        }
-
-        int firstOctet = Integer.parseInt(ipParts[0]);
-
-        // 根据 IP 地址的第一部分推断出适当的子网掩码
-        String subnetMask;
-        if (firstOctet >= 1 && firstOctet <= 126) {
-            // A 类地址，使用 /8
-            subnetMask = "/8";
-        } else if (firstOctet >= 128 && firstOctet <= 191) {
-            // B 类地址，使用 /16
-            subnetMask = "/16";
-        } else if (firstOctet >= 192 && firstOctet <= 223) {
-            // C 类地址，使用 /24
-            subnetMask = "/24";
-        } else {
-            // 其他情况，暂不处理
-            subnetMask = "/24"; // 默认返回 /24
-        }
-
-        // 构造网络前缀
-        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
-        return networkPrefix + subnetMask;
-    }
-
-    // 设置 priority_networks 参数
-    public static String getPriorityNetworks(String ipAddress) {
-        if (ipAddress != null) {
-            // 根据 IP 地址获取子网
-            return getSubnetFromIp(ipAddress);
-        }
-        return null;
-    }
 
     /**
      * 1、设置全局环境变量
@@ -161,9 +129,9 @@ public class LoadServiceMeta implements ApplicationRunner {
                 getActorRefName(serviceCacheSyncActor.class));
     }
 
+
     /**
      * 解析 DDL 并存储到 frame 库
-     *
      * @param frameCode
      * @param clusters
      * @param frameInfo
@@ -208,7 +176,7 @@ public class LoadServiceMeta implements ApplicationRunner {
                         allParameters,
                         configFileMap);
         // save frame service role
-        saveFrameServiceRole(frameCode, serviceName, serviceInfo, serviceEntity, configFileMap);
+        saveFrameServiceRole(frameCode, serviceName, serviceInfo, serviceEntity);
     }
 
 
@@ -227,11 +195,10 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private void saveFrameServiceRole(
-            String frameCode,
-            String serviceName,
-            ServiceInfo serviceInfo,
-            FrameServiceEntity serviceEntity,
-            Map<Generators, List<ServiceConfig>> configFileMap) {
+                                      String frameCode,
+                                      String serviceName,
+                                      ServiceInfo serviceInfo,
+                                      FrameServiceEntity serviceEntity) {
         List<ServiceRoleInfo> serviceRoles = serviceInfo.getRoles();
 
         for (ServiceRoleInfo serviceRole : serviceRoles) {
@@ -267,7 +234,6 @@ public class LoadServiceMeta implements ApplicationRunner {
                         frameCode,
                         serviceEntity,
                         serviceRole,
-                        configFileMap,
                         serviceRoleJson,
                         serviceRoleJsonMd5,
                         role);
@@ -277,7 +243,6 @@ public class LoadServiceMeta implements ApplicationRunner {
                         frameCode,
                         serviceEntity,
                         serviceRole,
-                        configFileMap,
                         serviceRoleJson,
                         serviceRoleJsonMd5,
                         role);
@@ -289,17 +254,27 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private FrameServiceEntity saveFrameService(
-            String frameCode,
-            FrameInfoEntity frameInfo,
-            String serviceName,
-            String serviceDdl,
-            ServiceInfo serviceInfo,
-            String serviceInfoMd5,
-            List<ServiceConfig> allParameters,
-            Map<Generators, List<ServiceConfig>> configFileMap) {
+                                                String frameCode,
+                                                FrameInfoEntity frameInfo,
+                                                String serviceName,
+                                                String serviceDdl,
+                                                ServiceInfo serviceInfo,
+                                                String serviceInfoMd5,
+                                                List<ServiceConfig> allParameters,
+                                                Map<Generators, List<ServiceConfig>> configFileMap) {
         FrameServiceEntity serviceEntity =
                 frameServiceService.getServiceByFrameIdAndServiceName(
                         frameInfo.getId(), serviceName);
+        List<ServiceConfig> parameters = serviceInfo.getParameters();
+        Map<String, String> nameToRoleMap = buildNameToRoleMap(configFileMap);
+
+        parameters.stream()
+                .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles())) // 只处理 configTargetRoles 为空的情况
+                .forEach(serviceConfig -> {
+                    String configTargetRoles = nameToRoleMap.getOrDefault(serviceConfig.getName(), COMMON_CONFIG);
+                    serviceConfig.setConfigTargetRoles(configTargetRoles);
+                });
+
         if (Objects.isNull(serviceEntity)) {
             serviceEntity = new FrameServiceEntity();
             buildServiceEntity(
@@ -346,9 +321,9 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private void buildConfigFileMap(
-            ServiceInfo serviceInfo,
-            Map<String, ServiceConfig> map,
-            Map<Generators, List<ServiceConfig>> configFileMap) {
+                                    ServiceInfo serviceInfo,
+                                    Map<String, ServiceConfig> map,
+                                    Map<Generators, List<ServiceConfig>> configFileMap) {
         ConfigWriter configWriter = serviceInfo.getConfigWriter();
         List<Generators> generators = configWriter.getGenerators();
         for (Generators generator : generators) {
@@ -408,7 +383,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private void updateServiceInstanceConfig(
-            String frameCode, String serviceName, List<ServiceConfig> parameters) {
+                                             String frameCode, String serviceName, List<ServiceConfig> parameters) {
         // 查询frameCode相同的集群
         List<ClusterInfoEntity> clusters = clusterInfoService.getClusterByFrameCode(frameCode);
         // 查询集群的服务实例
@@ -431,13 +406,12 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     private void buildFrameServiceRole(
-            String frameCode,
-            FrameServiceEntity serviceEntity,
-            ServiceRoleInfo serviceRole,
-            Map<Generators, List<ServiceConfig>> configFileMap,
-            String serviceRoleJson,
-            String serviceRoleJsonMd5,
-            FrameServiceRoleEntity role) {
+                                       String frameCode,
+                                       FrameServiceEntity serviceEntity,
+                                       ServiceRoleInfo serviceRole,
+                                       String serviceRoleJson,
+                                       String serviceRoleJsonMd5,
+                                       FrameServiceRoleEntity role) {
         role.setServiceId(serviceEntity.getId());
         role.setServiceRoleName(serviceRole.getName());
         role.setCardinality(serviceRole.getCardinality());
@@ -447,56 +421,78 @@ public class LoadServiceMeta implements ApplicationRunner {
         role.setJmxPort(serviceRole.getJmxPort());
         role.setServiceRoleJsonMd5(serviceRoleJsonMd5);
         role.setLogFile(serviceRole.getLogFile());
-
-        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
-            Generators generator = entry.getKey();
-            if (Objects.isNull(generator.getConfigTargetRoles()) || generator.getConfigTargetRoles().equals(COMMON_CONFIG)) {
-                continue;
-            }
-            List<ServiceConfig> configs = entry.getValue();
-            if (generator.getConfigTargetRoles().equals(serviceRole.getName())) {
-                role.setServiceConfig(JSON.toJSONString(configs));
-                break;
-            }
-        }
     }
 
     private void buildServiceEntity(
-            String frameCode,
-            Integer frameInfoId,
-            String serviceName,
-            String serviceDdl,
-            ServiceInfo serviceInfo,
-            String serviceInfoMd5,
-            FrameServiceEntity serviceEntity,
-            Map<Generators, List<ServiceConfig>> configFileMap,
-            String decompressPackageName) {
-
-        List<ServiceConfig> commonConfig = new ArrayList<>();
-        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
-            Generators generator = entry.getKey();
-            List<ServiceConfig> configs = entry.getValue();
-            if (Objects.isNull(generator.getConfigTargetRoles()) || generator.getConfigTargetRoles().equals(COMMON_CONFIG)) {
-                commonConfig.addAll(configs);
-            }
-        }
-
+                                    String frameCode,
+                                    Integer frameInfoId,
+                                    String serviceName,
+                                    String serviceDdl,
+                                    ServiceInfo serviceInfo,
+                                    String serviceInfoMd5,
+                                    FrameServiceEntity serviceEntity,
+                                    Map<Generators, List<ServiceConfig>> configFileMap,
+                                    String decompressPackageName) {
         serviceEntity.setServiceName(serviceName);
         serviceEntity.setLabel(serviceInfo.getLabel());
         serviceEntity.setFrameId(frameInfoId);
         serviceEntity.setServiceDesc(serviceInfo.getDescription());
         serviceEntity.setServiceVersion(serviceInfo.getVersion());
         serviceEntity.setPackageName(serviceInfo.getPackageName());
-        serviceEntity.setServiceConfig(JSON.toJSONString(commonConfig));
         serviceEntity.setDependencies(StringUtils.join(serviceInfo.getDependencies(), ","));
         serviceEntity.setFrameCode(frameCode);
+        serviceEntity.setServiceConfig(JSON.toJSONString(serviceInfo.getParameters()));
         serviceEntity.setServiceJson(serviceDdl);
         serviceEntity.setServiceJsonMd5(serviceInfoMd5);
         serviceEntity.setDecompressPackageName(decompressPackageName);
         serviceEntity.setConfigFileJson(JSONObject.toJSONString(configFileMap));
         serviceEntity.setConfigFileJsonMd5(SecureUtil.md5(serviceEntity.getConfigFileJson()));
         serviceEntity.setSortNum(serviceInfo.getSortNum());
+    }
 
+
+    // 根据 IP 地址推断子网掩码
+    public static String getSubnetFromIp(String ip) {
+        if (ip == null) {
+            return null;
+        }
+
+        // 拆分 IP 地址
+        String[] ipParts = ip.split("\\.");  // 将 IP 地址分割为四个部分
+        if (ipParts.length != 4) {
+            return null;  // 无效的 IP 地址
+        }
+
+        int firstOctet = Integer.parseInt(ipParts[0]);
+
+        // 根据 IP 地址的第一部分推断出适当的子网掩码
+        String subnetMask;
+        if (firstOctet >= 1 && firstOctet <= 126) {
+            // A 类地址，使用 /8
+            subnetMask = "/8";
+        } else if (firstOctet >= 128 && firstOctet <= 191) {
+            // B 类地址，使用 /16
+            subnetMask = "/16";
+        } else if (firstOctet >= 192 && firstOctet <= 223) {
+            // C 类地址，使用 /24
+            subnetMask = "/24";
+        } else {
+            // 其他情况，暂不处理
+            subnetMask = "/24"; // 默认返回 /24
+        }
+
+        // 构造网络前缀
+        String networkPrefix = ipParts[0] + "." + ipParts[1] + "." + ipParts[2] + ".0";
+        return networkPrefix + subnetMask;
+    }
+
+    // 设置 priority_networks 参数
+    public static String getPriorityNetworks(String ipAddress) {
+        if (ipAddress != null) {
+            // 根据 IP 地址获取子网
+            return getSubnetFromIp(ipAddress);
+        }
+        return null;
     }
 
 }

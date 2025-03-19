@@ -17,8 +17,10 @@
 
 package com.datasophon.api.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
@@ -39,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
         extends
@@ -55,9 +58,11 @@ public class ClusterServiceInstanceConfigServiceImpl
         ClusterServiceRoleGroupConfig roleGroupConfig =
                 roleGroupConfigService.getConfigByRoleGroupIdAndVersion(roleGroupId, version);
         if (Objects.nonNull(roleGroupConfig)) {
-            String configFileJson = roleGroupConfig.getConfigFileJson();
-            Map<Generators, List<ServiceConfig>> generatorsListMap = CommonUtils.parseConfigJson(configFileJson);
-            return Result.success(generatorsListMap);
+            List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfig.getConfigJson(),
+                    new TypeReference<List<ServiceConfig>>() {
+                    });
+            Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceConfigs);
+            return Result.success(roleToConfigMap);
         }
         return Result.success();
     }

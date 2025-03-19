@@ -30,33 +30,54 @@
       <div class="w180" style="margin-right:23px;">
         版本：
         <a-select placeholder="请选择" :value="currentVersion" @change="changeVersion" style="width:180px">
-          <a-select-option v-for="(child, childIndex) in verSionList" :key="childIndex" :value="child">{{child}}</a-select-option>
+          <a-select-option v-for="(child, childIndex) in verSionList" :key="childIndex" :value="child">{{ child }}
+          </a-select-option>
         </a-select>
       </div>
     </div>
     <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
       <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
-       <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
-         <a-radio-button :value="item.id" v-for="(item, childIndex) in GroupList" :key="childIndex" :style="radioStyle" >
-          {{item.roleGroupName}}
-          </a-radio-button>
-       </a-radio-group> -->
-        <div  v-for="(item, childIndex) in GroupList" :key="childIndex" @click="handlerClick(item,childIndex)" :class="[currentId==item.id ? 'active':'','system']">
+        <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
+          <a-radio-button :value="item.id" v-for="(item, childIndex) in GroupList" :key="childIndex" :style="radioStyle" >
+           {{item.roleGroupName}}
+           </a-radio-button>
+        </a-radio-group> -->
+        <div v-for="(item, childIndex) in GroupList" :key="childIndex" @click="handlerClick(item,childIndex)"
+             :class="[currentId==item.id ? 'active':'','system']">
           <div :class="[currentId==item.id ? 'active':'','system']">
-            {{item.roleGroupName}}
-                <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
-            <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index" :content="()=> getMoreMenu(item)">
-                <a-icon type="more" class="fr" />
-              </a-popover>
+            {{ item.roleGroupName }}
+            <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
+            <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index"
+                       :content="()=> getMoreMenu(item)">
+              <a-icon type="more" class="fr"/>
+            </a-popover>
           </div>
         </div>
       </a-spin>
       <a-spin :spinning="loading" class="steps-body" style="position: relative; flex:1; margin:0 20px">
-      <CommonTemplate :ref="'CommonTemplateRef'" :class="['']" :steps4Data="steps4Data" :templateData="templateData" />
-      <div class="footer">
-        <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
-      </div>
-     </a-spin>
+        <!-- 调整模板中的配置组部分 -->
+        <div v-for="(group, groupName) in templateData"
+             :key="groupName"
+             class="config-group">
+          <!-- 配置组标题 -->
+          <h3 class="group-title" @click="toggleGroup(groupName)">
+            {{ groupName }}
+            <span class="arrow" :class="{ 'arrow-up': isGroupExpanded[groupName] }">▶</span>
+          </h3>
+
+          <!-- 配置内容（默认收起） -->
+          <div v-show="isGroupExpanded[groupName]">
+            <CommonTemplate
+                :ref="`template_${groupName}_${groupName}`"
+                :steps4Data="steps4Data"
+                :templateData="group"
+            />
+          </div>
+        </div>
+        <div class="footer">
+          <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
+        </div>
+      </a-spin>
 
     </div>
 
@@ -64,39 +85,40 @@
 </template>
 <script>
 import CommonTemplate from "@/components/commonTemplate/index";
-import { mapActions, mapState } from "vuex";
+import {mapActions, mapState} from "vuex";
 import RenameGroup from "./renameGroup.vue";
 import {getServiceName} from "@/utils/util";
 
 export default {
-  components: { CommonTemplate },
+  components: {CommonTemplate},
   props: {
     steps4Data: Object,
   },
   data() {
     return {
       loading: false,
-      templateData: [],
+      templateData: {},
       verSionList: [],
-      GroupList:[],
-      currentId:undefined,
+      GroupList: [],
+      currentId: undefined,
       currentVersion: undefined,
+      isGroupExpanded: {}, // 存储每个配置组的展开状态
       clusterId: Number(localStorage.getItem("clusterId") || -1),
       labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
+        xs: {span: 24},
+        sm: {span: 5},
       },
       wrapperCol: {
-        xs: { span: 24 },
-        sm: { span: 19 },
+        xs: {span: 24},
+        sm: {span: 19},
       },
       radioStyle: {
         display: 'block',
         height: '30px',
         lineHeight: '30px',
-        marginTop:'5px' ,
+        marginTop: '5px',
       },
-      value:0
+      value: 0
     };
   },
   computed: {
@@ -108,27 +130,30 @@ export default {
     ...mapActions("steps", ["setCommandType", "setCommandIds"]),
     getMoreMenu(props) {
       let arr = [
-        { name: "重命名", key: "rename" },
-        { name: "删除", key: "del" },
+        {name: "重命名", key: "rename"},
+        {name: "删除", key: "del"},
       ];
       // if (props.meta.obj.needRestart) arr.splice(2, 0, { name: "重启", key: "restart" })
       return arr.map((item, index) => {
         return (
-          <div key={index}>
-            <a
-              class="more-menu-btn"
-              style="border-width:0px;min-width:100px;color: #333;"
-              onClick={() => this.batchOpt(item, props)}
-            >
-              {item.name}
-            </a>
-          </div>
+            <div key={index}>
+              <a
+                  class="more-menu-btn"
+                  style="border-width:0px;min-width:100px;color: #333;"
+                  onClick={() => this.batchOpt(item, props)}
+              >
+                {item.name}
+              </a>
+            </div>
         );
       });
     },
-    changeName (params) {
+    toggleGroup(groupName) {
+      this.$set(this.isGroupExpanded, groupName, !this.isGroupExpanded[groupName])
+    },
+    changeName(params) {
       this.GroupList.forEach(item => {
-        if(item.id === params.roleGroupId) {
+        if (item.id === params.roleGroupId) {
           item.roleGroupName = params.roleGroupName
         }
       })
@@ -136,9 +161,9 @@ export default {
     renameCharacter(props) {
       const self = this;
       let width = 520;
-      let title =  "重命名";
+      let title = "重命名";
       let content = (
-        <RenameGroup grouopObj={props} callBack={(params) => self.changeName(params)} />
+          <RenameGroup grouopObj={props} callBack={(params) => self.changeName(params)}/>
       );
       this.$confirm({
         width: width,
@@ -146,11 +171,11 @@ export default {
         content: content,
         closable: true,
         icon: () => {
-          return <div />;
+          return <div/>;
         },
       });
     },
-    batchOpt (item, props) {
+    batchOpt(item, props) {
       if (item.key === 'rename') {
         this.renameCharacter(props)
         return false
@@ -159,39 +184,39 @@ export default {
         width: 450,
         title: () => {
           return (
-            <div style="font-size: 22px;">
-              <a-icon
-                type="question-circle"
-                style="color:#2F7FD1 !important;margin-right:10px"
-              />
-              提示
-            </div>
+              <div style="font-size: 22px;">
+                <a-icon
+                    type="question-circle"
+                    style="color:#2F7FD1 !important;margin-right:10px"
+                />
+                提示
+              </div>
           );
         },
         content: (
-          <div style="margin-top:20px">
-            <div style="padding:0 65px;font-size: 16px;color: #555555;">
-              {'确认删除吗？'}
+            <div style="margin-top:20px">
+              <div style="padding:0 65px;font-size: 16px;color: #555555;">
+                {'确认删除吗？'}
+              </div>
+              <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
+                <a-button
+                    style="margin-right:10px;"
+                    type="primary"
+                    onClick={() => this.confirmDel(item, props)}
+                >
+                  确定
+                </a-button>
+                <a-button
+                    style="margin-right:10px;"
+                    onClick={() => this.$destroyAll()}
+                >
+                  取消
+                </a-button>
+              </div>
             </div>
-            <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
-              <a-button
-                style="margin-right:10px;"
-                type="primary"
-                onClick={() => this.confirmDel(item, props)}
-              >
-                确定
-              </a-button>
-              <a-button
-                style="margin-right:10px;"
-                onClick={() => this.$destroyAll()}
-              >
-                取消
-              </a-button>
-            </div>
-          </div>
         ),
         icon: () => {
-          return <div />;
+          return <div/>;
         },
         closable: true,
       });
@@ -201,20 +226,20 @@ export default {
 
       let params = {
         roleGroupId: props.id,
-        serviceName:serviceName
+        serviceName: serviceName
       };
       this.$axiosPost(global.API.delGroup, params).then((res) => {
         this.$destroyAll();
         if (res.code === 200) {
           this.$message.success("操作成功");
           this.GroupList = this.GroupList.filter(item => item.id !== props.id)
-          if (this.GroupList.length > 0 && this.currentId===props.id) {
+          if (this.GroupList.length > 0 && this.currentId === props.id) {
             this.currentId = this.GroupList[0].id;
           }
         }
       });
     },
-    handlerClick(item,childIndex){
+    handlerClick(item, childIndex) {
       console.log(item);
       this.currentId = item.id
       this.getConfigVersion()
@@ -293,64 +318,64 @@ export default {
     handleSubmit() {
       const self = this
       this.$refs[`CommonTemplateRef`].form.validateFields(
-        async (err, values) => {
-          if (!err) {
-            let param = _.cloneDeep(this.templateData);
-            const arrayWithData = this.handlearrayWithData(values);
-            const multipleData = this.handleMultipleData(values);
-            const formData = { ...values, ...arrayWithData, ...multipleData };
-            console.log(formData, "formDataformData");
-            for (let name in formData) {
+          async (err, values) => {
+            if (!err) {
+              let param = _.cloneDeep(this.templateData);
+              const arrayWithData = this.handlearrayWithData(values);
+              const multipleData = this.handleMultipleData(values);
+              const formData = {...values, ...arrayWithData, ...multipleData};
+              console.log(formData, "formDataformData");
+              for (let name in formData) {
+                param.forEach((item) => {
+                  if (item.name === name) {
+                    item.value = formData[name];
+                  }
+                });
+              }
               param.forEach((item) => {
-                if (item.name === name) {
-                  item.value = formData[name];
-                }
+                item.name = item.name.replaceAll("!", ".");
               });
-            }
-            param.forEach((item) => {
-              item.name = item.name.replaceAll("!", ".");
-            });
-            let filterParam = param.filter(
-              (item) => !(!item.required && item.hidden)
-            );
-            console.log(arrayWithData, "arrayWithData", filterParam);
-            let serviceName = ''
-            const serviceId = this.$route.params.serviceId || ''
-            const menuData = JSON.parse(localStorage.getItem('menuData')) || []
-            const arr = menuData.filter(item => item.path === 'service-manage')
-            if (arr.length > 0) {
-              arr[0].children.map(item => {
-                if (item.meta.params.serviceId == serviceId) serviceName = item.name
-              })
-            }
-            // 处理表单数据 将相同的key处理成数组
-            let saveParam = {
-              clusterId: this.clusterId,
-              serviceName,
-              serviceConfig: JSON.stringify(filterParam),
-              roleGroupId:this.currentId
-            };
-            // // 等待网络请求结束
-            let res = await this.$axiosPost(
-              global.API.saveServiceConfig,
-              saveParam
-            );
-            if (res.code === 200) {
-              this.$message.success("保存成功");
-              this.getConfigVersion()
-              // this.getServiceRoleType()
-            } else {
-              // this.$message.error(res.msg || "保存失败");
+              let filterParam = param.filter(
+                  (item) => !(!item.required && item.hidden)
+              );
+              console.log(arrayWithData, "arrayWithData", filterParam);
+              let serviceName = ''
+              const serviceId = this.$route.params.serviceId || ''
+              const menuData = JSON.parse(localStorage.getItem('menuData')) || []
+              const arr = menuData.filter(item => item.path === 'service-manage')
+              if (arr.length > 0) {
+                arr[0].children.map(item => {
+                  if (item.meta.params.serviceId == serviceId) serviceName = item.name
+                })
+              }
+              // 处理表单数据 将相同的key处理成数组
+              let saveParam = {
+                clusterId: this.clusterId,
+                serviceName,
+                serviceConfig: JSON.stringify(filterParam),
+                roleGroupId: this.currentId
+              };
+              // // 等待网络请求结束
+              let res = await this.$axiosPost(
+                  global.API.saveServiceConfig,
+                  saveParam
+              );
+              if (res.code === 200) {
+                this.$message.success("保存成功");
+                this.getConfigVersion()
+                // this.getServiceRoleType()
+              } else {
+                // this.$message.error(res.msg || "保存失败");
+              }
             }
           }
-        }
       );
     },
     changeVersion(val) {
       this.currentVersion = val;
       this.getServiceConfigOption();
     },
-    changeCasting(val){
+    changeCasting(val) {
       console.log(val.target.value);
       this.currentId = val.target.value
       this.getConfigVersion()
@@ -359,7 +384,7 @@ export default {
     //获取角色组
     getServiceRoleType() {
       this.loading = true;
-      const params={
+      const params = {
         serviceInstanceId: this.$route.params.serviceId,
       }
       this.$axiosPost(global.API.getRoleGroupList, params).then((res) => {
@@ -377,19 +402,20 @@ export default {
       this.loading = true;
       const params = {
         serviceInstanceId: this.$route.params.serviceId,
-        roleGroupId: JSON.stringify(this.currentId)||'',
+        roleGroupId: JSON.stringify(this.currentId) || '',
       };
       this.$axiosPost(global.API.getConfigVersion, params).then((res) => {
         if (res.code === 200) {
           this.verSionList = res.data;
           if (this.verSionList.length > 0) {
             this.currentVersion = this.verSionList[0];
-            this.getServiceConfigOption( true);
+            this.getServiceConfigOption(true);
           }
         }
       });
     },
-    getServiceConfigOption(loading) {
+    // 在获取配置的方法中增加初始化逻辑
+    async getServiceConfigOption(loading) {
       if (!loading) this.loading = true;
       const self = this;
       const params = {
@@ -399,21 +425,60 @@ export default {
         "version":this.currentVersion||'',
         "roleGroupId": JSON.stringify(this.currentId)||'',
       };
-      this.$axiosPost(global.API.getConfigInfo, params).then((res) => {
-        if (res.code === 200) {
-          self.templateData = self.handlerTemplate(res.data);
-          self.loading = false;
-        }
-      });
+      const res = await this.$axiosPost(global.API.getConfigInfo, params);
+
+      if (res.code === 200) {
+        this.templateData = this.handlerTemplate(res.data);
+
+        // 初始化所有分组为收起状态
+        Object.keys(this.templateData).forEach(name => {
+          if (!(name in this.isGroupExpanded)) {
+            this.$set(this.isGroupExpanded, name, false)
+          }
+        });
+      }
+      this.loading = false;
     },
     handlerTemplate(data) {
-      data.forEach((item) => {
-        item.name = item.name.replaceAll(".", "!");
+      const result = {};
+
+      Object.entries(data).forEach(([originalKey, configList]) => {
+        // 直接使用原始键名，并进行标准化处理
+        const groupKey = originalKey
+                ?.trim() // 去除前后空格
+                .replace(/^"|"$/g, '') // 去除可能存在的引号
+            || 'CommonConfig'; // 空值处理
+
+        // 配置项名称转换（保留原始替换逻辑）
+        const processedItems = configList.map(item => ({
+          ...item,
+          name: (item.name || '').replaceAll(".", "!")
+        }));
+
+        // 合并到结果集
+        result[groupKey] = [
+          ...(result[groupKey] || []),
+          ...processedItems
+        ];
       });
-      return data;
+
+
+      // 保证至少存在通用配置组
+      if (!('CommonConfig' in result)) {
+        result.CommonConfig = [];
+      }
+
+      return result;
     },
   },
-  created() {},
+  created() {
+    // 如果templateData有初始值需要处理
+    this.$nextTick(() => {
+      Object.keys(this.templateData).forEach(name => {
+        this.$set(this.isGroupExpanded, name, false)
+      })
+    })
+  },
   mounted() {
     this.getServiceRoleType()
     // setTimeout(()=>{
@@ -423,41 +488,42 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 修复角色组样式（完全匹配图片效果）
 .service-setting {
   /deep/ .ant-spin-container {
     position: relative;
   }
   .setting{
-     overflow-y: auto;
-     font-size: 12px;
-     padding-left: 20px;
-     color: #000;
-     .active{
+    overflow-y: auto;
+    font-size: 12px;
+    padding-left: 20px;
+    color: #000;
+    .active{
       color: #fff !important;
       background-color: #2872e0;
       &.ant-form-item{
         color: #fff;
       }
-     }
-     .system{
-        padding: 4px 0 ;
-        text-align: center;
-        cursor: pointer;
-        font-size: 14px;
+    }
+    .system{
+      padding: 4px 0 ;
+      text-align: center;
+      cursor: pointer;
+      font-size: 14px;
+      .fr {
+        float: right;
+        position: relative;
+        top: 4px;
+        right: 4px;
+        visibility: hidden;
+      }
+      &:hover {
         .fr {
-          float: right;
-          position: relative;
-          top: 4px;
-          right: 4px;
-          visibility: hidden;
+          visibility: visible;
         }
-        &:hover {
-          .fr {
-            visibility: visible;
-          }
-        }
-     }
-      &::-webkit-scrollbar {
+      }
+    }
+    &::-webkit-scrollbar {
       width: 3px;
       height: 1px;
     }
@@ -474,8 +540,8 @@ export default {
     }
   }
   .steps-body {
-   max-height: calc(100vh - 240px);
-   height: calc(100vh - 240px);
+    max-height: calc(100vh - 240px);
+    height: calc(100vh - 240px);
 
     border: 1px solid #e5e6e8;
     margin: 10px 0;
@@ -492,8 +558,115 @@ export default {
         width: 86px;
       }
       /deep/
-        .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
+      .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
         padding-left: 20px;
+      }
+    }
+  }
+}
+
+// 配置组自适应修复
+.config-group {
+  border: 1px solid #EBEEF5 !important; // 强制显示边框
+
+  > div {
+    display: grid; // 网格布局自适应
+    gap: 12px; // 项间距
+    overflow: visible !important; // 允许内容扩展
+  }
+}
+
+// 保存按钮位置修正
+.footer {
+  margin-top: 16px;
+  padding: 16px 0 0;
+  border-top: none;
+}
+// 配置内容区域优化
+.steps-body {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 16px 24px;
+
+  .config-group {
+    margin-bottom: 16px;
+    border: 1px solid #EBEEF5;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+
+    // 配置组标题
+    .group-title {
+      padding: 12px 16px;
+      background: #F7F9FC;
+      color: #303133;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      transition: background 0.3s;
+
+      // 左侧蓝色指示条
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 16px;
+        background: #1890ff;
+        border-radius: 2px;
+      }
+
+      // 展开箭头
+      .arrow {
+        color: #909399;
+        font-size: 12px;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-right: 8px;
+
+        &.arrow-up {
+          transform: rotate(90deg);
+        }
+      }
+
+      &:hover {
+        background: #F2F6FC;
+      }
+    }
+
+    // 配置内容区域
+    > div {
+      padding: 16px;
+      background: #fafbfc;
+    }
+  }
+
+  // 保存按钮
+  .footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #EBEEF5;
+    text-align: right;
+
+    .ant-btn-primary {
+      background: #1890ff;
+      border-color: #1890ff;
+      border-radius: 4px;
+      padding: 0 24px;
+      height: 36px;
+      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+      transition: all 0.3s;
+
+      &:hover {
+        background: #40a9ff;
+        border-color: #40a9ff;
+        transform: translateY(-1px);
       }
     }
   }

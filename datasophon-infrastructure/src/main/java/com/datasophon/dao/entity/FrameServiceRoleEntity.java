@@ -53,8 +53,6 @@ public class FrameServiceRoleEntity implements Serializable {
      * 角色类型 1:master2:worker3:client
      */
     private RoleType serviceRoleType;
-
-    private String serviceConfig;
     /**
      * 1  1+
      */

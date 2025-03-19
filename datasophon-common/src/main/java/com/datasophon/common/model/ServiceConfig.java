@@ -80,4 +80,6 @@ public class ServiceConfig implements Serializable {
      */
     private String close;
 
+    private String configTargetRoles;
+
 }

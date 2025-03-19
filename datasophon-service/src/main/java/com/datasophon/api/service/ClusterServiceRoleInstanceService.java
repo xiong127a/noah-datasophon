@@ -65,6 +65,8 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
 
     void updateToNeedRestart(Integer roleGroupId);
 
+    void updateToNeedRestart(Integer roleGroupId,String serviceRoleName);
+
     void updateToNeedRestartByHost(String hostName);
 
     List<ClusterServiceRoleInstanceEntity> getObsoleteService(Integer id);

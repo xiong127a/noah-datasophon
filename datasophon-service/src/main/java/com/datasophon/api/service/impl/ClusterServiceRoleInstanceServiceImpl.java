@@ -362,6 +362,11 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
+    public void updateToNeedRestart(Integer roleGroupId,String serviceRoleName) {
+        roleInstanceMapper.updateToNeedRestart(roleGroupId,serviceRoleName);
+    }
+
+    @Override
     public void updateToNeedRestart(Integer roleGroupId) {
         roleInstanceMapper.updateToNeedRestart(roleGroupId);
     }
