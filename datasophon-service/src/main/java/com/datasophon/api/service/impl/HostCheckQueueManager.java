@@ -126,6 +126,19 @@ public class HostCheckQueueManager {
                 return;
             }
             
+            // 立即更新主机状态为"检查中"
+            hostInfo.setStatus(com.datasophon.common.model.CheckItem.Status.CHECKING);
+            hostInfo.setMessage("正在检查中");
+            
+            // 更新主机信息缓存
+            Map<String, HostInfo> map = (Map<String, HostInfo>) com.datasophon.common.cache.CacheUtils.get(clusterId + com.datasophon.common.Constants.HOST_MAP);
+            if (map != null) {
+                map.put(hostInfo.getHostname(), hostInfo);
+                com.datasophon.common.cache.CacheUtils.put(clusterId + com.datasophon.common.Constants.HOST_MAP, map);
+            }
+            
+            logger.debug("主机 {} 状态已更新为检查中", hostInfo.getHostname());
+            
             logger.debug("正在将主机 {} 的检查任务添加到队列，当前队列大小: {}", 
                 hostInfo.getHostname(), checkQueue.size());
             checkQueue.put(new CheckTask(clusterId, hostInfo, hostCheckService));
