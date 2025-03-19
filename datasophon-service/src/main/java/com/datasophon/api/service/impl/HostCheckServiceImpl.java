@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -92,13 +93,13 @@ public class HostCheckServiceImpl implements HostCheckService {
     public List<CheckItem> getHostCheckItems() {
         List<CheckItem> checkItems = new ArrayList<>();
 
-        // 创建所有检查项
-        checkItems.add(createCheckItem(1, ItemCode.PASSWORD_FREE));
-        checkItems.add(createCheckItem(2, ItemCode.JAVA_ENV));
-        checkItems.add(createCheckItem(3, ItemCode.FILE_HANDLE));
-        checkItems.add(createCheckItem(4, ItemCode.FIREWALL));
-        checkItems.add(createCheckItem(5, ItemCode.SELINUX));
-        checkItems.add(createCheckItem(6, ItemCode.TIME_SYNC));
+        // 使用ItemCode中定义的顺序创建检查项
+        for (ItemCode itemCode : ItemCode.values()) {
+            checkItems.add(createCheckItem(itemCode.getSequence(), itemCode));
+        }
+
+        // 按照sequence排序
+        checkItems.sort(Comparator.comparingInt(CheckItem::getId));
 
         return checkItems;
     }
