@@ -28,7 +28,9 @@ public class LogEntry implements Serializable {
         ERROR(3, "#f5222d", "#fff1f0");  // 红色
         
         private int value;
+        @Getter
         private String color;           // 主要颜色（用于强调文本）
+        @Getter
         private String backgroundColor; // 背景色（用于整行）
         
         Level(int value) {
@@ -42,14 +44,6 @@ public class LogEntry implements Serializable {
             this.value = value;
             this.color = color;
             this.backgroundColor = backgroundColor;
-        }
-
-        public String getColor() {
-            return color;
-        }
-
-        public String getBackgroundColor() {
-            return backgroundColor;
         }
 
         /**

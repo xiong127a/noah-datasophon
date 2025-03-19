@@ -337,6 +337,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
         
+        // 更新日志记录器的类型
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        loggerImpl.setLogType(operationType);
+        
         // 先将状态设置为检查中
         checkItem.setStatus(CheckItem.Status.CHECKING);
         checkItem.setMessage("检查中...");
@@ -468,6 +472,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
         
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        
+        // 更新日志记录器的类型
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        loggerImpl.setLogType(operationType);
         
         // 记录修复开始
         cacheLog.info("===============================================");
@@ -608,6 +616,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
         
+        // 更新日志记录器的类型
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        loggerImpl.setLogType(operationType);
+        
         // 先将状态设置为检查中
         checkItem.setStatus(CheckItem.Status.CHECKING);
         checkItem.setMessage("检查中...");
@@ -698,6 +710,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
         
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        
+        // 更新日志记录器的类型
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        loggerImpl.setLogType(operationType);
         
         // 记录修复开始
         cacheLog.info("===============================================");
