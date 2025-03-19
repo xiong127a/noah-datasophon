@@ -30,33 +30,46 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("\n步骤1: 检查系统是否存在java命令");
             logger.info("开始检查主机 {} 的Java环境", hostInfo.getHostname());
             
-            String javaExistsResult = execCommand(session, "command -v java || echo 'NOT_FOUND'");
-            boolean javaCommandExists = !javaExistsResult.contains("NOT_FOUND") && !javaExistsResult.startsWith("ERROR");
+            // 首先检查 java 命令的位置
+            String javaPathResult = execCommand(session, "which java 2>/dev/null || echo 'NOT_FOUND'");
+            boolean javaCommandExists = !javaPathResult.contains("NOT_FOUND") && !javaPathResult.startsWith("ERROR");
             
-            cacheLog.info("检查结果: " + (javaCommandExists ? "找到java命令" : "未找到java命令"));
+            if (javaCommandExists) {
+                cacheLog.info("找到java命令: " + javaPathResult);
+                // 检查是否是软链接
+                String readlinkResult = execCommand(session, "readlink -f " + javaPathResult);
+                if (!readlinkResult.startsWith("ERROR")) {
+                    cacheLog.info("Java命令实际路径: " + readlinkResult);
+                }
+            } else {
+                cacheLog.info("未找到java命令");
+            }
 
             if (javaCommandExists) {
-                // 步骤2: 检查java -version是否显示为Java 8
+                // 步骤2: 检查java版本
                 cacheLog.info("\n步骤2: 检查java版本是否符合要求");
                 logger.info("主机 {} 存在java命令，检查java版本", hostInfo.getHostname());
                 
+                // 获取完整的版本信息
                 String javaVersionOutput = execCommand(session, "java -version 2>&1");
                 if (!javaVersionOutput.startsWith("ERROR")) {
                     String version = parseJavaVersion(javaVersionOutput);
-                    cacheLog.info("解析到的Java版本: " + version);
+                    cacheLog.info("Java版本信息:");
+                    cacheLog.info(version);
                     
-                    boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
+                    // 提取主版本号进行比较
+                    String mainVersion = version.split("\\s+")[0];
+                    boolean versionMeetRequirement = isVersionMeetRequirement(mainVersion, MIN_JAVA_VERSION);
                     cacheLog.info("版本检查结果: " + (versionMeetRequirement ? "符合要求" : "不符合要求"));
                     
                     if (versionMeetRequirement) {
                         cacheLog.info("\n==== Java环境检查通过 ====");
-                        cacheLog.info("Java环境正常，版本: " + version);
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
-                        checkItem.setMessage("Java环境正常，版本: " + version);
+                        checkItem.setMessage("Java环境正常: " + version);
                         return checkItem;
                     } else {
-                        cacheLog.info("java版本 " + version + " 低于要求的 " + MIN_JAVA_VERSION);
-                        logger.info("主机 {} 的java版本 {} 低于要求的 {}", hostInfo.getHostname(), version, MIN_JAVA_VERSION);
+                        cacheLog.info("当前版本 " + mainVersion + " 低于要求的 " + MIN_JAVA_VERSION);
+                        logger.info("主机 {} 的java版本 {} 低于要求的 {}", hostInfo.getHostname(), mainVersion, MIN_JAVA_VERSION);
                     }
                 } else {
                     cacheLog.info("获取Java版本失败: " + javaVersionOutput);
@@ -250,29 +263,46 @@ public class JavaEnvChecker extends AbstractItemChecker {
     }
 
     private String parseJavaVersion(String javaVersionOutput) {
-        // 简单解析Java版本输出
+        if (javaVersionOutput == null || javaVersionOutput.isEmpty()) {
+            return "unknown";
+        }
+        
+        // 记录完整的版本输出
+        String[] lines = javaVersionOutput.split("\n");
+        StringBuilder fullVersion = new StringBuilder();
+        for (String line : lines) {
+            line = line.trim();
+            if (!line.isEmpty()) {
+                if (fullVersion.length() > 0) {
+                    fullVersion.append(", ");
+                }
+                fullVersion.append(line);
+            }
+        }
+        
+        // 解析主版本号
+        String version = "unknown";
         if (javaVersionOutput.contains("version")) {
-            String[] lines = javaVersionOutput.split("\n");
-            for (String line : lines) {
-                if (line.contains("version")) {
-                    // 提取双引号中的版本号，例如 "1.8.0_XXX"
-                    int startIdx = line.indexOf("\"") + 1;
-                    int endIdx = line.indexOf("\"", startIdx);
-                    if (startIdx > 0 && endIdx > startIdx) {
-                        String fullVersion = line.substring(startIdx, endIdx);
-                        // 只返回主版本号，如 "1.8"
-                        int dotIdx = fullVersion.indexOf(".", fullVersion.indexOf(".") + 1);
-                        return dotIdx > 0 ? fullVersion.substring(0, dotIdx) : fullVersion;
-                    }
+            String[] parts = javaVersionOutput.split("\"");
+            if (parts.length > 1) {
+                String versionStr = parts[1];
+                // 提取主版本号（例如从 1.8.0_333 中提取 1.8）
+                int firstDot = versionStr.indexOf('.');
+                int secondDot = versionStr.indexOf('.', firstDot + 1);
+                if (firstDot > 0 && secondDot > 0) {
+                    version = versionStr.substring(0, secondDot);
+                } else {
+                    version = versionStr;
                 }
             }
         }
-        return "未知";
+        
+        return version + " (" + fullVersion + ")";
     }
 
     private boolean isVersionMeetRequirement(String currentVersion, String requiredVersion) {
         try {
-            if ("未知".equals(currentVersion)) {
+            if ("unknown".equals(currentVersion)) {
                 return false;
             }
 

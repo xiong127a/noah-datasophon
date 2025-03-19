@@ -285,10 +285,21 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected void closeSession() {
         if (session != null) {
             try {
-                logger.debug("正在关闭SSH会话: {}", 
-                    session.getConnectAddress() != null ? session.getConnectAddress() : "未知地址");
-                cacheLog.debug("正在关闭SSH会话: %s", 
-                    session.getConnectAddress() != null ? session.getConnectAddress() : "未知地址");
+                // 格式化连接地址
+                String address = "";
+                if (session.getConnectAddress() != null) {
+                    String[] parts = session.getConnectAddress().toString()
+                        .replaceAll("^/", "")  // 移除开头的斜杠
+                        .split(":");
+                    if (parts.length == 2) {
+                        address = parts[0] + ":" + parts[1];  // 使用冒号连接IP和端口
+                    } else {
+                        address = session.getConnectAddress().toString().replaceAll("^/", "");
+                    }
+                }
+                
+                logger.debug("正在关闭SSH会话: {}", address);
+                cacheLog.debug("正在关闭SSH会话: {}", address);
                 
                 long startTime = System.currentTimeMillis();
                 session.close();
