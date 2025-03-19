@@ -144,6 +144,19 @@ public class HostCheckController {
     }
 
     /**
+     * 获取检查项的实时日志（支持筛选日志类型）
+     */
+    @PostMapping("/getCheckItemLogWithType")
+    @UserPermission
+    public Result getCheckItemLogWithType(
+            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam("hostname") String hostname,
+            @RequestParam("itemId") Integer itemId,
+            @RequestParam(value = "logType", required = false, defaultValue = "check") String logType) {
+        return hostCheckService.getCheckItemLogWithType(clusterId, hostname, itemId, logType);
+    }
+
+    /**
      * 重试指定的检查项
      */
     @PostMapping("/retryCheckItems")

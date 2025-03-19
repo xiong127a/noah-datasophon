@@ -89,6 +89,15 @@
             </a-dropdown>
           </div>
           
+          <!-- 添加日志类型选择 -->
+          <div class="log-type-selector">
+            <a-radio-group v-model="currentLogType" button-style="solid" @change="handleLogTypeChange">
+              <a-radio-button value="check">检查日志</a-radio-button>
+              <a-radio-button value="fix">修复日志</a-radio-button>
+              <a-radio-button value="all">全部日志</a-radio-button>
+            </a-radio-group>
+          </div>
+          
           <!-- 添加日志筛选组件 -->
           <log-filter 
             v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
@@ -391,6 +400,8 @@ export default {
       currentLogItemId: null,
       currentLogItemName: null,
       refreshTimer: null,
+      currentLogType: 'check',
+      forceUseTypedApi: false,
     };
   },
   computed: {
@@ -482,7 +493,7 @@ export default {
      * 启动批量检查主机
      * 提取主机名列表，调用后端接口开始检查
      */
-    startBatchCheckHosts(hosts) {
+    async startBatchCheckHosts(hosts) {
       if (!hosts || hosts.length === 0) {
         return;
       }
@@ -499,17 +510,19 @@ export default {
       }
       
       // 调用批量检查API
-      this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, hostnamesToCheck)
-        .then(res => {
-          if (res.code === 200) {
-            console.log('成功启动主机检查:', res.msg);
-          } else {
-            console.warn('启动主机检查失败:', res.msg);
-          }
-        })
-        .catch(err => {
-          console.error('调用批量检查API失败:', err);
-        });
+      try {
+        const res = await this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, hostnamesToCheck);
+        if (res.code === 200) {
+          console.log('成功启动主机检查:', res.msg);
+          
+          // 立即刷新一次，不等待5秒后的自动刷新
+          this.getEnvironmentList(false);
+        } else {
+          console.warn('启动主机检查失败:', res.msg);
+        }
+      } catch (err) {
+        console.error('调用批量检查API失败:', err);
+      }
     },
     
     // 计算主机的整体状态
@@ -885,8 +898,9 @@ export default {
           this.$message.success('重试指令已发送');
           // 清空选择
           this.$set(this.selectedCheckItems, hostname, []);
-          // 直接调用pollingSearch刷新整个列表，而不是单独获取检查项
-          this.pollingSearch();
+          
+          // 立即刷新一次，不等待5秒后的自动刷新
+          this.getEnvironmentList(false);
         }
       } catch (error) {
         console.error('重试检查项失败:', error);
@@ -991,8 +1005,9 @@ export default {
         
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
-          // 直接调用pollingSearch刷新整个列表，而不是单独获取检查项
-          this.pollingSearch();
+          
+          // 立即刷新一次，不等待5秒后的自动刷新
+          this.getEnvironmentList(false);
         } else {
           this.$message.error(res.msg || '重试检查项失败');
         }
@@ -1191,6 +1206,9 @@ export default {
       this.logVisible = true;
       this.logContent = '';
       
+      // 设置初始日志类型为检查日志
+      this.currentLogType = 'check';
+      
       // 初始停止之前可能存在的自动刷新定时器
       this.stopAutoRefresh();
       
@@ -1207,11 +1225,25 @@ export default {
       this.logLoading = true;
       
       try {
-        const res = await this.$axiosPost(global.API.getCheckItemLog, { 
+        // 所有非默认日志类型都使用带类型的API
+        const useTypedApi = this.currentLogType !== 'check' || this.forceUseTypedApi;
+        const apiUrl = useTypedApi ? 
+          global.API.getCheckItemLogWithType : 
+          global.API.getCheckItemLog;
+          
+        // 准备请求参数
+        const params = { 
           clusterId: this.clusterId,
           hostname: this.currentLogHostname,
           itemId: this.currentLogItemId
-        });
+        };
+        
+        // 如果使用带类型的API，添加logType参数
+        if (useTypedApi) {
+          params.logType = this.currentLogType;
+        }
+        
+        const res = await this.$axiosPost(apiUrl, params);
         
         if (res.code === 200) {
           this.logContent = res.data || '暂无日志数据';
@@ -1329,10 +1361,26 @@ export default {
       // 清理checkItem
       this.checkItem = null;
     },
+
+    handleLogTypeChange() {
+      // 当日志类型变化时，重新获取日志
+      this.fetchItemLog();
+      
+      // 随着系统扩展，如果添加了新的日志类型，在这里不需要特殊处理
+      // 只需要:
+      // 1. 在上面的日志类型选择器中添加新的a-radio-button
+      // 2. 确保后端OperationType枚举中添加了相应的类型
+      // 3. 确保HostCheckServiceImpl.getCheckItemLogWithType方法支持新的日志类型
+    },
   },
   mounted() {
     // 直接开始轮询
     this.pollingSearch();
+    
+    // 确保API路径已定义
+    if (!global.API.getCheckItemLogWithType) {
+      global.API.getCheckItemLogWithType = '/host/check/getCheckItemLogWithType';
+    }
   },
   beforeDestroy() {
     // 清理定时器
@@ -1464,7 +1512,13 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     flex-shrink: 0;
+    gap: 10px;
+    
+    .refresh-options, .log-type-selector {
+      flex-shrink: 0;
+    }
   }
 
   .log-content {
@@ -1570,6 +1624,19 @@ export default {
       font-size: 12px;
       margin-left: 4px;
       margin-right: 0;
+    }
+  }
+}
+
+.log-type-selector {
+  margin: 0 15px;
+  
+  .ant-radio-group {
+    display: flex;
+    
+    .ant-radio-button-wrapper {
+      text-align: center;
+      min-width: 80px;
     }
   }
 }

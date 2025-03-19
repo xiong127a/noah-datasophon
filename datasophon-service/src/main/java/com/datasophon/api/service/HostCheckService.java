@@ -96,6 +96,16 @@ public interface HostCheckService {
     Result getCheckItemLog(Integer clusterId, String hostname, Integer itemId);
 
     /**
+     * 获取检查项的实时日志（带类型过滤）
+     * @param clusterId 集群ID
+     * @param hostname 主机名
+     * @param itemId 检查项ID
+     * @param logType 日志类型：check(检查日志)、fix(修复日志)、all(全部)
+     * @return 过滤后的检查项日志
+     */
+    Result getCheckItemLogWithType(Integer clusterId, String hostname, Integer itemId, String logType);
+
+    /**
      * 取消所有当前运行的检查任务
      * 
      * @return 操作结果
