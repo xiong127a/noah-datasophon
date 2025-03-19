@@ -1242,9 +1242,19 @@ export default {
       
       // 初始停止之前可能存在的自动刷新定时器
       this.stopAutoRefresh();
-      
-      // 获取日志数据
-      this.fetchItemLog();
+
+      // 等待DOM更新完成后设置初始筛选条件
+      this.$nextTick(() => {
+        if (this.$refs.logFilter) {
+          // 设置默认筛选条件
+          this.$refs.logFilter.filterType = 'min';
+          this.$refs.logFilter.selectedLevel = 'INFO';
+          // 手动触发筛选
+          this.$refs.logFilter.applyFilter();
+        }
+        // 获取日志数据
+        this.fetchItemLog();
+      });
     },
     
     // 获取检查项日志
@@ -1260,14 +1270,12 @@ export default {
         const apiUrl = '/ddh/host/check/getLog';
         
         // 获取级别筛选参数
-        let logLevel = null;
-        let filterMode = 'all';
+        let logLevel = 'INFO'; // 默认显示INFO级别
+        let filterMode = 'min'; // 默认显示INFO及以上级别
         
         if (this.$refs.logFilter) {
           filterMode = this.$refs.logFilter.filterType;
-          if (filterMode !== 'all') {
-            logLevel = this.$refs.logFilter.selectedLevel;
-          }
+          logLevel = this.$refs.logFilter.selectedLevel;
         }
           
         // 准备请求参数
