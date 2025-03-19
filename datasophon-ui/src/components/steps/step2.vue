@@ -99,7 +99,7 @@
           ></log-filter>
         </div>
         <div class="log-content" v-loading="logLoading">
-          <pre>{{ logContent }}</pre>
+          <pre v-html="logContent"></pre>
         </div>
       </div>
     </a-modal>

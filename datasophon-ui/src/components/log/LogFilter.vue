@@ -106,16 +106,21 @@ export default {
           // 确保获取到的日志内容是纯文本
           let filteredLog = response.data.data || '';
           
-          // 清理可能混入的HTML内容
+          // 不再移除HTML标签，保留颜色格式
           if (filteredLog && typeof filteredLog === 'string') {
-            // 移除可能的HTML标签
-            filteredLog = filteredLog.replace(/<[^>]*>/g, '');
-            
-            // 移除可能的UI元素描述文本（如果有特定模式可以识别）
+            // 仅在日志内容包含系统标识时进行清理
             if (filteredLog.includes('Noah大数据基础平台')) {
-              // 尝试只保留真正的日志行（通常以日期时间开头）
+              // 尝试只保留真正的日志行（通常以日期时间开头或包含日志级别标记）
               const logLines = filteredLog.split('\n')
-                .filter(line => /^\d{4}-\d{2}-\d{2}/.test(line.trim()))
+                .filter(line => 
+                  /^\d{4}-\d{2}-\d{2}/.test(line.trim()) || 
+                  line.includes('[INFO') || 
+                  line.includes('[DEBUG') || 
+                  line.includes('[WARN') || 
+                  line.includes('[ERROR') ||
+                  line.trim().startsWith('at ') ||
+                  line.includes('Exception:')
+                )
                 .join('\n');
               
               if (logLines) {
@@ -146,19 +151,24 @@ export default {
         });
         
         if (response.data && response.data.code === 200) {
-          // 确保获取到的日志内容是纯文本
+          // 确保获取到的日志内容包含HTML颜色标签
           let logContent = response.data.data || '';
           
-          // 清理可能混入的HTML内容
+          // 不再移除HTML标签，保留颜色格式
           if (logContent && typeof logContent === 'string') {
-            // 移除可能的HTML标签
-            logContent = logContent.replace(/<[^>]*>/g, '');
-            
-            // 移除可能的UI元素描述文本
+            // 仅在日志内容包含系统标识时进行清理
             if (logContent.includes('Noah大数据基础平台')) {
-              // 尝试只保留真正的日志行（通常以日期时间开头）
+              // 尝试只保留真正的日志行
               const logLines = logContent.split('\n')
-                .filter(line => /^\d{4}-\d{2}-\d{2}/.test(line.trim()))
+                .filter(line => 
+                  /^\d{4}-\d{2}-\d{2}/.test(line.trim()) || 
+                  line.includes('[INFO') || 
+                  line.includes('[DEBUG') || 
+                  line.includes('[WARN') || 
+                  line.includes('[ERROR') ||
+                  line.trim().startsWith('at ') ||
+                  line.includes('Exception:')
+                )
                 .join('\n');
               
               if (logLines) {

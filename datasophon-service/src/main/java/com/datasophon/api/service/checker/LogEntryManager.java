@@ -127,12 +127,69 @@ public class LogEntryManager {
         StringBuilder sb = new StringBuilder();
         for (LogEntry entry : entries) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-            String formattedLog = String.format("%s [%-5s] [%-" + maxThreadNameLength + "s] %-" + maxClassNameLength + "s - %s",
+            
+            // 根据日志级别设置不同的颜色
+            String colorStart = "";
+            String colorEnd = "";
+            
+            switch (entry.getLevel()) {
+                case DEBUG:
+                    // 灰色
+                    colorStart = "<font color='#888888'>";
+                    colorEnd = "</font>";
+                    break;
+                case INFO:
+                    // 蓝色
+                    colorStart = "<font color='#1E90FF'>";
+                    colorEnd = "</font>";
+                    break;
+                case WARN:
+                    // 橙色
+                    colorStart = "<font color='#FFA500'>";
+                    colorEnd = "</font>";
+                    break;
+                case ERROR:
+                    // 红色
+                    colorStart = "<font color='#FF0000'>";
+                    colorEnd = "</font>";
+                    break;
+                default:
+                    break;
+            }
+            
+            // 特殊处理消息内容中可能包含的成功/失败关键词，单独为它们着色
+            String message = entry.getMessage();
+            
+            // 成功信息用绿色突出显示
+            if (message.contains("成功") || message.contains("通过") || 
+                message.contains("完成") || message.contains("success")) {
+                message = message.replace("成功", "<font color='#52c41a'>成功</font>");
+                message = message.replace("通过", "<font color='#52c41a'>通过</font>");
+                message = message.replace("完成", "<font color='#52c41a'>完成</font>");
+                message = message.replace("success", "<font color='#52c41a'>success</font>");
+            }
+            
+            // 失败信息用红色突出显示
+            if (message.contains("失败") || message.contains("错误") || 
+                message.contains("异常") || message.contains("failed")) {
+                message = message.replace("失败", "<font color='#FF0000'>失败</font>");
+                message = message.replace("错误", "<font color='#FF0000'>错误</font>");
+                message = message.replace("异常", "<font color='#FF0000'>异常</font>");
+                message = message.replace("failed", "<font color='#FF0000'>failed</font>");
+            }
+            
+            // 检查是否是修复中的状态，使用特殊颜色
+            if (message.contains("修复中") || message.contains("正在修复")) {
+                message = message.replace("修复中", "<font color='#722ED1'>修复中</font>");
+                message = message.replace("正在修复", "<font color='#722ED1'>正在修复</font>");
+            }
+            
+            String formattedLog = String.format("%s [%s%-5s%s] [%-" + maxThreadNameLength + "s] %-" + maxClassNameLength + "s - %s",
                     sdf.format(entry.getTimestamp()),
-                    entry.getLevel(),
+                    colorStart, entry.getLevel(), colorEnd,
                     entry.getThreadName(),
                     entry.getClassName(),
-                    entry.getMessage());
+                    message);
             sb.append(formattedLog).append("\n");
         }
         return sb.toString();
@@ -192,7 +249,7 @@ public class LogEntryManager {
             // 优先使用改进的文本筛选方法，保留堆栈信息
             String rawFilteredContent = filterRawLogContent(logKey, level, exactMatch);
             if (rawFilteredContent != null && !rawFilteredContent.trim().isEmpty()) {
-                return rawFilteredContent;
+                return enhanceLogContentWithColors(rawFilteredContent);
             }
         } catch (Exception e) {
             // 如果处理过程中出现异常，尝试使用结构化日志处理
@@ -232,22 +289,142 @@ public class LogEntryManager {
             StringBuilder sb = new StringBuilder();
             for (LogEntry entry : entries) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-                String formattedLog = String.format("%s [%-5s] [%-" + maxThreadNameLength + "s] %-" + maxClassNameLength + "s - %s",
+                
+                // 根据日志级别设置不同的颜色
+                String colorStart = "";
+                String colorEnd = "";
+                
+                switch (entry.getLevel()) {
+                    case DEBUG:
+                        // 灰色
+                        colorStart = "<font color='#888888'>";
+                        colorEnd = "</font>";
+                        break;
+                    case INFO:
+                        // 蓝色
+                        colorStart = "<font color='#1E90FF'>";
+                        colorEnd = "</font>";
+                        break;
+                    case WARN:
+                        // 橙色
+                        colorStart = "<font color='#FFA500'>";
+                        colorEnd = "</font>";
+                        break;
+                    case ERROR:
+                        // 红色
+                        colorStart = "<font color='#FF0000'>";
+                        colorEnd = "</font>";
+                        break;
+                    default:
+                        break;
+                }
+                
+                // 特殊处理消息内容中可能包含的成功/失败关键词，单独为它们着色
+                String message = entry.getMessage();
+                
+                // 成功信息用绿色突出显示
+                if (message.contains("成功") || message.contains("通过") || 
+                    message.contains("完成") || message.contains("success")) {
+                    message = message.replace("成功", "<font color='#52c41a'>成功</font>");
+                    message = message.replace("通过", "<font color='#52c41a'>通过</font>");
+                    message = message.replace("完成", "<font color='#52c41a'>完成</font>");
+                    message = message.replace("success", "<font color='#52c41a'>success</font>");
+                }
+                
+                // 失败信息用红色突出显示
+                if (message.contains("失败") || message.contains("错误") || 
+                    message.contains("异常") || message.contains("failed")) {
+                    message = message.replace("失败", "<font color='#FF0000'>失败</font>");
+                    message = message.replace("错误", "<font color='#FF0000'>错误</font>");
+                    message = message.replace("异常", "<font color='#FF0000'>异常</font>");
+                    message = message.replace("failed", "<font color='#FF0000'>failed</font>");
+                }
+                
+                // 检查是否是修复中的状态，使用特殊颜色
+                if (message.contains("修复中") || message.contains("正在修复")) {
+                    message = message.replace("修复中", "<font color='#722ED1'>修复中</font>");
+                    message = message.replace("正在修复", "<font color='#722ED1'>正在修复</font>");
+                }
+                
+                String formattedLog = String.format("%s [%s%-5s%s] [%-" + maxThreadNameLength + "s] %-" + maxClassNameLength + "s - %s",
                         sdf.format(entry.getTimestamp()),
-                        entry.getLevel(),
+                        colorStart, entry.getLevel(), colorEnd,
                         entry.getThreadName(),
                         entry.getClassName(),
-                        entry.getMessage());
+                        message);
                 sb.append(formattedLog).append("\n");
             }
             String logContent = sb.toString();
             
-            // 确保返回干净的日志内容
-            return cleanupLogContent(logContent);
+            // 确保返回干净但带颜色的日志内容
+            return logContent;
         } catch (Exception e) {
             // 如果所有处理都失败，返回空字符串
             return "";
         }
+    }
+    
+    /**
+     * 为原始日志内容添加颜色
+     * @param content 原始日志内容
+     * @return 带颜色的日志内容
+     */
+    private static String enhanceLogContentWithColors(String content) {
+        if (content == null || content.isEmpty()) {
+            return content;
+        }
+        
+        // 分行处理
+        String[] lines = content.split("\n");
+        StringBuilder enhancedContent = new StringBuilder();
+        
+        for (String line : lines) {
+            String enhancedLine = line;
+            
+            // 按日志级别设置颜色
+            if (line.contains("[DEBUG]") || line.contains("[DEBUG ")) {
+                enhancedLine = enhancedLine.replaceFirst("\\[DEBUG\\]|\\[DEBUG ", "[<font color='#888888'>DEBUG</font>]");
+            } else if (line.contains("[INFO]") || line.contains("[INFO ")) {
+                enhancedLine = enhancedLine.replaceFirst("\\[INFO\\]|\\[INFO ", "[<font color='#1E90FF'>INFO</font>]");
+            } else if (line.contains("[WARN]") || line.contains("[WARN ")) {
+                enhancedLine = enhancedLine.replaceFirst("\\[WARN\\]|\\[WARN ", "[<font color='#FFA500'>WARN</font>]");
+            } else if (line.contains("[ERROR]") || line.contains("[ERROR ")) {
+                enhancedLine = enhancedLine.replaceFirst("\\[ERROR\\]|\\[ERROR ", "[<font color='#FF0000'>ERROR</font>]");
+            }
+            
+            // 突出显示成功/失败关键词
+            if (enhancedLine.contains("成功") || enhancedLine.contains("通过") || 
+                enhancedLine.contains("完成") || enhancedLine.contains("success")) {
+                enhancedLine = enhancedLine.replace("成功", "<font color='#52c41a'>成功</font>");
+                enhancedLine = enhancedLine.replace("通过", "<font color='#52c41a'>通过</font>");
+                enhancedLine = enhancedLine.replace("完成", "<font color='#52c41a'>完成</font>");
+                enhancedLine = enhancedLine.replace("success", "<font color='#52c41a'>success</font>");
+            }
+            
+            if (enhancedLine.contains("失败") || enhancedLine.contains("错误") || 
+                enhancedLine.contains("异常") || enhancedLine.contains("failed")) {
+                enhancedLine = enhancedLine.replace("失败", "<font color='#FF0000'>失败</font>");
+                enhancedLine = enhancedLine.replace("错误", "<font color='#FF0000'>错误</font>");
+                enhancedLine = enhancedLine.replace("异常", "<font color='#FF0000'>异常</font>");
+                enhancedLine = enhancedLine.replace("failed", "<font color='#FF0000'>failed</font>");
+            }
+            
+            // 特殊状态颜色
+            if (enhancedLine.contains("修复中") || enhancedLine.contains("正在修复")) {
+                enhancedLine = enhancedLine.replace("修复中", "<font color='#722ED1'>修复中</font>");
+                enhancedLine = enhancedLine.replace("正在修复", "<font color='#722ED1'>正在修复</font>");
+            }
+            
+            // 突出显示IP地址
+            enhancedLine = enhancedLine.replaceAll("(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})", "<font color='#13C2C2'>$1</font>");
+            
+            if (enhancedContent.length() > 0) {
+                enhancedContent.append("\n");
+            }
+            enhancedContent.append(enhancedLine);
+        }
+        
+        return enhancedContent.toString();
     }
     
     /**
