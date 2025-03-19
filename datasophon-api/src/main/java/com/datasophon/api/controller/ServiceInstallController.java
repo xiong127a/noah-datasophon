@@ -45,8 +45,8 @@ public class ServiceInstallController {
      * 根据服务角色名称查询服务配置选项
      */
     @RequestMapping("/getServiceConfigOption")
-    public Result getServiceConfigOption(Integer clusterId, String serviceName, String serviceRoleName) {
-        return serviceInstallService.getServiceRoleConfigOption(clusterId, serviceName, serviceRoleName);
+    public Result getServiceConfigOption(Integer clusterId, String serviceName) {
+        return serviceInstallService.getServiceConfigOption(clusterId, serviceName);
     }
 
     /**

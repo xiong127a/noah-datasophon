@@ -28,7 +28,7 @@ import java.util.List;
 
 public interface ServiceInstallService {
 
-    Result getServiceRoleConfigOption(Integer clusterId, String serviceName, String serviceRoleName);
+    Result getServiceConfigOption(Integer clusterId, String serviceName);
 
     Result saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list);
 

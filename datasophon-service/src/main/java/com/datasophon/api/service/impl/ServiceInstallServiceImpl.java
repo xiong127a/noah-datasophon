@@ -139,19 +139,18 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return serviceConfig;
     }
 
-
     @Override
-    public Result getServiceRoleConfigOption(Integer clusterId, String serviceName, String serviceRoleName) {
-
-        List<ServiceConfig> list;
+    public Result getServiceConfigOption(Integer clusterId, String serviceName) {
+        List<ServiceConfig> list = null;
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
-        ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.listServiceRoleByNameAndClusterId(
-                clusterId, serviceRoleName);
-        if (Objects.nonNull(serviceRoleInstance)) {
-            list = listServiceConfigByServiceRoleInstance(serviceRoleInstance);
+        ClusterServiceInstanceEntity serviceInstance =
+                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(
+                        clusterId, serviceName);
+        if (Objects.nonNull(serviceInstance)) {
+            list = listServiceConfigByServiceInstance(serviceInstance);
         } else {
             FrameServiceEntity frameService =
                     this.frameService.getServiceByFrameCodeAndServiceName(
@@ -184,7 +183,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         ServiceRoleStrategy serviceRoleHandler =
-                ServiceRoleStrategyContext.getServiceRoleHandler(serviceRoleName);
+                ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.getConfig(clusterId, list);
         }
