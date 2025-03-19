@@ -8,8 +8,15 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.concurrent.*;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -34,8 +41,8 @@ public class HostCheckQueueManager {
     public HostCheckQueueManager() {
         // 创建主线程池 - 负责主机级别的检查任务
         this.executorService = new ThreadPoolExecutor(
-            1, // 核心线程数 - 支持多主机并行检查
-            8, // 最大线程数
+            4, // 核心线程数 - 支持多主机并行检查，从1改为4
+            10, // 最大线程数，从8改为10
             60L, // 空闲线程存活时间
             TimeUnit.SECONDS, // 时间单位
             new LinkedBlockingQueue<>(50), // 有界工作队列，避免无限堆积
@@ -115,18 +122,20 @@ public class HostCheckQueueManager {
         try {
             // 如果任务已在运行，则不添加
             if (runningTasks.containsKey(taskKey)) {
-                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
+                logger.debug("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
                 return;
             }
             
-            logger.info("正在将主机 {} 的检查任务添加到队列，当前队列大小: {}", 
+            logger.debug("正在将主机 {} 的检查任务添加到队列，当前队列大小: {}", 
                 hostInfo.getHostname(), checkQueue.size());
             checkQueue.put(new CheckTask(clusterId, hostInfo, hostCheckService));
             logger.info("成功添加主机 {} 的检查任务到队列，新队列大小: {}", 
                 hostInfo.getHostname(), checkQueue.size());
         } catch (InterruptedException e) {
-            logger.error("添加主机 {} 的检查任务到队列时失败", hostInfo.getHostname(), e);
+            logger.error("添加检查任务被中断: {}", hostInfo.getHostname(), e);
             Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getHostname(), e.getMessage(), e);
         }
     }
 
@@ -183,15 +192,19 @@ public class HostCheckQueueManager {
         return clusterId + ":" + hostname;
     }
 
+    /**
+     * 队列处理任务，循环从队列中取出任务并提交给线程池执行
+     * 在单独的线程中运行
+     */
     private void processQueueTasks() {
-        logger.info("开始处理队列任务...");
+        logger.info("开始处理主机检查队列任务");
         while (isRunning.get()) {
             try {
                 logger.debug("等待下一个任务，当前队列大小: {}", checkQueue.size());
                 CheckTask task = checkQueue.take();
                 String taskKey = getTaskKey(task.getClusterId(), task.getHostInfo().getHostname());
                 
-                logger.info("正在提交主机 {} 的检查任务", task.getHostInfo().getHostname());
+                logger.debug("正在提交主机 {} 的检查任务", task.getHostInfo().getHostname());
                 Future<?> future = executorService.submit(() -> {
                     try {
                         task.getHostCheckService().processHostCheck(task.getClusterId(), task.getHostInfo());

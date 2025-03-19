@@ -371,7 +371,13 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     void processHostCheck(Integer clusterId, HostInfo hostInfo) {
         try {
-            logger.info("开始检查主机: {}, 将按顺序串行执行检查项", hostInfo.getHostname());
+            logger.info("开始检查主机: {}", hostInfo.getHostname());
+            
+            // 记录当前线程名称和检查项总数
+            logger.debug("检查线程: {}, 主机: {}, 集群ID: {}", 
+                Thread.currentThread().getName(), 
+                hostInfo.getHostname(), 
+                clusterId);
             
             // 创建检查项队列
             BlockingQueue<CheckItem> itemQueue = new LinkedBlockingQueue<>(hostInfo.getCheckItems());
@@ -380,21 +386,40 @@ public class HostCheckServiceImpl implements HostCheckService {
             boolean hostCheckCancelled = false;
             
             // 按顺序遍历检查项，确保串行执行
-            logger.info("队列中待检查项数量: {}", itemQueue.size());
+            logger.debug("主机 {} 队列中待检查项数量: {}", hostInfo.getHostname(), itemQueue.size());
+            
+            // 记录队列中所有检查项的状态
+            if (logger.isDebugEnabled()) {
+                StringBuilder itemStatus = new StringBuilder();
+                for (CheckItem item : hostInfo.getCheckItems()) {
+                    itemStatus.append(item.getItemName())
+                             .append("(").append(item.getStatus()).append("), ");
+                }
+                logger.debug("主机 {} 检查项列表: {}", hostInfo.getHostname(), itemStatus.toString());
+            }
+            
+            if (itemQueue.isEmpty()) {
+                logger.warn("主机 {} 没有可执行的检查项，检查提前结束", hostInfo.getHostname());
+                return;
+            }
+            
             while (!itemQueue.isEmpty()) {
                 CheckItem item = itemQueue.poll();
-                if (item == null) break;
+                if (item == null) {
+                    logger.warn("从队列获取的检查项为null，可能是队列已清空");
+                    break;
+                }
                 
                 // 只处理状态为"等待检查"或"检查中"的检查项，跳过其他状态
                 if (item.getStatus() != CheckItem.Status.WAITING && item.getStatus() != CheckItem.Status.CHECKING) {
-                    logger.info("跳过非等待状态的检查项: {}, 状态: {}, 主机: {}",
+                    logger.debug("跳过非等待状态的检查项: {}, 状态: {}, 主机: {}",
                         item.getItemName(), item.getStatus(), hostInfo.getHostname());
                     continue;
                 }
                 
                 try {
                     // 设置当前检查项状态为"检查中"
-                    logger.info("设置检查项 {} 状态为检查中", item.getItemName());
+                    logger.debug("设置检查项 {} 状态为检查中", item.getItemName());
                     hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.CHECKING, "检查中");
                     
                     // 立即更新缓存，确保前端能看到"检查中"状态
@@ -402,14 +427,14 @@ public class HostCheckServiceImpl implements HostCheckService {
                     updateHostInfoCache(clusterId, hostInfo);
 
                     // 执行检查，此方法内部不再使用线程池
-                    logger.info("开始串行执行检查项: {}", item.getItemName());
+                    logger.info("开始执行检查项: {}", item.getItemName());
                     boolean success = executeHostCheck(clusterId, hostInfo, item);
                     logger.info("检查项 {} 执行完成，结果: {}", item.getItemName(), success ? "成功" : "失败");
 
                     // 检查完成后获取最新状态 - 可能已被手动终止
                     CheckItem updatedItem = findCheckItemById(hostInfo, item.getId());
                     if (updatedItem != null && updatedItem.getStatus() == CheckItem.Status.SKIPPED) {
-                        logger.info("检查项在执行过程中被手动终止: {}, 主机: {}", item.getItemName(), hostInfo.getHostname());
+                        logger.debug("检查项在执行过程中被手动终止: {}, 主机: {}", item.getItemName(), hostInfo.getHostname());
                         continue;
                     }
 
@@ -417,23 +442,32 @@ public class HostCheckServiceImpl implements HostCheckService {
                     updateHostInfoCache(clusterId, hostInfo);
 
                     // 每个检查项执行完后等待3秒
-                    logger.info("检查项 {} 执行完成，等待3秒后继续执行下一个检查项", item.getItemName());
+                    logger.debug("检查项 {} 执行完成，等待3秒后继续执行下一个检查项", item.getItemName());
                     Thread.sleep(3000);
                 } catch (InterruptedException e) {
-                    logger.info("主机检查被中断，主机: {}, 检查项: {}", hostInfo.getHostname(), item.getItemName());
-                    hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.SKIPPED, "检查已终止");
+                    // 如果主机检查被中断，放弃后续检查项
+                    logger.warn("主机 {} 的检查被中断", hostInfo.getHostname());
                     hostCheckCancelled = true;
-                    Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    logger.error("执行检查项 {} 失败: {}", item.getId(), e.getMessage(), e);
-                    hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "检查失败: " + e.getMessage());
+                    logger.error("执行检查项 {} 时发生错误: {}", item.getItemName(), e.getMessage(), e);
+                    
+                    // 设置检查项状态为失败
+                    hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "执行检查时发生错误: " + e.getMessage());
                     updateHostInfoCache(clusterId, hostInfo);
+                }
+                
+                // 检查是否被取消
+                if (Thread.currentThread().isInterrupted()) {
+                    logger.warn("检测到中断信号，取消主机 {} 的检查", hostInfo.getHostname());
+                    hostCheckCancelled = true;
+                    break;
                 }
             }
             
-            // 如果是整个主机检查被取消，将剩余检查项标记为已跳过
+            // 如果被取消，将剩余检查项标记为"已跳过"
             if (hostCheckCancelled) {
+                logger.info("标记主机 {} 剩余检查项为已跳过", hostInfo.getHostname());
                 while (!itemQueue.isEmpty()) {
                     CheckItem item = itemQueue.poll();
                     if (item != null) {
@@ -452,6 +486,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     if (item.getStatus() != CheckItem.Status.SUCCESS && item.getStatus() != CheckItem.Status.SKIPPED) {
                         hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "检查过程中发生错误: " + e.getMessage());
                     }
+
                 }
                 updateHostInfoCache(clusterId, hostInfo);
             }
@@ -463,13 +498,17 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     private boolean executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         try {
-            logger.info("准备串行执行检查项: {}，主机: {}", checkItem.getItemName(), hostInfo.getHostname());
+            logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}", 
+                      checkItem.getItemName(), 
+                      hostInfo.getHostname(), 
+                      Thread.currentThread().getName());
             
             // 确保状态更新已发送到前端
             updateHostInfoCache(clusterId, hostInfo);
             
             // 初始化日志
             String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            logger.debug("检查项日志键: {}", logKey);
             
             // 清除可能存在的旧日志
             LogEntryManager.clearLogEntries(logKey);
@@ -478,55 +517,104 @@ public class HostCheckServiceImpl implements HostCheckService {
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
             
             // 添加日志头部信息
-            cacheLog.info("==== 开始串行检查: " + checkItem.getItemName() + " ====");
+            cacheLog.info("==== 开始检查: " + checkItem.getItemName() + " ====");
             cacheLog.info("主机: " + hostInfo.getHostname());
             cacheLog.info("检查项ID: " + checkItem.getId());
-            cacheLog.info("集群ID: " + clusterId);
+            cacheLog.debug("检查项代码: " + checkItem.getItemCode());
+            cacheLog.debug("集群ID: " + clusterId);
+            cacheLog.debug("执行时间: " + formatDateToChinese(new Date()));
+            cacheLog.debug("执行线程: " + Thread.currentThread().getName());
             
-            logger.info("开始执行检查项 {}", checkItem.getItemName());
+            logger.debug("主机 {} 开始执行检查项 {}", hostInfo.getHostname(), checkItem.getItemName());
             cacheLog.info("正在执行检查任务...");
             
-            // 获取检查器
-            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-            if (checker == null) {
-                String errorMsg = "未知的检查项: " + checkItem.getItemCode();
-                logger.error(errorMsg);
-                cacheLog.error("错误: " + errorMsg);
-                cacheLog.error("==== 检查失败 ====");
-                
-                checkItem.setMessage(errorMsg);
-                updateHostInfoCache(clusterId, hostInfo);
-                return false;
-            }
-
-            // 记录检查开始
-            cacheLog.info("正在执行检查 " + checkItem.getItemName() + "...");
-            
-            // 执行检查并记录结果
+            // 从工厂获取检查器实例
             try {
-                checker.check(clusterId, hostInfo, checkItem);
-                
-                // 检查结果
-                if (checkItem.getStatus() == CheckItem.Status.SUCCESS) {
-                    cacheLog.info("检查结果: " + checkItem.getStatus());
-                    cacheLog.info("详细信息: " + checkItem.getMessage());
-                    cacheLog.info("==== 检查通过 ====");
-                } else {
-                    cacheLog.warn("检查执行失败");
-                    cacheLog.info("检查结果: " + checkItem.getStatus());
-                    cacheLog.info("详细信息: " + checkItem.getMessage());
-                    cacheLog.warn("==== 检查未通过 ====");
+                // 注意检查ItemCode的转换过程
+                ItemCode itemCodeEnum = null;
+                try {
+                    itemCodeEnum = ItemCode.valueOf(checkItem.getItemCode());
+                } catch (IllegalArgumentException e) {
+                    String errorMsg = "无法将字符串 '" + checkItem.getItemCode() + "' 转换为ItemCode枚举";
+                    logger.error(errorMsg, e);
+                    cacheLog.error(errorMsg);
+                    cacheLog.error("详细错误: " + e.getMessage());
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
+                    updateHostInfoCache(clusterId, hostInfo);
+                    return false;
                 }
-                updateHostInfoCache(clusterId, hostInfo);
-                return true;
-            } catch (Exception e) {
-                String errorMsg = "执行检查过程中发生异常: " + e.getMessage();
-                logger.error(errorMsg, e);
-                cacheLog.error("错误: " + errorMsg);
-                cacheLog.error("==== 检查失败 ====");
                 
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("检查失败: " + e.getMessage());
+                logger.debug("正在获取检查器: {}", itemCodeEnum);
+                cacheLog.debug("正在获取检查器: " + itemCodeEnum);
+                
+                ItemChecker checker = itemCheckerFactory.getChecker(itemCodeEnum);
+                
+                if (checker == null) {
+                    String errorMsg = "未找到检查项 " + checkItem.getItemCode() + " 对应的检查器实现";
+                    logger.error(errorMsg);
+                    cacheLog.error(errorMsg);
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
+                    updateHostInfoCache(clusterId, hostInfo);
+                    return false;
+                }
+                
+                logger.debug("成功获取检查器: {}, 类型: {}", 
+                    itemCodeEnum, 
+                    checker.getClass().getSimpleName());
+                cacheLog.debug("成功获取检查器: " + checker.getClass().getSimpleName());
+                
+                // 执行检查，并捕获所有可能的异常
+                try {
+                    // 日志记录检查开始时间
+                    long startTime = System.currentTimeMillis();
+                    cacheLog.info("检查开始执行...");
+                    
+                    // 执行实际检查
+                    CheckItem resultItem = checker.check(clusterId, hostInfo, checkItem);
+                    
+                    // 记录执行耗时
+                    long endTime = System.currentTimeMillis();
+                    long duration = endTime - startTime;
+                    cacheLog.info("检查执行完成，耗时: " + duration + "ms");
+                    
+                    // 根据检查结果更新状态
+                    boolean result = (resultItem.getStatus() == CheckItem.Status.SUCCESS);
+                    if (result) {
+                        logger.info("检查项 {} 检查通过", checkItem.getItemName());
+                        cacheLog.info("检查结果: 通过");
+                        // 状态已经由check方法更新，不需要再次更新
+                    } else {
+                        logger.info("检查项 {} 检查未通过", checkItem.getItemName());
+                        cacheLog.info("检查结果: 未通过");
+                        
+                        // 确保状态已更新
+                        if (resultItem.getStatus() != CheckItem.Status.FAILED && 
+                            resultItem.getStatus() != CheckItem.Status.SKIPPED) {
+                            hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "检查未通过");
+                        }
+                    }
+                    
+                    // 更新缓存，确保前端能看到最新状态
+                    updateHostInfoCache(clusterId, hostInfo);
+                    
+                    return result;
+                } catch (Exception e) {
+                    String errorMsg = "执行检查项 " + checkItem.getItemName() + " 时发生异常: " + e.getMessage();
+                    logger.error(errorMsg, e);
+                    cacheLog.error(errorMsg);
+                    cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
+                    
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "执行检查时发生异常: " + e.getMessage());
+                    updateHostInfoCache(clusterId, hostInfo);
+                    return false;
+                }
+            } catch (Exception e) {
+                String errorMsg = "处理检查项 " + checkItem.getItemName() + " 的检查器时发生异常: " + e.getMessage();
+                logger.error(errorMsg, e);
+                cacheLog.error(errorMsg);
+                cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
+                
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "系统错误: " + e.getMessage());
                 updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
@@ -871,7 +959,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 从日志管理器获取日志
         String log = LogEntryManager.getLogContent(logKey);
         
-        if (log == null || log.isEmpty()) {
+        if (log.isEmpty()) {
             logger.warn("未找到检查项日志, 缓存键: {}", logKey);
             
             // 尝试获取检查项信息，验证检查项是否存在
@@ -1099,13 +1187,13 @@ public class HostCheckServiceImpl implements HostCheckService {
                 
                 // 执行检查
                 cacheLog.info("使用检查器: " + checker.getClass().getSimpleName());
-                CheckItem result = checker.check(clusterId, hostInfo, checkItem);
+                CheckItem resultItem = checker.check(clusterId, hostInfo, checkItem);
                 
                 // 记录检查结果
-                cacheLog.info("检查完成，状态: " + result.getStatus());
-                cacheLog.info("检查结果: " + result.getMessage());
+                cacheLog.info("检查完成，状态: " + resultItem.getStatus());
+                cacheLog.info("检查结果: " + resultItem.getMessage());
                 
-                return result;
+                return resultItem;
             } catch (Exception e) {
                 cacheLog.error("检查执行异常: " + e.getMessage());
                 logger.error("检查执行异常", e);
