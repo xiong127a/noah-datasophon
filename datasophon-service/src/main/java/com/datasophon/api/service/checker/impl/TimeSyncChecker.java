@@ -1,6 +1,7 @@
 package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.service.checker.AbstractItemChecker;
+import com.datasophon.api.service.checker.CommandResult;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 @Component
 public class TimeSyncChecker extends AbstractItemChecker {
@@ -20,70 +22,82 @@ public class TimeSyncChecker extends AbstractItemChecker {
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            cacheLog.debug("======== 时间同步检查开始 ========");
-            cacheLog.debug("检查主机: %s，检查项ID: %d", hostInfo.getHostname(), checkItem.getId());
-            cacheLog.info("开始检查主机时间同步 - 主机: %s", hostInfo.getHostname());
-            cacheLog.info("允许的最大时间差: %d秒", MAX_TIME_DIFF_SECONDS);
-
-            // 获取远程主机的Unix时间戳
-            cacheLog.debug("准备获取远程主机时间戳...");
-            cacheLog.info("获取远程主机时间戳...");
-            String remoteTimeResult = execCommand(session, "date +%s");
-            cacheLog.debug("远程主机时间戳获取命令返回: %s", remoteTimeResult);
+            cacheLog.info("==== 时间同步检查开始 ====");
+            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("最大允许时间差: " + MAX_TIME_DIFF_SECONDS + "秒");
             
-            // 获取当前服务器的时间戳
-            long serverTime = System.currentTimeMillis() / 1000; // 转换为秒
-            cacheLog.debug("当前服务器Unix时间戳: %d", serverTime);
-            cacheLog.debug("当前服务器时间: %s", new Date(serverTime * 1000).toString());
-            cacheLog.info("服务器当前时间戳: %d", serverTime);
+            // 更新状态为正在获取远程服务器时间
+            checkItem.setMessage("正在获取远程服务器时间...");
             
-            if (remoteTimeResult.startsWith("ERROR")) {
-                cacheLog.debug("远程主机时间戳获取失败: %s", remoteTimeResult);
-                cacheLog.error("获取主机时间失败: %s", remoteTimeResult);
+            // 1. 首先获取远程服务器的时间
+            CommandResult remoteTimeResult = execCommand(session, "date '+%Y-%m-%d %H:%M:%S'");
+            if (!remoteTimeResult.isSuccess()) {
+                cacheLog.error("获取远程服务器时间失败: %s", remoteTimeResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取主机时间失败: " + remoteTimeResult);
+                checkItem.setMessage("获取远程服务器时间失败: " + remoteTimeResult.getErrorOrOutput());
                 return checkItem;
             }
             
-            long remoteTime = Long.parseLong(remoteTimeResult.trim());
-            cacheLog.debug("远程主机Unix时间戳: %d", remoteTime);
-            cacheLog.debug("远程主机时间: %s", new Date(remoteTime * 1000).toString());
-            cacheLog.info("远程主机时间戳: %d", remoteTime);
+            String remoteTimeStr = remoteTimeResult.getOutput().trim();
+            cacheLog.info("远程服务器时间: " + remoteTimeStr);
             
-            // 计算时间差（取绝对值）
-            long timeDiff = Math.abs(remoteTime - serverTime);
-            cacheLog.debug("服务器与远程主机的时间差绝对值: %d秒", timeDiff);
-            cacheLog.info("时间差: %d秒", timeDiff);
+            // 更新状态为正在获取远程服务器时区
+            checkItem.setMessage("正在获取远程服务器时区...");
             
-            // 检查远程主机的时区
-            cacheLog.debug("获取远程主机的时区信息...");
-            String timeZoneResult = execCommand(session, "date +%Z");
-            cacheLog.debug("远程主机时区: %s", timeZoneResult.startsWith("ERROR") ? "获取失败" : timeZoneResult.trim());
+            // 2. 获取远程服务器时区
+            CommandResult remoteTzResult = execCommand(session, "date '+%Z'");
+            if (!remoteTzResult.isSuccess()) {
+                cacheLog.warn("获取远程服务器时区失败: %s", remoteTzResult.getErrorOrOutput());
+            }
+            String remoteTz = remoteTzResult.isSuccess() ? remoteTzResult.getOutput().trim() : "未知";
+            cacheLog.info("远程服务器时区: " + remoteTz);
             
-            if (timeDiff <= MAX_TIME_DIFF_SECONDS) {
-                cacheLog.debug("时间同步检查通过: 时间差在允许范围内 (%d秒 <= %d秒)", timeDiff, MAX_TIME_DIFF_SECONDS);
-                cacheLog.info("时间同步检查通过，时间差在允许范围内");
-                checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage(String.format("主机时间同步正常，与服务器时间差为 %d 秒", timeDiff));
-            } else {
-                cacheLog.debug("时间同步检查未通过: 时间差超出允许范围 (%d秒 > %d秒)", timeDiff, MAX_TIME_DIFF_SECONDS);
-                cacheLog.warn("时间同步检查未通过，时间差超过允许范围");
+            // 3. 获取本地服务器时间
+            Date localDate = new Date();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String localTimeStr = sdf.format(localDate);
+            cacheLog.info("本地服务器时间: " + localTimeStr);
+            
+            // 4. 获取本地服务器时区
+            String localTz = TimeZone.getDefault().getID();
+            cacheLog.info("本地服务器时区: " + localTz);
+            
+            // 更新状态为正在计算时间差
+            checkItem.setMessage("正在计算时间差...");
+            
+            // 5. 计算时间差
+            try {
+                Date remoteDate = sdf.parse(remoteTimeStr);
+                long diffMillis = Math.abs(remoteDate.getTime() - localDate.getTime());
+                long diffSeconds = diffMillis / 1000;
+                
+                cacheLog.info("时间差: " + diffSeconds + "秒");
+                
+                boolean isTimeSynced = diffSeconds <= MAX_TIME_DIFF_SECONDS;
+                
+                if (isTimeSynced) {
+                    checkItem.setStatus(CheckItem.Status.SUCCESS);
+                    checkItem.setMessage("服务器时间同步正常，时间差: " + diffSeconds + "秒");
+                    cacheLog.info("服务器时间同步检查通过");
+                } else {
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("服务器时间不同步，时间差: " + diffSeconds + "秒 (大于" + MAX_TIME_DIFF_SECONDS + "秒)");
+                    cacheLog.info("服务器时间同步检查未通过");
+                }
+            } catch (Exception e) {
+                cacheLog.error("计算时间差时发生错误: %s", e.getMessage());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage(String.format("主机时间同步异常，与服务器时间差为 %d 秒，超过了允许的 %d 秒",
-                        timeDiff, MAX_TIME_DIFF_SECONDS));
+                checkItem.setMessage("计算时间差时发生错误: " + e.getMessage());
             }
             
-            cacheLog.debug("时间同步检查结果: %s", checkItem.getStatus());
-            cacheLog.debug("时间同步检查消息: %s", checkItem.getMessage());
-            cacheLog.debug("======== 时间同步检查完成 ========");
-            
         } catch (Exception e) {
-            cacheLog.debug("时间同步检查过程中发生异常: %s", e.getMessage());
-            cacheLog.debug("异常堆栈: %s", e.toString());
-            logger.error("时间同步检查失败: {}", e.getMessage());
-            cacheLog.error("时间同步检查失败: %s", e.getMessage());
+            String errorMsg = "检查时间同步时发生错误: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error(errorMsg);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("时间同步检查失败: " + e.getMessage());
+            checkItem.setMessage(errorMsg);
+        } finally {
+            cacheLog.info("==== 时间同步检查结束 ====");
         }
         return checkItem;
     }
@@ -91,154 +105,159 @@ public class TimeSyncChecker extends AbstractItemChecker {
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            logger.info("开始修复主机 {} 的时间同步", hostInfo.getHostname());
-            cacheLog.info("开始修复主机 %s 的时间同步", hostInfo.getHostname());
+            cacheLog.info("==== 开始修复服务器时间同步 ====");
             
-            // 第1步：获取服务器当前时区信息
-            String serverTimezone = System.getProperty("user.timezone");
-            logger.info("服务器当前时区: {}", serverTimezone);
-            cacheLog.info("服务器当前时区: %s", serverTimezone);
+            // 更新状态为正在获取本地时间
+            checkItem.setMessage("正在获取本地时间信息...");
             
-            // 获取更详细的时区信息（如 Asia/Shanghai）
-            String serverZoneInfo = execCommand(session, "cat /etc/timezone || ls -l /etc/localtime | grep -o '[A-Za-z0-9/]*$'");
-            if (!serverZoneInfo.startsWith("ERROR")) {
-                serverZoneInfo = serverZoneInfo.trim();
-                logger.info("服务器时区信息: {}", serverZoneInfo);
-                cacheLog.info("服务器时区信息: %s", serverZoneInfo);
+            // 1. 获取本地时间
+            Date localDate = new Date();
+            SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd");
+            SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm:ss");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String localDateStr = dateFmt.format(localDate);
+            String localTimeStr = timeFmt.format(localDate);
+            
+            cacheLog.info("本地时间: " + localDateStr + " " + localTimeStr);
+            
+            // 2. 获取本地时区
+            String localTz = TimeZone.getDefault().getID();
+            cacheLog.info("本地时区: " + localTz);
+            
+            String tzFile = getTimezoneFile(localTz);
+            if (tzFile == null || tzFile.isEmpty()) {
+                cacheLog.warn("无法找到对应的时区文件，将只同步时间而不同步时区");
             } else {
-                // 如果无法获取详细信息，使用Java时区
-                serverZoneInfo = serverTimezone;
-                cacheLog.warn("无法获取详细时区信息，使用Java时区: %s", serverZoneInfo);
+                cacheLog.info("对应的时区文件: " + tzFile);
             }
             
-            // 第2步：设置远程主机时区
-            logger.info("设置远程主机时区为: {}", serverZoneInfo);
-            cacheLog.info("设置远程主机时区为: %s", serverZoneInfo);
-            String setTzResult;
+            // 更新状态为正在设置时区
+            checkItem.setMessage("正在设置服务器时区...");
             
-            // 尝试使用timedatectl设置时区（适用于systemd系统）
-            setTzResult = execCommand(session, "timedatectl set-timezone " + serverZoneInfo);
-            if (setTzResult.startsWith("ERROR")) {
-                // 如果timedatectl失败，尝试其他方法
-                logger.info("timedatectl设置时区失败，尝试其他方法");
-                cacheLog.warn("timedatectl设置时区失败，尝试其他方法");
-                
-                // 检查是否存在/etc/timezone文件（Debian/Ubuntu）
-                String checkDebian = execCommand(session, "test -f /etc/timezone && echo 'EXISTS' || echo 'NOT_EXISTS'");
-                if (checkDebian.trim().equals("EXISTS")) {
-                    logger.info("使用Debian/Ubuntu方式设置时区");
-                    cacheLog.info("使用Debian/Ubuntu方式设置时区");
-                    setTzResult = execCommand(session, "echo '" + serverZoneInfo + "' > /etc/timezone && dpkg-reconfigure --frontend noninteractive tzdata");
+            // 3. 设置远程服务器时区（如果能确定对应的时区文件）
+            if (tzFile != null && !tzFile.isEmpty()) {
+                cacheLog.info("设置远程服务器时区...");
+                CommandResult tzResult = execCommand(session, "ln -sf " + tzFile + " /etc/localtime");
+                if (!tzResult.isSuccess()) {
+                    cacheLog.warn("设置时区失败: %s", tzResult.getErrorOrOutput());
                 } else {
-                    // 检查是否存在/etc/sysconfig/clock文件（Red Hat/CentOS）
-                    String checkRedHat = execCommand(session, "test -f /etc/sysconfig/clock && echo 'EXISTS' || echo 'NOT_EXISTS'");
-                    if (checkRedHat.trim().equals("EXISTS")) {
-                        logger.info("使用Red Hat/CentOS方式设置时区");
-                        cacheLog.info("使用Red Hat/CentOS方式设置时区");
-                        setTzResult = execCommand(session, "sed -i 's/^ZONE=.*/ZONE=\"" + serverZoneInfo + "\"/' /etc/sysconfig/clock && ln -sf /usr/share/zoneinfo/" + serverZoneInfo + " /etc/localtime");
+                    cacheLog.info("时区设置成功");
+                }
+            }
+            
+            // 更新状态为正在设置系统时间
+            checkItem.setMessage("正在设置系统时间...");
+            
+            // 4. 设置远程服务器日期和时间
+            cacheLog.info("设置远程服务器日期和时间...");
+            String dateCmd = "date -s \"" + localDateStr + " " + localTimeStr + "\"";
+            CommandResult dateResult = execCommand(session, dateCmd);
+            
+            if (!dateResult.isSuccess()) {
+                cacheLog.error("设置日期和时间失败: %s", dateResult.getErrorOrOutput());
+                checkItem.setMessage("设置系统时间失败: " + dateResult.getErrorOrOutput());
+                return false;
+            }
+            cacheLog.info("日期和时间设置成功");
+            
+            // 更新状态为正在同步硬件时钟
+            checkItem.setMessage("正在同步硬件时钟...");
+            
+            // 5. 将时间写入硬件时钟
+            cacheLog.info("将时间同步到硬件时钟...");
+            CommandResult hwClockResult = execCommand(session, "hwclock --systohc");
+            if (!hwClockResult.isSuccess()) {
+                cacheLog.warn("硬件时钟同步失败: %s", hwClockResult.getErrorOrOutput());
+            } else {
+                cacheLog.info("硬件时钟同步成功");
+            }
+            
+            // 更新状态为正在验证时间同步
+            checkItem.setMessage("正在验证时间同步结果...");
+            
+            // 6. 验证时间同步结果
+            cacheLog.info("验证时间同步结果...");
+            CommandResult verifyResult = execCommand(session, "date '+%Y-%m-%d %H:%M:%S'");
+            if (verifyResult.isSuccess()) {
+                String remoteTimeAfterSync = verifyResult.getOutput().trim();
+                cacheLog.info("同步后的远程服务器时间: " + remoteTimeAfterSync);
+                
+                // 再次获取本地时间进行比较
+                Date newLocalDate = new Date();
+                String newLocalTimeStr = sdf.format(newLocalDate);
+                cacheLog.info("当前本地服务器时间: " + newLocalTimeStr);
+                
+                try {
+                    Date remoteDate = sdf.parse(remoteTimeAfterSync);
+                    long diffMillis = Math.abs(remoteDate.getTime() - newLocalDate.getTime());
+                    long diffSeconds = diffMillis / 1000;
+                    
+                    cacheLog.info("同步后的时间差: " + diffSeconds + "秒");
+                    
+                    if (diffSeconds <= MAX_TIME_DIFF_SECONDS) {
+                        cacheLog.info("时间同步修复成功");
+                        checkItem.setMessage("时间同步修复成功，当前时间差: " + diffSeconds + "秒");
                     } else {
-                        // 直接链接时区文件（通用方法）
-                        logger.info("使用通用方法设置时区");
-                        cacheLog.info("使用通用方法设置时区");
-                        setTzResult = execCommand(session, "ln -sf /usr/share/zoneinfo/" + serverZoneInfo + " /etc/localtime");
+                        cacheLog.warn("时间同步后仍有较大差异: " + diffSeconds + "秒");
+                        checkItem.setMessage("警告：时间同步后仍有较大差异: " + diffSeconds + "秒");
                     }
+                } catch (Exception e) {
+                    cacheLog.warn("验证时间同步结果时发生错误: %s", e.getMessage());
+                    checkItem.setMessage("警告：验证时间同步结果时发生错误");
                 }
-            }
-            
-            if (setTzResult.startsWith("ERROR")) {
-                logger.error("设置时区失败: {}", setTzResult);
-                cacheLog.error("设置时区失败: %s", setTzResult);
-                // 继续尝试设置时间，即使时区设置失败
             } else {
-                logger.info("时区设置成功");
-                cacheLog.info("时区设置成功");
+                cacheLog.warn("获取同步后的远程时间失败: %s", verifyResult.getErrorOrOutput());
+                checkItem.setMessage("警告：无法获取同步后的时间");
             }
             
-            // 第3步：获取当前服务器时间
-            Date currentDate = new Date();
+            cacheLog.info("==== 服务器时间同步修复完成 ====");
+            return true;
             
-            // 设置远程主机时间（使用hwclock同步硬件时钟）
-            logger.info("设置远程主机系统时间");
-            cacheLog.info("设置远程主机系统时间");
-            
-            // 使用ISO 8601格式设置日期和时间 (YYYY-MM-DD HH:MM:SS)
-            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String isoDateTime = isoFormat.format(currentDate);
-            
-            // 尝试使用timedatectl设置系统时间（现代Linux系统首选）
-            String setTimeResult = execCommand(session, "timedatectl set-time \"" + isoDateTime + "\"");
-            if (setTimeResult.startsWith("ERROR")) {
-                // 回退到传统date命令
-                logger.info("timedatectl设置时间失败，尝试使用date命令");
-                cacheLog.warn("timedatectl设置时间失败，尝试使用date命令");
-                
-                // 格式化为Linux date命令接受的格式 (MMDDHHmmYYYY.ss)
-                SimpleDateFormat dateFormat = new SimpleDateFormat("MMddHHmmyyyy.ss");
-                String formattedDate = dateFormat.format(currentDate);
-                
-                // 直接设置远程主机的系统时间
-                setTimeResult = execCommand(session, "date " + formattedDate);
-                
-                if (setTimeResult.startsWith("ERROR")) {
-                    logger.error("设置系统时间失败: {}", setTimeResult);
-                    cacheLog.error("设置系统时间失败: %s", setTimeResult);
-                    return false;
-                }
-            }
-            
-            // 同步硬件时钟
-            logger.info("同步远程主机硬件时钟");
-            cacheLog.info("同步远程主机硬件时钟");
-            String hwClockResult = execCommand(session, "hwclock --systohc");
-            if (hwClockResult.startsWith("ERROR")) {
-                logger.warn("同步硬件时钟失败: {}", hwClockResult);
-                cacheLog.warn("同步硬件时钟失败: %s", hwClockResult);
-                // 继续，因为系统时间已经设置
-            }
-            
-            // 第4步：验证时间是否已同步
-            logger.info("验证时间同步结果");
-            cacheLog.info("验证时间同步结果");
-            
-            // 验证时区
-            String remoteTimezone = execCommand(session, "date +%Z");
-            if (remoteTimezone.startsWith("ERROR")) {
-                logger.warn("获取远程时区失败: {}", remoteTimezone);
-                cacheLog.warn("获取远程时区失败: %s", remoteTimezone);
-            } else {
-                logger.info("远程主机时区: {}", remoteTimezone.trim());
-                cacheLog.info("远程主机时区: %s", remoteTimezone.trim());
-            }
-            
-            // 验证时间同步
-            long serverTime = System.currentTimeMillis() / 1000;
-            String remoteTimeAfterFix = execCommand(session, "date +%s");
-            
-            if (remoteTimeAfterFix.startsWith("ERROR")) {
-                logger.error("获取修复后的远程主机时间失败: {}", remoteTimeAfterFix);
-                cacheLog.error("获取修复后的远程主机时间失败: %s", remoteTimeAfterFix);
-                return false;
-            }
-            
-            long remoteTimeAfter = Long.parseLong(remoteTimeAfterFix.trim());
-            long timeDiffAfterFix = Math.abs(remoteTimeAfter - serverTime);
-            
-            logger.info("修复后的时间差: {} 秒", timeDiffAfterFix);
-            cacheLog.info("修复后的时间差: %d 秒", timeDiffAfterFix);
-            
-            if (timeDiffAfterFix <= MAX_TIME_DIFF_SECONDS) {
-                logger.info("成功同步主机时间，当前时间差为 {} 秒", timeDiffAfterFix);
-                cacheLog.info("成功同步主机时间，当前时间差为 %d 秒", timeDiffAfterFix);
-                return true;
-            } else {
-                logger.error("同步主机时间后仍存在较大时间差: {} 秒", timeDiffAfterFix);
-                cacheLog.error("同步主机时间后仍存在较大时间差: %d 秒", timeDiffAfterFix);
-                return false;
-            }
         } catch (Exception e) {
-            logger.error("时间同步修复失败: {}", e.getMessage(), e);
-            cacheLog.error("时间同步修复失败: %s", e.getMessage());
+            String errorMsg = "修复时间同步时发生错误: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error(errorMsg);
+            checkItem.setMessage("修复时间同步失败: " + e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * 根据时区ID获取对应的时区文件路径
+     * @param tzId 时区ID，如 "Asia/Shanghai"
+     * @return 时区文件路径，如 "/usr/share/zoneinfo/Asia/Shanghai"
+     */
+    private String getTimezoneFile(String tzId) {
+        if (tzId == null || tzId.isEmpty()) {
+            return null;
+        }
+        
+        // 常见时区ID到文件路径的映射
+        switch (tzId) {
+            case "Asia/Shanghai":
+            case "Asia/Chongqing":
+            case "Asia/Harbin":
+            case "Asia/Urumqi":
+                return "/usr/share/zoneinfo/Asia/Shanghai";
+                
+            case "America/New_York":
+                return "/usr/share/zoneinfo/America/New_York";
+                
+            case "America/Los_Angeles":
+                return "/usr/share/zoneinfo/America/Los_Angeles";
+                
+            case "Europe/London":
+                return "/usr/share/zoneinfo/Europe/London";
+                
+            case "Europe/Paris":
+                return "/usr/share/zoneinfo/Europe/Paris";
+                
+            default:
+                // 尝试直接使用时区ID作为相对路径
+                if (tzId.contains("/")) {
+                    return "/usr/share/zoneinfo/" + tzId;
+                }
+                return null;
         }
     }
     

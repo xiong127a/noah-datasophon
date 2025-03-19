@@ -1,11 +1,11 @@
 package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.service.checker.AbstractItemChecker;
+import com.datasophon.api.service.checker.CommandResult;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +31,15 @@ public class JavaEnvChecker extends AbstractItemChecker {
             logger.info("开始检查主机 {} 的Java环境", hostInfo.getHostname());
             
             // 首先检查 java 命令的位置
-            String javaPathResult = execCommand(session, "which java 2>/dev/null || echo 'NOT_FOUND'");
-            boolean javaCommandExists = !javaPathResult.contains("NOT_FOUND") && !javaPathResult.startsWith("ERROR");
+            CommandResult javaPathResult = execCommand(session, "which java 2>/dev/null || echo 'NOT_FOUND'");
+            boolean javaCommandExists = !javaPathResult.getOutput().contains("NOT_FOUND");
             
             if (javaCommandExists) {
-                cacheLog.info("找到java命令: " + javaPathResult);
+                cacheLog.info("找到java命令: " + javaPathResult.getOutput());
                 // 检查是否是软链接
-                String readlinkResult = execCommand(session, "readlink -f " + javaPathResult);
-                if (!readlinkResult.startsWith("ERROR")) {
-                    cacheLog.info("Java命令实际路径: " + readlinkResult);
+                CommandResult readlinkResult = execCommand(session, "readlink -f " + javaPathResult.getOutput());
+                if (readlinkResult.isSuccess()) {
+                    cacheLog.info("Java命令实际路径: " + readlinkResult.getOutput());
                 }
             } else {
                 cacheLog.info("未找到java命令");
@@ -51,9 +51,9 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 logger.info("主机 {} 存在java命令，检查java版本", hostInfo.getHostname());
                 
                 // 获取完整的版本信息
-                String javaVersionOutput = execCommand(session, "java -version 2>&1");
-                if (!javaVersionOutput.startsWith("ERROR")) {
-                    String version = parseJavaVersion(javaVersionOutput);
+                CommandResult javaVersionResult = execCommand(session, "java -version 2>&1");
+                if (javaVersionResult.isSuccess()) {
+                    String version = parseJavaVersion(javaVersionResult.getOutput());
                     cacheLog.info("Java版本信息:");
                     cacheLog.info(version);
                     
@@ -72,7 +72,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                         logger.info("主机 {} 的java版本 {} 低于要求的 {}", hostInfo.getHostname(), mainVersion, MIN_JAVA_VERSION);
                     }
                 } else {
-                    cacheLog.info("获取Java版本失败: " + javaVersionOutput);
+                    cacheLog.info("获取Java版本失败: " + javaVersionResult.getErrorOrOutput());
                 }
             }
 
@@ -80,24 +80,24 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("\n步骤3: 检查JAVA_HOME环境变量");
             logger.info("检查主机 {} 的JAVA_HOME环境变量", hostInfo.getHostname());
             
-            String javaHomeResult = execCommand(session, "echo $JAVA_HOME");
-            boolean javaHomeExists = !javaHomeResult.isEmpty() && !javaHomeResult.startsWith("ERROR");
-            cacheLog.info("JAVA_HOME检查结果: " + (javaHomeExists ? "存在，值为: " + javaHomeResult : "不存在或为空"));
+            CommandResult javaHomeResult = execCommand(session, "echo $JAVA_HOME");
+            boolean javaHomeExists = javaHomeResult.isSuccess() && !javaHomeResult.getOutput().trim().isEmpty();
+            cacheLog.info("JAVA_HOME检查结果: " + (javaHomeExists ? "存在，值为: " + javaHomeResult.getOutput() : "不存在或为空"));
             
             if (javaHomeExists) {
                 // 步骤4: 检查JAVA_HOME指向的路径是否是Java 8
                 cacheLog.info("\n步骤4: 检查JAVA_HOME指向的Java是否符合要求");
-                logger.info("主机 {} 存在JAVA_HOME: {}, 检查该路径下的Java版本", hostInfo.getHostname(), javaHomeResult);
+                logger.info("主机 {} 存在JAVA_HOME: {}, 检查该路径下的Java版本", hostInfo.getHostname(), javaHomeResult.getOutput());
                 
-                String javaHomeVersionCmd = "[ -f " + javaHomeResult + "/bin/java ] && " + javaHomeResult + "/bin/java -version 2>&1 || echo 'NOT_EXECUTABLE'";
+                String javaHomeVersionCmd = "[ -f " + javaHomeResult.getOutput() + "/bin/java ] && " + javaHomeResult.getOutput() + "/bin/java -version 2>&1 || echo 'NOT_EXECUTABLE'";
                 cacheLog.info("执行检查命令: " + javaHomeVersionCmd);
                 
-                String javaHomeVersionOutput = execCommand(session, javaHomeVersionCmd);
-                boolean javaHomeExecutable = !javaHomeVersionOutput.contains("NOT_EXECUTABLE") && !javaHomeVersionOutput.startsWith("ERROR");
+                CommandResult javaHomeVersionResult = execCommand(session, javaHomeVersionCmd);
+                boolean javaHomeExecutable = javaHomeVersionResult.isSuccess() && !javaHomeVersionResult.getOutput().contains("NOT_EXECUTABLE");
                 cacheLog.info("JAVA_HOME下Java可执行性检查: " + (javaHomeExecutable ? "可执行" : "不可执行"));
 
                 if (javaHomeExecutable) {
-                    String version = parseJavaVersion(javaHomeVersionOutput);
+                    String version = parseJavaVersion(javaHomeVersionResult.getOutput());
                     cacheLog.info("JAVA_HOME下Java版本: " + version);
                     
                     boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
@@ -105,9 +105,9 @@ public class JavaEnvChecker extends AbstractItemChecker {
                     
                     if (versionMeetRequirement) {
                         cacheLog.info("\n==== Java环境检查通过 ====");
-                        cacheLog.info("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult);
+                        cacheLog.info("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult.getOutput());
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
-                        checkItem.setMessage("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult);
+                        checkItem.setMessage("JAVA_HOME环境正常，版本: " + version + ", 路径: " + javaHomeResult.getOutput());
                         return checkItem;
                     } else {
                         cacheLog.info("JAVA_HOME指向的Java版本 " + version + " 低于要求的 " + MIN_JAVA_VERSION);
@@ -125,8 +125,8 @@ public class JavaEnvChecker extends AbstractItemChecker {
             String jdkPathExistsCmd = "[ -d " + DEFAULT_JDK_PATH + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
             cacheLog.info("执行检查命令: " + jdkPathExistsCmd);
             
-            String jdkPathResult = execCommand(session, jdkPathExistsCmd);
-            boolean jdkPathExists = jdkPathResult.contains("EXISTS");
+            CommandResult jdkPathResult = execCommand(session, jdkPathExistsCmd);
+            boolean jdkPathExists = jdkPathResult.isSuccess() && jdkPathResult.getOutput().contains("EXISTS");
             cacheLog.info("默认JDK路径检查结果: " + (jdkPathExists ? "存在" : "不存在"));
 
             if (jdkPathExists) {
@@ -137,12 +137,12 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 String defaultPathVersionCmd = "[ -f " + DEFAULT_JDK_PATH + "/bin/java ] && " + DEFAULT_JDK_PATH + "/bin/java -version 2>&1 || echo 'NOT_EXECUTABLE'";
                 cacheLog.info("执行检查命令: " + defaultPathVersionCmd);
                 
-                String defaultPathVersionOutput = execCommand(session, defaultPathVersionCmd);
-                boolean defaultPathExecutable = !defaultPathVersionOutput.contains("NOT_EXECUTABLE") && !defaultPathVersionOutput.startsWith("ERROR");
+                CommandResult defaultPathVersionResult = execCommand(session, defaultPathVersionCmd);
+                boolean defaultPathExecutable = defaultPathVersionResult.isSuccess() && !defaultPathVersionResult.getOutput().contains("NOT_EXECUTABLE");
                 cacheLog.info("默认JDK路径下Java可执行性检查: " + (defaultPathExecutable ? "可执行" : "不可执行"));
 
                 if (defaultPathExecutable) {
-                    String version = parseJavaVersion(defaultPathVersionOutput);
+                    String version = parseJavaVersion(defaultPathVersionResult.getOutput());
                     cacheLog.info("默认JDK路径下Java版本: " + version);
                     
                     boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
@@ -190,15 +190,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
             logger.info("开始修复主机 {} 的Java环境", hostInfo.getHostname());
 
             // 检查系统架构
-            String arch = execCommand(session, "arch");
+            CommandResult archResult = execCommand(session, "arch");
+            String arch = archResult.getOutput().trim();
             logger.info("主机 {} 的架构为 {}", hostInfo.getHostname(), arch);
 
             // 检查JDK目录是否存在
-            String testResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && echo 'success' || echo 'failed'");
-            boolean exists = true;
-            if (StringUtils.isNotBlank(testResult) && "failed".equals(testResult)) {
-                exists = false;
-            }
+            CommandResult testResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && echo 'success' || echo 'failed'");
+            boolean exists = testResult.isSuccess() && "success".equals(testResult.getOutput().trim());
 
             // 根据不同架构安装对应的JDK
             if ("x86_64".equals(arch)) {
@@ -211,7 +209,11 @@ public class JavaEnvChecker extends AbstractItemChecker {
                             Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.X86JDK);
 
                     // 解压JDK安装包
-                    execCommand(session, "tar -zxvf /usr/local/jdk-8u333-linux-x64.tar.gz -C /usr/local/");
+                    CommandResult unzipResult = execCommand(session, "tar -zxvf /usr/local/jdk-8u333-linux-x64.tar.gz -C /usr/local/");
+                    if (!unzipResult.isSuccess()) {
+                        logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
+                        return false;
+                    }
                     logger.info("主机 {} 的x86_64 JDK安装完成", hostInfo.getHostname());
                 }
             } else if ("aarch64".equals(arch)) {
@@ -224,7 +226,11 @@ public class JavaEnvChecker extends AbstractItemChecker {
                             Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.ARMJDK);
 
                     // 解压JDK安装包
-                    execCommand(session, "tar -zxvf /usr/local/jdk-8u333-linux-aarch64.tar.gz -C /usr/local/");
+                    CommandResult unzipResult = execCommand(session, "tar -zxvf /usr/local/jdk-8u333-linux-aarch64.tar.gz -C /usr/local/");
+                    if (!unzipResult.isSuccess()) {
+                        logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
+                        return false;
+                    }
                     logger.info("主机 {} 的ARM JDK安装完成", hostInfo.getHostname());
                 }
             } else {
@@ -233,22 +239,29 @@ public class JavaEnvChecker extends AbstractItemChecker {
             }
 
             // 验证JDK安装是否成功
-            String verifyResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && echo 'success' || echo 'failed'");
-            if ("success".equals(verifyResult)) {
+            CommandResult verifyResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && echo 'success' || echo 'failed'");
+            if (verifyResult.isSuccess() && "success".equals(verifyResult.getOutput().trim())) {
                 logger.info("主机 {} 的JDK安装验证成功", hostInfo.getHostname());
 
                 // 在需要时配置环境变量
-                String configEnvResult = execCommand(session, "grep JAVA_HOME /etc/profile || echo 'not_configured'");
-                if (configEnvResult.contains("not_configured")) {
+                CommandResult configEnvResult = execCommand(session, "grep JAVA_HOME /etc/profile || echo 'not_configured'");
+                if (configEnvResult.isSuccess() && configEnvResult.getOutput().contains("not_configured")) {
                     logger.info("为主机 {} 配置JAVA_HOME环境变量", hostInfo.getHostname());
 
                     // 添加JAVA_HOME环境变量
                     String envCmd = "echo 'export JAVA_HOME=" + DEFAULT_JDK_PATH + "' >> /etc/profile && " +
                             "echo 'export PATH=$JAVA_HOME/bin:$PATH' >> /etc/profile";
-                    execCommand(session, envCmd);
+                    CommandResult envResult = execCommand(session, envCmd);
+                    if (!envResult.isSuccess()) {
+                        logger.error("配置JAVA_HOME环境变量失败: {}", envResult.getErrorOrOutput());
+                        return false;
+                    }
 
                     // 使环境变量生效
-                    execCommand(session, "source /etc/profile");
+                    CommandResult sourceResult = execCommand(session, "source /etc/profile");
+                    if (!sourceResult.isSuccess()) {
+                        logger.warn("使环境变量生效可能失败: {}", sourceResult.getErrorOrOutput());
+                    }
                 }
 
                 return true;

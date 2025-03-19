@@ -1,6 +1,7 @@
 package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.service.checker.AbstractItemChecker;
+import com.datasophon.api.service.checker.CommandResult;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
@@ -18,75 +19,89 @@ public class PasswordFreeChecker extends AbstractItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(PasswordFreeChecker.class);
 
     @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
-        cacheLog.info("开始执行免密检查...");
-        
-        // 检查session是否为null
-        if (session == null) {
-            cacheLog.error("SSH会话为空，无法执行免密检查");
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("SSH连接失败，请检查主机连接信息");
-            return checkItem;
-        }
-
+    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            // 尝试执行一个简单的命令来验证SSH连接
-            String result = execCommand(session, "echo 'SSH connection test'");
+            cacheLog.info("==== 免密登录检查开始 ====");
+            cacheLog.info("主机: " + hostInfo.getHostname());
+
+            // 检查SSH密钥是否存在
+            cacheLog.info("检查SSH密钥是否存在...");
+            CommandResult keyResult = execCommand(session, "ls -l ~/.ssh/id_rsa");
+            boolean keyExists = keyResult.isSuccess();
             
-            if (result.startsWith("ERROR:")) {
-                cacheLog.error("SSH命令执行失败: {}", result);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("SSH连接测试失败: " + result);
-                return checkItem;
-            }
-
-            // 检查是否能成功执行命令
-            if (!result.contains("SSH connection test")) {
-                cacheLog.error("SSH命令执行结果异常: {}", result);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("SSH连接测试返回异常结果");
-                return checkItem;
-            }
-
-            // 执行更多的免密检查
-            // 检查用户权限
-            result = execCommand(session, "id");
-            if (result.startsWith("ERROR:")) {
-                cacheLog.error("用户权限检查失败: {}", result);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("用户权限检查失败: " + result);
-                return checkItem;
-            }
-
-            // 检查sudo权限
-            result = execCommand(session, "sudo -n true 2>&1");
-            if (!result.startsWith("ERROR:") && !result.contains("password")) {
-                cacheLog.info("用户具有sudo权限");
+            if (keyExists) {
+                cacheLog.info("SSH密钥已存在");
             } else {
-                cacheLog.warn("用户可能没有sudo权限，但不影响基本操作");
+                cacheLog.info("未找到SSH密钥");
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("未找到SSH密钥，需要配置免密登录");
+                return checkItem;
             }
 
-            // 所有检查都通过
-            cacheLog.info("免密检查通过");
-            checkItem.setStatus(CheckItem.Status.SUCCESS);
-            checkItem.setMessage("检查通过");
+            // 检查authorized_keys文件
+            cacheLog.info("检查authorized_keys文件...");
+            CommandResult authResult = execCommand(session, "ls -l ~/.ssh/authorized_keys");
+            boolean authExists = authResult.isSuccess();
             
-        } catch (InterruptedException e) {
-            cacheLog.warn("免密检查被中断");
-            throw e;
+            if (authExists) {
+                cacheLog.info("authorized_keys文件已存在");
+                
+                // 检查文件权限
+                CommandResult permResult = execCommand(session, "stat -c %a ~/.ssh/authorized_keys");
+                if (permResult.isSuccess()) {
+                    String perms = permResult.getOutput().trim();
+                    boolean validPerms = "600".equals(perms) || "644".equals(perms);
+                    if (!validPerms) {
+                        cacheLog.warn("authorized_keys文件权限不正确: %s", perms);
+                        checkItem.setStatus(CheckItem.Status.FAILED);
+                        checkItem.setMessage("authorized_keys文件权限不正确: " + perms);
+                        return checkItem;
+                    }
+                }
+                
+                // 检查文件内容
+                CommandResult contentResult = execCommand(session, "cat ~/.ssh/authorized_keys");
+                if (!contentResult.isSuccess() || contentResult.getOutput().trim().isEmpty()) {
+                    cacheLog.warn("authorized_keys文件为空");
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("authorized_keys文件为空");
+                    return checkItem;
+                }
+            } else {
+                cacheLog.info("未找到authorized_keys文件");
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("未找到authorized_keys文件，需要配置免密登录");
+                return checkItem;
+            }
+
+            // 检查SSH目录权限
+            cacheLog.info("检查SSH目录权限...");
+            CommandResult sshDirResult = execCommand(session, "stat -c %a ~/.ssh");
+            if (sshDirResult.isSuccess()) {
+                String dirPerms = sshDirResult.getOutput().trim();
+                boolean validDirPerms = "700".equals(dirPerms);
+                if (!validDirPerms) {
+                    cacheLog.warn("SSH目录权限不正确: %s", dirPerms);
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("SSH目录权限不正确: " + dirPerms);
+                    return checkItem;
+                }
+            }
+
+            // 所有检查通过
+            checkItem.setStatus(CheckItem.Status.SUCCESS);
+            checkItem.setMessage("免密登录配置正确");
+            cacheLog.info("免密登录检查通过");
+
         } catch (Exception e) {
-            cacheLog.error("执行免密检查时发生异常: {}", e.getMessage());
+            String errorMsg = "检查免密登录配置时发生错误: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error(errorMsg);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("免密检查异常: " + e.getMessage());
+            checkItem.setMessage(errorMsg);
+        } finally {
+            cacheLog.info("==== 免密登录检查结束 ====");
         }
-
-        // 最后确认状态
-        if (checkItem.getStatus() == null || checkItem.getStatus() == CheckItem.Status.CHECKING) {
-            cacheLog.error("检查完成但状态未正确设置，强制设置为失败");
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("检查状态异常");
-        }
-
         return checkItem;
     }
 
@@ -212,55 +227,69 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        cacheLog.info("<font color='blue'>开始修复SSH免密登录...</font>");
-        
-        // 获取主机信息
-        String hostname = hostInfo.getHostname();
-        String sshUser = hostInfo.getSshUser();
-        String sshPassword = hostInfo.getSshPassword();
-        int sshPort = hostInfo.getSshPort();
-        
-        if (sshPassword == null || sshPassword.isEmpty()) {
-            cacheLog.error("<font color='red'>SSH密码为空，无法设置免密登录</font>");
-            checkItem.setMessage("SSH密码为空，无法设置免密登录");
-            return false;
-        }
-        
-        cacheLog.info("<font color='blue'>使用信息: 主机={}, 用户={}, 端口={}</font>", hostname, sshUser, sshPort);
-        
         try {
-            // 生成并设置ED25519密钥
-            boolean ed25519Success = setupKeyBasedAuth(hostname, sshUser, sshPassword, sshPort, "ed25519");
-            if (ed25519Success) {
-                cacheLog.info("<font color='green'>ED25519免密登录设置成功</font>");
-            } else {
-                cacheLog.warn("<font color='orange'>ED25519免密登录设置失败，尝试RSA方式</font>");
-            }
-            
-            // 如果ED25519失败或为了双重保障，继续设置RSA密钥
-            boolean rsaSuccess = setupKeyBasedAuth(hostname, sshUser, sshPassword, sshPort, "rsa");
-            if (rsaSuccess) {
-                cacheLog.info("<font color='green'>RSA免密登录设置成功</font>");
-            } else {
-                cacheLog.error("<font color='red'>RSA免密登录设置失败</font>");
-            }
-            
-            // 只要有一种方式成功即可
-            boolean success = ed25519Success || rsaSuccess;
-            if (success) {
-                cacheLog.info("<font color='green'>免密登录修复成功</font>");
-                checkItem.setMessage("免密登录已成功设置");
-                return true;
-            } else {
-                cacheLog.error("<font color='red'>所有免密登录方式均设置失败</font>");
-                checkItem.setMessage("免密登录设置失败，请手动检查");
+            cacheLog.info("==== 开始配置免密登录 ====");
+
+            // 创建.ssh目录
+            cacheLog.info("创建.ssh目录...");
+            CommandResult mkdirResult = execCommand(session, "mkdir -p ~/.ssh");
+            if (!mkdirResult.isSuccess()) {
+                cacheLog.error("创建.ssh目录失败: %s", mkdirResult.getErrorOrOutput());
                 return false;
             }
-            
+
+            // 设置.ssh目录权限
+            cacheLog.info("设置.ssh目录权限...");
+            CommandResult chmodDirResult = execCommand(session, "chmod 700 ~/.ssh");
+            if (!chmodDirResult.isSuccess()) {
+                cacheLog.error("设置.ssh目录权限失败: %s", chmodDirResult.getErrorOrOutput());
+                return false;
+            }
+
+            // 检查是否已有SSH密钥
+            cacheLog.info("检查是否已有SSH密钥...");
+            CommandResult keyCheckResult = execCommand(session, "ls ~/.ssh/id_rsa");
+            if (!keyCheckResult.isSuccess()) {
+                // 生成SSH密钥
+                cacheLog.info("生成SSH密钥...");
+                CommandResult keygenResult = execCommand(session, 
+                    "ssh-keygen -t rsa -N '' -f ~/.ssh/id_rsa");
+                if (!keygenResult.isSuccess()) {
+                    cacheLog.error("生成SSH密钥失败: %s", keygenResult.getErrorOrOutput());
+                    return false;
+                }
+            }
+
+            // 配置authorized_keys
+            cacheLog.info("配置authorized_keys...");
+            CommandResult catResult = execCommand(session, "cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys");
+            if (!catResult.isSuccess()) {
+                cacheLog.error("配置authorized_keys失败: %s", catResult.getErrorOrOutput());
+                return false;
+            }
+
+            // 设置authorized_keys权限
+            cacheLog.info("设置authorized_keys权限...");
+            CommandResult chmodResult = execCommand(session, "chmod 600 ~/.ssh/authorized_keys");
+            if (!chmodResult.isSuccess()) {
+                cacheLog.error("设置authorized_keys权限失败: %s", chmodResult.getErrorOrOutput());
+                return false;
+            }
+
+            // 验证配置
+            cacheLog.info("验证免密登录配置...");
+            CommandResult verifyResult = execCommand(session, "ls -la ~/.ssh/authorized_keys");
+            if (!verifyResult.isSuccess()) {
+                cacheLog.error("验证配置失败: %s", verifyResult.getErrorOrOutput());
+                return false;
+            }
+
+            cacheLog.info("==== 免密登录配置完成 ====");
+            return true;
         } catch (Exception e) {
-            cacheLog.error("<font color='red'>设置免密登录时发生异常: {}</font>", e.getMessage());
-            cacheLog.error("<font color='red'>异常详情:</font>", e);
-            checkItem.setMessage("免密登录设置异常: " + e.getMessage());
+            String errorMsg = "配置免密登录时发生错误: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error(errorMsg);
             return false;
         }
     }

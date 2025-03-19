@@ -24,6 +24,9 @@ public class DiskChecker extends AbstractItemChecker {
             cacheLog.info("目标目录: " + TARGET_DIRECTORY);
             cacheLog.info("最小磁盘空间要求: " + MIN_DISK_SPACE_GB + "GB");
 
+            // 更新状态为正在检查目标目录磁盘使用情况
+            setCheckItemMessage(hostInfo, checkItem, "正在检查" + TARGET_DIRECTORY + "目录磁盘使用情况...");
+
             // 获取目标目录磁盘使用情况
             cacheLog.info("检查" + TARGET_DIRECTORY + "目录磁盘使用情况...");
             CommandResult dfResult = execCommand(session, "df -BG " + TARGET_DIRECTORY + " | tail -n 1");
@@ -31,7 +34,7 @@ public class DiskChecker extends AbstractItemChecker {
             if (!dfResult.isSuccess()) {
                 cacheLog.error("获取磁盘信息失败: %s", dfResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取磁盘信息失败: " + dfResult.getErrorOrOutput());
+                setCheckItemMessage(hostInfo, checkItem, "获取磁盘信息失败: " + dfResult.getErrorOrOutput());
                 return checkItem;
             }
 
@@ -40,7 +43,7 @@ public class DiskChecker extends AbstractItemChecker {
             if (parts.length < 4) {
                 cacheLog.error("无法解析磁盘信息: %s", dfResult.getOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("无法解析磁盘信息");
+                setCheckItemMessage(hostInfo, checkItem, "无法解析磁盘信息");
                 return checkItem;
             }
 
@@ -56,6 +59,9 @@ public class DiskChecker extends AbstractItemChecker {
             int diskUsage = Integer.parseInt(usagePercent);
             cacheLog.info(TARGET_DIRECTORY + "使用率: " + diskUsage + "%");
 
+            // 更新状态为正在检查inode使用情况
+            setCheckItemMessage(hostInfo, checkItem, "正在检查inode使用情况...");
+
             // 检查inode使用情况
             cacheLog.info("检查inode使用情况...");
             CommandResult inodeResult = execCommand(session, "df -i " + TARGET_DIRECTORY + " | tail -n 1");
@@ -63,7 +69,7 @@ public class DiskChecker extends AbstractItemChecker {
             if (!inodeResult.isSuccess()) {
                 cacheLog.error("获取inode信息失败: %s", inodeResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取inode信息失败: " + inodeResult.getErrorOrOutput());
+                setCheckItemMessage(hostInfo, checkItem, "获取inode信息失败: " + inodeResult.getErrorOrOutput());
                 return checkItem;
             }
 
@@ -71,7 +77,7 @@ public class DiskChecker extends AbstractItemChecker {
             if (parts.length < 5) {
                 cacheLog.error("无法解析inode信息: %s", inodeResult.getOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("无法解析inode信息");
+                setCheckItemMessage(hostInfo, checkItem, "无法解析inode信息");
                 return checkItem;
             }
 
@@ -79,10 +85,13 @@ public class DiskChecker extends AbstractItemChecker {
             int inodeUsage = Integer.parseInt(inodeUsagePercent);
             cacheLog.info("inode使用率: " + inodeUsage + "%");
 
+            // 更新状态为正在分析磁盘状态
+            setCheckItemMessage(hostInfo, checkItem, "正在分析磁盘状态...");
+
             // 设置检查结果
             if (hasEnoughSpace && diskUsage < 90 && inodeUsage < 90) {
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage(String.format(TARGET_DIRECTORY + "磁盘空间充足: 可用%dGB, 使用率%d%%, inode使用率%d%%",
+                setCheckItemMessage(hostInfo, checkItem, String.format(TARGET_DIRECTORY + "磁盘空间充足: 可用%dGB, 使用率%d%%, inode使用率%d%%",
                         availableGB, diskUsage, inodeUsage));
                 cacheLog.info("磁盘空间检查通过");
             } else {
@@ -97,7 +106,7 @@ public class DiskChecker extends AbstractItemChecker {
                 if (inodeUsage >= 90) {
                     message.append(String.format("inode使用率%d%%过高; ", inodeUsage));
                 }
-                checkItem.setMessage(message.toString());
+                setCheckItemMessage(hostInfo, checkItem, message.toString());
                 cacheLog.info("磁盘空间检查未通过: " + message);
             }
 
@@ -106,7 +115,7 @@ public class DiskChecker extends AbstractItemChecker {
             logger.error(errorMsg, e);
             cacheLog.error(errorMsg);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage(errorMsg);
+            setCheckItemMessage(hostInfo, checkItem, errorMsg);
         } finally {
             cacheLog.info("==== 磁盘空间检查结束 ====");
         }
@@ -122,6 +131,8 @@ public class DiskChecker extends AbstractItemChecker {
         cacheLog.info("2. 扩展" + TARGET_DIRECTORY + "分区大小");
         cacheLog.info("3. 挂载额外的磁盘到" + TARGET_DIRECTORY + "目录");
         cacheLog.info("==== 该检查项需要手动处理 ====");
+        
+        setCheckItemMessage(hostInfo, checkItem, "磁盘空间问题需要手动处理，请参考日志中的建议");
         
         return false;
     }

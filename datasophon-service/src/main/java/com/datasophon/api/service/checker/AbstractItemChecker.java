@@ -33,6 +33,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
     // 供子类使用的日志记录器实例，同时记录到缓存和控制台
     protected final CheckLogger cacheLog;
     
+    // 添加一个成员变量来存储当前正在处理的主机信息
+    private ThreadLocal<HostInfo> currentHostInfo = new ThreadLocal<>();
+    
     /**
      * 构造函数
      */
@@ -82,6 +85,14 @@ public abstract class AbstractItemChecker implements ItemChecker {
         return formatDateToChinese(new Date());
     }
 
+    // 格式化连接地址
+    private String formatAddress(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            return "";
+        }
+        return String.format("主机: %s, 端口: %d, 用户: %s", hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+    }
+
     /**
      * 执行命令，采用异步方式优化中断处理
      * @param session SSH会话
@@ -89,16 +100,20 @@ public abstract class AbstractItemChecker implements ItemChecker {
      * @return 命令执行结果
      * @throws InterruptedException 如果命令执行被中断
      */
-    protected String execCommand(ClientSession session, String command) throws InterruptedException {
+    protected CommandResult execCommand(ClientSession session, String command) throws InterruptedException {
         // 检查参数
         if (session == null) {
             logger.error("SSH会话为空，无法执行命令");
             cacheLog.error("SSH会话为空，无法执行命令");
-            return "ERROR: SSH会话为空";
+            return new CommandResult("", "SSH会话为空", -1);
         }
         
-        logger.debug("准备执行命令: {} 在主机: {}", command, session.getConnectAddress());
-        cacheLog.debug("准备执行命令: %s 在主机: %s", command, session.getConnectAddress());
+        // 从当前上下文中获取主机信息
+        HostInfo currentHostInfo = getCurrentHostInfo();
+        String formattedAddress = formatAddress(currentHostInfo);
+        
+        logger.debug("准备执行命令: {} 在主机: {}", command, formattedAddress);
+        cacheLog.debug("准备执行命令: %s 在主机: %s", command, formattedAddress);
         
         try {
             // 创建执行命令的通道
@@ -151,13 +166,13 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 } catch (java.util.concurrent.TimeoutException e) {
                     // 处理超时
                     logger.warn("命令执行超时: {}, 主机: {}, 已等待时间: {}ms", 
-                        command, session.getConnectAddress(), System.currentTimeMillis() - startTime);
+                        command, formattedAddress, System.currentTimeMillis() - startTime);
                     cacheLog.warn("命令执行超时: %s, 主机: %s, 已等待时间: %dms", 
-                        command, session.getConnectAddress(), System.currentTimeMillis() - startTime);
+                        command, formattedAddress, System.currentTimeMillis() - startTime);
                     
                     // 中断等待线程
                     waitThread.interrupt();
-                    return "ERROR: 命令执行超时，请检查网络或主机状态";
+                    return new CommandResult("", "命令执行超时，请检查网络或主机状态", -1);
                 } catch (java.util.concurrent.CancellationException e) {
                     // 处理取消
                     logger.info("命令执行被取消: {}", command);
@@ -181,7 +196,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     
                     // 中断等待线程
                     waitThread.interrupt();
-                    return "ERROR: 命令执行异常: " + e.getMessage();
+                    return new CommandResult("", "命令执行异常: " + e.getMessage(), -1);
                 }
                 
                 long endTime = System.currentTimeMillis();
@@ -190,25 +205,26 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 
                 // 获取命令执行的退出状态
                 Integer exitStatus = channel.getExitStatus();
+                String output = out.toString();
+                String error = err.toString();
+                
+                // 记录命令执行结果
                 if (exitStatus != null && exitStatus != 0) {
-                    String errorMsg = err.toString();
                     logger.warn("命令执行失败，退出状态: {}, 错误信息: {}, 主机: {}", 
-                        exitStatus, errorMsg, session.getConnectAddress());
+                        exitStatus, error, formattedAddress);
                     cacheLog.warn("命令执行失败，退出状态: %d, 错误信息: %s, 主机: %s", 
-                        exitStatus, errorMsg, session.getConnectAddress());
-                    return "ERROR: " + (errorMsg.isEmpty() ? "未知错误，退出状态: " + exitStatus : errorMsg);
+                        exitStatus, error, formattedAddress);
+                } else {
+                    if (output.length() > 100) {
+                        logger.debug("命令执行成功，输出(前100字符): {}", output.substring(0, 100) + "...");
+                        cacheLog.debug("命令执行成功，输出(前100字符): %s", output.substring(0, 100) + "...");
+                    } else {
+                        logger.debug("命令执行成功，输出: {}", output);
+                        cacheLog.debug("命令执行成功，输出: %s", output);
+                    }
                 }
                 
-                // 获取命令输出结果
-                String result = out.toString();
-                if (result.length() > 100) {
-                    logger.debug("命令执行成功，输出(前100字符): {}", result.substring(0, 100) + "...");
-                    cacheLog.debug("命令执行成功，输出(前100字符): %s", result.substring(0, 100) + "...");
-                } else {
-                    logger.debug("命令执行成功，输出: {}", result);
-                    cacheLog.debug("命令执行成功，输出: %s", result);
-                }
-                return result;
+                return new CommandResult(output, error, exitStatus != null ? exitStatus : -1);
             }
         } catch (InterruptedException e) {
             // 重新抛出中断异常，确保调用方知道发生了中断
@@ -226,7 +242,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 throw new InterruptedException("命令执行过程中被中断: " + e.getMessage());
             }
             
-            return "ERROR: " + e.getMessage();
+            return new CommandResult("", e.getMessage(), -1);
         }
     }
 
@@ -285,21 +301,12 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected void closeSession() {
         if (session != null) {
             try {
-                // 格式化连接地址
-                String address = "";
-                if (session.getConnectAddress() != null) {
-                    String[] parts = session.getConnectAddress().toString()
-                        .replaceAll("^/", "")  // 移除开头的斜杠
-                        .split(":");
-                    if (parts.length == 2) {
-                        address = parts[0] + ":" + parts[1];  // 使用冒号连接IP和端口
-                    } else {
-                        address = session.getConnectAddress().toString().replaceAll("^/", "");
-                    }
-                }
+                // 从当前上下文中获取主机信息
+                HostInfo currentHostInfo = getCurrentHostInfo();
+                String formattedAddress = formatAddress(currentHostInfo);
                 
-                logger.debug("正在关闭SSH会话: {}", address);
-                cacheLog.debug("正在关闭SSH会话: {}", address);
+                logger.debug("正在关闭SSH会话: {}", formattedAddress);
+                cacheLog.debug("正在关闭SSH会话: {}", formattedAddress);
                 
                 long startTime = System.currentTimeMillis();
                 session.close();
@@ -321,6 +328,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     @Override
     public final CheckItem check(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
+        hostInfo.setClusterId(clusterId);
         logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
         
         // 设置为检查操作
@@ -335,6 +343,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
         updateCheckStatus(clusterId, hostInfo, checkItem);
         
         try {
+            // 设置当前主机信息
+            setCurrentHostInfo(hostInfo);
+            
             logger.info("开始建立SSH连接到主机: {}, 端口: {}, 用户: {}", 
                 hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
             cacheLog.info("开始建立SSH连接到主机: %s, 端口: %d, 用户: %s", 
@@ -435,6 +446,8 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 closeSession();
                 logger.info("已关闭到主机 {} 的SSH连接", hostInfo.getHostname());
             }
+            // 清理当前主机信息
+            clearCurrentHostInfo();
         }
         
         // 最后更新一次状态，确保前端能看到最终结果
@@ -447,6 +460,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     @Override
     public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) throws Exception {
+        hostInfo.setClusterId(clusterId);
         logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
         
         // 设置为修复操作
@@ -464,6 +478,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
         cacheLog.info("===============================================");
         
         try {
+            // 设置当前主机信息
+            setCurrentHostInfo(hostInfo);
+            
             // 设置状态为修复中
             checkItem.setStatus(CheckItem.Status.FIXING);
             checkItem.setMessage("正在修复...");
@@ -572,9 +589,208 @@ public abstract class AbstractItemChecker implements ItemChecker {
             cacheLog.info("修复操作结束");
             cacheLog.info("结束时间: " + getCurrentTimeInChinese());
             cacheLog.info("===============================================");
+            // 清理当前主机信息
+            clearCurrentHostInfo();
         }
     }
 
+    /**
+     * 使用现有SSH会话执行检查
+     * 该方法允许外部传入已建立的SSH会话，用于优化多个检查项之间的连接复用
+     */
+    public CheckItem checkWithSession(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, ClientSession existingSession) throws Exception {
+        hostInfo.setClusterId(clusterId);
+        logger.info("开始使用现有会话检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        
+        // 设置为检查操作
+        operationType = LogEntry.Type.CHECK;
+        
+        // 设置当前检查项的日志缓存键
+        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        
+        // 先将状态设置为检查中
+        checkItem.setStatus(CheckItem.Status.CHECKING);
+        checkItem.setMessage("检查中...");
+        updateCheckStatus(clusterId, hostInfo, checkItem);
+        
+        try {
+            // 设置当前主机信息
+            setCurrentHostInfo(hostInfo);
+            
+            // 使用传入的会话而不是创建新会话
+            this.session = existingSession;
+            
+            if (this.session == null || !this.session.isOpen()) {
+                logger.error("传入的SSH会话无效");
+                cacheLog.error("传入的SSH会话无效");
+                
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("SSH会话无效");
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+                return checkItem;
+            }
+            
+            logger.info("使用现有会话执行检查项: {}", checkItem.getItemName());
+            
+            try {
+                cacheLog.info("开始执行检查 %s...", checkItem.getItemName());
+                
+                try {
+                    doCheck(hostInfo, checkItem);
+                    logger.info("doCheck执行后检查项状态: {}, 消息: {}", checkItem.getStatus(), checkItem.getMessage());
+                    updateCheckStatus(clusterId, hostInfo, checkItem);
+                } catch (InterruptedException e) {
+                    logger.info("检查项在执行过程中被中断: {}", checkItem.getItemName());
+                    cacheLog.info("检查项在执行过程中被中断");
+                    checkItem.setStatus(CheckItem.Status.SKIPPED);
+                    checkItem.setMessage("检查已终止");
+                    updateCheckStatus(clusterId, hostInfo, checkItem);
+                    Thread.currentThread().interrupt();
+                    return checkItem;
+                }
+                
+                if (checkItem.getStatus() == CheckItem.Status.CHECKING) {
+                    logger.warn("检查项 {} 执行完毕但状态仍为CHECKING，强制设置为FAILED", 
+                        checkItem.getItemName());
+                    cacheLog.warn("检查执行完毕但状态未更新，强制设置为失败");
+                    
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("检查执行过程中状态未正确更新");
+                    updateCheckStatus(clusterId, hostInfo, checkItem);
+                }
+                
+                logger.info("检查项 {} 执行完成, 状态: {}, 消息: {}", 
+                    checkItem.getItemName(), checkItem.getStatus(), checkItem.getMessage());
+            } catch (Exception e) {
+                logger.error("执行检查项 {} 时发生异常: {}", checkItem.getItemName(), e.getMessage(), e);
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("检查执行异常: " + e.getMessage());
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+            }
+        } catch (Exception e) {
+            logger.error("执行检查 {} 时发生异常: {}", hostInfo.getHostname(), e.getMessage(), e);
+            checkItem.setStatus(CheckItem.Status.FAILED);
+            checkItem.setMessage("检查失败: " + e.getMessage());
+            updateCheckStatus(clusterId, hostInfo, checkItem);
+        } finally {
+            // 注意：这里不关闭会话，因为会话是从外部传入的，需要由调用方管理
+            this.session = null;
+            clearCurrentHostInfo();
+        }
+        
+        updateCheckStatus(clusterId, hostInfo, checkItem);
+        logger.info("检查项 {} 最终状态: {}, 消息: {}", 
+            checkItem.getItemName(), checkItem.getStatus(), checkItem.getMessage());
+        
+        return checkItem;
+    }
+
+    /**
+     * 使用现有SSH会话执行修复
+     * 该方法允许外部传入已建立的SSH会话，用于优化多个检查项之间的连接复用
+     */
+    public boolean fixWithSession(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, ClientSession existingSession) throws Exception {
+        hostInfo.setClusterId(clusterId);
+        logger.info("开始使用现有会话修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        
+        // 设置为修复操作
+        operationType = LogEntry.Type.FIX;
+        
+        // 设置当前检查项的日志缓存键
+        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        
+        // 记录修复开始
+        cacheLog.info("===============================================");
+        cacheLog.info("开始修复检查项: " + checkItem.getItemName());
+        cacheLog.info("主机: " + hostInfo.getHostname());
+        cacheLog.info("检查项ID: " + checkItem.getId());
+        cacheLog.info("开始时间: " + getCurrentTimeInChinese());
+        cacheLog.info("===============================================");
+        
+        try {
+            // 设置当前主机信息
+            setCurrentHostInfo(hostInfo);
+            
+            // 设置状态为修复中
+            checkItem.setStatus(CheckItem.Status.FIXING);
+            checkItem.setMessage("正在修复...");
+            updateCheckStatus(clusterId, hostInfo, checkItem);
+            
+            // 使用传入的会话而不是创建新会话
+            this.session = existingSession;
+            
+            if (this.session == null || !this.session.isOpen()) {
+                String errorMsg = "传入的SSH会话无效";
+                logger.error(errorMsg);
+                cacheLog.error("错误: " + errorMsg);
+                cacheLog.error("修复失败: 无效的SSH会话");
+                
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("修复失败: 无效的SSH会话");
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+                
+                return false;
+            }
+            
+            cacheLog.info("使用现有SSH会话执行修复操作");
+            
+            // 执行具体修复逻辑
+            boolean doFixResult = false;
+            try {
+                cacheLog.info("正在执行修复逻辑...");
+                doFixResult = doFix(hostInfo, checkItem);
+                cacheLog.info("修复逻辑执行" + (doFixResult ? "成功" : "失败"));
+                
+                // 更新状态
+                if (doFixResult) {
+                    checkItem.setStatus(CheckItem.Status.SUCCESS);
+                    checkItem.setMessage("修复成功");
+                } else {
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("修复失败");
+                }
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+                
+            } catch (Exception e) {
+                String errorMsg = "执行修复逻辑时发生异常: " + e.getMessage();
+                logger.error(errorMsg, e);
+                cacheLog.error("错误: " + errorMsg);
+                
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("修复异常: " + e.getMessage());
+                updateCheckStatus(clusterId, hostInfo, checkItem);
+                
+                return false;
+            }
+            
+            // 注意：使用现有会话执行修复后不需要再次执行验证检查
+            
+            return doFixResult;
+        } catch (Exception e) {
+            String errorMsg = "修复过程中发生异常: " + e.getMessage();
+            logger.error(errorMsg, e);
+            cacheLog.error("错误: " + errorMsg);
+            
+            // 更新状态为失败
+            checkItem.setStatus(CheckItem.Status.FAILED);
+            checkItem.setMessage("修复异常: " + e.getMessage());
+            updateCheckStatus(clusterId, hostInfo, checkItem);
+            
+            return false;
+        } finally {
+            // 注意：这里不关闭会话，因为会话是从外部传入的，需要由调用方管理
+            this.session = null;
+            
+            // 记录修复结束
+            cacheLog.info("===============================================");
+            cacheLog.info("修复操作结束");
+            cacheLog.info("结束时间: " + getCurrentTimeInChinese());
+            cacheLog.info("===============================================");
+            
+            // 清理当前主机信息
+            clearCurrentHostInfo();
+        }
+    }
 
     /**
      * 执行具体的检查逻辑
@@ -652,5 +868,35 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected CheckLogger createLogger(Integer clusterId, String hostname, Integer itemId, LogEntry.Type operationType) {
         String logKey = String.format("%s%d_%s_%d", CHECK_ITEM_LOG_PREFIX, clusterId, hostname, itemId);
         return CheckLogger.createLogger(logKey, getClass().getSimpleName(), operationType);
+    }
+
+    // 设置当前主机信息
+    protected void setCurrentHostInfo(HostInfo hostInfo) {
+        currentHostInfo.set(hostInfo);
+    }
+
+    // 获取当前主机信息
+    protected HostInfo getCurrentHostInfo() {
+        return currentHostInfo.get();
+    }
+
+    // 清理当前主机信息
+    protected void clearCurrentHostInfo() {
+        currentHostInfo.remove();
+    }
+
+    /**
+     * 设置检查项消息并立即更新状态
+     * 这个方法确保消息更新能够实时同步到前端
+     * @param hostInfo 主机信息
+     * @param checkItem 检查项
+     * @param message 要设置的消息
+     */
+
+    protected void setCheckItemMessage(HostInfo hostInfo, CheckItem checkItem, String message) {
+        checkItem.setMessage(message);
+        logger.debug("正在实时更新检查状态消息: {}", message);
+        // 立即更新状态
+        updateCheckStatus(hostInfo.getClusterId(), hostInfo, checkItem);
     }
 } 
