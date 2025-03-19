@@ -23,7 +23,6 @@ import akka.actor.ActorRef;
 import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
@@ -443,16 +442,100 @@ public class InstallServiceImpl implements InstallService {
 
     @Override
     public Result hostCheckCompleted(Integer clusterId) {
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        
+        // 收集未通过检查的主机信息
+        List<Map<String, Object>> failedHosts = new ArrayList<>();
+        StringBuilder msgBuilder = new StringBuilder();
+        
+        // 检查是否存在未完成的主机
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
-            HostInfo value = hostInfoEntry.getValue();
-            if (Objects.isNull(value.getCheckResult()) || (Objects.nonNull(value.getCheckResult()) && value.getCheckResult().getCode() != 10001)) {
-                return Result.success().put("hostCheckCompleted", false);
+            HostInfo hostInfo = hostInfoEntry.getValue();
+            
+            // 检查主机整体状态
+            if (Objects.isNull(hostInfo.getCheckResult()) || 
+                (Objects.nonNull(hostInfo.getCheckResult()) && hostInfo.getCheckResult().getCode() != 10001)) {
+                Map<String, Object> failInfo = new HashMap<>();
+                failInfo.put("hostname", hostInfo.getHostname());
+                failInfo.put("reason", "主机整体检查状态未完成");
+                failInfo.put("code", Objects.nonNull(hostInfo.getCheckResult()) ? hostInfo.getCheckResult().getCode() : "未知");
+                failedHosts.add(failInfo);
+                
+                // 添加到错误消息
+                msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 检查未完成\n");
+                
+                logger.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getHostname());
+                continue;
+            }
+            
+            // 检查所有检查项状态
+            List<CheckItem> checkItems = hostInfo.getCheckItems();
+            if (checkItems != null) {
+                List<Map<String, Object>> failedItems = new ArrayList<>();
+                List<String> failedItemNames = new ArrayList<>();
+                
+                for (CheckItem item : checkItems) {
+                    // 只有 SUCCESS 或 SKIPPED 状态被视为通过
+                    if (item.getStatus() != CheckItem.Status.SUCCESS && 
+                        item.getStatus() != CheckItem.Status.SKIPPED) {
+                        Map<String, Object> itemInfo = new HashMap<>();
+                        itemInfo.put("itemId", item.getId());
+                        itemInfo.put("itemName", item.getItemName());
+                        itemInfo.put("status", item.getStatus());
+                        itemInfo.put("message", item.getMessage());
+                        failedItems.add(itemInfo);
+                        
+                        // 收集失败的检查项名称
+                        failedItemNames.add(item.getItemName() + "(" + item.getStatus() + ")");
+                        
+                        logger.info("主机 {} 的检查项 {} 状态为 {}，主机检查不通过", 
+                            hostInfo.getHostname(), item.getItemName(), item.getStatus());
+                    }
+                }
+                
+                if (!failedItems.isEmpty()) {
+                    Map<String, Object> failInfo = new HashMap<>();
+                    failInfo.put("hostname", hostInfo.getHostname());
+                    failInfo.put("reason", "存在未通过的检查项");
+                    failInfo.put("failedItems", failedItems);
+                    failedHosts.add(failInfo);
+                    
+                    // 添加主机及其失败检查项到错误消息
+                    msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 检查未通过:\n");
+                    for (String itemName : failedItemNames) {
+                        msgBuilder.append("  - ").append(itemName).append("\n");
+                    }
+                }
+            } else {
+                // 如果检查项列表为空，也视为未完成
+                Map<String, Object> failInfo = new HashMap<>();
+                failInfo.put("hostname", hostInfo.getHostname());
+                failInfo.put("reason", "没有检查项");
+                failedHosts.add(failInfo);
+                
+                // 添加到错误消息
+                msgBuilder.append("• 主机 【").append(hostInfo.getHostname()).append("】 没有检查项\n");
+                
+                logger.info("主机 {} 没有检查项，主机检查不通过", hostInfo.getHostname());
             }
         }
-        return Result.success().put("hostCheckCompleted", true);
+        
+        if (!failedHosts.isEmpty()) {
+            String errorMsg = "以下主机检查未通过:\n" + msgBuilder.toString();
+            
+            // 如果消息太长，截断它
+            if (errorMsg.length() > 500) {
+                errorMsg = errorMsg.substring(0, 497) + "...";
+            }
+            
+            logger.info("存在未通过检查的主机，总数: {}, 错误信息: {}", failedHosts.size(), errorMsg);
+            return Result.success(errorMsg)  // 将错误信息放在msg字段
+                    .put("hostCheckCompleted", false)
+                    .put("failedHosts", failedHosts);
+        }
+        
+        logger.info("所有主机的所有检查项均已通过检查");
+        return Result.success("所有主机检查项通过").put("hostCheckCompleted", true);
     }
 
     @Override

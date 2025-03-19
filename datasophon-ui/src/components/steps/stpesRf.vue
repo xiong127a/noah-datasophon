@@ -148,7 +148,7 @@ export default {
         this.$refs.steps2Ref.hostCheckCompleted((res) => {
           this.nextLoading = false;
           flag = res.hostCheckCompleted;
-          if (!flag) self.$message.warning("存在为未检验成功的主机");
+          if (!flag) self.$message.warning(res.data || "存在未检验成功的主机");
           if (!flag) return false;
           this.currentStepsAdd();
         });

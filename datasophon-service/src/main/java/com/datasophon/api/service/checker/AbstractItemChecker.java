@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractItemChecker implements ItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(AbstractItemChecker.class);
     private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
-    
+
     protected ClientSession session;
     // 当前检查项的日志缓存键
     protected String currentLogKey;

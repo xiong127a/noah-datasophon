@@ -279,13 +279,17 @@ public class HostCheckServiceImpl implements HostCheckService {
             String logKey = getLogKey(clusterId, hostname, item.getId());
             LogEntryManager.clearLogEntries(logKey);
             
+            // 将所有检查项状态设置为"等待检查" - 第一个检查项会在processHostCheck中更新为"检查中"
             item.setStatus(CheckItem.Status.WAITING);
-            item.setMessage("等待检查");
+            item.setMessage("等待检查...");
         }
         hostInfo.setCheckItems(checkItems);
-        hostInfo.setStatus(CheckItem.Status.WAITING);
         
-        // 更新缓存
+        // 设置主机状态为"检查中"
+        hostInfo.setStatus(CheckItem.Status.CHECKING);
+        hostInfo.setMessage("正在检查中");
+        
+        // 立即更新缓存，使前端能立即看到状态变化
         map.put(hostname, hostInfo);
         CacheUtils.put(clusterId + Constants.HOST_MAP, map);
 
@@ -331,6 +335,16 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return;
             }
             
+            // 预先查看下一个检查项，但不从队列中移除
+            CheckItem firstItem = itemQueue.peek();
+            if (firstItem != null) {
+                // 将第一个检查项状态设置为"检查中"
+                hostInfo.updateCheckItemStatus(firstItem.getId(), CheckItem.Status.CHECKING, "正在检查中");
+                // 立即更新缓存
+                updateHostInfoCache(clusterId, hostInfo);
+                logger.debug("已将第一个检查项 {} 状态设置为检查中", firstItem.getItemName());
+            }
+            
             while (!itemQueue.isEmpty()) {
                 CheckItem item = itemQueue.poll();
                 if (item == null) {
@@ -342,19 +356,21 @@ public class HostCheckServiceImpl implements HostCheckService {
                 if (item.getStatus() != CheckItem.Status.WAITING && item.getStatus() != CheckItem.Status.CHECKING) {
                     logger.debug("跳过非等待状态的检查项: {}, 状态: {}, 主机: {}",
                         item.getItemName(), item.getStatus(), hostInfo.getHostname());
+                    
+                    // 查看队列中的下一个检查项，并将其状态设置为"检查中"
+                    CheckItem nextItemAfterSkip = itemQueue.peek();
+                    if (nextItemAfterSkip != null) {
+                        hostInfo.updateCheckItemStatus(nextItemAfterSkip.getId(), CheckItem.Status.CHECKING, "正在检查中");
+                        // 立即更新缓存
+                        updateHostInfoCache(clusterId, hostInfo);
+                        logger.debug("已将下一个检查项 {} 状态设置为检查中", nextItemAfterSkip.getItemName());
+                    }
+                    
                     continue;
                 }
                 
                 try {
-                    // 设置当前检查项状态为"检查中"
-                    logger.debug("设置检查项 {} 状态为检查中", item.getItemName());
-                    hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.CHECKING, "检查中");
-                    
-                    // 立即更新缓存，确保前端能看到"检查中"状态
-                    logger.debug("立即更新缓存，使前端能看到检查中状态");
-                    updateHostInfoCache(clusterId, hostInfo);
-
-                    // 执行检查，此方法内部不再使用线程池
+                    // 当前检查项状态已经是"检查中"，执行实际检查
                     logger.info("开始执行检查项: {}", item.getItemName());
                     boolean success = executeHostCheck(clusterId, hostInfo, item);
                     logger.info("检查项 {} 执行完成，结果: {}", item.getItemName(), success ? "成功" : "失败");
@@ -368,6 +384,15 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                     // 更新缓存，使前端能立即看到检查结果
                     updateHostInfoCache(clusterId, hostInfo);
+                    
+                    // 查看队列中的下一个检查项，并将其状态设置为"检查中"
+                    CheckItem nextItemAfterSuccess = itemQueue.peek();
+                    if (nextItemAfterSuccess != null) {
+                        hostInfo.updateCheckItemStatus(nextItemAfterSuccess.getId(), CheckItem.Status.CHECKING, "正在检查中");
+                        // 立即更新缓存
+                        updateHostInfoCache(clusterId, hostInfo);
+                        logger.debug("已将下一个检查项 {} 状态设置为检查中", nextItemAfterSuccess.getItemName());
+                    }
 
                     // 每个检查项执行完后等待3秒
                     logger.debug("检查项 {} 执行完成，等待3秒后继续执行下一个检查项", item.getItemName());
@@ -383,6 +408,15 @@ public class HostCheckServiceImpl implements HostCheckService {
                     // 设置检查项状态为失败
                     hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "执行检查时发生错误: " + e.getMessage());
                     updateHostInfoCache(clusterId, hostInfo);
+                    
+                    // 查看队列中的下一个检查项，并将其状态设置为"检查中"
+                    CheckItem nextItemAfterError = itemQueue.peek();
+                    if (nextItemAfterError != null) {
+                        hostInfo.updateCheckItemStatus(nextItemAfterError.getId(), CheckItem.Status.CHECKING, "正在检查中");
+                        // 立即更新缓存
+                        updateHostInfoCache(clusterId, hostInfo);
+                        logger.debug("已将下一个检查项 {} 状态设置为检查中", nextItemAfterError.getItemName());
+                    }
             }
             
                 // 检查是否被取消
