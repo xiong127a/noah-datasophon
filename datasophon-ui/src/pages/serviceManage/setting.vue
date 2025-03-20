@@ -68,7 +68,7 @@
           <!-- 配置内容（默认收起） -->
           <div v-show="isGroupExpanded[groupName]">
             <CommonTemplate
-                :ref="`template_${groupName}_${groupName}`"
+                :ref="`template_${groupName}`"
                 :steps4Data="steps4Data"
                 :templateData="group"
             />
@@ -315,61 +315,89 @@ export default {
       return obj;
     },
     // 单个标签页的保存
-    handleSubmit() {
-      const self = this
-      this.$refs[`CommonTemplateRef`].form.validateFields(
-          async (err, values) => {
-            if (!err) {
-              let param = _.cloneDeep(this.templateData);
-              const arrayWithData = this.handlearrayWithData(values);
-              const multipleData = this.handleMultipleData(values);
-              const formData = {...values, ...arrayWithData, ...multipleData};
-              console.log(formData, "formDataformData");
-              for (let name in formData) {
-                param.forEach((item) => {
-                  if (item.name === name) {
-                    item.value = formData[name];
-                  }
-                });
-              }
-              param.forEach((item) => {
-                item.name = item.name.replaceAll("!", ".");
-              });
-              let filterParam = param.filter(
-                  (item) => !(!item.required && item.hidden)
-              );
-              console.log(arrayWithData, "arrayWithData", filterParam);
-              let serviceName = ''
-              const serviceId = this.$route.params.serviceId || ''
-              const menuData = JSON.parse(localStorage.getItem('menuData')) || []
-              const arr = menuData.filter(item => item.path === 'service-manage')
-              if (arr.length > 0) {
-                arr[0].children.map(item => {
-                  if (item.meta.params.serviceId == serviceId) serviceName = item.name
+    async handleSubmit() {
+      try {
+        // 1. 获取所有配置组表单实例
+        const formRefs = Object.keys(this.templateData)
+            .map(groupName => this.$refs[`template_${groupName}`]?.[0])
+            .filter(Boolean);
+
+        // 2. 并行验证所有表单
+        await Promise.all(
+            formRefs.map(form =>
+                new Promise((resolve, reject) => {
+                  form.form.validateFields()
+                      .then(values => resolve(values))
+                      .catch(error => reject(error))
                 })
-              }
-              // 处理表单数据 将相同的key处理成数组
-              let saveParam = {
-                clusterId: this.clusterId,
-                serviceName,
-                serviceConfig: JSON.stringify(filterParam),
-                roleGroupId: this.currentId
-              };
-              // // 等待网络请求结束
-              let res = await this.$axiosPost(
-                  global.API.saveServiceConfig,
-                  saveParam
-              );
-              if (res.code === 200) {
-                this.$message.success("保存成功");
-                this.getConfigVersion()
-                // this.getServiceRoleType()
-              } else {
-                // this.$message.error(res.msg || "保存失败");
-              }
-            }
+            )
+        );
+
+        // 3. 合并所有配置数据
+        const mergedValues = formRefs.reduce((acc, form) => {
+          return { ...acc, ...form.form.getFieldsValue() };
+        }, {});
+
+        // 4. 转换数据结构（修复核心问题）
+        const param = _.cloneDeep(this.templateData);
+        const allConfigItems = Object.values(param).flat(); // 转换为扁平化数组
+
+        // 5. 更新配置项值
+        Object.entries(mergedValues).forEach(([name, value]) => {
+          const targetItem = allConfigItems.find(item => item.name === name);
+          if (targetItem) {
+            targetItem.value = value;
           }
-      );
+        });
+
+        // 6. 处理配置项名称
+        const processedItems = allConfigItems.map(item => ({
+          ...item,
+          name: item.name.replaceAll("!", ".")
+        }));
+
+        // 7. 过滤不需要的配置项
+        const filterParam = processedItems.filter(
+            item => !(!item.required && item.hidden)
+        );
+
+        // 8. 获取服务名称（保持原有逻辑）
+        let serviceName = '';
+        const serviceId = this.$route.params.serviceId || '';
+        const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+        const arr = menuData.filter(item => item.path === 'service-manage');
+        if (arr.length > 0) {
+          arr[0].children.forEach(item => {
+            if (item.meta.params.serviceId == serviceId) serviceName = item.name;
+          });
+        }
+
+        // 9. 构建保存参数
+        const saveParam = {
+          clusterId: this.clusterId,
+          serviceName,
+          serviceConfig: JSON.stringify(filterParam),
+          roleGroupId: this.currentId
+        };
+
+        // 10. 提交保存
+        const res = await this.$axiosPost(global.API.saveServiceConfig, saveParam);
+        if (res.code === 200) {
+          this.$message.success("保存成功");
+          this.getConfigVersion();
+        } else {
+          this.$message.error(res.msg || "保存失败");
+        }
+
+      } catch (error) {
+        if (error.errorFields) {
+          const firstError = error.errorFields[0];
+          const fieldPath = firstError.name.join('.');
+          this.$message.error(`配置验证失败：[${fieldPath}] ${firstError.errors[0]}`);
+        } else {
+          this.$message.error(`保存失败: ${error.message || '未知错误'}`);
+        }
+      }
     },
     changeVersion(val) {
       this.currentVersion = val;

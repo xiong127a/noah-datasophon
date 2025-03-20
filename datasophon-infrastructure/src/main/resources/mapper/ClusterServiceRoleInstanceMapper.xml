@@ -26,6 +26,13 @@
         where role_group_id = #{roleGroupId}
     </update>
 
+    <update id="updateToNeedRestartByServiceRoleName">
+        update t_ddh_cluster_service_role_instance
+        set need_restart = 2
+        where role_group_id = #{roleGroupId}
+        and service_role_name= #{serviceRoleName}
+    </update>
+
     <update id="updateToNeedRestartByHost">
         update t_ddh_cluster_service_role_instance
         set need_restart = 2

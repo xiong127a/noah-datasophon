@@ -36,7 +36,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
 
     void updateToNeedRestart(@Param("roleGroupId") Integer roleGroupId);
 
-    void updateToNeedRestart(@Param("roleGroupId") Integer roleGroupId,@Param("serviceRoleName") String serviceRoleName);
+    void updateToNeedRestartByServiceRoleName(@Param("roleGroupId") Integer roleGroupId,@Param("serviceRoleName") String serviceRoleName);
 
     void updateToNeedRestartByHost(@Param("hostName") String hostName);
 }
