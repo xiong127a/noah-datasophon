@@ -4,7 +4,7 @@
 -->
 <template>
   <div>
-    <!-- 简洁视图：只包含状态灯，去掉开关 -->
+    <!-- 简洁视图：只包含状态灯 -->
     <div class="queue-status-compact">
       <a-tooltip :title="queueStatusTooltip">
         <div 
@@ -26,7 +26,7 @@
       <div class="detail-container">
         <div class="detail-header">
           <h3>任务队列与服务状态</h3>
-          <a-button type="primary" size="small" @click="fetchStatus">
+          <a-button type="primary" size="small" @click="fetchFullStatus">
             <a-icon type="reload" />刷新
           </a-button>
         </div>
@@ -218,7 +218,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">上次清理时间</div>
-              <div class="stat-value">{{ schedulerStats.lastConnectionCleanupTime || '未执行' }}</div>
+              <div class="stat-value">{{ formatDateTime(schedulerStats.lastConnectionCleanupTime) }}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">SSH会话缓存</div>
@@ -267,7 +267,7 @@
               </template>
               
               <template slot="lastRun" slot-scope="text">
-                {{ text || '未执行' }}
+                {{ formatDateTime(text) }}
               </template>
             </a-table>
           </div>
@@ -292,7 +292,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">上次任务清理</div>
-              <div class="stat-value">{{ schedulerStats.lastTaskCleanupTime || '未执行' }}</div>
+              <div class="stat-value">{{ formatDateTime(schedulerStats.lastTaskCleanupTime) }}</div>
             </div>
             <div class="stat-item">
               <div class="stat-label">过期任务清理</div>
@@ -327,6 +327,10 @@
           <a @click="cancelTask(record)">取消</a>
         </template>
         
+        <template slot="startTime" slot-scope="text">
+          {{ formatDateTime(text) }}
+        </template>
+        
         <template slot="duration" slot-scope="text">
           {{ formatDuration(text) }}
         </template>
@@ -357,6 +361,10 @@
           <a @click="cancelFixTask(record)">取消</a>
         </template>
         
+        <template slot="startTime" slot-scope="text">
+          {{ formatDateTime(text) }}
+        </template>
+        
         <template slot="duration" slot-scope="text">
           {{ formatDuration(text) }}
         </template>
@@ -370,24 +378,30 @@ import { message } from 'ant-design-vue'
 
 export default {
   name: 'QueueStatusIndicator',
+  props: {
+    queueStatus: {
+      type: Object,
+      default: () => ({
+        queueSize: 0,
+        runningTasks: 0,
+        processorThreadAlive: true
+      })
+    }
+  },
   data() {
     return {
-      queueStatus: {},
-      queueActive: false,
-      schedulerActive: false,
+      queueActive: true,
+      schedulerActive: true,
       queueLoading: false,
       schedulerLoading: false,
-      pollInterval: null,
       showDetailModal: false,
       queueStats: {},
       schedulerStats: {},
       showQueueDetails: false,
       showFixQueueDetails: false,
       cleanupLoading: false,
-      // 队列任务数据
       queueTasks: [],
       fixQueueTasks: [],
-      // 定时任务数据
       scheduledTasks: [
         {
           id: 'taskCleanup',
@@ -426,7 +440,6 @@ export default {
           loading: false
         }
       ],
-      // 列定义
       scheduledTaskColumns: [
         {
           title: '任务名称',
@@ -562,9 +575,16 @@ export default {
   },
   computed: {
     queueStatusClass() {
-      return {
-        'status-active': this.queueActive,
-        'status-inactive': !this.queueActive
+      if (this.queueStatus.runningTasks > 0) {
+        return 'status-running'
+      } else if (this.queueStatus.queueSize > 0) {
+        return 'status-waiting'
+      } else if (!this.queueStatus.processorThreadAlive) {
+        return 'status-error'
+      } else if (!this.queueActive) {
+        return 'status-inactive'
+      } else {
+        return 'status-active'
       }
     },
     schedulerStatusClass() {
@@ -574,62 +594,73 @@ export default {
       }
     },
     queueStatusTooltip() {
-      return this.queueActive ? '队列处理：活跃（点击查看详情）' : '队列处理：已暂停（点击查看详情）'
-    }
-  },
-  mounted() {
-    this.fetchStatus()
-    // 设置轮询，每30秒更新一次状态
-    this.pollInterval = setInterval(() => {
-      this.fetchStatus()
-    }, 30000)
-  },
-  beforeDestroy() {
-    // 组件销毁时清除轮询
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval)
+      if (this.queueStatus.runningTasks > 0) {
+        return `检查队列：正在执行${this.queueStatus.runningTasks}个任务（点击查看详情）`
+      } else if (this.queueStatus.queueSize > 0) {
+        return `检查队列：${this.queueStatus.queueSize}个任务等待执行（点击查看详情）`
+      } else if (!this.queueStatus.processorThreadAlive) {
+        return '检查队列：处理线程异常（点击查看详情）'
+      } else if (!this.queueActive) {
+        return '检查队列：已暂停（点击查看详情）'
+      } else {
+        return '检查队列：空闲（点击查看详情）'
+      }
     }
   },
   methods: {
-    async fetchStatus() {
+    // 添加日期时间格式化方法
+    formatDateTime(dateStr) {
+      if (!dateStr || dateStr === '未执行') return '未执行';
       try {
-        // 获取状态信息
+        // 创建日期对象
+        const date = new Date(dateStr);
+        // 检查日期是否有效
+        if (isNaN(date.getTime())) return dateStr;
+        
+        // 格式化为 yyyy-MM-dd HH:mm:ss
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      } catch (error) {
+        // 如果格式化失败，返回原始字符串
+        return dateStr;
+      }
+    },
+    
+    async fetchFullStatus() {
+      try {
         const response = await this.$axiosGet(global.API.queueManager + '?action=status', {})
         
-        // 确保有响应
         if (!response) {
           console.error('获取状态失败: 无响应');
           return;
         }
         
         if (response.code === 200) {
-          // 解析响应数据
           const data = response.data || {};
           
-          // 更新队列状态
           const queueManager = data.queueManager || {};
           this.queueActive = Boolean(queueManager.queueProcessingEnabled);
           this.queueStats = queueManager;
           
-          // 更新定时任务状态
           const asyncService = data.asyncService || {};
           this.schedulerActive = Boolean(asyncService.scheduledTasksEnabled);
           this.schedulerStats = asyncService;
           
-          // 更新定时任务列表状态
           this.updateScheduledTasksStatus(asyncService);
           
-          // 更新任务队列数据
           if (data.queueTasks) {
             this.queueTasks = data.queueTasks;
           }
           
-          // 更新修复任务队列数据
           if (data.fixQueueTasks) {
             this.fixQueueTasks = data.fixQueueTasks;
           }
-          
-          this.queueStatus = data;
         } else {
           console.error('获取状态失败:', response.msg || '未知错误');
         }
@@ -638,30 +669,25 @@ export default {
       }
     },
     
-    // 更新定时任务状态
     updateScheduledTasksStatus(asyncService) {
-      // 任务清理
       const taskCleanup = this.scheduledTasks.find(t => t.id === 'taskCleanup');
       if (taskCleanup) {
         taskCleanup.active = Boolean(asyncService.taskCleanupActive);
         taskCleanup.lastRun = asyncService.lastTaskCleanupTime;
       }
       
-      // 连接清理
       const connectionCleanup = this.scheduledTasks.find(t => t.id === 'connectionCleanup');
       if (connectionCleanup) {
         connectionCleanup.active = Boolean(asyncService.connectionCleanupActive);
         connectionCleanup.lastRun = asyncService.lastConnectionCleanupTime;
       }
       
-      // 队列健康监控
       const queueHealthMonitor = this.scheduledTasks.find(t => t.id === 'queueHealthMonitor');
       if (queueHealthMonitor) {
         queueHealthMonitor.active = Boolean(asyncService.queueHealthMonitorActive);
         queueHealthMonitor.lastRun = asyncService.lastQueueHealthCheckTime;
       }
       
-      // 任务超时监控
       const taskTimeoutMonitor = this.scheduledTasks.find(t => t.id === 'taskTimeoutMonitor');
       if (taskTimeoutMonitor) {
         taskTimeoutMonitor.active = Boolean(asyncService.taskTimeoutMonitorActive);
@@ -669,23 +695,19 @@ export default {
       }
     },
     
-    // 切换单个定时任务
     async toggleTask(task) {
       task.loading = true;
       try {
-        // 构建操作
         const action = task.active ? 'pauseTask' : 'resumeTask';
         const taskId = task.id;
         
-        // 发送请求
         const response = await this.$axiosGet(global.API.queueManager + `?action=${action}&taskId=${taskId}`, {});
         
         if (response && response.code === 200) {
           task.active = !task.active;
           message.success(`${task.name} 已${task.active ? '启用' : '暂停'}`);
           
-          // 刷新状态
-          setTimeout(() => this.fetchStatus(), 1000);
+          setTimeout(() => this.fetchFullStatus(), 1000);
         } else {
           message.error(`操作失败: ${response?.msg || '未知错误'}`);
         }
@@ -697,7 +719,6 @@ export default {
       }
     },
     
-    // 取消检查任务
     async cancelTask(task) {
       try {
         const clusterId = task.clusterId;
@@ -712,8 +733,7 @@ export default {
         
         if (response && response.code === 200) {
           message.success('任务已取消');
-          // 刷新队列状态
-          this.fetchStatus();
+          this.fetchFullStatus();
         } else {
           message.error(`取消任务失败: ${response?.msg || '未知错误'}`);
         }
@@ -723,7 +743,6 @@ export default {
       }
     },
     
-    // 取消修复任务
     async cancelFixTask(task) {
       try {
         const clusterId = task.clusterId;
@@ -738,8 +757,7 @@ export default {
         
         if (response && response.code === 200) {
           message.success('修复任务已取消');
-          // 刷新队列状态
-          this.fetchStatus();
+          this.fetchFullStatus();
         } else {
           message.error(`取消修复任务失败: ${response?.msg || '未知错误'}`);
         }
@@ -749,7 +767,6 @@ export default {
       }
     },
     
-    // 格式化持续时间
     formatDuration(ms) {
       if (!ms) return '0秒';
       
@@ -766,14 +783,12 @@ export default {
       }
     },
     
-    // 计算成功率
     calculateSuccessRate(success, failed) {
       const total = (success || 0) + (failed || 0);
       if (total === 0) return 0;
       return Math.round((success / total) * 100);
     },
     
-    // 获取状态颜色
     getStatusColor(status) {
       const statusMap = {
         'PENDING': 'blue',
@@ -792,15 +807,13 @@ export default {
       this.queueLoading = true
       try {
         const action = this.queueActive ? 'pause' : 'resume'
-        // 切换队列处理状态
         const response = await this.$axiosGet(global.API.queueManager + `?action=${action}&scope=queue`, {})
         
         if (response && response.code === 200) {
           this.queueActive = !this.queueActive
           message.success(`队列处理已${this.queueActive ? '启用' : '暂停'}`)
           
-          // 刷新状态
-          setTimeout(() => this.fetchStatus(), 1000)
+          setTimeout(() => this.fetchFullStatus(), 1000)
         } else {
           message.error(`操作失败: ${response?.msg || '未知错误'}`)
         }
@@ -816,15 +829,13 @@ export default {
       this.schedulerLoading = true
       try {
         const action = this.schedulerActive ? 'pause' : 'resume'
-        // 切换定时任务状态
         const response = await this.$axiosGet(global.API.queueManager + `?action=${action}&scope=scheduler`, {})
         
         if (response && response.code === 200) {
           this.schedulerActive = !this.schedulerActive
           message.success(`定时任务已${this.schedulerActive ? '启用' : '暂停'}`)
           
-          // 刷新状态
-          setTimeout(() => this.fetchStatus(), 1000)
+          setTimeout(() => this.fetchFullStatus(), 1000)
         } else {
           message.error(`操作失败: ${response?.msg || '未知错误'}`)
         }
@@ -843,8 +854,7 @@ export default {
         if (response && response.code === 200) {
           message.success('不活跃连接清理成功')
           
-          // 刷新状态
-          setTimeout(() => this.fetchStatus(), 1000)
+          setTimeout(() => this.fetchFullStatus(), 1000)
         } else {
           message.error(`操作失败: ${response?.msg || '未知错误'}`)
         }
@@ -859,30 +869,51 @@ export default {
 }
 </script>
 
-<style scoped>
-/* 简洁视图样式 */
+<style lang="less" scoped>
 .queue-status-compact {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-}
-
-.status-light {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  transition: background-color 0.3s ease;
   cursor: pointer;
 }
 
+.status-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
 .status-active {
-  background-color: #52c41a; /* 绿色 - 活跃 */
-  box-shadow: 0 0 5px #52c41a;
+  background-color: #52c41a; /* 绿色 - 空闲状态 */
 }
 
 .status-inactive {
-  background-color: #ff4d4f; /* 红色 - 不活跃 */
-  box-shadow: 0 0 5px #ff4d4f;
+  background-color: #d9d9d9; /* 灰色 - 暂停状态 */
+}
+
+.status-running {
+  background-color: #1890ff; /* 蓝色 - 运行中 */
+  animation: pulse 1.5s infinite; /* 添加脉冲动画 */
+}
+
+.status-waiting {
+  background-color: #faad14; /* 黄色 - 等待执行 */
+}
+
+.status-error {
+  background-color: #f5222d; /* 红色 - 错误状态 */
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* 详情弹窗样式 */

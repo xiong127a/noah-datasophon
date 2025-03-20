@@ -88,6 +88,9 @@ public class InstallServiceImpl implements InstallService {
     @Autowired
     private HostCheckService hostCheckService;
 
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
+
     private static final String SSHUSER = "SSHUSER";
 
     @Override
@@ -141,8 +144,21 @@ public class InstallServiceImpl implements InstallService {
             int end = Math.min(offset + pageSize, hostList.size());
             List<HostInfo> pagedHosts = hostList.subList(offset, end);
 
-            // 不再计算整体状态，直接返回主机列表
-            return Result.success().put("data", pagedHosts).put(Constants.TOTAL, (long) hostList.size());
+            // 添加队列状态信息
+            Map<String, Object> queueStatus = new HashMap<>();
+            if (hostCheckQueueManager != null) {
+                Map<String, Object> statusMap = hostCheckQueueManager.getQueueStatus();
+                // 获取必要的队列状态信息
+                queueStatus.put("queueSize", statusMap.getOrDefault("queueSize", 0));
+                queueStatus.put("runningTasks", statusMap.getOrDefault("runningTasks", 0));
+                queueStatus.put("processorThreadAlive", statusMap.getOrDefault("processorThreadAlive", true));
+            }
+
+            // 直接返回主机列表和队列状态
+            return Result.success()
+                    .put("data", pagedHosts)
+                    .put(Constants.TOTAL, (long) hostList.size())
+                    .put("queueStatus", queueStatus);
         } catch (Exception e) {
             logger.error(ExceptionUtils.getStackTrace(e));
             return Result.success().put("data", Collections.emptyList()).put(Constants.TOTAL, 0L);

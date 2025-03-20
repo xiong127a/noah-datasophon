@@ -28,7 +28,7 @@
     <div class="steps-title flex-bewteen-container pdr30">
       <span>主机环境校验</span>
       <div class="queue-controls">
-        <queue-status-indicator />
+        <queue-status-indicator :queue-status="queueStatus" />
       </div>
     </div>
     <div class="table-info mgt16 steps-body pdr30">
@@ -181,6 +181,11 @@ export default {
       checkItemsMap: {}, // 存储每个主机的校验项
       checkItem: null, // 当前查看日志的检查项
       showLogFilterOptions: true, // 是否显示日志筛选选项
+      queueStatus: {
+        queueSize: 0,
+        runningTasks: 0,
+        processorThreadAlive: true
+      }, // 队列状态信息
       columns: [
         {
           title: "序号",
@@ -500,6 +505,11 @@ export default {
             
             this.dataSource = res.data;
             this.pagination.total = res.total;
+            
+            // 保存队列状态信息
+            if (res.queueStatus) {
+              this.queueStatus = res.queueStatus;
+            }
 
             if (this.depType=='K8S'){
               let data = JSON.parse(JSON.stringify(res.data))

@@ -11,6 +11,7 @@ import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
 import com.datasophon.common.model.AsyncServiceStatus;
+import com.datasophon.common.model.ScheduledTasksStatus;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.text.SimpleDateFormat;
 
 /**
  * 异步检查服务
@@ -55,6 +57,11 @@ public class AsyncCheckService {
     @Qualifier("checkExecutor")
     private Executor checkExecutor;
     
+    // 修复任务执行器
+    @Autowired
+    @Qualifier("fixExecutor")
+    private Executor fixExecutor;
+    
     // SSH连接池 - 按主机名缓存SSH连接
     private final Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
     
@@ -63,6 +70,10 @@ public class AsyncCheckService {
     
     // 定时任务启用标志
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
+    
+    // 定时任务执行间隔（默认值）
+    private long taskCleanupIntervalMs = TimeUnit.HOURS.toMillis(1); // 默认1小时
+    private long connectionCleanupIntervalMs = TimeUnit.MINUTES.toMillis(10); // 默认10分钟
     
     // 上次执行时间
     private volatile long lastTaskCleanupTime = 0;
@@ -103,15 +114,15 @@ public class AsyncCheckService {
         // 启动任务清理定时任务（每小时执行一次）
         if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
             taskCleanupTask = taskScheduler.scheduleAtFixedRate(
-                this::cleanupTasks, TimeUnit.HOURS.toMillis(1));
-            logger.info("任务清理定时任务已启动，执行间隔: 1小时");
+                this::cleanupTasks, taskCleanupIntervalMs);
+            logger.info("任务清理定时任务已启动，执行间隔: {}毫秒", taskCleanupIntervalMs);
         }
         
         // 启动连接清理定时任务（每10分钟执行一次）
         if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
             connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                this::cleanupConnections, TimeUnit.MINUTES.toMillis(10));
-            logger.info("连接清理定时任务已启动，执行间隔: 10分钟");
+                this::cleanupConnections, connectionCleanupIntervalMs);
+            logger.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
         }
     }
     
@@ -157,19 +168,105 @@ public class AsyncCheckService {
     
     /**
      * 获取定时任务状态
+     * @return 定时任务状态对象
      */
-    public Map<String, Object> getScheduledTasksStatus() {
-        Map<String, Object> status = new HashMap<>();
-        status.put("scheduledTasksEnabled", scheduledTasksEnabled.get());
-        status.put("taskCleanupActive", taskCleanupTask != null && !taskCleanupTask.isCancelled());
-        status.put("connectionCleanupActive", connectionCleanupTask != null && !connectionCleanupTask.isCancelled());
-        status.put("lastTaskCleanupTime", lastTaskCleanupTime > 0 ? 
-                new java.util.Date(lastTaskCleanupTime).toString() : "未执行");
-        status.put("lastConnectionCleanupTime", lastConnectionCleanupTime > 0 ? 
-                new java.util.Date(lastConnectionCleanupTime).toString() : "未执行");
-        status.put("connectionPoolSize", hostConnectionPool.size());
-        status.put("runningTasksCount", runningTasks.size());
+    public ScheduledTasksStatus getScheduledTasksStatus() {
+        ScheduledTasksStatus status = new ScheduledTasksStatus();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        
+        status.setScheduledTasksEnabled(scheduledTasksEnabled.get());
+        status.setTaskCleanupActive(taskCleanupTask != null && !taskCleanupTask.isCancelled());
+        status.setConnectionCleanupActive(connectionCleanupTask != null && !connectionCleanupTask.isCancelled());
+        
+        // 添加定时任务执行间隔
+        status.setTaskCleanupIntervalMs(taskCleanupIntervalMs);
+        status.setConnectionCleanupIntervalMs(connectionCleanupIntervalMs);
+        
+        // 格式化为人类可读的时间间隔
+        status.setTaskCleanupInterval(formatTimeInterval(taskCleanupIntervalMs));
+        status.setConnectionCleanupInterval(formatTimeInterval(connectionCleanupIntervalMs));
+        
+        // 格式化时间日期
+        if (lastTaskCleanupTime > 0) {
+            status.setLastTaskCleanupTime(dateFormat.format(new java.util.Date(lastTaskCleanupTime)));
+        } else {
+            status.setLastTaskCleanupTime("未执行");
+        }
+        
+        // 格式化时间日期
+        if (lastConnectionCleanupTime > 0) {
+            status.setLastConnectionCleanupTime(dateFormat.format(new java.util.Date(lastConnectionCleanupTime)));
+        } else {
+            status.setLastConnectionCleanupTime("未执行");
+        }
+        
+        status.setConnectionPoolSize(hostConnectionPool.size());
+        status.setRunningTasksCount(runningTasks.size());
         return status;
+    }
+    
+    /**
+     * 设置任务清理定时任务的执行间隔
+     * @param intervalMs 间隔时间（毫秒）
+     * @return 是否设置成功
+     */
+    public boolean setTaskCleanupInterval(long intervalMs) {
+        if (intervalMs < 60000) { // 最小1分钟
+            return false;
+        }
+        
+        this.taskCleanupIntervalMs = intervalMs;
+        
+        // 如果任务已经在运行，则重新调度
+        if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
+            taskCleanupTask.cancel(false);
+            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupTasks, intervalMs);
+            logger.info("任务清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 设置连接清理定时任务的执行间隔
+     * @param intervalMs 间隔时间（毫秒）
+     * @return 是否设置成功
+     */
+    public boolean setConnectionCleanupInterval(long intervalMs) {
+        if (intervalMs < 30000) { // 最小30秒
+            return false;
+        }
+        
+        this.connectionCleanupIntervalMs = intervalMs;
+        
+        // 如果任务已经在运行，则重新调度
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupConnections, intervalMs);
+            logger.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * 将毫秒时间格式化为人类可读的时间间隔
+     * @param ms 毫秒数
+     * @return 格式化后的时间间隔
+     */
+    private String formatTimeInterval(long ms) {
+        long seconds = ms / 1000;
+        if (seconds < 60) {
+            return seconds + "秒";
+        } else if (seconds < 3600) {
+            return (seconds / 60) + "分钟";
+        } else if (seconds < 86400) {
+            return (seconds / 3600) + "小时";
+        } else {
+            return (seconds / 86400) + "天";
+        }
     }
     
     /**
@@ -285,7 +382,7 @@ public class AsyncCheckService {
                 setCheckItemMessage(clusterId, hostInfo, checkItem, "修复异常: " + e.getMessage());
                 return false;
             }
-        }, checkExecutor);
+        }, fixExecutor);
         
         // 注册任务
         String taskId = taskManager.registerTask("FIX", 
@@ -685,18 +782,19 @@ public class AsyncCheckService {
      */
     public AsyncServiceStatus getAsyncServiceStatus() {
         AsyncServiceStatus status = new AsyncServiceStatus();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
         // 获取状态信息
-        Map<String, Object> statusMap = getScheduledTasksStatus();
+        ScheduledTasksStatus statusInfo = getScheduledTasksStatus();
         
         // 填充实体类
-        status.setScheduledTasksEnabled((Boolean) statusMap.get("scheduledTasksEnabled"));
-        status.setLastTaskCleanupTime((String) statusMap.get("lastTaskCleanupTime"));
-        status.setRunningTasksCount((Integer) statusMap.get("runningTasksCount"));
-        status.setConnectionPoolSize((Integer) statusMap.get("connectionPoolSize"));
-        status.setTaskCleanupActive((Boolean) statusMap.get("taskCleanupActive"));
-        status.setConnectionCleanupActive((Boolean) statusMap.get("connectionCleanupActive"));
-        status.setLastConnectionCleanupTime((String) statusMap.get("lastConnectionCleanupTime"));
+        status.setScheduledTasksEnabled(statusInfo.isScheduledTasksEnabled());
+        status.setLastTaskCleanupTime(statusInfo.getLastTaskCleanupTime());
+        status.setRunningTasksCount(statusInfo.getRunningTasksCount());
+        status.setConnectionPoolSize(statusInfo.getConnectionPoolSize());
+        status.setTaskCleanupActive(statusInfo.isTaskCleanupActive());
+        status.setConnectionCleanupActive(statusInfo.isConnectionCleanupActive());
+        status.setLastConnectionCleanupTime(statusInfo.getLastConnectionCleanupTime());
         
         return status;
     }
@@ -730,8 +828,8 @@ public class AsyncCheckService {
         // 启动任务清理定时任务（每小时执行一次）
         if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
             taskCleanupTask = taskScheduler.scheduleAtFixedRate(
-                this::cleanupTasks, TimeUnit.HOURS.toMillis(1));
-            logger.info("任务清理定时任务已启动，执行间隔: 1小时");
+                this::cleanupTasks, taskCleanupIntervalMs);
+            logger.info("任务清理定时任务已启动，执行间隔: {}毫秒", taskCleanupIntervalMs);
         }
     }
     
@@ -742,8 +840,52 @@ public class AsyncCheckService {
         // 启动连接清理定时任务（每10分钟执行一次）
         if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
             connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                this::cleanupConnections, TimeUnit.MINUTES.toMillis(10));
-            logger.info("连接清理定时任务已启动，执行间隔: 10分钟");
+                this::cleanupConnections, connectionCleanupIntervalMs);
+            logger.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
+        }
+    }
+    
+    /**
+     * 更新任务清理定时任务执行间隔
+     * @param intervalMs 执行间隔（毫秒）
+     */
+    public void updateTaskCleanupInterval(long intervalMs) {
+        if (intervalMs < 60000) { // 最小1分钟
+            logger.warn("任务清理定时任务间隔不能小于1分钟，忽略此次更新");
+            return;
+        }
+        
+        // 更新间隔值
+        this.taskCleanupIntervalMs = intervalMs;
+        
+        // 重新调度任务
+        if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
+            taskCleanupTask.cancel(false);
+            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupTasks, intervalMs);
+            logger.info("任务清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+        }
+    }
+    
+    /**
+     * 更新连接清理定时任务执行间隔
+     * @param intervalMs 执行间隔（毫秒）
+     */
+    public void updateConnectionCleanupInterval(long intervalMs) {
+        if (intervalMs < 30000) { // 最小30秒
+            logger.warn("连接清理定时任务间隔不能小于30秒，忽略此次更新");
+            return;
+        }
+        
+        // 更新间隔值
+        this.connectionCleanupIntervalMs = intervalMs;
+        
+        // 重新调度任务
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupConnections, intervalMs);
+            logger.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
     }
 } 

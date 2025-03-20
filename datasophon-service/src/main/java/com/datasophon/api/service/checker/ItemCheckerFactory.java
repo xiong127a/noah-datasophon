@@ -68,33 +68,4 @@ public class ItemCheckerFactory {
         }
         return checker;
     }
-    
-    /**
-     * 根据ItemCode字符串获取对应的检查器
-     * @param itemCodeStr 检查项代码字符串
-     * @return 对应的检查器，如果不存在则返回null
-     */
-    public ItemChecker getChecker(String itemCodeStr) {
-        if (itemCodeStr == null) {
-            logger.warn("检查项代码为空");
-            return null;
-        }
-        
-        ItemChecker checker = checkerStringMap.get(itemCodeStr);
-        if (checker == null) {
-            // 尝试通过枚举名称查找
-            try {
-                ItemCode itemCode = ItemCode.valueOf(itemCodeStr);
-                checker = checkerMap.get(itemCode);
-            } catch (IllegalArgumentException e) {
-                logger.warn("无法将字符串 '{}' 转换为ItemCode枚举", itemCodeStr);
-            }
-        }
-        
-        if (checker == null) {
-            logger.warn("未找到检查器: {}", itemCodeStr);
-        }
-        
-        return checker;
-    }
 } 

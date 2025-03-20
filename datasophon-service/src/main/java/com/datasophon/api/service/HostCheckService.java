@@ -186,4 +186,12 @@ public interface HostCheckService {
      * @return 日志级别数组
      */
     LogEntry.Level[] getLogLevels();
+
+    /**
+     * 获取指定主机的检查项列表
+     * @param hostname 主机名
+     * @param clusterId 集群ID
+     * @return 指定主机的检查项列表
+     */
+    Result getHostCheckItems(String hostname, Integer clusterId);
 } 

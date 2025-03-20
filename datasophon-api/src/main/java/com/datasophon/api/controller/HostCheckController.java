@@ -8,6 +8,10 @@ import com.datasophon.api.service.impl.HostCheckQueueManager;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.ScheduledTasksStatus;
+import com.datasophon.common.model.ScheduleConfigResult;
+import com.datasophon.common.model.QueueSystemStatus;
+import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,8 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.datasophon.api.service.InstallService;
 
 /**
  * 主机检查控制器
@@ -47,20 +54,17 @@ public class HostCheckController {
     @Autowired
     private AsyncCheckService asyncCheckService;
 
+    @Autowired
+    private InstallService installService;
+
     /**
      * 获取主机检查项列表
      */
     @GetMapping("/getHostCheckItems")
     @UserPermission
     public Result getHostCheckItems(@RequestParam String hostname, @RequestParam Integer clusterId) {
-        // 从缓存中获取指定主机的检查项
-        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostInfoMap == null || !hostInfoMap.containsKey(hostname)) {
-            return Result.error("找不到主机信息: " + hostname);
-        }
-        
-        HostInfo hostInfo = hostInfoMap.get(hostname);
-        return Result.success(hostInfo.getCheckItems());
+        // 委托给服务层处理业务逻辑
+        return hostCheckService.getHostCheckItems(hostname, clusterId);
     }
     
     /**
@@ -80,46 +84,8 @@ public class HostCheckController {
         
         log.info("收到队列管理器控制请求: action={}, scope={}, taskId={}", action, scopeCode, taskId);
         
-        // 根据action类型执行相应操作
-        if ("status".equalsIgnoreCase(action)) {
-            Result statusResult = queueManagerService.getQueueSystemStatus();
-            
-            // 如果status请求，同时获取任务队列详情
-            if (statusResult.getCode() == 200) {
-                try {
-                    Result checkQueueResult = queueManagerService.getCheckQueueTasks();
-                    Result fixQueueResult = queueManagerService.getFixQueueTasks();
-                    
-                    Map<String, Object> data = (Map<String, Object>) statusResult.getData();
-                    
-                    if (checkQueueResult.getCode() == 200) {
-                        data.put("queueTasks", checkQueueResult.getData());
-                    }
-                    
-                    if (fixQueueResult.getCode() == 200) {
-                        data.put("fixQueueTasks", fixQueueResult.getData());
-                    }
-                } catch (Exception e) {
-                    log.error("获取队列任务详情失败", e);
-                }
-            }
-            
-            return statusResult;
-        } else if ("pauseTask".equalsIgnoreCase(action)) {
-            if (taskId == null || taskId.isEmpty()) {
-                return Result.error("暂停定时任务时需要提供taskId");
-            }
-            return queueManagerService.pauseScheduledTask(taskId);
-        } else if ("resumeTask".equalsIgnoreCase(action)) {
-            if (taskId == null || taskId.isEmpty()) {
-                return Result.error("恢复定时任务时需要提供taskId");
-            }
-            return queueManagerService.resumeScheduledTask(taskId);
-        } else if ("cleanupConnections".equalsIgnoreCase(action)) {
-            return queueManagerService.cleanupConnections();
-        } else {
-            return queueManagerService.manageQueueSystem(action, scopeCode);
-        }
+        // 委托给服务层处理所有业务逻辑
+        return queueManagerService.manageQueueManagerWithDetails(action, scopeCode, taskId);
     }
 
     /**
@@ -320,11 +286,111 @@ public class HostCheckController {
     @GetMapping("/asyncService/status")
     public Result getAsyncServiceStatus() {
         try {
-            Map<String, Object> status = asyncCheckService.getScheduledTasksStatus();
+            ScheduledTasksStatus status = asyncCheckService.getScheduledTasksStatus();
             return Result.success(status);
         } catch (Exception e) {
             log.error("获取异步服务状态失败", e);
             return Result.error(500, "获取异步服务状态失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 配置异步服务定时任务执行间隔
+     * @param type 任务类型：taskCleanup或connectionCleanup
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @UserPermission
+    @PostMapping("/asyncService/schedule")
+    public Result configureScheduledTask(
+            @RequestParam("type") String type,
+            @RequestParam("intervalMs") long intervalMs) {
+        try {
+            boolean success = false;
+            String message = "";
+            
+            if ("taskCleanup".equals(type)) {
+                success = asyncCheckService.setTaskCleanupInterval(intervalMs);
+                message = success ? "任务清理定时任务间隔设置成功" : "间隔时间不能小于1分钟";
+            } else if ("connectionCleanup".equals(type)) {
+                success = asyncCheckService.setConnectionCleanupInterval(intervalMs);
+                message = success ? "连接清理定时任务间隔设置成功" : "间隔时间不能小于30秒";
+            } else {
+                return Result.error("不支持的任务类型: " + type);
+            }
+            
+            if (success) {
+                // 返回最新状态
+                ScheduleConfigResult resultData = new ScheduleConfigResult();
+                resultData.setMessage(message);
+                resultData.setStatus(asyncCheckService.getScheduledTasksStatus());
+                return Result.success(resultData);
+            } else {
+                return Result.error(message);
+            }
+        } catch (Exception e) {
+            log.error("配置定时任务失败", e);
+            return Result.error("配置定时任务失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 配置队列管理器定时任务执行间隔
+     * @param taskId 任务类型：taskCleanup, connectionCleanup, queueHealthMonitor, taskTimeoutMonitor
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @UserPermission
+    @PostMapping("/queueManager/updateTaskInterval")
+    public Result updateTaskInterval(
+            @RequestParam("taskId") String taskId,
+            @RequestParam("intervalMs") long intervalMs) {
+        try {
+            log.info("收到更新定时任务执行间隔请求: taskId={}, intervalMs={}", taskId, intervalMs);
+            // 参数验证
+            if (taskId == null || taskId.isEmpty()) {
+                return Result.error("任务ID不能为空");
+            }
+            
+            if (intervalMs <= 0) {
+                return Result.error("执行间隔必须大于0");
+            }
+            
+            // 调用服务层更新定时任务执行间隔
+            return queueManagerService.updateTaskInterval(taskId, intervalMs);
+        } catch (Exception e) {
+            log.error("更新定时任务执行间隔失败", e);
+            return Result.error("更新定时任务执行间隔失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 分析主机列表
+     */
+    @PostMapping("/analysisHostList")
+    @UserPermission
+    public Result analysisHostList(@RequestBody List<HostInfo> hostInfoList, @RequestParam Integer clusterId) {
+        try {
+            // 直接使用传入的hostInfoList，不再调用其他方法
+            Map<String, Object> data = new HashMap<>();
+            data.put("hostList", hostInfoList);
+            
+            // 获取队列系统状态
+            QueueSystemStatus queueSystemStatus = queueManagerService.getQueueSystemStatusDirect();
+            
+            // 获取队列任务详情
+            List<QueueTaskInfo> checkQueueTasks = queueManagerService.getCheckQueueTasksDirect();
+            List<QueueTaskInfo> fixQueueTasks = queueManagerService.getFixQueueTasksDirect();
+            
+            // 添加队列系统状态和任务详情到返回数据
+            data.put("queueSystemStatus", queueSystemStatus);
+            data.put("checkQueueTasks", checkQueueTasks);
+            data.put("fixQueueTasks", fixQueueTasks);
+            
+            return Result.success(data);
+        } catch (Exception e) {
+            log.error("分析主机列表失败", e);
+            return Result.error("分析主机列表失败: " + e.getMessage());
         }
     }
 } 

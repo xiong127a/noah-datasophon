@@ -1767,4 +1767,22 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("获取确认信息失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 获取指定主机的检查项列表
+     * @param hostname 主机名
+     * @param clusterId 集群ID
+     * @return 指定主机的检查项列表
+     */
+    @Override
+    public Result getHostCheckItems(String hostname, Integer clusterId) {
+        // 从缓存中获取指定主机的检查项
+        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        if (hostInfoMap == null || !hostInfoMap.containsKey(hostname)) {
+            return Result.error("找不到主机信息: " + hostname);
+        }
+        
+        HostInfo hostInfo = hostInfoMap.get(hostname);
+        return Result.success(hostInfo.getCheckItems());
+    }
 }
