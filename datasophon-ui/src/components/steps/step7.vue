@@ -72,12 +72,12 @@
 </template>
 <script>
 import CommonTemplate from "@/components/commonTemplate/index";
-import { mapActions, mapState } from "vuex";
-import { de } from "date-fns/locale";
+import {mapActions, mapState} from "vuex";
+import {de} from "date-fns/locale";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: { CommonTemplate },
+  components: {CommonTemplate},
   props: {
     steps4Data: Object,
   },
@@ -435,7 +435,7 @@ export default {
                   serviceConfig: JSON.stringify(filterParam)
                 });
 
-                resolve({ ...res, name: serviceName });
+                resolve({...res, name: serviceName});
               } catch (error) {
                 // 10. 统一错误处理
                 console.error(`[${serviceName}] 配置保存失败:`, error);
@@ -449,7 +449,7 @@ export default {
 
             // 11. 执行异步处理
             processService().catch(error =>
-                resolve({ code: 500, name: serviceName, msg: error.message })
+                resolve({code: 500, name: serviceName, msg: error.message})
             );
           })
       );
@@ -460,10 +460,10 @@ export default {
 
         // 13. 处理失败项
         if (failedServices.length > 0) {
-          failedServices.forEach(({ name, msg }) =>
+          failedServices.forEach(({name, msg}) =>
               this.$message.error(`${name} 配置保存失败: ${msg}`)
           );
-          callback?.({ code: 500 });
+          callback?.({code: 500});
           return;
         }
 
@@ -488,13 +488,13 @@ export default {
           callback?.(execRes);
         } catch (error) {
           console.error('命令执行流程失败:', error);
-          callback?.({ code: 500 });
+          callback?.({code: 500});
         }
       });
     },
     //  从第七步进入第八步的请求
     async nextSteps(callback) {
-      let res = { code: 0 };
+      let res = {code: 0};
       const flag = this.checkAllForm();
       if (flag && callback) {
         callback(res);
@@ -506,7 +506,7 @@ export default {
   },
   created() {
     this.SERVICENAMES = this.steps4Data.serviceNames.map(
-      (item) => item.serviceName
+        (item) => item.serviceName
     );
     this.serviceNameKey = this.SERVICENAMES[0];
     this.selectKeys.push(this.serviceNameKey);
@@ -522,85 +522,128 @@ export default {
 <style lang="less" scoped>
 
 .config-group-container {
-  padding: 16px;
-  max-height: 600px;
-  overflow-y: auto;
+  padding: 16px 0 !important;  /* 垂直间距保持，去除水平留白 */
+  background: transparent !important;  /* 移除容器背景色 */
+}
+
+.service-title {
+  padding: 0 24px;  /* 保持水平的 padding，但去除底部的间隙 */
+  border-bottom: 1px solid #e9ecef;  /* 底部线条 */
+
+  h2 {
+    font: 500 16px/24px "Helvetica Neue", sans-serif;
+    color: #343a40;
+    margin: 0;  /* 移除外边距 */
+    padding: 0;  /* 去除内边距，确保没有多余的间隙 */
+    line-height: 24px;  /* 保持标题行高一致 */
+  }
+
+  .sub-title {
+    font: 13px/20px "PingFang SC";
+    color: #868e96;
+    letter-spacing: 0.5px;
+  }
 }
 
 .config-group {
-  border: 1px solid #EBEEF5;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  background: #fff;
+  margin-bottom: 0px;  /* 调整配置项之间的间距 */
+  background: #ffffff;
+  padding: 0px;
+  overflow: hidden;  /* 防止出现滚动条 */
 
   .group-title {
-    padding: 12px 16px;
-    background: #f7f9fc;
+    background: #F7F9FC;
+    padding: 10px;
+    color: #303133;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 14px;
-    font-weight: 500;
+    position: relative;
+    transition: background 0.3s ease, transform 0.3s ease;
+    left: 16px;
 
-    .arrow {
-      transition: transform 0.3s;
-      font-size: 12px;
-      color: #666;
-
-      &.arrow-up {
-        transform: rotate(90deg);
-      }
+    /* 左边垂直条 */
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      background: #1890ff;
+      z-index: 2;
     }
+
+    /* 默认状态下 z-index 设置为 1 */
+    z-index: 1;
 
     &:hover {
-      background: #f2f6fc;
+      background: #E1E9F7;  /* 更柔和的背景色 */
+      transform: scale(1.02);  /* 悬停时放大 */
+      z-index: 2;  /* 增加 z-index 以确保它显示在最上面 */
+    }
+
+    &.active {
+      background: #E0F7FF;  /* 激活状态时的柔和蓝色背景 */
+    }
+
+    .arrow {
+      position: absolute !important;
+      right: 40px;  /* 修改这里：箭头往左移动24px */
+      top: 50%;
+      transform: translateY(-50%) rotate(0deg);
+      transition: transform 0.3s ease;
+      z-index: 3;  /* 提升箭头的 z-index，确保它在最上层 */
+      color: #909399;
+      &.arrow-up {
+        transform: translateY(-50%) rotate(90deg);  /* 点击后箭头旋转 */
+      }
+    }
+  }
+}
+
+.steps7 {
+  .ant-tabs {
+    /deep/ .ant-tabs-nav {
+      padding: 0 24px !important;
+
+      .ant-tabs-tab {
+        font: 500 13px/1.5 "Helvetica Neue" !important;
+        padding: 8px 16px !important;
+        color: #868e96 !important;
+        border: 1px solid transparent;
+
+        &-active {
+          color: #228be6 !important;
+          background: rgba(34, 139, 230, 0.06) !important;
+          border-color: #e7f5ff !important;
+        }
+      }
+
+      .ant-tabs-ink-bar {
+        background: #228be6 !important;
+        height: 2px !important;
+      }
     }
   }
 
-  > div {
-    padding: 16px;
-  }
-}
-/deep/ .ant-tabs {
-  max-width: 1442px;
-  .ant-tabs-bar {
-    margin-right: 32px;
-  }
-}
-.steps7 {
-  /deep/ .ant-spin-container {
-    position: relative;
-  }
   .steps-body {
-    // max-width: 1444px;
-    position: absolute;
-    top: 60px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    // overflow-y: hidden!important;;
-    // max-height: 640px;
-    height: 600px;
+    border-radius: 8px !important;
+    margin: 0 24px !important;
   }
-  .steps-container {
-    // max-height: 640px;
-    // height: 600px;
-    // overflow-y: hidden;
-    z-index: 10;
-  }
-  .show-template {
-    z-index: 1;
-    opacity: 1;
-  }
-  .hide-template {
-    z-index: 0;
-    opacity: 0;
-  }
+
   .btn-save {
     position: absolute;
     right: 32px;
     z-index: 1000;
   }
 }
-</style> 
+
+</style>
+
+

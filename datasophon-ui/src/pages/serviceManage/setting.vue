@@ -488,7 +488,7 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-// 修复角色组样式（完全匹配图片效果）
+
 .service-setting {
   /deep/ .ant-spin-container {
     position: relative;
@@ -543,13 +543,15 @@ export default {
     max-height: calc(100vh - 240px);
     height: calc(100vh - 240px);
 
+    // 同步配置组容器样式
     border: 1px solid #e5e6e8;
     margin: 10px 0;
     padding: 20px 6% 0;
+    background: #fff;  // 新增背景色
+    border-radius: 8px;  // 新增圆角
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);  // 新增阴影
+
     .footer {
-      // margin: 0 32px 0 auto;
-      // margin: 0 32px 0 0;
-      // margin: 0 auto;
       height: 64px;
       display: flex;
       justify-content: center;
@@ -565,110 +567,110 @@ export default {
   }
 }
 
-// 配置组自适应修复
 .config-group {
-  border: 1px solid #EBEEF5 !important; // 强制显示边框
+  // 容器样式保持
+  margin-bottom: 0;
+  background: #ffffff;
+  border-radius: 6px;
+  overflow: visible;  // 关键修改：允许子元素溢出
+  transition: all 0.3s ease;
+
+  .group-title {
+    // 背景圆角实现
+    border-radius: 6px 6px 0 0;
+    background: #F7F9FC;
+    // 创建独立背景层
+    position: relative;
+    z-index: 1;
+
+    // 背景色圆角裁剪
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: inherit;
+      border-radius: inherit;
+      z-index: -1;  // 背景层置于内容下方
+    }
+
+    // 小蓝条修复
+    &::before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 16px;
+      background: #1890ff;
+      border-radius: 2px;
+      z-index: 2;  // 确保在背景层之上
+    }
+
+    // 其他样式保持
+    padding: 12px 40px 12px 36px;
+    color: #303133;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.3s;
+
+    .arrow {
+      position: absolute !important;
+      right: 40px;  /* 修改这里：箭头往左移动24px */
+      top: 50%;
+      transform: translateY(-50%) rotate(0deg);
+      transition: transform 0.3s ease;
+      z-index: 3;  /* 提升箭头的 z-index，确保它在最上层 */
+      color: #909399;
+      &.arrow-up {
+        transform: translateY(-50%) rotate(90deg);  /* 点击后箭头旋转 */
+      }
+    }
+
+    // 状态样式
+    &:hover {
+      background: #F2F6FC;
+    }
+    &.active {
+      background: #E0F7FF;
+    }
+  }
 
   > div {
-    display: grid; // 网格布局自适应
-    gap: 12px; // 项间距
-    overflow: visible !important; // 允许内容扩展
+    // 内容区域样式
+    border-radius: 0 0 6px 6px;
+    // 其他内容样式不变...
   }
 }
 
-// 保存按钮位置修正
 .footer {
-  margin-top: 16px;
+  margin-top: 24px;
   padding: 16px 0 0;
-  border-top: none;
-}
-// 配置内容区域优化
-.steps-body {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  padding: 16px 24px;
+  border-top: 1px solid #EBEEF5;
+  text-align: right;
 
-  .config-group {
-    margin-bottom: 16px;
-    border: 1px solid #EBEEF5;
-    border-radius: 6px;
-    overflow: hidden;
-    transition: all 0.3s ease;
+  .ant-btn-primary {
+    background: #1890ff;
+    border-color: #1890ff;
+    border-radius: 4px;
+    padding: 0 24px;
+    height: 36px;
+    box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+    transition: all 0.3s;
 
-    // 配置组标题
-    .group-title {
-      padding: 12px 16px;
-      background: #F7F9FC;
-      color: #303133;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: relative;
-      transition: background 0.3s;
-
-      // 左侧蓝色指示条
-      &::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 16px;
-        background: #1890ff;
-        border-radius: 2px;
-      }
-
-      // 展开箭头
-      .arrow {
-        color: #909399;
-        font-size: 12px;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        margin-right: 8px;
-
-        &.arrow-up {
-          transform: rotate(90deg);
-        }
-      }
-
-      &:hover {
-        background: #F2F6FC;
-      }
-    }
-
-    // 配置内容区域
-    > div {
-      padding: 16px;
-      background: #fafbfc;
-    }
-  }
-
-  // 保存按钮
-  .footer {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #EBEEF5;
-    text-align: right;
-
-    .ant-btn-primary {
-      background: #1890ff;
-      border-color: #1890ff;
-      border-radius: 4px;
-      padding: 0 24px;
-      height: 36px;
-      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
-      transition: all 0.3s;
-
-      &:hover {
-        background: #40a9ff;
-        border-color: #40a9ff;
-        transform: translateY(-1px);
-      }
+    &:hover {
+      background: #40a9ff;
+      border-color: #40a9ff;
+      transform: translateY(-1px);
     }
   }
 }
+
 </style>
