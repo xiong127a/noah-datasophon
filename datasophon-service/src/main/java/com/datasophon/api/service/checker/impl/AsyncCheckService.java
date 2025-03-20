@@ -193,7 +193,6 @@ public class AsyncCheckService {
             status.setLastTaskCleanupTime("未执行");
         }
         
-        // 格式化时间日期
         if (lastConnectionCleanupTime > 0) {
             status.setLastConnectionCleanupTime(dateFormat.format(new java.util.Date(lastConnectionCleanupTime)));
         } else {
@@ -803,7 +802,6 @@ public class AsyncCheckService {
      * 仅停止任务清理定时任务
      */
     public void stopTaskCleanup() {
-        // 取消任务清理定时任务
         if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
             taskCleanupTask.cancel(false);
             logger.info("任务清理定时任务已停止");
@@ -814,7 +812,6 @@ public class AsyncCheckService {
      * 仅停止连接清理定时任务
      */
     public void stopConnectionCleanup() {
-        // 取消连接清理定时任务
         if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
             connectionCleanupTask.cancel(false);
             logger.info("连接清理定时任务已停止");
@@ -825,7 +822,6 @@ public class AsyncCheckService {
      * 仅启动任务清理定时任务
      */
     public void startTaskCleanup() {
-        // 启动任务清理定时任务（每小时执行一次）
         if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
             taskCleanupTask = taskScheduler.scheduleAtFixedRate(
                 this::cleanupTasks, taskCleanupIntervalMs);
@@ -837,7 +833,6 @@ public class AsyncCheckService {
      * 仅启动连接清理定时任务
      */
     public void startConnectionCleanup() {
-        // 启动连接清理定时任务（每10分钟执行一次）
         if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
             connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
                 this::cleanupConnections, connectionCleanupIntervalMs);
@@ -855,10 +850,8 @@ public class AsyncCheckService {
             return;
         }
         
-        // 更新间隔值
         this.taskCleanupIntervalMs = intervalMs;
         
-        // 重新调度任务
         if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
             taskCleanupTask.cancel(false);
             taskCleanupTask = taskScheduler.scheduleAtFixedRate(
@@ -877,10 +870,8 @@ public class AsyncCheckService {
             return;
         }
         
-        // 更新间隔值
         this.connectionCleanupIntervalMs = intervalMs;
         
-        // 重新调度任务
         if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
             connectionCleanupTask.cancel(false);
             connectionCleanupTask = taskScheduler.scheduleAtFixedRate(

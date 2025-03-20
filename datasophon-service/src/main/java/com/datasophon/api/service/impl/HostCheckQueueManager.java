@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class HostCheckQueueManager {
@@ -62,10 +64,6 @@ public class HostCheckQueueManager {
     private final AtomicLong tasksSucceeded = new AtomicLong(0);
     private final AtomicLong tasksFailed = new AtomicLong(0);
     
-    // 主线程池 - 用于执行主机级别的检查任务
-    @Getter
-    private final ExecutorService executorService;
-    
     // 检查项线程池 - 专门用于执行单个检查项
     @Getter
     private final ExecutorService itemCheckExecutorService;
@@ -90,28 +88,10 @@ public class HostCheckQueueManager {
     private ScheduledFuture<?> queueHealthMonitorTask;
     private ScheduledFuture<?> taskTimeoutMonitorTask;
     
+    private long queueHealthMonitorIntervalMs;
+    private long taskTimeoutMonitorIntervalMs;
+    
     public HostCheckQueueManager() {
-        // 创建主线程池 - 负责主机级别的检查任务
-        this.executorService = new ThreadPoolExecutor(
-            1, // 核心线程数 - 改为1确保串行执行
-            1, // 最大线程数 - 改为1确保串行执行
-            60L, // 空闲线程存活时间
-            TimeUnit.SECONDS, // 时间单位
-            new LinkedBlockingQueue<>(100), // 有界工作队列，增大队列大小
-            new ThreadFactory() {
-                private final AtomicInteger counter = new AtomicInteger(1);
-                @Override
-                public Thread newThread(Runnable r) {
-                    Thread t = new Thread(r);
-                    t.setName("host-check-worker-" + counter.getAndIncrement());
-                    t.setDaemon(false); // 改为非守护线程，防止过早退出
-                    t.setPriority(Thread.NORM_PRIORITY); // 设置为普通优先级
-                    return t;
-                }
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝策略：调用者运行
-        );
-        
         // 创建检查项线程池 - 负责检查项级别的任务
         this.itemCheckExecutorService = new ThreadPoolExecutor(
             4, // 核心线程数 - 减少并行度
@@ -265,12 +245,8 @@ public class HostCheckQueueManager {
         taskKeysInQueue.clear();
         
         // 关闭线程池
-        executorService.shutdownNow();
         itemCheckExecutorService.shutdownNow();
         try {
-            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                logger.warn("线程池未能在指定时间内完全终止");
-            }
             if (!itemCheckExecutorService.awaitTermination(5, TimeUnit.SECONDS)) {
                 logger.warn("检查项线程池未能在指定时间内完全终止");
             }
@@ -329,6 +305,9 @@ public class HostCheckQueueManager {
     public void addCheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
         String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
         try {
+            // 强制确保所有组件处于运行状态
+            ensureSystemRunning();
+            
             // 如果任务已在运行，则不添加
             if (runningTasks.containsKey(taskKey)) {
                 logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
@@ -338,24 +317,6 @@ public class HostCheckQueueManager {
             // 使用Set检查队列中是否已存在该任务，避免遍历队列
             if (taskKeysInQueue.contains(taskKey)) {
                 logger.info("主机 {} 的检查任务已在队列中等待执行，跳过本次添加", hostInfo.getHostname());
-                return;
-            }
-            
-            // 检查队列处理线程是否正常
-            if (queueProcessorThread == null || !queueProcessorThread.isAlive()) {
-                logger.warn("队列处理线程不存在或已停止，尝试重新初始化");
-                startQueueProcessor();
-            }
-            
-            // 确保isRunning标志为true
-            if (!isRunning.get()) {
-                logger.warn("队列管理器未运行，尝试重启");
-                resumeQueueProcessing();
-            }
-            
-            // 检查线程池状态
-            if (executorService.isShutdown() || executorService.isTerminated()) {
-                logger.error("执行线程池已关闭，任务无法执行");
                 return;
             }
             
@@ -381,6 +342,83 @@ public class HostCheckQueueManager {
         } catch (Exception e) {
             logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getHostname(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * 确保系统所有组件都处于运行状态
+     * 如果有组件未运行，则强制启动
+     */
+    private void ensureSystemRunning() {
+        logger.info("正在确保系统组件处于运行状态...");
+        
+        // 1. 确保系统运行标志为true
+        if (!isRunning.get()) {
+            logger.info("系统运行标志为false，正在启用...");
+            isRunning.set(true);
+        }
+        
+        // 2. 确保队列处理线程在运行
+        if (queueProcessorThread == null || !queueProcessorThread.isAlive()) {
+            logger.info("队列处理线程未运行，正在启动...");
+            startQueueProcessor();
+        }
+        
+        // 3. 确保修复队列处理线程在运行
+        if (fixQueueProcessorThread == null || !fixQueueProcessorThread.isAlive()) {
+            logger.info("修复队列处理线程未运行，正在启动...");
+            startFixQueueProcessor();
+        }
+        
+        // 4. 确保线程池处于活跃状态
+        if (itemCheckExecutorService.isShutdown() || itemCheckExecutorService.isTerminated()) {
+            logger.warn("检查项线程池已关闭，正在重新创建...");
+            // 重新创建检查项线程池
+            ThreadPoolExecutor newItemExecutor = new ThreadPoolExecutor(
+                4, 8, 30L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(100),
+                new ThreadFactory() {
+                    private final AtomicInteger counter = new AtomicInteger(1);
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r);
+                        t.setName("item-checker-" + counter.getAndIncrement());
+                        t.setDaemon(false);
+                        t.setPriority(Thread.NORM_PRIORITY);
+                        return t;
+                    }
+                },
+                new ThreadPoolExecutor.CallerRunsPolicy()
+            );
+            // 使用反射设置新的线程池
+            try {
+                java.lang.reflect.Field field = this.getClass().getDeclaredField("itemCheckExecutorService");
+                field.setAccessible(true);
+                field.set(this, newItemExecutor);
+            } catch (Exception e) {
+                logger.error("重新创建检查项线程池失败", e);
+            }
+        }
+        
+        // 6. 确保定时任务处于启用状态
+        if (!scheduledTasksEnabled.get()) {
+            logger.info("定时任务未启用，正在启用...");
+            scheduledTasksEnabled.set(true);
+        }
+        
+        // 7. 确保定时任务在运行
+        if (taskScheduler == null) {
+            logger.info("TaskScheduler未初始化，正在创建...");
+            ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+            scheduler.setPoolSize(2);
+            scheduler.setThreadNamePrefix("host-check-scheduler-");
+            scheduler.initialize();
+            taskScheduler = scheduler;
+        }
+        
+        // 8. 启动所有定时任务
+        startScheduledTasks();
+        
+        logger.info("系统组件状态检查完成，所有组件已确保运行");
     }
 
     /**
@@ -415,7 +453,7 @@ public class HostCheckQueueManager {
             }
             
             // 检查线程池状态
-            if (executorService.isShutdown() || executorService.isTerminated()) {
+            if (itemCheckExecutorService.isShutdown() || itemCheckExecutorService.isTerminated()) {
                 logger.error("执行线程池已关闭，任务无法执行");
                 return;
             }
@@ -545,7 +583,7 @@ public class HostCheckQueueManager {
                     HostCheckTask hostCheckTask = new HostCheckTask(
                         task.getClusterId(), task.getHostInfo(), task.getHostCheckService(), taskKey);
                     
-                    Future<?> future = executorService.submit(hostCheckTask);
+                    Future<?> future = itemCheckExecutorService.submit(hostCheckTask);
                     
                     // 记录运行中的任务和开始时间
                     runningTasks.put(taskKey, future);
@@ -616,16 +654,11 @@ public class HostCheckQueueManager {
                 tasksProcessed.get(), tasksSucceeded.get(), tasksFailed.get());
             
             // 检查线程池状态
-            ThreadPoolExecutor mainExecutor = (ThreadPoolExecutor) executorService;
-            ThreadPoolExecutor itemExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
+            ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
             
-            logger.info("主线程池状态: 活跃线程={}, 完成任务={}, 队列任务={}",
-                mainExecutor.getActiveCount(), mainExecutor.getCompletedTaskCount(),
-                mainExecutor.getQueue().size());
-                
             logger.info("检查项线程池状态: 活跃线程={}, 完成任务={}, 队列任务={}",
-                itemExecutor.getActiveCount(), itemExecutor.getCompletedTaskCount(),
-                itemExecutor.getQueue().size());
+                checkExecutor.getActiveCount(), checkExecutor.getCompletedTaskCount(),
+                checkExecutor.getQueue().size());
                 
         } catch (Exception e) {
             logger.error("监控队列健康状态时发生错误", e);
@@ -690,13 +723,14 @@ public class HostCheckQueueManager {
         status.put("tasksSucceeded", tasksSucceeded.get());
         status.put("tasksFailed", tasksFailed.get());
         
-        if (executorService instanceof ThreadPoolExecutor) {
-            ThreadPoolExecutor executor = (ThreadPoolExecutor) executorService;
-            status.put("activeThreads", executor.getActiveCount());
-            status.put("poolSize", executor.getPoolSize());
-            status.put("completedTasks", executor.getCompletedTaskCount());
-            status.put("queuedTasks", executor.getQueue().size());
-        }
+        // 计算总线程统计
+        ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
+        ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
+        
+        status.put("totalActiveThreads", checkExecutor.getActiveCount() + fixExecutor.getActiveCount());
+        status.put("totalPoolSize", checkExecutor.getPoolSize() + fixExecutor.getPoolSize());
+        status.put("totalCompletedTasks", checkExecutor.getCompletedTaskCount() + fixExecutor.getCompletedTaskCount());
+        status.put("totalQueuedTasks", checkExecutor.getQueue().size() + fixExecutor.getQueue().size());
         
         return status;
     }
@@ -771,20 +805,61 @@ public class HostCheckQueueManager {
      */
     public QueueManagerStatus getQueueManagerStatus() {
         QueueManagerStatus status = new QueueManagerStatus();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
-        // 获取状态信息
-        Map<String, Object> statusMap = getManagerStatus();
+        // 基本状态
+        status.setRunning(isRunning.get());
+        status.setScheduledTasksEnabled(scheduledTasksEnabled.get());
+        status.setQueueEmpty(checkQueue.isEmpty());
+        status.setFixQueueEmpty(fixQueue.isEmpty());
         
-        // 填充实体类
-        status.setQueueSize((Integer) statusMap.get("queueSize"));
-        status.setTasksSucceeded((Long) statusMap.get("tasksSucceeded"));
-        status.setPoolSize((Integer) statusMap.get("poolSize"));
-        status.setActiveCount((Integer) statusMap.get("activeThreads"));
-        status.setCompletedTaskCount((Long) statusMap.get("completedTasks"));
-        status.setTasksFailed((Long) statusMap.get("tasksFailed"));
-        status.setRunning((Boolean) statusMap.get("queueProcessingEnabled"));
-        status.setTaskCount((Long) statusMap.get("tasksProcessed"));
-        status.setLargestPoolSize((Integer) statusMap.get("poolSize"));
+        // 队列详情
+        status.setQueueSize(checkQueue.size());
+        status.setFixQueueSize(fixQueue.size());
+        status.setRunningTasksCount(runningTasks.size());
+        status.setRunningFixTasksCount(runningFixTasks.size());
+        
+        // 线程池信息
+        ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
+        ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
+        
+        status.setMainExecutorActiveCount(checkExecutor.getActiveCount());
+        status.setMainExecutorQueueSize(checkExecutor.getQueue().size());
+        status.setItemExecutorActiveCount(checkExecutor.getActiveCount());
+        status.setItemExecutorQueueSize(checkExecutor.getQueue().size());
+        status.setFixExecutorActiveCount(fixExecutor.getActiveCount());
+        status.setFixExecutorQueueSize(fixExecutor.getQueue().size());
+        
+        // 统计信息
+        status.setTasksProcessed(tasksProcessed.get());
+        status.setTasksSucceeded(tasksSucceeded.get());
+        status.setTasksFailed(tasksFailed.get());
+        
+        // 定时任务状态
+        status.setQueueHealthMonitorActive(queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled());
+        status.setTaskTimeoutMonitorActive(taskTimeoutMonitorTask != null && !taskTimeoutMonitorTask.isCancelled());
+        
+        // 定时任务间隔
+        status.setQueueHealthMonitorIntervalMs(queueHealthMonitorIntervalMs);
+        status.setTaskTimeoutMonitorIntervalMs(taskTimeoutMonitorIntervalMs);
+        status.setQueueHealthMonitorInterval(formatTimeInterval(queueHealthMonitorIntervalMs));
+        status.setTaskTimeoutMonitorInterval(formatTimeInterval(taskTimeoutMonitorIntervalMs));
+        
+        // 处理线程状态
+        status.setQueueProcessorThreadAlive(queueProcessorThread != null && queueProcessorThread.isAlive());
+        status.setFixQueueProcessorThreadAlive(fixQueueProcessorThread != null && fixQueueProcessorThread.isAlive());
+        
+        if (queueProcessorStartTime > 0) {
+            status.setQueueProcessorStartTime(dateFormat.format(new Date(queueProcessorStartTime)));
+        } else {
+            status.setQueueProcessorStartTime("未启动");
+        }
+        
+        if (fixQueueProcessorStartTime > 0) {
+            status.setFixQueueProcessorStartTime(dateFormat.format(new Date(fixQueueProcessorStartTime)));
+        } else {
+            status.setFixQueueProcessorStartTime("未启动");
+        }
         
         return status;
     }
@@ -851,56 +926,47 @@ public class HostCheckQueueManager {
         List<QueueTaskInfo> taskDetails = new ArrayList<>();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
-        // 获取运行中的任务信息
+        // 添加运行中的任务
         for (Map.Entry<String, Future<?>> entry : runningTasks.entrySet()) {
             String taskKey = entry.getKey();
             Future<?> future = entry.getValue();
+            Long startTime = taskStartTimes.get(taskKey);
             
-            // 解析taskKey获取clusterId和hostname (格式: clusterId:hostname)
-            String[] parts = taskKey.split(":");
-            if (parts.length >= 2) {
+            if (startTime != null) {
                 QueueTaskInfo taskInfo = new QueueTaskInfo();
-                taskInfo.setTaskKey(taskKey);
+                String[] parts = taskKey.split(":");
                 taskInfo.setClusterId(Integer.parseInt(parts[0]));
                 taskInfo.setHostname(parts[1]);
-                taskInfo.setStatus(future.isDone() ? (future.isCancelled() ? "CANCELLED" : "COMPLETED") : "RUNNING");
+                if (parts.length >= 3) {
+                    taskInfo.setItemId(Integer.parseInt(parts[2]));
+                }
                 
-                // 添加开始时间和持续时间
-                Long startTime = taskStartTimes.get(taskKey);
-                if (startTime != null) {
-                    // 格式化时间为 yyyy-MM-dd HH:mm:ss
-                    taskInfo.setStartTime(dateFormat.format(new java.util.Date(startTime)));
-                    taskInfo.setDuration(System.currentTimeMillis() - startTime);
+                taskInfo.setTaskId(taskKey);
+                taskInfo.setStatus("运行中");
+                taskInfo.setStartTime(dateFormat.format(new Date(startTime)));
+                taskInfo.setDuration(System.currentTimeMillis() - startTime);
+                taskInfo.setFixTask(false);
+                
+                if (future instanceof CompletableFuture) {
+                    CompletableFuture<?> cf = (CompletableFuture<?>) future;
+                    taskInfo.setExecutorName("checkExecutor");
+                    taskInfo.setThreadName(Thread.currentThread().getName());
                 }
                 
                 taskDetails.add(taskInfo);
             }
         }
         
-        // 获取队列中等待的任务
+        // 添加等待中的任务
         for (CheckTask task : checkQueue) {
-            String taskKey = getTaskKey(task.getClusterId(), task.getHostInfo().getHostname());
-            // 检查任务是否已经在运行中列表中
-            boolean inRunningList = false;
-            for (QueueTaskInfo runningTask : taskDetails) {
-                if (taskKey.equals(runningTask.getTaskKey())) {
-                    inRunningList = true;
-                    break;
-                }
-            }
-            
-            // 如果不在运行中列表，则添加到结果中
-            if (!inRunningList) {
-                QueueTaskInfo taskInfo = new QueueTaskInfo();
-                taskInfo.setTaskKey(taskKey);
-                taskInfo.setClusterId(task.getClusterId());
-                taskInfo.setHostname(task.getHostInfo().getHostname());
-                taskInfo.setStatus("QUEUED");
-                taskInfo.setPriority(task.getPriority());
-                taskInfo.setDescription("主机检查任务等待中");
-                
-                taskDetails.add(taskInfo);
-            }
+            QueueTaskInfo taskInfo = new QueueTaskInfo();
+            taskInfo.setClusterId(task.getClusterId());
+            taskInfo.setHostname(task.getHostInfo().getHostname());
+            taskInfo.setTaskId("waiting_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
+            taskInfo.setStatus("等待中");
+            taskInfo.setPriority(task.getPriority());
+            taskInfo.setFixTask(false);
+            taskDetails.add(taskInfo);
         }
         
         return taskDetails;
@@ -911,17 +977,53 @@ public class HostCheckQueueManager {
      * @return 修复任务队列中的详细任务信息列表
      */
     public List<QueueTaskInfo> getFixQueueTasksDetails() {
-        // 在实际实现中，应该从专门管理修复任务的队列中获取数据
-        // 由于目前系统可能未区分修复任务和检查任务，此处返回一个空列表
-        // TODO: 实现完整的修复任务队列详情获取逻辑
-        
-        List<QueueTaskInfo> fixTaskDetails = new ArrayList<>();
+        List<QueueTaskInfo> taskDetails = new ArrayList<>();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
-        // 如果有专门存储修复任务的数据结构，可以在这里遍历并添加到结果中
-        // 此处为示例实现，实际应根据系统中修复任务的管理方式修改
+        // 添加运行中的修复任务
+        for (Map.Entry<String, Future<?>> entry : runningFixTasks.entrySet()) {
+            String taskKey = entry.getKey();
+            Future<?> future = entry.getValue();
+            Long startTime = fixTaskStartTimes.get(taskKey);
+            
+            if (startTime != null) {
+                QueueTaskInfo taskInfo = new QueueTaskInfo();
+                String[] parts = taskKey.split(":");
+                taskInfo.setClusterId(Integer.parseInt(parts[0]));
+                taskInfo.setHostname(parts[1]);
+                if (parts.length >= 3) {
+                    taskInfo.setItemId(Integer.parseInt(parts[2]));
+                }
+                
+                taskInfo.setTaskId("fix_" + taskKey);
+                taskInfo.setStatus("修复中");
+                taskInfo.setStartTime(dateFormat.format(new Date(startTime)));
+                taskInfo.setDuration(System.currentTimeMillis() - startTime);
+                taskInfo.setFixTask(true);
+                
+                if (future instanceof CompletableFuture) {
+                    CompletableFuture<?> cf = (CompletableFuture<?>) future;
+                    taskInfo.setExecutorName("fixExecutor");
+                    taskInfo.setThreadName(Thread.currentThread().getName());
+                }
+                
+                taskDetails.add(taskInfo);
+            }
+        }
         
-        return fixTaskDetails;
+        // 添加等待中的修复任务
+        for (FixTask task : fixQueue) {
+            QueueTaskInfo taskInfo = new QueueTaskInfo();
+            taskInfo.setClusterId(task.getClusterId());
+            taskInfo.setHostname(task.getHostInfo().getHostname());
+            taskInfo.setTaskId("waiting_fix_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
+            taskInfo.setStatus("等待修复");
+            taskInfo.setPriority(task.getPriority());
+            taskInfo.setFixTask(true);
+            taskDetails.add(taskInfo);
+        }
+        
+        return taskDetails;
     }
 
     /**
@@ -1069,17 +1171,18 @@ public class HostCheckQueueManager {
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateQueueHealthMonitorInterval(long intervalMs) {
-        if (intervalMs < 30000) { // 最小30秒
-            logger.warn("队列健康监控定时任务间隔不能小于30秒，忽略此次更新");
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("队列健康监控间隔不能小于1秒，忽略此次更新");
             return;
         }
         
-        // 重新调度任务
+        this.queueHealthMonitorIntervalMs = intervalMs;
+        
         if (queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled()) {
             queueHealthMonitorTask.cancel(false);
             queueHealthMonitorTask = taskScheduler.scheduleAtFixedRate(
                 this::monitorQueueHealth, intervalMs);
-            logger.info("队列健康监控定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+            logger.info("队列健康监控已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
     }
     
@@ -1088,17 +1191,18 @@ public class HostCheckQueueManager {
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateTaskTimeoutMonitorInterval(long intervalMs) {
-        if (intervalMs < 30000) { // 最小30秒
-            logger.warn("任务超时监控定时任务间隔不能小于30秒，忽略此次更新");
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("任务超时监控间隔不能小于1秒，忽略此次更新");
             return;
         }
         
-        // 重新调度任务
+        this.taskTimeoutMonitorIntervalMs = intervalMs;
+        
         if (taskTimeoutMonitorTask != null && !taskTimeoutMonitorTask.isCancelled()) {
             taskTimeoutMonitorTask.cancel(false);
             taskTimeoutMonitorTask = taskScheduler.scheduleAtFixedRate(
                 this::checkForTaskTimeouts, intervalMs);
-            logger.info("任务超时监控定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+            logger.info("任务超时监控已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
     }
     
@@ -1166,5 +1270,11 @@ public class HostCheckQueueManager {
             logger.error("修复检查项 {} 时发生异常: {}", checkItem.getId(), e.getMessage(), e);
             return false;
         }
+    }
+
+    private String formatTimeInterval(long intervalMs) {
+        long minutes = intervalMs / 60000;
+        long seconds = (intervalMs % 60000) / 1000;
+        return String.format("%d分钟 %d秒", minutes, seconds);
     }
 } 

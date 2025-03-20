@@ -20,53 +20,62 @@ package com.datasophon.common.model;
 import lombok.Data;
 
 /**
- * 队列管理器状态实体类
- * 用于封装队列管理器的状态信息
+ * 队列管理器状态
+ * 包含所有队列、执行器和定时任务的状态信息
  */
 @Data
 public class QueueManagerStatus {
-    /**
-     * 队列大小
-     */
-    private Integer queueSize;
+    // 基本状态
+    private boolean running;
+    private boolean scheduledTasksEnabled;
+    private boolean queueEmpty;
+    private boolean fixQueueEmpty;
     
-    /**
-     * 成功任务数
-     */
-    private Long tasksSucceeded;
+    // 队列详情
+    private int queueSize;
+    private int fixQueueSize;
+    private int runningTasksCount;
+    private int runningFixTasksCount;
     
-    /**
-     * 失败任务数
-     */
-    private Long tasksFailed;
+    // 线程池信息
+    private int mainExecutorActiveCount;
+    private int mainExecutorQueueSize;
+    private int itemExecutorActiveCount;
+    private int itemExecutorQueueSize;
+    private int fixExecutorActiveCount;
+    private int fixExecutorQueueSize;
     
-    /**
-     * 线程池大小
-     */
-    private Integer poolSize;
+    // 统计信息
+    private long tasksProcessed;
+    private long tasksSucceeded;
+    private long tasksFailed;
     
-    /**
-     * 活动线程数
-     */
-    private Integer activeCount;
+    // 定时任务状态
+    private boolean queueHealthMonitorActive;
+    private boolean taskTimeoutMonitorActive;
     
-    /**
-     * 已完成任务数
-     */
-    private Long completedTaskCount;
+    // 定时任务间隔（毫秒）
+    private long queueHealthMonitorIntervalMs;
+    private long taskTimeoutMonitorIntervalMs;
     
-    /**
-     * 任务总数
-     */
-    private Long taskCount;
+    // 定时任务间隔（可读格式）
+    private String queueHealthMonitorInterval;
+    private String taskTimeoutMonitorInterval;
     
-    /**
-     * 线程池历史最大大小
-     */
-    private Integer largestPoolSize;
+    // 处理线程状态
+    private boolean queueProcessorThreadAlive;
+    private boolean fixQueueProcessorThreadAlive;
+    private String queueProcessorStartTime;
+    private String fixQueueProcessorStartTime;
     
-    /**
-     * 是否运行中
-     */
-    private Boolean running;
+    // SSH连接池状态
+    private int connectionPoolSize;
+    private String lastConnectionCleanupTime;
+    private long connectionCleanupIntervalMs;
+    private String connectionCleanupInterval;
+    
+    // 任务清理状态
+    private String lastTaskCleanupTime;
+    private long taskCleanupIntervalMs;
+    private String taskCleanupInterval;
 } 

@@ -22,36 +22,6 @@ public class TaskConfig {
     private static final Logger logger = LoggerFactory.getLogger(TaskConfig.class);
     
     /**
-     * 通用任务执行器
-     */
-    @Bean("taskExecutor")
-    public Executor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        // 核心线程数
-        executor.setCorePoolSize(10);
-        // 最大线程数
-        executor.setMaxPoolSize(20);
-        // 队列容量
-        executor.setQueueCapacity(100);
-        // 线程名前缀
-        executor.setThreadNamePrefix("task-exec-");
-        // 线程空闲时间（秒）
-        executor.setKeepAliveSeconds(60);
-        // 拒绝策略：由调用线程处理
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        // 等待所有任务结束后再关闭线程池
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        // 等待时间（秒）
-        executor.setAwaitTerminationSeconds(60);
-        
-        executor.initialize();
-        logger.info("初始化通用任务执行器: 核心线程={}, 最大线程={}, 队列容量={}",
-                executor.getCorePoolSize(), executor.getMaxPoolSize(), 100);
-        
-        return executor;
-    }
-    
-    /**
      * 检查任务专用执行器
      */
     @Bean("checkExecutor")

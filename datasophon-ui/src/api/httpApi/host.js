@@ -42,10 +42,16 @@ export default {
   batchCheckHosts: path + '/host/check/batchCheckHosts', // 批量检查主机
   getCheckItemLog: path + '/host/check/getCheckItemLog', // 获取检查项日志
   getHostCheckItems: path + '/host/check/getHostCheckItems', // 获取主机检查项列表
-  stopCheckItem: path + '/host/check/stopCheckItem', // 终止检查项
+  stopCheckItem: path + '/host/check/stopCheckItem', // 终止单个检查项检查
   skipCheckItem: path + '/host/check/skipCheckItem', // 跳过检查项
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
   getCheckItemConfirmInfo: path + '/host/check/getCheckItemConfirmInfo', // 获取检查项确认信息
-  queueManager: path + '/host/check/queueManager', // 任务队列管理
+  queueManager: path + '/host/check/queueManager', // 控制队列系统
+  getLogLevels: path + '/host/check/log-levels', // 获取可用的日志级别
+  getLogTypes: path + '/host/check/log-types', // 获取可用的日志类型
+  queueSystemDetails: path + '/host/check/queueSystemDetails', // 获取队列系统详情
+  updateTaskInterval: path + '/host/check/updateTaskInterval', // 修改定时任务执行间隔
+  updateQueueHealthMonitorInterval: path + '/host/check/updateQueueHealthMonitorInterval', // 更新队列健康监控间隔
+  updateTaskTimeoutMonitorInterval: path + '/host/check/updateTaskTimeoutMonitorInterval', // 更新任务超时监控间隔
 }

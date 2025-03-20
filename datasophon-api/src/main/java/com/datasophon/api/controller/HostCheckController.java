@@ -12,6 +12,7 @@ import com.datasophon.common.model.ScheduledTasksStatus;
 import com.datasophon.common.model.ScheduleConfigResult;
 import com.datasophon.common.model.QueueSystemStatus;
 import com.datasophon.common.model.QueueTaskInfo;
+import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.datasophon.api.service.InstallService;
 
 /**
  * 主机检查控制器
@@ -53,9 +52,6 @@ public class HostCheckController {
     
     @Autowired
     private AsyncCheckService asyncCheckService;
-
-    @Autowired
-    private InstallService installService;
 
     /**
      * 获取主机检查项列表
@@ -295,7 +291,7 @@ public class HostCheckController {
     }
     
     /**
-     * 配置异步服务定时任务执行间隔
+     * 配置定时任务执行间隔
      * @param type 任务类型：taskCleanup或connectionCleanup
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
@@ -333,48 +329,15 @@ public class HostCheckController {
             return Result.error("配置定时任务失败: " + e.getMessage());
         }
     }
-    
-    /**
-     * 配置队列管理器定时任务执行间隔
-     * @param taskId 任务类型：taskCleanup, connectionCleanup, queueHealthMonitor, taskTimeoutMonitor
-     * @param intervalMs 执行间隔（毫秒）
-     * @return 操作结果
-     */
-    @UserPermission
-    @PostMapping("/queueManager/updateTaskInterval")
-    public Result updateTaskInterval(
-            @RequestParam("taskId") String taskId,
-            @RequestParam("intervalMs") long intervalMs) {
-        try {
-            log.info("收到更新定时任务执行间隔请求: taskId={}, intervalMs={}", taskId, intervalMs);
-            // 参数验证
-            if (taskId == null || taskId.isEmpty()) {
-                return Result.error("任务ID不能为空");
-            }
-            
-            if (intervalMs <= 0) {
-                return Result.error("执行间隔必须大于0");
-            }
-            
-            // 调用服务层更新定时任务执行间隔
-            return queueManagerService.updateTaskInterval(taskId, intervalMs);
-        } catch (Exception e) {
-            log.error("更新定时任务执行间隔失败", e);
-            return Result.error("更新定时任务执行间隔失败: " + e.getMessage());
-        }
-    }
 
     /**
-     * 分析主机列表
+     * 获取队列系统详情（包含所有状态和任务信息）
+     * 用于详情页面，一次性获取所有数据
      */
-    @PostMapping("/analysisHostList")
+    @GetMapping("/queueSystemDetails")
     @UserPermission
-    public Result analysisHostList(@RequestBody List<HostInfo> hostInfoList, @RequestParam Integer clusterId) {
+    public Result getQueueSystemDetails() {
         try {
-            // 直接使用传入的hostInfoList，不再调用其他方法
-            Map<String, Object> data = new HashMap<>();
-            data.put("hostList", hostInfoList);
-            
             // 获取队列系统状态
             QueueSystemStatus queueSystemStatus = queueManagerService.getQueueSystemStatusDirect();
             
@@ -382,15 +345,43 @@ public class HostCheckController {
             List<QueueTaskInfo> checkQueueTasks = queueManagerService.getCheckQueueTasksDirect();
             List<QueueTaskInfo> fixQueueTasks = queueManagerService.getFixQueueTasksDirect();
             
-            // 添加队列系统状态和任务详情到返回数据
-            data.put("queueSystemStatus", queueSystemStatus);
-            data.put("checkQueueTasks", checkQueueTasks);
-            data.put("fixQueueTasks", fixQueueTasks);
+            // 创建详细结果对象
+            QueueTaskDetailResult result = new QueueTaskDetailResult();
+            result.setQueueManager(queueSystemStatus.getQueueManager());
+            result.setAsyncService(queueSystemStatus.getAsyncService());
+            result.setQueueTasks(checkQueueTasks);
+            result.setFixQueueTasks(fixQueueTasks);
             
-            return Result.success(data);
+            return Result.success(result);
         } catch (Exception e) {
-            log.error("分析主机列表失败", e);
-            return Result.error("分析主机列表失败: " + e.getMessage());
+            log.error("获取队列系统详情失败", e);
+            return Result.error("获取队列系统详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 修改定时任务执行间隔
+     * @param taskId 任务ID
+     * @param intervalSeconds 执行间隔（秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateTaskInterval")
+    @UserPermission
+    public Result updateTaskInterval(
+            @RequestParam("taskId") String taskId,
+            @RequestParam("intervalSeconds") int intervalSeconds) {
+        try {
+            // 将秒转换为毫秒
+            long intervalMs = intervalSeconds * 1000L;
+            
+            if (intervalSeconds <= 0) {
+                return Result.error("执行间隔必须大于0秒");
+            }
+            
+            return queueManagerService.updateTaskInterval(taskId, intervalMs);
+        } catch (Exception e) {
+            log.error("修改定时任务执行间隔失败", e);
+            return Result.error("修改执行间隔失败: " + e.getMessage());
         }
     }
 } 

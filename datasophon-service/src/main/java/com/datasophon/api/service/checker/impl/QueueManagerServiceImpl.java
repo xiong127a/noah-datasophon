@@ -108,7 +108,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
     private OperationResult pauseQueueSystemDirect(String scope) {
         ScopeCode scopeCode = ScopeCode.valueOf(scope.toUpperCase());
         StringBuilder messageBuilder = new StringBuilder("已暂停");
-        
+
         // 根据作用范围执行暂停操作
         if (scopeCode == ScopeCode.ALL || scopeCode == ScopeCode.SCHEDULER) {
             // 暂停AsyncCheckService的定时任务
@@ -172,7 +172,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
     private OperationResult resumeQueueSystemDirect(String scope) {
         ScopeCode scopeCode = ScopeCode.valueOf(scope.toUpperCase());
         StringBuilder messageBuilder = new StringBuilder("已恢复");
-        
+
         // 根据作用范围执行恢复操作
         if (scopeCode == ScopeCode.ALL || scopeCode == ScopeCode.SCHEDULER) {
             // 恢复AsyncCheckService的定时任务
@@ -271,7 +271,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
     @Override
     public Result manageQueueSystem(String action, String scope) {
         log.info("处理队列管理请求: action={}, scope={}", action, scope);
-        
+
         try {
             // 根据action类型执行不同操作
             if ("status".equalsIgnoreCase(action)) {
