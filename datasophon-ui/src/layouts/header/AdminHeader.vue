@@ -51,7 +51,7 @@ import AlarmManage from './alarmManage.vue'
 import { mapState, mapMutations, mapGetters } from "vuex";
 export default {
   name: "AdminHeader",
-  components: { IMenu, HeaderAvatar, ClusterSetting  ,AlarmManage},
+  components: { IMenu, HeaderAvatar, ClusterSetting, AlarmManage },
   props: ["collapsed", "menuData"],
   data() {
     return {

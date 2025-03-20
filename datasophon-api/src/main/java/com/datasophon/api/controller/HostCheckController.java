@@ -2,6 +2,9 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
+import com.datasophon.api.service.checker.QueueManagerService;
+import com.datasophon.api.service.checker.impl.AsyncCheckService;
+import com.datasophon.api.service.impl.HostCheckQueueManager;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.HostInfo;
@@ -34,6 +37,15 @@ public class HostCheckController {
 
     @Autowired
     private HostCheckService hostCheckService;
+    
+    @Autowired
+    private QueueManagerService queueManagerService;
+    
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
+    
+    @Autowired
+    private AsyncCheckService asyncCheckService;
 
     /**
      * 获取主机检查项列表
@@ -49,6 +61,65 @@ public class HostCheckController {
         
         HostInfo hostInfo = hostInfoMap.get(hostname);
         return Result.success(hostInfo.getCheckItems());
+    }
+    
+    /**
+     * 控制主机检查队列管理器
+     * 用于控制队列管理器的运行状态和定时任务
+     * @param action 操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
+     *               pauseTask(暂停定时任务), resumeTask(恢复定时任务), cleanupConnections(清理连接)
+     * @param scope 作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
+     * @param taskId 定时任务ID，仅在pauseTask/resumeTask操作时需要
+     */
+    @GetMapping("/queueManager")
+    @UserPermission
+    public Result manageQueueManager(
+            @RequestParam(value = "action") String action,
+            @RequestParam(value = "scope", required = false, defaultValue = "all") String scopeCode,
+            @RequestParam(value = "taskId", required = false) String taskId) {
+        
+        log.info("收到队列管理器控制请求: action={}, scope={}, taskId={}", action, scopeCode, taskId);
+        
+        // 根据action类型执行相应操作
+        if ("status".equalsIgnoreCase(action)) {
+            Result statusResult = queueManagerService.getQueueSystemStatus();
+            
+            // 如果status请求，同时获取任务队列详情
+            if (statusResult.getCode() == 200) {
+                try {
+                    Result checkQueueResult = queueManagerService.getCheckQueueTasks();
+                    Result fixQueueResult = queueManagerService.getFixQueueTasks();
+                    
+                    Map<String, Object> data = (Map<String, Object>) statusResult.getData();
+                    
+                    if (checkQueueResult.getCode() == 200) {
+                        data.put("queueTasks", checkQueueResult.getData());
+                    }
+                    
+                    if (fixQueueResult.getCode() == 200) {
+                        data.put("fixQueueTasks", fixQueueResult.getData());
+                    }
+                } catch (Exception e) {
+                    log.error("获取队列任务详情失败", e);
+                }
+            }
+            
+            return statusResult;
+        } else if ("pauseTask".equalsIgnoreCase(action)) {
+            if (taskId == null || taskId.isEmpty()) {
+                return Result.error("暂停定时任务时需要提供taskId");
+            }
+            return queueManagerService.pauseScheduledTask(taskId);
+        } else if ("resumeTask".equalsIgnoreCase(action)) {
+            if (taskId == null || taskId.isEmpty()) {
+                return Result.error("恢复定时任务时需要提供taskId");
+            }
+            return queueManagerService.resumeScheduledTask(taskId);
+        } else if ("cleanupConnections".equalsIgnoreCase(action)) {
+            return queueManagerService.cleanupConnections();
+        } else {
+            return queueManagerService.manageQueueSystem(action, scopeCode);
+        }
     }
 
     /**
@@ -240,5 +311,20 @@ public class HostCheckController {
             @RequestParam("hostname") String hostname,
             @RequestParam("itemId") Integer itemId) {
         return hostCheckService.getCheckItemConfirmInfo(clusterId, hostname, itemId);
+    }
+    
+    /**
+     * 获取异步服务状态
+     */
+    @UserPermission
+    @GetMapping("/asyncService/status")
+    public Result getAsyncServiceStatus() {
+        try {
+            Map<String, Object> status = asyncCheckService.getScheduledTasksStatus();
+            return Result.success(status);
+        } catch (Exception e) {
+            log.error("获取异步服务状态失败", e);
+            return Result.error(500, "获取异步服务状态失败: " + e.getMessage());
+        }
     }
 } 

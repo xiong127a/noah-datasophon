@@ -10,19 +10,26 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
+import com.datasophon.common.model.AsyncServiceStatus;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 异步检查服务
@@ -53,6 +60,147 @@ public class AsyncCheckService {
     
     // 连接锁，防止并发问题
     private final Map<String, Object> connectionLocks = new ConcurrentHashMap<>();
+    
+    // 定时任务启用标志
+    private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
+    
+    // 上次执行时间
+    private volatile long lastTaskCleanupTime = 0;
+    private volatile long lastConnectionCleanupTime = 0;
+    
+    // 定时任务调度器
+    @Autowired(required = false)
+    private TaskScheduler taskScheduler;
+    
+    // 定时任务的Future
+    private ScheduledFuture<?> taskCleanupTask;
+    private ScheduledFuture<?> connectionCleanupTask;
+    
+    @PostConstruct
+    public void init() {
+        logger.info("初始化异步检查服务...");
+        startScheduledTasks();
+        logger.info("异步检查服务初始化完成");
+    }
+    
+    /**
+     * 启动定时任务
+     */
+    public void startScheduledTasks() {
+        if (!scheduledTasksEnabled.get()) {
+            scheduledTasksEnabled.set(true);
+        }
+        
+        if (taskScheduler == null) {
+            logger.info("TaskScheduler未注入，创建自定义TaskScheduler");
+            ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+            scheduler.setPoolSize(2);
+            scheduler.setThreadNamePrefix("async-check-scheduler-");
+            scheduler.initialize();
+            taskScheduler = scheduler;
+        }
+        
+        // 启动任务清理定时任务（每小时执行一次）
+        if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
+            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupTasks, TimeUnit.HOURS.toMillis(1));
+            logger.info("任务清理定时任务已启动，执行间隔: 1小时");
+        }
+        
+        // 启动连接清理定时任务（每10分钟执行一次）
+        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupConnections, TimeUnit.MINUTES.toMillis(10));
+            logger.info("连接清理定时任务已启动，执行间隔: 10分钟");
+        }
+    }
+    
+    /**
+     * 停止定时任务
+     */
+    public void stopScheduledTasks() {
+        // 取消任务清理定时任务
+        if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
+            taskCleanupTask.cancel(false);
+            logger.info("任务清理定时任务已停止");
+        }
+        
+        // 取消连接清理定时任务
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            logger.info("连接清理定时任务已停止");
+        }
+        
+        // 设置定时任务标志为已停用
+        scheduledTasksEnabled.set(false);
+    }
+    
+    /**
+     * 启用定时任务
+     */
+    public void enableScheduledTasks() {
+        if (!scheduledTasksEnabled.get()) {
+            startScheduledTasks();
+            logger.info("AsyncCheckService定时任务已启用");
+        }
+    }
+    
+    /**
+     * 禁用定时任务
+     */
+    public void disableScheduledTasks() {
+        if (scheduledTasksEnabled.get()) {
+            stopScheduledTasks();
+            logger.info("AsyncCheckService定时任务已禁用");
+        }
+    }
+    
+    /**
+     * 获取定时任务状态
+     */
+    public Map<String, Object> getScheduledTasksStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("scheduledTasksEnabled", scheduledTasksEnabled.get());
+        status.put("taskCleanupActive", taskCleanupTask != null && !taskCleanupTask.isCancelled());
+        status.put("connectionCleanupActive", connectionCleanupTask != null && !connectionCleanupTask.isCancelled());
+        status.put("lastTaskCleanupTime", lastTaskCleanupTime > 0 ? 
+                new java.util.Date(lastTaskCleanupTime).toString() : "未执行");
+        status.put("lastConnectionCleanupTime", lastConnectionCleanupTime > 0 ? 
+                new java.util.Date(lastConnectionCleanupTime).toString() : "未执行");
+        status.put("connectionPoolSize", hostConnectionPool.size());
+        status.put("runningTasksCount", runningTasks.size());
+        return status;
+    }
+    
+    /**
+     * 关闭服务
+     */
+    @PreDestroy
+    public void shutdown() {
+        logger.info("正在关闭异步检查服务...");
+        
+        // 停止定时任务
+        stopScheduledTasks();
+        
+        // 关闭所有SSH连接
+        for (Map.Entry<String, ClientSession> entry : hostConnectionPool.entrySet()) {
+            try {
+                ClientSession session = entry.getValue();
+                if (session != null && session.isOpen()) {
+                    session.close();
+                    logger.info("关闭SSH连接: {}", entry.getKey());
+                }
+            } catch (Exception e) {
+                logger.warn("关闭SSH连接时发生异常: {}", e.getMessage());
+            }
+        }
+        
+        // 清空连接池
+        hostConnectionPool.clear();
+        connectionLocks.clear();
+        
+        logger.info("异步检查服务已关闭");
+    }
     
     /**
      * 异步执行单个检查项
@@ -408,9 +556,14 @@ public class AsyncCheckService {
      * 定期清理过期任务信息
      * 每小时执行一次
      */
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.HOURS)
     public void cleanupTasks() {
+        if (!scheduledTasksEnabled.get()) {
+            logger.debug("定时任务已禁用，跳过执行cleanupTasks()");
+            return;
+        }
+        
         int count = taskManager.cleanCompletedTasks(24 * 60 * 60 * 1000); // 24小时
+        lastTaskCleanupTime = System.currentTimeMillis();
         logger.info("清理了 {} 个过期任务记录", count);
     }
     
@@ -418,8 +571,12 @@ public class AsyncCheckService {
      * 定期清理不活跃连接
      * 每10分钟执行一次
      */
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES)
     public void cleanupConnections() {
+        if (!scheduledTasksEnabled.get()) {
+            logger.debug("定时任务已禁用，跳过执行cleanupConnections()");
+            return;
+        }
+        
         int closedCount = 0;
         logger.info("开始清理不活跃SSH连接...");
         
@@ -436,6 +593,7 @@ public class AsyncCheckService {
             }
         }
         
+        lastConnectionCleanupTime = System.currentTimeMillis();
         logger.info("连接池清理完成，移除了 {} 个无效连接，当前连接数: {}", 
                 closedCount, hostConnectionPool.size());
     }
@@ -518,6 +676,74 @@ public class AsyncCheckService {
             } catch (Exception e) {
                 logger.error("更新检查状态时发生异常: {}", e.getMessage(), e);
             }
+        }
+    }
+    
+    /**
+     * 获取异步服务状态（返回实体类）
+     * @return AsyncServiceStatus对象
+     */
+    public AsyncServiceStatus getAsyncServiceStatus() {
+        AsyncServiceStatus status = new AsyncServiceStatus();
+        
+        // 获取状态信息
+        Map<String, Object> statusMap = getScheduledTasksStatus();
+        
+        // 填充实体类
+        status.setScheduledTasksEnabled((Boolean) statusMap.get("scheduledTasksEnabled"));
+        status.setLastTaskCleanupTime((String) statusMap.get("lastTaskCleanupTime"));
+        status.setRunningTasksCount((Integer) statusMap.get("runningTasksCount"));
+        status.setConnectionPoolSize((Integer) statusMap.get("connectionPoolSize"));
+        status.setTaskCleanupActive((Boolean) statusMap.get("taskCleanupActive"));
+        status.setConnectionCleanupActive((Boolean) statusMap.get("connectionCleanupActive"));
+        status.setLastConnectionCleanupTime((String) statusMap.get("lastConnectionCleanupTime"));
+        
+        return status;
+    }
+    
+    /**
+     * 仅停止任务清理定时任务
+     */
+    public void stopTaskCleanup() {
+        // 取消任务清理定时任务
+        if (taskCleanupTask != null && !taskCleanupTask.isCancelled()) {
+            taskCleanupTask.cancel(false);
+            logger.info("任务清理定时任务已停止");
+        }
+    }
+    
+    /**
+     * 仅停止连接清理定时任务
+     */
+    public void stopConnectionCleanup() {
+        // 取消连接清理定时任务
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            logger.info("连接清理定时任务已停止");
+        }
+    }
+    
+    /**
+     * 仅启动任务清理定时任务
+     */
+    public void startTaskCleanup() {
+        // 启动任务清理定时任务（每小时执行一次）
+        if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
+            taskCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupTasks, TimeUnit.HOURS.toMillis(1));
+            logger.info("任务清理定时任务已启动，执行间隔: 1小时");
+        }
+    }
+    
+    /**
+     * 仅启动连接清理定时任务
+     */
+    public void startConnectionCleanup() {
+        // 启动连接清理定时任务（每10分钟执行一次）
+        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                this::cleanupConnections, TimeUnit.MINUTES.toMillis(10));
+            logger.info("连接清理定时任务已启动，执行间隔: 10分钟");
         }
     }
 } 

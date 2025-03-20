@@ -27,6 +27,9 @@
   <div class="steps2 steps">
     <div class="steps-title flex-bewteen-container pdr30">
       <span>主机环境校验</span>
+      <div class="queue-controls">
+        <queue-status-indicator />
+      </div>
     </div>
     <div class="table-info mgt16 steps-body pdr30">
       <a-table 
@@ -147,6 +150,7 @@
 </template>
 <script>
 import LogFilter from '../log/LogFilter.vue';
+import QueueStatusIndicator from '@/components/QueueStatusIndicator'
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -155,7 +159,8 @@ export default {
     depType:String,
   },
   components: {
-    LogFilter
+    LogFilter,
+    QueueStatusIndicator
   },
   data() {
     return {
@@ -2124,9 +2129,7 @@ export default {
     }
   }
 }
-</style>
 
-<style lang="less">
 /* 全局样式修复确认弹窗按钮问题 */
 .ant-modal-confirm .ant-modal-confirm-btns {
   margin-top: 24px !important;
@@ -2191,5 +2194,17 @@ export default {
   box-shadow: none !important; /* 移除可能的阴影效果 */
   margin-left: 38px !important; /* 保持左边距 */
   width: calc(100% - 38px) !important; /* 保持宽度 */
+}
+
+/* 队列控制区域样式 */
+.queue-controls {
+  display: flex;
+  align-items: center;
+}
+
+.steps-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

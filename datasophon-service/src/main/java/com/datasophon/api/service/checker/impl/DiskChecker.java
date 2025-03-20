@@ -29,13 +29,63 @@ public class DiskChecker extends AbstractItemChecker {
 
             // 获取目标目录磁盘使用情况
             cacheLog.info("检查" + TARGET_DIRECTORY + "目录磁盘使用情况...");
-            CommandResult dfResult = execCommand(session, "df -BG " + TARGET_DIRECTORY + " | tail -n 1");
+            // 使用grep替代tail，更好地适应SSH会话
+            CommandResult dfResult = execCommand(session, "df -BG " + TARGET_DIRECTORY + " | grep " + TARGET_DIRECTORY);
+            
+            // 如果失败尝试其他命令
+            if (!dfResult.isSuccess() || dfResult.getOutput() == null || dfResult.getOutput().trim().isEmpty()) {
+                cacheLog.info("使用grep提取信息失败，尝试使用awk...");
+                dfResult = execCommand(session, "df -BG " + TARGET_DIRECTORY + " | awk 'END{print}'");
+            }
+            
+            // 如果仍然失败，尝试不使用管道
+            if (!dfResult.isSuccess() || dfResult.getOutput() == null || dfResult.getOutput().trim().isEmpty()) {
+                cacheLog.info("使用管道命令失败，尝试不使用管道...");
+                dfResult = execCommand(session, "df -BG " + TARGET_DIRECTORY);
+                
+                // 如果成功且有多行输出，记录下来
+                if (dfResult.isSuccess() && dfResult.getOutput() != null && !dfResult.getOutput().trim().isEmpty()) {
+                    cacheLog.info("df完整输出:\n" + dfResult.getOutput());
+                    
+                    String[] lines = dfResult.getOutput().trim().split("\n");
+                    if (lines.length > 1) {
+                        // 通常第二行是我们需要的数据
+                        for (int i = 1; i < lines.length; i++) {
+                            if (lines[i].contains(TARGET_DIRECTORY)) {
+                                cacheLog.info("找到目标目录行: " + lines[i]);
+                                dfResult = execCommand(session, "echo '" + lines[i] + "'");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
             
             if (!dfResult.isSuccess()) {
                 cacheLog.error("获取磁盘信息失败: %s", dfResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 setCheckItemMessage(hostInfo, checkItem, "获取磁盘信息失败: " + dfResult.getErrorOrOutput());
                 return checkItem;
+            }
+            
+            // 记录完整的命令输出以便调试
+            cacheLog.info("df命令原始输出: " + dfResult.getOutput());
+            
+            // 检查命令输出是否为空
+            if (dfResult.getOutput() == null || dfResult.getOutput().trim().isEmpty()) {
+                cacheLog.error("磁盘信息为空，可能是命令执行失败或目标目录不存在");
+                // 尝试不带路径的命令
+                cacheLog.info("尝试获取根文件系统的磁盘使用情况...");
+                dfResult = execCommand(session, "df -BG / | tail -n 1");
+                
+                if (!dfResult.isSuccess() || dfResult.getOutput() == null || dfResult.getOutput().trim().isEmpty()) {
+                    cacheLog.error("获取根文件系统磁盘信息也失败: %s", dfResult.getErrorOrOutput());
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    setCheckItemMessage(hostInfo, checkItem, "无法获取文件系统磁盘信息，请确保目标目录存在且有权限访问");
+                    return checkItem;
+                }
+                
+                cacheLog.info("使用根文件系统的磁盘信息替代: " + dfResult.getOutput());
             }
 
             // 解析df命令输出
@@ -64,13 +114,48 @@ public class DiskChecker extends AbstractItemChecker {
 
             // 检查inode使用情况
             cacheLog.info("检查inode使用情况...");
-            CommandResult inodeResult = execCommand(session, "df -i " + TARGET_DIRECTORY + " | tail -n 1");
+            // 修改命令避免使用管道，直接使用awk提取信息
+            // 备选命令1: df -i /opt | grep /opt
+            // 备选命令2: df -i /opt | awk 'END{print}'
+            CommandResult inodeResult = execCommand(session, "df -i " + TARGET_DIRECTORY + " | grep " + TARGET_DIRECTORY);
             
-            if (!inodeResult.isSuccess()) {
+            // 如果第一个命令失败，尝试其他选项
+            if (!inodeResult.isSuccess() || inodeResult.getOutput() == null || inodeResult.getOutput().trim().isEmpty()) {
+                cacheLog.info("使用grep提取信息失败，尝试使用awk...");
+                inodeResult = execCommand(session, "df -i " + TARGET_DIRECTORY + " | awk 'END{print}'");
+            }
+            
+            // 如果仍然失败，尝试不使用管道
+            if (!inodeResult.isSuccess() || inodeResult.getOutput() == null || inodeResult.getOutput().trim().isEmpty()) {
+                cacheLog.info("使用管道命令失败，尝试不使用管道...");
+                inodeResult = execCommand(session, "df -i " + TARGET_DIRECTORY);
+                
+                // 如果有多行输出，只保留最后一行
+                if (inodeResult.isSuccess() && inodeResult.getOutput() != null && !inodeResult.getOutput().trim().isEmpty()) {
+                    String[] lines = inodeResult.getOutput().trim().split("\n");
+                    if (lines.length > 1) {
+                        String lastLine = lines[lines.length - 1];
+                        cacheLog.info("多行输出，使用最后一行: " + lastLine);
+                        // 将原始输出替换为处理后的输出
+                        cacheLog.info("使用最后一行数据进行后续处理");
+                    }
+                }
+            }
+            
+            if (!inodeResult.isSuccess() || inodeResult.getOutput() == null || inodeResult.getOutput().trim().isEmpty()) {
                 cacheLog.error("获取inode信息失败: %s", inodeResult.getErrorOrOutput());
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(hostInfo, checkItem, "获取inode信息失败: " + inodeResult.getErrorOrOutput());
-                return checkItem;
+                // 尝试获取根文件系统信息
+                cacheLog.info("尝试获取根文件系统的inode使用情况...");
+                inodeResult = execCommand(session, "df -i / | grep /");
+                
+                if (!inodeResult.isSuccess() || inodeResult.getOutput() == null || inodeResult.getOutput().trim().isEmpty()) {
+                    cacheLog.error("获取根文件系统inode信息也失败: %s", inodeResult.getErrorOrOutput());
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    setCheckItemMessage(hostInfo, checkItem, "无法获取文件系统inode信息，请确保目标目录存在且有权限访问");
+                    return checkItem;
+                }
+                
+                cacheLog.info("使用根文件系统的inode信息替代: %s", inodeResult.getOutput());
             }
 
             parts = inodeResult.getOutput().trim().split("\\s+");

@@ -47,4 +47,5 @@ export default {
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
   getCheckItemConfirmInfo: path + '/host/check/getCheckItemConfirmInfo', // 获取检查项确认信息
+  queueManager: path + '/host/check/queueManager', // 任务队列管理
 }

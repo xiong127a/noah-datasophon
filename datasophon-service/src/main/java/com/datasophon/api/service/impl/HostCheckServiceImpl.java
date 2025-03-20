@@ -155,7 +155,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 CompletableFuture.runAsync(() -> {
                     try {
                         // 暂停一小段时间，让修改生效
-                        Thread.sleep(3000);
+                        Thread.sleep(1000);
                         
                         // 重新执行检查
                         cacheLog.info("正在重新检查...");
@@ -400,8 +400,8 @@ public class HostCheckServiceImpl implements HostCheckService {
                     }
 
                     // 每个检查项执行完后等待3秒
-                    logger.debug("检查项 {} 执行完成，等待3秒后继续执行下一个检查项", item.getItemName());
-                    Thread.sleep(3000);
+                    logger.debug("检查项 {} 执行完成，等待1秒后继续执行下一个检查项", item.getItemName());
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     // 如果主机检查被中断，放弃后续检查项
                     logger.warn("主机 {} 的检查被中断", hostInfo.getHostname());
@@ -686,7 +686,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 等待一小段时间，让前端有时间显示"终止中"状态
                 // 同时给任务足够时间响应中断请求
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -1235,7 +1235,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     CompletableFuture.runAsync(() -> {
                         try {
                             // 暂停一小段时间，让修改生效
-                            Thread.sleep(3000);
+                            Thread.sleep(1000);
                             
                             // 获取最新的主机信息
                             HostInfo latestHostInfo = getHostInfo(clusterId, hostname);
