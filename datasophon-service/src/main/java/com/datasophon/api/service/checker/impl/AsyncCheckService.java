@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,12 +56,12 @@ public class AsyncCheckService {
     // 检查任务执行器
     @Autowired
     @Qualifier("checkExecutor")
-    private Executor checkExecutor;
+    private ExecutorService checkExecutor;
     
     // 修复任务执行器
     @Autowired
     @Qualifier("fixExecutor")
-    private Executor fixExecutor;
+    private ExecutorService fixExecutor;
     
     // SSH连接池 - 按主机名缓存SSH连接
     private final Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();

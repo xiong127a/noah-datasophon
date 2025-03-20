@@ -49,6 +49,9 @@ public class QueueManagerStatus {
     private long tasksProcessed;
     private long tasksSucceeded;
     private long tasksFailed;
+    private long fixTasksProcessed;
+    private long fixTasksSucceeded;
+    private long fixTasksFailed;
     
     // 定时任务状态
     private boolean queueHealthMonitorActive;

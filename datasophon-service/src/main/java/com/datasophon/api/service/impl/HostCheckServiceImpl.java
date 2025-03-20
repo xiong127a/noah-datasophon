@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.checker.CheckLogger;
 import com.datasophon.api.service.checker.ItemChecker;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 /**
  * 主机检查服务实现类
  */
-@Service
+@Service("hostCheckService")
 public class HostCheckServiceImpl implements HostCheckService {
     // 静态常量，日志相关
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
@@ -50,7 +51,10 @@ public class HostCheckServiceImpl implements HostCheckService {
     private ItemCheckerFactory itemCheckerFactory;
 
     @Autowired
-    private HostCheckQueueManager checkQueueManager;
+    private ClusterInfoService clusterInfoService;
+
+    @Autowired
+    private HostCheckQueueManager hostCheckQueueManager;
 
     /**
      * 日志工厂，用于创建日志记录器
@@ -112,71 +116,54 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
         try {
+            logger.info("收到修复检查项请求: clusterId={}, hostname={}, itemId={}, skipConfirm={}", 
+                    clusterId, hostname, itemId, skipConfirm);
+            
+            // 获取主机信息
             HostInfo hostInfo = getHostInfo(clusterId, hostname);
             if (hostInfo == null) {
-                return Result.error("未找到主机信息");
+                return Result.error("主机信息不存在");
             }
-
+            
+            // 查找指定ID的检查项
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
-                return Result.error("未找到检查项");
+                return Result.error("检查项不存在");
             }
-
+            
+            // 如果检查项当前正在修复中，则返回错误
+            if (checkItem.getStatus() == CheckItem.Status.FIXING) {
+                return Result.error("检查项正在修复中，请稍后重试");
+            }
+            
             // 创建日志记录器
             String logKey = getLogKey(clusterId, hostname, itemId);
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
-            
-            // 记录日志
             cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
             cacheLog.info("时间: " + formatDateToChinese(new Date()));
-
-            // 获取Checker
-            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-            if (checker == null) {
-                cacheLog.error("修复失败: 未找到对应的检查器");
-                return Result.error("未找到对应的检查器");
-            }
-
-            // 执行修复
-            cacheLog.info("正在执行修复...");
-            boolean success = checker.fix(clusterId, hostInfo, checkItem);
-
-            if (success) {
-                cacheLog.info("修复成功，将重新检查项目状态");
+            
+            // 将修复任务提交到专用队列
+            String taskId = hostCheckQueueManager.addFixTask(clusterId, hostInfo, checkItem);
+            
+            if (taskId != null) {
+                // 更新状态为正在修复
+                checkItem.setStatus(CheckItem.Status.FIXING);
+                checkItem.setMessage("已加入修复队列，等待处理");
                 
-                // 修改状态为待检查，等待下次检查
-                checkItem.setStatus(CheckItem.Status.WAITING);
-                checkItem.setMessage("等待重新检查");
-                
-                // 更新缓存
+                // 更新主机状态
+                hostInfo.calculateStatus();
                 updateHostInfoCache(clusterId, hostInfo);
                 
-                // 执行异步检查
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        // 暂停一小段时间，让修改生效
-                        Thread.sleep(1000);
-                        
-                        // 重新执行检查
-                        cacheLog.info("正在重新检查...");
-                        executeCheckItem(hostInfo, checkItem, clusterId);
-                        
-                        // 更新缓存
-                        updateHostInfoCache(clusterId, hostInfo);
-                    } catch (Exception e) {
-                        cacheLog.error("重新检查失败: " + e.getMessage());
-                        logger.error("修复后重新检查失败: {}", e.getMessage(), e);
-                    }
-                });
+                cacheLog.info("修复任务已提交到队列，任务ID: " + taskId);
                 
-                return Result.success("修复指令已发送，请稍后查看结果");
+                return Result.success("修复任务已提交");
             } else {
-                cacheLog.error("修复失败");
-                return Result.error("修复失败");
+                cacheLog.error("修复任务提交失败，可能已在队列中");
+                return Result.error("修复任务已存在或提交失败");
             }
         } catch (Exception e) {
-            logger.error("修复检查项失败: {}", e.getMessage(), e);
-            return Result.error("修复失败: " + e.getMessage());
+            logger.error("提交修复任务失败", e);
+            return Result.error("提交修复任务失败: " + e.getMessage());
         }
     }
 
@@ -299,7 +286,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         CacheUtils.put(clusterId + Constants.HOST_MAP, map);
 
         // 将检查任务添加到队列
-        checkQueueManager.addCheckTask(clusterId, hostInfo, this);
+        hostCheckQueueManager.addCheckTask(clusterId, hostInfo, this);
     }
 
     /**
@@ -616,7 +603,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 取消队列中的整个主机检查任务
-            checkQueueManager.cancelTask(clusterId, hostname);
+            hostCheckQueueManager.cancelTask(clusterId, hostname);
 
             // 将该主机的所有检查项状态设为已跳过
             // 使用批量更新提高性能
@@ -681,7 +668,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 
                 // 在串行模式下，我们需要依赖线程中断机制来取消正在执行的检查项
                 // 调用队列管理器的取消方法，它需要负责中断正在执行检查的线程
-                checkQueueManager.cancelItemTask(clusterId, hostname, itemId);
+                hostCheckQueueManager.cancelItemTask(clusterId, hostname, itemId);
                 
                 // 等待一小段时间，让前端有时间显示"终止中"状态
                 // 同时给任务足够时间响应中断请求
@@ -854,7 +841,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         // 取消所有当前运行的检查任务
         logger.info("收到批量检查请求，取消当前所有检查任务");
-        checkQueueManager.cancelAllTasks();
+        hostCheckQueueManager.cancelAllTasks();
         
         // 等待短暂时间确保所有任务已终止
         try {
@@ -981,7 +968,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result cancelAllCheckTasks() {
         logger.info("收到取消所有检查任务请求");
-        checkQueueManager.cancelAllTasks();
+        hostCheckQueueManager.cancelAllTasks();
         
         // 等待短暂时间确保所有任务已终止
         try {
@@ -1063,7 +1050,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             CacheUtils.put(clusterId + Constants.HOST_MAP, map);
             
             // 将主机添加到检查队列
-            checkQueueManager.addCheckTask(clusterId, hostInfo, this);
+            hostCheckQueueManager.addCheckTask(clusterId, hostInfo, this);
             
             return Result.success("成功将检查项添加到检查队列");
         } else {

@@ -1,26 +1,31 @@
 package com.datasophon.api.service.impl;
 
-import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.api.service.checker.ItemChecker;
+import com.datasophon.api.service.checker.ItemCheckerFactory;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.ItemCode;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -33,9 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.CompletableFuture;
 
 @Component
 public class HostCheckQueueManager {
@@ -43,7 +45,9 @@ public class HostCheckQueueManager {
 
     // 修改为优先队列，支持任务优先级
     private final BlockingQueue<CheckTask> checkQueue = new PriorityBlockingQueue<>(100);
-    private final BlockingQueue<FixTask> fixQueue = new PriorityBlockingQueue<>(100);
+    // 修复队列，独立于检查队列
+    private final BlockingQueue<FixTask> fixQueue = new PriorityBlockingQueue<>(50);
+    
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
     private final Map<String, Future<?>> runningTasks = new ConcurrentHashMap<>();
     private final Map<String, Future<?>> runningFixTasks = new ConcurrentHashMap<>();
@@ -64,13 +68,14 @@ public class HostCheckQueueManager {
     private final AtomicLong tasksSucceeded = new AtomicLong(0);
     private final AtomicLong tasksFailed = new AtomicLong(0);
     
+    // 修复任务统计信息
+    private final AtomicLong fixTasksProcessed = new AtomicLong(0);
+    private final AtomicLong fixTasksSucceeded = new AtomicLong(0);
+    private final AtomicLong fixTasksFailed = new AtomicLong(0);
+    
     // 检查项线程池 - 专门用于执行单个检查项
     @Getter
     private final ExecutorService itemCheckExecutorService;
-    
-    // 修复任务线程池 - 专门用于执行修复任务
-    @Getter
-    private final ExecutorService fixExecutorService;
     
     private Thread queueProcessorThread;
     private Thread fixQueueProcessorThread;
@@ -90,7 +95,18 @@ public class HostCheckQueueManager {
     
     private long queueHealthMonitorIntervalMs;
     private long taskTimeoutMonitorIntervalMs;
+
+    @Autowired
+    @Qualifier("checkExecutor")
+    private ExecutorService checkExecutorService;
     
+    @Autowired
+    @Qualifier("fixExecutor")
+    private ExecutorService fixExecutorService;
+    
+    @Autowired
+    private ItemCheckerFactory itemCheckerFactory;
+
     public HostCheckQueueManager() {
         // 创建检查项线程池 - 负责检查项级别的任务
         this.itemCheckExecutorService = new ThreadPoolExecutor(
@@ -111,27 +127,6 @@ public class HostCheckQueueManager {
                 }
             },
             new ThreadPoolExecutor.CallerRunsPolicy() // 改为调用者运行策略，防止任务丢失
-        );
-        
-        // 创建修复任务线程池 - 专门用于执行修复任务
-        this.fixExecutorService = new ThreadPoolExecutor(
-            2, // 核心线程数
-            4, // 最大线程数
-            60L, // 空闲线程存活时间
-            TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(50), // 修复任务队列容量较小
-            new ThreadFactory() {
-                private final AtomicInteger counter = new AtomicInteger(1);
-                @Override
-                public Thread newThread(Runnable r) {
-                    Thread t = new Thread(r);
-                    t.setName("fix-task-worker-" + counter.getAndIncrement());
-                    t.setDaemon(false);
-                    t.setPriority(Thread.NORM_PRIORITY);
-                    return t;
-                }
-            },
-            new ThreadPoolExecutor.CallerRunsPolicy()
         );
     }
 
@@ -163,10 +158,10 @@ public class HostCheckQueueManager {
     private void startFixQueueProcessor() {
         if (fixQueueProcessorThread == null || !fixQueueProcessorThread.isAlive()) {
             fixQueueProcessorThread = new Thread(this::processFixQueueTasks);
-            fixQueueProcessorThread.setName("fix-task-queue-processor");
+            fixQueueProcessorThread.setName("host-fix-queue-processor");
             fixQueueProcessorThread.start();
             fixQueueProcessorStartTime = System.currentTimeMillis();
-            logger.info("修复任务队列处理线程已启动");
+            logger.info("主机修复队列处理线程已启动");
         }
     }
     
@@ -256,7 +251,7 @@ public class HostCheckQueueManager {
         
         // 中断队列处理线程
         if (queueProcessorThread != null && queueProcessorThread.isAlive()) {
-            queueProcessorThread.interrupt();
+        queueProcessorThread.interrupt();
             logger.info("队列处理线程已中断");
         }
         
@@ -330,8 +325,8 @@ public class HostCheckQueueManager {
             if (added) {
                 // 添加到Set中跟踪
                 taskKeysInQueue.add(taskKey);
-                logger.info("成功添加主机 {} 的检查任务到队列，新队列大小: {}", 
-                    hostInfo.getHostname(), checkQueue.size());
+            logger.info("成功添加主机 {} 的检查任务到队列，新队列大小: {}", 
+                hostInfo.getHostname(), checkQueue.size());
             } else {
                 logger.error("添加主机 {} 的检查任务到队列失败，队列可能已满", hostInfo.getHostname());
             }
@@ -363,13 +358,7 @@ public class HostCheckQueueManager {
             startQueueProcessor();
         }
         
-        // 3. 确保修复队列处理线程在运行
-        if (fixQueueProcessorThread == null || !fixQueueProcessorThread.isAlive()) {
-            logger.info("修复队列处理线程未运行，正在启动...");
-            startFixQueueProcessor();
-        }
-        
-        // 4. 确保线程池处于活跃状态
+        // 3. 确保线程池处于活跃状态
         if (itemCheckExecutorService.isShutdown() || itemCheckExecutorService.isTerminated()) {
             logger.warn("检查项线程池已关闭，正在重新创建...");
             // 重新创建检查项线程池
@@ -586,7 +575,7 @@ public class HostCheckQueueManager {
                     Future<?> future = itemCheckExecutorService.submit(hostCheckTask);
                     
                     // 记录运行中的任务和开始时间
-                    runningTasks.put(taskKey, future);
+                runningTasks.put(taskKey, future);
                     taskStartTimes.put(taskKey, System.currentTimeMillis());
                     
                     // 重置错误计数
@@ -625,7 +614,7 @@ public class HostCheckQueueManager {
         }
         logger.info("队列处理已停止");
     }
-    
+
     /**
      * 健康监控 - 定期检查队列处理线程和运行任务的状态
      * 由任务调度器调用，不再使用@Scheduled注解
@@ -641,17 +630,28 @@ public class HostCheckQueueManager {
             if (queueProcessorThread == null || !queueProcessorThread.isAlive()) {
                 logger.warn("队列处理线程已停止，尝试重新启动");
                 startQueueProcessor();
-                return;
+            }
+            
+            // 检查修复队列处理线程是否存活
+            if (fixQueueProcessorThread == null || !fixQueueProcessorThread.isAlive()) {
+                logger.warn("修复队列处理线程已停止，尝试重新启动");
+                startFixQueueProcessor();
             }
             
             // 记录处理线程运行时间
-            long runningTime = System.currentTimeMillis() - queueProcessorStartTime;
-            logger.info("队列处理线程已运行: {} 分钟", runningTime / 60000);
+            long checkRunningTime = System.currentTimeMillis() - queueProcessorStartTime;
+            long fixRunningTime = System.currentTimeMillis() - fixQueueProcessorStartTime;
+            logger.info("检查队列处理线程已运行: {} 分钟, 修复队列处理线程已运行: {} 分钟", 
+                    checkRunningTime / 60000, fixRunningTime / 60000);
             
             // 记录队列和任务统计信息
-            logger.info("队列状态: 等待任务={}, 运行任务={}, 总处理任务={}, 成功={}, 失败={}",
+            logger.info("检查队列状态: 等待任务={}, 运行任务={}, 总处理任务={}, 成功={}, 失败={}",
                 checkQueue.size(), runningTasks.size(), 
                 tasksProcessed.get(), tasksSucceeded.get(), tasksFailed.get());
+                
+            logger.info("修复队列状态: 等待任务={}, 运行任务={}, 总处理任务={}, 成功={}, 失败={}",
+                fixQueue.size(), runningFixTasks.size(), 
+                fixTasksProcessed.get(), fixTasksSucceeded.get(), fixTasksFailed.get());
             
             // 检查线程池状态
             ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
@@ -725,12 +725,11 @@ public class HostCheckQueueManager {
         
         // 计算总线程统计
         ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
-        ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
         
-        status.put("totalActiveThreads", checkExecutor.getActiveCount() + fixExecutor.getActiveCount());
-        status.put("totalPoolSize", checkExecutor.getPoolSize() + fixExecutor.getPoolSize());
-        status.put("totalCompletedTasks", checkExecutor.getCompletedTaskCount() + fixExecutor.getCompletedTaskCount());
-        status.put("totalQueuedTasks", checkExecutor.getQueue().size() + fixExecutor.getQueue().size());
+        status.put("totalActiveThreads", checkExecutor.getActiveCount());
+        status.put("totalPoolSize", checkExecutor.getPoolSize());
+        status.put("totalCompletedTasks", checkExecutor.getCompletedTaskCount());
+        status.put("totalQueuedTasks", checkExecutor.getQueue().size());
         
         return status;
     }
@@ -781,7 +780,7 @@ public class HostCheckQueueManager {
         private final HostInfo hostInfo;
         private final HostCheckServiceImpl hostCheckService;
         private final int priority; // 优先级，数字越小优先级越高
-        
+
         public CheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
             this(clusterId, hostInfo, hostCheckService, 5); // 默认优先级为5
         }
@@ -811,24 +810,18 @@ public class HostCheckQueueManager {
         status.setRunning(isRunning.get());
         status.setScheduledTasksEnabled(scheduledTasksEnabled.get());
         status.setQueueEmpty(checkQueue.isEmpty());
-        status.setFixQueueEmpty(fixQueue.isEmpty());
         
         // 队列详情
         status.setQueueSize(checkQueue.size());
-        status.setFixQueueSize(fixQueue.size());
         status.setRunningTasksCount(runningTasks.size());
-        status.setRunningFixTasksCount(runningFixTasks.size());
         
         // 线程池信息
         ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
-        ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
         
         status.setMainExecutorActiveCount(checkExecutor.getActiveCount());
         status.setMainExecutorQueueSize(checkExecutor.getQueue().size());
         status.setItemExecutorActiveCount(checkExecutor.getActiveCount());
         status.setItemExecutorQueueSize(checkExecutor.getQueue().size());
-        status.setFixExecutorActiveCount(fixExecutor.getActiveCount());
-        status.setFixExecutorQueueSize(fixExecutor.getQueue().size());
         
         // 统计信息
         status.setTasksProcessed(tasksProcessed.get());
@@ -847,18 +840,11 @@ public class HostCheckQueueManager {
         
         // 处理线程状态
         status.setQueueProcessorThreadAlive(queueProcessorThread != null && queueProcessorThread.isAlive());
-        status.setFixQueueProcessorThreadAlive(fixQueueProcessorThread != null && fixQueueProcessorThread.isAlive());
         
         if (queueProcessorStartTime > 0) {
             status.setQueueProcessorStartTime(dateFormat.format(new Date(queueProcessorStartTime)));
         } else {
             status.setQueueProcessorStartTime("未启动");
-        }
-        
-        if (fixQueueProcessorStartTime > 0) {
-            status.setFixQueueProcessorStartTime(dateFormat.format(new Date(fixQueueProcessorStartTime)));
-        } else {
-            status.setFixQueueProcessorStartTime("未启动");
         }
         
         return status;
@@ -971,198 +957,78 @@ public class HostCheckQueueManager {
         
         return taskDetails;
     }
-    
-    /**
-     * 获取修复任务队列详情
-     * @return 修复任务队列中的详细任务信息列表
-     */
-    public List<QueueTaskInfo> getFixQueueTasksDetails() {
-        List<QueueTaskInfo> taskDetails = new ArrayList<>();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        
-        // 添加运行中的修复任务
-        for (Map.Entry<String, Future<?>> entry : runningFixTasks.entrySet()) {
-            String taskKey = entry.getKey();
-            Future<?> future = entry.getValue();
-            Long startTime = fixTaskStartTimes.get(taskKey);
-            
-            if (startTime != null) {
-                QueueTaskInfo taskInfo = new QueueTaskInfo();
-                String[] parts = taskKey.split(":");
-                taskInfo.setClusterId(Integer.parseInt(parts[0]));
-                taskInfo.setHostname(parts[1]);
-                if (parts.length >= 3) {
-                    taskInfo.setItemId(Integer.parseInt(parts[2]));
-                }
-                
-                taskInfo.setTaskId("fix_" + taskKey);
-                taskInfo.setStatus("修复中");
-                taskInfo.setStartTime(dateFormat.format(new Date(startTime)));
-                taskInfo.setDuration(System.currentTimeMillis() - startTime);
-                taskInfo.setFixTask(true);
-                
-                if (future instanceof CompletableFuture) {
-                    CompletableFuture<?> cf = (CompletableFuture<?>) future;
-                    taskInfo.setExecutorName("fixExecutor");
-                    taskInfo.setThreadName(Thread.currentThread().getName());
-                }
-                
-                taskDetails.add(taskInfo);
-            }
-        }
-        
-        // 添加等待中的修复任务
-        for (FixTask task : fixQueue) {
-            QueueTaskInfo taskInfo = new QueueTaskInfo();
-            taskInfo.setClusterId(task.getClusterId());
-            taskInfo.setHostname(task.getHostInfo().getHostname());
-            taskInfo.setTaskId("waiting_fix_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
-            taskInfo.setStatus("等待修复");
-            taskInfo.setPriority(task.getPriority());
-            taskInfo.setFixTask(true);
-            taskDetails.add(taskInfo);
-        }
-        
-        return taskDetails;
+
+    private String formatTimeInterval(long intervalMs) {
+        long minutes = intervalMs / 60000;
+        long seconds = (intervalMs % 60000) / 1000;
+        return String.format("%d分钟 %d秒", minutes, seconds);
     }
 
     /**
-     * 修复队列处理任务，循环从队列中取出任务并提交给线程池执行
+     * 为修复任务添加处理主机修复的方法
+     * @param clusterId 集群ID
+     * @param hostInfo 主机信息
      */
-    private void processFixQueueTasks() {
-        logger.info("开始处理修复任务队列");
-        int consecutiveErrorCount = 0;
+    public void processHostFix(Integer clusterId, HostInfo hostInfo) {
+        logger.info("开始为主机 {} 执行修复任务", hostInfo.getHostname());
         
-        while (isRunning.get()) {
-            try {
-                if (!fixQueue.isEmpty()) {
-                    logger.info("当前修复队列状态: 队列中等待的任务数量={}, 正在执行的任务数量={}", 
-                        fixQueue.size(), runningFixTasks.size());
-                }
-                
-                FixTask task = fixQueue.poll(5, TimeUnit.SECONDS);
-                
-                if (task == null) {
-                    continue;
-                }
-                
-                String hostname = task.getHostInfo().getHostname();
-                String taskKey = getTaskKey(task.getClusterId(), hostname);
-                
-                fixTaskKeysInQueue.remove(taskKey);
-                
-                if (runningFixTasks.containsKey(taskKey)) {
-                    logger.warn("主机 {} 的修复任务已在运行中，将延迟处理", hostname);
-                    fixQueue.put(task);
-                    fixTaskKeysInQueue.add(taskKey);
-                    Thread.sleep(1000);
-                    continue;
-                }
-                
-                logger.info("正在提交主机 {} 的修复任务，当前运行中任务数: {}", 
-                    hostname, runningFixTasks.size());
-                
+        // 修复状态为FAILED的所有检查项
+        List<CheckItem> checkItems = hostInfo.getCheckItems();
+        if (checkItems == null || checkItems.isEmpty()) {
+            logger.warn("主机 {} 没有需要修复的检查项", hostInfo.getHostname());
+            return;
+        }
+        
+        int fixedCount = 0;
+        int failedCount = 0;
+        
+        for (CheckItem checkItem : checkItems) {
+            if (checkItem.getStatus() == CheckItem.Status.FAILED) {
+                logger.info("正在修复检查项 {}: {}", checkItem.getId(), checkItem.getItemName());
                 try {
-                    FixTaskExecutor fixTaskExecutor = new FixTaskExecutor(
-                        task.getClusterId(), task.getHostInfo(), task.getHostCheckService(), taskKey);
-                    
-                    Future<?> future = fixExecutorService.submit(fixTaskExecutor);
-                    
-                    runningFixTasks.put(taskKey, future);
-                    fixTaskStartTimes.put(taskKey, System.currentTimeMillis());
-                    
-                    consecutiveErrorCount = 0;
-                    
-                } catch (Exception e) {
-                    logger.error("提交主机 {} 的修复任务时发生错误: {}", hostname, e.getMessage(), e);
-                    fixQueue.put(task);
-                    fixTaskKeysInQueue.add(taskKey);
-                    Thread.sleep(2000);
-                }
-                
-            } catch (InterruptedException e) {
-                if (isRunning.get()) {
-                    logger.error("修复队列处理被中断", e);
-                }
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                logger.error("修复队列处理过程中发生意外错误", e);
-                consecutiveErrorCount++;
-                
-                if (consecutiveErrorCount > 5) {
-                    logger.warn("连续出错次数过多，尝试短暂休息后继续处理");
-                    try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
+                    // 通过直接的方式执行修复
+                    boolean success = fixCheckItem(clusterId, hostInfo, checkItem);
+                    if (success) {
+                        checkItem.setStatus(CheckItem.Status.SUCCESS);
+                        checkItem.setMessage("修复成功");
+                        fixedCount++;
+                    } else {
+                        failedCount++;
                     }
-                    consecutiveErrorCount = 0;
+                } catch (Exception e) {
+                    logger.error("修复检查项 {} 时发生错误: {}", checkItem.getId(), e.getMessage(), e);
+                    failedCount++;
                 }
             }
         }
-        logger.info("修复队列处理已停止");
+        
+        logger.info("主机 {} 的修复任务完成，成功修复 {} 项，失败 {} 项", 
+            hostInfo.getHostname(), fixedCount, failedCount);
     }
     
     /**
-     * 修复任务执行类
+     * 修复单个检查项
+     * @param clusterId 集群ID
+     * @param hostInfo 主机信息
+     * @param checkItem 检查项
+     * @return 是否修复成功
      */
-    private class FixTaskExecutor implements Runnable {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final HostCheckServiceImpl hostCheckService;
-        private final String taskKey;
-        
-        public FixTaskExecutor(Integer clusterId, HostInfo hostInfo, 
-                              HostCheckServiceImpl hostCheckService, String taskKey) {
-            this.clusterId = clusterId;
-            this.hostInfo = hostInfo;
-            this.hostCheckService = hostCheckService;
-            this.taskKey = taskKey;
-        }
-        
-        @Override
-        public void run() {
-            Thread.currentThread().setName("fix-task-" + hostInfo.getHostname());
-            logger.info("开始执行主机 {} 的修复任务", hostInfo.getHostname());
+    private boolean fixCheckItem(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        try {
+            // 执行检查项的修复逻辑
+            logger.info("执行检查项 {} 的修复逻辑", checkItem.getId());
             
-            try {
-                // 调用本类中的processHostFix方法
-                processHostFix(clusterId, hostInfo);
-                logger.info("主机 {} 的修复任务执行完成", hostInfo.getHostname());
-            } catch (Exception e) {
-                logger.error("执行主机 {} 的修复任务时发生错误: {}", 
-                    hostInfo.getHostname(), e.getMessage(), e);
-            } finally {
-                logger.info("移除主机 {} 的修复任务，释放资源", hostInfo.getHostname());
-                runningFixTasks.remove(taskKey);
-                fixTaskStartTimes.remove(taskKey);
+            // 通过ItemCheckerFactory获取checker并调用fix方法
+            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
+            if (checker == null) {
+                logger.error("找不到检查项 {} 对应的检查器", checkItem.getId());
+                return false;
             }
-        }
-    }
-    
-    @Getter
-    private static class FixTask implements Comparable<FixTask> {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final HostCheckServiceImpl hostCheckService;
-        private final int priority;
-        
-        public FixTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
-            this(clusterId, hostInfo, hostCheckService, 3); // 修复任务默认优先级为3，高于检查任务
-        }
-        
-        public FixTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService, int priority) {
-            this.clusterId = clusterId;
-            this.hostInfo = hostInfo;
-            this.hostCheckService = hostCheckService;
-            this.priority = priority;
-        }
-
-        @Override
-        public int compareTo(FixTask other) {
-            return Integer.compare(this.priority, other.priority);
+            
+            return checker.fix(clusterId, hostInfo, checkItem);
+        } catch (Exception e) {
+            logger.error("修复检查项 {} 时发生异常: {}", checkItem.getId(), e.getMessage(), e);
+            return false;
         }
     }
 
@@ -1205,76 +1071,298 @@ public class HostCheckQueueManager {
             logger.info("任务超时监控已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
     }
-    
+
     /**
-     * 为修复任务添加处理主机修复的方法
+     * 添加修复任务到队列
      * @param clusterId 集群ID
      * @param hostInfo 主机信息
+     * @param checkItem 检查项
+     * @return 任务ID或null（如果任务已在队列中）
      */
-    public void processHostFix(Integer clusterId, HostInfo hostInfo) {
-        logger.info("开始为主机 {} 执行修复任务", hostInfo.getHostname());
-        
-        // 修复状态为FAILED的所有检查项
-        List<CheckItem> checkItems = hostInfo.getCheckItems();
-        if (checkItems == null || checkItems.isEmpty()) {
-            logger.warn("主机 {} 没有需要修复的检查项", hostInfo.getHostname());
-            return;
+    public String addFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        try {
+            // 生成任务标识和追踪键
+            String taskId = "FIX_" + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
+            String taskKey = getFixTaskKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            
+            // 检查是否已经在队列中
+            if (fixTaskKeysInQueue.contains(taskKey)) {
+                logger.info("主机 {} 的修复任务已在队列中, 项目: {}", 
+                    hostInfo.getHostname(), checkItem.getItemName());
+                return null;
+            }
+            
+            // 检查是否正在运行
+            if (runningFixTasks.containsKey(taskKey)) {
+                logger.info("主机 {} 的修复任务正在执行中, 项目: {}", 
+                    hostInfo.getHostname(), checkItem.getItemName());
+                return null;
+            }
+            
+            // 创建并添加任务到队列
+            FixTask fixTask = new FixTask(clusterId, hostInfo, checkItem);
+            fixQueue.put(fixTask);
+            fixTaskKeysInQueue.add(taskKey);
+            
+            logger.info("成功添加修复任务到队列: {}, 队列大小: {}", 
+                taskId, fixQueue.size());
+            
+            return taskId;
+        } catch (Exception e) {
+            logger.error("添加修复任务到队列时发生错误: {}", e.getMessage(), e);
+            return null;
         }
+    }
+    
+    /**
+     * 处理修复队列任务
+     */
+    private void processFixQueueTasks() {
+        logger.info("开始处理主机修复队列任务");
+        int consecutiveErrorCount = 0;
         
-        int fixedCount = 0;
-        int failedCount = 0;
-        
-        for (CheckItem checkItem : checkItems) {
-            if (checkItem.getStatus() == CheckItem.Status.FAILED) {
-                logger.info("正在修复检查项 {}: {}", checkItem.getId(), checkItem.getItemName());
+        while (isRunning.get()) {
+            try {
+                // 定期打印当前状态日志以监控队列健康
+                if (!fixQueue.isEmpty()) {
+                    logger.info("当前修复队列状态: 队列中等待的任务数量={}, 正在执行的任务数量={}", 
+                        fixQueue.size(), runningFixTasks.size());
+                }
+                
+                // 添加超时机制，避免无限期阻塞
+                FixTask task = fixQueue.poll(5, TimeUnit.SECONDS);
+                
+                // 如果队列为空，继续等待
+                if (task == null) {
+                    continue;
+                }
+                
+                String hostname = task.getHostInfo().getHostname();
+                String taskKey = getFixTaskKey(task.getClusterId(), hostname, task.getCheckItem().getId());
+                
+                // 从任务跟踪集合中移除
+                fixTaskKeysInQueue.remove(taskKey);
+                
+                // 检查是否已经有相同的任务在执行
+                if (runningFixTasks.containsKey(taskKey)) {
+                    logger.warn("主机 {} 的修复任务已在运行中，将延迟处理", hostname);
+                    // 将任务重新放回队列末尾，等待稍后处理
+                    fixQueue.put(task);
+                    fixTaskKeysInQueue.add(taskKey);
+                    Thread.sleep(1000); // 短暂等待避免立即重试
+                    continue;
+                }
+                
+                logger.info("正在提交主机 {} 的修复任务，当前运行中任务数: {}", 
+                    hostname, runningFixTasks.size());
+                
                 try {
-                    // 通过AsyncCheckService执行修复
-                    boolean success = fixCheckItem(clusterId, hostInfo, checkItem);
-                    if (success) {
-                        checkItem.setStatus(CheckItem.Status.SUCCESS);
-                        checkItem.setMessage("修复成功");
-                        fixedCount++;
-                    } else {
-                        failedCount++;
-                    }
+                    // 创建修复任务
+                    HostFixTask hostFixTask = new HostFixTask(
+                        task.getClusterId(), task.getHostInfo(), task.getCheckItem(), taskKey);
+                    
+                    // 使用修复专用线程池执行
+                    Future<?> future = fixExecutorService.submit(hostFixTask);
+                    
+                    // 记录运行中的任务和开始时间
+                    runningFixTasks.put(taskKey, future);
+                    fixTaskStartTimes.put(taskKey, System.currentTimeMillis());
+                    
+                    // 重置错误计数
+                    consecutiveErrorCount = 0;
+                    
                 } catch (Exception e) {
-                    logger.error("修复检查项 {} 时发生错误: {}", checkItem.getId(), e.getMessage(), e);
-                    failedCount++;
+                    logger.error("提交主机 {} 的修复任务时发生错误: {}", hostname, e.getMessage(), e);
+                    // 出现异常时，尝试将任务重新加入队列
+                    fixQueue.put(task);
+                    fixTaskKeysInQueue.add(taskKey);
+                    Thread.sleep(2000); // 出错后等待一段时间再重试
+                }
+                
+            } catch (InterruptedException e) {
+                if (isRunning.get()) {
+                    logger.error("修复队列处理被中断", e);
+                }
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                logger.error("修复队列处理过程中发生意外错误", e);
+                consecutiveErrorCount++;
+                
+                // 如果连续出错次数过多，尝试重置处理过程
+                if (consecutiveErrorCount > 5) {
+                    logger.warn("连续出错次数过多，尝试短暂休息后继续处理");
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    consecutiveErrorCount = 0;
+                }
+            }
+        }
+        logger.info("修复队列处理已停止");
+    }
+    
+    /**
+     * 获取修复任务队列中的任务详情
+     */
+    public List<QueueTaskInfo> getFixQueueTasksDetails() {
+        List<QueueTaskInfo> taskDetails = new ArrayList<>();
+        
+        // 添加运行中的任务
+        for (Map.Entry<String, Future<?>> entry : runningFixTasks.entrySet()) {
+            String taskKey = entry.getKey();
+            Future<?> future = entry.getValue();
+            
+            if (!future.isDone() && !future.isCancelled()) {
+                String[] parts = taskKey.split(":");
+                if (parts.length >= 2) {
+                    QueueTaskInfo taskInfo = new QueueTaskInfo();
+                    taskInfo.setClusterId(Integer.parseInt(parts[0]));
+                    taskInfo.setHostname(parts[1]);
+                    taskInfo.setTaskId("running_" + taskKey);
+                    taskInfo.setStatus("执行中");
+                    taskInfo.setFixTask(true);
+                    
+                    // 计算运行时间
+                    Long startTime = fixTaskStartTimes.get(taskKey);
+                    if (startTime != null) {
+                        long runningTime = System.currentTimeMillis() - startTime;
+                        taskInfo.setStatus("执行中 - " + formatTimeInterval(runningTime));
+                    }
+                    
+                    taskDetails.add(taskInfo);
                 }
             }
         }
         
-        logger.info("主机 {} 的修复任务完成，成功修复 {} 项，失败 {} 项", 
-            hostInfo.getHostname(), fixedCount, failedCount);
+        // 添加等待中的任务
+        for (FixTask task : fixQueue) {
+            QueueTaskInfo taskInfo = new QueueTaskInfo();
+            taskInfo.setClusterId(task.getClusterId());
+            taskInfo.setHostname(task.getHostInfo().getHostname());
+            taskInfo.setTaskId("waiting_fix_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
+            taskInfo.setStatus("等待中");
+            taskInfo.setFixTask(true);
+            taskDetails.add(taskInfo);
+        }
+        
+        return taskDetails;
     }
     
     /**
-     * 修复单个检查项
-     * @param clusterId 集群ID
-     * @param hostInfo 主机信息
-     * @param checkItem 检查项
-     * @return 是否修复成功
+     * 获取修复任务的唯一标识
      */
-    private boolean fixCheckItem(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        try {
-            // 执行检查项的修复逻辑
-            // 这里需要根据实际情况调用相应的修复方法
-            logger.info("执行检查项 {} 的修复逻辑", checkItem.getId());
-            
-            // 可以使用AsyncCheckService执行修复
-            // return asyncService.executeFixItemAsync(clusterId, hostInfo, checkItem) != null;
-            
-            // 模拟修复成功
-            return true;
-        } catch (Exception e) {
-            logger.error("修复检查项 {} 时发生异常: {}", checkItem.getId(), e.getMessage(), e);
-            return false;
+    private String getFixTaskKey(Integer clusterId, String hostname, Integer itemId) {
+        return clusterId + ":" + hostname + ":" + itemId;
+    }
+    
+    /**
+     * 修复任务执行类
+     */
+    private class HostFixTask implements Runnable {
+        private final Integer clusterId;
+        private final HostInfo hostInfo;
+        private final CheckItem checkItem;
+        private final String taskKey;
+        
+        public HostFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, String taskKey) {
+            this.clusterId = clusterId;
+            this.hostInfo = hostInfo;
+            this.checkItem = checkItem;
+            this.taskKey = taskKey;
+        }
+        
+        @Override
+        public void run() {
+            try {
+                logger.info("开始执行主机 {} 的修复任务: {}", 
+                    hostInfo.getHostname(), checkItem.getItemName());
+                
+                // 标记修复任务为进行中
+                checkItem.setStatus(CheckItem.Status.FIXING);
+                
+                // 统计信息
+                fixTasksProcessed.incrementAndGet();
+                
+                // 获取检查器并执行修复
+                boolean success = fixCheckItem(clusterId, hostInfo, checkItem);
+                
+                // 更新结果
+                if (success) {
+                    checkItem.setStatus(CheckItem.Status.SUCCESS);
+                    checkItem.setMessage("修复成功");
+                    fixTasksSucceeded.incrementAndGet();
+                    logger.info("主机 {} 的修复任务 {} 执行成功", 
+                        hostInfo.getHostname(), checkItem.getItemName());
+                } else {
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("修复失败");
+                    fixTasksFailed.incrementAndGet();
+                    logger.warn("主机 {} 的修复任务 {} 执行失败", 
+                        hostInfo.getHostname(), checkItem.getItemName());
+                }
+                
+            } catch (Exception e) {
+                // 处理异常情况
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("修复异常: " + e.getMessage());
+                fixTasksFailed.incrementAndGet();
+                logger.error("执行主机 {} 的修复任务时发生异常: {}", 
+                    hostInfo.getHostname(), e.getMessage(), e);
+            } finally {
+                // 清理资源
+                runningFixTasks.remove(taskKey);
+                fixTaskStartTimes.remove(taskKey);
+            }
         }
     }
-
-    private String formatTimeInterval(long intervalMs) {
-        long minutes = intervalMs / 60000;
-        long seconds = (intervalMs % 60000) / 1000;
-        return String.format("%d分钟 %d秒", minutes, seconds);
+    
+    /**
+     * 修复任务数据结构
+     */
+    private static class FixTask implements Comparable<FixTask> {
+        private final Integer clusterId;
+        private final HostInfo hostInfo;
+        private final CheckItem checkItem;
+        private final int priority;
+        
+        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+            this.clusterId = clusterId;
+            this.hostInfo = hostInfo;
+            this.checkItem = checkItem;
+            // 设置优先级，可以基于检查项的重要程度设置
+            this.priority = calculatePriority(checkItem);
+        }
+        
+        public Integer getClusterId() {
+            return clusterId;
+        }
+        
+        public HostInfo getHostInfo() {
+            return hostInfo;
+        }
+        
+        public CheckItem getCheckItem() {
+            return checkItem;
+        }
+        
+        public int getPriority() {
+            return priority;
+        }
+        
+        // 计算任务优先级
+        private int calculatePriority(CheckItem checkItem) {
+            // 基于检查项的ID或其他属性设置优先级，默认为中等优先级
+            return 100;
+        }
+        
+        @Override
+        public int compareTo(FixTask other) {
+            // 优先级高的排在队列前面
+            return Integer.compare(this.priority, other.priority);
+        }
     }
 } 
