@@ -7,6 +7,7 @@ import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
 import com.datasophon.common.model.LogEntry;
+import com.datasophon.common.model.OSInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,17 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractItemChecker implements ItemChecker {
     private static final Logger logger = LoggerFactory.getLogger(AbstractItemChecker.class);
     private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
+    private static final String OS_INFO_CACHE_PREFIX = "OS_INFO_";
+    private static final long OS_INFO_CACHE_TTL = 24 * 60 * 60 * 1000; // 24小时缓存
+
+    // 用于缓存操作系统信息的Map
+    private static final Map<String, OSInfo> osInfoCache = new ConcurrentHashMap<>();
 
     protected ClientSession session;
     // 当前检查项的日志缓存键
@@ -1008,5 +1015,271 @@ public abstract class AbstractItemChecker implements ItemChecker {
         logger.debug("正在实时更新检查状态消息: {}", message);
         // 立即更新状态
         updateCheckStatus(hostInfo.getClusterId(), hostInfo, checkItem);
+    }
+
+    /**
+     * 获取主机操作系统信息
+     * @param hostInfo 主机信息
+     * @return 操作系统信息对象
+     */
+    protected OSInfo getOSInfo(HostInfo hostInfo) throws InterruptedException {
+        if (hostInfo == null) {
+            logger.warn("主机信息为空，无法获取操作系统信息");
+            return null;
+        }
+        
+        String hostKey = hostInfo.getHostname();
+        
+        // 首先从内存缓存中获取
+        OSInfo cachedInfo = osInfoCache.get(hostKey);
+        if (cachedInfo != null) {
+            logger.debug("从内存缓存中获取主机{}的操作系统信息", hostKey);
+            return cachedInfo;
+        }
+        
+        // 其次尝试从持久化缓存中获取
+        String cacheKey = OS_INFO_CACHE_PREFIX + hostKey;
+        cachedInfo = CacheUtils.get(cacheKey, OSInfo.class);
+        if (cachedInfo != null) {
+            // 同时更新内存缓存
+            osInfoCache.put(hostKey, cachedInfo);
+            logger.debug("从持久化缓存中获取主机{}的操作系统信息", hostKey);
+            return cachedInfo;
+        }
+        
+        // 缓存中没有，需要通过SSH连接检测系统信息
+        logger.info("正在检测主机{}的操作系统信息", hostKey);
+        try {
+            // 确保会话已连接
+            if (session == null || !session.isOpen()) {
+                openSession(hostInfo);
+            }
+            
+            if (session == null) {
+                logger.error("无法连接到主机{}，获取操作系统信息失败", hostKey);
+                return null;
+            }
+            
+            OSInfo osInfo = detectOSInfo(hostInfo);
+            
+            if (osInfo != null) {
+                // 更新缓存
+                osInfoCache.put(hostKey, osInfo);
+                CacheUtils.put(cacheKey, osInfo, OS_INFO_CACHE_TTL);
+                logger.info("检测到主机{}的操作系统: {}", hostKey, osInfo);
+            }
+            
+            return osInfo;
+        } catch (Exception e) {
+            logger.error("获取主机{}的操作系统信息失败: {}", hostKey, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 检测远程主机的操作系统信息
+     */
+    private OSInfo detectOSInfo(HostInfo hostInfo) throws InterruptedException {
+        OSInfo osInfo = new OSInfo();
+        osInfo.setHostname(hostInfo.getHostname());
+        
+        try {
+            // 1. 检查是否为CentOS
+            CommandResult centosCheck = execCommand(session, "cat /etc/redhat-release 2>/dev/null || echo ''");
+            if (centosCheck.isSuccess() && centosCheck.getOutput().trim().length() > 0) {
+                String output = centosCheck.getOutput().trim();
+                osInfo.setFamily("RedHat");
+                
+                if (output.contains("CentOS")) {
+                    osInfo.setDistro("CentOS");
+                    // 提取版本号
+                    if (output.contains("release 7")) {
+                        osInfo.setMajorVersion(7);
+                        osInfo.setFullVersion("7");
+                        if (output.contains("7.")) {
+                            String minorVersion = output.split("7\\.")[1].split(" ")[0];
+                            osInfo.setFullVersion("7." + minorVersion);
+                        }
+                    } else if (output.contains("release 8")) {
+                        osInfo.setMajorVersion(8);
+                        osInfo.setFullVersion("8");
+                        if (output.contains("8.")) {
+                            String minorVersion = output.split("8\\.")[1].split(" ")[0];
+                            osInfo.setFullVersion("8." + minorVersion);
+                        }
+                    }
+                    return osInfo;
+                } else if (output.contains("Red Hat")) {
+                    osInfo.setDistro("RHEL");
+                    // 提取RHEL版本
+                    if (output.contains("release 7")) {
+                        osInfo.setMajorVersion(7);
+                        osInfo.setFullVersion("7");
+                    } else if (output.contains("release 8")) {
+                        osInfo.setMajorVersion(8);
+                        osInfo.setFullVersion("8");
+                    }
+                    return osInfo;
+                }
+            }
+            
+            // 2. 检查是否为Ubuntu或Debian
+            CommandResult ubuntuCheck = execCommand(session, "cat /etc/os-release 2>/dev/null || echo ''");
+            if (ubuntuCheck.isSuccess() && ubuntuCheck.getOutput().trim().length() > 0) {
+                String output = ubuntuCheck.getOutput().trim();
+                
+                if (output.contains("ID=ubuntu")) {
+                    osInfo.setFamily("Debian");
+                    osInfo.setDistro("Ubuntu");
+                    
+                    // 提取版本号
+                    if (output.contains("VERSION_ID=")) {
+                        String versionLine = output.split("VERSION_ID=")[1].split("\n")[0];
+                        String version = versionLine.replace("\"", "").trim();
+                        osInfo.setFullVersion(version);
+                        if (version.contains(".")) {
+                            try {
+                                osInfo.setMajorVersion(Integer.parseInt(version.split("\\.")[0]));
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析Ubuntu版本号失败: {}", version);
+                            }
+                        }
+                    }
+                    return osInfo;
+                } else if (output.contains("ID=debian")) {
+                    osInfo.setFamily("Debian");
+                    osInfo.setDistro("Debian");
+                    
+                    // 提取版本号
+                    if (output.contains("VERSION_ID=")) {
+                        String versionLine = output.split("VERSION_ID=")[1].split("\n")[0];
+                        String version = versionLine.replace("\"", "").trim();
+                        osInfo.setFullVersion(version);
+                        try {
+                            osInfo.setMajorVersion(Integer.parseInt(version));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析Debian版本号失败: {}", version);
+                        }
+                    }
+                    return osInfo;
+                } else if (output.contains("ID=kylin") || output.contains("ID=\"kylin\"")) {
+                    osInfo.setFamily("RedHat");
+                    osInfo.setDistro("Kylin");
+                    
+                    // 提取版本号
+                    if (output.contains("VERSION_ID=")) {
+                        String versionLine = output.split("VERSION_ID=")[1].split("\n")[0];
+                        String version = versionLine.replace("\"", "").trim();
+                        osInfo.setFullVersion(version);
+                        
+                        // Kylin版本格式各不相同，尝试解析主版本号
+                        if (version.contains("V4") || version.contains("v4")) {
+                            osInfo.setMajorVersion(4);
+                        } else if (version.contains("V10") || version.contains("v10")) {
+                            osInfo.setMajorVersion(10);
+                        }
+                    }
+                    return osInfo;
+                }
+            }
+            
+            // 3. 通用的获取Linux发行版信息方法
+            CommandResult lsbRelease = execCommand(session, "lsb_release -a 2>/dev/null || echo ''");
+            if (lsbRelease.isSuccess() && lsbRelease.getOutput().trim().length() > 0) {
+                String output = lsbRelease.getOutput().trim();
+                
+                String distro = "";
+                String version = "";
+                
+                if (output.contains("Distributor ID:")) {
+                    distro = output.split("Distributor ID:")[1].split("\n")[0].trim();
+                }
+                
+                if (output.contains("Release:")) {
+                    version = output.split("Release:")[1].split("\n")[0].trim();
+                }
+                
+                if (!distro.isEmpty()) {
+                    if (distro.contains("Ubuntu")) {
+                        osInfo.setFamily("Debian");
+                        osInfo.setDistro("Ubuntu");
+                    } else if (distro.contains("Debian")) {
+                        osInfo.setFamily("Debian");
+                        osInfo.setDistro("Debian");
+                    } else if (distro.contains("CentOS")) {
+                        osInfo.setFamily("RedHat");
+                        osInfo.setDistro("CentOS");
+                    } else if (distro.contains("RedHat") || distro.contains("Red Hat")) {
+                        osInfo.setFamily("RedHat");
+                        osInfo.setDistro("RHEL");
+                    } else if (distro.contains("Kylin")) {
+                        osInfo.setFamily("RedHat");
+                        osInfo.setDistro("Kylin");
+                    } else {
+                        osInfo.setFamily("Unknown");
+                        osInfo.setDistro(distro);
+                    }
+                    
+                    osInfo.setFullVersion(version);
+                    if (version.contains(".")) {
+                        try {
+                            osInfo.setMajorVersion(Integer.parseInt(version.split("\\.")[0]));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析版本号失败: {}", version);
+                        }
+                    }
+                    return osInfo;
+                }
+            }
+            
+            // 4. 尝试通过uname获取基本信息
+            CommandResult uname = execCommand(session, "uname -a");
+            if (uname.isSuccess()) {
+                String output = uname.getOutput().trim();
+                
+                // 设置默认值
+                osInfo.setFamily("Linux");
+                osInfo.setDistro("Unknown");
+                osInfo.setFullVersion("Unknown");
+                
+                if (output.contains("el7") || output.contains("fc7")) {
+                    osInfo.setFamily("RedHat");
+                    osInfo.setMajorVersion(7);
+                } else if (output.contains("el8") || output.contains("fc8")) {
+                    osInfo.setFamily("RedHat");
+                    osInfo.setMajorVersion(8);
+                } else if (output.contains("Ubuntu")) {
+                    osInfo.setFamily("Debian");
+                    osInfo.setDistro("Ubuntu");
+                } else if (output.contains("Debian")) {
+                    osInfo.setFamily("Debian");
+                    osInfo.setDistro("Debian");
+                } else if (output.contains("Kylin")) {
+                    osInfo.setFamily("RedHat");
+                    osInfo.setDistro("Kylin");
+                }
+                
+                return osInfo;
+            }
+        } catch (Exception e) {
+            logger.error("检测操作系统信息时发生错误: {}", e.getMessage(), e);
+        }
+        
+        // 如果无法确定，返回默认信息
+        osInfo.setFamily("Linux");
+        osInfo.setDistro("Unknown");
+        osInfo.setFullVersion("Unknown");
+        return osInfo;
+    }
+
+    /**
+     * 清除主机的操作系统信息缓存
+     */
+    protected void clearOSInfoCache(String hostname) {
+        if (hostname != null && !hostname.isEmpty()) {
+            osInfoCache.remove(hostname);
+            CacheUtils.remove(OS_INFO_CACHE_PREFIX + hostname);
+            logger.info("已清除主机{}的操作系统信息缓存", hostname);
+        }
     }
 } 

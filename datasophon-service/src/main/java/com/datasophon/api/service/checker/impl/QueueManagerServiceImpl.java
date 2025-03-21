@@ -177,6 +177,11 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         if (scopeCode == ScopeCode.ALL || scopeCode == ScopeCode.SCHEDULER) {
             // 恢复AsyncCheckService的定时任务
             asyncCheckService.startScheduledTasks();
+            
+            // 确保HostCheckQueueManager的监控任务被启动
+            hostCheckQueueManager.startQueueHealthMonitor();
+            hostCheckQueueManager.startTaskTimeoutMonitor();
+            
             if (scopeCode == ScopeCode.SCHEDULER) {
                 messageBuilder.append("定时任务");
             }
@@ -234,6 +239,10 @@ public class QueueManagerServiceImpl implements QueueManagerService {
     private OperationResult shutdownQueueSystemDirect() {
         // 为安全起见，先取消所有任务
         hostCheckQueueManager.cancelAllTasks();
+        
+        // 确保明确关闭队列健康监控和任务超时监控
+        hostCheckQueueManager.stopQueueHealthMonitor();
+        hostCheckQueueManager.stopTaskTimeoutMonitor();
         
         // 完全关闭队列管理器
         hostCheckQueueManager.shutdown();

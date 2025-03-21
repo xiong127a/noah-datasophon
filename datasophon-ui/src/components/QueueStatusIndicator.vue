@@ -502,7 +502,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">SSH会话缓存</div>
-              <a-tooltip title="SSH会话缓存命中率，表示复用已有连接的比例。若显示为0%可能是因为连接复用功能尚未激活或统计功能尚未完全实现。">
+              <a-tooltip title="SSH会话缓存命中率，表示复用已有连接的比例。若显示为0%可能是因为连接复用功能尚未激活。">
                 <div class="stat-value ssh-cache-stat">
                   <div class="cache-container">
                     <div class="cache-level" :class="getCacheLevelClass(schedulerStats.sessionCacheHitRate)">

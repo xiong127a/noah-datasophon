@@ -1,4 +1,4 @@
-package com.datasophon.api.service.checker.impl;
+package com.datasophon.api.service.checker.impl.memory;
 
 import com.datasophon.api.service.checker.AbstractItemChecker;
 import com.datasophon.api.service.checker.CommandResult;

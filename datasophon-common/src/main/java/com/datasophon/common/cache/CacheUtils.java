@@ -83,4 +83,44 @@ public class CacheUtils {
         Object data = cache.get(key);
         return (String) data;
     }
+
+    /**
+     * 获取指定类型的缓存对象
+     * @param <T> 返回对象类型
+     * @param key 缓存键
+     * @param clazz 期望返回的类型
+     * @return 缓存的对象，如果不存在或类型不匹配则返回null
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T get(String key, Class<T> clazz) {
+        Object value = cache.get(key);
+        if (value == null) {
+            return null;
+        }
+        
+        if (clazz.isInstance(value)) {
+            return (T) value;
+        } else {
+            logger.warn("缓存对象类型不匹配，期望: {}, 实际: {}", clazz.getName(), value.getClass().getName());
+            return null;
+        }
+    }
+    
+    /**
+     * 放入缓存并指定过期时间
+     * @param key 缓存键
+     * @param value 缓存值
+     * @param timeout 过期时间（毫秒）
+     */
+    public static void put(String key, Object value, long timeout) {
+        cache.put(key, value, timeout);
+    }
+    
+    /**
+     * 删除缓存项
+     * @param key 要删除的缓存键
+     */
+    public static void remove(String key) {
+        cache.remove(key);
+    }
 }

@@ -429,6 +429,10 @@ public class HostCheckQueueManager {
         // 8. 启动所有定时任务
         startScheduledTasks();
         
+        // 9. 确保队列健康监控和任务超时监控一定被启动
+        startQueueHealthMonitor();
+        startTaskTimeoutMonitor();
+        
         logger.info("系统组件状态检查完成，所有组件已确保运行");
     }
 
