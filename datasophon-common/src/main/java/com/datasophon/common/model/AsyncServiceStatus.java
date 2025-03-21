@@ -57,4 +57,7 @@ public class AsyncServiceStatus {
     
     // 连接清理间隔（可读字符串）
     private String connectionCleanupInterval;
+    
+    // SSH会话缓存命中率（百分比）
+    private Integer sessionCacheHitRate;
 } 

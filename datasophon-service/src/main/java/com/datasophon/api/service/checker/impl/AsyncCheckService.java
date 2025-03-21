@@ -30,7 +30,6 @@ import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -96,6 +95,10 @@ public class AsyncCheckService {
     
     // 添加连接池清理改进
     private final Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
+    
+    // 添加缓存命中和总请求计数，用于计算缓存命中率
+    private final Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
+    private final Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
     
     @PostConstruct
     public void init() {
@@ -556,6 +559,10 @@ public class AsyncCheckService {
     private ClientSession getOrCreateConnection(HostInfo hostInfo) {
         String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
         
+        // 增加总请求计数
+        long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
+        hostCacheRequests.put(hostKey, requests);
+        
         // 获取连接锁，确保同一主机的连接操作串行化
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
         
@@ -573,6 +580,11 @@ public class AsyncCheckService {
                             logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getHostname());
                             // 更新最后访问时间
                             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+                            
+                            // 增加缓存命中计数
+                            long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
+                            hostCacheHits.put(hostKey, hits);
+                            
                             return session;
                         } else {
                             logger.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getHostname());
@@ -698,20 +710,26 @@ public class AsyncCheckService {
                     }
                 }
             } catch (Exception e) {
-                logger.warn("清理连接时发生异常: {}", e.getMessage());
-                keysToRemove.add(key);
+                logger.warn("检查连接时发生异常: {}", e.getMessage());
             }
         }
         
-        // 批量移除失效连接
+        // 移除已关闭的连接
         for (String key : keysToRemove) {
             hostConnectionPool.remove(key);
+            // 同时也要移除对应的访问时间记录
             connectionLastAccessTime.remove(key);
+            
+            // 注意：不要清除缓存命中统计数据，保留以便计算长期命中率
         }
         
         lastConnectionCleanupTime = System.currentTimeMillis();
-        logger.info("连接池清理完成，移除了 {} 个无效连接，{} 个空闲连接，当前连接数: {}", 
+        logger.info("SSH连接清理完成，关闭{}个失效连接，{}个空闲连接，当前连接池大小: {}",
             closedCount, idleClosedCount, hostConnectionPool.size());
+            
+        // 日志记录当前缓存命中率
+        int hitRate = calculateSessionCacheHitRate();
+        logger.info("当前SSH会话缓存命中率: {}%", hitRate);
     }
     
     /**
@@ -796,6 +814,26 @@ public class AsyncCheckService {
     }
     
     /**
+     * 计算SSH会话缓存命中率
+     * @return 缓存命中百分比
+     */
+    private int calculateSessionCacheHitRate() {
+        long totalHits = 0;
+        long totalRequests = 0;
+        
+        for (String hostKey : hostCacheRequests.keySet()) {
+            totalHits += hostCacheHits.getOrDefault(hostKey, 0L);
+            totalRequests += hostCacheRequests.getOrDefault(hostKey, 0L);
+        }
+        
+        if (totalRequests == 0) {
+            return 0;
+        }
+        
+        return (int) ((totalHits * 100) / totalRequests);
+    }
+    
+    /**
      * 获取异步服务状态（返回实体类）
      * @return AsyncServiceStatus对象
      */
@@ -822,6 +860,9 @@ public class AsyncCheckService {
         // 添加可读间隔
         status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
         status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
+        
+        // 添加SSH会话缓存命中率
+        status.setSessionCacheHitRate(calculateSessionCacheHitRate());
         
         return status;
     }

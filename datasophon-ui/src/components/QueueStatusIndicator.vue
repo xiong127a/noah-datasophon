@@ -497,13 +497,21 @@
             <div class="stat-item">
               <div class="stat-label">上次清理时间</div>
               <div class="stat-value cleanup-time">
-                <a-icon type="history" class="cleanup-icon" />
-                <span>{{ formatDateTime(schedulerStats.lastConnectionCleanupTime) }}</span>
+                <span class="cleanup-text">{{ formatDateTime(schedulerStats.lastConnectionCleanupTime) }}</span>
               </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">SSH会话缓存</div>
-              <div class="stat-value">{{ schedulerStats.sessionCacheHitRate || '0' }}%</div>
+              <a-tooltip title="SSH会话缓存命中率，表示复用已有连接的比例。若显示为0%可能是因为连接复用功能尚未激活或统计功能尚未完全实现。">
+                <div class="stat-value ssh-cache-stat">
+                  <div class="cache-container">
+                    <div class="cache-level" :class="getCacheLevelClass(schedulerStats.sessionCacheHitRate)">
+                      <span class="cache-value">{{ schedulerStats.sessionCacheHitRate || 0 }}%</span>
+                      <span class="cache-label">{{ getCacheLabel(schedulerStats.sessionCacheHitRate) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </a-tooltip>
             </div>
           </div>
         </div>
@@ -625,7 +633,9 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">上次任务清理</div>
-              <div class="stat-value">{{ formatDateTime(schedulerStats.lastTaskCleanupTime) }}</div>
+              <div class="stat-value cleanup-time">
+                <span class="cleanup-text">{{ formatDateTime(schedulerStats.lastTaskCleanupTime) }}</span>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">过期任务清理</div>
@@ -1039,7 +1049,6 @@ export default {
         
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       } catch (error) {
-        // 如果格式化失败，返回原始字符串
         return dateStr;
       }
     },
@@ -2203,6 +2212,24 @@ export default {
         console.error('格式化队列时间错误:', error);
         return '计算错误';
       }
+    },
+    
+    // 获取缓存等级CSS类
+    getCacheLevelClass(hitRate) {
+      if (!hitRate || hitRate === 0) return 'level-low';
+      if (hitRate < 30) return 'level-low';
+      if (hitRate < 60) return 'level-medium';
+      if (hitRate < 85) return 'level-good';
+      return 'level-excellent';
+    },
+    
+    // 获取缓存标签文本
+    getCacheLabel(hitRate) {
+      if (!hitRate || hitRate === 0) return '未使用缓存';
+      if (hitRate < 30) return '缓存较少';
+      if (hitRate < 60) return '缓存适中';
+      if (hitRate < 85) return '缓存良好';
+      return '缓存优秀';
     },
   }
 }
@@ -3379,22 +3406,44 @@ export default {
 .cleanup-time {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  background: linear-gradient(135deg, #fafafa, #f0f4f8);
+  border-radius: 6px;
+  padding: 6px 8px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  transition: all 0.3s ease;
+  min-height: 36px;
+  overflow: hidden;
 
-  .cleanup-icon {
-    font-size: 16px;
-    color: #1890ff;
-    animation: pulse 1.5s infinite ease-in-out;
+  &:hover {
+    box-shadow: inset 0 1px 5px rgba(24, 144, 255, 0.1);
+    background: linear-gradient(135deg, #f4f9ff, #edf6ff);
   }
 
   .cleanup-text {
     font-family: 'Consolas', monospace;
-    font-size: 14px;
+    font-size: 13px;
     background: linear-gradient(90deg, #1890ff, #52c41a);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 500;
-    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-shadow: 0 0 1px rgba(24, 144, 255, 0.1);
+    animation: text-glow 3s infinite alternate;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@keyframes text-glow {
+  0% {
+    text-shadow: 0 0 1px rgba(24, 144, 255, 0.1);
+  }
+  100% {
+    text-shadow: 0 0 3px rgba(24, 144, 255, 0.3);
   }
 }
 
@@ -3642,6 +3691,114 @@ export default {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.ssh-cache-stat {
+  width: 100%;
+
+  .cache-container {
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(135deg, #f5f5f5, #fafafa);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.03),
+        rgba(0, 0, 0, 0.03) 10px,
+        rgba(0, 0, 0, 0.06) 10px,
+        rgba(0, 0, 0, 0.06) 20px
+      );
+      opacity: 0.3;
+      z-index: 1;
+    }
+  }
+
+  .cache-level {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    padding: 0 16px;
+    transition: all 0.5s ease;
+    
+    &.level-low {
+      background: linear-gradient(135deg, #fff1f0, #ffccc7);
+      box-shadow: 0 0 10px rgba(255, 77, 79, 0.2);
+    }
+    
+    &.level-medium {
+      background: linear-gradient(135deg, #fff7e6, #ffd591);
+      box-shadow: 0 0 10px rgba(250, 173, 20, 0.2);
+    }
+    
+    &.level-good {
+      background: linear-gradient(135deg, #f6ffed, #b7eb8f);
+      box-shadow: 0 0 10px rgba(82, 196, 26, 0.2);
+    }
+    
+    &.level-excellent {
+      background: linear-gradient(135deg, #e6f7ff, #91d5ff);
+      box-shadow: 0 0 10px rgba(24, 144, 255, 0.2);
+      animation: excellent-pulse 3s infinite alternate;
+    }
+    
+    &:hover {
+      transform: scale(1.02);
+    }
+    
+    .cache-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #262626;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .cache-label {
+      font-size: 12px;
+      color: #595959;
+      margin-top: 2px;
+    }
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.02) 100%
+      );
+      z-index: -1;
+    }
+  }
+}
+
+@keyframes excellent-pulse {
+  0% {
+    box-shadow: 0 0 10px rgba(24, 144, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 18px rgba(24, 144, 255, 0.4);
   }
 }
 </style> 
