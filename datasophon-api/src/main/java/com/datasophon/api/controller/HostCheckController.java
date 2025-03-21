@@ -307,10 +307,10 @@ public class HostCheckController {
             
             if ("taskCleanup".equals(type)) {
                 success = asyncCheckService.setTaskCleanupInterval(intervalMs);
-                message = success ? "任务清理定时任务间隔设置成功" : "间隔时间不能小于1分钟";
+                message = success ? "任务清理定时任务间隔设置成功，当前间隔: " + (intervalMs/1000) + "秒" : "间隔时间不能小于1秒";
             } else if ("connectionCleanup".equals(type)) {
                 success = asyncCheckService.setConnectionCleanupInterval(intervalMs);
-                message = success ? "连接清理定时任务间隔设置成功" : "间隔时间不能小于30秒";
+                message = success ? "连接清理定时任务间隔设置成功，当前间隔: " + (intervalMs/1000) + "秒" : "间隔时间不能小于1秒";
             } else {
                 return Result.error("不支持的任务类型: " + type);
             }
@@ -320,6 +320,11 @@ public class HostCheckController {
                 ScheduleConfigResult resultData = new ScheduleConfigResult();
                 resultData.setMessage(message);
                 resultData.setStatus(asyncCheckService.getScheduledTasksStatus());
+                
+                // 添加当前设置的值到结果中
+                resultData.setCurrentIntervalMs(intervalMs);
+                resultData.setCurrentIntervalSeconds(intervalMs / 1000);
+                
                 return Result.success(resultData);
             } else {
                 return Result.error(message);
@@ -382,6 +387,50 @@ public class HostCheckController {
         } catch (Exception e) {
             log.error("修改定时任务执行间隔失败", e);
             return Result.error("修改执行间隔失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 更新队列健康监控任务间隔
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateQueueHealthMonitorInterval")
+    @UserPermission
+    public Result updateQueueHealthMonitorInterval(
+            @RequestParam("intervalMs") long intervalMs) {
+        try {
+            if (intervalMs <= 0) {
+                return Result.error("执行间隔必须大于0毫秒");
+            }
+            
+            // 调用队列管理服务更新间隔
+            return queueManagerService.updateTaskInterval("queueHealthMonitor", intervalMs);
+        } catch (Exception e) {
+            log.error("更新队列健康监控间隔失败", e);
+            return Result.error("更新间隔失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 更新任务超时监控任务间隔
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateTaskTimeoutMonitorInterval")
+    @UserPermission
+    public Result updateTaskTimeoutMonitorInterval(
+            @RequestParam("intervalMs") long intervalMs) {
+        try {
+            if (intervalMs <= 0) {
+                return Result.error("执行间隔必须大于0毫秒");
+            }
+            
+            // 调用队列管理服务更新间隔
+            return queueManagerService.updateTaskInterval("taskTimeoutMonitor", intervalMs);
+        } catch (Exception e) {
+            log.error("更新任务超时监控间隔失败", e);
+            return Result.error("更新间隔失败: " + e.getMessage());
         }
     }
 } 

@@ -56,6 +56,7 @@
                   @change="toggleAutoRefresh"
                   checkedChildren="自动刷新"
                   unCheckedChildren="手动刷新"
+                  class="custom-switch"
                 />
               </a-tooltip>
             </div>
@@ -74,6 +75,7 @@
                 :checked="systemActive"
                 :loading="systemLoading"
                 @change="toggleSystem"
+                class="custom-switch"
               />
             </div>
           </div>
@@ -276,31 +278,24 @@
             <h4>定时任务管理</h4>
             <div class="status-control">
               <div class="status-item">
-                <div class="status-light" :class="schedulerStatusClass" />
-                <span>{{ schedulerActive ? '活跃' : '已暂停' }}</span>
+                <a-tooltip :title="schedulerActive ? '所有定时任务已激活' : '所有定时任务已暂停'">
+                  <div class="status-light" :class="schedulerStatusClass" />
+                </a-tooltip>
               </div>
-              <a-space>
-                <a-tooltip title="暂停所有定时任务">
-                  <a-button
-                    type="primary"
-                    size="small"
-                    :disabled="!schedulerActive"
-                    @click="toggleScheduler"
-                  >
-                    <a-icon type="pause-circle" /> 暂停全部
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip title="启动所有定时任务">
-                  <a-button
-                    type="primary"
-                    size="small"
-                    :disabled="schedulerActive"
-                    @click="toggleScheduler"
-                  >
-                    <a-icon type="play-circle" /> 启动全部
-                  </a-button>
-                </a-tooltip>
-              </a-space>
+              <a-tooltip :title="schedulerActive ? '暂停所有定时任务' : '启动所有定时任务'">
+                <a-button
+                  :type="schedulerActive ? 'danger' : 'primary'"
+                  shape="round"
+                  size="default"
+                  :loading="schedulerLoading"
+                  @click="toggleScheduler"
+                  class="scheduler-toggle-button"
+                  :class="{'active-button': schedulerActive, 'inactive-button': !schedulerActive}"
+                >
+                  <a-icon :type="schedulerActive ? 'pause-circle' : 'play-circle'" theme="filled" />
+                  <span class="button-text">{{ schedulerActive ? '暂停全部' : '启动全部' }}</span>
+                </a-button>
+              </a-tooltip>
             </div>
           </div>
           
@@ -311,7 +306,7 @@
               style="margin-bottom: 10px;"
             >
               <template slot="message">
-                您可以调整定时任务执行间隔，输入秒数后点击保存按钮。各任务的最小间隔各不相同，系统会自动限制。
+                您可以调整定时任务执行间隔，输入秒数后点击保存按钮。系统支持的最小间隔为1秒，建议生产环境使用更长间隔。
               </template>
             </a-alert>
             <a-table
@@ -331,21 +326,21 @@
                   <a-input-number
                     v-model="record.newInterval"
                     :min="getMinInterval(record.id)"
-                    :max="3600"
-                    :step="1"
-                    placeholder="请输入间隔(秒)"
-                    style="width: 90px;"
+                    :max="24 * 60 * 60"
+                    :disabled="saving || record.saving"
+                    style="width: 100px;"
+                    addon-after="秒"
                   />
-                  <span class="interval-unit">秒</span>
                   <a-button 
                     type="primary" 
                     size="small" 
                     @click="updateTaskInterval(record)"
                     :loading="record.saving"
+                    style="margin-left: 5px"
                   >
                     保存
                   </a-button>
-                  <a-tooltip title="恢复默认间隔">
+                  <a-tooltip title="重置为默认值（任务清理和连接清理为60秒，队列健康监控为60秒，任务超时监控为30秒）">
                     <a-button 
                       type="link" 
                       size="small" 
@@ -359,19 +354,11 @@
               <template slot="action" slot-scope="text, record">
                 <a-space>
                   <a-switch
-                    size="small"
                     :checked="record.active"
                     :loading="record.loading"
                     @click="toggleTask(record)"
+                    class="custom-switch"
                   />
-                  <a-popconfirm
-                    title="确定要重置此任务吗？"
-                    @confirm="resetTask(record)"
-                  >
-                    <a-button type="link" size="small" :disabled="!record.active">
-                      重置
-                    </a-button>
-                  </a-popconfirm>
                 </a-space>
               </template>
               
@@ -511,54 +498,48 @@ export default {
       cleanupLoading: false,
       queueTasks: [],
       fixQueueTasks: [],
+      // 添加请求锁，防止请求堆积
+      isRequestPending: false,
       scheduledTasks: [
         {
           id: 'taskCleanup',
           name: '任务清理',
-          description: '清理已完成的过期任务',
+          description: '自动清理已完成的任务记录',
+          active: false,
+          lastRun: '未执行',
           interval: '1小时',
           newInterval: 3600,
-          active: false,
-          lastRun: '',
-          loading: false,
-          saving: false,
-          defaultInterval: 3600
+          saving: false
         },
         {
           id: 'connectionCleanup',
           name: '连接清理',
-          description: '清理不活跃的SSH连接',
+          description: '自动清理无效的连接记录',
+          active: false,
+          lastRun: '未执行',
           interval: '10分钟',
           newInterval: 600,
-          active: false,
-          lastRun: '',
-          loading: false,
-          saving: false,
-          defaultInterval: 600
+          saving: false
         },
         {
           id: 'queueHealthMonitor',
           name: '队列健康监控',
-          description: '监控队列处理线程的健康状态',
-          interval: '1分钟',
-          newInterval: 60,
+          description: '监控队列健康状态并自动处理异常',
           active: false,
-          lastRun: '',
-          loading: false,
-          saving: false,
-          defaultInterval: 60
+          lastRun: '未执行',
+          interval: '2分钟',
+          newInterval: 120,
+          saving: false
         },
         {
           id: 'taskTimeoutMonitor',
           name: '任务超时监控',
-          description: '检查和处理超时的任务',
-          interval: '5分钟',
-          newInterval: 300,
+          description: '监控任务执行时间并处理超时任务',
           active: false,
-          lastRun: '',
-          loading: false,
-          saving: false,
-          defaultInterval: 300
+          lastRun: '未执行',
+          interval: '30秒',
+          newInterval: 30,
+          saving: false
         }
       ],
       scheduledTaskColumns: [
@@ -709,6 +690,7 @@ export default {
       queueProcessorUptime: 0,
       queueProcessorTimer: null,
       systemLoading: false,
+      saving: false,
     }
   },
   created() {
@@ -716,6 +698,10 @@ export default {
     this.fetchStartTime();
     // 启动定时更新运行时间
     this.startUptimeTimer();
+    // 初始化加载数据
+    this.fetchFullStatusOnce();
+    // 默认开启自动刷新
+    this.startAutoRefresh();
   },
   beforeDestroy() {
     // 组件销毁前清除定时器
@@ -723,6 +709,27 @@ export default {
     // 清理定时器
     if (this.uptimeTimer) {
       clearInterval(this.uptimeTimer);
+    }
+  },
+  watch: {
+    // 监听任务状态变化，自动同步总状态
+    scheduledTasks: {
+      handler: 'syncGlobalTaskStatus',
+      deep: true
+    },
+    // 监听详情弹窗状态
+    showDetailModal(newVal) {
+      if (newVal) {
+        // 详情弹窗打开时，立即获取一次数据
+        this.fetchFullStatusOnce();
+        // 如果设置了自动刷新，确保开启
+        if (this.isAutoRefresh && !this.refreshInterval) {
+          this.startAutoRefresh();
+        }
+      } else {
+        // 详情弹窗关闭时，如果没有其他需要自动刷新的界面，可以停止刷新
+        // 这里可以根据需要决定是否在关闭弹窗时停止刷新
+      }
     }
   },
   computed: {
@@ -847,28 +854,80 @@ export default {
     
     // 启动自动刷新
     startAutoRefresh() {
+      if (this.isAutoRefresh && this.refreshInterval) {
+        // 如果已经在自动刷新中，不需要再次启动
+        console.log('自动刷新已经在运行中，无需重复启动');
+        return;
+      }
+      
+      console.log('启动自动刷新');
       this.isAutoRefresh = true;
-      this.refreshInterval = setInterval(() => {
-        this.fetchFullStatus();
+      // 先清除可能存在的定时器
+      if (this.refreshInterval) {
+        clearTimeout(this.refreshInterval);
+        this.refreshInterval = null;
+      }
+      // 使用递归的方式，确保上一个请求完成后再发起下一个
+      this.scheduleNextRefresh();
+    },
+    
+    // 安排下一次刷新
+    scheduleNextRefresh() {
+      if (!this.isAutoRefresh) return;
+      
+      console.log('安排下一次刷新，1秒后执行');
+      this.refreshInterval = setTimeout(async () => {
+        // 先执行数据获取
+        await this.fetchFullStatusOnce();
         this.updateQueueProcessorUptime();
-      }, 5000); // 每5秒更新一次
+        
+        // 然后安排下一次刷新
+        if (this.isAutoRefresh) {
+          this.scheduleNextRefresh();
+        }
+      }, 1000); // 间隔1秒
     },
     
     // 停止自动刷新
     stopAutoRefresh() {
       if (this.refreshInterval) {
-        clearInterval(this.refreshInterval);
+        console.log('停止自动刷新');
+        clearTimeout(this.refreshInterval);
         this.refreshInterval = null;
+      }
+      this.isAutoRefresh = false;
+    },
+    
+    // 单次获取数据，确保不会重复请求
+    async fetchFullStatusOnce() {
+      // 如果已经有一个请求在进行中，则跳过此次请求
+      if (this.isRequestPending) {
+        console.log('跳过请求：上一个请求尚未完成');
+        return;
+      }
+      
+      try {
+        console.log('开始请求队列状态');
+        this.isRequestPending = true;
+        await this.fetchFullStatus(false);
+        console.log('队列状态请求完成');
+      } finally {
+        this.isRequestPending = false;
       }
     },
     
     // 切换自动刷新状态
     toggleAutoRefresh() {
-      this.isAutoRefresh = !this.isAutoRefresh;
-      if (this.isAutoRefresh) {
+      // 切换状态
+      const newState = !this.isAutoRefresh;
+      
+      if (newState) {
+        // 启用自动刷新
         this.startAutoRefresh();
         message.success('自动刷新已启用');
       } else {
+        // 停用自动刷新
+        this.stopAutoRefresh();
         message.success('自动刷新已停用');
       }
     },
@@ -884,6 +943,23 @@ export default {
         const response = await this.$axiosGet(global.API.queueSystemDetails);
         
         if (response && response.code === 200 && response.data) {
+          // 调试信息
+          console.log('接收到的后端数据结构:', {
+            queueManager: response.data.queueManager,
+            asyncService: response.data.asyncService,
+            queueTasksCount: response.data.queueTasks ? response.data.queueTasks.length : 0,
+            fixQueueTasksCount: response.data.fixQueueTasks ? response.data.fixQueueTasks.length : 0
+          });
+          
+          if (response.data.queueManager) {
+            console.log('队列管理器健康监控数据:', {
+              monitorActive: response.data.queueManager.queueHealthMonitorActive,
+              interval: response.data.queueManager.queueHealthMonitorInterval,
+              intervalMs: response.data.queueManager.queueHealthMonitorIntervalMs,
+              lastTime: response.data.queueManager.lastQueueHealthMonitorTime
+            });
+          }
+          
           // 更新状态数据
           if (response.data.queueManager) {
             this.queueStats = response.data.queueManager;
@@ -915,26 +991,175 @@ export default {
                 case 'taskCleanup':
                   task.active = this.schedulerStats.taskCleanupActive || false;
                   task.lastRun = this.schedulerStats.lastTaskCleanupTime;
-                  task.interval = this.schedulerStats.taskCleanupInterval || '1小时';
-                  task.newInterval = this.getIntervalSeconds(this.schedulerStats.taskCleanupInterval);
+                  
+                  // 优先使用intervalMs
+                  if (this.schedulerStats.taskCleanupIntervalMs) {
+                    const seconds = Math.floor(this.schedulerStats.taskCleanupIntervalMs / 1000);
+                    task.interval = this.formatInterval(seconds);
+                    task.newInterval = seconds;
+                    console.log('使用intervalMs设置任务清理间隔:', seconds, '秒');
+                  }
+                  // 其次使用interval
+                  else if (this.schedulerStats.taskCleanupInterval) {
+                    if (typeof this.schedulerStats.taskCleanupInterval === 'number') {
+                      const seconds = Math.floor(this.schedulerStats.taskCleanupInterval / 1000);
+                      task.interval = this.formatInterval(seconds);
+                      task.newInterval = seconds;
+                      console.log('使用interval数值设置任务清理间隔:', seconds, '秒');
+                    } else {
+                      task.interval = this.schedulerStats.taskCleanupInterval;
+                      task.newInterval = this.getIntervalSeconds(this.schedulerStats.taskCleanupInterval);
+                      console.log('使用interval字符串设置任务清理间隔:', task.newInterval, '秒');
+                    }
+                  } else {
+                    task.interval = '1小时';
+                    task.newInterval = 3600;
+                    console.log('未找到间隔信息，使用默认值:', 3600, '秒');
+                  }
                   break;
                 case 'connectionCleanup':
                   task.active = this.schedulerStats.connectionCleanupActive || false;
                   task.lastRun = this.schedulerStats.lastConnectionCleanupTime;
-                  task.interval = this.schedulerStats.connectionCleanupInterval || '10分钟';
-                  task.newInterval = this.getIntervalSeconds(this.schedulerStats.connectionCleanupInterval);
+                  
+                  // 优先使用intervalMs
+                  if (this.schedulerStats.connectionCleanupIntervalMs) {
+                    const seconds = Math.floor(this.schedulerStats.connectionCleanupIntervalMs / 1000);
+                    task.interval = this.formatInterval(seconds);
+                    task.newInterval = seconds;
+                    console.log('使用intervalMs设置连接清理间隔:', seconds, '秒');
+                  }
+                  // 其次使用interval
+                  else if (this.schedulerStats.connectionCleanupInterval) {
+                    if (typeof this.schedulerStats.connectionCleanupInterval === 'number') {
+                      const seconds = Math.floor(this.schedulerStats.connectionCleanupInterval / 1000);
+                      task.interval = this.formatInterval(seconds);
+                      task.newInterval = seconds;
+                      console.log('使用interval数值设置连接清理间隔:', seconds, '秒');
+                    } else {
+                      task.interval = this.schedulerStats.connectionCleanupInterval;
+                      task.newInterval = this.getIntervalSeconds(this.schedulerStats.connectionCleanupInterval);
+                      console.log('使用interval字符串设置连接清理间隔:', task.newInterval, '秒');
+                    }
+                  } else {
+                    task.interval = '10分钟';
+                    task.newInterval = 600;
+                    console.log('未找到间隔信息，使用默认值:', 600, '秒');
+                  }
                   break;
                 case 'queueHealthMonitor':
+                  // 添加调试信息
+                  console.log('队列健康监控数据:', {
+                    active: this.queueStats?.queueHealthMonitorActive,
+                    interval: this.queueStats?.queueHealthMonitorInterval,
+                    intervalMs: this.queueStats?.queueHealthMonitorIntervalMs,
+                    lastRunTime: this.queueStats?.lastQueueHealthMonitorTime
+                  });
+                  
                   task.active = this.queueStats ? this.queueStats.queueHealthMonitorActive || false : false;
-                  task.interval = this.queueStats ? this.queueStats.queueHealthMonitorInterval || '2分钟' : '2分钟';
-                  task.newInterval = this.getIntervalSeconds(this.queueStats ? this.queueStats.queueHealthMonitorInterval : null);
+                  
+                  // 确保显示正确的间隔
+                  if (this.queueStats) {
+                    // 优先使用intervalMs (毫秒值)
+                    if (this.queueStats.queueHealthMonitorIntervalMs) {
+                      const seconds = Math.floor(this.queueStats.queueHealthMonitorIntervalMs / 1000);
+                      task.interval = this.formatInterval(seconds);
+                      task.newInterval = seconds;
+                      console.log('使用intervalMs设置间隔:', seconds, '秒');
+                    }
+                    // 其次使用interval (带单位的字符串或秒数)
+                    else if (this.queueStats.queueHealthMonitorInterval) {
+                      if (typeof this.queueStats.queueHealthMonitorInterval === 'number') {
+                        // 如果是数值，假设是毫秒
+                        const seconds = Math.floor(this.queueStats.queueHealthMonitorInterval / 1000);
+                        task.interval = this.formatInterval(seconds);
+                        task.newInterval = seconds;
+                        console.log('使用interval数值设置间隔:', seconds, '秒');
+                      } else {
+                        // 如果是字符串，解析并转换
+                        task.interval = this.queueStats.queueHealthMonitorInterval;
+                        task.newInterval = this.getIntervalSeconds(this.queueStats.queueHealthMonitorInterval);
+                        console.log('使用interval字符串设置间隔:', task.newInterval, '秒');
+                      }
+                    } else {
+                      task.interval = '60秒';
+                      task.newInterval = 60;
+                      console.log('未找到间隔信息，使用默认值:', 60, '秒');
+                    }
+                  } else {
+                    task.interval = '60秒';
+                    task.newInterval = 60;
+                    console.log('未找到队列管理器信息，使用默认值:', 60, '秒');
+                  }
+                  
+                  // 确保正确显示上次执行时间
+                  if (this.queueStats && this.queueStats.lastQueueHealthMonitorTime) {
+                    task.lastRun = this.queueStats.lastQueueHealthMonitorTime;
+                    console.log('设置上次执行时间:', task.lastRun);
+                  } else {
+                    task.lastRun = '未执行';
+                    console.log('未找到上次执行时间');
+                  }
                   break;
                 case 'taskTimeoutMonitor':
+                  // 添加调试信息
+                  console.log('任务超时监控数据:', {
+                    active: this.queueStats?.taskTimeoutMonitorActive,
+                    interval: this.queueStats?.taskTimeoutMonitorInterval,
+                    intervalMs: this.queueStats?.taskTimeoutMonitorIntervalMs,
+                    lastRunTime: this.queueStats?.lastTaskTimeoutMonitorTime
+                  });
+                  
                   task.active = this.queueStats ? this.queueStats.taskTimeoutMonitorActive || false : false;
-                  task.interval = this.queueStats ? this.queueStats.taskTimeoutMonitorInterval || '30秒' : '30秒';
-                  task.newInterval = this.getIntervalSeconds(this.queueStats ? this.queueStats.taskTimeoutMonitorInterval : null);
+                  
+                  // 确保显示正确的间隔
+                  if (this.queueStats) {
+                    // 优先使用intervalMs (毫秒值)
+                    if (this.queueStats.taskTimeoutMonitorIntervalMs) {
+                      const seconds = Math.floor(this.queueStats.taskTimeoutMonitorIntervalMs / 1000);
+                      task.interval = this.formatInterval(seconds);
+                      task.newInterval = seconds;
+                      console.log('使用intervalMs设置超时监控间隔:', seconds, '秒');
+                    }
+                    // 其次使用interval (带单位的字符串或秒数)
+                    else if (this.queueStats.taskTimeoutMonitorInterval) {
+                      if (typeof this.queueStats.taskTimeoutMonitorInterval === 'number') {
+                        // 如果是数值，假设是毫秒
+                        const seconds = Math.floor(this.queueStats.taskTimeoutMonitorInterval / 1000);
+                        task.interval = this.formatInterval(seconds);
+                        task.newInterval = seconds;
+                        console.log('使用interval数值设置超时监控间隔:', seconds, '秒');
+                      } else {
+                        // 如果是字符串，解析并转换
+                        task.interval = this.queueStats.taskTimeoutMonitorInterval;
+                        task.newInterval = this.getIntervalSeconds(this.queueStats.taskTimeoutMonitorInterval);
+                        console.log('使用interval字符串设置超时监控间隔:', task.newInterval, '秒');
+                      }
+                    } else {
+                      task.interval = '30秒';
+                      task.newInterval = 30;
+                      console.log('未找到间隔信息，使用默认值:', 30, '秒');
+                    }
+                  } else {
+                    task.interval = '30秒';
+                    task.newInterval = 30;
+                    console.log('未找到队列管理器信息，使用默认值:', 30, '秒');
+                  }
+                  
+                  // 确保正确显示上次执行时间
+                  if (this.queueStats && this.queueStats.lastTaskTimeoutMonitorTime) {
+                    task.lastRun = this.queueStats.lastTaskTimeoutMonitorTime;
+                    console.log('设置任务超时监控上次执行时间:', task.lastRun);
+                  } else {
+                    task.lastRun = '未执行';
+                    console.log('未找到任务超时监控上次执行时间');
+                  }
                   break;
               }
+            });
+            
+            // 数据加载完成后同步全局状态
+            this.$nextTick(() => {
+              this.syncGlobalTaskStatus();
             });
           }
           
@@ -949,6 +1174,11 @@ export default {
           // 关闭加载提示
           message.success({ content: '数据加载完成', duration: 1, key: 'statusLoading' });
         }
+        
+        // 确保modal显示时自动刷新正常工作
+        if (this.showDetailModal && !this.refreshInterval && this.isAutoRefresh) {
+          this.startAutoRefresh();
+        }
       } catch (error) {
         console.error('获取队列系统状态失败:', error);
         if (showLoading) {
@@ -961,17 +1191,32 @@ export default {
     getIntervalSeconds(intervalText) {
       if (!intervalText) return 60;
       
+      // 如果是数字（毫秒值），直接转换为秒
+      if (typeof intervalText === 'number') {
+        return Math.floor(intervalText / 1000);
+      }
+      
       try {
         if (typeof intervalText === 'string') {
-          if (intervalText.includes('小时')) {
-            return parseInt(intervalText) * 3600;
-          } else if (intervalText.includes('分钟')) {
-            return parseInt(intervalText) * 60;
-          } else if (intervalText.includes('秒')) {
-            return parseInt(intervalText);
+          // 先尝试直接从字符串中提取数字
+          const matches = intervalText.match(/(\d+)/);
+          if (matches && matches[1]) {
+            const value = parseInt(matches[1]);
+            
+            if (intervalText.includes('小时')) {
+              return value * 3600;
+            } else if (intervalText.includes('分钟')) {
+              return value * 60;
+            } else if (intervalText.includes('秒')) {
+              return value;
+            } else {
+              // 如果没有单位，假设是秒
+              return value;
+            }
           }
         }
       } catch (e) {
+        console.error('解析间隔错误:', e, intervalText);
         return 60;
       }
       
@@ -983,15 +1228,28 @@ export default {
       
       try {
         const action = record.active ? 'pauseTask' : 'resumeTask';
+        
+        // 对不同的任务使用不同的范围参数
+        let scope = 'ALL';
+        if (record.id === 'queueHealthMonitor' || record.id === 'taskTimeoutMonitor') {
+          scope = 'scheduler';  // 确保监控任务使用scheduler范围
+        }
+        
         const response = await this.$axiosGet(global.API.queueManager, {
           action: action,
-          taskId: record.id
+          taskId: record.id,
+          scope: scope
         });
         
         if (response && response.code === 200) {
           message.success(`任务已${record.active ? '停止' : '启动'}`);
           record.active = !record.active;
-          this.fetchFullStatus();
+          
+          // 任务状态改变后立即同步全局状态
+          this.syncGlobalTaskStatus();
+          
+          // 稍后刷新所有状态
+          setTimeout(() => this.fetchFullStatus(false), 500);
         } else {
           message.error(`操作失败: ${response?.msg || '未知错误'}`);
         }
@@ -1077,19 +1335,80 @@ export default {
       this.schedulerLoading = true
       try {
         const action = this.schedulerActive ? 'pause' : 'resume'
-        const response = await this.$axiosGet(global.API.queueManager + `?action=${action}&scope=scheduler`, {})
+        let promises = []
         
-        if (response && response.code === 200) {
+        // 检查是否需要修正状态不一致
+        const allTasksStopped = this.scheduledTasks.every(task => !task.active);
+        const actionNeeded = (this.schedulerActive && allTasksStopped) || (!this.schedulerActive && !allTasksStopped);
+        
+        if (actionNeeded) {
+          // 如果状态不一致，先修正状态，而不是发送不必要的请求
+          this.schedulerActive = !this.schedulerActive;
+          this.schedulerLoading = false;
+          message.info('已同步任务状态显示');
+          return;
+        }
+        
+        // 主请求，控制所有任务
+        promises.push(this.$axiosGet(global.API.queueManager, {
+          action: action,
+          scope: 'scheduler'
+        }))
+        
+        if (action === 'resume') {
+          // 明确启动队列健康监控
+          promises.push(this.$axiosGet(global.API.queueManager, {
+            action: 'resumeTask',
+            taskId: 'queueHealthMonitor',
+            scope: 'scheduler'
+          }))
+          
+          // 明确启动任务超时监控
+          promises.push(this.$axiosGet(global.API.queueManager, {
+            action: 'resumeTask',
+            taskId: 'taskTimeoutMonitor',
+            scope: 'scheduler'
+          }))
+        } else {
+          // 暂停操作：明确暂停两个监控任务
+          promises.push(this.$axiosGet(global.API.queueManager, {
+            action: 'pauseTask',
+            taskId: 'queueHealthMonitor',
+            scope: 'scheduler'
+          }))
+          
+          promises.push(this.$axiosGet(global.API.queueManager, {
+            action: 'pauseTask',
+            taskId: 'taskTimeoutMonitor',
+            scope: 'scheduler'
+          }))
+        }
+        
+        // 等待所有请求完成
+        const responses = await Promise.all(promises)
+        const mainResponse = responses[0]
+        
+        if (mainResponse && mainResponse.code === 200) {
           this.schedulerActive = !this.schedulerActive
           message.success(`定时任务已${this.schedulerActive ? '启用' : '暂停'}`)
           
-          setTimeout(() => this.fetchFullStatus(), 1000)
+          // 手动更新所有任务状态
+          this.scheduledTasks.forEach(task => {
+            task.active = this.schedulerActive;
+          });
+          
+          // 立即刷新状态
+          setTimeout(() => this.fetchFullStatus(false), 500)
         } else {
-          message.error(`操作失败: ${response?.msg || '未知错误'}`)
+          message.error(`操作失败: ${mainResponse?.msg || '未知错误'}`)
+          // 操作失败时同步状态
+          this.syncGlobalTaskStatus();
         }
       } catch (error) {
         console.error('切换定时任务状态异常:', error)
         message.error('操作异常，请查看控制台日志')
+        // 发生错误时同步状态
+        this.syncGlobalTaskStatus();
       } finally {
         this.schedulerLoading = false
       }
@@ -1115,61 +1434,243 @@ export default {
     },
     getMinInterval(taskId) {
       const minIntervals = {
-        taskCleanup: 60, // 最小1分钟
-        connectionCleanup: 30, // 最小30秒
-        queueHealthMonitor: 30, // 最小30秒
-        taskTimeoutMonitor: 30 // 最小30秒
+        taskCleanup: 1, // 最小1秒
+        connectionCleanup: 1, // 最小1秒
+        queueHealthMonitor: 1, // 最小1秒
+        taskTimeoutMonitor: 1 // 最小1秒
       }
-      return minIntervals[taskId] || 30
+      return minIntervals[taskId] || 1
     },
     
     async updateTaskInterval(record) {
-      if (!record.newInterval || record.newInterval < this.getMinInterval(record.id)) {
-        message.error(`执行间隔不能小于${this.getMinInterval(record.id)}秒`);
-        return;
-      }
-      
-      record.saving = true;
-      
       try {
-        let response;
-        const intervalMs = record.newInterval * 1000; // 转换为毫秒
+        this.loading = true;
+        // 设置record.saving状态为true
+        record.saving = true;
         
-        switch (record.id) {
-          case 'queueHealthMonitor':
-            response = await this.$axiosPost(global.API.updateQueueHealthMonitorInterval, {
-              intervalMs: intervalMs
-            });
-            break;
-          case 'taskTimeoutMonitor':
-            response = await this.$axiosPost(global.API.updateTaskTimeoutMonitorInterval, {
-              intervalMs: intervalMs
-            });
-            break;
-          default:
-            response = await this.$axiosPost(global.API.updateTaskInterval, {
-              taskId: record.id,
-              intervalSeconds: record.newInterval
-            });
+        if (!record.newInterval || isNaN(record.newInterval)) {
+          this.$message.error('请输入有效的间隔值');
+          return;
         }
+
+        // 检查最小间隔
+        const minInterval = this.getMinInterval(record.id);
+        const interval = parseInt(record.newInterval);
+        if (interval < minInterval) {
+          this.$message.warning(`${record.name}的最小间隔为${minInterval}秒`);
+          record.newInterval = minInterval;
+          return;
+        }
+
+        // 构建请求
+        const type = record.id;
+        console.log(`更新任务 ${type} 的间隔为 ${interval} 秒`);
         
+        const response = await this.$axiosPost(global.API.updateTaskInterval, {
+          taskId: type,
+          intervalSeconds: interval
+        });
+
         if (response && response.code === 200) {
-          message.success('执行间隔已更新');
-          record.interval = this.formatInterval(record.newInterval);
-          this.fetchFullStatus();
+          this.$message.success('更新间隔成功');
+          
+          // 立即更新UI显示的间隔，不等待fetchFullStatus
+          record.interval = this.formatInterval(interval);
+          
+          // 延迟更新全部状态
+          setTimeout(() => {
+            this.fetchFullStatus(false);
+          }, 500);
         } else {
-          message.error(`更新失败: ${response?.msg || '未知错误'}`);
-          // 恢复之前的值
-          record.newInterval = this.getIntervalSeconds(record.interval);
+          this.$message.error(`更新间隔失败: ${response?.msg || 'service is not defined'}`);
         }
       } catch (error) {
-        console.error('更新执行间隔异常:', error);
-        message.error('操作异常，请查看控制台日志');
-        // 恢复之前的值
-        record.newInterval = this.getIntervalSeconds(record.interval);
+        this.$message.error(`更新间隔失败: ${error.message || 'service is not defined'}`);
+        console.error('更新间隔失败', error);
       } finally {
+        this.loading = false;
+        // 设置record.saving状态为false
         record.saving = false;
       }
+    },
+    
+    // 新增方法：根据服务器返回的状态更新任务状态
+    updateTaskStatus(record, status) {
+      if (!status || !record) return;
+      
+      // 根据任务ID寻找对应的状态更新
+      switch(record.id) {
+        case 'taskCleanup':
+          if (status.asyncService) {
+            console.log('更新任务清理状态:', {
+              active: status.asyncService.taskCleanupActive,
+              interval: status.asyncService.taskCleanupInterval,
+              intervalMs: status.asyncService.taskCleanupIntervalMs,
+              lastRun: status.asyncService.lastTaskCleanupTime
+            });
+            
+            record.active = status.asyncService.taskCleanupActive || false;
+            record.lastRun = status.asyncService.lastTaskCleanupTime || '未执行';
+            
+            // 处理间隔
+            if (status.asyncService.taskCleanupIntervalMs) {
+              const seconds = Math.floor(status.asyncService.taskCleanupIntervalMs / 1000);
+              record.interval = this.formatInterval(seconds);
+              record.newInterval = seconds;
+              console.log('使用intervalMs设置任务清理间隔:', seconds, '秒');
+            }
+            // 其次使用interval
+            else if (status.asyncService.taskCleanupInterval) {
+              if (typeof status.asyncService.taskCleanupInterval === 'number') {
+                const seconds = Math.floor(status.asyncService.taskCleanupInterval / 1000);
+                record.interval = this.formatInterval(seconds);
+                record.newInterval = seconds;
+                console.log('使用interval数值设置任务清理间隔:', seconds, '秒');
+              } else {
+                record.interval = status.asyncService.taskCleanupInterval;
+                record.newInterval = this.getIntervalSeconds(status.asyncService.taskCleanupInterval);
+                console.log('使用interval字符串设置任务清理间隔:', record.newInterval, '秒');
+              }
+            } else {
+              record.interval = '1小时';
+              record.newInterval = 3600;
+              console.log('未找到间隔信息，使用默认值:', 3600, '秒');
+            }
+          }
+          break;
+        case 'connectionCleanup':
+          if (status.asyncService) {
+            console.log('更新连接清理状态:', {
+              active: status.asyncService.connectionCleanupActive,
+              interval: status.asyncService.connectionCleanupInterval,
+              intervalMs: status.asyncService.connectionCleanupIntervalMs,
+              lastRun: status.asyncService.lastConnectionCleanupTime
+            });
+            
+            record.active = status.asyncService.connectionCleanupActive || false;
+            record.lastRun = status.asyncService.lastConnectionCleanupTime || '未执行';
+            
+            // 处理间隔
+            if (status.asyncService.connectionCleanupIntervalMs) {
+              const seconds = Math.floor(status.asyncService.connectionCleanupIntervalMs / 1000);
+              record.interval = this.formatInterval(seconds);
+              record.newInterval = seconds;
+              console.log('使用intervalMs设置连接清理间隔:', seconds, '秒');
+            }
+            // 其次使用interval
+            else if (status.asyncService.connectionCleanupInterval) {
+              if (typeof status.asyncService.connectionCleanupInterval === 'number') {
+                const seconds = Math.floor(status.asyncService.connectionCleanupInterval / 1000);
+                record.interval = this.formatInterval(seconds);
+                record.newInterval = seconds;
+                console.log('使用interval数值设置连接清理间隔:', seconds, '秒');
+              } else {
+                record.interval = status.asyncService.connectionCleanupInterval;
+                record.newInterval = this.getIntervalSeconds(status.asyncService.connectionCleanupInterval);
+                console.log('使用interval字符串设置连接清理间隔:', record.newInterval, '秒');
+              }
+            } else {
+              record.interval = '10分钟';
+              record.newInterval = 600;
+              console.log('未找到间隔信息，使用默认值:', 600, '秒');
+            }
+          }
+          break;
+        case 'queueHealthMonitor':
+          if (status.queueManager) {
+            console.log('更新队列健康监控状态:', {
+              active: status.queueManager.queueHealthMonitorActive,
+              interval: status.queueManager.queueHealthMonitorInterval,
+              intervalMs: status.queueManager.queueHealthMonitorIntervalMs,
+              lastRun: status.queueManager.lastQueueHealthMonitorTime
+            });
+            
+            record.active = status.queueManager.queueHealthMonitorActive || false;
+            
+            // 优先使用intervalMs
+            if (status.queueManager.queueHealthMonitorIntervalMs) {
+              const seconds = Math.floor(status.queueManager.queueHealthMonitorIntervalMs / 1000);
+              record.interval = this.formatInterval(seconds);
+              record.newInterval = seconds;
+              console.log('使用intervalMs设置间隔:', seconds, '秒');
+            }
+            // 其次使用interval (带单位的字符串或秒数)
+            else if (status.queueManager.queueHealthMonitorInterval) {
+              if (typeof status.queueManager.queueHealthMonitorInterval === 'number') {
+                // 如果是数值，假设是毫秒
+                const seconds = Math.floor(status.queueManager.queueHealthMonitorInterval / 1000);
+                record.interval = this.formatInterval(seconds);
+                record.newInterval = seconds;
+                console.log('使用interval数值设置间隔:', seconds, '秒');
+              } else {
+                // 如果是字符串，解析并转换
+                record.interval = status.queueManager.queueHealthMonitorInterval;
+                record.newInterval = this.getIntervalSeconds(status.queueManager.queueHealthMonitorInterval);
+                console.log('使用interval字符串设置间隔:', record.newInterval, '秒');
+              }
+            } else {
+              record.interval = '60秒';
+              record.newInterval = 60;
+              console.log('未找到间隔信息，使用默认值:', 60, '秒');
+            }
+            
+            // 处理上次执行时间
+            if (status.queueManager.lastQueueHealthMonitorTime) {
+              record.lastRun = status.queueManager.lastQueueHealthMonitorTime;
+            } else {
+              record.lastRun = '未执行';
+            }
+          }
+          break;
+        case 'taskTimeoutMonitor':
+          if (status.queueManager) {
+            console.log('更新任务超时监控状态:', {
+              active: status.queueManager.taskTimeoutMonitorActive,
+              interval: status.queueManager.taskTimeoutMonitorInterval,
+              intervalMs: status.queueManager.taskTimeoutMonitorIntervalMs,
+              lastRun: status.queueManager.lastTaskTimeoutMonitorTime
+            });
+            
+            record.active = status.queueManager.taskTimeoutMonitorActive || false;
+            
+            // 优先使用intervalMs
+            if (status.queueManager.taskTimeoutMonitorIntervalMs) {
+              const seconds = Math.floor(status.queueManager.taskTimeoutMonitorIntervalMs / 1000);
+              record.interval = this.formatInterval(seconds);
+              record.newInterval = seconds;
+              console.log('使用intervalMs设置超时监控间隔:', seconds, '秒');
+            }
+            // 其次使用interval (带单位的字符串或秒数)
+            else if (status.queueManager.taskTimeoutMonitorInterval) {
+              if (typeof status.queueManager.taskTimeoutMonitorInterval === 'number') {
+                // 如果是数值，假设是毫秒
+                const seconds = Math.floor(status.queueManager.taskTimeoutMonitorInterval / 1000);
+                record.interval = this.formatInterval(seconds);
+                record.newInterval = seconds;
+                console.log('使用interval数值设置超时监控间隔:', seconds, '秒');
+              } else {
+                // 如果是字符串，解析并转换
+                record.interval = status.queueManager.taskTimeoutMonitorInterval;
+                record.newInterval = this.getIntervalSeconds(status.queueManager.taskTimeoutMonitorInterval);
+                console.log('使用interval字符串设置超时监控间隔:', record.newInterval, '秒');
+              }
+            } else {
+              record.interval = '30秒';
+              record.newInterval = 30;
+              console.log('未找到间隔信息，使用默认值:', 30, '秒');
+            }
+            
+            // 处理上次执行时间
+            if (status.queueManager.lastTaskTimeoutMonitorTime) {
+              record.lastRun = status.queueManager.lastTaskTimeoutMonitorTime;
+            } else {
+              record.lastRun = '未执行';
+            }
+          }
+          break;
+      }
+      
+      console.log(`更新任务 ${record.id} 状态完成:`, record);
     },
     
     formatInterval(seconds) {
@@ -1180,6 +1681,30 @@ export default {
       } else {
         return `${seconds}秒`
       }
+    },
+    
+    // 添加重置为默认间隔的方法
+    resetToDefaultInterval(record) {
+      // 根据任务类型设置默认间隔值
+      switch(record.id) {
+        case 'taskCleanup':
+          record.newInterval = 60; // 60秒
+          break;
+        case 'connectionCleanup':
+          record.newInterval = 60; // 60秒
+          break;
+        case 'queueHealthMonitor':
+          record.newInterval = 60; // 60秒
+          break;
+        case 'taskTimeoutMonitor':
+          record.newInterval = 30; // 30秒
+          break;
+        default:
+          record.newInterval = 60; // 默认60秒
+      }
+      
+      // 直接调用更新方法，无需用户确认
+      this.updateTaskInterval(record);
     },
     
     async resetTask(record) {
@@ -1282,6 +1807,20 @@ export default {
           console.error('提交修复任务失败:', error);
           message.error('提交修复任务失败');
         }
+      }
+    },
+    // 添加新方法：同步全局任务状态和任务列表状态
+    syncGlobalTaskStatus() {
+      // 检查是否所有任务都已停止
+      const allTasksStopped = this.scheduledTasks.every(task => !task.active);
+      
+      // 如果所有任务都已停止，但全局状态还是活跃，则更新全局状态
+      if (allTasksStopped && this.schedulerActive) {
+        this.schedulerActive = false;
+      } 
+      // 如果至少有一个任务是活跃的，但全局状态是停止的，则更新全局状态
+      else if (!allTasksStopped && !this.schedulerActive) {
+        this.schedulerActive = true;
       }
     },
   }
@@ -1950,30 +2489,7 @@ export default {
   }
 
   :deep(.ant-switch) {
-    background: #f0f0f0;
-    border: 1px solid #d9d9d9;
-    height: 24px;
-    min-width: 44px;
-
-    &.ant-switch-checked {
-      background: #1890ff;
-      border-color: #1890ff;
-    }
-
-    .ant-switch-handle {
-      width: 20px;
-      height: 20px;
-      top: 1px;
-      left: 1px;
-      background: #fff;
-      border: 1px solid #d9d9d9;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    &.ant-switch-checked .ant-switch-handle {
-      left: calc(100% - 21px);
-      border-color: #fff;
-    }
+    @extend .custom-switch;
   }
 }
 
@@ -2038,6 +2554,176 @@ export default {
         font-weight: 500;
       }
     }
+  }
+}
+
+.scheduler-toggle-button {
+  min-width: 120px !important;
+  height: 38px !important;
+  padding: 0 20px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
+  
+  &.active-button {
+    background: linear-gradient(135deg, #ff7a45 0%, #ff4d4f 100%) !important;
+    border: none !important;
+    color: white !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, #ff7a45 0%, #ff7875 100%) !important;
+      transform: translateY(-3px) !important;
+      box-shadow: 0 8px 16px rgba(255, 77, 79, 0.3) !important;
+    }
+  }
+  
+  &.inactive-button {
+    background: linear-gradient(135deg, #2f54eb 0%, #1890ff 100%) !important;
+    border: none !important;
+    color: white !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, #597ef7 0%, #40a9ff 100%) !important;
+      transform: translateY(-3px) !important;
+      box-shadow: 0 8px 16px rgba(24, 144, 255, 0.3) !important;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-3px) !important;
+  }
+  
+  &:active {
+    transform: translateY(-1px) !important;
+  }
+  
+  i {
+    font-size: 18px !important;
+    margin-right: 8px !important;
+  }
+  
+  .button-text {
+    font-size: 14px !important;
+    line-height: 1 !important;
+  }
+  
+  &.ant-btn-loading {
+    opacity: 0.8;
+  }
+}
+
+.modern-toggle-button {
+  width: 40px !important;
+  height: 40px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  
+  &:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 16px rgba(24, 144, 255, 0.3) !important;
+  }
+  
+  &:active {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3) !important;
+  }
+  
+  i {
+    font-size: 20px !important;
+    color: #ffffff !important;
+  }
+  
+  &.ant-btn-loading {
+    background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  }
+}
+
+// 在样式部分添加新的样式
+.custom-switch {
+  &.ant-switch {
+    background-color: #f0f0f0; 
+    border: 1px solid #d9d9d9;
+    height: 22px;
+    min-width: 44px;
+    line-height: 20px;
+
+    &.ant-switch-checked {
+      background-color: #1890ff;
+      border-color: #1890ff;
+    }
+    
+    .ant-switch-handle {
+      width: 18px;
+      height: 18px;
+      top: 1px;
+      left: 1px;
+      background-color: #fff;
+      border-radius: 50%;
+      transform: translateY(0);
+      border: 1px solid #d9d9d9;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    &.ant-switch-checked .ant-switch-handle {
+      left: calc(100% - 19px);
+      border-color: #fff;
+    }
+    
+    .ant-switch-inner {
+      margin: 0 7px 0 24px;
+      color: rgba(0, 0, 0, 0.65);
+      font-size: 12px;
+      line-height: 20px;
+    }
+    
+    &.ant-switch-checked .ant-switch-inner {
+      margin: 0 24px 0 7px;
+      color: #fff;
+    }
+  }
+  
+  &.ant-switch-small {
+    height: 20px;
+    min-width: 40px;
+    line-height: 18px;
+    
+    .ant-switch-handle {
+      width: 16px;
+      height: 16px;
+      top: 1px;
+      left: 1px;
+    }
+    
+    &.ant-switch-checked .ant-switch-handle {
+      left: calc(100% - 17px);
+    }
+    
+    .ant-switch-inner {
+      margin: 0 5px 0 18px;
+      font-size: 12px;
+      line-height: 18px;
+    }
+    
+    &.ant-switch-checked .ant-switch-inner {
+      margin: 0 18px 0 5px;
+    }
+  }
+}
+
+// 系统控制开关也应用相同样式
+.status-control {
+  .ant-switch {
+    @extend .custom-switch;
   }
 }
 </style> 

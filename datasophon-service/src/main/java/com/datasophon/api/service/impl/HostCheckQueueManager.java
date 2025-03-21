@@ -107,6 +107,13 @@ public class HostCheckQueueManager {
     @Autowired
     private ItemCheckerFactory itemCheckerFactory;
 
+    // 添加上次执行时间记录
+    private volatile String lastQueueHealthMonitorTime = null;
+    private volatile String lastTaskTimeoutMonitorTime = null;
+    
+    // 添加日期格式化器
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     public HostCheckQueueManager() {
         // 创建检查项线程池 - 负责检查项级别的任务
         this.itemCheckExecutorService = new ThreadPoolExecutor(
@@ -621,6 +628,12 @@ public class HostCheckQueueManager {
      */
     public void monitorQueueHealth() {
         try {
+            // 记录本次执行时间
+            lastQueueHealthMonitorTime = dateFormat.format(new Date());
+            
+            // 添加每次执行的日志记录
+            logger.info("队列健康监控执行中，执行时间: {}", lastQueueHealthMonitorTime);
+            
             // 如果定时任务已禁用，直接返回
             if (!scheduledTasksEnabled.get() || !isRunning.get()) {
                 return;
@@ -670,6 +683,12 @@ public class HostCheckQueueManager {
      * 由任务调度器调用，独立于monitorQueueHealth方法
      */
     public void checkForTaskTimeouts() {
+        // 记录本次执行时间
+        lastTaskTimeoutMonitorTime = dateFormat.format(new Date());
+        
+        // 添加每次执行的日志记录
+        logger.info("任务超时监控执行中，执行时间: {}", lastTaskTimeoutMonitorTime);
+        
         // 如果定时任务已禁用，直接返回
         if (!scheduledTasksEnabled.get() || !isRunning.get()) {
             return;
@@ -810,10 +829,13 @@ public class HostCheckQueueManager {
         status.setRunning(isRunning.get());
         status.setScheduledTasksEnabled(scheduledTasksEnabled.get());
         status.setQueueEmpty(checkQueue.isEmpty());
+        status.setFixQueueEmpty(fixQueue.isEmpty());
         
         // 队列详情
         status.setQueueSize(checkQueue.size());
+        status.setFixQueueSize(fixQueue.size());
         status.setRunningTasksCount(runningTasks.size());
+        status.setRunningFixTasksCount(runningFixTasks.size());
         
         // 线程池信息
         ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
@@ -827,24 +849,36 @@ public class HostCheckQueueManager {
         status.setTasksProcessed(tasksProcessed.get());
         status.setTasksSucceeded(tasksSucceeded.get());
         status.setTasksFailed(tasksFailed.get());
+        status.setFixTasksProcessed(fixTasksProcessed.get());
+        status.setFixTasksSucceeded(fixTasksSucceeded.get());
+        status.setFixTasksFailed(fixTasksFailed.get());
         
-        // 定时任务状态
+        // 监控任务状态
         status.setQueueHealthMonitorActive(queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled());
         status.setTaskTimeoutMonitorActive(taskTimeoutMonitorTask != null && !taskTimeoutMonitorTask.isCancelled());
         
-        // 定时任务间隔
+        // 监控任务间隔
         status.setQueueHealthMonitorIntervalMs(queueHealthMonitorIntervalMs);
         status.setTaskTimeoutMonitorIntervalMs(taskTimeoutMonitorIntervalMs);
+        
+        // 可读的监控任务间隔
         status.setQueueHealthMonitorInterval(formatTimeInterval(queueHealthMonitorIntervalMs));
         status.setTaskTimeoutMonitorInterval(formatTimeInterval(taskTimeoutMonitorIntervalMs));
         
-        // 处理线程状态
-        status.setQueueProcessorThreadAlive(queueProcessorThread != null && queueProcessorThread.isAlive());
+        // 添加上次监控执行时间
+        status.setLastQueueHealthMonitorTime(lastQueueHealthMonitorTime != null ? lastQueueHealthMonitorTime : null);
+        status.setLastTaskTimeoutMonitorTime(lastTaskTimeoutMonitorTime != null ? lastTaskTimeoutMonitorTime : null);
         
+        // 设置处理线程状态
+        status.setQueueProcessorThreadAlive(queueProcessorThread != null && queueProcessorThread.isAlive());
+        status.setFixQueueProcessorThreadAlive(fixQueueProcessorThread != null && fixQueueProcessorThread.isAlive());
+        
+        // 设置处理器启动时间
         if (queueProcessorStartTime > 0) {
             status.setQueueProcessorStartTime(dateFormat.format(new Date(queueProcessorStartTime)));
-        } else {
-            status.setQueueProcessorStartTime("未启动");
+        }
+        if (fixQueueProcessorStartTime > 0) {
+            status.setFixQueueProcessorStartTime(dateFormat.format(new Date(fixQueueProcessorStartTime)));
         }
         
         return status;

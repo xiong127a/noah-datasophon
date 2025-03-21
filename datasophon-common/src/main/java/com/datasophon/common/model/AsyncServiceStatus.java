@@ -45,4 +45,16 @@ public class AsyncServiceStatus {
     
     // 上次连接清理时间
     private String lastConnectionCleanupTime;
+    
+    // 任务清理间隔（毫秒）
+    private Long taskCleanupIntervalMs;
+    
+    // 连接清理间隔（毫秒）
+    private Long connectionCleanupIntervalMs;
+    
+    // 任务清理间隔（可读字符串）
+    private String taskCleanupInterval;
+    
+    // 连接清理间隔（可读字符串）
+    private String connectionCleanupInterval;
 } 

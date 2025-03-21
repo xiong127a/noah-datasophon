@@ -206,12 +206,13 @@ public class AsyncCheckService {
     }
     
     /**
-     * 设置任务清理定时任务的执行间隔
+     * 设置任务清理定时任务执行间隔
      * @param intervalMs 间隔时间（毫秒）
      * @return 是否设置成功
      */
     public boolean setTaskCleanupInterval(long intervalMs) {
-        if (intervalMs < 60000) { // 最小1分钟
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("任务清理定时任务间隔不能小于1秒，忽略此次更新");
             return false;
         }
         
@@ -234,7 +235,8 @@ public class AsyncCheckService {
      * @return 是否设置成功
      */
     public boolean setConnectionCleanupInterval(long intervalMs) {
-        if (intervalMs < 30000) { // 最小30秒
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("连接清理定时任务间隔不能小于1秒，忽略此次更新");
             return false;
         }
         
@@ -796,6 +798,14 @@ public class AsyncCheckService {
         status.setConnectionCleanupActive(statusInfo.isConnectionCleanupActive());
         status.setLastConnectionCleanupTime(statusInfo.getLastConnectionCleanupTime());
         
+        // 添加间隔毫秒值
+        status.setTaskCleanupIntervalMs(this.taskCleanupIntervalMs);
+        status.setConnectionCleanupIntervalMs(this.connectionCleanupIntervalMs);
+        
+        // 添加可读间隔
+        status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
+        status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
+        
         return status;
     }
     
@@ -846,8 +856,8 @@ public class AsyncCheckService {
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateTaskCleanupInterval(long intervalMs) {
-        if (intervalMs < 60000) { // 最小1分钟
-            logger.warn("任务清理定时任务间隔不能小于1分钟，忽略此次更新");
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("任务清理定时任务间隔不能小于1秒，忽略此次更新");
             return;
         }
         
@@ -866,8 +876,8 @@ public class AsyncCheckService {
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateConnectionCleanupInterval(long intervalMs) {
-        if (intervalMs < 30000) { // 最小30秒
-            logger.warn("连接清理定时任务间隔不能小于30秒，忽略此次更新");
+        if (intervalMs < 1000) { // 最小1秒
+            logger.warn("连接清理定时任务间隔不能小于1秒，忽略此次更新");
             return;
         }
         

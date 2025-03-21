@@ -65,6 +65,10 @@ public class QueueManagerStatus {
     private String queueHealthMonitorInterval;
     private String taskTimeoutMonitorInterval;
     
+    // 上次执行时间
+    private String lastQueueHealthMonitorTime;
+    private String lastTaskTimeoutMonitorTime;
+    
     // 处理线程状态
     private boolean queueProcessorThreadAlive;
     private boolean fixQueueProcessorThreadAlive;

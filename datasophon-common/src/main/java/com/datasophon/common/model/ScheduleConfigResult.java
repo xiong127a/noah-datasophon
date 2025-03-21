@@ -12,4 +12,10 @@ public class ScheduleConfigResult {
     
     // 定时任务状态
     private ScheduledTasksStatus status;
+    
+    // 当前间隔（毫秒）
+    private long currentIntervalMs;
+    
+    // 当前间隔（秒）
+    private long currentIntervalSeconds;
 } 
