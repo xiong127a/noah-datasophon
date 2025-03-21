@@ -1700,23 +1700,26 @@ public class HostCheckServiceImpl implements HostCheckService {
             logger.info("使用SSH连接复用机制批量执行 {} 个修复项", fixItems.size());
             
             // 使用AsyncCheckService的批量执行方法执行所有修复，实现SSH连接复用
-            Map<String, Boolean> results = asyncCheckService.batchExecuteFix(clusterId, hostInfo, fixItems);
+            List<CheckItem> results = asyncCheckService.batchExecuteFix(clusterId, hostInfo, fixItems);
             
             // 更新修复结果
             if (results != null && !results.isEmpty()) {
                 boolean allSuccess = true;
                 
-                for (CheckItem item : fixItems) {
-                    Boolean result = results.get(item.getItemName());
-                    if (result != null && result) {
-                        // 修复成功，更新状态
-                        item.setStatus(CheckItem.Status.SUCCESS);
-                        item.setMessage("修复成功");
-                    } else {
-                        // 修复失败
-                        item.setStatus(CheckItem.Status.FAILED);
-                        item.setMessage("修复失败");
-                        allSuccess = false;
+                for (CheckItem result : results) {
+                    // 在原始修复项列表中找到对应项并更新
+                    for (CheckItem item : fixItems) {
+                        if (item.getId().equals(result.getId())) {
+                            // 复制状态和消息
+                            item.setStatus(result.getStatus());
+                            item.setMessage(result.getMessage());
+                            
+                            // 检查是否成功
+                            if (item.getStatus() != CheckItem.Status.SUCCESS) {
+                                allSuccess = false;
+                            }
+                            break;
+                        }
                     }
                 }
                 
@@ -1763,20 +1766,18 @@ public class HostCheckServiceImpl implements HostCheckService {
             logger.info("使用SSH连接复用机制批量执行 {} 个检查项", checkItems.size());
             
             // 使用AsyncCheckService的批量执行方法执行所有检查，实现SSH连接复用
-            Map<String, Boolean> results = asyncCheckService.batchExecuteCheck(clusterId, hostInfo, checkItems);
+            List<CheckItem> results = asyncCheckService.batchExecuteCheck(clusterId, hostInfo, checkItems);
             
             // 更新检查结果
             if (results != null && !results.isEmpty()) {
-                for (CheckItem item : checkItems) {
-                    Boolean result = results.get(item.getItemName());
-                    if (result != null) {
-                        // 更新检查项状态
-                        item.setStatus(result ? CheckItem.Status.SUCCESS : CheckItem.Status.FAILED);
-                        item.setMessage(result ? "检查通过" : "检查失败");
-                    } else {
-                        // 未获取到结果，设为失败
-                        item.setStatus(CheckItem.Status.FAILED);
-                        item.setMessage("检查执行异常，未返回结果");
+                for (CheckItem result : results) {
+                    // 在原始检查项列表中找到对应项并更新
+                    for (CheckItem item : checkItems) {
+                        if (item.getId().equals(result.getId())) {
+                            item.setStatus(result.getStatus());
+                            item.setMessage(result.getMessage());
+                            break;
+                        }
                     }
                 }
             } else {

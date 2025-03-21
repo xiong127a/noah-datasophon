@@ -499,20 +499,11 @@ public class AsyncCheckService {
             items.add(checkItem);
             
             // 使用批量检查方法进行处理
-            Map<String, Boolean> results = batchExecuteCheck(clusterId, hostInfo, items);
+            List<CheckItem> results = batchExecuteCheck(clusterId, hostInfo, items);
             
             // 返回检查结果
             if (results != null && !results.isEmpty()) {
-                Boolean result = results.get(checkItem.getItemName());
-                if (result != null) {
-                    checkItem.setStatus(result ? CheckItem.Status.SUCCESS : CheckItem.Status.FAILED);
-                    checkItem.setMessage(result ? "检查通过" : "检查失败");
-                } else {
-                    // 没有找到对应的结果
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("执行检查时发生内部错误: 无结果");
-                }
-                return checkItem;
+                return results.get(0);
             } else {
                 // 如果没有结果，则返回原始检查项但标记为失败
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -537,12 +528,12 @@ public class AsyncCheckService {
             items.add(checkItem);
             
             // 使用批量修复方法进行处理
-            Map<String, Boolean> results = batchExecuteFix(clusterId, hostInfo, items);
+            List<CheckItem> results = batchExecuteFix(clusterId, hostInfo, items);
             
             // 返回修复结果
             if (results != null && !results.isEmpty()) {
-                Boolean result = results.get(checkItem.getItemName());
-                return result != null && result;
+                CheckItem result = results.get(0);
+                return result != null && result.getStatus() == CheckItem.Status.SUCCESS;
             } else {
                 // 如果没有结果，则标记为失败
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -954,11 +945,10 @@ public class AsyncCheckService {
      * @param clusterId 集群ID
      * @param hostInfo 主机信息
      * @param checkItems 检查项列表
-     * @return 检查结果映射
+     * @return 检查结果列表
      */
-    public Map<String, Boolean> batchExecuteCheck(Integer clusterId, HostInfo hostInfo, List<CheckItem> checkItems) {
-        Map<String, Boolean> results = new HashMap<>();
-        List<CheckItem> resultItems = new ArrayList<>();
+    public List<CheckItem> batchExecuteCheck(Integer clusterId, HostInfo hostInfo, List<CheckItem> checkItems) {
+        List<CheckItem> results = new ArrayList<>();
         ClientSession session = null;
         String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
         
@@ -969,7 +959,9 @@ public class AsyncCheckService {
                 logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
                 // 标记所有检查项为失败
                 for (CheckItem item : checkItems) {
-                    results.put(item.getItemName(), false);
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("无法建立SSH连接");
+                    results.add(item);
                 }
                 return results;
             }
@@ -996,7 +988,9 @@ public class AsyncCheckService {
                     // 获取相应的检查器
                     ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(item.getItemCode()));
                     if (checker == null) {
-                        results.put(item.getItemName(), false);
+                        item.setStatus(CheckItem.Status.FAILED);
+                        item.setMessage("找不到检查器: " + item.getItemName());
+                        results.add(item);
                         continue;
                     }
                     
@@ -1011,16 +1005,13 @@ public class AsyncCheckService {
                         logger.error("执行检查前会话未就绪: {}", item.getItemName());
                         item.setStatus(CheckItem.Status.FAILED);
                         item.setMessage("SSH会话未就绪");
-                        resultItems.add(item);
-                        results.put(item.getItemName(), false);
+                        results.add(item);
                         continue;
                     }
                     
                     // 执行检查
-                    CheckItem resultItem = checker.check(clusterId, hostInfo, item);
-                    resultItems.add(resultItem);
-                    // 将检查结果添加到结果映射
-                    results.put(resultItem.getItemName(), resultItem.getStatus() == CheckItem.Status.SUCCESS);
+                    CheckItem result = checker.check(clusterId, hostInfo, item);
+                    results.add(result);
                     
                     // 更新最后访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
@@ -1028,19 +1019,17 @@ public class AsyncCheckService {
                     logger.error("执行检查项 {} 时发生异常: {}", item.getItemName(), e.getMessage(), e);
                     item.setStatus(CheckItem.Status.FAILED);
                     item.setMessage("检查异常: " + e.getMessage());
-                    resultItems.add(item);
-                    results.put(item.getItemName(), false);
+                    results.add(item);
                 }
             }
         } catch (Exception e) {
             logger.error("批量执行检查时发生异常: {}", e.getMessage(), e);
             // 标记所有剩余检查项为失败
             for (CheckItem item : checkItems) {
-                if (!resultItems.contains(item)) {
+                if (!results.contains(item)) {
                     item.setStatus(CheckItem.Status.FAILED);
                     item.setMessage("批量检查异常: " + e.getMessage());
-                    resultItems.add(item);
-                    results.put(item.getItemName(), false);
+                    results.add(item);
                 }
             }
         } finally {
@@ -1058,10 +1047,10 @@ public class AsyncCheckService {
      * @param clusterId 集群ID
      * @param hostInfo 主机信息
      * @param fixItems 修复项列表
-     * @return 修复结果映射
+     * @return 修复结果列表
      */
-    public Map<String, Boolean> batchExecuteFix(Integer clusterId, HostInfo hostInfo, List<CheckItem> fixItems) {
-        Map<String, Boolean> results = new HashMap<>();
+    public List<CheckItem> batchExecuteFix(Integer clusterId, HostInfo hostInfo, List<CheckItem> fixItems) {
+        List<CheckItem> results = new ArrayList<>();
         ClientSession session = null;
         String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
         
@@ -1072,7 +1061,9 @@ public class AsyncCheckService {
                 logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
                 // 标记所有修复项为失败
                 for (CheckItem item : fixItems) {
-                    results.put(item.getItemName(), false);
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("无法建立SSH连接");
+                    results.add(item);
                 }
                 return results;
             }
@@ -1099,7 +1090,9 @@ public class AsyncCheckService {
                     // 获取相应的检查器
                     ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(item.getItemCode()));
                     if (checker == null) {
-                        results.put(item.getItemName(), false);
+                        item.setStatus(CheckItem.Status.FAILED);
+                        item.setMessage("找不到检查器: " + item.getItemName());
+                        results.add(item);
                         continue;
                     }
                     
@@ -1112,27 +1105,40 @@ public class AsyncCheckService {
                     // 再次验证会话是否就绪
                     if (!hostInfo.isSessionReady()) {
                         logger.error("执行修复前会话未就绪: {}", item.getItemName());
-                        results.put(item.getItemName(), false);
+                        item.setStatus(CheckItem.Status.FAILED);
+                        item.setMessage("SSH会话未就绪");
+                        results.add(item);
                         continue;
                     }
                     
                     // 执行修复
                     boolean fixResult = checker.fix(clusterId, hostInfo, item);
-                    results.put(item.getItemName(), fixResult);
+                    if (fixResult) {
+                        item.setStatus(CheckItem.Status.SUCCESS);
+                        item.setMessage("修复成功");
+                    } else {
+                        item.setStatus(CheckItem.Status.FAILED);
+                        item.setMessage("修复失败");
+                    }
+                    results.add(item);
                     
                     // 更新最后访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
                 } catch (Exception e) {
                     logger.error("执行修复项 {} 时发生异常: {}", item.getItemName(), e.getMessage(), e);
-                    results.put(item.getItemName(), false);
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("修复异常: " + e.getMessage());
+                    results.add(item);
                 }
             }
         } catch (Exception e) {
             logger.error("批量执行修复时发生异常: {}", e.getMessage(), e);
             // 标记所有剩余修复项为失败
             for (CheckItem item : fixItems) {
-                if (!results.containsKey(item.getItemName())) {
-                    results.put(item.getItemName(), false);
+                if (!results.contains(item)) {
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("批量修复异常: " + e.getMessage());
+                    results.add(item);
                 }
             }
         } finally {
