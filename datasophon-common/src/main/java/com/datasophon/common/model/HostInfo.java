@@ -19,7 +19,10 @@ package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -88,6 +91,38 @@ public class HostInfo implements Serializable {
      * 状态缓存是否失效 - 不序列化此字段
      */
     private transient boolean statusCacheDirty = true;
+
+    /**
+     * -- GETTER --
+     *  是否使用已存在的会话（用于连接复用）
+     * -- SETTER --
+     *  设置是否使用已存在的会话
+
+     */
+    // 添加连接复用相关属性
+    @Setter
+    @Getter
+    @JsonIgnore
+    private transient boolean useExistingSession = false;
+
+    /**
+     * -- GETTER --
+     *  获取外部会话
+     * -- SETTER --
+     *  设置外部会话
+
+     */
+    @Setter
+    @Getter
+    @JsonIgnore
+    private transient ClientSession externalSession = null;
+
+    /**
+     * 会话是否准备就绪
+     */
+    public boolean isSessionReady() {
+        return externalSession != null && externalSession.isOpen();
+    }
 
     /**
      * 获取主机整体状态 - 枚举类型

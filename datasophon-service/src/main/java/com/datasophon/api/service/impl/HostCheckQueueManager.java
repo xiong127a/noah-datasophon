@@ -126,6 +126,9 @@ public class HostCheckQueueManager {
     // 系统启动时间
     private static long applicationStartTime;
 
+    @Autowired
+    private HostCheckServiceImpl hostCheckService;
+
     public HostCheckQueueManager() {
         // 创建检查项线程池 - 负责检查项级别的任务
         this.itemCheckExecutorService = new ThreadPoolExecutor(
@@ -1280,7 +1283,7 @@ public class HostCheckQueueManager {
                 try {
                     // 创建修复任务
                     HostFixTask hostFixTask = new HostFixTask(
-                        task.getClusterId(), task.getHostInfo(), task.getCheckItem(), taskKey);
+                        task.getClusterId(), task.getHostInfo(), task.getCheckItem(), taskKey, hostCheckService);
                     
                     // 使用修复专用线程池执行
                     Future<?> future = fixExecutorService.submit(hostFixTask);
@@ -1388,12 +1391,14 @@ public class HostCheckQueueManager {
         private final HostInfo hostInfo;
         private final CheckItem checkItem;
         private final String taskKey;
+        private final HostCheckServiceImpl hostCheckService;
         
-        public HostFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, String taskKey) {
+        public HostFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, String taskKey, HostCheckServiceImpl hostCheckService) {
             this.clusterId = clusterId;
             this.hostInfo = hostInfo;
             this.checkItem = checkItem;
             this.taskKey = taskKey;
+            this.hostCheckService = hostCheckService;
         }
         
         @Override
@@ -1409,19 +1414,19 @@ public class HostCheckQueueManager {
                 // 统计信息
                 fixTasksProcessed.incrementAndGet();
                 
-                // 获取检查器并执行修复
-                boolean success = fixCheckItem(clusterId, hostInfo, checkItem);
+                // 创建修复项列表
+                List<CheckItem> fixItems = new ArrayList<>();
+                fixItems.add(checkItem);
+                
+                // 使用doHostFix方法批量执行修复，实现SSH连接复用
+                boolean success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
                 
                 // 更新结果
                 if (success) {
-                    checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("修复成功");
                     fixTasksSucceeded.incrementAndGet();
                     logger.info("主机 {} 的修复任务 {} 执行成功", 
                         hostInfo.getHostname(), checkItem.getItemName());
                 } else {
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("修复失败");
                     fixTasksFailed.incrementAndGet();
                     logger.warn("主机 {} 的修复任务 {} 执行失败", 
                         hostInfo.getHostname(), checkItem.getItemName());
@@ -1437,8 +1442,8 @@ public class HostCheckQueueManager {
             } finally {
                 // 统计执行时间
                 long executionTime = System.currentTimeMillis() - startTime;
-                // 更新总执行时间
                 fixTasksTotalExecutionTimeMs.addAndGet(executionTime);
+                
                 // 更新最大执行时间
                 long currentMax = fixTasksMaxExecutionTimeMs.get();
                 while (executionTime > currentMax) {
@@ -1448,9 +1453,8 @@ public class HostCheckQueueManager {
                     currentMax = fixTasksMaxExecutionTimeMs.get();
                 }
                 
-                // 清理资源
+                // 移除任务
                 runningFixTasks.remove(taskKey);
-                fixTaskStartTimes.remove(taskKey);
             }
         }
     }
@@ -1458,45 +1462,28 @@ public class HostCheckQueueManager {
     /**
      * 修复任务数据结构
      */
+    @Getter
     private static class FixTask implements Comparable<FixTask> {
         private final Integer clusterId;
         private final HostInfo hostInfo;
         private final CheckItem checkItem;
-        private final int priority;
+        private final int priority; // 优先级，数字越小优先级越高
+        private final HostCheckServiceImpl hostCheckService;
         
         public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+            this(clusterId, hostInfo, checkItem, 5); // 默认优先级为5
+        }
+        
+        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, int priority) {
             this.clusterId = clusterId;
             this.hostInfo = hostInfo;
             this.checkItem = checkItem;
-            // 设置优先级，可以基于检查项的重要程度设置
-            this.priority = calculatePriority(checkItem);
-        }
-        
-        public Integer getClusterId() {
-            return clusterId;
-        }
-        
-        public HostInfo getHostInfo() {
-            return hostInfo;
-        }
-        
-        public CheckItem getCheckItem() {
-            return checkItem;
-        }
-        
-        public int getPriority() {
-            return priority;
-        }
-        
-        // 计算任务优先级
-        private int calculatePriority(CheckItem checkItem) {
-            // 基于检查项的ID或其他属性设置优先级，默认为中等优先级
-            return 100;
+            this.priority = priority;
+            this.hostCheckService = null; // 默认为null，由HostFixTask在运行时从Spring获取
         }
         
         @Override
         public int compareTo(FixTask other) {
-            // 优先级高的排在队列前面
             return Integer.compare(this.priority, other.priority);
         }
     }

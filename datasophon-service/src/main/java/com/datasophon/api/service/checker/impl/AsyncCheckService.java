@@ -1,38 +1,44 @@
 package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.config.TaskManager;
-import com.datasophon.api.service.checker.AbstractItemChecker;
+import com.datasophon.api.service.checker.CommandResult;
 import com.datasophon.api.service.checker.ItemChecker;
 import com.datasophon.api.service.checker.ItemCheckerFactory;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.model.AsyncServiceStatus;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ItemCode;
-import com.datasophon.common.model.AsyncServiceStatus;
 import com.datasophon.common.model.ScheduledTasksStatus;
+import org.apache.sshd.client.channel.ClientChannel;
+import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.text.SimpleDateFormat;
 
 /**
  * 异步检查服务
@@ -87,6 +93,9 @@ public class AsyncCheckService {
     // 定时任务的Future
     private ScheduledFuture<?> taskCleanupTask;
     private ScheduledFuture<?> connectionCleanupTask;
+    
+    // 添加连接池清理改进
+    private final Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
     
     @PostConstruct
     public void init() {
@@ -484,53 +493,36 @@ public class AsyncCheckService {
      * 执行实际检查逻辑
      */
     private CheckItem doCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = null;
-        
         try {
-            // 将String类型的itemCode转换为ItemCode枚举
-            ItemCode itemCode = ItemCode.valueOf(checkItem.getItemCode());
-            ItemChecker checker = itemCheckerFactory.getChecker(itemCode);
+            // 将单个检查项放入列表中使用批量检查方法
+            List<CheckItem> items = new ArrayList<>();
+            items.add(checkItem);
             
-            if (checker == null) {
-                logger.error("找不到检查项对应的检查器: {}", itemCode);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "找不到对应的检查器");
+            // 使用批量检查方法进行处理
+            Map<String, Boolean> results = batchExecuteCheck(clusterId, hostInfo, items);
+            
+            // 返回检查结果
+            if (results != null && !results.isEmpty()) {
+                Boolean result = results.get(checkItem.getItemName());
+                if (result != null) {
+                    checkItem.setStatus(result ? CheckItem.Status.SUCCESS : CheckItem.Status.FAILED);
+                    checkItem.setMessage(result ? "检查通过" : "检查失败");
+                } else {
+                    // 没有找到对应的结果
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("执行检查时发生内部错误: 无结果");
+                }
                 return checkItem;
-            }
-            
-            // 获取或创建连接
-            session = getOrCreateConnection(hostInfo);
-            if (session == null) {
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "无法建立SSH连接");
-                return checkItem;
-            }
-            
-            // 使用复用的会话执行检查
-            if (checker instanceof AbstractItemChecker) {
-                // 使用新添加的支持连接复用的方法
-                AbstractItemChecker abstractChecker = (AbstractItemChecker) checker;
-                return abstractChecker.checkWithSession(clusterId, hostInfo, checkItem, session);
             } else {
-                // 不支持会话复用的检查器使用原始方法
-                return checker.check(clusterId, hostInfo, checkItem);
+                // 如果没有结果，则返回原始检查项但标记为失败
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("执行检查时发生内部错误");
+                return checkItem;
             }
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("无效的检查项代码: {}", checkItem.getItemCode());
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "无效的检查项代码: " + checkItem.getItemCode());
-            return checkItem;
-        } catch (InterruptedException e) {
-            logger.info("检查任务被中断");
-            Thread.currentThread().interrupt();
-            checkItem.setStatus(CheckItem.Status.SKIPPED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "检查被中断");
-            return checkItem;
         } catch (Exception e) {
-            logger.error("执行检查时发生异常", e);
+            logger.error("执行检查时发生异常: {}", e.getMessage(), e);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "检查异常: " + e.getMessage());
+            checkItem.setMessage("检查异常: " + e.getMessage());
             return checkItem;
         }
     }
@@ -539,53 +531,28 @@ public class AsyncCheckService {
      * 执行实际修复逻辑
      */
     private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = null;
-        
         try {
-            // 将String类型的itemCode转换为ItemCode枚举
-            ItemCode itemCode = ItemCode.valueOf(checkItem.getItemCode());
-            ItemChecker checker = itemCheckerFactory.getChecker(itemCode);
+            // 将单个修复项放入列表中使用批量修复方法
+            List<CheckItem> items = new ArrayList<>();
+            items.add(checkItem);
             
-            if (checker == null) {
-                logger.error("找不到检查项对应的检查器: {}", itemCode);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "找不到对应的检查器");
-                return false;
-            }
+            // 使用批量修复方法进行处理
+            Map<String, Boolean> results = batchExecuteFix(clusterId, hostInfo, items);
             
-            // 获取或创建连接
-            session = getOrCreateConnection(hostInfo);
-            if (session == null) {
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "无法建立SSH连接");
-                return false;
-            }
-            
-            // 使用复用的会话执行修复
-            if (checker instanceof AbstractItemChecker) {
-                // 使用新添加的支持连接复用的方法
-                AbstractItemChecker abstractChecker = (AbstractItemChecker) checker;
-                return abstractChecker.fixWithSession(clusterId, hostInfo, checkItem, session);
+            // 返回修复结果
+            if (results != null && !results.isEmpty()) {
+                Boolean result = results.get(checkItem.getItemName());
+                return result != null && result;
             } else {
-                // 不支持会话复用的检查器使用原始方法
-                return checker.fix(clusterId, hostInfo, checkItem);
+                // 如果没有结果，则标记为失败
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("执行修复时发生内部错误");
+                return false;
             }
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("无效的检查项代码: {}", checkItem.getItemCode());
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "无效的检查项代码: " + checkItem.getItemCode());
-            return false;
-        } catch (InterruptedException e) {
-            logger.info("修复任务被中断");
-            Thread.currentThread().interrupt();
-            checkItem.setStatus(CheckItem.Status.SKIPPED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "修复被中断");
-            return false;
         } catch (Exception e) {
-            logger.error("执行修复时发生异常", e);
+            logger.error("执行修复时发生异常: {}", e.getMessage(), e);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            setCheckItemMessage(clusterId, hostInfo, checkItem, "修复异常: " + e.getMessage());
+            checkItem.setMessage("修复异常: " + e.getMessage());
             return false;
         }
     }
@@ -605,9 +572,35 @@ public class AsyncCheckService {
             ClientSession session = hostConnectionPool.get(hostKey);
             
             // 检查连接是否存在且有效
-            if (session != null && session.isOpen()) {
-                logger.debug("复用主机 {} 的现有SSH连接", hostInfo.getHostname());
-                return session;
+            if (session != null) {
+                try {
+                    // 检查连接是否仍然可用
+                    if (session.isOpen()) {
+                        // 尝试发送一个无害的命令来验证连接是否真正有效
+                        CommandResult testResult = execCommand(session, "echo connection_test");
+                        if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
+                            logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getHostname());
+                            // 更新最后访问时间
+                            connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+                            return session;
+                        } else {
+                            logger.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getHostname());
+                        }
+                    } else {
+                        logger.info("主机 {} 的SSH连接已关闭，将创建新连接", hostInfo.getHostname());
+                    }
+                } catch (Exception e) {
+                    logger.warn("测试SSH连接时发生异常: {}", e.getMessage());
+                }
+                
+                // 关闭无效连接
+                try {
+                    session.close();
+                } catch (Exception e) {
+                    logger.debug("关闭失效连接时发生异常: {}", e.getMessage());
+                } finally {
+                    hostConnectionPool.remove(hostKey);
+                }
             }
             
             // 创建新连接
@@ -618,6 +611,8 @@ public class AsyncCheckService {
                 
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
+                    // 设置初始访问时间
+                    connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
                     logger.info("成功创建主机 {} 的SSH连接", hostInfo.getHostname());
                 }
                 return session;
@@ -670,6 +665,7 @@ public class AsyncCheckService {
      * 定期清理不活跃连接
      * 每10分钟执行一次
      */
+    @Scheduled(fixedDelay = 60000) // 每分钟执行一次
     public void cleanupConnections() {
         if (!scheduledTasksEnabled.get()) {
             logger.debug("定时任务已禁用，跳过执行cleanupConnections()");
@@ -677,24 +673,54 @@ public class AsyncCheckService {
         }
         
         int closedCount = 0;
+        int idleClosedCount = 0;
         logger.info("开始清理不活跃SSH连接...");
         
+        long currentTime = System.currentTimeMillis();
+        long idleTimeout = TimeUnit.MINUTES.toMillis(1); // 1分钟没有使用的连接将被关闭
+        
+        List<String> keysToRemove = new ArrayList<>();
+        
         for (Map.Entry<String, ClientSession> entry : hostConnectionPool.entrySet()) {
+            String key = entry.getKey();
             try {
                 ClientSession session = entry.getValue();
+                // 检查连接是否有效
                 if (session == null || !session.isOpen()) {
-                    hostConnectionPool.remove(entry.getKey());
+                    keysToRemove.add(key);
                     closedCount++;
-                    logger.debug("已移除无效连接: {}", entry.getKey());
+                    logger.debug("已移除无效连接: {}", key);
+                    continue;
+                }
+                
+                // 检查连接是否空闲超时
+                Long lastAccess = connectionLastAccessTime.get(key);
+                if (lastAccess != null && (currentTime - lastAccess) > idleTimeout) {
+                    try {
+                        logger.info("关闭空闲超时的连接: {}, 空闲时长: {}分钟", 
+                            key, (currentTime - lastAccess) / 60000);
+                        session.close();
+                        keysToRemove.add(key);
+                        idleClosedCount++;
+                    } catch (Exception e) {
+                        logger.warn("关闭空闲连接时发生异常: {}", e.getMessage());
+                    }
                 }
             } catch (Exception e) {
                 logger.warn("清理连接时发生异常: {}", e.getMessage());
+                keysToRemove.add(key);
             }
         }
         
+        // 批量移除失效连接
+        for (String key : keysToRemove) {
+            hostConnectionPool.remove(key);
+            connectionLastAccessTime.remove(key);
+        }
+        
         lastConnectionCleanupTime = System.currentTimeMillis();
-        logger.info("连接池清理完成，移除了 {} 个无效连接，当前连接数: {}", 
-                closedCount, hostConnectionPool.size());
+        logger.info("连接池清理完成，移除了 {} 个无效连接，{} 个空闲连接，当前连接数: {}", 
+            closedCount, idleClosedCount, hostConnectionPool.size());
     }
     
     /**
@@ -889,5 +915,233 @@ public class AsyncCheckService {
                 this::cleanupConnections, intervalMs);
             logger.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
         }
+    }
+    
+    /**
+     * 在一个会话上执行命令
+     */
+    private CommandResult execCommand(ClientSession session, String command) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+            
+            ClientChannel channel = session.createExecChannel(command);
+            channel.setOut(outputStream);
+            channel.setErr(errorStream);
+            
+            // 打开通道
+            channel.open().verify(30, TimeUnit.SECONDS);
+            
+            // 等待命令完成
+            channel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), 30000);
+            
+            // 获取退出状态
+            Integer exitStatus = channel.getExitStatus();
+            String output = outputStream.toString();
+            String error = errorStream.toString();
+            
+            // 关闭通道
+            channel.close();
+            
+            return new CommandResult(output, error, exitStatus != null ? exitStatus : -1);
+        } catch (Exception e) {
+            return new CommandResult("", e.getMessage(), -1);
+        }
+    }
+    
+    /**
+     * 批量执行检查项，复用SSH连接
+     * @param clusterId 集群ID
+     * @param hostInfo 主机信息
+     * @param checkItems 检查项列表
+     * @return 检查结果映射
+     */
+    public Map<String, Boolean> batchExecuteCheck(Integer clusterId, HostInfo hostInfo, List<CheckItem> checkItems) {
+        Map<String, Boolean> results = new HashMap<>();
+        List<CheckItem> resultItems = new ArrayList<>();
+        ClientSession session = null;
+        String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
+        
+        try {
+            // 尝试获取或创建一个连接
+            session = getOrCreateConnection(hostInfo);
+            if (session == null || !session.isOpen()) {
+                logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
+                // 标记所有检查项为失败
+                for (CheckItem item : checkItems) {
+                    results.put(item.getItemName(), false);
+                }
+                return results;
+            }
+            
+            // 标记使用现有会话并设置外部会话 - 这里是关键
+            hostInfo.setUseExistingSession(true);
+            hostInfo.setExternalSession(session);
+            
+            logger.debug("批量执行检查 - 已设置SSH会话: session.isOpen={}, hostInfo.useExistingSession={}", 
+                session.isOpen(), hostInfo.isUseExistingSession());
+            
+            // 验证会话设置是否正确
+            if (!hostInfo.isSessionReady()) {
+                logger.error("会话设置后未就绪: externalSession={}, useExistingSession={}", 
+                    hostInfo.getExternalSession() != null, hostInfo.isUseExistingSession());
+            }
+            
+            // 更新最后访问时间
+            connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+            
+            // 执行每个检查项
+            for (CheckItem item : checkItems) {
+                try {
+                    // 获取相应的检查器
+                    ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(item.getItemCode()));
+                    if (checker == null) {
+                        results.put(item.getItemName(), false);
+                        continue;
+                    }
+                    
+                    logger.debug("开始执行检查项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
+                    
+                    // 确保每个检查项都使用同一个会话 - 确保这个标志设置正确
+                    hostInfo.setUseExistingSession(true);
+                    hostInfo.setExternalSession(session);
+                    
+                    // 再次验证会话是否就绪
+                    if (!hostInfo.isSessionReady()) {
+                        logger.error("执行检查前会话未就绪: {}", item.getItemName());
+                        item.setStatus(CheckItem.Status.FAILED);
+                        item.setMessage("SSH会话未就绪");
+                        resultItems.add(item);
+                        results.put(item.getItemName(), false);
+                        continue;
+                    }
+                    
+                    // 执行检查
+                    CheckItem resultItem = checker.check(clusterId, hostInfo, item);
+                    resultItems.add(resultItem);
+                    // 将检查结果添加到结果映射
+                    results.put(resultItem.getItemName(), resultItem.getStatus() == CheckItem.Status.SUCCESS);
+                    
+                    // 更新最后访问时间
+                    connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+                } catch (Exception e) {
+                    logger.error("执行检查项 {} 时发生异常: {}", item.getItemName(), e.getMessage(), e);
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("检查异常: " + e.getMessage());
+                    resultItems.add(item);
+                    results.put(item.getItemName(), false);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("批量执行检查时发生异常: {}", e.getMessage(), e);
+            // 标记所有剩余检查项为失败
+            for (CheckItem item : checkItems) {
+                if (!resultItems.contains(item)) {
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("批量检查异常: " + e.getMessage());
+                    resultItems.add(item);
+                    results.put(item.getItemName(), false);
+                }
+            }
+        } finally {
+            // 执行完毕后清理，但不关闭会话
+            logger.debug("批量检查执行完毕，清理hostInfo引用，但不关闭会话");
+            hostInfo.setExternalSession(null);
+            hostInfo.setUseExistingSession(false);
+        }
+        
+        return results;
+    }
+    
+    /**
+     * 批量执行修复项，复用SSH连接
+     * @param clusterId 集群ID
+     * @param hostInfo 主机信息
+     * @param fixItems 修复项列表
+     * @return 修复结果映射
+     */
+    public Map<String, Boolean> batchExecuteFix(Integer clusterId, HostInfo hostInfo, List<CheckItem> fixItems) {
+        Map<String, Boolean> results = new HashMap<>();
+        ClientSession session = null;
+        String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
+        
+        try {
+            // 尝试获取或创建一个连接
+            session = getOrCreateConnection(hostInfo);
+            if (session == null || !session.isOpen()) {
+                logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
+                // 标记所有修复项为失败
+                for (CheckItem item : fixItems) {
+                    results.put(item.getItemName(), false);
+                }
+                return results;
+            }
+            
+            // 标记使用现有会话并设置外部会话 - 这里是关键
+            hostInfo.setUseExistingSession(true);
+            hostInfo.setExternalSession(session);
+            
+            logger.debug("批量执行修复 - 已设置SSH会话: session.isOpen={}, hostInfo.useExistingSession={}", 
+                session.isOpen(), hostInfo.isUseExistingSession());
+            
+            // 验证会话设置是否正确
+            if (!hostInfo.isSessionReady()) {
+                logger.error("会话设置后未就绪: externalSession={}, useExistingSession={}", 
+                    hostInfo.getExternalSession() != null, hostInfo.isUseExistingSession());
+            }
+            
+            // 更新最后访问时间
+            connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+            
+            // 执行每个修复项
+            for (CheckItem item : fixItems) {
+                try {
+                    // 获取相应的检查器
+                    ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(item.getItemCode()));
+                    if (checker == null) {
+                        results.put(item.getItemName(), false);
+                        continue;
+                    }
+                    
+                    logger.debug("开始执行修复项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
+                    
+                    // 确保每个修复项都使用同一个会话 - 确保这个标志设置正确
+                    hostInfo.setUseExistingSession(true);
+                    hostInfo.setExternalSession(session);
+                    
+                    // 再次验证会话是否就绪
+                    if (!hostInfo.isSessionReady()) {
+                        logger.error("执行修复前会话未就绪: {}", item.getItemName());
+                        results.put(item.getItemName(), false);
+                        continue;
+                    }
+                    
+                    // 执行修复
+                    boolean fixResult = checker.fix(clusterId, hostInfo, item);
+                    results.put(item.getItemName(), fixResult);
+                    
+                    // 更新最后访问时间
+                    connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+                } catch (Exception e) {
+                    logger.error("执行修复项 {} 时发生异常: {}", item.getItemName(), e.getMessage(), e);
+                    results.put(item.getItemName(), false);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("批量执行修复时发生异常: {}", e.getMessage(), e);
+            // 标记所有剩余修复项为失败
+            for (CheckItem item : fixItems) {
+                if (!results.containsKey(item.getItemName())) {
+                    results.put(item.getItemName(), false);
+                }
+            }
+        } finally {
+            // 执行完毕后清理，但不关闭会话
+            logger.debug("批量修复执行完毕，清理hostInfo引用，但不关闭会话");
+            hostInfo.setExternalSession(null);
+            hostInfo.setUseExistingSession(false);
+        }
+        
+        return results;
     }
 } 
