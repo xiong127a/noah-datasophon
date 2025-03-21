@@ -83,19 +83,31 @@
           <div class="detail-stats">
             <div class="stat-item">
               <div class="stat-label">系统运行时间</div>
-              <div class="stat-value">{{ queueStats.systemUptime || '未知' }}</div>
+              <div class="stat-value system-uptime">
+                <a-icon type="hourglass" class="time-icon pulse" />
+                <span class="uptime-text">{{ queueStats.systemUptime || '未知' }}</span>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">活跃线程</div>
-              <div class="stat-value">{{ queueStats.totalActiveThreads || 0 }}</div>
+              <div class="stat-value">
+                <a-icon type="deployment-unit" theme="filled" class="stat-icon thread-icon" />
+                {{ queueStats.totalActiveThreads || 0 }}
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">总线程数</div>
-              <div class="stat-value">{{ queueStats.totalPoolSize || 0 }}</div>
+              <div class="stat-value">
+                <a-icon type="apartment" class="stat-icon" />
+                {{ queueStats.totalPoolSize || 0 }}
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">完成任务</div>
-              <div class="stat-value">{{ queueStats.totalCompletedTasks || 0 }}</div>
+              <div class="stat-value">
+                <a-icon type="check-circle" theme="filled" class="stat-icon task-icon" />
+                {{ queueStats.totalCompletedTasks || 0 }}
+              </div>
             </div>
           </div>
         </div>
@@ -170,7 +182,7 @@
                       </div>
                     </template>
                     <div 
-                      class="status-light detail-status-light" 
+                      class="status-light detail-status-light enhanced-light" 
                       :class="getQueueStatusClass(queueStats)"
                       @mouseenter="fetchQueueTasksOnHover"
                     />
@@ -181,19 +193,31 @@
               <div class="detail-stats with-padding">
                 <div class="stat-item">
                   <div class="stat-label">等待任务</div>
-                  <div class="stat-value">{{ queueStats.queueSize || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="hourglass" class="queue-icon waiting-icon" />
+                    <span>{{ queueStats.queueSize || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">正在执行</div>
-                  <div class="stat-value">{{ queueStats.runningTasks || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="loading" spin class="queue-icon running-icon" />
+                    <span>{{ queueStats.runningTasks || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">已完成任务</div>
-                  <div class="stat-value">{{ queueStats.completedTasks || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="check-circle" theme="filled" class="queue-icon completed-icon" />
+                    <span>{{ queueStats.completedTasks || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">队列容量</div>
-                  <div class="stat-value">{{ queueStats.queueCapacity || 100 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="database" class="queue-icon capacity-icon" />
+                    <span>{{ queueStats.queueCapacity || 100 }}</span>
+                  </div>
                 </div>
               </div>
               
@@ -206,19 +230,31 @@
                 <div class="detail-stats with-padding">
                   <div class="stat-item">
                     <div class="stat-label">总活跃线程</div>
-                    <div class="stat-value">{{ queueStats.totalActiveThreads || 0 }}</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="thunderbolt" theme="filled" class="thread-icon active-icon" />
+                      <span>{{ queueStats.totalActiveThreads || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">总线程池大小</div>
-                    <div class="stat-value">{{ queueStats.totalPoolSize || 0 }}</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="cluster" class="thread-icon pool-icon" />
+                      <span>{{ queueStats.totalPoolSize || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">总完成任务</div>
-                    <div class="stat-value">{{ queueStats.totalCompletedTasks || 0 }}</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="file-done" class="thread-icon complete-icon" />
+                      <span>{{ queueStats.totalCompletedTasks || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">总队列任务</div>
-                    <div class="stat-value">{{ queueStats.totalQueuedTasks || 0 }}</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="ordered-list" class="thread-icon queue-icon" />
+                      <span>{{ queueStats.totalQueuedTasks || 0 }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -232,19 +268,31 @@
                 <div class="detail-stats with-padding">
                   <div class="stat-item">
                     <div class="stat-label">检查成功</div>
-                    <div class="stat-value text-success">{{ queueStats.tasksSucceeded || 0 }}</div>
+                    <div class="stat-value task-stat success-stat">
+                      <a-icon type="check-square" theme="filled" class="task-icon" />
+                      <span>{{ queueStats.tasksSucceeded || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">检查失败</div>
-                    <div class="stat-value text-danger">{{ queueStats.tasksFailed || 0 }}</div>
+                    <div class="stat-value task-stat failed-stat">
+                      <a-icon type="close-square" theme="filled" class="task-icon" />
+                      <span>{{ queueStats.tasksFailed || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">平均执行时间</div>
-                    <div class="stat-value">{{ queueStats.tasksAvgExecutionTime || '0秒' }}</div>
+                    <div class="stat-value timing-display">
+                      <a-icon type="clock-circle" class="timing-icon avg-time-icon" />
+                      <span class="timing-text">{{ queueStats.tasksAvgExecutionTime || '0秒' }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">最长执行时间</div>
-                    <div class="stat-value">{{ queueStats.tasksMaxExecutionTime || '0秒' }}</div>
+                    <div class="stat-value timing-display">
+                      <a-icon type="dashboard" class="timing-icon max-time-icon" />
+                      <span class="timing-text">{{ queueStats.tasksMaxExecutionTime || '0秒' }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -258,7 +306,10 @@
                 <div class="status-control">
                   <div class="queue-runtime">
                     <span class="runtime-label">运行时间:</span>
-                    <span class="runtime-value">{{ formatQueueTime(queueStats.fixQueueProcessorStartTime) }}</span>
+                    <span class="runtime-value animated-time">
+                      <a-icon type="clock-circle" class="runtime-icon" />
+                      {{ formatQueueTime(queueStats.fixQueueProcessorStartTime) }}
+                    </span>
                   </div>
                   <a-popover
                     placement="topRight"
@@ -308,20 +359,68 @@
               <div class="detail-stats with-padding">
                 <div class="stat-item">
                   <div class="stat-label">等待修复任务</div>
-                  <div class="stat-value">{{ queueStats.fixQueueSize || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="hourglass" class="queue-icon waiting-icon" />
+                    <span>{{ queueStats.fixQueueSize || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">正在执行修复</div>
-                  <div class="stat-value">{{ queueStats.runningFixTasks || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="loading" spin class="queue-icon running-icon" />
+                    <span>{{ queueStats.runningFixTasks || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">已完成修复</div>
-                  <div class="stat-value">{{ queueStats.completedFixTasks || 0 }}</div>
+                  <div class="stat-value queue-stat">
+                    <a-icon type="check-circle" theme="filled" class="queue-icon completed-icon" />
+                    <span>{{ queueStats.fixTasksProcessed || 0 }}</span>
+                  </div>
                 </div>
                 <div class="stat-item">
                   <div class="stat-label">修复成功率</div>
-                  <div class="stat-value">
-                    {{ calculateSuccessRate(queueStats.fixTasksSucceeded, queueStats.fixTasksFailed) }}%
+                  <div class="stat-value success-rate">
+                    <a-icon type="pie-chart" theme="filled" class="rate-icon animated-icon" />
+                    <span class="rate-text gradient-text">{{ calculateSuccessRate(queueStats.fixTasksSucceeded, queueStats.fixTasksFailed) }}%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 线程池状态 -->
+              <div class="sub-section">
+                <div class="sub-header with-padding">
+                  <h5>线程池状态</h5>
+                </div>
+                
+                <div class="detail-stats with-padding">
+                  <div class="stat-item">
+                    <div class="stat-label">总活跃线程</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="thunderbolt" theme="filled" class="thread-icon active-icon" />
+                      <span>{{ queueStats.fixExecutorActiveCount || 0 }}</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">总线程池大小</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="cluster" class="thread-icon pool-icon" />
+                      <span>{{ queueStats.totalPoolSize || 0 }}</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">总完成任务</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="file-done" class="thread-icon complete-icon" />
+                      <span>{{ queueStats.fixTasksProcessed || 0 }}</span>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">总队列任务</div>
+                    <div class="stat-value thread-stat">
+                      <a-icon type="ordered-list" class="thread-icon queue-icon" />
+                      <span>{{ queueStats.fixExecutorQueueSize || 0 }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -335,19 +434,31 @@
                 <div class="detail-stats with-padding">
                   <div class="stat-item">
                     <div class="stat-label">修复成功</div>
-                    <div class="stat-value text-success">{{ queueStats.fixTasksSucceeded || 0 }}</div>
+                    <div class="stat-value task-stat success-stat">
+                      <a-icon type="check-square" theme="filled" class="task-icon" />
+                      <span>{{ queueStats.fixTasksSucceeded || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">修复失败</div>
-                    <div class="stat-value text-danger">{{ queueStats.fixTasksFailed || 0 }}</div>
+                    <div class="stat-value task-stat failed-stat">
+                      <a-icon type="close-square" theme="filled" class="task-icon" />
+                      <span>{{ queueStats.fixTasksFailed || 0 }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">平均执行时间</div>
-                    <div class="stat-value">{{ queueStats.fixTasksAvgExecutionTime || '0秒' }}</div>
+                    <div class="stat-value timing-display">
+                      <a-icon type="clock-circle" class="timing-icon avg-time-icon" />
+                      <span class="timing-text">{{ queueStats.fixTasksAvgExecutionTime || '0秒' }}</span>
+                    </div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">最长执行时间</div>
-                    <div class="stat-value">{{ queueStats.fixTasksMaxExecutionTime || '0秒' }}</div>
+                    <div class="stat-value timing-display">
+                      <a-icon type="dashboard" class="timing-icon max-time-icon" />
+                      <span class="timing-text">{{ queueStats.fixTasksMaxExecutionTime || '0秒' }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -378,13 +489,17 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">连接清理状态</div>
-              <div class="stat-value" :class="schedulerStats.connectionCleanupActive ? 'text-success' : 'text-warning'">
-                {{ schedulerStats.connectionCleanupActive ? '活跃' : '已停止' }}
+              <div class="connection-status-badge" :class="schedulerStats.connectionCleanupActive ? 'status-active' : 'status-inactive'">
+                <span class="status-text">{{ schedulerStats.connectionCleanupActive ? '活跃' : '已停止' }}</span>
+                <span class="status-ripple"></span>
               </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">上次清理时间</div>
-              <div class="stat-value">{{ formatDateTime(schedulerStats.lastConnectionCleanupTime) }}</div>
+              <div class="stat-value cleanup-time">
+                <a-icon type="history" class="cleanup-icon" />
+                <span>{{ formatDateTime(schedulerStats.lastConnectionCleanupTime) }}</span>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-label">SSH会话缓存</div>
@@ -503,8 +618,9 @@
             </div>
             <div class="stat-item">
               <div class="stat-label">任务清理状态</div>
-              <div class="stat-value" :class="schedulerStats.taskCleanupActive ? 'text-success' : 'text-warning'">
-                {{ schedulerStats.taskCleanupActive ? '活跃' : '已停止' }}
+              <div class="connection-status-badge" :class="schedulerStats.taskCleanupActive ? 'status-active' : 'status-inactive'">
+                <span class="status-text">{{ schedulerStats.taskCleanupActive ? '活跃' : '已停止' }}</span>
+                <span class="status-ripple"></span>
               </div>
             </div>
             <div class="stat-item">
@@ -2092,7 +2208,7 @@ export default {
 }
 </script>
 
-<style lang="less" scoped>
+<style lang="scss" scoped>
 .queue-status-compact {
   display: inline-flex;
   align-items: center;
@@ -3143,6 +3259,389 @@ export default {
   .button-text {
     font-size: 13px !important;
     line-height: 1 !important;
+  }
+}
+
+.system-uptime {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .time-icon {
+    font-size: 16px;
+    color: #1890ff;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+
+  .uptime-text {
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    background: linear-gradient(90deg, #1890ff, #52c41a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+}
+
+.stat-icon {
+  font-size: 16px;
+  margin-right: 8px;
+  color: #1890ff;
+}
+
+.thread-icon {
+  color: #722ed1;
+}
+
+.task-icon {
+  color: #52c41a;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.timing-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .timing-icon {
+    font-size: 16px;
+    color: #1890ff;
+  }
+
+  .timing-text {
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    color: #333;
+  }
+}
+
+.avg-time-icon {
+  color: #52c41a;
+}
+
+.max-time-icon {
+  color: #ff4d4f;
+}
+
+.queue-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .queue-icon {
+    font-size: 16px;
+    margin-right: 4px;
+  }
+
+  .waiting-icon {
+    color: #faad14;
+  }
+
+  .running-icon {
+    color: #1890ff;
+    animation: spin 1s linear infinite;
+  }
+  
+  .completed-icon {
+    color: #52c41a;
+  }
+  
+  .capacity-icon {
+    color: #722ed1;
+    animation: pulse 3s infinite ease-in-out;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+.cleanup-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .cleanup-icon {
+    font-size: 16px;
+    color: #1890ff;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+
+  .cleanup-text {
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    background: linear-gradient(90deg, #1890ff, #52c41a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+}
+
+.connection-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  min-width: 60px;
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-text {
+  position: relative;
+  z-index: 2;
+}
+
+.status-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.status-active {
+  background: linear-gradient(90deg, #52c41a, #1ab394);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(82, 196, 26, 0.4);
+  animation: pulse-active 2s infinite, glow-active 1.5s ease-in-out infinite alternate;
+}
+
+.status-active .status-ripple {
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+  animation: ripple 2s infinite ease-out;
+}
+
+.status-inactive {
+  background: linear-gradient(90deg, #ff4d4f, #cf1322);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(255, 77, 79, 0.4);
+  animation: pulse-inactive 2s infinite;
+}
+
+.status-inactive .status-ripple {
+  background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+  animation: ripple 3s infinite ease-out;
+}
+
+@keyframes glow-active {
+  from {
+    text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 6px #52c41a, 0 0 8px #52c41a;
+  }
+  to {
+    text-shadow: 0 0 4px #fff, 0 0 6px #1ab394, 0 0 8px #1ab394, 0 0 10px #1ab394;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-active {
+  0% {
+    box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(82, 196, 26, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(82, 196, 26, 0);
+  }
+}
+
+@keyframes pulse-inactive {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(255, 77, 79, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
+  }
+}
+
+.task-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  .task-icon {
+    font-size: 16px;
+  }
+}
+
+.success-stat {
+  .task-icon {
+    color: #52c41a;
+    animation: pulse 2s infinite alternate;
+  }
+}
+
+.failed-stat {
+  .task-icon {
+    color: #ff4d4f;
+    animation: shake 1s ease-in-out infinite;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-2px);
+  }
+  40%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+.thread-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  .thread-icon {
+    font-size: 16px;
+  }
+  
+  .active-icon {
+    color: #1890ff;
+    animation: flash 2s infinite;
+  }
+  
+  .pool-icon {
+    color: #722ed1;
+  }
+  
+  .complete-icon {
+    color: #52c41a;
+  }
+  
+  .queue-icon {
+    color: #fa8c16;
+  }
+}
+
+@keyframes flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0.5;
+  }
+}
+
+.enhanced-light {
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    background: inherit;
+    border-radius: 50%;
+    filter: blur(4px);
+    opacity: 0.7;
+    z-index: -1;
+    animation: pulse-light 2s infinite ease-in-out;
+  }
+}
+
+@keyframes pulse-light {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+}
+
+.success-rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .rate-icon {
+    font-size: 16px;
+    color: #52c41a;
+    animation: rotate 3s linear infinite;
+  }
+  
+  .rate-text {
+    font-family: 'Consolas', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #faad14, #52c41a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.animated-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Consolas', monospace;
+  color: #1890ff;
+  
+  .runtime-icon {
+    color: #1890ff;
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 </style> 
