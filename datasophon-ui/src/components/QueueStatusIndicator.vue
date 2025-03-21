@@ -1053,6 +1053,36 @@ export default {
       }
     },
     
+    // 关闭整个队列系统
+    async shutdownSystem() {
+      this.systemLoading = true;
+      try {
+        // 调用关闭系统API
+        const response = await this.$axiosGet(global.API.queueManager, {
+          action: 'shutdown'
+        });
+        
+        if (response && response.code === 200) {
+          this.systemActive = false;
+          this.queueActive = false;
+          this.schedulerActive = false;
+          message.success('系统已成功关闭');
+          this.lastOperationTime = new Date();
+          this.lastOperator = '当前用户';
+          
+          // 刷新状态
+          this.fetchFullStatus();
+        } else {
+          message.error(`系统关闭失败: ${response?.msg || '未知错误'}`);
+        }
+      } catch (error) {
+        console.error('关闭系统异常:', error);
+        message.error('系统关闭操作异常，请查看控制台日志');
+      } finally {
+        this.systemLoading = false;
+      }
+    },
+    
     // 格式化持续时间（毫秒转为可读格式）
     formatDuration(ms) {
       if (!ms) return '0秒';
