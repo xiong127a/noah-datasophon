@@ -125,9 +125,48 @@
               <div class="section-header with-padding">
                 <h4>检查任务队列</h4>
                 <div class="status-control">
-                  <a-button type="primary" size="small" @click="showQueueDetails = true">
-                    查看详情
-                  </a-button>
+                  <a-popover
+                    placement="topRight"
+                    trigger="hover"
+                    :visible="showQueuePopover"
+                    @visibleChange="handleQueuePopoverVisibleChange"
+                    overlayClassName="queue-detail-popover"
+                  >
+                    <template slot="content">
+                      <div class="queue-popover-content">
+                        <h3>检查任务队列详情</h3>
+                        <a-table
+                          :columns="queueTaskColumns"
+                          :dataSource="queueTasks"
+                          size="small"
+                          :scroll="{ y: 300 }"
+                          :pagination="{ pageSize: 5, size: 'small' }"
+                          :rowKey="record => record.taskKey"
+                        >
+                          <template slot="status" slot-scope="text">
+                            <a-tag :color="getStatusColor(text)" style="color: rgba(0, 0, 0, 0.85); font-weight: 500;">{{ text }}</a-tag>
+                          </template>
+                          
+                          <template slot="action" slot-scope="text, record">
+                            <a @click="cancelTask(record)">取消</a>
+                          </template>
+                          
+                          <template slot="startTime" slot-scope="text">
+                            {{ formatDateTime(text) }}
+                          </template>
+                          
+                          <template slot="duration" slot-scope="text">
+                            {{ formatDuration(text) }}
+                          </template>
+                        </a-table>
+                      </div>
+                    </template>
+                    <div 
+                      class="status-light detail-status-light" 
+                      :class="getQueueStatusClass(queueStats)"
+                      @mouseenter="fetchQueueTasksOnHover"
+                    />
+                  </a-popover>
                 </div>
               </div>
               
@@ -183,9 +222,48 @@
               <div class="section-header with-padding">
                 <h4>修复任务队列</h4>
                 <div class="status-control">
-                  <a-button type="primary" size="small" @click="showFixQueueDetails = true">
-                    查看详情
-                  </a-button>
+                  <a-popover
+                    placement="topRight"
+                    trigger="hover"
+                    :visible="showFixQueuePopover"
+                    @visibleChange="handleFixQueuePopoverVisibleChange"
+                    overlayClassName="queue-detail-popover"
+                  >
+                    <template slot="content">
+                      <div class="queue-popover-content">
+                        <h3>修复任务队列详情</h3>
+                        <a-table
+                          :columns="fixTaskColumns"
+                          :dataSource="fixQueueTasks"
+                          size="small"
+                          :scroll="{ y: 300 }"
+                          :pagination="{ pageSize: 5, size: 'small' }"
+                          :rowKey="record => record.taskKey"
+                        >
+                          <template slot="status" slot-scope="text">
+                            <a-tag :color="getStatusColor(text)" style="color: rgba(0, 0, 0, 0.85); font-weight: 500;">{{ text }}</a-tag>
+                          </template>
+                          
+                          <template slot="action" slot-scope="text, record">
+                            <a @click="cancelFixTask(record)">取消</a>
+                          </template>
+                          
+                          <template slot="startTime" slot-scope="text">
+                            {{ formatDateTime(text) }}
+                          </template>
+                          
+                          <template slot="duration" slot-scope="text">
+                            {{ formatDuration(text) }}
+                          </template>
+                        </a-table>
+                      </div>
+                    </template>
+                    <div 
+                      class="status-light detail-status-light" 
+                      :class="getFixQueueStatusClass(queueStats)"
+                      @mouseenter="fetchFixQueueTasksOnHover"
+                    />
+                  </a-popover>
                 </div>
               </div>
               
@@ -495,6 +573,8 @@ export default {
       schedulerStats: {},
       showQueueDetails: false,
       showFixQueueDetails: false,
+      showQueuePopover: false,
+      showFixQueuePopover: false,
       cleanupLoading: false,
       queueTasks: [],
       fixQueueTasks: [],
@@ -588,46 +668,35 @@ export default {
           title: '主机',
           dataIndex: 'hostname',
           key: 'hostname',
-          width: '15%'
-        },
-        {
-          title: '检查项',
-          dataIndex: 'itemName',
-          key: 'itemName',
           width: '20%'
         },
         {
           title: '状态',
           dataIndex: 'status',
           key: 'status',
-          width: '10%',
+          width: '15%',
           scopedSlots: { customRender: 'status' }
         },
         {
           title: '开始时间',
           dataIndex: 'startTime',
           key: 'startTime',
-          width: '20%',
-          className: 'timestamp-column'
+          width: '30%',
+          className: 'timestamp-column',
+          scopedSlots: { customRender: 'startTime' }
         },
         {
           title: '执行时长',
           dataIndex: 'duration',
           key: 'duration',
-          width: '15%',
+          width: '20%',
           scopedSlots: { customRender: 'duration' }
         },
         {
           title: '优先级',
           dataIndex: 'priority',
           key: 'priority',
-          width: '10%'
-        },
-        {
-          title: '操作',
-          key: 'action',
-          scopedSlots: { customRender: 'action' },
-          width: '10%'
+          width: '15%'
         }
       ],
       fixTaskColumns: [
@@ -635,46 +704,35 @@ export default {
           title: '主机',
           dataIndex: 'hostname',
           key: 'hostname',
-          width: '15%'
-        },
-        {
-          title: '修复项',
-          dataIndex: 'itemName',
-          key: 'itemName',
           width: '20%'
         },
         {
           title: '状态',
           dataIndex: 'status',
           key: 'status',
-          width: '10%',
+          width: '15%',
           scopedSlots: { customRender: 'status' }
         },
         {
           title: '开始时间',
           dataIndex: 'startTime',
           key: 'startTime',
-          width: '18%',
-          className: 'timestamp-column'
+          width: '30%',
+          className: 'timestamp-column',
+          scopedSlots: { customRender: 'startTime' }
         },
         {
           title: '执行时长',
           dataIndex: 'duration',
           key: 'duration',
-          width: '12%',
+          width: '20%',
           scopedSlots: { customRender: 'duration' }
         },
         {
           title: '结果',
           dataIndex: 'result',
           key: 'result',
-          width: '10%'
-        },
-        {
-          title: '操作',
-          key: 'action',
-          scopedSlots: { customRender: 'action' },
-          width: '10%'
+          width: '15%'
         }
       ],
       systemActive: true,
@@ -840,16 +898,17 @@ export default {
     
     // 获取状态颜色
     getStatusColor(status) {
+      // 使用具体的颜色值而不是预设的颜色名称，以确保更好的可见性
       const statusMap = {
-        '运行中': 'processing',
-        '修复中': 'processing',
-        '等待中': 'warning',
-        '等待修复': 'warning',
-        '已完成': 'success',
-        '失败': 'error',
-        '取消': 'default'
+        '运行中': '#1890ff',     // 明亮的蓝色
+        '修复中': '#1890ff',     // 明亮的蓝色
+        '等待中': '#faad14',     // 明亮的黄色
+        '等待修复': '#faad14',   // 明亮的黄色
+        '已完成': '#52c41a',     // 明亮的绿色
+        '失败': '#f5222d',       // 明亮的红色
+        '取消': '#d9d9d9'        // 灰色
       };
-      return statusMap[status] || 'default';
+      return statusMap[status] || '#1890ff'; // 默认使用明亮的蓝色
     },
     
     // 启动自动刷新
@@ -1823,6 +1882,113 @@ export default {
         this.schedulerActive = true;
       }
     },
+    // 获取检查任务队列的状态灯CSS类
+    getQueueStatusClass(stats) {
+      if (!stats) return 'status-inactive';
+      
+      if (stats.runningTasks > 0) {
+        return 'status-running';
+      } else if (stats.queueSize > 0) {
+        return 'status-waiting';
+      } else if (!stats.queueProcessorThreadAlive) {
+        return 'status-error';
+      } else {
+        return 'status-active';
+      }
+    },
+    
+    // 获取修复任务队列的状态灯CSS类
+    getFixQueueStatusClass(stats) {
+      if (!stats) return 'status-inactive';
+      
+      if (stats.runningFixTasks > 0) {
+        return 'status-running';
+      } else if (stats.fixQueueSize > 0) {
+        return 'status-waiting';
+      } else if (!stats.fixQueueProcessorThreadAlive) {
+        return 'status-error';
+      } else {
+        return 'status-active';
+      }
+    },
+    
+    // 获取检查任务队列的悬浮提示内容
+    getQueueStatusTooltip(stats) {
+      if (!stats) return '无队列信息';
+      
+      let content = `检查任务队列: ${stats.queueSize || 0} 个等待, ${stats.runningTasks || 0} 个执行中\n`;
+      
+      if (this.queueTasks && this.queueTasks.length > 0) {
+        content += `\n最近任务列表（${Math.min(5, this.queueTasks.length)}个):\n`;
+        
+        // 只显示前5个任务
+        const limitedTasks = this.queueTasks.slice(0, 5);
+        
+        limitedTasks.forEach((task, index) => {
+          content += `${index + 1}. ${task.hostname} - ${task.itemName} (${task.status})\n`;
+        });
+        
+        if (this.queueTasks.length > 5) {
+          content += `...还有 ${this.queueTasks.length - 5} 个任务\n`;
+        }
+      }
+      
+      return content;
+    },
+    
+    // 获取修复任务队列的悬浮提示内容
+    getFixQueueStatusTooltip(stats) {
+      if (!stats) return '无队列信息';
+      
+      let content = `修复任务队列: ${stats.fixQueueSize || 0} 个等待, ${stats.runningFixTasks || 0} 个执行中\n`;
+      
+      if (this.fixQueueTasks && this.fixQueueTasks.length > 0) {
+        content += `\n最近任务列表（${Math.min(5, this.fixQueueTasks.length)}个):\n`;
+        
+        // 只显示前5个任务
+        const limitedTasks = this.fixQueueTasks.slice(0, 5);
+        
+        limitedTasks.forEach((task, index) => {
+          content += `${index + 1}. ${task.hostname} - ${task.itemName} (${task.status})\n`;
+        });
+        
+        if (this.fixQueueTasks.length > 5) {
+          content += `...还有 ${this.fixQueueTasks.length - 5} 个任务\n`;
+        }
+      }
+      
+      return content;
+    },
+    
+    // 鼠标悬停时获取检查任务队列数据
+    fetchQueueTasksOnHover() {
+      if (!this.queueTasks || this.queueTasks.length === 0) {
+        this.fetchFullStatus(false);
+      }
+    },
+    
+    // 鼠标悬停时获取修复任务队列数据
+    fetchFixQueueTasksOnHover() {
+      if (!this.fixQueueTasks || this.fixQueueTasks.length === 0) {
+        this.fetchFullStatus(false);
+      }
+    },
+    
+    // 处理检查队列Popover显示状态变化
+    handleQueuePopoverVisibleChange(visible) {
+      this.showQueuePopover = visible;
+      if (visible) {
+        this.fetchQueueTasksOnHover();
+      }
+    },
+    
+    // 处理修复队列Popover显示状态变化
+    handleFixQueuePopoverVisibleChange(visible) {
+      this.showFixQueuePopover = visible;
+      if (visible) {
+        this.fetchFixQueueTasksOnHover();
+      }
+    },
   }
 }
 </script>
@@ -2724,6 +2890,43 @@ export default {
 .status-control {
   .ant-switch {
     @extend .custom-switch;
+  }
+}
+
+// 详情状态灯样式
+.detail-status-light {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 12px rgba(24, 144, 255, 0.5);
+  }
+}
+
+.queue-popover-content {
+  width: 800px;
+  max-height: 500px;
+  
+  h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+:deep(.queue-detail-popover) {
+  .ant-popover-inner-content {
+    padding: 16px;
+  }
+  
+  .ant-popover-arrow {
+    border-color: #fff !important;
   }
 }
 </style> 
