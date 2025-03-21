@@ -45,6 +45,17 @@ public class QueueManagerStatus {
     private int fixExecutorActiveCount;
     private int fixExecutorQueueSize;
     
+    // 线程池总统计
+    private int totalActiveThreads;
+    private int totalPoolSize;
+    private long totalCompletedTasks;
+    private int totalQueuedTasks;
+    
+    // 系统运行时间
+    private String systemStartTime;   // 系统启动时间
+    private long systemUptimeMs;      // 系统运行时间(毫秒)
+    private String systemUptime;      // 格式化的系统运行时间
+    
     // 统计信息
     private long tasksProcessed;
     private long tasksSucceeded;
@@ -52,6 +63,17 @@ public class QueueManagerStatus {
     private long fixTasksProcessed;
     private long fixTasksSucceeded;
     private long fixTasksFailed;
+    
+    // 任务执行时间统计
+    private long fixTasksAvgExecutionTimeMs;
+    private long fixTasksMaxExecutionTimeMs;
+    private String fixTasksAvgExecutionTime;
+    private String fixTasksMaxExecutionTime;
+    
+    private long tasksAvgExecutionTimeMs;
+    private long tasksMaxExecutionTimeMs;
+    private String tasksAvgExecutionTime;
+    private String tasksMaxExecutionTime;
     
     // 定时任务状态
     private boolean queueHealthMonitorActive;

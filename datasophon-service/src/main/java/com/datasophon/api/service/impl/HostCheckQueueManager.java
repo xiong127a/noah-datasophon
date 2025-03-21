@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
@@ -73,6 +75,13 @@ public class HostCheckQueueManager {
     private final AtomicLong fixTasksSucceeded = new AtomicLong(0);
     private final AtomicLong fixTasksFailed = new AtomicLong(0);
     
+    // 添加任务执行时间统计
+    private final AtomicLong fixTasksTotalExecutionTimeMs = new AtomicLong(0);
+    private final AtomicLong fixTasksMaxExecutionTimeMs = new AtomicLong(0);
+    // 检查任务执行时间统计
+    private final AtomicLong tasksTotalExecutionTimeMs = new AtomicLong(0);
+    private final AtomicLong tasksMaxExecutionTimeMs = new AtomicLong(0);
+    
     // 检查项线程池 - 专门用于执行单个检查项
     @Getter
     private final ExecutorService itemCheckExecutorService;
@@ -113,6 +122,9 @@ public class HostCheckQueueManager {
     
     // 添加日期格式化器
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+    // 系统启动时间
+    private static long applicationStartTime;
 
     public HostCheckQueueManager() {
         // 创建检查项线程池 - 负责检查项级别的任务
@@ -775,6 +787,7 @@ public class HostCheckQueueManager {
             Thread.currentThread().setName("host-check-" + hostInfo.getHostname());
             logger.info("开始执行主机 {} 的检查任务", hostInfo.getHostname());
             
+            long startTime = System.currentTimeMillis();
             tasksProcessed.incrementAndGet();
             
             try {
@@ -786,6 +799,19 @@ public class HostCheckQueueManager {
                     hostInfo.getHostname(), e.getMessage(), e);
                 tasksFailed.incrementAndGet();
             } finally {
+                // 统计执行时间
+                long executionTime = System.currentTimeMillis() - startTime;
+                // 更新总执行时间
+                tasksTotalExecutionTimeMs.addAndGet(executionTime);
+                // 更新最大执行时间
+                long currentMax = tasksMaxExecutionTimeMs.get();
+                while (executionTime > currentMax) {
+                    if (tasksMaxExecutionTimeMs.compareAndSet(currentMax, executionTime)) {
+                        break;
+                    }
+                    currentMax = tasksMaxExecutionTimeMs.get();
+                }
+                
                 logger.info("移除主机 {} 的检查任务，释放资源", hostInfo.getHostname());
                 runningTasks.remove(taskKey);
                 taskStartTimes.remove(taskKey);
@@ -831,6 +857,14 @@ public class HostCheckQueueManager {
         status.setQueueEmpty(checkQueue.isEmpty());
         status.setFixQueueEmpty(fixQueue.isEmpty());
         
+        // 设置系统运行时间
+        if (applicationStartTime > 0) {
+            long uptimeMs = System.currentTimeMillis() - applicationStartTime;
+            status.setSystemStartTime(dateFormat.format(new Date(applicationStartTime)));
+            status.setSystemUptimeMs(uptimeMs);
+            status.setSystemUptime(formatDuration(uptimeMs));
+        }
+        
         // 队列详情
         status.setQueueSize(checkQueue.size());
         status.setFixQueueSize(fixQueue.size());
@@ -838,12 +872,41 @@ public class HostCheckQueueManager {
         status.setRunningFixTasksCount(runningFixTasks.size());
         
         // 线程池信息
-        ThreadPoolExecutor checkExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
+        ThreadPoolExecutor mainExecutor = (ThreadPoolExecutor) checkExecutorService;
+        ThreadPoolExecutor itemExecutor = (ThreadPoolExecutor) itemCheckExecutorService;
         
-        status.setMainExecutorActiveCount(checkExecutor.getActiveCount());
-        status.setMainExecutorQueueSize(checkExecutor.getQueue().size());
-        status.setItemExecutorActiveCount(checkExecutor.getActiveCount());
-        status.setItemExecutorQueueSize(checkExecutor.getQueue().size());
+        // 修复线程池可能为null，进行判断
+        int fixActiveCount = 0;
+        int fixQueueSize = 0;
+        int fixPoolSize = 0;
+        long fixCompletedTasks = 0;
+        
+        status.setMainExecutorActiveCount(mainExecutor.getActiveCount());
+        status.setMainExecutorQueueSize(mainExecutor.getQueue().size());
+        status.setItemExecutorActiveCount(itemExecutor.getActiveCount());
+        status.setItemExecutorQueueSize(itemExecutor.getQueue().size());
+        status.setFixExecutorActiveCount(fixActiveCount);
+        status.setFixExecutorQueueSize(fixQueueSize);
+        
+        // 计算线程池总统计数据
+        int totalActiveThreads = mainExecutor.getActiveCount() + 
+                                itemExecutor.getActiveCount() + 
+                                fixActiveCount;
+        int totalPoolSize = mainExecutor.getPoolSize() + 
+                           itemExecutor.getPoolSize() + 
+                           fixPoolSize;
+        long totalCompletedTasks = mainExecutor.getCompletedTaskCount() + 
+                                  itemExecutor.getCompletedTaskCount() + 
+                                  fixCompletedTasks;
+        int totalQueuedTasks = mainExecutor.getQueue().size() + 
+                              itemExecutor.getQueue().size() + 
+                              fixQueueSize;
+        
+        // 设置线程池总统计
+        status.setTotalActiveThreads(totalActiveThreads);
+        status.setTotalPoolSize(totalPoolSize);
+        status.setTotalCompletedTasks(totalCompletedTasks);
+        status.setTotalQueuedTasks(totalQueuedTasks);
         
         // 统计信息
         status.setTasksProcessed(tasksProcessed.get());
@@ -852,6 +915,30 @@ public class HostCheckQueueManager {
         status.setFixTasksProcessed(fixTasksProcessed.get());
         status.setFixTasksSucceeded(fixTasksSucceeded.get());
         status.setFixTasksFailed(fixTasksFailed.get());
+        
+        // 计算平均执行时间
+        long fixAvgTimeMs = 0;
+        if (fixTasksProcessed.get() > 0) {
+            fixAvgTimeMs = fixTasksTotalExecutionTimeMs.get() / fixTasksProcessed.get();
+        }
+        status.setFixTasksAvgExecutionTimeMs(fixAvgTimeMs);
+        status.setFixTasksMaxExecutionTimeMs(fixTasksMaxExecutionTimeMs.get());
+        
+        // 格式化执行时间
+        status.setFixTasksAvgExecutionTime(formatDuration(fixAvgTimeMs));
+        status.setFixTasksMaxExecutionTime(formatDuration(fixTasksMaxExecutionTimeMs.get()));
+        
+        // 计算检查任务平均执行时间
+        long tasksAvgTimeMs = 0;
+        if (tasksProcessed.get() > 0) {
+            tasksAvgTimeMs = tasksTotalExecutionTimeMs.get() / tasksProcessed.get();
+        }
+        status.setTasksAvgExecutionTimeMs(tasksAvgTimeMs);
+        status.setTasksMaxExecutionTimeMs(tasksMaxExecutionTimeMs.get());
+        
+        // 格式化执行时间
+        status.setTasksAvgExecutionTime(formatDuration(tasksAvgTimeMs));
+        status.setTasksMaxExecutionTime(formatDuration(tasksMaxExecutionTimeMs.get()));
         
         // 监控任务状态
         status.setQueueHealthMonitorActive(queueHealthMonitorTask != null && !queueHealthMonitorTask.isCancelled());
@@ -1311,6 +1398,7 @@ public class HostCheckQueueManager {
         
         @Override
         public void run() {
+            long startTime = System.currentTimeMillis();
             try {
                 logger.info("开始执行主机 {} 的修复任务: {}", 
                     hostInfo.getHostname(), checkItem.getItemName());
@@ -1347,6 +1435,19 @@ public class HostCheckQueueManager {
                 logger.error("执行主机 {} 的修复任务时发生异常: {}", 
                     hostInfo.getHostname(), e.getMessage(), e);
             } finally {
+                // 统计执行时间
+                long executionTime = System.currentTimeMillis() - startTime;
+                // 更新总执行时间
+                fixTasksTotalExecutionTimeMs.addAndGet(executionTime);
+                // 更新最大执行时间
+                long currentMax = fixTasksMaxExecutionTimeMs.get();
+                while (executionTime > currentMax) {
+                    if (fixTasksMaxExecutionTimeMs.compareAndSet(currentMax, executionTime)) {
+                        break;
+                    }
+                    currentMax = fixTasksMaxExecutionTimeMs.get();
+                }
+                
                 // 清理资源
                 runningFixTasks.remove(taskKey);
                 fixTaskStartTimes.remove(taskKey);
@@ -1398,5 +1499,42 @@ public class HostCheckQueueManager {
             // 优先级高的排在队列前面
             return Integer.compare(this.priority, other.priority);
         }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        // 记录应用启动时间
+        applicationStartTime = System.currentTimeMillis();
+        logger.info("应用启动时间已记录: {}", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(applicationStartTime)));
+    }
+
+    /**
+     * 格式化持续时间
+     * @param durationMs 持续时间（毫秒）
+     * @return 格式化的持续时间字符串
+     */
+    private String formatDuration(long durationMs) {
+        long seconds = durationMs / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        long days = hours / 24;
+        
+        seconds %= 60;
+        minutes %= 60;
+        hours %= 24;
+        
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) {
+            sb.append(days).append("天");
+        }
+        if (hours > 0 || days > 0) {
+            sb.append(hours).append("小时");
+        }
+        if (minutes > 0 || hours > 0 || days > 0) {
+            sb.append(minutes).append("分");
+        }
+        sb.append(seconds).append("秒");
+        
+        return sb.toString();
     }
 } 

@@ -82,6 +82,10 @@
           
           <div class="detail-stats">
             <div class="stat-item">
+              <div class="stat-label">系统运行时间</div>
+              <div class="stat-value">{{ queueStats.systemUptime || '未知' }}</div>
+            </div>
+            <div class="stat-item">
               <div class="stat-label">活跃线程</div>
               <div class="stat-value">{{ queueStats.totalActiveThreads || 0 }}</div>
             </div>
@@ -125,6 +129,10 @@
               <div class="section-header with-padding">
                 <h4>检查任务队列</h4>
                 <div class="status-control">
+                  <div class="queue-runtime">
+                    <span class="runtime-label">运行时间:</span>
+                    <span class="runtime-value">{{ formatQueueTime(queueStats.queueProcessorStartTime) }}</span>
+                  </div>
                   <a-popover
                     placement="topRight"
                     trigger="hover"
@@ -214,6 +222,32 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- 新增：检查任务统计 -->
+              <div class="sub-section">
+                <div class="sub-header with-padding">
+                  <h5>检查任务统计</h5>
+                </div>
+                
+                <div class="detail-stats with-padding">
+                  <div class="stat-item">
+                    <div class="stat-label">检查成功</div>
+                    <div class="stat-value text-success">{{ queueStats.tasksSucceeded || 0 }}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">检查失败</div>
+                    <div class="stat-value text-danger">{{ queueStats.tasksFailed || 0 }}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">平均执行时间</div>
+                    <div class="stat-value">{{ queueStats.tasksAvgExecutionTime || '0秒' }}</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">最长执行时间</div>
+                    <div class="stat-value">{{ queueStats.tasksMaxExecutionTime || '0秒' }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </a-tab-pane>
           
@@ -222,6 +256,10 @@
               <div class="section-header with-padding">
                 <h4>修复任务队列</h4>
                 <div class="status-control">
+                  <div class="queue-runtime">
+                    <span class="runtime-label">运行时间:</span>
+                    <span class="runtime-value">{{ formatQueueTime(queueStats.fixQueueProcessorStartTime) }}</span>
+                  </div>
                   <a-popover
                     placement="topRight"
                     trigger="hover"
@@ -305,11 +343,11 @@
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">平均执行时间</div>
-                    <div class="stat-value">{{ formatDuration(queueStats.avgFixTaskTime) }}</div>
+                    <div class="stat-value">{{ queueStats.fixTasksAvgExecutionTime || '0秒' }}</div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">最长执行时间</div>
-                    <div class="stat-value">{{ formatDuration(queueStats.maxFixTaskTime) }}</div>
+                    <div class="stat-value">{{ queueStats.fixTasksMaxExecutionTime || '0秒' }}</div>
                   </div>
                 </div>
               </div>
@@ -322,8 +360,13 @@
           <div class="section-header">
             <h4>SSH连接管理</h4>
             <div class="status-control">
-              <a-button size="small" type="primary" @click="cleanupConnections" :loading="cleanupLoading">
-                清理不活跃连接
+              <a-button 
+                class="cleanup-connection-btn" 
+                @click="cleanupConnections" 
+                :loading="cleanupLoading"
+              >
+                <a-icon type="delete" theme="filled" />
+                <span class="button-text">清理不活跃连接</span>
               </a-button>
             </div>
           </div>
@@ -560,6 +603,27 @@ export default {
         runningTasks: 0,
         processorThreadAlive: true
       })
+    }
+  },
+  filters: {
+    // 格式化时间为可读格式
+    formatTime(milliseconds) {
+      if (!milliseconds) return '未知';
+      
+      const seconds = Math.floor(milliseconds / 1000);
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const remainingSeconds = seconds % 60;
+      
+      // 构建显示字符串
+      let result = '';
+      if (days > 0) result += `${days}天`;
+      if (hours > 0 || days > 0) result += `${hours}小时`;
+      if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}分`;
+      result += `${remainingSeconds}秒`;
+      
+      return result;
     }
   },
   data() {
@@ -1989,6 +2053,41 @@ export default {
         this.fetchFixQueueTasksOnHover();
       }
     },
+    formatQueueTime(startTimeStr) {
+      if (!startTimeStr) return '未启动';
+      
+      try {
+        // 解析起始时间
+        const startTime = new Date(startTimeStr).getTime();
+        if (isNaN(startTime)) return '时间格式错误';
+        
+        // 计算运行时间（毫秒）
+        const runTimeMs = Date.now() - startTime;
+        
+        // 将毫秒转换为秒
+        let seconds = Math.floor(runTimeMs / 1000);
+        
+        // 计算天数、小时、分钟和剩余秒数
+        const days = Math.floor(seconds / 86400);
+        seconds %= 86400;
+        const hours = Math.floor(seconds / 3600);
+        seconds %= 3600;
+        const minutes = Math.floor(seconds / 60);
+        seconds %= 60;
+        
+        // 构建输出字符串
+        let result = '';
+        if (days > 0) result += `${days}天 `;
+        if (hours > 0 || days > 0) result += `${hours}小时 `;
+        if (minutes > 0 || hours > 0 || days > 0) result += `${minutes}分钟 `;
+        result += `${seconds}秒`;
+        
+        return result.trim();
+      } catch (error) {
+        console.error('格式化队列时间错误:', error);
+        return '计算错误';
+      }
+    },
   }
 }
 </script>
@@ -2654,6 +2753,39 @@ export default {
     }
   }
 
+  .queue-runtime {
+    display: flex;
+    align-items: center;
+    background: #f6f8fc;
+    padding: 6px 12px;
+    border-radius: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e6f7ff;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(24, 144, 255, 0.15);
+      border-color: #bae7ff;
+    }
+
+    .runtime-label {
+      font-size: 12px;
+      color: #8c8c8c;
+      margin-right: 6px;
+      font-weight: 500;
+    }
+
+    .runtime-value {
+      font-size: 13px;
+      color: #1890ff;
+      font-weight: 600;
+      font-family: 'Consolas', monospace;
+      letter-spacing: 0.3px;
+    }
+  }
+
   :deep(.ant-switch) {
     @extend .custom-switch;
   }
@@ -2927,6 +3059,90 @@ export default {
   
   .ant-popover-arrow {
     border-color: #fff !important;
+  }
+}
+
+.queue-header-stats {
+  padding: 0 24px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  .queue-runtime {
+    display: flex;
+    align-items: center;
+    background: #f6f8fc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e6f7ff;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(24, 144, 255, 0.15);
+      border-color: #bae7ff;
+    }
+
+    .runtime-label {
+      font-size: 13px;
+      color: #8c8c8c;
+      margin-right: 8px;
+      font-weight: 500;
+    }
+
+    .runtime-value {
+      font-size: 14px;
+      color: #1890ff;
+      font-weight: 600;
+      font-family: 'Consolas', monospace;
+      letter-spacing: 0.3px;
+    }
+  }
+}
+
+// 添加清理不活跃连接按钮的样式
+.cleanup-connection-btn {
+  min-width: 140px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  border: none !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
+  background: linear-gradient(135deg, #36cfc9 0%, #13c2c2 100%) !important;
+  color: white !important;
+
+  &:hover {
+    background: linear-gradient(135deg, #5cdbd3 0%, #36cfc9 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(19, 194, 194, 0.3) !important;
+  }
+
+  &:active {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(19, 194, 194, 0.2) !important;
+  }
+
+  &.ant-btn-loading {
+    opacity: 0.8;
+    background: linear-gradient(135deg, #5cdbd3 0%, #13c2c2 100%) !important;
+  }
+
+  i {
+    font-size: 16px !important;
+    margin-right: 6px !important;
+  }
+
+  .button-text {
+    font-size: 13px !important;
+    line-height: 1 !important;
   }
 }
 </style> 
