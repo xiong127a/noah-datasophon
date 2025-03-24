@@ -4,10 +4,7 @@ import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.checker.QueueManagerService;
 import com.datasophon.api.service.checker.impl.AsyncCheckService;
-import com.datasophon.api.service.impl.HostCheckQueueManager;
-import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.HostInfo;
+import com.datasophon.api.service.checker.impl.HostCheckQueueManager;
 import com.datasophon.common.model.ScheduledTasksStatus;
 import com.datasophon.common.model.ScheduleConfigResult;
 import com.datasophon.common.model.QueueSystemStatus;
@@ -28,9 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 主机检查控制器

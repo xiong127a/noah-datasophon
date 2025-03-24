@@ -8,6 +8,7 @@ import com.datasophon.api.service.checker.ItemChecker;
 import com.datasophon.api.service.checker.ItemCheckerFactory;
 import com.datasophon.api.service.checker.LogEntryManager;
 import com.datasophon.api.service.checker.impl.AsyncCheckService;
+import com.datasophon.api.service.checker.impl.HostCheckQueueManager;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -33,9 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 /**
@@ -297,7 +296,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 执行主机检查流程
      * 包级别访问权限，允许队列管理器调用
      */
-    void processHostCheck(Integer clusterId, HostInfo hostInfo) {
+    public void processHostCheck(Integer clusterId, HostInfo hostInfo) {
         try {
             logger.info("开始检查主机: {}", hostInfo.getHostname());
             

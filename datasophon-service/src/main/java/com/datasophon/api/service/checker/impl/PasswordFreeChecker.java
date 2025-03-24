@@ -193,6 +193,9 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         cacheLog.info("===============================================");
         
         try {
+            // 设置当前主机信息
+            setCurrentHostInfo(hostInfo);
+            
             // 执行具体修复逻辑
             boolean doFixResult = doFix(hostInfo, checkItem);
             
@@ -261,6 +264,9 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             checkItem.setMessage("修复异常: " + e.getMessage());
             return false;
         } finally {
+            // 清理当前主机信息
+            clearCurrentHostInfo();
+            
             // 记录修复结束
             cacheLog.info("===============================================");
             cacheLog.info("修复操作结束");
@@ -271,6 +277,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
+        ClientSession passwordSession = null;
         try {
             cacheLog.info("==== 开始配置免密登录 ====");
             
@@ -333,30 +340,37 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             publicKeyContent = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8).trim();
             cacheLog.info("读取本地公钥内容成功");
             
-            // 2. 建立到远程主机的连接并配置authorized_keys
+            // 2. 建立到远程主机的密码连接并配置authorized_keys
             cacheLog.info("连接到远程主机配置authorized_keys...");
-            ClientSession session = null;
+            
             try {
-                session = MinaUtils.openConnectionWithPassword(
+                // 使用密码直接建立连接，而不使用共享连接池
+                cacheLog.info("使用密码创建SSH连接: 主机={}, 端口={}, 用户={}", 
+                    hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                    
+                passwordSession = MinaUtils.openConnectionWithPassword(
                         hostInfo.getHostname(),
                         hostInfo.getSshPort(), 
                         hostInfo.getSshUser(),
                         hostInfo.getSshPassword());
                 
-                if (session == null) {
-                    cacheLog.error("无法连接到远程主机");
+                if (passwordSession == null) {
+                    cacheLog.error("无法使用密码连接到远程主机");
                     return false;
                 }
                 
+                // 将密码连接赋值给当前会话，以便后续 execCommand 方法可以使用
+                this.session = passwordSession;
+                
                 // 在远程主机上创建.ssh目录
-                CommandResult mkdirResult = execCommand(session, "mkdir -p ~/.ssh");
+                CommandResult mkdirResult = execCommand(this.session, "mkdir -p ~/.ssh");
                 if (!mkdirResult.isSuccess()) {
                     cacheLog.error("在远程主机上创建.ssh目录失败: %s", mkdirResult.getErrorOrOutput());
                     return false;
                 }
                 
                 // 设置远程.ssh目录权限
-                CommandResult chmodDirResult = execCommand(session, "chmod 700 ~/.ssh");
+                CommandResult chmodDirResult = execCommand(this.session, "chmod 700 ~/.ssh");
                 if (!chmodDirResult.isSuccess()) {
                     cacheLog.error("设置远程.ssh目录权限失败: %s", chmodDirResult.getErrorOrOutput());
                     return false;
@@ -364,13 +378,13 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 
                 // 将本地公钥添加到远程authorized_keys
                 // 先检查远程authorized_keys是否已包含此公钥
-                CommandResult checkExistResult = execCommand(session, 
+                CommandResult checkExistResult = execCommand(this.session, 
                     "grep -F \"" + publicKeyContent + "\" ~/.ssh/authorized_keys 2>/dev/null || echo 'NOT_FOUND'");
                 boolean alreadyExists = checkExistResult.isSuccess() && !checkExistResult.getOutput().contains("NOT_FOUND");
                 
                 if (!alreadyExists) {
                     // 添加公钥到远程authorized_keys
-                    CommandResult appendResult = execCommand(session, 
+                    CommandResult appendResult = execCommand(this.session, 
                         "echo \"" + publicKeyContent + "\" >> ~/.ssh/authorized_keys");
                     if (!appendResult.isSuccess()) {
                         cacheLog.error("将公钥添加到远程authorized_keys失败: %s", appendResult.getErrorOrOutput());
@@ -382,14 +396,14 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 }
                 
                 // 设置远程authorized_keys权限
-                CommandResult chmodKeyResult = execCommand(session, "chmod 600 ~/.ssh/authorized_keys");
+                CommandResult chmodKeyResult = execCommand(this.session, "chmod 600 ~/.ssh/authorized_keys");
                 if (!chmodKeyResult.isSuccess()) {
                     cacheLog.error("设置远程authorized_keys权限失败: %s", chmodKeyResult.getErrorOrOutput());
                     return false;
                 }
                 
                 // 确保SSH服务配置正确
-                CommandResult sshConfigResult = execCommand(session, 
+                CommandResult sshConfigResult = execCommand(this.session, 
                     "grep -F \"PubkeyAuthentication yes\" /etc/ssh/sshd_config || " +
                     "echo '可能需要配置SSH服务以启用公钥认证'");
                 if (sshConfigResult.getOutput().contains("需要配置SSH服务")) {
@@ -398,18 +412,19 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 
                 cacheLog.info("免密登录配置完成");
                 return true;
-                
             } finally {
-                if (session != null) {
+                if (passwordSession != null) {
                     try {
-                        session.close();
+                        passwordSession.close();
+                        cacheLog.info("密码SSH连接已关闭");
                     } catch (Exception e) {
                         cacheLog.warn("关闭SSH会话时发生异常: %s", e.getMessage());
                     }
-                    session = null;
+                    // 确保清除会话引用
+                    passwordSession = null;
+                    this.session = null;
                 }
             }
-            
         } catch (Exception e) {
             String errorMsg = "配置免密登录时发生错误: " + e.getMessage();
             logger.error(errorMsg, e);

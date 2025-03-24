@@ -18,7 +18,6 @@
 package com.datasophon.api.service.checker.impl;
 
 import com.datasophon.api.service.checker.QueueManagerService;
-import com.datasophon.api.service.impl.HostCheckQueueManager;
 import com.datasophon.common.enums.ScopeCode;
 import com.datasophon.common.model.AsyncServiceStatus;
 import com.datasophon.common.model.OperationResult;
