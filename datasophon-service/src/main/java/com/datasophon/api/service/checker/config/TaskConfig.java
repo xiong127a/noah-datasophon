@@ -1,4 +1,4 @@
-package com.datasophon.api.config;
+package com.datasophon.api.service.checker.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

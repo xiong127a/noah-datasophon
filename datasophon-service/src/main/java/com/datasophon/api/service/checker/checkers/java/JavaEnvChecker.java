@@ -1,7 +1,7 @@
-package com.datasophon.api.service.checker.impl;
+package com.datasophon.api.service.checker.checkers.java;
 
-import com.datasophon.api.service.checker.AbstractItemChecker;
-import com.datasophon.api.service.checker.CommandResult;
+import com.datasophon.api.service.checker.core.AbstractItemChecker;
+import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;

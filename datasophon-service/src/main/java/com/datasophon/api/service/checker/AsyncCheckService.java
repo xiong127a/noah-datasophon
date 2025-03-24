@@ -1,10 +1,10 @@
-package com.datasophon.api.service.checker.impl;
+package com.datasophon.api.service.checker;
 
-import com.datasophon.api.config.TaskManager;
-import com.datasophon.api.service.checker.CommandResult;
-import com.datasophon.api.service.checker.ItemChecker;
-import com.datasophon.api.service.checker.ItemCheckerFactory;
-import com.datasophon.api.service.checker.LogEntryManager;
+import com.datasophon.api.service.checker.config.TaskManager;
+import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.LogEntryManager;
+import com.datasophon.api.service.checker.core.ItemChecker;
+import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -1030,7 +1030,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "无法建立到主机 " + hostInfo.getHostname() + " 的SSH连接",
                             com.datasophon.common.model.LogEntry.Type.CHECK);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, logEntry);
+                    LogEntryManager.addLogEntry(logKey, logEntry);
 
                     results.add(item);
                 }
@@ -1072,7 +1072,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "找不到检查器: " + item.getItemName(),
                                 com.datasophon.common.model.LogEntry.Type.CHECK);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, logEntry);
+                        LogEntryManager.addLogEntry(logKey, logEntry);
 
                         results.add(item);
                         continue;
@@ -1089,7 +1089,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "开始检查项: " + item.getItemName() + ", 使用SSH连接复用机制",
                             com.datasophon.common.model.LogEntry.Type.CHECK);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, startLogEntry);
+                    LogEntryManager.addLogEntry(logKey, startLogEntry);
 
                     logger.debug("开始执行检查项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
 
@@ -1111,7 +1111,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "执行检查前会话未就绪: " + item.getItemName(),
                                 com.datasophon.common.model.LogEntry.Type.CHECK);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
+                        LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                         results.add(item);
                         continue;
@@ -1129,7 +1129,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "检查项 " + item.getItemName() + " 完成，状态: " + result.getStatus(),
                             com.datasophon.common.model.LogEntry.Type.CHECK);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, endLogEntry);
+                    LogEntryManager.addLogEntry(logKey, endLogEntry);
 
                     // 更新最后访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
@@ -1147,7 +1147,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "执行检查项 " + item.getItemName() + " 时发生异常: " + e.getMessage(),
                             com.datasophon.common.model.LogEntry.Type.CHECK);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
+                    LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                     results.add(item);
                 }
@@ -1169,7 +1169,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "批量执行检查时发生异常: " + e.getMessage(),
                             com.datasophon.common.model.LogEntry.Type.CHECK);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
+                    LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                     results.add(item);
                 }
@@ -1223,7 +1223,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "无法建立到主机 " + hostInfo.getHostname() + " 的SSH连接",
                                 com.datasophon.common.model.LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, logEntry);
+                        LogEntryManager.addLogEntry(logKey, logEntry);
 
                         results.add(item);
                     }
@@ -1270,7 +1270,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "找不到检查器: " + item.getItemName(),
                                 com.datasophon.common.model.LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, logEntry);
+                        LogEntryManager.addLogEntry(logKey, logEntry);
 
                         results.add(item);
                         continue;
@@ -1287,7 +1287,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "开始修复项: " + item.getItemName() + ", 使用SSH连接复用机制",
                             com.datasophon.common.model.LogEntry.Type.FIX);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, startLogEntry);
+                    LogEntryManager.addLogEntry(logKey, startLogEntry);
 
                     // 对于免密登录检查项，始终使用独立会话
                     boolean isPasswordFreeItem = ItemCode.PASSWORD_FREE.toString().equals(item.getItemCode());
@@ -1305,7 +1305,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "免密登录修复项使用独立SSH连接",
                                 com.datasophon.common.model.LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, connLogEntry);
+                        LogEntryManager.addLogEntry(logKey, connLogEntry);
                     } else if (session != null) {
                         // 非免密检查项继续使用共享会话
                         logger.debug("开始执行修复项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
@@ -1328,7 +1328,7 @@ public class AsyncCheckService {
                                     this.getClass().getSimpleName(),
                                     "执行修复前会话未就绪: " + item.getItemName(),
                                     com.datasophon.common.model.LogEntry.Type.FIX);
-                            com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
+                            LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                             results.add(item);
                             continue;
@@ -1352,7 +1352,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "修复项 " + item.getItemName() + " 成功完成",
                                 com.datasophon.common.model.LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, successLogEntry);
+                        LogEntryManager.addLogEntry(logKey, successLogEntry);
                     } else {
                         item.setStatus(CheckItem.Status.FAILED);
                         if (item.getMessage() == null || item.getMessage().isEmpty() ||
@@ -1368,7 +1368,7 @@ public class AsyncCheckService {
                                 this.getClass().getSimpleName(),
                                 "修复项 " + item.getItemName() + " 失败: " + item.getMessage(),
                                 com.datasophon.common.model.LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, failLogEntry);
+                        LogEntryManager.addLogEntry(logKey, failLogEntry);
                     }
                     results.add(item);
 
@@ -1390,7 +1390,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "执行修复项 " + item.getItemName() + " 时发生异常: " + e.getMessage(),
                             com.datasophon.common.model.LogEntry.Type.FIX);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
+                    LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                     results.add(item);
                 }
@@ -1412,7 +1412,7 @@ public class AsyncCheckService {
                             this.getClass().getSimpleName(),
                             "批量执行修复时发生异常: " + e.getMessage(),
                             com.datasophon.common.model.LogEntry.Type.FIX);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
+                    LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                     results.add(item);
                 }

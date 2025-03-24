@@ -1,7 +1,8 @@
-package com.datasophon.api.service.checker.impl;
+package com.datasophon.api.service.checker.queue;
 
-import com.datasophon.api.service.checker.ItemChecker;
-import com.datasophon.api.service.checker.ItemCheckerFactory;
+import com.datasophon.api.service.checker.common.LogEntryManager;
+import com.datasophon.api.service.checker.core.ItemChecker;
+import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.service.impl.HostCheckServiceImpl;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
@@ -1511,7 +1512,7 @@ public class HostCheckQueueManager {
                 String startMessage = String.format("开始执行主机 %s 的修复任务: %s (ID: %d)",
                         hostInfo.getHostname(), checkItem.getItemName(), checkItem.getId());
                 LogEntry startLogEntry = createLogEntry(LogEntry.Level.INFO, startMessage, LogEntry.Type.FIX);
-                com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, startLogEntry);
+                LogEntryManager.addLogEntry(logKey, startLogEntry);
 
                 logger.info("开始执行主机 {} 的修复任务: {}", hostInfo.getHostname(), checkItem.getItemName());
 
@@ -1528,7 +1529,7 @@ public class HostCheckQueueManager {
                     // 免密检查项特殊处理
                     LogEntry logEntry = createLogEntry(LogEntry.Level.INFO,
                             "检测到免密登录修复项，将直接调用checker而非使用连接池", LogEntry.Type.FIX);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, logEntry);
+                    LogEntryManager.addLogEntry(logKey, logEntry);
 
                     logger.info("检测到免密登录修复项，将直接调用checker而非使用连接池");
 
@@ -1539,7 +1540,7 @@ public class HostCheckQueueManager {
                             String errorMsg = "未找到免密登录检查器";
                             LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
                                     LogEntry.Type.FIX);
-                            com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
+                            LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                             logger.error(errorMsg);
                             checkItem.setStatus(CheckItem.Status.FAILED);
@@ -1554,7 +1555,7 @@ public class HostCheckQueueManager {
 
                         LogEntry connLogEntry = createLogEntry(LogEntry.Level.INFO,
                                 "正在建立独立SSH连接进行免密登录配置", LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, connLogEntry);
+                        LogEntryManager.addLogEntry(logKey, connLogEntry);
 
                         // 直接调用免密检查器的fix方法
                         boolean success = passwordFreeChecker.fix(clusterId, hostInfo, checkItem);
@@ -1566,7 +1567,7 @@ public class HostCheckQueueManager {
                             String successMsg = String.format("主机 %s 的免密登录修复任务执行成功", hostInfo.getHostname());
                             LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
                                     LogEntry.Type.FIX);
-                            com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, successLogEntry);
+                            LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                             logger.info(successMsg);
                         } else {
@@ -1574,7 +1575,7 @@ public class HostCheckQueueManager {
 
                             String failMsg = String.format("主机 %s 的免密登录修复任务执行失败", hostInfo.getHostname());
                             LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
-                            com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, failLogEntry);
+                            LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                             logger.warn(failMsg);
                         }
@@ -1583,7 +1584,7 @@ public class HostCheckQueueManager {
                                 hostInfo.getHostname(), e.getMessage());
                         LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
                                 LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
+                        LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                         checkItem.setStatus(CheckItem.Status.FAILED);
                         checkItem.setMessage("免密登录修复异常: " + e.getMessage());
@@ -1599,7 +1600,7 @@ public class HostCheckQueueManager {
                     // 记录将要使用连接池执行修复
                     LogEntry poolLogEntry = createLogEntry(LogEntry.Level.INFO,
                             "将使用SSH连接池执行修复任务: " + checkItem.getItemName(), LogEntry.Type.FIX);
-                    com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, poolLogEntry);
+                    LogEntryManager.addLogEntry(logKey, poolLogEntry);
 
                     // 使用doHostFix方法批量执行修复，实现SSH连接复用
                     boolean success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
@@ -1612,7 +1613,7 @@ public class HostCheckQueueManager {
                                 hostInfo.getHostname(), checkItem.getItemName());
                         LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
                                 LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, successLogEntry);
+                        LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                         logger.info(successMsg);
                     } else {
@@ -1621,7 +1622,7 @@ public class HostCheckQueueManager {
                         String failMsg = String.format("主机 %s 的修复任务 %s 执行失败",
                                 hostInfo.getHostname(), checkItem.getItemName());
                         LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
-                        com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, failLogEntry);
+                        LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                         logger.warn(failMsg);
                     }
@@ -1632,7 +1633,7 @@ public class HostCheckQueueManager {
                 String errorMsg = String.format("执行主机 %s 的修复任务时发生异常: %s",
                         hostInfo.getHostname(), e.getMessage());
                 LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg, LogEntry.Type.FIX);
-                com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
+                LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("修复异常: " + e.getMessage());
@@ -1643,7 +1644,7 @@ public class HostCheckQueueManager {
                 String endMessage = String.format("主机 %s 的修复任务 %s 已完成，耗时: %d 毫秒",
                         hostInfo.getHostname(), checkItem.getItemName(), System.currentTimeMillis() - startTime);
                 LogEntry endLogEntry = createLogEntry(LogEntry.Level.INFO, endMessage, LogEntry.Type.FIX);
-                com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, endLogEntry);
+                LogEntryManager.addLogEntry(logKey, endLogEntry);
 
                 // 统计执行时间
                 long executionTime = System.currentTimeMillis() - startTime;

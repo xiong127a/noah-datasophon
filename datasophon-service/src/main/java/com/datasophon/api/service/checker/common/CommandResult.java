@@ -1,4 +1,4 @@
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.common;
 
 /**
  * 命令执行结果

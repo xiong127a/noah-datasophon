@@ -1,4 +1,4 @@
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.common;
 
 import com.datasophon.common.model.LogEntry;
 import org.slf4j.Logger;

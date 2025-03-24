@@ -1,5 +1,6 @@
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.helpers;
 
+import com.datasophon.api.service.checker.common.LogEntryManager;
 import com.datasophon.common.model.LogEntry;
 import lombok.Setter;
 import org.slf4j.LoggerFactory;

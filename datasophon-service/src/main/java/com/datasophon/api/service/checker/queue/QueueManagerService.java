@@ -15,9 +15,8 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.queue;
 
-import com.datasophon.common.enums.ScopeCode;
 import com.datasophon.common.model.QueueSystemStatus;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.utils.Result;

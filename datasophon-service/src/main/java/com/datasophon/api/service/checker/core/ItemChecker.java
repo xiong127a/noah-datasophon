@@ -1,4 +1,4 @@
-package com.datasophon.api.service.checker;
+package com.datasophon.api.service.checker.core;
 
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
