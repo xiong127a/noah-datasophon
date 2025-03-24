@@ -321,46 +321,58 @@ public class HostCheckQueueManager {
         return status;
     }
 
+    /**
+     * 添加主机检查任务
+     */
     public void addCheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
+        ensureSystemRunning();
         String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
-        try {
-            // 强制确保所有组件处于运行状态
-            ensureSystemRunning();
 
-            // 如果任务已在运行，则不添加
-            if (runningTasks.containsKey(taskKey)) {
-                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
-                return;
-            }
-
-            // 使用Set检查队列中是否已存在该任务，避免遍历队列
-            if (taskKeysInQueue.contains(taskKey)) {
-                logger.info("主机 {} 的检查任务已在队列中等待执行，跳过本次添加", hostInfo.getHostname());
-                return;
-            }
-
-            logger.info("正在将主机 {} 的检查任务添加到队列，当前队列大小: {}, 运行中任务数: {}",
-                    hostInfo.getHostname(), checkQueue.size(), runningTasks.size());
-
-            // 创建任务（使用默认优先级）
-            CheckTask newTask = new CheckTask(clusterId, hostInfo, hostCheckService);
-            boolean added = checkQueue.offer(newTask, 10, TimeUnit.SECONDS); // 添加超时机制
-
-            if (added) {
-                // 添加到Set中跟踪
-                taskKeysInQueue.add(taskKey);
-                logger.info("成功添加主机 {} 的检查任务到队列，新队列大小: {}",
-                        hostInfo.getHostname(), checkQueue.size());
-            } else {
-                logger.error("添加主机 {} 的检查任务到队列失败，队列可能已满", hostInfo.getHostname());
-            }
-
-        } catch (InterruptedException e) {
-            logger.error("添加检查任务被中断: {}", hostInfo.getHostname(), e);
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getHostname(), e.getMessage(), e);
+        // 检查任务是否已经在队列或正在运行
+        if (taskKeysInQueue.contains(taskKey) || runningTasks.containsKey(taskKey)) {
+            logger.info("任务已经在队列或正在运行中，不重复添加: {}", taskKey);
+            return;
         }
+
+        CheckTask task = new CheckTask(clusterId, hostInfo, hostCheckService);
+        checkQueue.offer(task);
+        taskKeysInQueue.add(taskKey);
+        logger.info("已添加检查任务到队列: 主机={}, 任务键={}", hostInfo.getHostname(), taskKey);
+    }
+
+    /**
+     * 添加部分检查项的主机检查任务
+     * 仅对指定的检查项进行检查，而不是主机上的所有检查项
+     */
+    public void addPartialCheckTask(Integer clusterId, HostInfo hostInfo, List<CheckItem> itemsToCheck,
+            HostCheckServiceImpl hostCheckService) {
+        ensureSystemRunning();
+        String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
+
+        // 检查任务是否已经在队列或正在运行
+        if (taskKeysInQueue.contains(taskKey) || runningTasks.containsKey(taskKey)) {
+            logger.info("任务已经在队列或正在运行中，将取消旧任务并添加新任务: {}", taskKey);
+            // 取消任何正在运行的任务
+            cancelTask(clusterId, hostInfo.getHostname());
+        }
+
+        // 创建一个修改后的HostInfo对象，只包含需要检查的项目
+        HostInfo partialHostInfo = new HostInfo();
+        partialHostInfo.setHostname(hostInfo.getHostname());
+        partialHostInfo.setSshPort(hostInfo.getSshPort());
+        partialHostInfo.setSshUser(hostInfo.getSshUser());
+        partialHostInfo.setSshPassword(hostInfo.getSshPassword());
+        // 复制其他必要的属性，但不包括不存在的sshKeyPath
+        partialHostInfo.setClusterId(hostInfo.getClusterId());
+        partialHostInfo.setCheckItems(new ArrayList<>(itemsToCheck));
+
+        // 使用自定义优先级添加任务，给重试任务更高的优先级
+        CheckTask task = new CheckTask(clusterId, partialHostInfo, hostCheckService, 5); // 优先级5比默认的10高
+        checkQueue.offer(task);
+        taskKeysInQueue.add(taskKey);
+
+        logger.info("已添加部分检查任务到队列: 主机={}, 检查项数量={}, 任务键={}",
+                hostInfo.getHostname(), itemsToCheck.size(), taskKey);
     }
 
     /**

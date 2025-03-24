@@ -38,13 +38,13 @@ public class HostCheckController {
 
     @Autowired
     private HostCheckService hostCheckService;
-    
+
     @Autowired
     private QueueManagerService queueManagerService;
-    
+
     @Autowired
     private HostCheckQueueManager hostCheckQueueManager;
-    
+
     @Autowired
     private AsyncCheckService asyncCheckService;
 
@@ -57,13 +57,14 @@ public class HostCheckController {
         // 委托给服务层处理业务逻辑
         return hostCheckService.getHostCheckItems(hostname, clusterId);
     }
-    
+
     /**
      * 控制主机检查队列管理器
      * 用于控制队列管理器的运行状态和定时任务
+     * 
      * @param action 操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
      *               pauseTask(暂停定时任务), resumeTask(恢复定时任务), cleanupConnections(清理连接)
-     * @param scope 作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
+     * @param scope  作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
      * @param taskId 定时任务ID，仅在pauseTask/resumeTask操作时需要
      */
     @GetMapping("/queueManager")
@@ -72,9 +73,9 @@ public class HostCheckController {
             @RequestParam(value = "action") String action,
             @RequestParam(value = "scope", required = false, defaultValue = "all") String scopeCode,
             @RequestParam(value = "taskId", required = false) String taskId) {
-        
+
         log.info("收到队列管理器控制请求: action={}, scope={}, taskId={}", action, scopeCode, taskId);
-        
+
         // 委托给服务层处理所有业务逻辑
         return queueManagerService.manageQueueManagerWithDetails(action, scopeCode, taskId);
     }
@@ -158,8 +159,8 @@ public class HostCheckController {
     @UserPermission
     public Result rehostCheck(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostnames, 
-            @RequestParam(required = false) String sshUser, 
+            @RequestParam String hostnames,
+            @RequestParam(required = false) String sshUser,
             @RequestParam(required = false) Integer sshPort) {
         // 将主机名字符串转换为列表
         List<String> hostnameList = Arrays.asList(hostnames.split(","));
@@ -187,11 +188,11 @@ public class HostCheckController {
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
             @RequestParam("hostname") String hostname,
             @RequestParam("itemNames") String itemNamesStr) {
-        
+
         if (clusterId == null) {
             return Result.error("集群ID不能为空");
         }
-        
+
         // 将itemNames字符串转换为列表
         List<String> itemIds = new ArrayList<>();
         if (itemNamesStr != null && !itemNamesStr.isEmpty()) {
@@ -204,10 +205,14 @@ public class HostCheckController {
                 }
             } else {
                 // 单个值
-                itemIds.add(itemNamesStr);
+                itemIds.add(itemNamesStr.trim());
             }
         }
-        
+
+        // 记录详细日志，帮助诊断
+        log.info("retryCheckItems请求参数: clusterId={}, hostname={}, itemNames={}, 解析后的itemIds={}",
+                clusterId, hostname, itemNamesStr, itemIds);
+
         return hostCheckService.retryCheckItems(clusterId, hostname, itemIds);
     }
 
@@ -225,9 +230,10 @@ public class HostCheckController {
             @RequestParam(required = false, defaultValue = "all") String filterMode) {
         return hostCheckService.getFormattedLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
     }
-    
+
     /**
      * 获取可用的日志级别
+     * 
      * @return 日志级别列表
      */
     @GetMapping("/log-levels")
@@ -235,7 +241,7 @@ public class HostCheckController {
     public Result getLogLevels() {
         return Result.success(hostCheckService.getLogLevels());
     }
-    
+
     /**
      * 跳过指定检查项
      */
@@ -247,9 +253,10 @@ public class HostCheckController {
             @RequestParam("itemId") Integer itemId) {
         return hostCheckService.skipCheckItem(clusterId, hostname, itemId);
     }
-    
+
     /**
      * 获取可用的日志类型
+     * 
      * @return 日志类型列表
      */
     @GetMapping("/log-types")
@@ -269,7 +276,7 @@ public class HostCheckController {
             @RequestParam("itemId") Integer itemId) {
         return hostCheckService.getCheckItemConfirmInfo(clusterId, hostname, itemId);
     }
-    
+
     /**
      * 获取异步服务状态
      */
@@ -284,10 +291,11 @@ public class HostCheckController {
             return Result.error(500, "获取异步服务状态失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 配置定时任务执行间隔
-     * @param type 任务类型：taskCleanup或connectionCleanup
+     * 
+     * @param type       任务类型：taskCleanup或connectionCleanup
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
      */
@@ -299,27 +307,27 @@ public class HostCheckController {
         try {
             boolean success = false;
             String message = "";
-            
+
             if ("taskCleanup".equals(type)) {
                 success = asyncCheckService.setTaskCleanupInterval(intervalMs);
-                message = success ? "任务清理定时任务间隔设置成功，当前间隔: " + (intervalMs/1000) + "秒" : "间隔时间不能小于1秒";
+                message = success ? "任务清理定时任务间隔设置成功，当前间隔: " + (intervalMs / 1000) + "秒" : "间隔时间不能小于1秒";
             } else if ("connectionCleanup".equals(type)) {
                 success = asyncCheckService.setConnectionCleanupInterval(intervalMs);
-                message = success ? "连接清理定时任务间隔设置成功，当前间隔: " + (intervalMs/1000) + "秒" : "间隔时间不能小于1秒";
+                message = success ? "连接清理定时任务间隔设置成功，当前间隔: " + (intervalMs / 1000) + "秒" : "间隔时间不能小于1秒";
             } else {
                 return Result.error("不支持的任务类型: " + type);
             }
-            
+
             if (success) {
                 // 返回最新状态
                 ScheduleConfigResult resultData = new ScheduleConfigResult();
                 resultData.setMessage(message);
                 resultData.setStatus(asyncCheckService.getScheduledTasksStatus());
-                
+
                 // 添加当前设置的值到结果中
                 resultData.setCurrentIntervalMs(intervalMs);
                 resultData.setCurrentIntervalSeconds(intervalMs / 1000);
-                
+
                 return Result.success(resultData);
             } else {
                 return Result.error(message);
@@ -340,18 +348,18 @@ public class HostCheckController {
         try {
             // 获取队列系统状态
             QueueSystemStatus queueSystemStatus = queueManagerService.getQueueSystemStatusDirect();
-            
+
             // 获取队列任务详情
             List<QueueTaskInfo> checkQueueTasks = queueManagerService.getCheckQueueTasksDirect();
             List<QueueTaskInfo> fixQueueTasks = queueManagerService.getFixQueueTasksDirect();
-            
+
             // 创建详细结果对象
             QueueTaskDetailResult result = new QueueTaskDetailResult();
             result.setQueueManager(queueSystemStatus.getQueueManager());
             result.setAsyncService(queueSystemStatus.getAsyncService());
             result.setQueueTasks(checkQueueTasks);
             result.setFixQueueTasks(fixQueueTasks);
-            
+
             return Result.success(result);
         } catch (Exception e) {
             log.error("获取队列系统详情失败", e);
@@ -361,7 +369,8 @@ public class HostCheckController {
 
     /**
      * 修改定时任务执行间隔
-     * @param taskId 任务ID
+     * 
+     * @param taskId          任务ID
      * @param intervalSeconds 执行间隔（秒）
      * @return 操作结果
      */
@@ -373,20 +382,21 @@ public class HostCheckController {
         try {
             // 将秒转换为毫秒
             long intervalMs = intervalSeconds * 1000L;
-            
+
             if (intervalSeconds <= 0) {
                 return Result.error("执行间隔必须大于0秒");
             }
-            
+
             return queueManagerService.updateTaskInterval(taskId, intervalMs);
         } catch (Exception e) {
             log.error("修改定时任务执行间隔失败", e);
             return Result.error("修改执行间隔失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 更新队列健康监控任务间隔
+     * 
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
      */
@@ -398,7 +408,7 @@ public class HostCheckController {
             if (intervalMs <= 0) {
                 return Result.error("执行间隔必须大于0毫秒");
             }
-            
+
             // 调用队列管理服务更新间隔
             return queueManagerService.updateTaskInterval("queueHealthMonitor", intervalMs);
         } catch (Exception e) {
@@ -406,9 +416,10 @@ public class HostCheckController {
             return Result.error("更新间隔失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 更新任务超时监控任务间隔
+     * 
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
      */
@@ -420,7 +431,7 @@ public class HostCheckController {
             if (intervalMs <= 0) {
                 return Result.error("执行间隔必须大于0毫秒");
             }
-            
+
             // 调用队列管理服务更新间隔
             return queueManagerService.updateTaskInterval("taskTimeoutMonitor", intervalMs);
         } catch (Exception e) {
@@ -428,4 +439,4 @@ public class HostCheckController {
             return Result.error("更新间隔失败: " + e.getMessage());
         }
     }
-} 
+}

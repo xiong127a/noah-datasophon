@@ -926,6 +926,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
 
         boolean hasChanges = false;
+        List<CheckItem> itemsToRetry = new ArrayList<>();
+
         for (String itemId : itemNames) {
             try {
                 Integer id = Integer.parseInt(itemId);
@@ -951,8 +953,11 @@ public class HostCheckServiceImpl implements HostCheckService {
                     // 将检查项状态设置为等待检查
                     item.setStatus(CheckItem.Status.WAITING);
                     item.setMessage("等待检查");
+                    itemsToRetry.add(item);
                     hasChanges = true;
                     logger.info("重置检查项 {}: {} 状态为等待检查", item.getId(), item.getItemName());
+                } else {
+                    logger.warn("未找到检查项ID: {}", id);
                 }
             } catch (NumberFormatException e) {
                 logger.warn("无效的检查项ID: {}", itemId);
@@ -964,12 +969,65 @@ public class HostCheckServiceImpl implements HostCheckService {
             map.put(hostname, hostInfo);
             CacheUtils.put(clusterId + Constants.HOST_MAP, map);
 
-            // 将主机添加到检查队列
-            hostCheckQueueManager.addCheckTask(clusterId, hostInfo, this);
+            // 仅对指定的检查项进行重试
+            // 注意：这里不能传入itemsToRetry，否则会导致其他检查项消失
+            // 而是使用doHostCheckForItems直接处理这些项
+            doHostCheckForItems(clusterId, hostInfo, itemsToRetry);
 
-            return Result.success("成功将检查项添加到检查队列");
+            return Result.success("成功添加" + itemsToRetry.size() + "个检查项到检查队列");
         } else {
             return Result.error("未找到需要重试的检查项");
+        }
+    }
+
+    /**
+     * 专门用于重试特定检查项的方法
+     * 这个方法直接执行指定的检查项，而不修改主机的完整检查项列表
+     */
+    private void doHostCheckForItems(Integer clusterId, HostInfo hostInfo, List<CheckItem> itemsToCheck) {
+        if (itemsToCheck == null || itemsToCheck.isEmpty()) {
+            logger.warn("没有需要检查的项目");
+            return;
+        }
+
+        logger.info("开始重试主机: {} 的 {} 个检查项", hostInfo.getHostname(), itemsToCheck.size());
+
+        // 使用线程池并行执行每个检查项
+        for (CheckItem item : itemsToCheck) {
+            // 使用线程池执行检查
+            hostCheckQueueManager.getItemCheckExecutorService().submit(() -> {
+                String originalThreadName = Thread.currentThread().getName();
+                try {
+                    // 设置线程名，方便日志识别
+                    Thread.currentThread().setName("check-" + hostInfo.getHostname() + "-item-" + item.getId());
+
+                    logger.info("开始重试检查项: {}", item.getItemName());
+
+                    // 标记为正在检查
+                    item.setStatus(CheckItem.Status.CHECKING);
+                    item.setMessage("正在检查中");
+
+                    // 立即更新缓存，使前端能看到状态变化
+                    updateHostInfoCache(clusterId, hostInfo);
+
+                    // 执行检查
+                    executeHostCheck(clusterId, hostInfo, item);
+
+                    // 检查完成后再次更新缓存
+                    updateHostInfoCache(clusterId, hostInfo);
+
+                    logger.info("检查项 {} 重试完成", item.getItemName());
+                } catch (Exception e) {
+                    logger.error("检查项 {} 执行失败: {}", item.getItemName(), e.getMessage(), e);
+                    // 设置状态为失败
+                    item.setStatus(CheckItem.Status.FAILED);
+                    item.setMessage("检查失败: " + e.getMessage());
+                    updateHostInfoCache(clusterId, hostInfo);
+                } finally {
+                    // 恢复线程名
+                    Thread.currentThread().setName(originalThreadName);
+                }
+            });
         }
     }
 
