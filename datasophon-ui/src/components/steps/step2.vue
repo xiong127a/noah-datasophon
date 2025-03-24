@@ -419,14 +419,42 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  disabled: isChecking || !((row.status === 'FAILED' || row.statusStr === 'FAILED' || 
-                             row.status === 'SUCCESS' || row.statusStr === 'SUCCESS' || 
-                             row.status === 'SKIPPED' || row.statusStr === 'SKIPPED'))
+                  // 修改：只有当前检查项处于CHECKING状态时才禁用重试按钮
+                  // 不再使用整个主机的isHostChecking状态来禁用
+                  disabled: isChecking || !((row.status === 'FAILED' || 
+                             row.status === 'SUCCESS' || 
+                             row.status === 'SKIPPED'))
                 },
                 on: {
-                  click: () => this.retryEnvironment(row)
+                  click: () => this.retryCheckItem(record.hostname, row.id)
                 }
-              }, ["重试"]) : null
+              }, ["重试"]) : null,
+              
+              // 修复按钮 - 失败时可用，主机整体检查中时禁用
+              isFailed ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  // 当主机整体状态为检查中时，禁用按钮
+                  disabled: isHostChecking
+                },
+                on: {
+                  click: () => this.fixCheckItem(record.hostname, row)
+                }
+              }, ["修复"]) : null,
+              
+              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
+              isFailed ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  // 当主机整体状态为检查中时，禁用按钮
+                  disabled: isHostChecking
+                },
+                on: {
+                  click: () => this.skipCheckItem(record.hostname, row.id)
+                }
+              }, ["跳过"]) : null
             ].filter(Boolean));
           },
         },
@@ -764,8 +792,9 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  // 当主机整体状态为检查中时，禁用按钮
-                  disabled: isHostChecking || !((row.status === 'FAILED' || 
+                  // 修改：只有当前检查项处于CHECKING状态时才禁用重试按钮
+                  // 不再使用整个主机的isHostChecking状态来禁用
+                  disabled: isChecking || !((row.status === 'FAILED' || 
                              row.status === 'SUCCESS' || 
                              row.status === 'SKIPPED'))
                 },
@@ -888,8 +917,9 @@ export default {
           attrs: {
             type: 'primary',
             size: 'small',
-            // 当主机整体状态为检查中时，禁用按钮
-            disabled: isHostChecking || !this.hasRetryableSelectedItems(record.hostname)
+            // 修改：不再基于整个主机的检查状态禁用按钮
+            // 只检查是否有可重试的选中项
+            disabled: !this.hasRetryableSelectedItems(record.hostname)
           },
           style: { marginRight: '8px' },
           on: {
@@ -900,8 +930,9 @@ export default {
           attrs: {
             type: 'primary',
             size: 'small',
-            // 当主机整体状态为检查中时，禁用按钮
-            disabled: isHostChecking || !this.hasFixableSelectedItems(record.hostname)
+            // 修改：不再基于整个主机的检查状态禁用按钮
+            // 只检查是否有可修复的选中项
+            disabled: !this.hasFixableSelectedItems(record.hostname)
           },
           on: {
             click: () => this.fixSelectedItems(record.hostname)
@@ -1244,9 +1275,16 @@ export default {
     hasRetryableSelectedItems(hostname) {
       const selectedItems = this.selectedCheckItems[hostname] || [];
       const items = this.checkItemsMap[hostname] || [];
+      
+      if (selectedItems.length === 0) {
+        return false;
+      }
+      
       return selectedItems.some(itemId => {
         const item = items.find(i => i.id === itemId);
-        return item && (item.status === 'FAILED' || item.status === 'SUCCESS') && item.status !== 'SKIPPED';
+        // 允许重试所有非CHECKING和非TERMINATING状态的检查项
+        return item && item.status !== 'CHECKING' && item.status !== 'TERMINATING'
+          && (item.status === 'FAILED' || item.status === 'SUCCESS' || item.status === 'SKIPPED');
       });
     },
 
