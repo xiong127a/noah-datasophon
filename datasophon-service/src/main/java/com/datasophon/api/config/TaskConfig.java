@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableScheduling
 public class TaskConfig {
     private static final Logger logger = LoggerFactory.getLogger(TaskConfig.class);
-    
+
     /**
      * 检查任务专用执行器
      */
@@ -31,7 +31,22 @@ public class TaskConfig {
         executor.setCorePoolSize(10);
         executor.setMaxPoolSize(20);
         executor.setQueueCapacity(checkQueueCapacity);
-        executor.setThreadNamePrefix("check-task-");
+
+        // 使用自定义ThreadFactory可以在创建线程时动态设置线程名称
+        executor.setThreadFactory(new java.util.concurrent.ThreadFactory() {
+            private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(
+                    1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r);
+                // 这里设置一个基本名称，具体主机名将在提交任务时设置
+                thread.setName("host-check-task-" + counter.getAndIncrement());
+                thread.setDaemon(false);
+                return thread;
+            }
+        });
+
         executor.setKeepAliveSeconds(60);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
@@ -40,7 +55,7 @@ public class TaskConfig {
                 executor.getCorePoolSize(), executor.getMaxPoolSize(), checkQueueCapacity);
         return executor.getThreadPoolExecutor();
     }
-    
+
     /**
      * 修复任务执行器
      */
@@ -51,7 +66,22 @@ public class TaskConfig {
         executor.setCorePoolSize(5);
         executor.setMaxPoolSize(10);
         executor.setQueueCapacity(fixQueueCapacity);
-        executor.setThreadNamePrefix("fix-task-");
+
+        // 使用自定义ThreadFactory可以在创建线程时动态设置线程名称
+        executor.setThreadFactory(new java.util.concurrent.ThreadFactory() {
+            private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(
+                    1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r);
+                // 这里设置一个基本名称，具体主机名将在提交任务时设置
+                thread.setName("host-fix-task-" + counter.getAndIncrement());
+                thread.setDaemon(false);
+                return thread;
+            }
+        });
+
         executor.setKeepAliveSeconds(60);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
@@ -60,4 +90,4 @@ public class TaskConfig {
                 executor.getCorePoolSize(), executor.getMaxPoolSize(), fixQueueCapacity);
         return executor.getThreadPoolExecutor();
     }
-} 
+}

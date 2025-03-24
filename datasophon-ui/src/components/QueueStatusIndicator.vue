@@ -120,6 +120,24 @@
           
           <div class="detail-stats">
             <div class="stat-item">
+              <div class="stat-label">队列列表</div>
+              <div class="stat-value queue-names">
+                <a-icon type="appstore" theme="filled" class="queue-icon pulse" />
+                <div class="queue-list">
+                  <template v-if="queueStats.queueNames && queueStats.queueNames.length > 0">
+                    <a-tooltip v-for="(name, index) in queueStats.queueNames" :key="index" :title="'队列ID: ' + (index + 1)">
+                      <a-tag class="queue-tag" :color="getRandomColor(index)">
+                        {{ name }}
+                      </a-tag>
+                    </a-tooltip>
+                  </template>
+                  <template v-else>
+                    <span class="no-queues">暂无队列</span>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div class="stat-item">
               <div class="stat-label">总任务数</div>
               <div class="stat-value">{{ queueStats.tasksProcessed || 0 }}</div>
             </div>
@@ -2261,6 +2279,30 @@ export default {
       if (hitRate < 85) return '缓存良好';
       return '缓存优秀';
     },
+    
+    /**
+     * 获取随机颜色
+     * @param {number} index 队列索引
+     * @returns {string} 颜色值
+     */
+    getRandomColor(index) {
+      // 预定义一组好看的颜色
+      const colors = [
+        '#1890ff', // 蓝色
+        '#52c41a', // 绿色
+        '#faad14', // 黄色
+        '#722ed1', // 紫色
+        '#eb2f96', // 粉色
+        '#fa8c16', // 橙色
+        '#13c2c2', // 青色
+        '#2f54eb', // 深蓝色
+        '#fa541c', // 红橙色
+        '#a0d911'  // 青柠色
+      ];
+      
+      // 使用索引循环选择颜色
+      return colors[index % colors.length];
+    },
   }
 }
 </script>
@@ -3829,6 +3871,58 @@ export default {
   }
   100% {
     box-shadow: 0 0 18px rgba(24, 144, 255, 0.4);
+  }
+}
+
+.queue-names {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .queue-icon {
+    font-size: 16px;
+    color: #1890ff;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+
+  .queue-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    .queue-tag {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #fff;
+      background-color: #1890ff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .no-queues {
+      font-size: 12px;
+      color: #8c8c8c;
+    }
+  }
+}
+
+.getRandomColor {
+  color: #1890ff;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 </style> 

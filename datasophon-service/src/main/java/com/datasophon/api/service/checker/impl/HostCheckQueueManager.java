@@ -9,7 +9,6 @@ import com.datasophon.common.model.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;
-import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,7 +84,6 @@ public class HostCheckQueueManager {
     private final AtomicLong tasksMaxExecutionTimeMs = new AtomicLong(0);
 
     // 检查项线程池 - 专门用于执行单个检查项
-    @Getter
     private final ExecutorService itemCheckExecutorService;
 
     private Thread queueProcessorThread;
@@ -768,6 +766,12 @@ public class HostCheckQueueManager {
         status.put("totalCompletedTasks", checkExecutor.getCompletedTaskCount());
         status.put("totalQueuedTasks", checkExecutor.getQueue().size());
 
+        // 添加队列名称列表
+        List<String> queueNames = new ArrayList<>();
+        queueNames.add("检查队列(checkQueue)");
+        queueNames.add("修复队列(fixQueue)");
+        status.put("queueNames", queueNames);
+
         return status;
     }
 
@@ -790,7 +794,12 @@ public class HostCheckQueueManager {
 
         @Override
         public void run() {
-            Thread.currentThread().setName("host-check-" + hostInfo.getHostname());
+            // 保存原始线程名
+            Thread currentThread = Thread.currentThread();
+            String originalThreadName = currentThread.getName();
+
+            // 设置新的线程名
+            currentThread.setName("host-check-" + hostInfo.getHostname());
             logger.info("开始执行主机 {} 的检查任务", hostInfo.getHostname());
 
             long startTime = System.currentTimeMillis();
@@ -809,6 +818,7 @@ public class HostCheckQueueManager {
                 long executionTime = System.currentTimeMillis() - startTime;
                 // 更新总执行时间
                 tasksTotalExecutionTimeMs.addAndGet(executionTime);
+
                 // 更新最大执行时间
                 long currentMax = tasksMaxExecutionTimeMs.get();
                 while (executionTime > currentMax) {
@@ -818,22 +828,74 @@ public class HostCheckQueueManager {
                     currentMax = tasksMaxExecutionTimeMs.get();
                 }
 
-                logger.info("移除主机 {} 的检查任务，释放资源", hostInfo.getHostname());
+                // 移除任务
                 runningTasks.remove(taskKey);
-                taskStartTimes.remove(taskKey);
+
+                // 恢复原始线程名
+                currentThread.setName(originalThreadName);
             }
         }
     }
 
-    @Getter
+    private static class FixTask implements Comparable<FixTask> {
+        private final Integer clusterId;
+        private final HostInfo hostInfo;
+        private final CheckItem checkItem;
+        private final HostCheckServiceImpl hostCheckService;
+        private final int priority;
+
+        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+            this(clusterId, hostInfo, checkItem, null, 5);
+        }
+
+        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem,
+                HostCheckServiceImpl hostCheckService) {
+            this(clusterId, hostInfo, checkItem, hostCheckService, 5);
+        }
+
+        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, HostCheckServiceImpl hostCheckService,
+                int priority) {
+            this.clusterId = clusterId;
+            this.hostInfo = hostInfo;
+            this.checkItem = checkItem;
+            this.hostCheckService = hostCheckService;
+            this.priority = priority;
+        }
+
+        public Integer getClusterId() {
+            return clusterId;
+        }
+
+        public HostInfo getHostInfo() {
+            return hostInfo;
+        }
+
+        public CheckItem getCheckItem() {
+            return checkItem;
+        }
+
+        public HostCheckServiceImpl getHostCheckService() {
+            return hostCheckService;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        @Override
+        public int compareTo(FixTask other) {
+            return Integer.compare(this.priority, other.priority);
+        }
+    }
+
     private static class CheckTask implements Comparable<CheckTask> {
         private final Integer clusterId;
         private final HostInfo hostInfo;
         private final HostCheckServiceImpl hostCheckService;
-        private final int priority; // 优先级，数字越小优先级越高
+        private final int priority;
 
         public CheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
-            this(clusterId, hostInfo, hostCheckService, 5); // 默认优先级为5
+            this(clusterId, hostInfo, hostCheckService, 5);
         }
 
         public CheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService, int priority) {
@@ -841,6 +903,22 @@ public class HostCheckQueueManager {
             this.hostInfo = hostInfo;
             this.hostCheckService = hostCheckService;
             this.priority = priority;
+        }
+
+        public Integer getClusterId() {
+            return clusterId;
+        }
+
+        public HostInfo getHostInfo() {
+            return hostInfo;
+        }
+
+        public HostCheckServiceImpl getHostCheckService() {
+            return hostCheckService;
+        }
+
+        public int getPriority() {
+            return priority;
         }
 
         @Override
@@ -877,6 +955,12 @@ public class HostCheckQueueManager {
         status.setFixQueueSize(fixQueue.size());
         status.setRunningTasksCount(runningTasks.size());
         status.setRunningFixTasksCount(runningFixTasks.size());
+
+        // 添加队列名称列表
+        List<String> queueNames = new ArrayList<>();
+        queueNames.add("检查队列(checkQueue)");
+        queueNames.add("修复队列(fixQueue)");
+        status.setQueueNames(queueNames);
 
         // 线程池信息
         ThreadPoolExecutor mainExecutor = (ThreadPoolExecutor) checkExecutorService;
@@ -1416,8 +1500,10 @@ public class HostCheckQueueManager {
 
         @Override
         public void run() {
+            String originalThreadName = Thread.currentThread().getName();
+            Thread.currentThread().setName("host-fix-" + hostInfo.getHostname() + "-" + checkItem.getId());
+
             long startTime = System.currentTimeMillis();
-            // 创建唯一的日志键
             String logKey = "FIX_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
 
             try {
@@ -1451,7 +1537,8 @@ public class HostCheckQueueManager {
                         ItemChecker passwordFreeChecker = itemCheckerFactory.getChecker(ItemCode.PASSWORD_FREE);
                         if (passwordFreeChecker == null) {
                             String errorMsg = "未找到免密登录检查器";
-                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg, LogEntry.Type.FIX);
+                            LogEntry errorLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
+                                    LogEntry.Type.FIX);
                             com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, errorLogEntry);
 
                             logger.error(errorMsg);
@@ -1494,7 +1581,8 @@ public class HostCheckQueueManager {
                     } catch (Exception e) {
                         String errorMsg = String.format("执行主机 %s 的免密登录修复任务时发生异常: %s",
                                 hostInfo.getHostname(), e.getMessage());
-                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg, LogEntry.Type.FIX);
+                        LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
+                                LogEntry.Type.FIX);
                         com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -1522,7 +1610,8 @@ public class HostCheckQueueManager {
 
                         String successMsg = String.format("主机 %s 的修复任务 %s 执行成功",
                                 hostInfo.getHostname(), checkItem.getItemName());
-                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg, LogEntry.Type.FIX);
+                        LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
+                                LogEntry.Type.FIX);
                         com.datasophon.api.service.checker.LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                         logger.info(successMsg);
@@ -1571,60 +1660,34 @@ public class HostCheckQueueManager {
 
                 // 移除任务
                 runningFixTasks.remove(taskKey);
+
+                // 恢复原始线程名
+                Thread.currentThread().setName(originalThreadName);
             }
-        }
-
-        /**
-         * 创建日志条目对象
-         * 
-         * @param level   日志级别
-         * @param message 日志消息
-         * @param type    日志类型
-         * @return 日志条目对象
-         */
-        private LogEntry createLogEntry(LogEntry.Level level, String message, LogEntry.Type type) {
-            Date timestamp = new Date();
-            String threadName = Thread.currentThread().getName();
-            String className = HostCheckQueueManager.class.getName();
-
-            LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message, type);
-            // 获取调用者的行号作为元数据
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            if (stackTrace.length >= 3) {
-                logEntry.setLineNumber(stackTrace[2].getLineNumber());
-            }
-
-            return logEntry;
         }
     }
 
     /**
-     * 修复任务数据结构
+     * 创建日志条目对象
+     * 
+     * @param level   日志级别
+     * @param message 日志消息
+     * @param type    日志类型
+     * @return 日志条目对象
      */
-    @Getter
-    private static class FixTask implements Comparable<FixTask> {
-        private final Integer clusterId;
-        private final HostInfo hostInfo;
-        private final CheckItem checkItem;
-        private final int priority; // 优先级，数字越小优先级越高
-        private final HostCheckServiceImpl hostCheckService;
+    private LogEntry createLogEntry(LogEntry.Level level, String message, LogEntry.Type type) {
+        Date timestamp = new Date();
+        String threadName = Thread.currentThread().getName();
+        String className = HostCheckQueueManager.class.getName();
 
-        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-            this(clusterId, hostInfo, checkItem, 5); // 默认优先级为5
+        LogEntry logEntry = new LogEntry(timestamp, level, threadName, className, message, type);
+        // 获取调用者的行号作为元数据
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        if (stackTrace.length >= 3) {
+            logEntry.setLineNumber(stackTrace[2].getLineNumber());
         }
 
-        public FixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem, int priority) {
-            this.clusterId = clusterId;
-            this.hostInfo = hostInfo;
-            this.checkItem = checkItem;
-            this.priority = priority;
-            this.hostCheckService = null; // 默认为null，由HostFixTask在运行时从Spring获取
-        }
-
-        @Override
-        public int compareTo(FixTask other) {
-            return Integer.compare(this.priority, other.priority);
-        }
+        return logEntry;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -1728,5 +1791,9 @@ public class HostCheckQueueManager {
         } catch (Exception e) {
             logger.error("处理修复队列任务时发生异常", e);
         }
+    }
+
+    public ExecutorService getItemCheckExecutorService() {
+        return itemCheckExecutorService;
     }
 }
