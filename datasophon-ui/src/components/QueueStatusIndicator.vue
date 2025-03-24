@@ -124,12 +124,31 @@
               <div class="stat-value queue-names">
                 <a-icon type="appstore" theme="filled" class="queue-icon pulse" />
                 <div class="queue-list">
-                  <template v-if="queueStats.queueNames && queueStats.queueNames.length > 0">
-                    <a-tooltip v-for="(name, index) in queueStats.queueNames" :key="index" :title="'队列ID: ' + (index + 1)">
-                      <a-tag class="queue-tag" :color="getRandomColor(index)">
+                  <template v-if="displayQueueNames && displayQueueNames.length > 0">
+                    <template v-for="(name, index) in displayQueueNames.slice(0, 3)">
+                      <a-tag :key="index" class="queue-tag" :color="getRandomColor(index)">
                         {{ name }}
                       </a-tag>
-                    </a-tooltip>
+                    </template>
+                    <a-popover v-if="displayQueueNames.length > 3" placement="rightTop" trigger="hover">
+                      <template slot="content">
+                        <div class="queue-popover">
+                          <div class="queue-popover-title">所有队列 ({{ displayQueueNames.length }})</div>
+                          <div class="queue-popover-list">
+                            <a-tag v-for="(name, index) in displayQueueNames" 
+                              :key="index" 
+                              class="queue-tag" 
+                              :color="getRandomColor(index)"
+                            >
+                              {{ name }}
+                            </a-tag>
+                          </div>
+                        </div>
+                      </template>
+                      <a-tag class="queue-more-tag">
+                        <a-icon type="ellipsis" /> 查看更多 ({{ displayQueueNames.length - 3 }})
+                      </a-tag>
+                    </a-popover>
                   </template>
                   <template v-else>
                     <span class="no-queues">暂无队列</span>
@@ -137,17 +156,26 @@
                 </div>
               </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item animated-stat">
               <div class="stat-label">总任务数</div>
-              <div class="stat-value">{{ queueStats.tasksProcessed || 0 }}</div>
+              <div class="stat-value stat-count">
+                <span class="count-number">{{ queueStats.tasksProcessed || 0 }}</span>
+                <span class="count-icon"><a-icon type="bar-chart" /></span>
+              </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item animated-stat">
               <div class="stat-label">成功任务</div>
-              <div class="stat-value success-text">{{ queueStats.tasksSucceeded || 0 }}</div>
+              <div class="stat-value stat-count success-count">
+                <span class="count-number">{{ queueStats.tasksSucceeded || 0 }}</span>
+                <span class="count-icon"><a-icon type="check-circle" /></span>
+              </div>
             </div>
-            <div class="stat-item">
+            <div class="stat-item animated-stat">
               <div class="stat-label">失败任务</div>
-              <div class="stat-value danger-text">{{ queueStats.tasksFailed || 0 }}</div>
+              <div class="stat-value stat-count danger-count">
+                <span class="count-number">{{ queueStats.tasksFailed || 0 }}</span>
+                <span class="count-icon"><a-icon type="close-circle" /></span>
+              </div>
             </div>
           </div>
         </div>
@@ -1013,10 +1041,7 @@ export default {
       }
     },
     schedulerStatusClass() {
-      return {
-        'status-active': this.schedulerActive,
-        'status-inactive': !this.schedulerActive
-      }
+      return this.schedulerActive ? 'status-active' : 'status-inactive';
     },
     queueStatusTooltip() {
       if (this.queueStatus.runningTasks > 0) {
@@ -1045,6 +1070,10 @@ export default {
     },
     queueProcessorStatusText() {
       return this.queueStats.processorThreadAlive ? '运行中' : '已停止';
+    },
+    // 添加模拟队列名称数据（仅在开发环境下使用）
+    displayQueueNames() {
+      return this.queueStats.queueNames || [];
     }
   },
   methods: {
@@ -3888,15 +3917,38 @@ export default {
   .queue-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 6px;
+    align-items: center;
 
     .queue-tag {
-      padding: 4px 8px;
+      padding: 2px 8px;
       border-radius: 4px;
       font-size: 12px;
       color: #fff;
-      background-color: #1890ff;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.3s;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+    
+    .queue-more-tag {
+      background: #f0f2f5;
+      color: rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+      border: 1px dashed #d9d9d9;
+      padding: 1px 10px;
+      
+      &:hover {
+        color: #1890ff;
+        border-color: #1890ff;
+        background: rgba(24, 144, 255, 0.1);
+      }
     }
 
     .no-queues {
@@ -3906,9 +3958,96 @@ export default {
   }
 }
 
-.getRandomColor {
-  color: #1890ff;
-  animation: pulse 1.5s infinite ease-in-out;
+.queue-popover {
+  max-width: 300px;
+  
+  .queue-popover-title {
+    font-weight: 500;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .queue-popover-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    
+    .queue-tag {
+      margin-bottom: 4px;
+    }
+  }
+}
+
+.animated-stat {
+  transition: all 0.3s;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+  
+  .stat-count {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    .count-number {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .count-icon {
+      margin-left: 8px;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      .anticon {
+        font-size: 14px;
+      }
+    }
+    
+    &:not(.success-count):not(.danger-count) {
+      .count-number {
+        color: #1890ff;
+      }
+      
+      .count-icon {
+        background-color: rgba(24, 144, 255, 0.1);
+        color: #1890ff;
+        animation: data-pulse 1.5s infinite alternate;
+      }
+    }
+  }
+  
+  .success-count {
+    .count-number {
+      color: #52c41a;
+    }
+    
+    .count-icon {
+      background-color: rgba(82, 196, 26, 0.1);
+      color: #52c41a;
+      animation: success-pulse 1.5s infinite alternate;
+    }
+  }
+  
+  .danger-count {
+    .count-number {
+      color: #f5222d;
+    }
+    
+    .count-icon {
+      background-color: rgba(245, 34, 45, 0.1);
+      color: #f5222d;
+      animation: danger-pulse 1.5s infinite alternate;
+    }
+  }
 }
 
 @keyframes pulse {
@@ -3923,6 +4062,39 @@ export default {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes data-pulse {
+  0% {
+    background-color: rgba(24, 144, 255, 0.1);
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
+  }
+  100% {
+    background-color: rgba(24, 144, 255, 0.2);
+    box-shadow: 0 0 0 5px rgba(24, 144, 255, 0.1);
+  }
+}
+
+@keyframes success-pulse {
+  0% {
+    background-color: rgba(82, 196, 26, 0.1);
+    box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4);
+  }
+  100% {
+    background-color: rgba(82, 196, 26, 0.2);
+    box-shadow: 0 0 0 5px rgba(82, 196, 26, 0.1);
+  }
+}
+
+@keyframes danger-pulse {
+  0% {
+    background-color: rgba(245, 34, 45, 0.1);
+    box-shadow: 0 0 0 0 rgba(245, 34, 45, 0.4);
+  }
+  100% {
+    background-color: rgba(245, 34, 45, 0.2);
+    box-shadow: 0 0 0 5px rgba(245, 34, 45, 0.1);
   }
 }
 </style> 
