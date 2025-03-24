@@ -46,7 +46,6 @@ public class HostCheckServiceImpl implements HostCheckService {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(HostCheckServiceImpl.class);
     private static final String CHECK_TASK_STATUS_PREFIX = "CHECK_TASK_STATUS_";
 
-
     @Autowired
     private ItemCheckerFactory itemCheckerFactory;
 
@@ -66,7 +65,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         /**
          * 创建检查项日志记录器
          */
-        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
+                Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, service.getClass().getSimpleName());
         }
@@ -74,23 +74,26 @@ public class HostCheckServiceImpl implements HostCheckService {
         /**
          * 创建检查项日志记录器，使用自定义类名
          */
-        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId, String className) {
+        public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
+                Integer itemId, String className) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, className);
         }
-        
+
         /**
          * 创建检查日志记录器
          */
-        public static CheckLogger getCheckLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+        public static CheckLogger getCheckLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
+                Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.CHECK);
         }
-        
+
         /**
          * 创建修复日志记录器
          */
-        public static CheckLogger getFixLogger(HostCheckServiceImpl service, Integer clusterId, String hostname, Integer itemId) {
+        public static CheckLogger getFixLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
+                Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.FIX);
         }
@@ -119,46 +122,46 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result fixCheckItem(Integer clusterId, String hostname, Integer itemId, Boolean skipConfirm) {
         try {
-            logger.info("收到修复检查项请求: clusterId={}, hostname={}, itemId={}, skipConfirm={}", 
+            logger.info("收到修复检查项请求: clusterId={}, hostname={}, itemId={}, skipConfirm={}",
                     clusterId, hostname, itemId, skipConfirm);
-            
+
             // 获取主机信息
             HostInfo hostInfo = getHostInfo(clusterId, hostname);
             if (hostInfo == null) {
                 return Result.error("主机信息不存在");
             }
-            
+
             // 查找指定ID的检查项
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
                 return Result.error("检查项不存在");
             }
-            
+
             // 如果检查项当前正在修复中，则返回错误
             if (checkItem.getStatus() == CheckItem.Status.FIXING) {
                 return Result.error("检查项正在修复中，请稍后重试");
             }
-            
+
             // 创建日志记录器
             String logKey = getLogKey(clusterId, hostname, itemId);
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
             cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
             cacheLog.info("时间: " + formatDateToChinese(new Date()));
-            
+
             // 将修复任务提交到专用队列
             String taskId = hostCheckQueueManager.addFixTask(clusterId, hostInfo, checkItem);
-            
+
             if (taskId != null) {
                 // 更新状态为正在修复
                 checkItem.setStatus(CheckItem.Status.FIXING);
                 checkItem.setMessage("已加入修复队列，等待处理");
-                
+
                 // 更新主机状态
                 hostInfo.calculateStatus();
                 updateHostInfoCache(clusterId, hostInfo);
-                
+
                 cacheLog.info("修复任务已提交到队列，任务ID: " + taskId);
-                
+
                 return Result.success("修复任务已提交");
             } else {
                 cacheLog.error("修复任务提交失败，可能已在队列中");
@@ -273,17 +276,17 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 清除该检查项的旧日志
             String logKey = getLogKey(clusterId, hostname, item.getId());
             LogEntryManager.clearLogEntries(logKey);
-            
+
             // 将所有检查项状态设置为"等待检查" - 第一个检查项会在processHostCheck中更新为"检查中"
             item.setStatus(CheckItem.Status.WAITING);
             item.setMessage("等待检查...");
         }
         hostInfo.setCheckItems(checkItems);
-        
+
         // 设置主机状态为"检查中"
         hostInfo.setStatus(CheckItem.Status.CHECKING);
         hostInfo.setMessage("正在检查中");
-        
+
         // 立即更新缓存，使前端能立即看到状态变化
         map.put(hostname, hostInfo);
         CacheUtils.put(clusterId + Constants.HOST_MAP, map);
@@ -299,20 +302,20 @@ public class HostCheckServiceImpl implements HostCheckService {
     public void processHostCheck(Integer clusterId, HostInfo hostInfo) {
         try {
             logger.info("开始检查主机: {}", hostInfo.getHostname());
-            
+
             // 记录当前线程名称和检查项总数
-            logger.debug("检查线程: {}, 主机: {}, 集群ID: {}", 
-                Thread.currentThread().getName(), 
-                hostInfo.getHostname(), 
-                clusterId);
-            
+            logger.debug("检查线程: {}, 主机: {}, 集群ID: {}",
+                    Thread.currentThread().getName(),
+                    hostInfo.getHostname(),
+                    clusterId);
+
             // 获取需要检查的项
             List<CheckItem> checkItems = new ArrayList<>(hostInfo.getCheckItems());
             if (checkItems.isEmpty()) {
                 logger.warn("主机 {} 没有可执行的检查项，检查提前结束", hostInfo.getHostname());
                 return;
             }
-            
+
             // 将所有检查项状态设置为"等待检查"
             for (CheckItem item : checkItems) {
                 if (item.getStatus() != CheckItem.Status.SUCCESS && item.getStatus() != CheckItem.Status.SKIPPED) {
@@ -320,38 +323,39 @@ public class HostCheckServiceImpl implements HostCheckService {
                     item.setMessage("等待检查");
                 }
             }
-            
+
             // 过滤出需要执行的检查项（状态为WAITING的项）
             List<CheckItem> itemsToCheck = checkItems.stream()
-                .filter(item -> item.getStatus() == CheckItem.Status.WAITING)
-                .collect(Collectors.toList());
-            
+                    .filter(item -> item.getStatus() == CheckItem.Status.WAITING)
+                    .collect(Collectors.toList());
+
             if (itemsToCheck.isEmpty()) {
                 logger.info("主机 {} 没有需要执行的检查项，检查提前结束", hostInfo.getHostname());
                 updateHostInfoCache(clusterId, hostInfo);
                 return;
             }
-            
+
             // 将第一个检查项状态设置为"检查中"
             CheckItem firstItem = itemsToCheck.get(0);
             firstItem.setStatus(CheckItem.Status.CHECKING);
             firstItem.setMessage("正在检查中");
-            
+
             // 立即更新缓存，使前端能看到状态变化
             updateHostInfoCache(clusterId, hostInfo);
-            
+
             // 使用新增的doHostCheck方法进行批量检查，实现SSH连接复用
             doHostCheck(clusterId, hostInfo, itemsToCheck);
-            
+
             logger.info("主机 {} 的所有检查项执行完成", hostInfo.getHostname());
-            
+
         } catch (Exception e) {
             logger.error("检查主机 {} 时发生错误: {}", hostInfo.getHostname(), e.getMessage(), e);
             // 将所有检查项设置为失败
             if (hostInfo.getCheckItems() != null) {
                 for (CheckItem item : hostInfo.getCheckItems()) {
                     if (item.getStatus() != CheckItem.Status.SUCCESS && item.getStatus() != CheckItem.Status.SKIPPED) {
-                        hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED, "检查过程中发生错误: " + e.getMessage());
+                        hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.FAILED,
+                                "检查过程中发生错误: " + e.getMessage());
                     }
                 }
                 updateHostInfoCache(clusterId, hostInfo);
@@ -364,24 +368,24 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     private boolean executeHostCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         try {
-            logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}", 
-                      checkItem.getItemName(), 
-                      hostInfo.getHostname(), 
-                      Thread.currentThread().getName());
-            
+            logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}",
+                    checkItem.getItemName(),
+                    hostInfo.getHostname(),
+                    Thread.currentThread().getName());
+
             // 确保状态更新已发送到前端
             updateHostInfoCache(clusterId, hostInfo);
-            
+
             // 初始化日志
             String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
             logger.debug("检查项日志键: {}", logKey);
-            
+
             // 清除可能存在的旧日志
             LogEntryManager.clearLogEntries(logKey);
-            
+
             // 创建日志记录器
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
-            
+
             // 添加日志头部信息
             cacheLog.info("==== 开始检查: " + checkItem.getItemName() + " ====");
             cacheLog.info("主机: " + hostInfo.getHostname());
@@ -390,10 +394,10 @@ public class HostCheckServiceImpl implements HostCheckService {
             cacheLog.debug("集群ID: " + clusterId);
             cacheLog.debug("执行时间: " + formatDateToChinese(new Date()));
             cacheLog.debug("执行线程: " + Thread.currentThread().getName());
-            
+
             logger.debug("主机 {} 开始执行检查项 {}", hostInfo.getHostname(), checkItem.getItemName());
             cacheLog.info("正在执行检查任务...");
-            
+
             // 从工厂获取检查器实例
             try {
                 // 注意检查ItemCode的转换过程
@@ -409,40 +413,40 @@ public class HostCheckServiceImpl implements HostCheckService {
                     updateHostInfoCache(clusterId, hostInfo);
                     return false;
                 }
-                
+
                 logger.debug("正在获取检查器: {}", itemCodeEnum);
                 cacheLog.debug("正在获取检查器: " + itemCodeEnum);
-                
+
                 ItemChecker checker = itemCheckerFactory.getChecker(itemCodeEnum);
-                
-                    if (checker == null) {
+
+                if (checker == null) {
                     String errorMsg = "未找到检查项 " + checkItem.getItemCode() + " 对应的检查器实现";
                     logger.error(errorMsg);
                     cacheLog.error(errorMsg);
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
                     updateHostInfoCache(clusterId, hostInfo);
-                        return false;
-                    }
+                    return false;
+                }
 
-                logger.debug("成功获取检查器: {}, 类型: {}", 
-                    itemCodeEnum, 
-                    checker.getClass().getSimpleName());
+                logger.debug("成功获取检查器: {}, 类型: {}",
+                        itemCodeEnum,
+                        checker.getClass().getSimpleName());
                 cacheLog.debug("成功获取检查器: " + checker.getClass().getSimpleName());
-                
+
                 // 执行检查，并捕获所有可能的异常
                 try {
                     // 日志记录检查开始时间
                     long startTime = System.currentTimeMillis();
                     cacheLog.info("检查开始执行...");
-                    
+
                     // 执行实际检查
                     CheckItem resultItem = checker.check(clusterId, hostInfo, checkItem);
-                    
+
                     // 记录执行耗时
                     long endTime = System.currentTimeMillis();
                     long duration = endTime - startTime;
                     cacheLog.info("检查执行完成，耗时: " + duration + "ms");
-                    
+
                     // 根据检查结果更新状态
                     boolean result = (resultItem.getStatus() == CheckItem.Status.SUCCESS);
                     if (result) {
@@ -452,25 +456,26 @@ public class HostCheckServiceImpl implements HostCheckService {
                     } else {
                         logger.info("检查项 {} 检查未通过", checkItem.getItemName());
                         cacheLog.info("检查结果: 未通过");
-                        
+
                         // 确保状态已更新
-                        if (resultItem.getStatus() != CheckItem.Status.FAILED && 
-                            resultItem.getStatus() != CheckItem.Status.SKIPPED) {
+                        if (resultItem.getStatus() != CheckItem.Status.FAILED &&
+                                resultItem.getStatus() != CheckItem.Status.SKIPPED) {
                             hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "检查未通过");
                         }
                     }
-                    
+
                     // 更新缓存，确保前端能看到最新状态
                     updateHostInfoCache(clusterId, hostInfo);
-                    
+
                     return result;
                 } catch (Exception e) {
                     String errorMsg = "执行检查项 " + checkItem.getItemName() + " 时发生异常: " + e.getMessage();
                     logger.error(errorMsg, e);
                     cacheLog.error(errorMsg);
                     cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
-                    
-                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "执行检查时发生异常: " + e.getMessage());
+
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED,
+                            "执行检查时发生异常: " + e.getMessage());
                     updateHostInfoCache(clusterId, hostInfo);
                     return false;
                 }
@@ -479,23 +484,23 @@ public class HostCheckServiceImpl implements HostCheckService {
                 logger.error(errorMsg, e);
                 cacheLog.error(errorMsg);
                 cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
-                
+
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "系统错误: " + e.getMessage());
                 updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
         } catch (Exception e) {
             logger.error("执行检查失败: " + e.getMessage(), e);
-            
+
             checkItem.setMessage("检查失败: " + e.getMessage());
             updateHostInfoCache(clusterId, hostInfo);
-            
+
             // 记录异常信息
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
             cacheLog.error("执行检查时发生异常: " + e.getMessage());
             cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
             cacheLog.error("==== 检查失败 ====");
-            
+
             return false;
         }
     }
@@ -561,27 +566,26 @@ public class HostCheckServiceImpl implements HostCheckService {
             if (checkItem == null) {
                 return Result.error("检查项不存在");
             }
-            
+
             // 如果检查项正在检查中，取消任务
             if (checkItem.getStatus() == CheckItem.Status.CHECKING) {
                 // 首先更新状态为"终止中"
                 logger.info("检查项状态更新为终止中: clusterId={}, hostname={}, itemId={}",
-                    clusterId, hostname, itemId);
-                
+                        clusterId, hostname, itemId);
+
                 hostInfo.updateCheckItemStatus(
-                    itemId,
-                    CheckItem.Status.TERMINATING,
-                    "正在终止检查..."
-                );
-                
+                        itemId,
+                        CheckItem.Status.TERMINATING,
+                        "正在终止检查...");
+
                 // 更新缓存，使前端立即看到"终止中"状态
                 map.put(hostname, hostInfo);
                 CacheUtils.put(clusterId + Constants.HOST_MAP, map);
-                
+
                 // 在串行模式下，我们需要依赖线程中断机制来取消正在执行的检查项
                 // 调用队列管理器的取消方法，它需要负责中断正在执行检查的线程
                 hostCheckQueueManager.cancelItemTask(clusterId, hostname, itemId);
-                
+
                 // 等待一小段时间，让前端有时间显示"终止中"状态
                 // 同时给任务足够时间响应中断请求
                 try {
@@ -589,17 +593,16 @@ public class HostCheckServiceImpl implements HostCheckService {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-                
+
                 logger.info("已请求终止检查项：clusterId={}, hostname={}, itemId={}",
-                           clusterId, hostname, itemId);
+                        clusterId, hostname, itemId);
             }
 
             // 无论如何，都将检查项状态设为已跳过
             boolean updated = hostInfo.updateCheckItemStatus(
                     itemId,
                     CheckItem.Status.SKIPPED,
-                    "检查已终止"
-            );
+                    "检查已终止");
 
             if (!updated) {
                 return Result.error("检查项状态更新失败");
@@ -708,7 +711,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
         return map.get(hostname);
     }
-    
+
     /**
      * 根据ID查找检查项
      */
@@ -716,13 +719,13 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (hostInfo == null || hostInfo.getCheckItems() == null) {
             return null;
         }
-        
+
         return hostInfo.getCheckItems().stream()
                 .filter(item -> itemId.equals(item.getId()))
                 .findFirst()
                 .orElse(null);
     }
-    
+
     /**
      * 更新主机信息缓存
      */
@@ -754,14 +757,14 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 取消所有当前运行的检查任务
         logger.info("收到批量检查请求，取消当前所有检查任务");
         hostCheckQueueManager.cancelAllTasks();
-        
+
         // 等待短暂时间确保所有任务已终止
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        
+
         logger.info("开始执行新的批量检查，主机数量: {}", hostnames.size());
 
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
@@ -776,7 +779,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             try {
                 if (map.containsKey(hostname)) {
                     HostInfo hostInfo = map.get(hostname);
-                    
+
                     // 将所有检查项重置为WAITING状态
                     if (hostInfo.getCheckItems() != null) {
                         for (CheckItem item : hostInfo.getCheckItems()) {
@@ -784,10 +787,10 @@ public class HostCheckServiceImpl implements HostCheckService {
                             item.setMessage("等待检查");
                         }
                     }
-                    
+
                     // 更新缓存
                     map.put(hostname, hostInfo);
-                    
+
                     // 对单个主机启动检查
                     checkSingleHost(clusterId, hostname);
                     successHosts.add(hostname);
@@ -808,8 +811,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (failedHosts.isEmpty()) {
             message = "成功启动所有主机的检查";
         } else {
-            message = String.format("成功启动 %d 台主机的检查, %d 台主机启动失败", 
-                successHosts.size(), failedHosts.size());
+            message = String.format("成功启动 %d 台主机的检查, %d 台主机启动失败",
+                    successHosts.size(), failedHosts.size());
         }
 
         return Result.success(message);
@@ -821,14 +824,14 @@ public class HostCheckServiceImpl implements HostCheckService {
     private String getLogKey(Integer clusterId, String hostname, Integer itemId) {
         return "CHECK_ITEM_LOG_" + clusterId + "_" + hostname + "_" + itemId;
     }
-    
+
     /**
      * 获取检查日志的缓存键
      */
     private String getCheckLogKey(Integer clusterId, String hostname, Integer itemId) {
         return "CHECK_LOG_" + clusterId + "_" + hostname + "_" + itemId;
     }
-    
+
     /**
      * 获取修复日志的缓存键
      */
@@ -841,35 +844,35 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 构建检查日志缓存键
         String checkLogKey = getCheckLogKey(clusterId, hostname, itemId);
         logger.info("获取检查项日志, clusterId: {}, hostname: {}, itemId: {}, 缓存键: {}",
-            clusterId, hostname, itemId, checkLogKey);
-        
+                clusterId, hostname, itemId, checkLogKey);
+
         // 从日志管理器获取检查日志
         String log = LogEntryManager.getLogContent(checkLogKey);
-        
+
         if (log.isEmpty()) {
             logger.warn("未找到检查项日志, 缓存键: {}", checkLogKey);
-            
+
             // 尝试获取检查项信息，验证检查项是否存在
             HostInfo hostInfo = getHostInfo(clusterId, hostname);
             if (hostInfo == null) {
                 logger.warn("未找到主机: {}, clusterId: {}", hostname, clusterId);
                 return Result.success("");
             }
-            
+
             CheckItem checkItem = findCheckItemById(hostInfo, itemId);
             if (checkItem == null) {
                 logger.warn("未找到检查项: {} 在主机: {}", itemId, hostname);
                 return Result.success("");
             }
-            
+
             // 检查项存在但没有日志，可能是日志尚未生成或已过期
             logger.info("检查项存在但未找到日志, 检查项: {}, 状态: {}, 消息: {}",
-                checkItem.getItemName(), checkItem.getStatus(), checkItem.getMessage());
-            
+                    checkItem.getItemName(), checkItem.getStatus(), checkItem.getMessage());
+
             // 返回空字符串，不再生成假日志
             return Result.success("");
         }
-        
+
         logger.info("成功获取检查项日志, 长度: {}", log.length());
         return Result.success(log);
     }
@@ -881,17 +884,17 @@ public class HostCheckServiceImpl implements HostCheckService {
     public Result cancelAllCheckTasks() {
         logger.info("收到取消所有检查任务请求");
         hostCheckQueueManager.cancelAllTasks();
-        
+
         // 等待短暂时间确保所有任务已终止
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        
+
         return Result.success("已成功取消所有检查任务");
     }
-    
+
     /**
      * 重试指定的检查项
      */
@@ -910,7 +913,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
 
         logger.info("收到重试检查项请求：主机 {}, 检查项 {}", hostname, itemNames);
-        
+
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         if (map == null || !map.containsKey(hostname)) {
             return Result.error("找不到主机：" + hostname);
@@ -926,25 +929,25 @@ public class HostCheckServiceImpl implements HostCheckService {
         for (String itemId : itemNames) {
             try {
                 Integer id = Integer.parseInt(itemId);
-                
+
                 // 找到检查项
                 Optional<CheckItem> optionalItem = checkItems.stream()
                         .filter(item -> item.getId().equals(id))
                         .findFirst();
-                
+
                 if (optionalItem.isPresent()) {
                     CheckItem item = optionalItem.get();
-                    
+
                     // 如果检查项正在检查中，则跳过
                     if (item.getStatus() == CheckItem.Status.CHECKING) {
                         logger.info("检查项 {} 正在检查中，跳过重试", item.getId());
                         continue;
                     }
-                    
+
                     // 清除旧日志
                     String logKey = getLogKey(clusterId, hostname, id);
                     LogEntryManager.clearLogEntries(logKey);
-                    
+
                     // 将检查项状态设置为等待检查
                     item.setStatus(CheckItem.Status.WAITING);
                     item.setMessage("等待检查");
@@ -960,23 +963,23 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 更新缓存
             map.put(hostname, hostInfo);
             CacheUtils.put(clusterId + Constants.HOST_MAP, map);
-            
+
             // 将主机添加到检查队列
             hostCheckQueueManager.addCheckTask(clusterId, hostInfo, this);
-            
+
             return Result.success("成功将检查项添加到检查队列");
         } else {
             return Result.error("未找到需要重试的检查项");
         }
     }
-    
+
     /**
      * 创建日志记录器
      * 此方法现在返回CheckLogger接口，而不是旧的ItemLogger
      *
      * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
+     * @param hostname  主机名
+     * @param itemId    检查项ID
      * @return 日志记录器
      */
     private CheckLogger createLogger(Integer clusterId, String hostname, Integer itemId) {
@@ -996,10 +999,10 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (throwable == null) {
             return "";
         }
-        
+
         StringBuilder sb = new StringBuilder();
         try (java.io.StringWriter sw = new java.io.StringWriter();
-             java.io.PrintWriter pw = new java.io.PrintWriter(sw)) {
+                java.io.PrintWriter pw = new java.io.PrintWriter(sw)) {
             throwable.printStackTrace(pw);
             return sw.toString();
         } catch (Exception e) {
@@ -1012,7 +1015,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         try {
             // 检查项日志键和运行状态键
             String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
-            String statusKey = CHECK_TASK_STATUS_PREFIX + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
+            String statusKey = CHECK_TASK_STATUS_PREFIX + clusterId + "_" + hostInfo.getHostname() + "_"
+                    + checkItem.getId();
 
             // 检查是否已经有任务在执行
             Boolean isRunning = (Boolean) CacheUtils.get(statusKey);
@@ -1023,10 +1027,10 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             // 创建日志记录器
             CheckLogger cacheLog = createLogger(clusterId, hostInfo.getHostname(), checkItem.getId());
-            
+
             // 清空之前的日志
             CacheUtils.put(logKey, "");
-            
+
             // 添加日志头部
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             String timestamp = sdf.format(new Date());
@@ -1038,7 +1042,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             // 设置运行状态
             CacheUtils.put(statusKey, Boolean.TRUE);
-            
+
             try {
                 // 获取适合的检查器
                 ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
@@ -1048,15 +1052,15 @@ public class HostCheckServiceImpl implements HostCheckService {
                     checkItem.setMessage("配置错误：未找到合适的检查器");
                     return checkItem;
                 }
-                
+
                 // 执行检查
                 cacheLog.info("使用检查器: " + checker.getClass().getSimpleName());
                 CheckItem resultItem = checker.check(clusterId, hostInfo, checkItem);
-                
+
                 // 记录检查结果
                 cacheLog.info("检查完成，状态: " + resultItem.getStatus());
                 cacheLog.info("检查结果: " + resultItem.getMessage());
-                
+
                 return resultItem;
             } catch (Exception e) {
                 cacheLog.error("检查执行异常: " + e.getMessage());
@@ -1069,7 +1073,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 cacheLog.info("检查项执行结束: " + checkItem.getItemName());
                 cacheLog.info("结束时间: " + sdf.format(new Date()));
                 cacheLog.info("===============================================");
-                
+
                 // 重置运行状态
                 CacheUtils.put(statusKey, Boolean.FALSE);
             }
@@ -1103,7 +1107,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 创建日志记录器
                 String logKey = getLogKey(clusterId, hostname, itemId);
                 CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
-                
+
                 // 记录日志
                 cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
                 cacheLog.info("时间: " + formatDateToChinese(new Date()));
@@ -1121,39 +1125,39 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 if (success) {
                     cacheLog.info("修复成功，将重新检查项目状态");
-                    
+
                     // 修改状态为待检查，等待下次检查
                     checkItem.setStatus(CheckItem.Status.WAITING);
                     checkItem.setMessage("等待重新检查");
-                    
+
                     // 添加到成功计数
                     fixCount += 1;
-                    
+
                     // 执行异步检查
                     final Integer checkedItemId = itemId;
                     CompletableFuture.runAsync(() -> {
                         try {
                             // 暂停一小段时间，让修改生效
                             Thread.sleep(1000);
-                            
+
                             // 获取最新的主机信息
                             HostInfo latestHostInfo = getHostInfo(clusterId, hostname);
                             if (latestHostInfo == null) {
                                 cacheLog.error("重新检查失败: 未找到主机信息");
                                 return;
                             }
-                            
+
                             // 获取最新的检查项
                             CheckItem latestCheckItem = findCheckItemById(latestHostInfo, checkedItemId);
                             if (latestCheckItem == null) {
                                 cacheLog.error("重新检查失败: 未找到检查项");
                                 return;
                             }
-                            
+
                             // 重新执行检查
                             cacheLog.info("正在重新检查...");
                             executeCheckItem(latestHostInfo, latestCheckItem, clusterId);
-                            
+
                             // 更新缓存
                             updateHostInfoCache(clusterId, latestHostInfo);
                         } catch (Exception e) {
@@ -1183,55 +1187,57 @@ public class HostCheckServiceImpl implements HostCheckService {
     /**
      * 获取检查项日志（统一接口）
      * 整合了所有日志筛选功能
-     * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
-     * @param logType 日志类型，支持 "all", "check", "fix"
-     * @param logLevel 日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
+     * 
+     * @param clusterId  集群ID
+     * @param hostname   主机名
+     * @param itemId     检查项ID
+     * @param logType    日志类型，支持 "all", "check", "fix"
+     * @param logLevel   日志级别，支持 "DEBUG", "INFO", "WARN", "ERROR"
      * @param filterMode 筛选模式，"all"=全部日志, "exact"=精确级别, "min"=指定级别及以上
      * @return 筛选后的LogEntry列表
      */
     @Override
-    public List<LogEntry> getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode) {
+    public List<LogEntry> getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel,
+            String filterMode) {
         if (clusterId == null) {
             logger.error("获取日志失败：集群ID不能为空");
             return Collections.emptyList();
         }
-        
+
         if (StrUtil.isBlank(hostname)) {
             logger.error("获取日志失败：主机名不能为空");
             return Collections.emptyList();
         }
-        
+
         if (itemId == null) {
             logger.error("获取日志失败：检查项ID不能为空");
             return Collections.emptyList();
         }
-        
+
         // 设置默认值
         if (logType == null || logType.isEmpty()) {
             logType = "all";
         }
-        
+
         if (filterMode == null || filterMode.isEmpty()) {
             filterMode = "all";
         }
-        
+
         logger.info("获取检查项日志, clusterId: {}, hostname: {}, itemId: {}, 日志类型: {}, 日志级别: {}, 筛选模式: {}",
-            clusterId, hostname, itemId, logType, logLevel, filterMode);
-        
+                clusterId, hostname, itemId, logType, logLevel, filterMode);
+
         // 获取主机和检查项信息
         HostInfo hostInfo = getHostInfo(clusterId, hostname);
         CheckItem checkItem = hostInfo != null ? findCheckItemById(hostInfo, itemId) : null;
-        
+
         if (checkItem == null) {
             logger.error("获取日志失败：未找到指定的检查项");
             return Collections.emptyList();
         }
-        
+
         // 构建日志键 - 使用统一的日志键
         String logKey = getLogKey(clusterId, hostname, itemId);
-        
+
         // 转换日志类型
         LogEntry.Type type = null;
         if (!"all".equals(logType)) {
@@ -1242,7 +1248,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return Collections.emptyList();
             }
         }
-        
+
         // 转换日志级别
         LogEntry.Level level = null;
         if (!"all".equals(filterMode) && logLevel != null && !logLevel.isEmpty()) {
@@ -1253,17 +1259,17 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return Collections.emptyList();
             }
         }
-        
+
         // 获取过滤后的日志条目
         List<LogEntry> logEntries = LogEntryManager.getFilteredLogEntries(logKey, type, level, filterMode);
-        
+
         if (logEntries.isEmpty()) {
             // 如果没有找到日志，使用默认日志响应
-            logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}", 
-                clusterId, hostname, itemId);
+            logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}",
+                    clusterId, hostname, itemId);
             return Collections.emptyList();
         }
-        
+
         logger.info("成功获取检查项日志, 条目数: {}", logEntries.size());
         return logEntries;
     }
@@ -1273,9 +1279,9 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     private Result createDefaultLogResponse(Integer clusterId, String hostname, Integer itemId) {
         // 记录日志，便于追踪
-        logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}", 
-            clusterId, hostname, itemId);
-        
+        logger.warn("未找到任何日志, clusterId: {}, hostname: {}, itemId: {}",
+                clusterId, hostname, itemId);
+
         // 直接返回空字符串，不再生成假日志
         return Result.success("");
     }
@@ -1284,19 +1290,20 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 实现获取格式化后的HTML日志
      */
     @Override
-    public Result getFormattedLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel, String filterMode) {
+    public Result getFormattedLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel,
+            String filterMode) {
         // 先获取原始日志数据
         List<LogEntry> logEntries = getLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
-        
+
         // 如果是空列表，返回空日志提示
         if (logEntries.isEmpty()) {
             return Result.success("<div class=\"empty-log\">暂无日志数据</div>");
         }
-        
+
         // 转换LogLevel和LogType (如果存在)
         LogEntry.Level level = null;
         LogEntry.Type type = null;
-        
+
         if (logLevel != null && !logLevel.isEmpty() && !"all".equals(logLevel)) {
             try {
                 level = LogEntry.Level.valueOf(logLevel.toUpperCase());
@@ -1304,7 +1311,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 logger.warn("无效的日志级别: {}", logLevel);
             }
         }
-        
+
         if (logType != null && !logType.isEmpty() && !"all".equals(logType)) {
             try {
                 type = LogEntry.Type.valueOf(logType.toUpperCase());
@@ -1312,16 +1319,17 @@ public class HostCheckServiceImpl implements HostCheckService {
                 logger.warn("无效的日志类型: {}", logType);
             }
         }
-        
+
         // 使用服务层的格式化和筛选功能
         String coloredHtml = formatFilteredLogsToColoredHtml(
                 logEntries, type, level, filterMode);
-        
+
         return Result.success(coloredHtml);
     }
 
     /**
      * 将LogEntry列表转换为HTML格式的彩色日志
+     * 
      * @param logEntries 日志条目列表
      * @return HTML格式的彩色日志内容
      */
@@ -1329,66 +1337,77 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (logEntries == null || logEntries.isEmpty()) {
             return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
         }
-        
+
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
-        
+        sb.append(
+                "<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
+
         // 先添加日志统计摘要
         int errorCount = 0;
         int warnCount = 0;
         int infoCount = 0;
         int debugCount = 0;
-        
+
         for (LogEntry entry : logEntries) {
             switch (entry.getLevel()) {
-                case ERROR: errorCount++; break;
-                case WARN: warnCount++; break;
-                case INFO: infoCount++; break;
-                case DEBUG: debugCount++; break;
+                case ERROR:
+                    errorCount++;
+                    break;
+                case WARN:
+                    warnCount++;
+                    break;
+                case INFO:
+                    infoCount++;
+                    break;
+                case DEBUG:
+                    debugCount++;
+                    break;
             }
         }
-        
-        sb.append("<div class=\"log-summary\" style=\"margin-bottom: 16px; padding: 8px; background-color: #f5f5f5; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 12px;\">");
+
+        sb.append(
+                "<div class=\"log-summary\" style=\"margin-bottom: 16px; padding: 8px; background-color: #f5f5f5; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 12px;\">");
         sb.append("<span style=\"font-weight: bold;\">共 ").append(logEntries.size()).append(" 条日志:</span>");
-        
+
         if (errorCount > 0) {
             sb.append("<span style=\"color: #FF5252;\">")
-              .append("<span style=\"font-weight: bold;\">").append(errorCount).append("</span> 条错误")
-              .append("</span>");
+                    .append("<span style=\"font-weight: bold;\">").append(errorCount).append("</span> 条错误")
+                    .append("</span>");
         }
-        
+
         if (warnCount > 0) {
             sb.append("<span style=\"color: #FFD740;\">")
-              .append("<span style=\"font-weight: bold;\">").append(warnCount).append("</span> 条警告")
-              .append("</span>");
+                    .append("<span style=\"font-weight: bold;\">").append(warnCount).append("</span> 条警告")
+                    .append("</span>");
         }
-        
+
         if (infoCount > 0) {
             sb.append("<span style=\"color: #4CAF50;\">")
-              .append("<span style=\"font-weight: bold;\">").append(infoCount).append("</span> 条信息")
-              .append("</span>");
+                    .append("<span style=\"font-weight: bold;\">").append(infoCount).append("</span> 条信息")
+                    .append("</span>");
         }
-        
+
         if (debugCount > 0) {
             sb.append("<span style=\"color: #2196F3;\">")
-              .append("<span style=\"font-weight: bold;\">").append(debugCount).append("</span> 条调试")
-              .append("</span>");
+                    .append("<span style=\"font-weight: bold;\">").append(debugCount).append("</span> 条调试")
+                    .append("</span>");
         }
-        
+
         sb.append("</div>");
-        
+
         // 添加所有日志条目
         for (LogEntry entry : logEntries) {
             sb.append(entry.toColoredHtml());
         }
-        
+
         sb.append("</div>");
-        
+
         return sb.toString();
     }
-    
+
     /**
      * 将文本日志内容转换为HTML格式的彩色日志
+     * 
      * @param logContent 原始文本日志内容
      * @return HTML格式的彩色日志内容
      */
@@ -1396,16 +1415,17 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (logContent == null || logContent.isEmpty()) {
             return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
         }
-        
+
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
+        sb.append(
+                "<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
         String[] lines = logContent.split("\n");
-        
+
         // 判断是否包含堆栈跟踪
         boolean containsStackTrace = false;
         StringBuilder stackTrace = new StringBuilder();
         StringBuilder currentLine = new StringBuilder();
-        
+
         for (String line : lines) {
             // 判断是否是新的堆栈开始
             if (line.contains("Exception") || line.contains("Error")) {
@@ -1416,7 +1436,8 @@ public class HostCheckServiceImpl implements HostCheckService {
                 }
                 containsStackTrace = true;
                 stackTrace.append(line).append("\n");
-            } else if (containsStackTrace && (line.contains("at ") || line.trim().isEmpty() || line.contains("Caused by:"))) {
+            } else if (containsStackTrace
+                    && (line.contains("at ") || line.trim().isEmpty() || line.contains("Caused by:"))) {
                 // 继续追加到当前堆栈
                 stackTrace.append(line).append("\n");
             } else {
@@ -1431,17 +1452,17 @@ public class HostCheckServiceImpl implements HostCheckService {
                 sb.append(applyColorToLogLine(line));
             }
         }
-        
+
         // 处理剩余的堆栈
         if (containsStackTrace && stackTrace.length() > 0) {
             sb.append(formatStackTraceLines(stackTrace.toString()));
         }
-        
+
         sb.append("</div>");
-        
+
         return sb.toString();
     }
-    
+
     /**
      * 格式化堆栈跟踪行
      */
@@ -1449,97 +1470,102 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (stackTrace == null || stackTrace.isEmpty()) {
             return "";
         }
-        
+
         StringBuilder formatted = new StringBuilder();
-        formatted.append("<div class=\"stack-trace\" style=\"margin: 8px 0; padding: 12px; background-color: #FFF1F0; border-left: 4px solid #FF5252; border-radius: 4px;\">");
-        
+        formatted.append(
+                "<div class=\"stack-trace\" style=\"margin: 8px 0; padding: 12px; background-color: #FFF1F0; border-left: 4px solid #FF5252; border-radius: 4px;\">");
+
         String[] lines = stackTrace.split("\n");
         for (int i = 0; i < lines.length; i++) {
             String line = escapeHtml(lines[i].trim());
-            
+
             if (i == 0) {
                 // 异常标题
-                formatted.append("<div style=\"color: #FF5252; font-weight: bold; font-size: 14px; margin-bottom: 8px;\">")
-                       .append(line)
-                       .append("</div>");
+                formatted.append(
+                        "<div style=\"color: #FF5252; font-weight: bold; font-size: 14px; margin-bottom: 8px;\">")
+                        .append(line)
+                        .append("</div>");
             } else if (line.contains("at com.datasophon")) {
                 // 项目相关行
                 formatted.append("<div style=\"color: #FF5252; padding-left: 20px; margin-bottom: 2px;\">")
-                       .append(line)
-                       .append("</div>");
+                        .append(line)
+                        .append("</div>");
             } else if (line.contains("at ")) {
                 // 普通堆栈行
                 formatted.append("<div style=\"color: #777; padding-left: 20px; margin-bottom: 2px;\">")
-                       .append(line)
-                       .append("</div>");
+                        .append(line)
+                        .append("</div>");
             } else if (line.contains("Caused by:")) {
                 // 内部异常
-                formatted.append("<div style=\"color: #FF9800; font-weight: bold; margin-top: 8px; margin-bottom: 4px;\">")
-                       .append(line)
-                       .append("</div>");
+                formatted.append(
+                        "<div style=\"color: #FF9800; font-weight: bold; margin-top: 8px; margin-bottom: 4px;\">")
+                        .append(line)
+                        .append("</div>");
             } else if (!line.trim().isEmpty()) {
                 // 其他非空行
                 formatted.append("<div style=\"margin-bottom: 2px;\">")
-                       .append(line)
-                       .append("</div>");
+                        .append(line)
+                        .append("</div>");
             }
         }
-        
+
         formatted.append("</div>");
         return formatted.toString();
     }
-    
+
     /**
      * 根据日志类型和级别筛选并格式化日志
+     * 
      * @param logEntries 日志条目列表
-     * @param type 日志类型，可为null
-     * @param level 日志级别，可为null
+     * @param type       日志类型，可为null
+     * @param level      日志级别，可为null
      * @param filterMode 筛选模式，"exact" - 精确匹配, "min" - 最低级别, "all" - 所有级别
      * @return HTML格式的彩色日志内容
      */
-    private String formatFilteredLogsToColoredHtml(List<LogEntry> logEntries, 
+    private String formatFilteredLogsToColoredHtml(List<LogEntry> logEntries,
             LogEntry.Type type, LogEntry.Level level, String filterMode) {
-        
+
         if (logEntries == null || logEntries.isEmpty()) {
             return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无日志数据</div>";
         }
-        
+
         List<LogEntry> filteredEntries = logEntries;
-        
+
         // 根据类型过滤
         if (type != null) {
             filteredEntries = filteredEntries.stream()
-                .filter(entry -> entry.getType() == type)
-                .collect(Collectors.toList());
+                    .filter(entry -> entry.getType() == type)
+                    .collect(Collectors.toList());
         }
-        
+
         // 按级别过滤
         if (level != null && filterMode != null) {
             if ("exact".equals(filterMode)) {
                 // 精确匹配级别
                 filteredEntries = filteredEntries.stream()
-                    .filter(entry -> entry.getLevel() == level)
-                    .collect(Collectors.toList());
+                        .filter(entry -> entry.getLevel() == level)
+                        .collect(Collectors.toList());
             } else if ("min".equals(filterMode)) {
                 // 最小级别（当前级别及更高级别）
                 filteredEntries = filteredEntries.stream()
-                    .filter(entry -> entry.getLevel().isHigherOrEqual(level))
-                    .collect(Collectors.toList());
+                        .filter(entry -> entry.getLevel().isHigherOrEqual(level))
+                        .collect(Collectors.toList());
             }
             // "all"模式不需要过滤
         }
-        
+
         if (filteredEntries.isEmpty()) {
             return "<div class=\"empty-log\" style=\"text-align: center; padding: 20px; color: #888; font-style: italic; background-color: #f9f9f9; border-radius: 4px;\">暂无符合条件的日志数据</div>";
         }
-        
+
         // 使用彩色HTML格式化
         return formatLogsToColoredHtml(filteredEntries);
     }
-    
+
     /**
      * 为日志行应用颜色高亮
      * 根据日志级别或关键字应用不同的颜色样式
+     * 
      * @param line 日志行内容
      * @return 应用颜色样式的HTML格式日志行
      */
@@ -1547,31 +1573,41 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (line == null || line.isEmpty()) {
             return "<div></div>";
         }
-        
+
         line = escapeHtml(line);
-        
+
         // 识别日志级别并应用颜色
         if (line.contains(" ERROR ") || line.contains("[ERROR]") || line.contains("<e>")) {
             // 错误级别 - 红色
-            return String.format("<div style=\"color: #FF5252; margin-bottom: 4px; padding: 4px 8px; background-color: #FFF1F0; border-radius: 2px;\">%s</div>", line);
+            return String.format(
+                    "<div style=\"color: #FF5252; margin-bottom: 4px; padding: 4px 8px; background-color: #FFF1F0; border-radius: 2px;\">%s</div>",
+                    line);
         } else if (line.contains(" WARN ") || line.contains("[WARN]") || line.contains("<WARN>")) {
             // 警告级别 - 黄色
-            return String.format("<div style=\"color: #FFD740; margin-bottom: 4px; padding: 4px 8px; background-color: #FFFBE6; border-radius: 2px;\">%s</div>", line);
+            return String.format(
+                    "<div style=\"color: #FFD740; margin-bottom: 4px; padding: 4px 8px; background-color: #FFFBE6; border-radius: 2px;\">%s</div>",
+                    line);
         } else if (line.contains(" INFO ") || line.contains("[INFO]") || line.contains("<INFO>")) {
             // 信息级别 - 绿色
-            return String.format("<div style=\"color: #4CAF50; margin-bottom: 4px; padding: 4px 8px; background-color: #F6FFED; border-radius: 2px;\">%s</div>", line);
+            return String.format(
+                    "<div style=\"color: #4CAF50; margin-bottom: 4px; padding: 4px 8px; background-color: #F6FFED; border-radius: 2px;\">%s</div>",
+                    line);
         } else if (line.contains(" DEBUG ") || line.contains("[DEBUG]") || line.contains("<DEBUG>")) {
             // 调试级别 - 蓝色
-            return String.format("<div style=\"color: #2196F3; margin-bottom: 4px; padding: 4px 8px; background-color: #E6F7FF; border-radius: 2px;\">%s</div>", line);
+            return String.format(
+                    "<div style=\"color: #2196F3; margin-bottom: 4px; padding: 4px 8px; background-color: #E6F7FF; border-radius: 2px;\">%s</div>",
+                    line);
         } else if (line.contains(" TRACE ") || line.contains("[TRACE]") || line.contains("<TRACE>")) {
             // 跟踪级别 - 灰色
-            return String.format("<div style=\"color: #9E9E9E; margin-bottom: 4px; padding: 4px 8px; background-color: #F5F5F5; border-radius: 2px;\">%s</div>", line);
+            return String.format(
+                    "<div style=\"color: #9E9E9E; margin-bottom: 4px; padding: 4px 8px; background-color: #F5F5F5; border-radius: 2px;\">%s</div>",
+                    line);
         } else {
             // 无法识别级别 - 默认样式
             return String.format("<div style=\"margin-bottom: 4px; padding: 4px 8px;\">%s</div>", line);
         }
     }
-    
+
     /**
      * HTML特殊字符转义
      */
@@ -1579,17 +1615,18 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (content == null) {
             return "";
         }
-        
+
         return content
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#39;");
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     /**
      * 获取可用的日志级别
+     * 
      * @return 日志级别数组
      */
     @Override
@@ -1599,6 +1636,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 获取可用的日志类型
+     * 
      * @return 日志类型映射，key为类型编码，value为显示名称
      */
     @Override
@@ -1612,9 +1650,10 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 跳过指定检查项
+     * 
      * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
+     * @param hostname  主机名
+     * @param itemId    检查项ID
      * @return 跳过结果
      */
     @Override
@@ -1624,27 +1663,27 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (hostInfo == null) {
             return Result.error("找不到指定主机: " + hostname);
         }
-        
+
         // 查找对应的检查项
         CheckItem checkItem = findCheckItemById(hostInfo, itemId);
         if (checkItem == null) {
             return Result.error("找不到检查项: " + itemId);
         }
-        
+
         try {
             // 先尝试停止检查项如果正在运行
             stopItemCheck(clusterId, hostname, itemId);
-            
+
             // 更新检查项状态为已跳过
             hostInfo.updateCheckItemStatus(itemId, CheckItem.Status.SKIPPED, "用户已跳过该检查项");
-            
+
             // 更新缓存
             updateHostInfoCache(clusterId, hostInfo);
-            
+
             // 记录日志
             LoggerFactory.getCheckLogger(this, clusterId, hostname, itemId)
-                .info("用户跳过了该检查项");
-                
+                    .info("用户跳过了该检查项");
+
             return Result.success("已跳过该检查项");
         } catch (Exception e) {
             logger.error("跳过检查项时出错: " + e.getMessage(), e);
@@ -1669,7 +1708,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 获取指定主机的检查项列表
-     * @param hostname 主机名
+     * 
+     * @param hostname  主机名
      * @param clusterId 集群ID
      * @return 指定主机的检查项列表
      */
@@ -1680,7 +1720,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (hostInfoMap == null || !hostInfoMap.containsKey(hostname)) {
             return Result.error("找不到主机信息: " + hostname);
         }
-        
+
         HostInfo hostInfo = hostInfoMap.get(hostname);
         return Result.success(hostInfo.getCheckItems());
     }
@@ -1697,14 +1737,14 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         try {
             logger.info("使用SSH连接复用机制批量执行 {} 个修复项", fixItems.size());
-            
+
             // 使用AsyncCheckService的批量执行方法执行所有修复，实现SSH连接复用
             List<CheckItem> results = asyncCheckService.batchExecuteFix(clusterId, hostInfo, fixItems);
-            
+
             // 更新修复结果
             if (results != null && !results.isEmpty()) {
                 boolean allSuccess = true;
-                
+
                 for (CheckItem result : results) {
                     // 在原始修复项列表中找到对应项并更新
                     for (CheckItem item : fixItems) {
@@ -1712,7 +1752,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                             // 复制状态和消息
                             item.setStatus(result.getStatus());
                             item.setMessage(result.getMessage());
-                            
+
                             // 检查是否成功
                             if (item.getStatus() != CheckItem.Status.SUCCESS) {
                                 allSuccess = false;
@@ -1721,11 +1761,11 @@ public class HostCheckServiceImpl implements HostCheckService {
                         }
                     }
                 }
-                
+
                 // 更新缓存
                 updateHostInfoCache(clusterId, hostInfo);
                 logger.info("所有修复项执行完成，结果: {}", allSuccess ? "全部成功" : "部分失败");
-                
+
                 return allSuccess;
             } else {
                 logger.error("批量执行修复项失败，结果为空");
@@ -1763,10 +1803,10 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         try {
             logger.info("使用SSH连接复用机制批量执行 {} 个检查项", checkItems.size());
-            
+
             // 使用AsyncCheckService的批量执行方法执行所有检查，实现SSH连接复用
             List<CheckItem> results = asyncCheckService.batchExecuteCheck(clusterId, hostInfo, checkItems);
-            
+
             // 更新检查结果
             if (results != null && !results.isEmpty()) {
                 for (CheckItem result : results) {
@@ -1787,11 +1827,11 @@ public class HostCheckServiceImpl implements HostCheckService {
                     item.setMessage("执行检查时发生内部错误");
                 }
             }
-            
+
             // 更新缓存
             updateHostInfoCache(clusterId, hostInfo);
             logger.info("所有检查项执行完成");
-            
+
         } catch (Exception e) {
             logger.error("执行检查时发生错误: {}", e.getMessage(), e);
             // 将所有检查项设置为失败

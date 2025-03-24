@@ -994,8 +994,10 @@ export default {
     this.startUptimeTimer();
     // 初始化加载数据
     this.fetchFullStatusOnce();
-    // 默认开启自动刷新
-    this.startAutoRefresh();
+    
+    // 默认不开启自动刷新，等待模态框打开时再启动
+    this.isAutoRefresh = false;
+    console.log('QueueStatusIndicator组件已创建，初始化完成');
   },
   beforeDestroy() {
     // 组件销毁前清除定时器
@@ -1003,7 +1005,17 @@ export default {
     // 清理定时器
     if (this.uptimeTimer) {
       clearInterval(this.uptimeTimer);
+      this.uptimeTimer = null;
     }
+    // 确保所有定时器都被清除
+    if (this.refreshInterval) {
+      clearTimeout(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+    // 重置状态
+    this.isAutoRefresh = false;
+    
+    console.log('QueueStatusIndicator组件已销毁，所有定时器已清除');
   },
   watch: {
     // 监听任务状态变化，自动同步总状态
@@ -1013,16 +1025,17 @@ export default {
     },
     // 监听详情弹窗状态
     showDetailModal(newVal) {
+      console.log('详情弹窗状态变更:', newVal ? '打开' : '关闭');
       if (newVal) {
         // 详情弹窗打开时，立即获取一次数据
         this.fetchFullStatusOnce();
-        // 如果设置了自动刷新，确保开启
-        if (this.isAutoRefresh && !this.refreshInterval) {
-          this.startAutoRefresh();
-        }
+        // 确保开启自动刷新
+        this.isAutoRefresh = true;
+        this.startAutoRefresh();
       } else {
-        // 详情弹窗关闭时，如果没有其他需要自动刷新的界面，可以停止刷新
-        // 这里可以根据需要决定是否在关闭弹窗时停止刷新
+        // 详情弹窗关闭时，停止自动刷新
+        console.log('详情弹窗关闭，停止自动刷新');
+        this.stopAutoRefresh();
       }
     }
   },
@@ -1179,48 +1192,72 @@ export default {
     
     // 启动自动刷新
     startAutoRefresh() {
-      if (this.isAutoRefresh && this.refreshInterval) {
-        // 如果已经在自动刷新中，不需要再次启动
+      console.log('启动自动刷新');
+      
+      // 设置状态
+      this.isAutoRefresh = true;
+      
+      // 如果已有定时器在运行，不需要再次启动
+      if (this.refreshInterval) {
         console.log('自动刷新已经在运行中，无需重复启动');
         return;
       }
       
-      console.log('启动自动刷新');
-      this.isAutoRefresh = true;
-      // 先清除可能存在的定时器
-      if (this.refreshInterval) {
-        clearTimeout(this.refreshInterval);
-        this.refreshInterval = null;
-      }
       // 使用递归的方式，确保上一个请求完成后再发起下一个
       this.scheduleNextRefresh();
     },
     
     // 安排下一次刷新
     scheduleNextRefresh() {
-      if (!this.isAutoRefresh) return;
+      // 如果自动刷新已关闭，直接返回
+      if (!this.isAutoRefresh) {
+        console.log('自动刷新已停止，不再安排下一次刷新');
+        return;
+      }
       
       console.log('安排下一次刷新，1秒后执行');
       this.refreshInterval = setTimeout(async () => {
-        // 先执行数据获取
-        await this.fetchFullStatusOnce();
-        this.updateQueueProcessorUptime();
-        
-        // 然后安排下一次刷新
-        if (this.isAutoRefresh) {
-          this.scheduleNextRefresh();
+        try {
+          // 再次检查是否应该继续刷新（可能在等待期间被停止）
+          if (!this.isAutoRefresh) {
+            console.log('刷新已在等待期间被停止');
+            return;
+          }
+          
+          // 先执行数据获取
+          await this.fetchFullStatusOnce();
+          this.updateQueueProcessorUptime();
+          
+          // 然后安排下一次刷新（只要自动刷新标志为true就继续）
+          if (this.isAutoRefresh) {
+            this.scheduleNextRefresh();
+          }
+        } catch (error) {
+          console.error('自动刷新过程中发生错误:', error);
+          // 出错时也继续下一次刷新，但可以适当延长间隔
+          if (this.isAutoRefresh) {
+            setTimeout(() => this.scheduleNextRefresh(), 3000); // 错误后延长到3秒再试
+          }
         }
       }, 1000); // 间隔1秒
     },
     
     // 停止自动刷新
     stopAutoRefresh() {
+      // 先标记状态，防止新的刷新被安排
+      this.isAutoRefresh = false;
+      
+      // 清除定时器
       if (this.refreshInterval) {
-        console.log('停止自动刷新');
+        console.log('停止自动刷新，清除定时器');
         clearTimeout(this.refreshInterval);
         this.refreshInterval = null;
       }
-      this.isAutoRefresh = false;
+      
+      // 取消可能正在进行的请求（如果有需要）
+      // 这里可以添加取消请求的逻辑，例如使用axios取消令牌
+      
+      console.log('自动刷新已彻底停止');
     },
     
     // 单次获取数据，确保不会重复请求
