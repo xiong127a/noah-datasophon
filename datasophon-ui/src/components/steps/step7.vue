@@ -219,21 +219,16 @@ export default {
               })
           );
         }
-        console.log("allFormData",allFormData);
         // 2. 处理复合数据结构
         const mergedData = {
           ...allFormData,
           ...this.handlearrayWithData(allFormData),
           ...this.handleMultipleData(allFormData)
         };
-        console.log("mergedData",mergedData);
         // 3. 安全更新配置项
         const param = (this.templateObj[currentService] || []).map(item => {
           if (item?.name) {
             const formKey = item.name.replace(/\./g, "!"); // 使用正则全局替换
-            console.log("formKey",formKey);
-            console.log("item.value",item.value);
-            console.log("mergedData[formKey]",mergedData[formKey]);
             return {
               ...item,
               value: mergedData[formKey] ?? item.value
@@ -241,12 +236,10 @@ export default {
           }
           return item;
         });
-        console.log("param",param);
         // 4. 过滤有效参数
         let filterParam = param.filter(
             (item) => !(!item.required && item.hidden)
         );
-        console.log("filterParam",filterParam);
         // 5. 提交保存
         const saveParam = {
           clusterId: this.setting.clusterId || this.clusterId,
@@ -329,7 +322,9 @@ export default {
               configGroup: (item.configGroup || 'CommonConfig').toString()
             };
           });
-
+      validData.forEach((item) => {
+        item.name = item.name.replaceAll(".", "!");
+      });
       // 后续分组逻辑不变
       const groupedData = _.groupBy(validData, item =>
           item.configGroup.replace(/^"+|"+$/g, '').trim() || 'CommonConfig'
@@ -386,30 +381,24 @@ export default {
     // 修改后的 submitAllServices 方法
     submitAllServices(callback) {
       const self = this;
-      console.log("const self:", self);
 
       // 生成所有服务的Promise数组
       const promises = this.SERVICENAMES.map(serviceName =>
           new Promise((resolve) => {
-            console.log("const promises:", promises);
 
             const processService = async () => {
               try {
                 // 初始化所有表单数据
                 const allFormData = {};
-                console.log("const allFormData:", allFormData);
 
                 const groups = self.groupedTemplateData[serviceName] || {}; // 获取当前服务的表单数据
-                console.log("const groups:", groups);
 
                 // 遍历每个配置组（`groupName`）
                 for (const groupName of Object.keys(groups)) {
                   // 动态生成表单组件的引用名
                   const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
-                  console.log("const refName:", refName);
 
                   const formRef = self.$refs[refName]?.[0]; // 获取表单组件的引用
-                  console.log("const formRef:", formRef);
 
                   // 如果找不到表单组件，输出警告并跳过该组
                   if (!formRef) {
@@ -420,7 +409,6 @@ export default {
                   // 验证表单数据并收集字段值
                   await formRef.form.validateFields();  // 表单验证
                   const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
-                  console.log("const rawData:", rawData);
 
                   // 处理字段名（替换“.”为“!”）
                   const convertedData = Object.keys(rawData).reduce((acc, key) => {
@@ -428,7 +416,6 @@ export default {
                     acc[newKey] = rawData[key];
                     return acc;
                   }, {});
-                  console.log("const convertedData:", convertedData);
 
                   // 合并所有表单数据
                   Object.assign(allFormData, convertedData);
@@ -440,7 +427,6 @@ export default {
                   ...this.handlearrayWithData(allFormData),
                   ...this.handleMultipleData(allFormData)
                 };
-                console.log("const mergedData:", mergedData);
 
                 // 构建提交的参数
                 const param = (this.templateObj[serviceName] || []).map(item => {
@@ -451,11 +437,9 @@ export default {
                     value: mergedData[formKey] ?? item.value // 将字段值替换为合并后的值
                   };
                 });
-                console.log("const param:", param);
 
                 // 过滤不必要的字段（如未设置的必需字段和隐藏字段）
                 const filterParam = param.filter(item => !(!item.required && item.hidden));
-                console.log("const filterParam:", filterParam);
 
                 // 提交表单数据到服务器保存服务配置
                 const res = await this.$axiosPost(global.API.saveServiceConfig, {
@@ -463,7 +447,6 @@ export default {
                   serviceName,
                   serviceConfig: JSON.stringify(filterParam) // 服务配置转为JSON格式
                 });
-                console.log("const res:", res);
 
                 // 保存配置成功，返回结果
                 resolve({...res, name: serviceName});
@@ -504,11 +487,9 @@ export default {
             serviceNames: this.SERVICENAMES, // 传递所有服务名称
             commandType: this.steps.commandType // 获取命令类型
           };
-          console.log("const params:", params);
 
           // 生成执行命令
           const genCmdRes = await this.$axiosPost(global.API.generateCommand, params);
-          console.log("const genCmdRes:", genCmdRes);
 
           this.setCommandIds(genCmdRes.data); // 保存生成的命令ID
 
@@ -517,7 +498,6 @@ export default {
             ...params,
             commandIds: genCmdRes.data // 传递生成的命令ID以启动执行
           });
-          console.log("const execRes:", execRes);
 
           // 执行命令成功，调用回调返回结果
           callback?.(execRes);
