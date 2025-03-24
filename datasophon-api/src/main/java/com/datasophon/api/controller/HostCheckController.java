@@ -2,9 +2,9 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
-import com.datasophon.api.service.checker.QueueManagerService;
-import com.datasophon.api.service.checker.impl.AsyncCheckService;
-import com.datasophon.api.service.checker.impl.HostCheckQueueManager;
+import com.datasophon.api.service.checker.queue.QueueManagerService;
+import com.datasophon.api.service.checker.AsyncCheckService;
+import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.common.model.ScheduledTasksStatus;
 import com.datasophon.common.model.ScheduleConfigResult;
 import com.datasophon.common.model.QueueSystemStatus;

@@ -32,7 +32,7 @@ import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
-import com.datasophon.api.service.checker.impl.HostCheckQueueManager;
+import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
 import com.datasophon.api.utils.MinaUtils;
