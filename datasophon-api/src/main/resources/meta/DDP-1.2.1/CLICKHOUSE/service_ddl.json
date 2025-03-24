@@ -48,8 +48,9 @@
   "configWriter": {
     "generators": [
       {
-        "filename": "config.xml",
+        "filename": "ClickHouse",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "etc",
         "templateName": "clickhouse-server-config.ftl",
         "includeParams": [

@@ -206,7 +206,6 @@ export default {
       try {
         const currentService = this.serviceNameKey;
         const allFormData = {};
-
         // 1. 收集所有分组表单数据（新版结构）
         if (this.groupedTemplateData[currentService]) {
           await Promise.all(
@@ -220,18 +219,21 @@ export default {
               })
           );
         }
-
+        console.log("allFormData",allFormData);
         // 2. 处理复合数据结构
         const mergedData = {
           ...allFormData,
           ...this.handlearrayWithData(allFormData),
           ...this.handleMultipleData(allFormData)
         };
-
+        console.log("mergedData",mergedData);
         // 3. 安全更新配置项
         const param = (this.templateObj[currentService] || []).map(item => {
           if (item?.name) {
             const formKey = item.name.replace(/\./g, "!"); // 使用正则全局替换
+            console.log("formKey",formKey);
+            console.log("item.value",item.value);
+            console.log("mergedData[formKey]",mergedData[formKey]);
             return {
               ...item,
               value: mergedData[formKey] ?? item.value
@@ -239,10 +241,12 @@ export default {
           }
           return item;
         });
+        console.log("param",param);
         // 4. 过滤有效参数
         let filterParam = param.filter(
             (item) => !(!item.required && item.hidden)
         );
+        console.log("filterParam",filterParam);
         // 5. 提交保存
         const saveParam = {
           clusterId: this.setting.clusterId || this.clusterId,
@@ -292,6 +296,7 @@ export default {
               })));
             });
 
+
             this.$set(this.groupedTemplateData, serviceName,
                 this.handlerTemplate(serviceName, allConfigs)
             );
@@ -305,37 +310,35 @@ export default {
       });
     },
     handlerTemplate(serviceName, data) {
-      // 数据校验加强版
       const validData = (Array.isArray(data) ? data : [])
           .filter(item => {
-            const isValid = item &&
-                typeof item === 'object' &&
-                'name' in item &&
-                'configGroup' in item;
-            if (!isValid) {
-              console.warn('Invalid config item:', item);
-            }
+            const isValid = item && typeof item === 'object' && 'name' in item;
             return isValid;
           })
-          .map(item => ({
-            ...item,
-            name: (item.name || '').toString(),
-            configGroup: (item.configGroup || 'CommonConfig').toString()
-          }));
+          .map(item => {
+            let value = item.value;
 
-      // 分组处理
-      const groupedData = _.groupBy(validData, item => {
-        return item.configGroup
-            .replace(/^"+|"+$/g, '') // 去除首尾引号
-            .trim() || 'CommonConfig';
-      });
+            if (item.type === 'switch' || item.type === 'boolean') {
+              value = String(value).toLowerCase() === 'true';
+            }
 
-      // 初始化分组状态
+            return {
+              ...item,
+              value, // 转换后的值
+              name: (item.name || '').toString(),
+              configGroup: (item.configGroup || 'CommonConfig').toString()
+            };
+          });
+
+      // 后续分组逻辑不变
+      const groupedData = _.groupBy(validData, item =>
+          item.configGroup.replace(/^"+|"+$/g, '').trim() || 'CommonConfig'
+      );
+
       this.$set(this.isGroupExpanded, serviceName, {});
       Object.keys(groupedData).forEach(groupName => {
-        this.$set(this.isGroupExpanded[serviceName], groupName, false); // 默认展开
+        this.$set(this.isGroupExpanded[serviceName], groupName, false);
       });
-
       return groupedData;
     },
     // 新增分组切换方法
@@ -383,115 +386,148 @@ export default {
     // 修改后的 submitAllServices 方法
     submitAllServices(callback) {
       const self = this;
+      console.log("const self:", self);
 
-      // 1. 生成所有服务的Promise数组
+      // 生成所有服务的Promise数组
       const promises = this.SERVICENAMES.map(serviceName =>
           new Promise((resolve) => {
-            // 2. 定义异步处理函数
+            console.log("const promises:", promises);
+
             const processService = async () => {
               try {
-                // 3. 收集所有分组的表单数据
+                // 初始化所有表单数据
                 const allFormData = {};
-                const groups = self.groupedTemplateData[serviceName] || {};
+                console.log("const allFormData:", allFormData);
 
-                // 遍历每个配置组
+                const groups = self.groupedTemplateData[serviceName] || {}; // 获取当前服务的表单数据
+                console.log("const groups:", groups);
+
+                // 遍历每个配置组（`groupName`）
                 for (const groupName of Object.keys(groups)) {
+                  // 动态生成表单组件的引用名
                   const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
-                  const formRef = self.$refs[refName]?.[0];
+                  console.log("const refName:", refName);
 
-                  // 4. 校验分组表单是否存在
+                  const formRef = self.$refs[refName]?.[0]; // 获取表单组件的引用
+                  console.log("const formRef:", formRef);
+
+                  // 如果找不到表单组件，输出警告并跳过该组
                   if (!formRef) {
                     console.warn(`[${serviceName}] 缺失表单组件: ${refName}`);
                     continue;
                   }
 
-                  // 5. 执行表单校验
-                  await formRef.form.validateFields();
-                  Object.assign(allFormData, formRef.form.getFieldsValue());
+                  // 验证表单数据并收集字段值
+                  await formRef.form.validateFields();  // 表单验证
+                  const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
+                  console.log("const rawData:", rawData);
+
+                  // 处理字段名（替换“.”为“!”）
+                  const convertedData = Object.keys(rawData).reduce((acc, key) => {
+                    const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
+                    acc[newKey] = rawData[key];
+                    return acc;
+                  }, {});
+                  console.log("const convertedData:", convertedData);
+
+                  // 合并所有表单数据
+                  Object.assign(allFormData, convertedData);
                 }
 
-                // 6. 处理复合数据结构
+                // 处理复合数据，调用外部函数处理数组和多重数据
                 const mergedData = {
                   ...allFormData,
                   ...this.handlearrayWithData(allFormData),
                   ...this.handleMultipleData(allFormData)
                 };
+                console.log("const mergedData:", mergedData);
 
-                // 7. 构建提交参数
-                const param = (this.templateObj[serviceName] || []).map(item => ({
-                  ...item,
-                  value: mergedData[item.name.replace(/\./g, "!")] ?? item.value
-                }));
+                // 构建提交的参数
+                const param = (this.templateObj[serviceName] || []).map(item => {
+                  const formKey = item.name.replace(/\./g, "!");
 
-                // 8. 过滤有效参数
-                const filterParam = param.filter(
-                    item => !(!item.required && item.hidden)
-                );
-
-                // 9. 提交保存
-                const res = await this.$axiosPost(global.API.saveServiceConfig, {
-                  clusterId: this.setting.clusterId || this.clusterId,
-                  serviceName,
-                  serviceConfig: JSON.stringify(filterParam)
+                  return {
+                    ...item,
+                    value: mergedData[formKey] ?? item.value // 将字段值替换为合并后的值
+                  };
                 });
+                console.log("const param:", param);
 
+                // 过滤不必要的字段（如未设置的必需字段和隐藏字段）
+                const filterParam = param.filter(item => !(!item.required && item.hidden));
+                console.log("const filterParam:", filterParam);
+
+                // 提交表单数据到服务器保存服务配置
+                const res = await this.$axiosPost(global.API.saveServiceConfig, {
+                  clusterId: this.setting.clusterId || this.clusterId, // 获取集群ID
+                  serviceName,
+                  serviceConfig: JSON.stringify(filterParam) // 服务配置转为JSON格式
+                });
+                console.log("const res:", res);
+
+                // 保存配置成功，返回结果
                 resolve({...res, name: serviceName});
               } catch (error) {
-                // 10. 统一错误处理
+                // 捕获并处理异常，保存失败时返回错误信息
                 console.error(`[${serviceName}] 配置保存失败:`, error);
-                resolve({
-                  code: 500,
-                  name: serviceName,
-                  msg: error.message || error.msg
-                });
+                resolve({ code: 500, name: serviceName, msg: error.message });
               }
             };
 
-            // 11. 执行异步处理
-            processService().catch(error =>
-                resolve({code: 500, name: serviceName, msg: error.message})
-            );
+            // 执行服务处理函数
+            processService();
           })
       );
+      console.log("const promises after map:", promises);
 
-      // 12. 处理所有结果
+      // 等待所有服务的Promise执行完毕
       Promise.all(promises).then(async (results) => {
-        const failedServices = results.filter(r => r.code !== 200);
+        console.log("const results:", results);
 
-        // 13. 处理失败项
+        // 筛选出失败的服务
+        const failedServices = results.filter(r => r.code !== 200);
+        console.log("const failedServices:", failedServices);
+
+        // 处理失败项：显示错误信息并调用回调
         if (failedServices.length > 0) {
           failedServices.forEach(({name, msg}) =>
               this.$message.error(`${name} 配置保存失败: ${msg}`)
           );
-          callback?.({code: 500});
+          callback?.({code: 500}); // 如果有失败项，调用回调返回失败状态
           return;
         }
 
-        // 14. 后续流程处理
+        // 如果所有配置保存成功，进行后续命令处理
         try {
           const params = {
-            clusterId: this.setting.clusterId || this.clusterId,
-            serviceNames: this.SERVICENAMES,
-            commandType: this.steps.commandType
+            clusterId: this.setting.clusterId || this.clusterId, // 获取集群ID
+            serviceNames: this.SERVICENAMES, // 传递所有服务名称
+            commandType: this.steps.commandType // 获取命令类型
           };
+          console.log("const params:", params);
 
-          // 15. 生成执行命令
+          // 生成执行命令
           const genCmdRes = await this.$axiosPost(global.API.generateCommand, params);
-          this.setCommandIds(genCmdRes.data);
+          console.log("const genCmdRes:", genCmdRes);
 
-          // 16. 启动执行
+          this.setCommandIds(genCmdRes.data); // 保存生成的命令ID
+
+          // 启动执行命令
           const execRes = await this.$axiosPost(global.API.startExecuteCommand, {
             ...params,
-            commandIds: genCmdRes.data
+            commandIds: genCmdRes.data // 传递生成的命令ID以启动执行
           });
+          console.log("const execRes:", execRes);
 
+          // 执行命令成功，调用回调返回结果
           callback?.(execRes);
         } catch (error) {
+          // 捕获并处理异常，命令执行失败时输出错误
           console.error('命令执行流程失败:', error);
-          callback?.({code: 500});
+          callback?.({code: 500}); // 如果执行失败，返回失败状态
         }
       });
-    },
+  },
     //  从第七步进入第八步的请求
     async nextSteps(callback) {
       let res = {code: 0};
