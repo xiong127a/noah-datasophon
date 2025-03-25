@@ -8,11 +8,12 @@ public enum ItemCode {
     DISK("DISK", "磁盘空间检查", 2, true, "磁盘空间不足无法自动修复，需要您手动增加磁盘空间。确定要继续尝试修复吗？"),
     MEMORY("MEMORY", "内存检查", 3, true, "内存不足无法自动修复，需要您手动增加内存。确定要继续尝试修复吗？"),
     CPU("CPU", "CPU检查", 4, true, "CPU核心数不足无法自动修复，需要您手动增加CPU资源。确定要继续尝试修复吗？"),
-    JAVA_ENV("JAVA_ENV", "Java环境检查", 5, false, null),
+    JAVA_ENV("JAVA_ENV", "专用Java环境检查", 5, false, null),
     FILE_HANDLE("FILE_HANDLE", "最大文件句柄数检查", 6, false, null),
     FIREWALL("FIREWALL", "防火墙检查", 7, false, null),
     SELINUX("SELINUX", "SELinux检查", 8, false, null),
     TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null);
+
     private final String code;
     private final String name;
     private final int sequence;
