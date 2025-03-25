@@ -1,15 +1,16 @@
 package com.datasophon.api.service.checker.core;
 
-import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.common.LinuxDistribution;
+import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
 import com.datasophon.common.model.LogEntry;
-import com.datasophon.api.service.checker.common.OsInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,9 +33,6 @@ public abstract class AbstractItemChecker implements ItemChecker {
     private static final Map<String, OsInfo> hostOsInfoCache = new ConcurrentHashMap<>();
 
     // 支持的Linux发行版类型枚举
-    public enum LinuxDistribution {
-        CENTOS, REDHAT, UBUNTU, DEBIAN, FEDORA, SUSE, KYLIN, OPENEULER, UNKNOWN
-    }
 
     protected ClientSession session;
     // 当前检查项的日志缓存键
@@ -116,7 +114,15 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 // 设置Linux发行版类型
                 osInfo.setDistribution(determineDistribution(distroId));
 
-                cacheLog.info("操作系统: %s, 版本: %s", prettyName, versionId);
+                // 确保操作系统类型与ID保持一致
+                if (osInfo.getDistribution() == LinuxDistribution.OTHER && !distroId.isEmpty()) {
+                    logger.warn("操作系统类型识别异常，distroId='{}' 但 distribution={}，尝试强制更新",
+                            distroId, osInfo.getDistribution());
+                    osInfo.forceUpdateDistribution();
+                    logger.info("更新后的操作系统类型：{}", osInfo.getDistribution());
+                }
+
+                cacheLog.info("操作系统: %s, 版本: %s, 类型: %s", prettyName, versionId, osInfo.getDistribution());
             } else {
                 // 如果/etc/os-release不存在，尝试其他方法
 
@@ -161,11 +167,11 @@ public abstract class AbstractItemChecker implements ItemChecker {
                         CommandResult unameResult = execCommand(session, "uname -a");
                         if (unameResult.isSuccess()) {
                             osInfo.setFullName(unameResult.getOutput().trim());
-                            osInfo.setDistribution(LinuxDistribution.UNKNOWN);
+                            osInfo.setDistribution(LinuxDistribution.OTHER);
                             cacheLog.info("无法确定具体Linux发行版，uname输出: %s", unameResult.getOutput().trim());
                         } else {
                             cacheLog.warn("无法确定操作系统类型和版本");
-                            osInfo.setDistribution(LinuxDistribution.UNKNOWN);
+                            osInfo.setDistribution(LinuxDistribution.OTHER);
                         }
                     }
                 }
@@ -181,11 +187,22 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } catch (Exception e) {
             logger.error("获取操作系统信息时发生错误: {}", e.getMessage(), e);
             cacheLog.error("获取操作系统信息失败: %s", e.getMessage());
-            osInfo.setDistribution(LinuxDistribution.UNKNOWN);
+            osInfo.setDistribution(LinuxDistribution.OTHER);
         }
 
         // 设置有效性并缓存结果
         osInfo.setValid(true);
+
+        // 最后一次确保操作系统类型与ID保持一致
+        if (osInfo.getDistribution() == LinuxDistribution.OTHER &&
+                osInfo.getDistributionId() != null && !osInfo.getDistributionId().isEmpty()) {
+            logger.warn("缓存前检测到操作系统类型可能不一致: distributionId='{}' 但 distribution={}",
+                    osInfo.getDistributionId(), osInfo.getDistribution());
+            osInfo.forceUpdateDistribution();
+            logger.info("缓存前更新后的操作系统类型: {}", osInfo.getDistribution());
+        }
+
+        logger.info("最终确定的操作系统信息: {}", osInfo);
         hostOsInfoCache.put(cacheKey, osInfo);
         return osInfo;
     }
@@ -264,7 +281,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
      */
     private LinuxDistribution determineDistribution(String distroId) {
         if (distroId == null) {
-            return LinuxDistribution.UNKNOWN;
+            return LinuxDistribution.OTHER;
         }
 
         distroId = distroId.toLowerCase();
@@ -286,7 +303,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } else if (distroId.contains("openeuler")) {
             return LinuxDistribution.OPENEULER;
         } else {
-            return LinuxDistribution.UNKNOWN;
+            return LinuxDistribution.OTHER;
         }
     }
 

@@ -1,4 +1,4 @@
-package com.datasophon.common.model;
+package com.datasophon.api.service.checker.common;
 
 import lombok.Getter;
 

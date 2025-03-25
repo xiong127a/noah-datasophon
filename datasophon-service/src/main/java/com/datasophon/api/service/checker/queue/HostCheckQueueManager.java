@@ -6,7 +6,7 @@ import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.service.impl.HostCheckServiceImpl;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;

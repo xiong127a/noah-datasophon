@@ -14,7 +14,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.Result;
 import org.apache.sshd.client.session.ClientSession;

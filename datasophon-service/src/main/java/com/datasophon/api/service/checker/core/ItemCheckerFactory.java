@@ -1,6 +1,6 @@
 package com.datasophon.api.service.checker.core;
 
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

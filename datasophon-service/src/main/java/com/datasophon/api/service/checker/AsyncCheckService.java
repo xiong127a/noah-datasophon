@@ -11,7 +11,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.AsyncServiceStatus;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.ScheduledTasksStatus;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.channel.ClientChannelEvent;

@@ -1,7 +1,5 @@
 package com.datasophon.api.service.checker.common;
 
-import com.datasophon.api.service.checker.core.AbstractItemChecker.LinuxDistribution;
-
 /**
  * 操作系统信息类
  * 存储主机操作系统相关信息
@@ -20,7 +18,7 @@ public class OsInfo {
     private String fullName = "";
 
     // Linux发行版类型
-    private LinuxDistribution distribution = LinuxDistribution.UNKNOWN;
+    private LinuxDistribution distribution = LinuxDistribution.OTHER;
 
     // 信息是否有效
     private boolean valid = false;
@@ -169,6 +167,41 @@ public class OsInfo {
      */
     public boolean isValid() {
         return valid;
+    }
+
+    /**
+     * 根据distributionId强制更新distribution枚举值
+     * 解决某些情况下distributionId和distribution不一致的问题
+     */
+    public void forceUpdateDistribution() {
+        if (this.distributionId == null || this.distributionId.isEmpty()) {
+            return;
+        }
+
+        // 将ID转为小写以便更好地进行比较
+        String lowerDistroId = this.distributionId.toLowerCase().trim();
+
+        // 根据分发ID判断Linux发行版类型
+        if (lowerDistroId.contains("centos")) {
+            this.distribution = LinuxDistribution.CENTOS;
+        } else if (lowerDistroId.contains("rhel") || lowerDistroId.contains("redhat")
+                || lowerDistroId.contains("red hat")) {
+            this.distribution = LinuxDistribution.REDHAT;
+        } else if (lowerDistroId.contains("ubuntu")) {
+            this.distribution = LinuxDistribution.UBUNTU;
+        } else if (lowerDistroId.contains("debian")) {
+            this.distribution = LinuxDistribution.DEBIAN;
+        } else if (lowerDistroId.contains("fedora")) {
+            this.distribution = LinuxDistribution.FEDORA;
+        } else if (lowerDistroId.contains("suse") || lowerDistroId.contains("sles")) {
+            this.distribution = LinuxDistribution.SUSE;
+        } else if (lowerDistroId.contains("kylin")) {
+            this.distribution = LinuxDistribution.KYLIN;
+        } else if (lowerDistroId.contains("openeuler")) {
+            this.distribution = LinuxDistribution.OPENEULER;
+        } else {
+            this.distribution = LinuxDistribution.OTHER;
+        }
     }
 
     // Getter 和 Setter 方法

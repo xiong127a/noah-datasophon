@@ -2,7 +2,7 @@ package com.datasophon.api.service.checker.core;
 
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 
 public interface ItemChecker {
     /**

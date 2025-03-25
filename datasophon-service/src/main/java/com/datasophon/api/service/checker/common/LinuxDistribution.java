@@ -44,7 +44,7 @@ public enum LinuxDistribution {
     /**
      * 其他发行版
      */
-    OTHER("unknown");
+    OTHER("unknown"), FEDORA("fedora"), OPENEULER("openeuler");
 
     /**
      * 发行版标识符列表，一个发行版可能有多个标识符
@@ -53,7 +53,7 @@ public enum LinuxDistribution {
 
     /**
      * 构造函数
-     * 
+     *
      * @param identifiers 发行版标识符列表
      */
     LinuxDistribution(String... identifiers) {
@@ -62,7 +62,7 @@ public enum LinuxDistribution {
 
     /**
      * 获取发行版标识符列表
-     * 
+     *
      * @return 标识符列表
      */
     public String[] getIdentifiers() {
@@ -71,7 +71,7 @@ public enum LinuxDistribution {
 
     /**
      * 检查传入的标识符是否匹配当前发行版
-     * 
+     *
      * @param id 要检查的标识符
      * @return 如果匹配返回true，否则返回false
      */
@@ -92,7 +92,7 @@ public enum LinuxDistribution {
 
     /**
      * 根据标识符获取对应的发行版枚举
-     * 
+     *
      * @param id 发行版标识符
      * @return 匹配的发行版枚举，如果没有匹配项则返回OTHER
      */

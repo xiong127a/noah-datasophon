@@ -4,7 +4,7 @@ import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.ItemCode;
+import com.datasophon.api.service.checker.common.ItemCode;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
