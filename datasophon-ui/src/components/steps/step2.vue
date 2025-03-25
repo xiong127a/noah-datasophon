@@ -709,30 +709,96 @@ export default {
             // 检查文本是否存在
             if (!text) return h('span', {}, ['-']);
             
-            // 检查文本长度，如果超过20个字符就截断并显示省略号
-            const isLongText = text.length > 20;
-            const displayText = isLongText ? text.substr(0, 20) + '...' : text;
+            // 不再限制文本长度，所有检查项都显示悬浮提示
+            const displayText = text;
             
             // 使用a-tooltip组件提供鼠标悬浮显示完整内容的功能
             return h('a-tooltip', {
               props: {
-                // 只有当文本较长时才显示tooltip
-                title: isLongText ? text : '',
-                placement: 'topLeft',
-                // 只有当文本较长时才启用tooltip
-                mouseEnterDelay: isLongText ? 0.5 : 100000
+                title: h('div', { 
+                  class: 'check-result-tooltip',
+                  style: {
+                    maxWidth: '1200px',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)',
+                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                    color: '#333',
+                    fontSize: '14px',
+                    lineHeight: '1.6',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap'
+                  }
+                }, [
+                  // 添加标题行
+                  h('div', {
+                    style: {
+                      fontWeight: 'bold',
+                      marginBottom: '6px',
+                      borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+                      paddingBottom: '6px',
+                      color: row.status === 'SUCCESS' ? '#52c41a' : 
+                             row.status === 'FAILED' ? '#f5222d' :
+                             row.status === 'SKIPPED' ? '#d9d9d9' :
+                             row.status === 'CHECKING' ? '#1890ff' : '#333'
+                    }
+                  }, [
+                    h('a-icon', {
+                      props: {
+                        type: row.status === 'SUCCESS' ? 'check-circle' :
+                              row.status === 'FAILED' ? 'close-circle' :
+                              row.status === 'SKIPPED' ? 'warning' :
+                              row.status === 'CHECKING' ? 'loading' : 'info-circle',
+                        theme: row.status !== 'CHECKING' ? 'filled' : undefined,
+                        spin: row.status === 'CHECKING'
+                      },
+                      style: {
+                        marginRight: '8px',
+                      }
+                    }),
+                    '检查结果详情'
+                  ]),
+                  // 添加检查结果内容
+                  h('div', {
+                    domProps: {
+                      innerHTML: text
+                    }
+                  })
+                ]),
+                placement: 'top',
+                mouseEnterDelay: 0.3,
+                overlayClassName: 'custom-tooltip-overlay',
+                autoAdjustOverflow: true,
+                arrowPointAtCenter: true,
+                align: {
+                  offset: [0, 0]
+                }
               }
             }, [
               h('span', {
                 style: {
-                  cursor: isLongText ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   display: 'inline-block',
-                  maxWidth: '100%'
-                }
-              }, [displayText])
+                  maxWidth: '100%',
+                  borderBottom: '1px dotted #ccc',
+                  color: row.status === 'SUCCESS' ? '#52c41a' : 
+                         row.status === 'FAILED' ? '#f5222d' :
+                         row.status === 'CHECKING' ? '#1890ff' :
+                         row.status === 'SKIPPED' ? '#d9d9d9' : '#333',
+                  transition: 'color 0.3s'
+                },
+                class: 'check-result-text'
+              }, [
+                // 在这里使用一个辅助函数去除HTML标签，只显示纯文本
+                h('span', {}, [
+                  displayText.length > 20 ? 
+                    this.stripHtml(displayText).substr(0, 20) + '...' : 
+                    this.stripHtml(displayText)
+                ])
+              ])
             ]);
           }
         },
@@ -1573,6 +1639,14 @@ export default {
     handleFilterChange(filterData) {
       // 直接刷新日志以应用新的筛选条件
       this.fetchItemLog();
+    },
+    
+    // 去除HTML标签的辅助函数
+    stripHtml(html) {
+      if (!html) return '';
+      const tmp = document.createElement('DIV');
+      tmp.innerHTML = html;
+      return tmp.textContent || tmp.innerText || '';
     },
   },
   mounted() {

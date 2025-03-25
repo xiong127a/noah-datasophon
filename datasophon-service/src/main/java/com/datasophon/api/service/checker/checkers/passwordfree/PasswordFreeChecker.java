@@ -189,7 +189,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         cacheLog.info("开始修复检查项: " + checkItem.getItemName());
         cacheLog.info("主机: " + hostInfo.getHostname());
         cacheLog.info("检查项ID: " + checkItem.getId());
-        cacheLog.info("开始时间: " + getCurrentTimeInChinese());
+        cacheLog.info("开始时间: " + getCurrentTime());
         cacheLog.info("===============================================");
         
         try {
@@ -270,7 +270,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             // 记录修复结束
             cacheLog.info("===============================================");
             cacheLog.info("修复操作结束");
-            cacheLog.info("结束时间: " + getCurrentTimeInChinese());
+            cacheLog.info("结束时间: " + getCurrentTime());
             cacheLog.info("===============================================");
         }
     }

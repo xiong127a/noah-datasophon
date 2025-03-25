@@ -230,13 +230,66 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
             // 检查磁盘使用率
             if (usage > DiskChecker.WARNING_DISK_USAGE_THRESHOLD) {
-                String message = String.format(
-                        "%s 目录所在分区(%s, 挂载点: %s)使用率过高: %d%% > %d%%, 请清理磁盘空间",
-                        DiskChecker.TARGET_DIR, device, mountPoint, usage, DiskChecker.WARNING_DISK_USAGE_THRESHOLD);
-                log.error(message);
-                cacheLog.error(message);
+                // 创建带HTML样式的消息
+                StringBuilder message = new StringBuilder();
+                message.append("<div style='line-height:1.6'>");
+
+                // 状态标题
+                message.append(String.format("<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘空间不足</h3>",
+                        DiskChecker.TARGET_DIR));
+
+                // 磁盘详情
+                message.append("<div style='margin-bottom:15px'>");
+                message.append(String.format("<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>",
+                        mountPoint));
+                message.append(
+                        String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>", device));
+                message.append(String.format(
+                        "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>", size));
+                message.append(String.format(
+                        "<p><strong>可用空间:</strong> <span style='color:#f5222d;font-weight:bold'>%s</span> (阈值: <span style='color:#722ed1;font-weight:bold'>%dGB</span>)</p>",
+                        available, DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("</div>");
+
+                // 磁盘空间可视化
+                message.append("<div style='margin-bottom:15px'>");
+                message.append("<p><strong>磁盘可用空间:</strong></p>");
+
+                // 计算百分比
+                float percentAvailable = (Float.parseFloat(available.replace("G", "")) / DiskChecker.MIN_DISK_SPACE_GB)
+                        * 100;
+                if (percentAvailable > 100)
+                    percentAvailable = 100;
+
+                message.append(
+                        "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
+                message.append(String.format(
+                        "<div style='background:#f5222d;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                        Math.round(percentAvailable)));
+                message.append(String.format(
+                        "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f GB / %d GB</div>",
+                        percentAvailable > 70 ? "white" : "#333", Float.parseFloat(available.replace("G", "")),
+                        DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("</div>");
+                message.append("</div>");
+
+                // 警告信息
+                message.append(
+                        "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                message.append(String.format(
+                        "<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 磁盘可用空间(%.2f GB)小于最低要求(%d GB)</p>",
+                        Float.parseFloat(available.replace("G", "")), DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>建议清理磁盘空间或扩展存储容量，以确保系统正常运行。</p>");
+                message.append("</div>");
+
+                message.append("</div>");
+
+                String errorMsg = String.format("磁盘可用空间不足: %.2f GB < %d GB",
+                        Float.parseFloat(available.replace("G", "")), DiskChecker.MIN_DISK_SPACE_GB);
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage(message);
+                checkItem.setMessage(message.toString());
                 return checkItem;
             }
 
@@ -259,22 +312,151 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
             }
 
             if (availableGB < DiskChecker.MIN_DISK_SPACE_GB) {
-                String message = String.format(
-                        "%s 目录所在分区(%s, 挂载点: %s)可用空间不足: %.2f GB < %d GB, 请清理磁盘空间",
-                        DiskChecker.TARGET_DIR, device, mountPoint, availableGB, DiskChecker.MIN_DISK_SPACE_GB);
-                log.error(message);
-                cacheLog.error(message);
+                // 创建带HTML样式的消息
+                StringBuilder message = new StringBuilder();
+                message.append("<div style='line-height:1.6'>");
+
+                // 状态标题
+                message.append(String.format("<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘可用空间不足</h3>",
+                        DiskChecker.TARGET_DIR));
+
+                // 磁盘详情
+                message.append("<div style='margin-bottom:15px'>");
+                message.append(String.format("<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>",
+                        mountPoint));
+                message.append(
+                        String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>", device));
+                message.append(String.format(
+                        "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>", size));
+                message.append(String.format(
+                        "<p><strong>可用空间:</strong> <span style='color:#f5222d;font-weight:bold'>%s</span> (阈值: <span style='color:#722ed1;font-weight:bold'>%dGB</span>)</p>",
+                        available, DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("</div>");
+
+                // 磁盘空间可视化
+                message.append("<div style='margin-bottom:15px'>");
+                message.append("<p><strong>磁盘可用空间:</strong></p>");
+
+                // 计算百分比
+                float percentAvailable = (availableGB / DiskChecker.MIN_DISK_SPACE_GB) * 100;
+                if (percentAvailable > 100)
+                    percentAvailable = 100;
+
+                message.append(
+                        "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
+                message.append(String.format(
+                        "<div style='background:#f5222d;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                        Math.round(percentAvailable)));
+                message.append(String.format(
+                        "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f GB / %d GB</div>",
+                        percentAvailable > 70 ? "white" : "#333", availableGB, DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("</div>");
+                message.append("</div>");
+
+                // 警告信息
+                message.append(
+                        "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                message.append(String.format(
+                        "<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 磁盘可用空间(%.2f GB)小于最低要求(%d GB)</p>",
+                        availableGB, DiskChecker.MIN_DISK_SPACE_GB));
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>建议清理磁盘空间或扩展存储容量，以确保系统正常运行。</p>");
+                message.append("</div>");
+
+                message.append("</div>");
+
+                String errorMsg = String.format("磁盘可用空间不足: %.2f GB < %d GB", availableGB,
+                        DiskChecker.MIN_DISK_SPACE_GB);
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage(message);
+                checkItem.setMessage(message.toString());
                 return checkItem;
             }
 
             // 如果检查通过，设置为成功
             checkItem.setStatus(CheckItem.Status.SUCCESS);
-            String successMsg = String.format("%s 目录所在分区(%s, 挂载点: %s)磁盘空间充足",
-                    DiskChecker.TARGET_DIR, device, mountPoint);
-            checkItem.setMessage(successMsg);
-            cacheLog.info(successMsg);
+
+            // 创建带HTML样式的成功消息
+            StringBuilder message = new StringBuilder();
+            message.append("<div style='line-height:1.6'>");
+
+            // 状态标题
+            message.append(String.format("<h3 style='color:#52c41a;margin-bottom:10px'>%s 目录磁盘空间充足</h3>",
+                    DiskChecker.TARGET_DIR));
+
+            // 磁盘详情
+            message.append("<div style='margin-bottom:15px'>");
+            message.append(
+                    String.format("<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>", mountPoint));
+            message.append(String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>", device));
+            message.append(String.format(
+                    "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>", size));
+            message.append(String.format(
+                    "<p><strong>可用空间:</strong> <span style='color:#52c41a;font-weight:bold'>%s</span> (阈值: <span style='color:#722ed1;font-weight:bold'>%dGB</span>)</p>",
+                    available, DiskChecker.MIN_DISK_SPACE_GB));
+            message.append("</div>");
+
+            // 磁盘使用率可视化
+            message.append("<div style='margin-bottom:15px'>");
+            message.append("<p><strong>磁盘使用率:</strong></p>");
+
+            // 颜色等级
+            String usageColor = usage < 50 ? "#52c41a" : (usage < 80 ? "#faad14" : "#f5222d");
+
+            message.append(
+                    "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
+            message.append(String.format("<div style='background:%s;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                    usageColor, usage));
+            message.append(String.format(
+                    "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%d%%</div>",
+                    usage > 70 ? "white" : "#333", usage));
+            message.append("</div>");
+            message.append("</div>");
+
+            // 磁盘可用空间可视化
+            message.append("<div style='margin-bottom:15px'>");
+            message.append("<p><strong>磁盘可用空间:</strong></p>");
+
+            // 计算可用空间百分比
+            // 提取数值并处理单位
+            available = available.toUpperCase();
+            float availableFloat;
+            if (available.endsWith("G")) {
+                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1));
+            } else if (available.endsWith("T")) {
+                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1)) * 1024;
+            } else if (available.endsWith("M")) {
+                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1)) / 1024;
+            } else {
+                availableFloat = Float.parseFloat(available);
+            }
+
+            float percentAvailable = (availableFloat / DiskChecker.MIN_DISK_SPACE_GB) * 100;
+            if (percentAvailable > 100)
+                percentAvailable = 100;
+
+            message.append(
+                    "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
+            message.append(
+                    String.format("<div style='background:#52c41a;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                            Math.round(percentAvailable)));
+            message.append(String.format(
+                    "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f GB / %d GB</div>",
+                    percentAvailable > 70 ? "white" : "#333", availableFloat, DiskChecker.MIN_DISK_SPACE_GB));
+            message.append("</div>");
+            message.append("</div>");
+
+            // 成功信息
+            message.append(
+                    "<div style='background:#f6ffed;border-left:4px solid #52c41a;padding:10px;border-radius:0 4px 4px 0;'>");
+            message.append("<p style='margin:0;color:#52c41a;font-weight:bold'>磁盘检查通过</p>");
+            message.append("<p style='margin-top:5px;margin-bottom:0;'>磁盘空间充足，可以正常运行系统和应用程序。</p>");
+            message.append("</div>");
+
+            message.append("</div>");
+
+            checkItem.setMessage(message.toString());
+            cacheLog.info("磁盘检查通过，磁盘空间充足");
 
         } catch (NumberFormatException e) {
             String errorMsg = "无法解析磁盘使用率: " + usageStr;
@@ -290,25 +472,86 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
     @Override
     public void provideCleanupSuggestions(CheckLogger cacheLog) {
-        cacheLog.warn("磁盘空间不足，建议清理步骤:");
-        cacheLog.warn("1. 清理临时文件和缓存:");
-        cacheLog.warn("   - 清理/tmp目录: rm -rf /tmp/*");
-        cacheLog.warn("   - 清理系统日志: sudo journalctl --vacuum-time=7d");
+        StringBuilder html = new StringBuilder();
+        html.append("<div style='line-height:1.6'>");
+        html.append("<h3 style='color:#f5222d;margin-bottom:10px'>磁盘空间问题清理建议</h3>");
 
-        cacheLog.warn("2. 检查并清理大文件:");
-        cacheLog.warn("   - 查找大文件: find /opt -type f -size +100M -exec ls -lh {} \\;");
-        cacheLog.warn("   - 清理不需要的大文件");
+        html.append("<p style='color:#333;margin-bottom:8px'>检测到<span style='color:#1890ff;font-weight:bold'>");
+        html.append(DiskChecker.TARGET_DIR);
+        html.append("</span>目录所在分区空间不足，建议采取以下措施：</p>");
 
-        cacheLog.warn("3. 检查并清理旧日志文件:");
-        cacheLog.warn("   - 查找旧日志: find /opt -name \"*.log\" -type f -mtime +30");
-        cacheLog.warn("   - 清理或压缩旧日志");
+        html.append("<ol style='padding-left:20px;margin-bottom:15px'>");
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>清理日志文件：</span>");
+        html.append(
+                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
+        html.append("find " + DiskChecker.TARGET_DIR + " -name \"*.log*\" -type f -size +100M | xargs ls -lh");
+        html.append("</pre>");
+        html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并列出大于100MB的日志文件，可以删除或压缩这些文件</p>");
+        html.append("</li>");
 
-        cacheLog.warn("4. 清理不需要的软件包:");
-        cacheLog.warn("   - CentOS/RHEL: sudo yum clean all");
-        cacheLog.warn("   - Ubuntu/Debian: sudo apt clean; sudo apt autoremove");
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>清理临时文件：</span>");
+        html.append(
+                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
+        html.append("find " + DiskChecker.TARGET_DIR + " -name \"tmp*\" -o -name \"temp*\" -type d | xargs du -sh");
+        html.append("</pre>");
+        html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并显示临时目录的大小，可以删除不需要的临时文件</p>");
+        html.append("</li>");
 
-        cacheLog.warn("5. 检查并删除不需要的服务和应用程序");
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>清理过期数据文件：</span>");
+        html.append(
+                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
+        html.append("find " + DiskChecker.TARGET_DIR
+                + " -type f -name \"*.old\" -o -name \"*.bak\" -o -name \"*~\" | xargs ls -lh");
+        html.append("</pre>");
+        html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找备份和临时文件，可以删除过期的备份</p>");
+        html.append("</li>");
 
-        cacheLog.warn("注意：在执行任何清理命令前，请确保备份重要数据，以防意外删除");
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>查找大文件：</span>");
+        html.append(
+                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
+        html.append("find " + DiskChecker.TARGET_DIR + " -type f -size +500M -exec ls -lh {} \\;");
+        html.append("</pre>");
+        html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找大于500MB的文件，评估是否需要保留</p>");
+        html.append("</li>");
+
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>清理软件包缓存：</span>");
+        html.append("<p style='margin-top:5px'>根据不同的Linux发行版，可以使用不同的命令清理包缓存：</p>");
+        html.append("<ul style='padding-left:20px;margin-top:5px'>");
+        html.append(
+                "<li style='color:#333'>CentOS/RHEL: <code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>yum clean all</code></li>");
+        html.append(
+                "<li style='color:#333'>Ubuntu/Debian: <code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>apt-get clean</code></li>");
+        html.append("</ul>");
+        html.append("</li>");
+
+        html.append("<li style='margin-bottom:8px'>");
+        html.append("<span style='color:#1890ff;font-weight:bold'>增加磁盘空间：</span>");
+        html.append("<p style='margin-top:5px'>如果清理后仍不足，可以考虑：</p>");
+        html.append("<ul style='padding-left:20px;margin-top:5px'>");
+        html.append("<li style='color:#333'>扩展现有磁盘分区</li>");
+        html.append(
+                "<li style='color:#333'>添加新磁盘并挂载到<code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>"
+                        + DiskChecker.TARGET_DIR + "</code></li>");
+        html.append("<li style='color:#333'>将数据迁移到更大的存储设备</li>");
+        html.append("</ul>");
+        html.append("</li>");
+
+        html.append("</ol>");
+
+        html.append(
+                "<div style='background:#fffbe6;border-left:4px solid #faad14;padding:10px;margin-top:15px;border-radius:0 4px 4px 0'>");
+        html.append("<p style='margin:0;font-weight:bold;color:#d48806'>注意事项：</p>");
+        html.append("<p style='margin-top:5px;margin-bottom:0;color:#666'>在删除文件前，请确保这些文件不再需要。建议先备份重要数据，再进行清理操作。</p>");
+        html.append("</div>");
+
+        html.append("</div>");
+
+        // 输出HTML格式的建议到日志
+        cacheLog.info(html.toString());
     }
 }

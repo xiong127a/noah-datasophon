@@ -5,6 +5,7 @@ import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -28,7 +29,7 @@ public class CpuChecker extends AbstractItemChecker {
             // 检查CPU核心数
             cacheLog.info("检查CPU核心数...");
             CommandResult cpuResult = execCommand(session, "nproc");
-            
+
             if (!cpuResult.isSuccess()) {
                 cacheLog.error("获取CPU核心数失败: %s", cpuResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -45,7 +46,7 @@ public class CpuChecker extends AbstractItemChecker {
             // 检查CPU负载
             cacheLog.info("检查CPU负载...");
             CommandResult loadResult = execCommand(session, "cat /proc/loadavg");
-            
+
             if (!loadResult.isSuccess()) {
                 cacheLog.error("获取CPU负载失败: %s", loadResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -57,18 +58,18 @@ public class CpuChecker extends AbstractItemChecker {
             double load1 = Double.parseDouble(loadAvg[0]);
             double load5 = Double.parseDouble(loadAvg[1]);
             double load15 = Double.parseDouble(loadAvg[2]);
-            
-            cacheLog.info(String.format("CPU负载(1分钟/5分钟/15分钟): %.2f/%.2f/%.2f", 
-                load1, load5, load15));
+
+            cacheLog.info(String.format("CPU负载(1分钟/5分钟/15分钟): %.2f/%.2f/%.2f",
+                    load1, load5, load15));
 
             // 更新状态为正在检查CPU使用率
             setCheckItemMessage(hostInfo, checkItem, "正在检查CPU使用率...");
 
             // 检查CPU使用率
             cacheLog.info("检查CPU使用率...");
-            CommandResult usageResult = execCommand(session, 
-                "top -bn1 | grep '%Cpu' | awk '{print $2 + $4}'");
-            
+            CommandResult usageResult = execCommand(session,
+                    "top -bn1 | grep '%Cpu' | awk '{print $2 + $4}'");
+
             if (!usageResult.isSuccess()) {
                 cacheLog.error("获取CPU使用率失败: %s", usageResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -89,25 +90,76 @@ public class CpuChecker extends AbstractItemChecker {
 
             if (cpuSufficient && loadNormal && usageNormal) {
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
-                setCheckItemMessage(hostInfo, checkItem, String.format("CPU配置正常: %d核心, 负载%.2f, 使用率%.1f%%",
-                    cpuCores, load5, cpuUsage));
+
+                // 创建HTML详细信息构建器
+                StringBuilder detailsBuilder = new StringBuilder();
+
+                // 添加CPU核心数组
+                detailsBuilder.append(HtmlStyleHelper.beginGroup());
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("CPU核心数", String.valueOf(cpuCores),
+                        HtmlStyleHelper.Colors.INFO));
+
+                // 负载信息组
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("负载情况(1分钟/5分钟/15分钟)",
+                        String.format("%.2f / %.2f / %.2f", load1, load5, load15),
+                        load5 < cpuCores * 0.7 ? HtmlStyleHelper.Colors.SUCCESS
+                                : (load5 < cpuCores ? HtmlStyleHelper.Colors.WARNING : HtmlStyleHelper.Colors.ERROR)));
+
+                // CPU使用率进度条
+                detailsBuilder.append("<p><strong>CPU使用率:</strong></p>");
+                String usageColor = cpuUsage < 70 ? HtmlStyleHelper.Colors.SUCCESS
+                        : (cpuUsage < 90 ? HtmlStyleHelper.Colors.WARNING : HtmlStyleHelper.Colors.ERROR);
+                detailsBuilder.append(HtmlStyleHelper.generateProgressBar((int) cpuUsage, usageColor,
+                        String.format("%.1f%%", cpuUsage)));
+                detailsBuilder.append(HtmlStyleHelper.endGroup());
+
+                // 添加成功信息提示
+                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert("CPU检查通过", "CPU配置正常，可以正常运行系统和应用程序。"));
+
+                // 设置格式化的HTML消息
+                setStyledHtmlMessage(hostInfo, checkItem, true, "CPU配置检查通过", detailsBuilder);
                 cacheLog.info("CPU检查通过");
             } else {
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                StringBuilder message = new StringBuilder("CPU检查未通过: ");
+
+                // 创建HTML详细信息构建器
+                StringBuilder detailsBuilder = new StringBuilder();
+
+                // 添加CPU核心数组
+                detailsBuilder.append(HtmlStyleHelper.beginGroup());
+                String coreColor = cpuSufficient ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRowWithThreshold(
+                        "CPU核心数", String.valueOf(cpuCores), coreColor, MIN_CPU_CORES, "核"));
+
+                // 负载信息组
+                String loadColor = loadNormal ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("负载情况(1分钟/5分钟/15分钟)",
+                        String.format("%.2f / %.2f / %.2f", load1, load5, load15), loadColor));
+
+                // CPU使用率进度条
+                detailsBuilder.append("<p><strong>CPU使用率:</strong></p>");
+                String usageColor = usageNormal ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
+                detailsBuilder.append(HtmlStyleHelper.generateProgressBar((int) cpuUsage, usageColor,
+                        String.format("%.1f%%", cpuUsage)));
+                detailsBuilder.append(HtmlStyleHelper.endGroup());
+
+                // 添加警告信息
+                StringBuilder warningMsg = new StringBuilder();
                 if (!cpuSufficient) {
-                    message.append(String.format("CPU核心数(%d)小于最低要求(%d); ", 
-                        cpuCores, MIN_CPU_CORES));
+                    warningMsg.append(String.format("CPU核心数(%d)小于最低要求(%d)<br>", cpuCores, MIN_CPU_CORES));
                 }
                 if (!loadNormal) {
-                    message.append(String.format("CPU负载(%.2f)高于核心数(%d); ", 
-                        load5, cpuCores));
+                    warningMsg.append(String.format("CPU负载(%.2f)高于核心数(%d)<br>", load5, cpuCores));
                 }
                 if (!usageNormal) {
-                    message.append(String.format("CPU使用率(%.1f%%)过高; ", cpuUsage));
+                    warningMsg.append(String.format("CPU使用率(%.1f%%)过高<br>", cpuUsage));
                 }
-                setCheckItemMessage(hostInfo, checkItem, message.toString());
-                cacheLog.info("CPU检查未通过: " + message);
+
+                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert("CPU检查未通过", warningMsg.toString()));
+
+                // 设置格式化的HTML消息
+                setStyledHtmlMessage(hostInfo, checkItem, false, "CPU配置检查未通过", detailsBuilder);
+                cacheLog.info("CPU检查未通过: " + warningMsg);
             }
 
         } catch (Exception e) {
@@ -126,14 +178,47 @@ public class CpuChecker extends AbstractItemChecker {
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
         cacheLog.info("==== CPU问题说明 ====");
         cacheLog.error("CPU问题无法自动修复，请手动处理");
-        cacheLog.info("推荐操作:");
-        cacheLog.info("1. 增加服务器CPU核心数量");
-        cacheLog.info("2. 关闭不必要的服务以减轻CPU负载");
-        cacheLog.info("3. 优化应用程序的CPU使用");
+
+        // 创建HTML详细信息构建器
+        StringBuilder detailsBuilder = new StringBuilder();
+
+        // 添加问题说明
+        detailsBuilder.append(HtmlStyleHelper.beginGroup());
+        detailsBuilder.append("<p>CPU问题无法自动修复，需要手动处理。以下是一些建议操作：</p>");
+        detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
+        detailsBuilder.append(
+                "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>增加服务器CPU核心数量</span></li>");
+        detailsBuilder.append(
+                "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>关闭不必要的服务以减轻CPU负载</span>");
+        detailsBuilder.append("<ul style='padding-left:20px;margin-top:5px'>");
+        detailsBuilder.append("<li style='color:#333'>使用 " + HtmlStyleHelper.generateInlineCode("top") +
+                " 命令查看占用CPU较高的进程</li>");
+        detailsBuilder.append("<li style='color:#333'>停止或限制非关键服务</li>");
+        detailsBuilder.append("</ul></li>");
+        detailsBuilder.append(
+                "<li style='margin-bottom:5px'><span style='color:#1890ff;font-weight:bold'>优化应用程序的CPU使用</span>");
+        detailsBuilder.append("<ul style='padding-left:20px;margin-top:5px'>");
+        detailsBuilder.append("<li style='color:#333'>检查和优化应用程序代码</li>");
+        detailsBuilder.append("<li style='color:#333'>调整应用程序线程池和并发配置</li>");
+        detailsBuilder.append("</ul></li>");
+        detailsBuilder.append("</ol>");
+        detailsBuilder.append(HtmlStyleHelper.endGroup());
+
+        // 添加检查当前CPU使用情况的命令
+        detailsBuilder.append(HtmlStyleHelper.beginGroup());
+        detailsBuilder.append("<p><strong>检查当前CPU使用情况的命令：</strong></p>");
+        detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
+                "# 显示CPU使用率\ntop -bn1 | grep '%Cpu'\n\n# 显示进程CPU使用情况\nps aux --sort=-%cpu | head -10"));
+        detailsBuilder.append(HtmlStyleHelper.endGroup());
+
+        // 添加注意事项
+        detailsBuilder.append(HtmlStyleHelper.generateNoteAlert("注意事项",
+                "处理CPU问题时，应该先分析原因，确定是临时负载高峰还是持续的资源不足，然后采取相应措施。"));
+
+        // 设置格式化的HTML消息
+        setStyledHtmlMessage(hostInfo, checkItem, false, "CPU问题处理建议", detailsBuilder);
+
         cacheLog.info("==== 该检查项需要手动处理 ====");
-        
-        setCheckItemMessage(hostInfo, checkItem, "CPU问题需要手动处理，请参考日志中的建议");
-        
         return false; // 总是返回false表示修复失败，需要手动处理
     }
 
@@ -141,4 +226,4 @@ public class CpuChecker extends AbstractItemChecker {
     public ItemCode getCheckerType() {
         return ItemCode.CPU;
     }
-} 
+}

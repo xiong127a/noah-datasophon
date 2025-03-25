@@ -5,6 +5,7 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.common.LinuxDistribution;
 import com.datasophon.api.service.checker.common.OsInfo;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
+import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -317,23 +318,23 @@ public abstract class AbstractItemChecker implements ItemChecker {
     }
 
     /**
-     * 格式化日期为中文格式
+     * 格式化日期为标准格式
      * 
      * @param date 日期对象
-     * @return 格式化后的中文日期字符串
+     * @return 格式化后的日期字符串
      */
-    protected String formatDateToChinese(Date date) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日 HH时mm分ss秒");
+    protected String formatDate(Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(date);
     }
 
     /**
-     * 获取当前时间的中文格式
+     * 获取当前时间的格式化字符串
      * 
-     * @return 当前时间的中文格式字符串
+     * @return 当前时间的标准格式字符串
      */
-    protected String getCurrentTimeInChinese() {
-        return formatDateToChinese(new Date());
+    protected String getCurrentTime() {
+        return formatDate(new Date());
     }
 
     // 格式化连接地址
@@ -751,7 +752,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         cacheLog.info("开始修复检查项: " + checkItem.getItemName());
         cacheLog.info("主机: " + hostInfo.getHostname());
         cacheLog.info("检查项ID: " + checkItem.getId());
-        cacheLog.info("开始时间: " + getCurrentTimeInChinese());
+        cacheLog.info("开始时间: " + getCurrentTime());
         cacheLog.info("===============================================");
 
         try {
@@ -876,7 +877,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 记录修复结束
             cacheLog.info("===============================================");
             cacheLog.info("修复操作结束");
-            cacheLog.info("结束时间: " + getCurrentTimeInChinese());
+            cacheLog.info("结束时间: " + getCurrentTime());
             cacheLog.info("===============================================");
             // 清理当前主机信息
             clearCurrentHostInfo();
@@ -1037,7 +1038,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             cacheLog.info("开始修复检查项: " + checkItem.getItemName());
             cacheLog.info("主机: " + hostInfo.getHostname());
             cacheLog.info("检查项ID: " + checkItem.getId());
-            cacheLog.info("开始时间: " + getCurrentTimeInChinese());
+            cacheLog.info("开始时间: " + getCurrentTime());
             cacheLog.info("使用已存在的SSH会话");
             cacheLog.info("===============================================");
 
@@ -1146,7 +1147,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 记录修复结束
             cacheLog.info("===============================================");
             cacheLog.info("修复操作结束");
-            cacheLog.info("结束时间: " + getCurrentTimeInChinese());
+            cacheLog.info("结束时间: " + getCurrentTime());
             cacheLog.info("===============================================");
 
             // 清理当前主机信息
@@ -1264,5 +1265,44 @@ public abstract class AbstractItemChecker implements ItemChecker {
         logger.debug("正在实时更新检查状态消息: {}", message);
         // 立即更新状态
         updateCheckStatus(hostInfo.getClusterId(), hostInfo, checkItem);
+    }
+
+    /**
+     * 格式化HTML样式的检查结果消息
+     * 便于所有检查器统一使用美化的HTML样式
+     * 
+     * @param hostInfo       主机信息
+     * @param checkItem      检查项
+     * @param isSuccess      是否检查成功
+     * @param titleText      标题文本
+     * @param detailsBuilder HTML格式的详细内容构建器
+     */
+    protected void setStyledHtmlMessage(HostInfo hostInfo, CheckItem checkItem, boolean isSuccess,
+            String titleText, StringBuilder detailsBuilder) {
+
+        StringBuilder html = new StringBuilder();
+
+        // 开始HTML容器
+        html.append(HtmlStyleHelper.beginContainer());
+
+        // 添加标题
+        html.append(HtmlStyleHelper.generateTitle(titleText, isSuccess));
+
+        // 添加主机基本信息组
+        html.append(HtmlStyleHelper.beginGroup());
+        html.append(HtmlStyleHelper.generatePropertyRow("主机", hostInfo.getHostname(), HtmlStyleHelper.Colors.INFO));
+        html.append(HtmlStyleHelper.generatePropertyRow("IP地址", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO));
+        html.append(
+                HtmlStyleHelper.generatePropertyRow("检查时间", getCurrentTime(), HtmlStyleHelper.Colors.GRAY));
+        html.append(HtmlStyleHelper.endGroup());
+
+        // 添加详细内容
+        html.append(detailsBuilder.toString());
+
+        // 结束HTML容器
+        html.append(HtmlStyleHelper.endContainer());
+
+        // 设置检查项消息
+        setCheckItemMessage(hostInfo, checkItem, html.toString());
     }
 }
