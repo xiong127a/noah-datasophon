@@ -419,42 +419,12 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  // 修改：只有当前检查项处于CHECKING状态时才禁用重试按钮
-                  // 不再使用整个主机的isHostChecking状态来禁用
-                  disabled: isChecking || !((row.status === 'FAILED' || 
-                             row.status === 'SUCCESS' || 
-                             row.status === 'SKIPPED'))
+                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
                 },
                 on: {
-                  click: () => this.retryCheckItem(record.hostname, row.id)
+                  click: () => this.retryEnvironment(row)
                 }
-              }, ["重试"]) : null,
-              
-              // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当主机整体状态为检查中时，禁用按钮
-                  disabled: isHostChecking
-                },
-                on: {
-                  click: () => this.fixCheckItem(record.hostname, row)
-                }
-              }, ["修复"]) : null,
-              
-              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当主机整体状态为检查中时，禁用按钮
-                  disabled: isHostChecking
-                },
-                on: {
-                  click: () => this.skipCheckItem(record.hostname, row.id)
-                }
-              }, ["跳过"]) : null
+              }, ["重试"]) : null
             ].filter(Boolean));
           },
         },
@@ -787,7 +757,7 @@ export default {
                 }
               }, ["终止"]) : null,
               
-              // 重试按钮 - 非检查中时显示
+              // 重试按钮 - 非检查中时显示，检查中则禁用
               !isChecking ? h('a-button', {
                 attrs: {
                   type: 'link',

@@ -12,9 +12,7 @@ public enum ItemCode {
     FILE_HANDLE("FILE_HANDLE", "最大文件句柄数检查", 6, false, null),
     FIREWALL("FIREWALL", "防火墙检查", 7, false, null),
     SELINUX("SELINUX", "SELinux检查", 8, false, null),
-    TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null),
-    DISK_SPACE("DISK_SPACE", "磁盘空间检查", 10, true, "磁盘空间不足无法自动修复，需要您手动增加磁盘空间。确定要继续尝试修复吗？");
-
+    TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null);
     private final String code;
     private final String name;
     private final int sequence;
