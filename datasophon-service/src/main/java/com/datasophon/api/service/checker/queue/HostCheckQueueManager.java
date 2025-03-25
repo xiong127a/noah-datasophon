@@ -10,6 +10,8 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;
+import com.datasophon.common.Constants;
+import com.datasophon.common.cache.CacheUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1530,9 +1532,22 @@ public class HostCheckQueueManager {
 
                 // 标记修复任务为进行中
                 checkItem.setStatus(CheckItem.Status.FIXING);
+                checkItem.setMessage("正在执行修复...");
+
+                // 更新主机状态并立即更新缓存
+                hostInfo.calculateStatus();
+                HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
 
                 // 统计信息
                 fixTasksProcessed.incrementAndGet();
+
+                // 使修复状态至少持续2秒，确保用户能看到"修复中"的状态
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    logger.warn("修复等待时间被中断", e);
+                    Thread.currentThread().interrupt();
+                }
 
                 // 检查是否是特殊的免密检查项
                 boolean isPasswordFreeItem = "PASSWORD_FREE".equals(checkItem.getItemCode());
@@ -1558,6 +1573,8 @@ public class HostCheckQueueManager {
                             checkItem.setStatus(CheckItem.Status.FAILED);
                             checkItem.setMessage(errorMsg);
                             fixTasksFailed.incrementAndGet();
+                            // 更新缓存
+                            HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                             return;
                         }
 
@@ -1582,6 +1599,8 @@ public class HostCheckQueueManager {
                             LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                             logger.info(successMsg);
+                            // 更新缓存
+                            HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                         } else {
                             fixTasksFailed.incrementAndGet();
 
@@ -1590,6 +1609,8 @@ public class HostCheckQueueManager {
                             LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                             logger.warn(failMsg);
+                            // 更新缓存
+                            HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                         }
                     } catch (Exception e) {
                         String errorMsg = String.format("执行主机 %s 的免密登录修复任务时发生异常: %s",
@@ -1602,6 +1623,8 @@ public class HostCheckQueueManager {
                         checkItem.setMessage("免密登录修复异常: " + e.getMessage());
                         fixTasksFailed.incrementAndGet();
                         logger.error(errorMsg, e);
+                        // 更新缓存
+                        HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                     }
                 } else {
                     // 常规检查项使用正常的doHostFix方法
@@ -1628,6 +1651,8 @@ public class HostCheckQueueManager {
                         LogEntryManager.addLogEntry(logKey, successLogEntry);
 
                         logger.info(successMsg);
+                        // 更新缓存
+                        HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                     } else {
                         fixTasksFailed.incrementAndGet();
 
@@ -1637,6 +1662,8 @@ public class HostCheckQueueManager {
                         LogEntryManager.addLogEntry(logKey, failLogEntry);
 
                         logger.warn(failMsg);
+                        // 更新缓存
+                        HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
                     }
                 }
 
@@ -1651,6 +1678,8 @@ public class HostCheckQueueManager {
                 checkItem.setMessage("修复异常: " + e.getMessage());
                 fixTasksFailed.incrementAndGet();
                 logger.error(errorMsg, e);
+                // 更新缓存
+                HostCheckQueueManager.this.updateHostInfoCache(clusterId, hostInfo);
             } finally {
                 // 记录任务完成
                 String endMessage = String.format("主机 %s 的修复任务 %s 已完成，耗时: %d 毫秒",
@@ -1808,5 +1837,26 @@ public class HostCheckQueueManager {
 
     public ExecutorService getItemCheckExecutorService() {
         return itemCheckExecutorService;
+    }
+
+    /**
+     * 更新主机信息缓存
+     * 
+     * @param clusterId 集群ID
+     * @param hostInfo  主机信息
+     */
+    private void updateHostInfoCache(Integer clusterId, HostInfo hostInfo) {
+        try {
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (map != null) {
+                map.put(hostInfo.getHostname(), hostInfo);
+                CacheUtils.put(clusterId + Constants.HOST_MAP, map);
+                logger.debug("已更新主机信息缓存: clusterId={}, hostname={}", clusterId, hostInfo.getHostname());
+            } else {
+                logger.warn("无法更新主机信息缓存，未找到集群对应的缓存: clusterId={}", clusterId);
+            }
+        } catch (Exception e) {
+            logger.error("更新主机信息缓存时发生错误: {}", e.getMessage(), e);
+        }
     }
 }
