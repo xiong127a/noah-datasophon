@@ -50,7 +50,7 @@
       {
         "filename": "ClickHouse",
         "configFormat": "custom",
-        "configTargetRoles": "KafkaBroker",
+        "configTargetRoles": "ClickHouse",
         "outputDirectory": "etc",
         "templateName": "clickhouse-server-config.ftl",
         "includeParams": [
@@ -62,6 +62,7 @@
       {
         "filename": "users.xml",
         "configFormat": "custom",
+        "configTargetRoles": "ClickHouse",
         "outputDirectory": "etc",
         "templateName": "clickhouse-user.ftl",
         "includeParams": [

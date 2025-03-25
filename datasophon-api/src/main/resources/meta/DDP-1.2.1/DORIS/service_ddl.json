@@ -109,6 +109,7 @@
         "filename": "be.conf",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
+        "configTargetRoles": "DorisBE",
         "includeParams": [
           "be_priority_networks",
           "sys_log_level",
@@ -124,6 +125,7 @@
         "filename": "fe.conf",
         "configFormat": "custom",
         "outputDirectory": "fe/conf",
+        "configTargetRoles": "DorisFE",
         "templateName": "doris_fe.ftl",
         "includeParams": [
           "fe_heap_size",

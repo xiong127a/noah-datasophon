@@ -94,6 +94,7 @@
     "generators": [
       {
         "filename": "server.properties",
+        "configTargetRoles": "KafkaBroker",
         "configFormat": "properties",
         "outputDirectory": "config",
         "includeParams": [
@@ -128,6 +129,7 @@
       {
         "filename": "system-config.properties",
         "configFormat": "properties",
+        "configTargetRoles": "efak",
         "outputDirectory": "efak/conf",
         "includeParams": [
           "efak.zk.cluster.alias",
@@ -167,12 +169,14 @@
           "efak.driver",
           "efak.url",
           "efak.username",
-          "efak.password"
+          "efak.password",
+          "custom.system-config.properties"
         ]
       },
       {
         "filename": "kafka-server-start.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-server-start.ftl",
         "includeParams": [
@@ -184,6 +188,7 @@
       {
         "filename": "kafka-run-class.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-run-class.ftl",
         "includeParams": [
@@ -194,6 +199,7 @@
       {
         "filename": "kafka-topics.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-topics.ftl",
         "includeParams": [
@@ -203,6 +209,7 @@
       {
         "filename": "kafka-console-consumer.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-console-consumer.ftl",
         "includeParams": [
@@ -212,6 +219,7 @@
       {
         "filename": "kafka-console-producer.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-console-producer.ftl",
         "includeParams": [
@@ -221,6 +229,7 @@
       {
         "filename": "kafka-consumer-groups.sh",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
         "templateName": "kafka-consumer-groups.ftl",
         "includeParams": [
@@ -230,6 +239,7 @@
       {
         "filename": "kafka-jaas.conf",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",
         "templateName": "kafka-jaas.ftl",
         "includeParams": [
@@ -240,6 +250,7 @@
       {
         "filename": "kafka-client-jaas.conf",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",
         "templateName": "kafka-client-jaas.ftl",
         "includeParams": [
@@ -250,6 +261,7 @@
       {
         "filename": "kafka-client.properties",
         "configFormat": "custom",
+        "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",
         "templateName": "kafka-client.ftl",
         "includeParams": [

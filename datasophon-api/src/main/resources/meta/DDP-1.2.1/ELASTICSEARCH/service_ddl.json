@@ -100,6 +100,7 @@
       {
         "filename": "elasticsearch.yml",
         "configFormat": "properties3",
+        "configTargetRoles": "ElasticSearch",
         "outputDirectory": "config",
         "includeParams": [
           "cluster.name",

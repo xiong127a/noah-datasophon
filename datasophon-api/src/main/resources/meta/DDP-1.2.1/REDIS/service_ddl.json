@@ -120,6 +120,7 @@
       {
         "filename": "redis-master.conf",
         "configFormat": "custom",
+        "configTargetRoles": ["RedisMaster"],
         "outputDirectory": "cluster/conf",
         "templateName": "redis-master.ftl",
         "includeParams": [
@@ -130,6 +131,7 @@
       {
         "filename": "redis-slave.conf",
         "configFormat": "custom",
+        "configTargetRoles": ["RedisWorker"],
         "outputDirectory": "cluster/conf",
         "templateName": "redis-slave.ftl",
         "includeParams": [
@@ -150,6 +152,7 @@
       {
         "filename": "control_redis_exporter.sh",
         "configFormat": "custom",
+        "configTargetRoles": ["RedisExporter"],
         "outputDirectory": "redis_exporter",
         "templateName": "redis-control-exporter.ftl",
         "includeParams": [
@@ -159,6 +162,7 @@
       {
         "filename": "redis.json",
         "configFormat": "custom",
+        "configTargetRoles": ["RedisExporter"],
         "outputDirectory": "redis_exporter",
         "templateName": "redis-metric-json.ftl",
         "includeParams": [
