@@ -23,8 +23,9 @@ public interface InstallService {
 
     Result getInstallStep(Integer type);
 
-    Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword, Integer page,
-                            Integer pageSize);
+    Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword,
+            Integer page,
+            Integer pageSize);
 
     Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort);
 
@@ -34,6 +35,16 @@ public interface InstallService {
 
     Result hostCheckCompleted(Integer clusterId);
 
+    /**
+     * 清理主机检查资源
+     * 在hostCheckCompleted返回成功且hostCheckCompleted为true后调用
+     * 用于释放与检查任务和修复任务相关的资源
+     * 
+     * @param clusterId 集群ID
+     * @return 清理结果
+     */
+    Result cleanupHostCheckResources(Integer clusterId);
+
     Result cancelDispatcherHostAgent(Integer clusterId, String hostname, Integer installStateCode);
 
     Result dispatcherHostAgentCompleted(Integer clusterId);
@@ -42,18 +53,20 @@ public interface InstallService {
 
     /**
      * 修复单个检查项
+     * 
      * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
+     * @param hostname  主机名
+     * @param itemId    检查项ID
      * @return 修复结果
      */
     Result fixCheckItem(Integer clusterId, String hostname, Integer itemId);
 
     /**
      * 修复单个检查项（支持跳过确认）
-     * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemId 检查项ID
+     * 
+     * @param clusterId   集群ID
+     * @param hostname    主机名
+     * @param itemId      检查项ID
      * @param skipConfirm 是否跳过确认提示
      * @return 修复结果
      */
@@ -61,23 +74,26 @@ public interface InstallService {
 
     /**
      * 修复选中的多个检查项
+     * 
      * @param clusterId 集群ID
-     * @param hostname 主机名
-     * @param itemIds 检查项ID列表,逗号分隔
+     * @param hostname  主机名
+     * @param itemIds   检查项ID列表,逗号分隔
      * @return 修复结果
      */
     Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds);
 
     /**
      * 修复主机上所有可自动修复的检查项
+     * 
      * @param clusterId 集群ID
-     * @param hostname 主机名
+     * @param hostname  主机名
      * @return 修复结果
      */
     Result fixAllCheckItems(Integer clusterId, String hostname);
 
     /**
      * 启动/停止 主机上安装的服务启动
+     * 
      * @param clusterHostIds
      * @param commandType
      * @return

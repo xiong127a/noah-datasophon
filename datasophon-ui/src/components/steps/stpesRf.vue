@@ -150,7 +150,23 @@ export default {
           flag = res.hostCheckCompleted;
           if (!flag) self.$message.warning(res.data || "存在未检验成功的主机");
           if (!flag) return false;
-          this.currentStepsAdd();
+          
+          // 主机检查完成后，额外调用清理资源接口
+          this.$axiosPost(global.API.cleanupHostCheckResources, {
+            clusterId: this.clusterId
+          }).then((cleanupRes) => {
+            if (cleanupRes.code !== 200) {
+              console.warn("清理主机检查资源失败:", cleanupRes.msg);
+            } else {
+              console.info("清理主机检查资源成功");
+            }
+            // 无论清理结果如何，都进入下一步
+            this.currentStepsAdd();
+          }).catch((err) => {
+            console.error("清理主机检查资源出错:", err);
+            // 即使清理出错，也进入下一步
+            this.currentStepsAdd();
+          });
         });
       }
       if (this.stepsNumber === 3) {

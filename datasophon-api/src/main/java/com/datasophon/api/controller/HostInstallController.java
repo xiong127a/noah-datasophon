@@ -48,12 +48,12 @@ public class HostInstallController {
     @PostMapping("/analysisHostList")
     @UserPermission
     public Result analysisHostList(@RequestParam Integer clusterId,
-                                   @RequestParam @NotBlank(message = "主机列表不能为空") String hosts,
-                                   @RequestParam @Pattern(regexp = "(?=.*?[a-z_])[a-zA-Z0-9._\\-]{1,30}", message = "非法的SSH用户名") String sshUser,
-                                   @RequestParam @NotNull(message = "SSH端口必填") @Min(value = 1, message = "非法的SSH端口") @Max(value = 65535, message = "非法的SSH端口") Integer sshPort,
-                                   @RequestParam @NotBlank(message = "SSH密码不能为空") String sshPassword,
-                                   @RequestParam Integer page,
-                                   @RequestParam Integer pageSize) {
+            @RequestParam @NotBlank(message = "主机列表不能为空") String hosts,
+            @RequestParam @Pattern(regexp = "(?=.*?[a-z_])[a-zA-Z0-9._\\-]{1,30}", message = "非法的SSH用户名") String sshUser,
+            @RequestParam @NotNull(message = "SSH端口必填") @Min(value = 1, message = "非法的SSH端口") @Max(value = 65535, message = "非法的SSH端口") Integer sshPort,
+            @RequestParam @NotBlank(message = "SSH密码不能为空") String sshPassword,
+            @RequestParam Integer page,
+            @RequestParam Integer pageSize) {
         return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, sshPassword, page, pageSize);
     }
 
@@ -71,8 +71,22 @@ public class HostInstallController {
      */
     @PostMapping("/hostCheckCompleted")
     @UserPermission
-    public Result hostCheckCompleted(Integer clusterId) {
+    public Result hostCheckCompleted(@RequestParam("clusterId") Integer clusterId) {
         return installService.hostCheckCompleted(clusterId);
+    }
+
+    /**
+     * 清理主机检查资源
+     * 在hostCheckCompleted返回成功且hostCheckCompleted为true后调用
+     * 用于释放与检查任务和修复任务相关的资源
+     * 
+     * @param clusterId 集群ID
+     * @return 清理结果
+     */
+    @PostMapping("/cleanupHostCheckResources")
+    @UserPermission
+    public Result cleanupHostCheckResources(@RequestParam("clusterId") Integer clusterId) {
+        return installService.cleanupHostCheckResources(clusterId);
     }
 
     /**
@@ -111,19 +125,21 @@ public class HostInstallController {
 
     /**
      * 主机管理agent操作(启动(start)、停止(stop)、重启(restart))
+     * 
      * @param clusterHostIds
      * @param commandType
      * @return
      */
     @PostMapping("/generateHostAgentCommand")
     public Result generateHostAgentCommand(
-                                           @RequestParam String clusterHostIds,
-                                           @RequestParam String commandType) throws Exception {
+            @RequestParam String clusterHostIds,
+            @RequestParam String commandType) throws Exception {
         return installService.generateHostAgentCommand(clusterHostIds, commandType);
     }
 
     /**
      * 启动/停止 主机上服务启动
+     * 
      * @param clusterHostIds
      * @param commandType
      * @return
@@ -141,8 +157,8 @@ public class HostInstallController {
     @PostMapping("/fixCheckItem")
     @UserPermission
     public Result fixCheckItem(
-            @RequestParam("clusterId") Integer clusterId, 
-            @RequestParam("hostname") String hostname, 
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam("hostname") String hostname,
             @RequestParam("itemId") Integer itemId,
             @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
         return installService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);

@@ -59,7 +59,9 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,6 +73,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.lang.reflect.Method;
 
 @Service("installService")
 public class InstallServiceImpl implements InstallService {
@@ -92,11 +95,15 @@ public class InstallServiceImpl implements InstallService {
     @Autowired
     private HostCheckQueueManager hostCheckQueueManager;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
     private static final String SSHUSER = "SSHUSER";
 
     @Override
     public Result getInstallStep(Integer type) {
-        List<InstallStepEntity> list = stepMapper.selectList(new QueryWrapper<InstallStepEntity>().eq(Constants.INSTALL_TYPE, type));
+        List<InstallStepEntity> list = stepMapper
+                .selectList(new QueryWrapper<InstallStepEntity>().eq(Constants.INSTALL_TYPE, type));
         return Result.success(list);
     }
 
@@ -120,14 +127,14 @@ public class InstallServiceImpl implements InstallService {
      * @return 分页后的主机列表结果
      */
     @Override
-    public Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword, Integer page, Integer pageSize) {
+    public Result analysisHostList(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword,
+            Integer page, Integer pageSize) {
         try {
             if (StringUtils.isBlank(hosts)) {
                 return Result.error("主机列表不能为空");
             }
 
             Map<String, HostInfo> hostMap = saveHostInfo(clusterId, hosts, sshUser, sshPort, sshPassword);
-
 
             // 如果没有获取到主机信息,返回错误提示
             if (Objects.isNull(hostMap)) {
@@ -175,7 +182,8 @@ public class InstallServiceImpl implements InstallService {
      * @param sshPort     SSH端口
      * @param sshPassword SSH密码
      */
-    private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort, String sshPassword) {
+    private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
+            String sshPassword) {
         String hostsMd5 = SecureUtil.md5(hosts);
         // 1. 检查缓存中是否存在有效的主机列表
         if (isCacheValid(clusterId, hostsMd5)) {
@@ -185,8 +193,7 @@ public class InstallServiceImpl implements InstallService {
 
         Map<String, HostInfo> hostMap = processHostList(clusterId, hosts, hostsMd5, sshPort, sshUser, sshPassword);
 
-
-        //将结果存入缓存
+        // 将结果存入缓存
         CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
         CacheUtils.put(clusterId + Constants.HOST_MD5, hostsMd5);
         logger.info("主机列表已存入缓存");
@@ -203,7 +210,8 @@ public class InstallServiceImpl implements InstallService {
      * @param sshPort     SSH端口
      * @param sshPassword SSH密码
      */
-    private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, String hostsMd5, Integer sshPort, String sshUser, String sshPassword) {
+    private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, String hostsMd5, Integer sshPort,
+            String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
         logger.info("解析主机列表");
@@ -236,15 +244,19 @@ public class InstallServiceImpl implements InstallService {
      * 检查缓存是否有效
      */
     private boolean isCacheValid(Integer clusterId, String hostsMd5) {
-        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP) && CacheUtils.constainsKey(clusterId + Constants.HOST_MD5) && hostsMd5.equals(CacheUtils.getString(clusterId + Constants.HOST_MD5));
+        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)
+                && CacheUtils.constainsKey(clusterId + Constants.HOST_MD5)
+                && hostsMd5.equals(CacheUtils.getString(clusterId + Constants.HOST_MD5));
     }
 
     /**
      * 处理单个主机信息
      */
-    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
+            Map<String, HostInfo> hostInfoMap) {
         // 添加参数日志
-        logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", host, sshPort, sshUser, StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterCode);
+        logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", host, sshPort, sshUser,
+                StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterCode);
 
         // 1. 处理IP域格式 [x-y]
         if (host.contains("[") && host.contains("-")) {
@@ -262,7 +274,8 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 处理IP范围
      */
-    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
+            Map<String, HostInfo> hostInfoMap) {
         int start = host.indexOf("[");
         String prefix = host.substring(0, start);
         String range = host.substring(start + 1, host.length() - 1);
@@ -281,7 +294,8 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 处理字母范围的主机名
      */
-    private void processLetterRange(String prefix, String start, String end, Integer sshPort, String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+    private void processLetterRange(String prefix, String start, String end, Integer sshPort, String sshUser,
+            String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
         List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
         for (String suffix : hostList) {
             HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterCode);
@@ -294,7 +308,8 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 处理数字范围的主机名
      */
-    private void processNumberRange(String prefix, String[] range, Integer sshPort, String sshUser, String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+    private void processNumberRange(String prefix, String[] range, Integer sshPort, String sshUser, String sshPassword,
+            String clusterCode, Map<String, HostInfo> hostInfoMap) {
         int start = Integer.parseInt(range[0]);
         int end = Integer.parseInt(range[1]);
         for (int i = start; i <= end; i++) {
@@ -327,7 +342,8 @@ public class InstallServiceImpl implements InstallService {
      * @param clusterCode 集群编码
      * @return 主机信息对象
      */
-    private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode) {
+    private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword,
+            String clusterCode) {
         HostInfo hostInfo = new HostInfo();
 
         // 1. 设置基本信息
@@ -358,7 +374,8 @@ public class InstallServiceImpl implements InstallService {
         hostInfo.setInstallState(InstallState.SUCCESS);
         hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
         hostInfo.setProgress(Constants.ONE_HUNDRRD);
-        hostInfo.setCheckResult(new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
+        hostInfo.setCheckResult(
+                new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
     }
 
     /**
@@ -387,7 +404,8 @@ public class InstallServiceImpl implements InstallService {
         String clusterCode = clusterInfo.getClusterCode();
         String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream().sorted(Comparator.comparing(e -> e.getKey())).map(e -> e.getValue()).filter(e -> e.getCheckResult().getCode() == 10001).collect(Collectors.toList());
+        List<HostInfo> list = map.entrySet().stream().sorted(Comparator.comparing(e -> e.getKey()))
+                .map(e -> e.getValue()).filter(e -> e.getCheckResult().getCode() == 10001).collect(Collectors.toList());
 
         for (HostInfo hostInfo : list) {
             if (hostInfo.isManaged()) {
@@ -397,10 +415,12 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setInstallState(InstallState.SUCCESS);
             } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getHostname())) {
                 logger.info("start to dispatcher host agent to {}", hostInfo.getHostname());
-                ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class, "dispatcherWorkerActor-" + hostInfo.getHostname());
+                ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
+                        "dispatcherWorkerActor-" + hostInfo.getHostname());
                 hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
                 hostInfo.setCreateTime(new Date());
-                hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()), ActorRef.noSender());
+                hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
+                        ActorRef.noSender());
                 // 保存主机agent分发历史
                 CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getHostname(), true);
 
@@ -445,14 +465,16 @@ public class InstallServiceImpl implements InstallService {
                 hostInfo.setSshUser("root");
                 hostInfo.setSshPort(22);
             }
-            ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class, "dispatcherWorkerActor-" + hostname);
+            ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
+                    "dispatcherWorkerActor-" + hostname);
 
             hostInfo.setInstallState(InstallState.RUNNING);
             hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
             hostInfo.setErrMsg("");
             hostInfo.setProgress(0);
 
-            hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()), ActorRef.noSender());
+            hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
+                    ActorRef.noSender());
         }
         return Result.success();
     }
@@ -460,53 +482,54 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public Result hostCheckCompleted(Integer clusterId) {
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        
+
         // 收集未通过检查的主机信息
         List<Map<String, Object>> failedHosts = new ArrayList<>();
         Map<String, List<String>> hostToFailedItems = new HashMap<>();
         int totalFailedItems = 0;
-        
+
         // 检查是否存在未完成的主机
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
-            
+
             // 检查主机整体状态
             CheckResult checkResult = hostInfo.getCheckResult();
             if (checkResult == null) {
                 Map<String, Object> failInfo = new HashMap<>();
                 failInfo.put("hostname", hostInfo.getHostname());
                 failInfo.put("reason", "主机整体检查状态未完成");
-                failInfo.put("code", Objects.nonNull(hostInfo.getCheckResult()) ? hostInfo.getCheckResult().getCode() : "未知");
+                failInfo.put("code",
+                        Objects.nonNull(hostInfo.getCheckResult()) ? hostInfo.getCheckResult().getCode() : "未知");
                 failedHosts.add(failInfo);
-                
+
                 // 添加到错误映射
                 List<String> failedItemsList = new ArrayList<>();
                 failedItemsList.add("检查未完成");
                 hostToFailedItems.put(hostInfo.getHostname(), failedItemsList);
                 totalFailedItems++;
-                
+
                 logger.info("主机 {} 的整体检查状态未完成，主机检查不通过", hostInfo.getHostname());
                 continue;
             }
-            
+
             // 检查所有检查项状态
             List<CheckItem> checkItems = hostInfo.getCheckItems();
             if (checkItems != null) {
                 List<Map<String, Object>> failedItems = new ArrayList<>();
                 List<String> failedItemNames = new ArrayList<>();
-                
+
                 // 先统计该主机上未通过的检查项
                 for (CheckItem item : checkItems) {
                     // 只有 SUCCESS 或 SKIPPED 状态被视为通过
-                    if (item.getStatus() != CheckItem.Status.SUCCESS && 
-                        item.getStatus() != CheckItem.Status.SKIPPED) {
+                    if (item.getStatus() != CheckItem.Status.SUCCESS &&
+                            item.getStatus() != CheckItem.Status.SKIPPED) {
                         Map<String, Object> itemInfo = new HashMap<>();
                         itemInfo.put("itemId", item.getId());
                         itemInfo.put("itemName", item.getItemName());
                         itemInfo.put("status", item.getStatus());
                         itemInfo.put("message", item.getMessage());
                         failedItems.add(itemInfo);
-                        
+
                         // 收集失败的检查项名称
                         String statusText = "";
                         if (item.getStatus() == CheckItem.Status.FAILED) {
@@ -519,19 +542,19 @@ public class InstallServiceImpl implements InstallService {
                             statusText = item.getStatus().toString();
                         }
                         failedItemNames.add(item.getItemName() + "(" + statusText + ")");
-                        
-                        logger.info("主机 {} 的检查项 {} 状态为 {}，主机检查不通过", 
-                            hostInfo.getHostname(), item.getItemName(), item.getStatus());
+
+                        logger.info("主机 {} 的检查项 {} 状态为 {}，主机检查不通过",
+                                hostInfo.getHostname(), item.getItemName(), item.getStatus());
                     }
                 }
-                
+
                 if (!failedItems.isEmpty()) {
                     Map<String, Object> failInfo = new HashMap<>();
                     failInfo.put("hostname", hostInfo.getHostname());
                     failInfo.put("reason", "存在未通过的检查项");
                     failInfo.put("failedItems", failedItems);
                     failedHosts.add(failInfo);
-                    
+
                     // 添加到错误映射
                     hostToFailedItems.put(hostInfo.getHostname(), failedItemNames);
                     // 将该主机的未通过项数量加到总数中
@@ -543,41 +566,42 @@ public class InstallServiceImpl implements InstallService {
                 failInfo.put("hostname", hostInfo.getHostname());
                 failInfo.put("reason", "没有检查项");
                 failedHosts.add(failInfo);
-                
+
                 // 添加到错误映射
                 List<String> noItemsList = new ArrayList<>();
                 noItemsList.add("没有检查项");
                 hostToFailedItems.put(hostInfo.getHostname(), noItemsList);
                 totalFailedItems++;
-                
+
                 logger.info("主机 {} 没有检查项，主机检查不通过", hostInfo.getHostname());
             }
         }
-        
+
         if (!failedHosts.isEmpty()) {
             // 生成简洁的错误消息
             StringBuilder msgBuilder = new StringBuilder();
-            
+
             // 格式化错误信息
             int hostCount = hostToFailedItems.size();
-            msgBuilder.append("共有 ").append(hostCount).append(" 台主机检查未通过，").append(totalFailedItems).append(" 项未通过检查\n\n");
-            
+            msgBuilder.append("共有 ").append(hostCount).append(" 台主机检查未通过，").append(totalFailedItems)
+                    .append(" 项未通过检查\n\n");
+
             // 限制显示的主机数量
             int hostDisplayLimit = 3;
             int hostDisplayCount = 0;
-            
+
             for (Map.Entry<String, List<String>> entry : hostToFailedItems.entrySet()) {
                 if (hostDisplayCount >= hostDisplayLimit && hostCount > hostDisplayLimit) {
                     msgBuilder.append("\n还有 ").append(hostCount - hostDisplayLimit).append(" 台主机存在问题...");
                     break;
                 }
-                
+
                 String hostname = entry.getKey();
                 List<String> items = entry.getValue();
-                
+
                 msgBuilder.append("• ").append(hostname).append("：")
-                         .append(items.size()).append("项未通过 - ");
-                
+                        .append(items.size()).append("项未通过 - ");
+
                 // 限制每台主机显示的检查项数量
                 int itemLimit = 2;
                 if (items.size() <= itemLimit) {
@@ -585,24 +609,175 @@ public class InstallServiceImpl implements InstallService {
                 } else {
                     List<String> displayItems = items.subList(0, itemLimit);
                     msgBuilder.append(String.join("、", displayItems))
-                             .append(" 等 ").append(items.size()).append(" 项");
+                            .append(" 等 ").append(items.size()).append(" 项");
                 }
-                
+
                 msgBuilder.append("\n");
                 hostDisplayCount++;
             }
-            
+
             String errorMsg = msgBuilder.toString().trim();
-            logger.info("存在未通过检查的主机，总数: {}, 失败项总数: {}, 错误信息: {}", 
+            logger.info("存在未通过检查的主机，总数: {}, 失败项总数: {}, 错误信息: {}",
                     failedHosts.size(), totalFailedItems, errorMsg);
-            
-            return Result.success(errorMsg)  // 将错误信息放在msg字段
+
+            return Result.success(errorMsg) // 将错误信息放在msg字段
                     .put("hostCheckCompleted", false)
                     .put("failedHosts", failedHosts);
         }
-        
+
         logger.info("所有主机的所有检查项均已通过检查");
+
         return Result.success("所有主机检查项通过").put("hostCheckCompleted", true);
+    }
+
+    @Override
+    public Result cleanupHostCheckResources(Integer clusterId) {
+        try {
+            if (clusterId == null) {
+                logger.error("集群ID为空，无法清理主机检查资源");
+                return Result.error("集群ID不能为空");
+            }
+
+            logger.info("开始清理集群[{}]的主机检查资源", clusterId);
+
+            // 1. 删除缓存中当前集群ID的所有日志
+            // 主要的日志前缀模式
+            String[] logPrefixes = {
+                    "CHECK_ITEM_LOG_" + clusterId + "_", // 检查项日志
+                    "CHECK_LOG_" + clusterId + "_", // 检查操作日志
+                    "FIX_LOG_" + clusterId + "_", // 修复操作日志
+                    "CHECK_TASK_STATUS_" + clusterId + "_" // 任务状态
+            };
+
+            // 获取所有的缓存键
+            // 由于没有直接获取所有键的方法，我们需要基于前缀前缀模式清理
+            for (String prefix : logPrefixes) {
+                logger.info("清理前缀为[{}]的日志缓存", prefix);
+                // 注意：这里无法遍历所有键，所以我们只能在后续操作中处理相关键
+            }
+
+            // 通用日志缓存键
+            String logCacheKey = clusterId + "_HOST_CHECK_LOG";
+            if (CacheUtils.constainsKey(logCacheKey)) {
+                CacheUtils.removeKey(logCacheKey);
+                logger.info("已清理集群[{}]的主机检查日志缓存", clusterId);
+            }
+
+            // 2. 清理其他与检查相关的缓存
+            String hostMapKey = clusterId + Constants.HOST_MAP;
+            if (CacheUtils.constainsKey(hostMapKey)) {
+                // 在清理前，获取所有主机信息，用于清理特定主机的日志
+                Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(hostMapKey);
+                if (hostMap != null) {
+                    for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+                        String hostname = entry.getKey();
+                        HostInfo hostInfo = entry.getValue();
+
+                        // 清理该主机的所有检查项日志
+                        if (hostInfo.getCheckItems() != null) {
+                            for (CheckItem item : hostInfo.getCheckItems()) {
+                                // 删除该主机该检查项的所有日志
+                                for (String prefix : logPrefixes) {
+                                    String itemLogKey = prefix + hostname + "_" + item.getId();
+                                    if (CacheUtils.constainsKey(itemLogKey)) {
+                                        CacheUtils.removeKey(itemLogKey);
+                                        logger.debug("已清理日志: {}", itemLogKey);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 清理主机映射缓存
+                CacheUtils.removeKey(hostMapKey);
+                logger.info("已清理集群[{}]的主机映射缓存", clusterId);
+            }
+
+            String hostMd5Key = clusterId + Constants.HOST_MD5;
+            if (CacheUtils.constainsKey(hostMd5Key)) {
+                CacheUtils.removeKey(hostMd5Key);
+                logger.info("已清理集群[{}]的主机列表MD5缓存", clusterId);
+            }
+
+            // 3. 关闭任务清理和连接清理
+            // 如果有特定于集群ID的检查任务，可以取消它们
+            if (hostCheckQueueManager != null) {
+                logger.info("开始清理集群[{}]的检查任务和监控", clusterId);
+
+                // 关闭队列健康监控
+                hostCheckQueueManager.stopQueueHealthMonitor();
+                logger.info("已关闭队列健康监控");
+
+                // 关闭任务超时监控
+                hostCheckQueueManager.stopTaskTimeoutMonitor();
+                logger.info("已关闭任务超时监控");
+
+                // 取消所有与该集群相关的任务
+                try {
+                    // cancelTask方法没有返回值，所以我们不能统计取消的任务数
+                    hostCheckQueueManager.cancelTask(clusterId, null); // 取消所有主机的任务
+                    logger.info("已取消集群[{}]的所有检查任务", clusterId);
+                } catch (Exception e) {
+                    logger.warn("取消集群[{}]的检查任务时发生异常: {}", clusterId, e.getMessage());
+                }
+
+                // 关闭定时任务（停止监控）
+                hostCheckQueueManager.stopScheduledTasks();
+                logger.info("已关闭所有定时监控任务");
+            } else {
+                logger.warn("hostCheckQueueManager为空，无法关闭相关任务");
+            }
+
+            // 4. 尝试获取并关闭AsyncCheckService的SSH连接清理
+            try {
+                // 通过Spring获取AsyncCheckService实例 - 考虑添加@Autowired注入AsyncCheckService
+                Object asyncCheckService = applicationContext.getBean("asyncCheckService");
+                if (asyncCheckService != null && asyncCheckService.getClass().getName().contains("AsyncCheckService")) {
+                    // 反射调用stopConnectionCleanup方法停止SSH连接清理
+                    Method stopConnectionCleanupMethod = asyncCheckService.getClass()
+                            .getMethod("stopConnectionCleanup");
+                    stopConnectionCleanupMethod.invoke(asyncCheckService);
+                    logger.info("已停止AsyncCheckService的SSH连接清理任务");
+
+                    // 反射调用stopTaskCleanup方法停止任务清理
+                    Method stopTaskCleanupMethod = asyncCheckService.getClass()
+                            .getMethod("stopTaskCleanup");
+                    stopTaskCleanupMethod.invoke(asyncCheckService);
+                    logger.info("已停止AsyncCheckService的任务清理任务");
+
+                    // 尝试调用stopScheduledTasks方法停止所有定时任务
+                    try {
+                        Method stopScheduledTasksMethod = asyncCheckService.getClass()
+                                .getMethod("stopScheduledTasks");
+                        stopScheduledTasksMethod.invoke(asyncCheckService);
+                        logger.info("已停止AsyncCheckService的所有定时任务");
+                    } catch (NoSuchMethodException nsme) {
+                        logger.info("AsyncCheckService没有stopScheduledTasks方法，已单独停止各项定时任务");
+                    }
+
+                    // 尝试调用disableScheduledTasks方法禁用所有定时任务
+                    try {
+                        Method disableScheduledTasksMethod = asyncCheckService.getClass()
+                                .getMethod("disableScheduledTasks");
+                        disableScheduledTasksMethod.invoke(asyncCheckService);
+                        logger.info("已禁用AsyncCheckService的所有定时任务");
+                    } catch (NoSuchMethodException nsme) {
+                        logger.info("AsyncCheckService没有disableScheduledTasks方法");
+                    }
+                }
+            } catch (NoSuchBeanDefinitionException e) {
+                logger.warn("无法找到AsyncCheckService实例，跳过任务清理的停止");
+            } catch (Exception e) {
+                logger.warn("关闭AsyncCheckService的任务时发生异常: {}", e.getMessage());
+            }
+
+            logger.info("集群[{}]的主机检查资源清理完成", clusterId);
+            return Result.success(String.format("主机检查资源清理完成，已清理缓存和取消检查任务"));
+        } catch (Exception e) {
+            logger.error("清理主机检查资源时发生错误", e);
+            return Result.error("清理主机检查资源失败: " + e.getMessage());
+        }
     }
 
     @Override
@@ -618,7 +793,8 @@ public class InstallServiceImpl implements InstallService {
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
-            if (hostInfo.getProgress() == 75 && DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE) > 1) {
+            if (hostInfo.getProgress() == 75
+                    && DateUtil.between(hostInfo.getCreateTime(), new Date(), DateUnit.MINUTE) > 1) {
                 logger.info("dispatcher host agent timeout");
                 hostInfo.setInstallState(InstallState.FAILED);
                 hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
@@ -667,9 +843,11 @@ public class InstallServiceImpl implements InstallService {
         List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(Arrays.asList(clusterHostIdArray));
         Result result = null;
 
-        CommandType serviceCommandType = "start".equalsIgnoreCase(commandType) ? CommandType.START_SERVICE : CommandType.STOP_SERVICE;
+        CommandType serviceCommandType = "start".equalsIgnoreCase(commandType) ? CommandType.START_SERVICE
+                : CommandType.STOP_SERVICE;
         for (ClusterHostDO clusterHostDO : clusterHostList) {
-            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostDO.getHostname(), clusterHostDO.getClusterId(), serviceCommandType);
+            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostDO.getHostname(),
+                    clusterHostDO.getClusterId(), serviceCommandType);
             try {
                 ActorRef actor = ActorUtils.getLocalActor(WorkerStartActor.class, "workerStartActor");
                 actor.tell(serviceMessage, ActorRef.noSender());
@@ -718,7 +896,8 @@ public class InstallServiceImpl implements InstallService {
      */
     private Result executeCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+            ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(),
+                    hostInfo.getSshUser());
 
             if (Objects.isNull(session)) {
                 return Result.error("无法连接到主机");
@@ -787,5 +966,3 @@ public class InstallServiceImpl implements InstallService {
         }
     }
 }
-
-

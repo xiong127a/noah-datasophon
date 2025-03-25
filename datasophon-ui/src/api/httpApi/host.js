@@ -28,6 +28,7 @@ export default {
   analysisHostList: path + '/host/install/analysisHostList', // 解析主机列表
   saveK8sHost: path + '/api/cluster/host/saveK8sHost', // 保存k8s主机
   hostCheckCompleted: path + '/host/install/hostCheckCompleted', // 查询主机环境校验是否完成
+  cleanupHostCheckResources: path + '/host/install/cleanupHostCheckResources', // 清理主机检查资源
   dispatcherHostAgentCompleted:
     path + '/host/install/dispatcherHostAgentCompleted', // 查询主机agent分发是否完成
   getRack: path + '/api/cluster/host/getRack', // 查询机架
