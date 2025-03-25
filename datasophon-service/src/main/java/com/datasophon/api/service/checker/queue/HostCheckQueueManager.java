@@ -105,8 +105,8 @@ public class HostCheckQueueManager {
     private ScheduledFuture<?> queueHealthMonitorTask;
     private ScheduledFuture<?> taskTimeoutMonitorTask;
 
-    private long queueHealthMonitorIntervalMs;
-    private long taskTimeoutMonitorIntervalMs;
+    private long queueHealthMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
+    private long taskTimeoutMonitorIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
 
     @Autowired
     @Qualifier("checkExecutor")
@@ -204,18 +204,18 @@ public class HostCheckQueueManager {
             taskScheduler = scheduler;
         }
 
-        // 启动队列健康监控任务（每2分钟执行一次）
+        // 启动队列健康监控任务（每60秒执行一次）
         if (queueHealthMonitorTask == null || queueHealthMonitorTask.isCancelled()) {
             queueHealthMonitorTask = taskScheduler.scheduleAtFixedRate(
-                    this::monitorQueueHealth, 120000);
-            logger.info("队列健康监控定时任务已启动，执行间隔: 2分钟");
+                    this::monitorQueueHealth, 60000);
+            logger.info("队列健康监控定时任务已启动，执行间隔: 60秒");
         }
 
-        // 启动任务超时监控（每30秒执行一次）
+        // 启动任务超时监控（每60秒执行一次）
         if (taskTimeoutMonitorTask == null || taskTimeoutMonitorTask.isCancelled()) {
             taskTimeoutMonitorTask = taskScheduler.scheduleAtFixedRate(
-                    this::checkForTaskTimeouts, 30000);
-            logger.info("任务超时监控定时任务已启动，执行间隔: 30秒");
+                    this::checkForTaskTimeouts, 60000);
+            logger.info("任务超时监控定时任务已启动，执行间隔: 60秒");
         }
 
         // 设置定时任务标志为已启用

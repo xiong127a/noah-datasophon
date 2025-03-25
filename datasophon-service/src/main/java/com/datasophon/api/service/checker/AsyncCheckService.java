@@ -80,8 +80,8 @@ public class AsyncCheckService {
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 定时任务执行间隔（默认值）
-    private long taskCleanupIntervalMs = TimeUnit.HOURS.toMillis(1); // 默认1小时
-    private long connectionCleanupIntervalMs = TimeUnit.MINUTES.toMillis(10); // 默认10分钟
+    private long taskCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
+    private long connectionCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
 
     // 上次执行时间
     private volatile long lastTaskCleanupTime = 0;
@@ -126,14 +126,14 @@ public class AsyncCheckService {
             taskScheduler = scheduler;
         }
 
-        // 启动任务清理定时任务（每小时执行一次）
+        // 启动任务清理定时任务（每60秒执行一次）
         if (taskCleanupTask == null || taskCleanupTask.isCancelled()) {
             taskCleanupTask = taskScheduler.scheduleAtFixedRate(
                     this::cleanupTasks, taskCleanupIntervalMs);
             logger.info("任务清理定时任务已启动，执行间隔: {}毫秒", taskCleanupIntervalMs);
         }
 
-        // 启动连接清理定时任务（每10分钟执行一次）
+        // 启动连接清理定时任务（每60秒执行一次）
         if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
             connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
                     this::cleanupConnections, connectionCleanupIntervalMs);
