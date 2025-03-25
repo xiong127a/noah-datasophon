@@ -1,392 +1,243 @@
 package com.datasophon.api.service.checker.checkers.selinux;
 
-import com.datasophon.api.service.checker.core.AbstractItemChecker;
+import com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
-import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * SELinux检查器
+ * 负责检查和修复主机SELinux配置
+ * 支持多种Linux发行版，包括CentOS、Ubuntu和Kylin
+ */
 @Component
 public class SELinuxChecker extends AbstractItemChecker {
 
-    private static final Logger logger = LoggerFactory.getLogger(SELinuxChecker.class);
+        private static final Logger logger = LoggerFactory.getLogger(SELinuxChecker.class);
 
-    @Override
-    protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
-        try {
-            cacheLog.info("==== SELinux检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+        @Override
+        protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
+                try {
+                        logger.info("开始检查主机 {} 的SELinux状态", hostInfo.getHostname());
+                        cacheLog.info("开始检查SELinux状态...");
 
-            // 更新状态为正在检查SELinux状态
-            setCheckItemMessage(hostInfo, checkItem, "正在检查SELinux状态...");
+                        // 更新检查项状态
+                        checkItem.setMessage("正在检查SELinux状态...");
 
-            // 检查SELinux状态
-            cacheLog.info("检查SELinux状态...");
-            CommandResult result = execCommand(session, "getenforce");
+                        // 检查会话是否准备就绪
+                        if (session == null) {
+                                // 检查hostInfo中是否有可用的会话
+                                if (!hostInfo.isSessionReady()) {
+                                        String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getHostname();
+                                        logger.error(errorMsg);
+                                        cacheLog.error(errorMsg);
+                                        checkItem.setStatus(CheckItem.Status.FAILED);
+                                        checkItem.setMessage(errorMsg);
+                                        return checkItem;
+                                }
+                                // 使用hostInfo的会话
+                                session = hostInfo.getExternalSession();
+                        }
 
-            if (!result.isSuccess()) {
-                cacheLog.error("获取SELinux状态失败: %s", result.getErrorOrOutput());
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(hostInfo, checkItem, "获取SELinux状态失败: " + result.getErrorOrOutput());
-                return checkItem;
-            }
+                        // 获取操作系统信息
+                        OsInfo osInfo;
+                        try {
+                                osInfo = getOsInfo(hostInfo);
+                                if (osInfo == null || !osInfo.isValid()) {
+                                        String errorMsg = "无法获取操作系统信息，SELinux检查失败";
+                                        logger.error(errorMsg);
+                                        cacheLog.error(errorMsg);
+                                        checkItem.setStatus(CheckItem.Status.FAILED);
+                                        checkItem.setMessage(errorMsg);
+                                        return checkItem;
+                                }
+                                hostInfo.setExternalSession(session);
+                        } catch (InterruptedException e) {
+                                String errorMsg = "获取操作系统信息过程被中断";
+                                logger.error(errorMsg, e);
+                                cacheLog.error(errorMsg);
+                                checkItem.setStatus(CheckItem.Status.FAILED);
+                                checkItem.setMessage(errorMsg);
+                                return checkItem;
+                        }
 
-            String selinuxStatus = result.getOutput().trim();
-            cacheLog.info("SELinux当前状态: " + selinuxStatus);
+                        logger.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+                        cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
-            // 更新状态为正在检查SELinux配置文件
-            setCheckItemMessage(hostInfo, checkItem, "正在检查SELinux配置文件...");
+                        // 通过工厂获取对应的SELinux检查器策略
+                        SELinuxCheckerStrategy strategy = SELinuxCheckerFactory.getChecker(osInfo);
 
-            // 检查SELinux配置文件
-            cacheLog.info("检查SELinux配置文件...");
-            CommandResult configResult = execCommand(session, "cat /etc/selinux/config | grep ^SELINUX=");
+                        // 执行检查
+                        CheckItem result = strategy.check(hostInfo, checkItem, cacheLog);
 
-            String selinuxConfig = configResult.isSuccess() ? configResult.getOutput().trim() : "无法读取";
-            if (configResult.isSuccess()) {
-                cacheLog.info("SELinux配置: " + selinuxConfig);
-            } else {
-                cacheLog.warn("无法读取SELinux配置文件: %s", configResult.getErrorOrOutput());
-            }
+                        // 返回检查结果
+                        return result;
 
-            // 更新状态为正在分析SELinux状态
-            setCheckItemMessage(hostInfo, checkItem, "正在分析SELinux状态: " + selinuxStatus);
+                } catch (Exception e) {
+                        String errorMsg = "检查SELinux时发生异常: " + e.getMessage();
+                        logger.error(errorMsg, e);
+                        cacheLog.error(errorMsg);
+                        cacheLog.error(e.getMessage());
 
-            // 判断状态
-            boolean isOk = "Disabled".equalsIgnoreCase(selinuxStatus) || "Permissive".equalsIgnoreCase(selinuxStatus);
-
-            if (isOk) {
-                checkItem.setStatus(CheckItem.Status.SUCCESS);
-
-                // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
-
-                // 添加SELinux状态信息组
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-
-                // 添加当前状态信息
-                String statusColor = "Disabled".equalsIgnoreCase(selinuxStatus) ? HtmlStyleHelper.Colors.SUCCESS
-                        : HtmlStyleHelper.Colors.CYAN;
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "SELinux当前状态", selinuxStatus, statusColor));
-
-                // 添加配置文件信息
-                if (configResult.isSuccess()) {
-                    detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                            "SELinux配置文件设置", selinuxConfig, HtmlStyleHelper.Colors.INFO));
+                        checkItem.setStatus(CheckItem.Status.FAILED);
+                        checkItem.setMessage("检查SELinux失败: "
+                                        + (StringUtils.isBlank(e.getMessage()) ? "未知错误" : e.getMessage()));
+                        return checkItem;
+                } finally {
+                        logger.info("完成主机 {} 的SELinux检查", hostInfo.getHostname());
+                        cacheLog.info("SELinux检查完成");
                 }
-
-                // 添加命令执行结果
-                detailsBuilder.append("<p><strong>命令执行结果:</strong></p>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "$ getenforce\n" + selinuxStatus +
-                                (configResult.isSuccess()
-                                        ? "\n\n$ cat /etc/selinux/config | grep ^SELINUX=\n" + selinuxConfig
-                                        : "")));
-
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 添加成功信息
-                String successMsg = "Disabled".equalsIgnoreCase(selinuxStatus) ? "SELinux已完全禁用，不会干扰系统运行。"
-                        : "SELinux处于宽容模式(Permissive)，会记录但不会阻止操作，可以正常运行系统。";
-
-                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
-                        "SELinux检查通过", successMsg));
-
-                // 如果是宽容模式，添加建议信息
-                if ("Permissive".equalsIgnoreCase(selinuxStatus)) {
-                    detailsBuilder.append(HtmlStyleHelper.generateNoteAlert(
-                            "建议完全禁用SELinux",
-                            "当前SELinux处于宽容模式，建议通过修改配置完全禁用SELinux并重启系统，以避免潜在问题。"));
-                }
-
-                // 设置格式化的HTML消息
-                setStyledHtmlMessage(hostInfo, checkItem, true, "SELinux状态正常", detailsBuilder);
-
-                cacheLog.info("SELinux检查通过");
-            } else {
-                checkItem.setStatus(CheckItem.Status.FAILED);
-
-                // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
-
-                // 添加SELinux状态信息组
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-
-                // 添加当前状态信息
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "SELinux当前状态", selinuxStatus, HtmlStyleHelper.Colors.ERROR));
-
-                // 添加配置文件信息
-                if (configResult.isSuccess()) {
-                    detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                            "SELinux配置文件设置", selinuxConfig, HtmlStyleHelper.Colors.INFO));
-                }
-
-                // 添加命令执行结果
-                detailsBuilder.append("<p><strong>命令执行结果:</strong></p>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "$ getenforce\n" + selinuxStatus +
-                                (configResult.isSuccess()
-                                        ? "\n\n$ cat /etc/selinux/config | grep ^SELINUX=\n" + selinuxConfig
-                                        : "")));
-
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 添加警告信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                        "SELinux检查未通过",
-                        "SELinux处于强制模式(Enforcing)，这可能会阻止某些操作，影响系统正常运行。"));
-
-                // 添加修复建议
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>修复建议:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                detailsBuilder.append("<li style='margin-bottom:5px'>临时禁用SELinux (重启后失效):</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo setenforce 0"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>永久禁用SELinux (需要重启):</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config\n" +
-                                "# 完成后重启系统\nsudo reboot"));
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 设置格式化的HTML消息
-                setStyledHtmlMessage(hostInfo, checkItem, false, "SELinux处于强制模式", detailsBuilder);
-
-                cacheLog.info("SELinux检查未通过: 当前为强制模式");
-            }
-
-        } catch (Exception e) {
-            String errorMsg = "检查SELinux时发生错误: " + e.getMessage();
-            logger.error(errorMsg, e);
-            cacheLog.error(errorMsg);
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            setCheckItemMessage(hostInfo, checkItem, errorMsg);
-        } finally {
-            cacheLog.info("==== SELinux检查结束 ====");
         }
-        return checkItem;
-    }
 
-    @Override
-    protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
-        try {
-            cacheLog.info("==== 开始修复SELinux配置 ====");
+        @Override
+        protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
+                try {
+                        logger.info("开始修复主机 {} 的SELinux配置", hostInfo.getHostname());
+                        cacheLog.info("开始修复SELinux配置...");
 
-            // 更新状态为正在设置SELinux为宽容模式
-            setCheckItemMessage(hostInfo, checkItem, "正在设置SELinux为宽容模式...");
+                        // 更新修复项状态
+                        checkItem.setMessage("正在修复SELinux配置...");
 
-            // 先设置为宽容模式
-            cacheLog.info("设置SELinux为宽容模式...");
-            CommandResult setenforceResult = execCommand(session, "setenforce 0");
-            boolean tempFixSuccess = setenforceResult.isSuccess();
+                        // 检查会话是否准备就绪
+                        if (session == null) {
+                                // 检查hostInfo中是否有可用的会话
+                                if (!hostInfo.isSessionReady()) {
+                                        String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getHostname();
+                                        logger.error(errorMsg);
+                                        cacheLog.error(errorMsg);
+                                        checkItem.setStatus(CheckItem.Status.FAILED);
+                                        checkItem.setMessage(errorMsg);
+                                        return false;
+                                }
+                                // 使用hostInfo的会话
+                                session = hostInfo.getExternalSession();
+                        }
 
-            if (!tempFixSuccess) {
-                cacheLog.error("设置SELinux状态失败: %s", setenforceResult.getErrorOrOutput());
+                        // 获取操作系统信息
+                        OsInfo osInfo;
+                        try {
+                                osInfo = getOsInfo(hostInfo);
+                                if (osInfo == null || !osInfo.isValid()) {
+                                        String errorMsg = "无法获取操作系统信息，SELinux修复失败";
+                                        logger.error(errorMsg);
+                                        cacheLog.error(errorMsg);
+                                        checkItem.setMessage(errorMsg);
+                                        return false;
+                                }
+                        } catch (InterruptedException e) {
+                                String errorMsg = "获取操作系统信息过程被中断";
+                                logger.error(errorMsg, e);
+                                cacheLog.error(errorMsg);
+                                checkItem.setMessage(errorMsg);
+                                return false;
+                        }
 
-                // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
+                        logger.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+                        cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
-                // 添加错误信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                        "临时设置SELinux失败",
-                        "无法临时设置SELinux为宽容模式: " + setenforceResult.getErrorOrOutput()));
+                        // 通过工厂获取对应的SELinux检查器策略
+                        SELinuxCheckerStrategy strategy = SELinuxCheckerFactory.getChecker(osInfo);
 
-                // 添加手动修复指南
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
+                        // 执行修复
+                        boolean result = false;
+                        try {
+                                result = strategy.fix(hostInfo, checkItem, cacheLog);
+                        } catch (InterruptedException e) {
+                                String errorMsg = "修复SELinux被中断: " + e.getMessage();
+                                logger.error(errorMsg, e);
+                                cacheLog.error(errorMsg);
+                                checkItem.setMessage(errorMsg);
+                                return false;
+                        }
 
-                detailsBuilder.append("<li style='margin-bottom:5px'>以root权限临时禁用SELinux:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo setenforce 0"));
+                        // 记录修复结果
+                        if (result) {
+                                logger.info("主机 {} SELinux修复成功", hostInfo.getHostname());
+                                cacheLog.info("SELinux修复成功");
+                        } else {
+                                logger.warn("主机 {} SELinux修复失败", hostInfo.getHostname());
+                                cacheLog.warn("SELinux修复失败");
+                        }
 
-                detailsBuilder.append("<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo vi /etc/selinux/config\n\n" +
-                                "# 修改以下行\nSELINUX=disabled"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 设置格式化的HTML消息
-                setStyledHtmlMessage(hostInfo, checkItem, false, "SELinux临时禁用失败", detailsBuilder);
-
-                return false;
-            }
-            cacheLog.info("已临时设置SELinux为宽容模式");
-
-            // 更新状态为正在修改SELinux配置文件
-            setCheckItemMessage(hostInfo, checkItem, "正在修改SELinux配置文件...");
-
-            // 修改配置文件
-            cacheLog.info("修改SELinux配置文件...");
-            String sedCmd = "sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config";
-            CommandResult sedResult = execCommand(session, sedCmd);
-            boolean configFixSuccess = sedResult.isSuccess();
-
-            if (!configFixSuccess) {
-                cacheLog.error("修改SELinux配置文件失败: %s", sedResult.getErrorOrOutput());
-
-                // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
-
-                // 添加错误和部分成功信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                        "SELinux配置文件修改失败",
-                        "SELinux已临时设置为宽容模式，但无法修改配置文件进行永久设置: " + sedResult.getErrorOrOutput()));
-
-                // 添加当前状态说明
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>当前SELinux状态:</strong></p>");
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS));
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "永久配置", "未修改 (重启后将恢复原状态)", HtmlStyleHelper.Colors.ERROR));
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 添加手动修复指南
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo vi /etc/selinux/config\n\n" +
-                                "# 修改以下行\nSELINUX=disabled"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-                // 设置格式化的HTML消息
-                setStyledHtmlMessage(hostInfo, checkItem, true, "SELinux已临时禁用", detailsBuilder);
-
-                return true; // 返回true因为临时修复成功
-            }
-            cacheLog.info("SELinux配置文件已修改");
-
-            // 更新状态为正在验证SELinux配置
-            setCheckItemMessage(hostInfo, checkItem, "正在验证SELinux配置...");
-
-            // 验证配置
-            cacheLog.info("验证SELinux配置...");
-            CommandResult verifyResult = execCommand(session, "cat /etc/selinux/config | grep ^SELINUX=");
-            boolean verifySuccess = verifyResult.isSuccess();
-            String newConfig = verifySuccess ? verifyResult.getOutput().trim() : "无法验证";
-
-            if (!verifySuccess) {
-                cacheLog.error("验证SELinux配置失败: %s", verifyResult.getErrorOrOutput());
-            } else {
-                cacheLog.info("当前SELinux配置: " + newConfig);
-            }
-
-            cacheLog.info("==== SELinux配置修复完成 ====");
-            cacheLog.info("注意: 完全禁用SELinux需要重启系统才能生效");
-
-            // 创建HTML详细信息构建器
-            StringBuilder detailsBuilder = new StringBuilder();
-
-            // 添加修复操作信息组
-            detailsBuilder.append(HtmlStyleHelper.beginGroup());
-            detailsBuilder.append("<p><strong>已完成的SELinux修复操作:</strong></p>");
-
-            // 添加操作列表
-            detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-
-            // 临时禁用操作
-            detailsBuilder.append("<li style='margin-bottom:5px'>临时设置SELinux为宽容模式 (" +
-                    HtmlStyleHelper.generateColoredValue("成功", HtmlStyleHelper.Colors.SUCCESS) + ")</li>");
-
-            // 修改配置文件操作
-            detailsBuilder.append("<li style='margin-bottom:5px'>修改SELinux配置文件为禁用模式 (" +
-                    HtmlStyleHelper.generateColoredValue("成功", HtmlStyleHelper.Colors.SUCCESS) + ")</li>");
-
-            detailsBuilder.append("</ol>");
-            detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-            // 添加当前状态信息组
-            detailsBuilder.append(HtmlStyleHelper.beginGroup());
-            detailsBuilder.append("<p><strong>当前SELinux状态:</strong></p>");
-
-            // 当前状态
-            detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                    "当前运行状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS));
-
-            // 配置文件状态
-            if (verifySuccess) {
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "配置文件设置", newConfig, HtmlStyleHelper.Colors.SUCCESS));
-            }
-
-            detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-            // 添加重启提示
-            detailsBuilder.append(HtmlStyleHelper.generateNoteAlert(
-                    "完成禁用需要重启",
-                    "SELinux已临时设置为宽容模式，配置文件已修改为禁用模式，但<strong>完全禁用需要重启系统</strong>才能生效。"));
-
-            // 添加验证命令
-            detailsBuilder.append(HtmlStyleHelper.beginGroup());
-            detailsBuilder.append("<p><strong>重启后验证方法:</strong></p>");
-            detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("getenforce"));
-            detailsBuilder.append("<p>应返回: <code>Disabled</code></p>");
-            detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-            // 设置格式化的HTML消息
-            setStyledHtmlMessage(hostInfo, checkItem, true, "SELinux配置已修复", detailsBuilder);
-
-            return true;
-        } catch (Exception e) {
-            String errorMsg = "修复SELinux配置时发生错误: " + e.getMessage();
-            logger.error(errorMsg, e);
-            cacheLog.error(errorMsg);
-
-            // 创建HTML详细信息构建器
-            StringBuilder detailsBuilder = new StringBuilder();
-
-            // 添加错误信息
-            detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                    "SELinux修复失败",
-                    "修复SELinux配置时发生错误: " + e.getMessage()));
-
-            // 添加手动修复指南
-            detailsBuilder.append(HtmlStyleHelper.beginGroup());
-            detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-            detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-
-            detailsBuilder.append("<li style='margin-bottom:5px'>以root权限临时禁用SELinux:</li>");
-            detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo setenforce 0"));
-
-            detailsBuilder.append("<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>");
-            detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                    "sudo vi /etc/selinux/config\n\n" +
-                            "# 修改以下行\nSELINUX=disabled"));
-
-            detailsBuilder.append("<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>");
-            detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-
-            detailsBuilder.append("</ol>");
-            detailsBuilder.append(HtmlStyleHelper.endGroup());
-
-            // 设置格式化的HTML消息
-            setStyledHtmlMessage(hostInfo, checkItem, false, "SELinux修复失败", detailsBuilder);
-
-            return false;
+                        return result;
+                } catch (Exception e) {
+                        String errorMsg = "修复SELinux时发生异常: " + e.getMessage();
+                        logger.error(errorMsg, e);
+                        cacheLog.error(errorMsg);
+                        checkItem.setMessage(errorMsg);
+                        return false;
+                } finally {
+                        logger.info("完成主机 {} 的SELinux修复", hostInfo.getHostname());
+                        cacheLog.info("SELinux修复完成");
+                }
         }
-    }
 
-    @Override
-    public ItemCode getCheckerType() {
-        return ItemCode.SELINUX;
-    }
+        @Override
+        public ItemCode getCheckerType() {
+                return ItemCode.SELINUX;
+        }
+
+        /**
+         * 设置日志键
+         * 公开的方法，用于子类设置日志键
+         * 
+         * @param clusterId 集群ID
+         * @param hostname  主机名
+         * @param itemId    检查项ID
+         */
+        public void setupLogKey(Integer clusterId, String hostname, Integer itemId) {
+                setCurrentLogKey(clusterId, hostname, itemId);
+        }
+
+        /**
+         * 执行命令并获取结果
+         * 
+         * @param session SSH会话
+         * @param command 要执行的命令
+         * @return 命令执行结果
+         * @throws InterruptedException 如果命令执行被中断
+         */
+        public CommandResult execCommand(org.apache.sshd.client.session.ClientSession session, String command)
+                        throws InterruptedException {
+                // 确保正确设置了currentLogKey
+                if (currentLogKey == null) {
+                        logger.warn("执行命令时currentLogKey为null，尝试从上下文恢复日志键");
+
+                        // 尝试从线程名中恢复日志键
+                        String threadName = Thread.currentThread().getName();
+
+                        // 检查线程名是否符合期望的格式，通常是: check-hostname-item-id
+                        if (threadName != null && threadName.startsWith("check-") && threadName.contains("-item-")) {
+                                try {
+                                        String[] parts = threadName.split("-item-");
+                                        if (parts.length == 2) {
+                                                String hostnamePart = parts[0].substring("check-".length());
+                                                Integer itemId = Integer.parseInt(parts[1]);
+
+                                                // 使用当前任务的HostInfo和CheckItem对象获取集群ID和主机名
+                                                Integer clusterId = null;
+                                                if (this.currentHostInfo != null) {
+                                                        clusterId = this.currentHostInfo.get().getClusterId();
+                                                }
+
+                                                // 设置日志键
+                                                this.setCurrentLogKey(clusterId, hostnamePart, itemId);
+                                                logger.info("已从线程名恢复日志键: 集群ID={}, 主机名={}, 检查项ID={}",
+                                                                clusterId, hostnamePart, itemId);
+                                        }
+                                } catch (Exception e) {
+                                        logger.warn("从线程名恢复日志键失败: {}", e.getMessage());
+                                }
+                        }
+                }
+
+                return super.execCommand(session, command);
+        }
 }
