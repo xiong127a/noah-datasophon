@@ -109,6 +109,7 @@
       {
         "filename": "kdc.conf",
         "configFormat": "custom",
+        "configTargetRoles": "Krb5Kdc",
         "outputDirectory": "/var/kerberos/krb5kdc",
         "templateName": "kdc.ftl",
         "includeParams": [
@@ -118,6 +119,7 @@
       {
         "filename": "kadm5.acl",
         "configFormat": "custom",
+        "configTargetRoles": "KAdmin",
         "outputDirectory": "/var/kerberos/krb5kdc",
         "templateName": "kadm5.ftl",
         "includeParams": [

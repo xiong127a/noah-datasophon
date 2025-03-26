@@ -147,6 +147,7 @@
             {
                 "filename": "nebula-metad.conf",
                 "configFormat": "custom",
+                "configTargetRoles": "Meta",
                 "templateName": "nebula-metad.ftl",
                 "outputDirectory": "etc",
                 "includeParams": [
@@ -161,6 +162,7 @@
             {
                 "filename": "nebula-graphd.conf",
                 "configFormat": "custom",
+                "configTargetRoles": "Graph",
                 "outputDirectory": "etc",
                 "templateName": "nebula-graphd.ftl",
                 "includeParams": [
@@ -191,6 +193,7 @@
             {
                 "filename": "nebula-storaged.conf",
                 "configFormat": "custom",
+                "configTargetRoles": "Storage",
                 "templateName": "nebula-storaged.ftl",
                 "outputDirectory": "etc",
                 "includeParams": [

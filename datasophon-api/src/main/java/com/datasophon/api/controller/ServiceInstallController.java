@@ -42,7 +42,7 @@ public class ServiceInstallController {
     ServiceInstallService serviceInstallService;
 
     /**
-     * 根据服务名称查询服务配置选项
+     * 根据服务角色名称查询服务配置选项
      */
     @RequestMapping("/getServiceConfigOption")
     public Result getServiceConfigOption(Integer clusterId, String serviceName) {
@@ -88,6 +88,7 @@ public class ServiceInstallController {
 
         return serviceInstallService.saveHostServiceRoleMapping(clusterId, list);
     }
+
     /**
      * 服务部署总览
      */

@@ -49,6 +49,7 @@
         "filename": "zeppelin-env.sh",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
         "templateName": "zeppelin-env.ftl",
         "includeParams": [
           "custom.zeppelin.env"
@@ -58,6 +59,7 @@
         "filename": "zeppelin-site.xml",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
         "templateName": "zeppelin-site.ftl",
         "includeParams": [
           "jobmanagerEnable",

@@ -121,6 +121,7 @@
       {
         "filename": "redis-master.conf",
         "configFormat": "custom",
+        "configTargetRoles": "RedisSentinelMaster",
         "outputDirectory": "conf",
         "templateName": "redis-sentinel-master.ftl",
         "includeParams": [
@@ -132,6 +133,7 @@
       {
         "filename": "redis-slave.conf",
         "configFormat": "custom",
+        "configTargetRoles": "RedisSentinelSlave",
         "outputDirectory": "conf",
         "templateName": "redis-sentinel-slave.ftl",
         "includeParams": [

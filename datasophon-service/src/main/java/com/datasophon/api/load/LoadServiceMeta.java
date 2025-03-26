@@ -38,6 +38,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.*;
 import com.datasophon.dao.entity.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -54,6 +55,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
+import static com.datasophon.api.utils.CommonUtils.buildNameToRoleMap;
+import static com.datasophon.common.Constants.COMMON_CONFIG;
 
 @Component
 public class LoadServiceMeta implements ApplicationRunner {
@@ -61,7 +64,8 @@ public class LoadServiceMeta implements ApplicationRunner {
     private static final Logger logger = LoggerFactory.getLogger(LoadServiceMeta.class);
 
     private static final String PATH = "meta";
-
+    private static final String HDFS = "HDFS";
+    private static final String HADOOP = "HADOOP";
     @Autowired
     private FrameServiceService frameServiceService;
 
@@ -89,9 +93,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     @Autowired
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
-    private static final String HDFS = "HDFS";
 
-    private static final String HADOOP = "HADOOP";
 
     /**
      * 1、设置全局环境变量
@@ -112,7 +114,7 @@ public class LoadServiceMeta implements ApplicationRunner {
             FrameInfoEntity frameInfo = saveClusterFrame(frameCode);
             // analysis file
             for (File file : files) {
-                if (file.getName().endsWith(Constants.JSON)) {
+                if (file.getName().endsWith(Constants.JSON_EXTENSION)) {
                     String serviceName = file.getParentFile().getName();
                     String serviceDdl = FileReader.create(file).readString();
                     try {
@@ -179,8 +181,8 @@ public class LoadServiceMeta implements ApplicationRunner {
 
 
     private void putServiceHomeToVariable(
-                                          List<ClusterInfoEntity> clusters, String serviceName,
-                                          String decompressPackageName) {
+            List<ClusterInfoEntity> clusters, String serviceName,
+            String decompressPackageName) {
         for (ClusterInfoEntity cluster : clusters) {
             Map<String, String> globalVariables = GlobalVariables.get(cluster.getId());
             if (HDFS.equals(serviceName)) {
@@ -263,6 +265,16 @@ public class LoadServiceMeta implements ApplicationRunner {
         FrameServiceEntity serviceEntity =
                 frameServiceService.getServiceByFrameIdAndServiceName(
                         frameInfo.getId(), serviceName);
+        List<ServiceConfig> parameters = serviceInfo.getParameters();
+        Map<String, String> nameToRoleMap = buildNameToRoleMap(configFileMap);
+
+        parameters.stream()
+                .filter(serviceConfig -> ObjectUtils.isEmpty(serviceConfig.getConfigTargetRoles())) // 只处理 configTargetRoles 为空的情况
+                .forEach(serviceConfig -> {
+                    String configTargetRoles = nameToRoleMap.getOrDefault(serviceConfig.getName(), COMMON_CONFIG);
+                    serviceConfig.setConfigTargetRoles(configTargetRoles);
+                });
+
         if (Objects.isNull(serviceEntity)) {
             serviceEntity = new FrameServiceEntity();
             buildServiceEntity(

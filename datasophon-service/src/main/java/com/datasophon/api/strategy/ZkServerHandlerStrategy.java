@@ -167,7 +167,7 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
                 CacheUtils.put("zkserver_" + server, myid);
                 myid++;
             }
-            ServiceConfig clusterIp = map.get(K8S_CLUSTER_IP);
+            /*ServiceConfig clusterIp = map.get(K8S_CLUSTER_IP);
             ArrayList<Map<String, String>> clusterIpLists = new ArrayList<>();
             clusterIpLists.add(new HashMap<String, String>() {{
                 put("zookeeper-zkserver", "2181");
@@ -185,7 +185,7 @@ public class ZkServerHandlerStrategy implements ServiceRoleStrategy {
             targetPortLists.add(new HashMap<String, String>() {{
                 put("zookeeper-zkserver", "2181:32181");
             }});
-            targetPort.setValue(targetPortLists);
+            targetPort.setValue(targetPortLists);*/
         }
     }
 

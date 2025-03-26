@@ -52,6 +52,7 @@
         "filename": "zoo.cfg",
         "configFormat": "properties",
         "outputDirectory": "conf",
+        "configTargetRoles": "ZkServer",
         "includeParams": [
           "clientPort",
           "dataDir",
@@ -74,6 +75,7 @@
         "filename": "java.env",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "CommonConfig",
         "templateName": "zk-env.ftl",
         "includeParams": [
           "zkHeapSize",
@@ -86,6 +88,7 @@
         "filename": "jaas.conf",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "CommonConfig",
         "templateName": "jaas.ftl",
         "includeParams": [
           "hostname",
@@ -95,6 +98,7 @@
         {
           "filename": "pvc.config.k8s",
           "configFormat": "properties",
+          "configTargetRoles": "CommonConfig",
           "outputDirectory": "",
           "includeParams": [
             "storageClasses",

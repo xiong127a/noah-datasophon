@@ -127,6 +127,7 @@
                 "filename": "install.properties",
                 "configFormat": "custom",
                 "templateName": "ranger-install.ftl",
+                "configTargetRoles": "RangerAdmin",
                 "outputDirectory": "",
                 "includeParams": [
                     "databaseFlavor",
@@ -158,6 +159,7 @@
                 "filename": "install.properties1",
                 "configFormat": "custom",
                 "templateName": "ranger-usersync-install.ftl",
+                "configTargetRoles": "RangerUsersync",
                 "outputDirectory": "ranger-2.1.0-usersync",
                 "includeParams": [
                     "rangerAdminUrl",
@@ -176,6 +178,7 @@
                 "filename": "install.properties2",
                 "configFormat": "custom",
                 "templateName": "ranger-kms-install.ftl",
+                "configTargetRoles": "RangerKms",
                 "outputDirectory": "ranger-2.1.0-kms",
                 "includeParams": [
                     "databaseFlavor",
@@ -203,6 +206,7 @@
                 "configFormat": "custom",
                 "templateName": "kms-site.ftl",
                 "outputDirectory": "ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf",
+                "configTargetRoles": "RangerKms",
                 "includeParams": [
                     "hadoopKmsKeyProviderUri",
                     "hadoopKmsAuthenticationType",

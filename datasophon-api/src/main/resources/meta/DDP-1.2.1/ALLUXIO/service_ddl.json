@@ -88,6 +88,7 @@
         "filename": "alluxio-site.properties",
         "configFormat": "properties",
         "outputDirectory": "conf",
+        "configTargetRoles": "AlluxioMaster",
         "includeParams": [
           "alluxio.master.mount.table.root.ufs",
           "alluxio.underfs.hdfs.configuration",
@@ -104,6 +105,7 @@
       {
         "filename": "masters",
         "configFormat": "custom",
+        "configTargetRoles": "AlluxioMaster",
         "outputDirectory": "conf",
         "templateName": "properties_value.ftl",
         "includeParams": [
@@ -113,6 +115,7 @@
       {
         "filename": "workers",
         "configFormat": "custom",
+        "configTargetRoles": "AlluxioWorker",
         "outputDirectory": "conf",
         "templateName": "properties_value.ftl",
         "includeParams": [
