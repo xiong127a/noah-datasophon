@@ -525,6 +525,98 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         }
     }
 
+    /**
+     * 增强版的execCommand方法，支持命令失败时自动重试
+     * 最多尝试MAX_RETRY_ATTEMPTS次，每次失败后等待RETRY_DELAY_MS毫秒
+     *
+     * @param session 会话对象
+     * @param command 要执行的命令
+     * @return 命令执行结果
+     * @throws InterruptedException 如果线程被中断
+     */
+    @Override
+    protected CommandResult execCommand(ClientSession session, String command) throws InterruptedException {
+        // 重试相关配置
+        final int MAX_RETRY_ATTEMPTS = 5; // 最大重试次数
+        final long RETRY_DELAY_MS = 2000; // 重试间隔时间，2秒
+
+        int attempts = 0;
+        CommandResult result = null;
+        Exception lastException = null;
+
+        // 自动重试逻辑，最多尝试MAX_RETRY_ATTEMPTS次
+        while (attempts < MAX_RETRY_ATTEMPTS) {
+            attempts++;
+            try {
+                // 调用父类的execCommand方法执行命令
+                result = super.execCommand(session, command);
+
+                // 如果命令执行成功，直接返回结果
+                if (result.isSuccess()) {
+                    if (attempts > 1) {
+                        cacheLog.info("命令 [%s] 在第 %d 次尝试成功执行", command, attempts);
+                    }
+                    return result;
+                } else {
+                    // 命令执行失败，记录错误并准备重试
+                    cacheLog.warn("命令 [%s] 第 %d 次执行失败: %s",
+                            command, attempts, result.getErrorOrOutput());
+
+                    // 如果已达到最大重试次数，返回最后一次执行的结果
+                    if (attempts >= MAX_RETRY_ATTEMPTS) {
+                        cacheLog.error("命令 [%s] 在尝试 %d 次后仍然失败，放弃重试",
+                                command, attempts);
+                        return result;
+                    }
+
+                    // 否则等待一段时间后重试
+                    cacheLog.info("将在 %d 毫秒后进行第 %d 次重试命令 [%s]",
+                            RETRY_DELAY_MS, attempts + 1, command);
+                    Thread.sleep(RETRY_DELAY_MS);
+                }
+            } catch (InterruptedException e) {
+                // 如果线程被中断，停止重试
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (Exception e) {
+                // 捕获其他异常
+                lastException = e;
+                cacheLog.error("命令 [%s] 第 %d 次执行出现异常: %s",
+                        command, attempts, e.getMessage());
+
+                // 如果已达到最大重试次数，抛出异常
+                if (attempts >= MAX_RETRY_ATTEMPTS) {
+                    cacheLog.error("命令 [%s] 在尝试 %d 次后仍然出现异常，放弃重试",
+                            command, attempts);
+                    if (e instanceof RuntimeException) {
+                        throw (RuntimeException) e;
+                    } else {
+                        throw new RuntimeException("执行命令失败: " + e.getMessage(), e);
+                    }
+                }
+
+                // 否则等待一段时间后重试
+                cacheLog.info("将在 %d 毫秒后进行第 %d 次重试命令 [%s]",
+                        RETRY_DELAY_MS, attempts + 1, command);
+                Thread.sleep(RETRY_DELAY_MS);
+            }
+        }
+
+        // 这里正常不会执行到，因为循环中已经有返回或抛出异常
+        // 但为了代码完整性，返回最后的结果或抛出异常
+        if (result != null) {
+            return result;
+        } else if (lastException != null) {
+            if (lastException instanceof RuntimeException) {
+                throw (RuntimeException) lastException;
+            } else {
+                throw new RuntimeException("执行命令失败: " + lastException.getMessage(), lastException);
+            }
+        } else {
+            return new CommandResult("", "未知错误，命令执行结果和异常均为null", -1);
+        }
+    }
+
     @Override
     public ItemCode getCheckerType() {
         return ItemCode.PASSWORD_FREE;

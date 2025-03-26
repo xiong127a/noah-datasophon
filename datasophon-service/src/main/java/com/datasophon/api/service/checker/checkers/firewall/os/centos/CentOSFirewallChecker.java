@@ -107,10 +107,25 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
         cacheLog.info("执行检查命令: systemctl status firewalld");
         CommandResult result = execCommand(session, "systemctl status firewalld", cacheLog);
 
+        // 获取系统实际类型，用于显示正确的系统名称
+        CommandResult osTypeResult = execCommand(session, "cat /etc/os-release | grep -i \"^NAME=\"", cacheLog);
+        String osTypeStr = osTypeResult.isSuccess() ? osTypeResult.getOutput() : "";
+        String osName = "Linux";
+
+        if (osTypeStr.toLowerCase().contains("kylin")) {
+            osName = "银河麒麟";
+        } else if (osTypeStr.toLowerCase().contains("centos")) {
+            osName = "CentOS";
+        } else if (osTypeStr.toLowerCase().contains("ubuntu")) {
+            osName = "Ubuntu";
+        } else {
+            cacheLog.info("无法确定系统类型，使用默认系统名称");
+        }
+
         switch (result.getExitCode()) {
             case 0:
                 // 服务正在运行
-                cacheLog.info("CentOS firewalld状态: 正在运行");
+                cacheLog.info(osName + " firewalld状态: 正在运行");
 
                 // 获取防火墙详细配置
                 CommandResult zoneResult = execCommand(session, "firewall-cmd --get-active-zones", cacheLog);
@@ -126,38 +141,38 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
                 }
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("CentOS系统firewalld防火墙正在运行，建议关闭");
+                checkItem.setMessage(osName + "系统firewalld防火墙正在运行，建议关闭");
                 break;
 
             case 3:
                 // 服务已停止
-                cacheLog.info("CentOS firewalld状态: 已停止");
+                cacheLog.info(osName + " firewalld状态: 已停止");
 
                 // 检查自启动状态
                 CommandResult enabledResult = execCommand(session,
                         "systemctl is-enabled firewalld 2>/dev/null || echo 'Unknown'", cacheLog);
                 if (enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled")) {
-                    cacheLog.info("CentOS firewalld自启动状态: 已启用");
+                    cacheLog.info(osName + " firewalld自启动状态: 已启用");
                     checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("CentOS系统firewalld防火墙已配置为自启动，建议禁用");
+                    checkItem.setMessage(osName + "系统firewalld防火墙已配置为自启动，建议禁用");
                 } else {
                     checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("CentOS系统firewalld防火墙已关闭");
+                    checkItem.setMessage(osName + "系统firewalld防火墙已关闭");
                 }
                 break;
 
             case 4:
                 // 服务不存在
-                cacheLog.info("CentOS firewalld状态: 服务不存在");
+                cacheLog.info(osName + " firewalld状态: 服务不存在");
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage("CentOS系统firewalld防火墙服务未安装");
+                checkItem.setMessage(osName + "系统firewalld防火墙服务未安装");
                 break;
 
             default:
                 // 其他状态，可能是命令执行出错
-                cacheLog.warn("获取CentOS firewalld防火墙状态失败，退出状态码: %d", result.getExitCode());
+                cacheLog.warn("获取" + osName + " firewalld防火墙状态失败，退出状态码: %d", result.getExitCode());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取CentOS系统firewalld防火墙状态失败: " + result.getErrorOrOutput());
+                checkItem.setMessage("获取" + osName + "系统firewalld防火墙状态失败: " + result.getErrorOrOutput());
                 break;
         }
 
@@ -169,6 +184,21 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
      */
     protected CheckItem checkIptables(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
             throws InterruptedException {
+        // 获取系统实际类型，用于显示正确的系统名称
+        CommandResult osTypeResult = execCommand(session, "cat /etc/os-release | grep -i \"^NAME=\"", cacheLog);
+        String osTypeStr = osTypeResult.isSuccess() ? osTypeResult.getOutput() : "";
+        String osName = "Linux";
+
+        if (osTypeStr.toLowerCase().contains("kylin")) {
+            osName = "银河麒麟";
+        } else if (osTypeStr.toLowerCase().contains("centos")) {
+            osName = "CentOS";
+        } else if (osTypeStr.toLowerCase().contains("ubuntu")) {
+            osName = "Ubuntu";
+        } else {
+            cacheLog.info("无法确定系统类型，使用默认系统名称");
+        }
+
         cacheLog.info("执行检查命令: service iptables status");
         CommandResult result = execCommand(session, "service iptables status 2>/dev/null || echo 'Not Found'",
                 cacheLog);
@@ -178,22 +208,22 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
 
             if (output.contains("not running") || output.contains("stopped")) {
                 // 服务已停止
-                cacheLog.info("CentOS iptables状态: 已停止");
+                cacheLog.info(osName + " iptables状态: 已停止");
 
                 // 检查自启动状态
                 CommandResult chkconfigResult = execCommand(session,
                         "chkconfig --list iptables | grep on || echo 'Not enabled'", cacheLog);
                 if (chkconfigResult.isSuccess() && !chkconfigResult.getOutput().contains("Not enabled")) {
-                    cacheLog.info("CentOS iptables自启动状态: 已启用");
+                    cacheLog.info(osName + " iptables自启动状态: 已启用");
                     checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("CentOS系统iptables防火墙已配置为自启动，建议禁用");
+                    checkItem.setMessage(osName + "系统iptables防火墙已配置为自启动，建议禁用");
                 } else {
                     checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("CentOS系统iptables防火墙已关闭");
+                    checkItem.setMessage(osName + "系统iptables防火墙已关闭");
                 }
             } else if (output.contains("running")) {
                 // 服务正在运行
-                cacheLog.info("CentOS iptables状态: 正在运行");
+                cacheLog.info(osName + " iptables状态: 正在运行");
 
                 // 获取iptables规则
                 CommandResult rulesResult = execCommand(session, "iptables -L", cacheLog);
@@ -203,12 +233,12 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
                 }
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("CentOS系统iptables防火墙正在运行，建议关闭");
+                checkItem.setMessage(osName + "系统iptables防火墙正在运行，建议关闭");
             } else {
                 // 状态不明
-                cacheLog.warn("无法确定CentOS iptables状态: %s", output);
+                cacheLog.warn("无法确定" + osName + " iptables状态: %s", output);
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("无法确定CentOS系统iptables防火墙状态，请手动检查");
+                checkItem.setMessage("无法确定" + osName + "系统iptables防火墙状态，请手动检查");
             }
         } else {
             // 尝试直接检查iptables规则
@@ -223,73 +253,90 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
      */
     protected boolean fixFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
             throws InterruptedException {
+        // 获取系统实际类型，用于显示正确的系统名称
+        CommandResult osTypeResult = execCommand(session, "cat /etc/os-release | grep -i \"^NAME=\"", cacheLog);
+        String osTypeStr = osTypeResult.isSuccess() ? osTypeResult.getOutput() : "";
+        String osName = "Linux";
+
+        if (osTypeStr.toLowerCase().contains("kylin")) {
+            osName = "银河麒麟";
+        } else if (osTypeStr.toLowerCase().contains("centos")) {
+            osName = "CentOS";
+        } else if (osTypeStr.toLowerCase().contains("ubuntu")) {
+            osName = "Ubuntu";
+        } else {
+            cacheLog.info("无法确定系统类型，使用默认系统名称");
+        }
+
         // 更新状态为正在检查防火墙当前状态
-        checkItem.setMessage("正在检查CentOS系统firewalld防火墙当前状态...");
+        checkItem.setMessage("正在检查" + osName + "系统firewalld防火墙当前状态...");
 
         // 检查firewalld状态
-        cacheLog.info("检查CentOS系统firewalld防火墙当前状态...");
+        cacheLog.info("检查" + osName + "系统firewalld防火墙当前状态...");
         CommandResult statusResult = execCommand(session, "systemctl status firewalld", cacheLog);
 
         // 如果服务不存在，直接返回成功
         if (statusResult.getExitCode() == 4) {
-            cacheLog.info("CentOS系统firewalld防火墙服务未安装，无需修复");
-            checkItem.setMessage("CentOS系统firewalld防火墙服务未安装，无需修复");
+            cacheLog.info(osName + "系统firewalld防火墙服务未安装，无需修复");
+            checkItem.setMessage(osName + "系统firewalld防火墙服务未安装，无需修复");
             return true;
         }
 
         // 如果服务已停止，检查是否已禁用自启动
         if (statusResult.getExitCode() == 3) {
             // 更新状态为正在检查自启动状态
-            checkItem.setMessage("正在检查CentOS系统firewalld防火墙自启动状态...");
+            checkItem.setMessage("正在检查" + osName + "系统firewalld防火墙自启动状态...");
 
             CommandResult isEnabledResult = execCommand(session, "systemctl is-enabled firewalld", cacheLog);
             if (isEnabledResult.isSuccess() && isEnabledResult.getOutput().trim().equals("disabled")) {
-                cacheLog.info("CentOS系统firewalld防火墙已关闭且已禁用自启动，无需修复");
-                checkItem.setMessage("CentOS系统firewalld防火墙已关闭且已禁用自启动");
+                cacheLog.info(osName + "系统firewalld防火墙已关闭且已禁用自启动，无需修复");
+                checkItem.setMessage(osName + "系统firewalld防火墙已关闭且已禁用自启动");
                 return true;
             }
         }
 
-        // 更新状态为正在停止防火墙服务
-        checkItem.setMessage("正在停止CentOS系统firewalld防火墙服务...");
+        // 更新状态为正在停止服务
+        checkItem.setMessage("正在停止" + osName + "系统firewalld防火墙服务...");
 
-        // 停止并禁用防火墙
-        cacheLog.info("正在停止CentOS系统firewalld防火墙服务...");
+        // 停止服务
+        cacheLog.info("执行命令: systemctl stop firewalld");
         CommandResult stopResult = execCommand(session, "systemctl stop firewalld", cacheLog);
+
         if (!stopResult.isSuccess()) {
-            cacheLog.error("停止CentOS系统firewalld防火墙服务失败: %s", stopResult.getErrorOrOutput());
-            checkItem.setMessage("停止CentOS系统firewalld防火墙服务失败: " + stopResult.getErrorOrOutput());
+            cacheLog.error("停止" + osName + "系统firewalld防火墙服务失败: %s", stopResult.getErrorOrOutput());
+            checkItem.setMessage("停止" + osName + "系统firewalld防火墙服务失败: " + stopResult.getErrorOrOutput());
             return false;
         }
-        cacheLog.info("停止CentOS系统firewalld防火墙服务完成");
 
-        // 更新状态为正在禁用防火墙自启动
-        checkItem.setMessage("正在禁用CentOS系统firewalld防火墙自启动...");
+        // 更新状态为正在禁用自启动
+        checkItem.setMessage("正在禁用" + osName + "系统firewalld防火墙自启动...");
 
-        cacheLog.info("正在禁用CentOS系统firewalld防火墙自启动...");
+        // 禁用自启动
+        cacheLog.info("执行命令: systemctl disable firewalld");
         CommandResult disableResult = execCommand(session, "systemctl disable firewalld", cacheLog);
+
         if (!disableResult.isSuccess()) {
-            cacheLog.error("禁用CentOS系统firewalld防火墙自启动失败: %s", disableResult.getErrorOrOutput());
-            checkItem.setMessage("禁用CentOS系统firewalld防火墙自启动失败: " + disableResult.getErrorOrOutput());
+            cacheLog.error("禁用" + osName + "系统firewalld防火墙自启动失败: %s", disableResult.getErrorOrOutput());
+            checkItem.setMessage("禁用" + osName + "系统firewalld防火墙自启动失败: " + disableResult.getErrorOrOutput());
             return false;
         }
-        cacheLog.info("禁用CentOS系统firewalld防火墙自启动完成");
 
-        // 更新状态为正在验证防火墙状态
-        checkItem.setMessage("正在验证CentOS系统firewalld防火墙状态...");
+        // 更新状态为正在验证
+        checkItem.setMessage("正在验证" + osName + "系统firewalld防火墙状态...");
 
-        // 再次检查确认防火墙已关闭
-        cacheLog.info("验证CentOS系统firewalld防火墙状态...");
+        // 验证服务状态
+        cacheLog.info("执行命令: systemctl status firewalld");
         CommandResult verifyResult = execCommand(session, "systemctl status firewalld", cacheLog);
-        if (verifyResult.getExitCode() != 3) {
-            cacheLog.warn("警告: CentOS系统firewalld防火墙服务可能未成功关闭，请手动检查");
-            checkItem.setMessage("警告: CentOS系统firewalld防火墙服务可能未成功关闭，请手动检查");
+
+        if (verifyResult.getExitCode() == 3) {
+            cacheLog.info(osName + "系统firewalld防火墙已成功停止");
+            checkItem.setMessage(osName + "系统firewalld防火墙已成功停止并禁用自启动");
+            return true;
+        } else {
+            cacheLog.error("验证" + osName + "系统firewalld防火墙状态失败，服务可能仍在运行");
+            checkItem.setMessage("验证" + osName + "系统firewalld防火墙状态失败，服务可能仍在运行");
             return false;
         }
-
-        cacheLog.info("验证成功: CentOS系统firewalld防火墙已关闭");
-        checkItem.setMessage("CentOS系统firewalld防火墙已成功关闭并禁用自启动");
-        return true;
     }
 
     /**

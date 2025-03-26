@@ -303,6 +303,17 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 if (javaExecutable) {
                     cacheLog.info("专用Java环境已正常存在，无需修复");
+
+                    // 确保检查项状态更新为SUCCESS
+                    checkItem.setStatus(CheckItem.Status.SUCCESS);
+                    checkItem.setMessage("专用Java环境正常，无需修复");
+
+                    // 同步到HostInfo
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.SUCCESS, "专用Java环境正常，无需修复");
+
+                    // 重新计算并更新主机状态
+                    hostInfo.calculateStatus();
+
                     return true;
                 }
 
@@ -314,6 +325,17 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 if (!rmResult.isSuccess()) {
                     logger.error("删除旧JDK目录失败: {}", rmResult.getErrorOrOutput());
                     cacheLog.error("删除旧JDK目录失败: " + rmResult.getErrorOrOutput());
+
+                    // 确保更新失败状态
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("删除旧JDK目录失败: " + rmResult.getErrorOrOutput());
+
+                    // 同步到HostInfo
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, checkItem.getMessage());
+
+                    // 重新计算并更新主机状态
+                    hostInfo.calculateStatus();
+
                     return false;
                 }
                 cacheLog.info("已删除旧JDK目录");
@@ -337,6 +359,17 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 if (!unzipResult.isSuccess()) {
                     logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
                     cacheLog.error("解压JDK安装包失败: " + unzipResult.getErrorOrOutput());
+
+                    // 确保更新失败状态
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("解压JDK安装包失败: " + unzipResult.getErrorOrOutput());
+
+                    // 同步到HostInfo
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, checkItem.getMessage());
+
+                    // 重新计算并更新主机状态
+                    hostInfo.calculateStatus();
+
                     return false;
                 }
                 logger.info("主机 {} 的x86_64 JDK安装完成", hostInfo.getHostname());
@@ -358,6 +391,17 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 if (!unzipResult.isSuccess()) {
                     logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
                     cacheLog.error("解压JDK安装包失败: " + unzipResult.getErrorOrOutput());
+
+                    // 确保更新失败状态
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("解压JDK安装包失败: " + unzipResult.getErrorOrOutput());
+
+                    // 同步到HostInfo
+                    hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, checkItem.getMessage());
+
+                    // 重新计算并更新主机状态
+                    hostInfo.calculateStatus();
+
                     return false;
                 }
                 logger.info("主机 {} 的ARM JDK安装完成", hostInfo.getHostname());
@@ -365,6 +409,17 @@ public class JavaEnvChecker extends AbstractItemChecker {
             } else {
                 logger.error("主机 {} 的架构 {} 不受支持", hostInfo.getHostname(), arch);
                 cacheLog.error("不支持的系统架构: " + arch);
+
+                // 确保更新失败状态
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("不支持的系统架构: " + arch);
+
+                // 同步到HostInfo
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, checkItem.getMessage());
+
+                // 重新计算并更新主机状态
+                hostInfo.calculateStatus();
+
                 return false;
             }
 
@@ -406,12 +461,41 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 设置HTML格式化消息
                 setStyledHtmlMessage(hostInfo, checkItem, true, "专用Java环境修复成功", detailsBuilder);
 
-                // 确保检查项状态更新为SUCCESS，并正确同步到HostInfo
+                // 确保检查项状态更新为SUCCESS
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
+
+                // 同步到HostInfo
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.SUCCESS, "专用Java环境修复成功");
 
                 // 重新计算并更新主机状态
                 hostInfo.calculateStatus();
+
+                // 记录状态更新
+                logger.info("主机 {} 的专用Java环境检查项状态已更新为成功", hostInfo.getHostname());
+                cacheLog.info("专用Java环境检查项状态已更新为成功");
+
+                // 添加额外的状态确认和日志
+                logger.info("Java环境修复完成后的最终状态确认 - checkItem.getStatus(): {}, message: {}",
+                        checkItem.getStatus(), checkItem.getMessage());
+
+                // 在HostInfo中再次确认检查项状态
+                if (hostInfo.getCheckItems() != null) {
+                    for (CheckItem item : hostInfo.getCheckItems()) {
+                        if (item.getId().equals(checkItem.getId())) {
+                            logger.info("Java环境修复完成后在HostInfo中的状态: {}, message: {}",
+                                    item.getStatus(), item.getMessage());
+
+                            // 如果状态还不是SUCCESS，进行强制更新
+                            if (item.getStatus() != CheckItem.Status.SUCCESS) {
+                                logger.warn("修复后状态在HostInfo中未正确更新，进行强制更新");
+                                item.setStatus(CheckItem.Status.SUCCESS);
+                                item.setMessage("Java环境修复成功（状态已强制更新）");
+                                hostInfo.calculateStatus();
+                            }
+                            break;
+                        }
+                    }
+                }
 
                 return true;
             } else {
@@ -449,10 +533,23 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 设置HTML格式化消息
                 setStyledHtmlMessage(hostInfo, checkItem, false, "专用Java环境修复失败", detailsBuilder);
 
+                // 确保检查项状态更新为FAILED
+                checkItem.setStatus(CheckItem.Status.FAILED);
+
+                // 同步到HostInfo
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "专用Java环境安装验证失败");
+
+                // 重新计算并更新主机状态
+                hostInfo.calculateStatus();
+
+                // 记录状态更新
+                logger.info("主机 {} 的专用Java环境检查项状态已更新为失败", hostInfo.getHostname());
+                cacheLog.info("专用Java环境检查项状态已更新为失败");
+
                 return false;
             }
         } catch (Exception e) {
-            logger.error("修复主机 {} 的专用Java环境失败: {}", hostInfo.getHostname(), e.getMessage());
+            logger.error("修复主机 {} 的专用Java环境失败: {}", hostInfo.getHostname(), e.getMessage(), e);
             cacheLog.error("修复专用Java环境失败: " + e.getMessage());
             cacheLog.info("==== 专用Java环境修复失败 ====");
 
@@ -495,7 +592,57 @@ public class JavaEnvChecker extends AbstractItemChecker {
             // 设置HTML格式化消息
             setStyledHtmlMessage(hostInfo, checkItem, false, "专用Java环境修复错误", detailsBuilder);
 
+            // 确保检查项状态更新为FAILED
+            checkItem.setStatus(CheckItem.Status.FAILED);
+
+            // 同步到HostInfo
+            hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED,
+                    "专用Java环境修复失败: " + e.getMessage());
+
+            // 重新计算并更新主机状态
+            hostInfo.calculateStatus();
+
+            // 记录状态更新
+            logger.info("主机 {} 的专用Java环境检查项状态已更新为失败(异常)", hostInfo.getHostname());
+            cacheLog.info("专用Java环境检查项状态已更新为失败(异常)");
+
             return false;
+        } finally {
+            // 添加一个额外的最终日志确认
+            try {
+                // 获取检查项的最终状态，并记录
+                CheckItem.Status finalStatus = checkItem.getStatus();
+                String finalMessage = checkItem.getMessage();
+                logger.info("专用Java环境修复过程结束，最终状态: {}, 消息: {}", finalStatus, finalMessage);
+
+                // 确保状态已同步到HostInfo
+                boolean foundInHostInfo = false;
+                if (hostInfo.getCheckItems() != null) {
+                    for (CheckItem item : hostInfo.getCheckItems()) {
+                        if (item.getId().equals(checkItem.getId())) {
+                            logger.info("修复结束时在HostInfo中的状态: {}, 消息: {}",
+                                    item.getStatus(), item.getMessage());
+                            foundInHostInfo = true;
+
+                            // 如果出现不一致，进行最后的强制同步
+                            if (item.getStatus() != finalStatus) {
+                                logger.warn("检测到状态不一致，进行最终同步，参考状态: {}, HostInfo状态: {}",
+                                        finalStatus, item.getStatus());
+                                item.setStatus(finalStatus);
+                                item.setMessage(finalMessage);
+                                hostInfo.calculateStatus();
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundInHostInfo) {
+                    logger.warn("在HostInfo中未找到ID为{}的检查项", checkItem.getId());
+                }
+            } catch (Exception e) {
+                logger.error("记录最终状态时发生错误: {}", e.getMessage());
+            }
         }
     }
 

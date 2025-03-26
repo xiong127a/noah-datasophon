@@ -1897,7 +1897,7 @@ export default {
     async retryCheckItem(hostname, itemId) {
       // 查找对应的主机信息
       const host = this.dataSource.find(h => h.hostname === hostname);
-
+      
       // 删除以下检查，允许在主机检查过程中也能点击重试按钮
       /*
       if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
@@ -1905,7 +1905,7 @@ export default {
         return;
       }
       */
-
+      
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
           clusterId: this.clusterId,
@@ -2119,15 +2119,15 @@ export default {
         id: itemId,
         itemName: itemName
       };
-
+      
       // 打开日志弹窗并加载日志
       this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
       this.logVisible = true;
       this.logContent = '';
-
+      
       // 设置初始日志类型为全部日志
       this.currentLogType = 'all';
-
+      
       // 初始停止之前可能存在的自动刷新定时器
       this.stopAutoRefresh();
 
@@ -2677,7 +2677,7 @@ export default {
             // 状态标签样式
             .status-tag {
               display: inline-flex;
-              align-items: center;
+    align-items: center;
               padding: 4px 12px;
               border-radius: 12px;
               font-size: 0.85rem;
@@ -2727,8 +2727,8 @@ export default {
                 background: fade(@apple-blue, 10%);
                 border: none;
                 color: @apple-blue;
-                
-                &:hover {
+      
+      &:hover {
                   background: fade(@apple-blue, 15%);
                 }
               }
@@ -2737,8 +2737,8 @@ export default {
                 background: fade(@apple-red, 10%);
                 border: none;
                 color: @apple-red;
-                
-                &:hover {
+      
+      &:hover {
                   background: fade(@apple-red, 15%);
                 }
               }
@@ -2786,10 +2786,10 @@ export default {
     }
     
     .expand-icon-inner {
-    display: flex;
-      align-items: center;
-      justify-content: center;
-      
+  display: flex;
+    align-items: center;
+    justify-content: center;
+    
     .anticon {
         color: @apple-black;
         transform: rotate(0);
@@ -2881,7 +2881,7 @@ export default {
   
   // 操作系统详情弹出框样式
   .os-detail-popup {
-    padding: 0;
+  padding: 0;
     min-width: 320px;
     max-width: 420px;
     border-radius: 16px;
@@ -2917,7 +2917,7 @@ export default {
     // 头部区域
     .os-detail-header {
       padding: 24px;
-      display: flex;
+    display: flex;
       align-items: center;
       background: linear-gradient(135deg, #0066CC, #007AFF);
       
@@ -2952,7 +2952,7 @@ export default {
     // 卡片样式
     .os-detail-card {
       margin: 16px;
-      border-radius: 12px;
+    border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       background-color: #ffffff;
@@ -2972,7 +2972,7 @@ export default {
       
       // 信息行
       .os-detail-info-row {
-        display: flex;
+    display: flex;
         padding: 16px;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         
@@ -2987,7 +2987,7 @@ export default {
             width: 36px;
             height: 36px;
             border-radius: 8px;
-            display: flex;
+    display: flex;
             align-items: center;
             justify-content: center;
             
@@ -3036,7 +3036,7 @@ export default {
             &.with-progress {
               display: flex;
               justify-content: space-between;
-              align-items: center;
+      align-items: center;
               
               span {
                 margin-right: 10px;
@@ -3075,8 +3075,8 @@ export default {
           &:last-child {
             border-bottom: none;
           }
-          
-          &:hover {
+      
+      &:hover {
             background-color: rgba(0, 0, 0, 0.02);
           }
           

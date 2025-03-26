@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Component
 public class HostCheckQueueManager {
@@ -1872,9 +1873,46 @@ public class HostCheckQueueManager {
 
         try {
             if (success) {
+                // 记录修复前的状态以便日志记录
+                CheckItem.Status oldStatus = checkItem.getStatus();
+                logger.info("修复任务执行成功，准备更新状态: clusterId={}, hostname={}, itemId={}, 原状态={}",
+                        clusterId, hostInfo.getHostname(), checkItem.getId(), oldStatus);
+
                 // 修复成功后，强制更新状态为SUCCESS
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
+                checkItem.setMessage("修复成功");
+
+                // 同时更新HostInfo中该检查项的状态，确保两边同步
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.SUCCESS, "修复成功");
+
+                // 对于特定类型的检查项（如Java环境），增加额外的日志和检查
+                // 获取检查项代码，如果是JAVA_ENV，增加特殊处理
+                if ("JAVA_ENV".equals(checkItem.getItemCode())) {
+                    logger.info("Java环境检查项修复成功，特别确保状态更新: clusterId={}, hostname={}, itemId={}, 原状态={}, 新状态=SUCCESS",
+                            clusterId, hostInfo.getHostname(), checkItem.getId(), oldStatus);
+
+                    // 直接遍历并更新检查项状态，确保修改生效
+                    boolean foundInHost = false;
+                    if (hostInfo.getCheckItems() != null) {
+                        for (CheckItem item : hostInfo.getCheckItems()) {
+                            if (item.getId().equals(checkItem.getId())) {
+                                foundInHost = true;
+                                // 记录原始状态
+                                CheckItem.Status beforeUpdate = item.getStatus();
+                                // 强制更新状态
+                                item.setStatus(CheckItem.Status.SUCCESS);
+                                item.setMessage("Java环境修复成功");
+                                logger.info("Java环境检查项在HostInfo中状态更新: 原状态={}, 新状态=SUCCESS",
+                                        beforeUpdate);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!foundInHost) {
+                        logger.warn("Java环境检查项在HostInfo中未找到: itemId={}", checkItem.getId());
+                    }
+                }
 
                 // 重新计算主机状态
                 hostInfo.calculateStatus();
@@ -1882,17 +1920,84 @@ public class HostCheckQueueManager {
                 // 更新缓存中的主机信息
                 updateHostInfoCache(clusterId, hostInfo);
 
+                // 立即再次获取并检查状态，确保状态已经正确更新
+                Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+                if (map != null) {
+                    HostInfo cachedInfo = map.get(hostInfo.getHostname());
+                    if (cachedInfo != null) {
+                        CheckItem cachedItem = null;
+                        for (CheckItem item : cachedInfo.getCheckItems()) {
+                            if (item.getId().equals(checkItem.getId())) {
+                                cachedItem = item;
+                                break;
+                            }
+                        }
+
+                        if (cachedItem != null) {
+                            logger.info("修复任务完成后缓存状态确认: clusterId={}, hostname={}, itemId={}, 缓存状态={}",
+                                    clusterId, hostInfo.getHostname(), checkItem.getId(), cachedItem.getStatus());
+
+                            // 如果缓存中的状态不是SUCCESS，强制更新
+                            if (cachedItem.getStatus() != CheckItem.Status.SUCCESS) {
+                                logger.warn("修复后状态未正确更新，强制更新状态: clusterId={}, hostname={}, itemId={}",
+                                        clusterId, hostInfo.getHostname(), checkItem.getId());
+                                cachedItem.setStatus(CheckItem.Status.SUCCESS);
+                                cachedItem.setMessage("修复成功（状态已强制更新）");
+                                cachedInfo.calculateStatus();
+                                map.put(hostInfo.getHostname(), cachedInfo);
+                                CacheUtils.put(clusterId + Constants.HOST_MAP, map);
+
+                                // 对Java环境特殊处理，确保状态正确
+                                if ("JAVA_ENV".equals(checkItem.getItemCode())) {
+                                    // 再次延迟确认状态（前面的状态更新可能被其他线程覆盖）
+                                    try {
+                                        Thread.sleep(500); // 短暂延迟，等待其他可能的状态更新
+
+                                        // 最终状态确认和强制更新
+                                        HostInfo finalInfo = map.get(hostInfo.getHostname());
+                                        if (finalInfo != null) {
+                                            for (CheckItem item : finalInfo.getCheckItems()) {
+                                                if (item.getId().equals(checkItem.getId()) &&
+                                                        item.getStatus() != CheckItem.Status.SUCCESS) {
+                                                    logger.warn("Java环境最终状态仍不正确，再次强制更新: 当前状态={}",
+                                                            item.getStatus());
+                                                    item.setStatus(CheckItem.Status.SUCCESS);
+                                                    item.setMessage("Java环境修复成功（最终强制更新）");
+                                                    finalInfo.calculateStatus();
+                                                    map.put(hostInfo.getHostname(), finalInfo);
+                                                    CacheUtils.put(clusterId + Constants.HOST_MAP, map);
+                                                }
+                                            }
+                                        }
+                                    } catch (InterruptedException e) {
+                                        Thread.currentThread().interrupt();
+                                        logger.warn("Java环境状态确认延迟被中断", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 logger.info("修复任务完成后状态已更新: clusterId={}, hostname={}, itemId={}, 状态={}",
                         clusterId, hostInfo.getHostname(), checkItem.getId(), CheckItem.Status.SUCCESS);
             } else {
                 // 修复失败
+                logger.info("修复任务执行失败: clusterId={}, hostname={}, itemId={}",
+                        clusterId, hostInfo.getHostname(), checkItem.getId());
+
                 checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("修复失败");
+
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "修复失败");
                 hostInfo.calculateStatus();
                 updateHostInfoCache(clusterId, hostInfo);
+
+                logger.info("修复任务失败后状态已更新: clusterId={}, hostname={}, itemId={}, 状态={}",
+                        clusterId, hostInfo.getHostname(), checkItem.getId(), CheckItem.Status.FAILED);
             }
         } catch (Exception e) {
-            logger.error("处理修复任务完成后更新状态时出错", e);
+            logger.error("处理修复任务完成后更新状态时出错: {}", e.getMessage(), e);
         }
     }
 
@@ -1921,6 +2026,8 @@ public class HostCheckQueueManager {
         private final List<CheckItem> fixItems;
         private final long startTimeMs;
         private final String taskKey;
+        private static final int MAX_RETRY_ATTEMPTS = 3; // 最大重试次数
+        private static final long RETRY_DELAY_MS = 5000; // 重试间隔时间，5秒
 
         public ExecuteFixTaskJob(FixTask fixTask, List<CheckItem> fixItems, String taskKey) {
             this.fixTask = fixTask;
@@ -1931,53 +2038,87 @@ public class HostCheckQueueManager {
 
         @Override
         public void run() {
+            logger.info("开始执行主机 {} 上的修复任务", fixTask.getHostInfo().getHostname());
+            Integer clusterId = fixTask.getClusterId();
+            HostInfo hostInfo = fixTask.getHostInfo();
+            HostCheckServiceImpl hostCheckService = fixTask.getHostCheckService();
+            List<String> fixItemNames = fixItems.stream()
+                    .map(CheckItem::getItemName)
+                    .collect(Collectors.toList());
+
             boolean success = false;
-            try {
-                // 记录任务开始时间
-                fixTaskStartTimes.put(taskKey, System.currentTimeMillis());
+            int attempts = 0;
+            Exception lastException = null;
 
-                // 获取任务信息
-                Integer clusterId = fixTask.getClusterId();
-                HostInfo hostInfo = fixTask.getHostInfo();
-                HostCheckServiceImpl hostCheckService = fixTask.getHostCheckService();
+            // 自动重试逻辑，最多尝试MAX_RETRY_ATTEMPTS次
+            while (!success && attempts < MAX_RETRY_ATTEMPTS) {
+                attempts++;
+                try {
+                    logger.info("执行主机 {} 的修复任务，第 {} 次尝试，修复项: {}", hostInfo.getHostname(),
+                            attempts, String.join(", ", fixItemNames));
 
-                logger.info("开始执行修复任务: clusterId={}, hostname={}, itemId={}",
-                        clusterId, hostInfo.getHostname(), fixTask.getCheckItem().getId());
+                    // 执行修复操作
+                    success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
 
-                // 执行修复操作
-                success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
-
-                // 处理修复任务完成后的状态更新
-                handleFixTaskCompletion(fixTask, success);
-
-                // 计算执行时间
-                long executionTimeMs = System.currentTimeMillis() - startTimeMs;
-
-                // 更新统计信息
-                fixTasksProcessed.incrementAndGet();
-                if (success) {
-                    fixTasksSucceeded.incrementAndGet();
-                } else {
-                    fixTasksFailed.incrementAndGet();
+                    if (success) {
+                        logger.info("主机 {} 的修复任务在第 {} 次尝试成功完成", hostInfo.getHostname(), attempts);
+                        break; // 修复成功，跳出循环
+                    } else {
+                        logger.warn("主机 {} 的修复任务第 {} 次尝试失败", hostInfo.getHostname(), attempts);
+                        if (attempts < MAX_RETRY_ATTEMPTS) {
+                            logger.info("将在 {} 毫秒后进行第 {} 次重试", RETRY_DELAY_MS, attempts + 1);
+                            Thread.sleep(RETRY_DELAY_MS); // 延迟一段时间后重试
+                        }
+                    }
+                } catch (Exception e) {
+                    lastException = e;
+                    logger.error("主机 {} 的修复任务第 {} 次尝试出现异常: {}", hostInfo.getHostname(),
+                            attempts, e.getMessage(), e);
+                    if (attempts < MAX_RETRY_ATTEMPTS) {
+                        logger.info("将在 {} 毫秒后进行第 {} 次重试", RETRY_DELAY_MS, attempts + 1);
+                        try {
+                            Thread.sleep(RETRY_DELAY_MS); // 延迟一段时间后重试
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            logger.warn("重试等待被中断", ie);
+                            break; // 如果线程被中断，退出重试
+                        }
+                    }
                 }
+            }
 
-                // 更新总执行时间和最长执行时间
-                fixTasksTotalExecutionTimeMs.addAndGet(executionTimeMs);
-                updateMaxExecutionTime(fixTasksMaxExecutionTimeMs, executionTimeMs);
+            // 计算任务执行耗时
+            long executionTimeMs = System.currentTimeMillis() - startTimeMs;
+            fixTasksTotalExecutionTimeMs.addAndGet(executionTimeMs);
+            updateMaxExecutionTime(fixTasksMaxExecutionTimeMs, executionTimeMs);
 
-                logger.info("修复任务完成: clusterId={}, hostname={}, itemId={}, 状态={}, 耗时={}ms",
-                        fixTask.getClusterId(), fixTask.getHostInfo().getHostname(),
-                        fixTask.getCheckItem().getId(),
-                        success ? "成功" : "失败", executionTimeMs);
-
-            } catch (Exception e) {
-                logger.error("执行修复任务时发生异常: {}", e.getMessage(), e);
+            // 更新运行统计信息
+            fixTasksProcessed.incrementAndGet();
+            if (success) {
+                fixTasksSucceeded.incrementAndGet();
+                logger.info("主机 {} 的修复任务成功完成，耗时 {} ms，尝试次数: {}/{}",
+                        hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
+            } else {
                 fixTasksFailed.incrementAndGet();
-            } finally {
-                // 清理资源
+                if (lastException != null) {
+                    logger.error("主机 {} 的修复任务最终失败，耗时 {} ms，尝试次数: {}/{}, 最后错误: {}",
+                            hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS,
+                            lastException.getMessage());
+                } else {
+                    logger.error("主机 {} 的修复任务最终失败，耗时 {} ms，尝试次数: {}/{}",
+                            hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
+                }
+            }
+
+            // 处理任务完成逻辑
+            handleFixTaskCompletion(fixTask, success);
+
+            // 从运行任务列表中移除当前任务
+            try {
                 runningFixTasks.remove(taskKey);
                 fixTaskKeysInQueue.remove(taskKey);
-                fixTaskStartTimes.remove(taskKey);
+            } catch (Exception e) {
+                logger.error("移除修复任务 {} 时出错: {}", taskKey, e.getMessage(), e);
             }
         }
     }
