@@ -401,11 +401,11 @@ public class InstallServiceImpl implements InstallService {
     public Result dispatcherHostAgentList(Integer clusterId, Integer installStateCode, Integer page, Integer pageSize) {
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        List<HostInfo> list = map.entrySet().stream().sorted(Comparator.comparing(e -> e.getKey()))
-                .map(e -> e.getValue()).filter(e -> e.getCheckResult().getCode() == 10001).collect(Collectors.toList());
+        String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
+        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        List<HostInfo> list = map.entrySet().stream().sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue).filter(e -> e.getCheckResult().getCode() == 10001)
+                .collect(Collectors.toList());
 
         for (HostInfo hostInfo : list) {
             if (hostInfo.isManaged()) {
@@ -452,8 +452,7 @@ public class InstallServiceImpl implements InstallService {
     public Result reStartDispatcherHostAgent(Integer clusterId, String hostnames) {
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
 
         for (String hostname : hostnames.split(",")) {
             ClusterHostDO clusterHost = hostService.getClusterHostByHostname(hostname);
@@ -689,15 +688,6 @@ public class InstallServiceImpl implements InstallService {
                     }
                 }
 
-                // 清理主机映射缓存
-                CacheUtils.removeKey(hostMapKey);
-                logger.info("已清理集群[{}]的主机映射缓存", clusterId);
-            }
-
-            String hostMd5Key = clusterId + Constants.HOST_MD5;
-            if (CacheUtils.constainsKey(hostMd5Key)) {
-                CacheUtils.removeKey(hostMd5Key);
-                logger.info("已清理集群[{}]的主机列表MD5缓存", clusterId);
             }
 
             // 3. 关闭任务清理和连接清理
@@ -733,7 +723,7 @@ public class InstallServiceImpl implements InstallService {
             try {
                 // 通过Spring获取AsyncCheckService实例 - 考虑添加@Autowired注入AsyncCheckService
                 Object asyncCheckService = applicationContext.getBean("asyncCheckService");
-                if (asyncCheckService != null && asyncCheckService.getClass().getName().contains("AsyncCheckService")) {
+                if (asyncCheckService.getClass().getName().contains("AsyncCheckService")) {
                     // 反射调用stopConnectionCleanup方法停止SSH连接清理
                     Method stopConnectionCleanupMethod = asyncCheckService.getClass()
                             .getMethod("stopConnectionCleanup");
@@ -773,7 +763,7 @@ public class InstallServiceImpl implements InstallService {
             }
 
             logger.info("集群[{}]的主机检查资源清理完成", clusterId);
-            return Result.success(String.format("主机检查资源清理完成，已清理缓存和取消检查任务"));
+            return Result.success("主机检查资源清理完成，已清理缓存和取消检查任务");
         } catch (Exception e) {
             logger.error("清理主机检查资源时发生错误", e);
             return Result.error("清理主机检查资源失败: " + e.getMessage());
@@ -789,8 +779,7 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public Result dispatcherHostAgentCompleted(Integer clusterId) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
             HostInfo hostInfo = hostInfoEntry.getValue();
             if (hostInfo.getProgress() == 75

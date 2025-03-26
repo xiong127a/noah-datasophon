@@ -86,7 +86,7 @@ public class HostInfo implements Serializable {
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
      */
     private CheckItem.Status status;
-    
+
     /**
      * 状态缓存是否失效 - 不序列化此字段
      */
@@ -94,10 +94,10 @@ public class HostInfo implements Serializable {
 
     /**
      * -- GETTER --
-     *  是否使用已存在的会话（用于连接复用）
+     * 是否使用已存在的会话（用于连接复用）
      * -- SETTER --
-     *  设置是否使用已存在的会话
-
+     * 设置是否使用已存在的会话
+     * 
      */
     // 添加连接复用相关属性
     @Setter
@@ -107,10 +107,10 @@ public class HostInfo implements Serializable {
 
     /**
      * -- GETTER --
-     *  获取外部会话
+     * 获取外部会话
      * -- SETTER --
-     *  设置外部会话
-
+     * 设置外部会话
+     * 
      */
     @Setter
     @Getter
@@ -142,7 +142,7 @@ public class HostInfo implements Serializable {
         // 当状态被手动设置时，缓存被视为有效
         this.statusCacheDirty = false;
     }
-    
+
     /**
      * 获取用于前端展示的状态
      * 对于混合状态(部分成功部分跳过)的特殊处理，返回"MIXED"
@@ -154,7 +154,7 @@ public class HostInfo implements Serializable {
         }
         return status != null ? status.name() : null;
     }
-    
+
     /**
      * 检查是否是混合状态（部分成功部分跳过）
      */
@@ -177,7 +177,7 @@ public class HostInfo implements Serializable {
         }
         return false;
     }
-    
+
     /**
      * 设置检查项列表
      * 重写此方法以在设置新的检查项时标记状态缓存为脏
@@ -186,21 +186,21 @@ public class HostInfo implements Serializable {
         this.checkItems = checkItems;
         this.statusCacheDirty = true;
     }
-    
+
     /**
      * 更新单个检查项的状态并自动计算主机状态
      * 这是推荐的更新检查项状态的方法，可以自动触发状态计算
      *
-     * @param itemId 检查项ID
+     * @param itemId    检查项ID
      * @param newStatus 新状态
-     * @param message 状态消息
+     * @param message   状态消息
      * @return 状态是否发生变化
      */
     public boolean updateCheckItemStatus(Integer itemId, CheckItem.Status newStatus, String message) {
         if (checkItems == null) {
             return false;
         }
-        
+
         boolean statusChanged = false;
         for (CheckItem item : checkItems) {
             if (item.getId().equals(itemId)) {
@@ -214,15 +214,15 @@ public class HostInfo implements Serializable {
                 break;
             }
         }
-        
+
         if (statusChanged) {
             statusCacheDirty = true;
             calculateStatus();
         }
-        
+
         return statusChanged;
     }
-    
+
     /**
      * 批量更新检查项状态
      * 对于需要同时更新多个检查项的场景，性能更优
@@ -234,7 +234,7 @@ public class HostInfo implements Serializable {
         if (checkItems == null || updates == null || updates.isEmpty()) {
             return false;
         }
-        
+
         boolean anyChange = false;
         for (CheckItem item : checkItems) {
             if (updates.containsKey(item.getId())) {
@@ -245,15 +245,15 @@ public class HostInfo implements Serializable {
                 }
             }
         }
-        
+
         if (anyChange) {
             statusCacheDirty = true;
             calculateStatus();
         }
-        
+
         return anyChange;
     }
-    
+
     /**
      * 计算主机的整体状态
      * 状态计算规则：
@@ -279,7 +279,7 @@ public class HostInfo implements Serializable {
         boolean hasWaiting = false;
         boolean hasSkipped = false;
         boolean hasSuccess = false;
-        
+
         // 统计检查项的状态
         int total = checkItems.size();
         int successCount = 0;
@@ -290,7 +290,7 @@ public class HostInfo implements Serializable {
 
         for (CheckItem item : checkItems) {
             CheckItem.Status itemStatus = item.getStatus();
-            
+
             if (itemStatus == CheckItem.Status.CHECKING) {
                 hasChecking = true;
                 checkingCount++;
@@ -313,40 +313,45 @@ public class HostInfo implements Serializable {
         if (hasChecking) {
             this.status = CheckItem.Status.CHECKING;
             // 检查中，提供更详细的信息
-            this.checkResult = new CheckResult(10000, 
-                String.format("开始主机校验：进行中(%d/%d)，已通过(%d)，已失败(%d)，已跳过(%d)", 
-                     checkingCount, total, successCount, failedCount, skippedCount));
+            this.checkResult = new CheckResult(10000,
+                    String.format("开始主机校验：进行中(%d/%d)，已通过(%d)，已失败(%d)，已跳过(%d)",
+                            checkingCount, total, successCount, failedCount, skippedCount));
         } else if (hasFailed) {
             this.status = CheckItem.Status.FAILED;
             // 主机校验不通过，提供失败数量
-            this.checkResult = new CheckResult(10043, 
-                String.format("主机校验不通过：%d个检查项未通过，%d个检查项通过", 
-                    failedCount, successCount));
+            this.checkResult = new CheckResult(10043,
+                    String.format("主机校验不通过：%d个检查项未通过，%d个检查项通过",
+                            failedCount, successCount));
         } else if (hasWaiting) {
             this.status = CheckItem.Status.WAITING;
             // 等待检查，提供等待检查的数量
-            this.checkResult = new CheckResult(9999, 
-                String.format("等待主机校验：%d个检查项待检查", waitingCount));
+            this.checkResult = new CheckResult(9999,
+                    String.format("等待主机校验：%d个检查项待检查", waitingCount));
         } else if (hasSuccess && !hasSkipped) {
             this.status = CheckItem.Status.SUCCESS;
             // 主机校验成功
-            this.checkResult = new CheckResult(10001, 
-                String.format("主机校验成功：全部%d个检查项通过", successCount));
+            this.checkResult = new CheckResult(10001,
+                    String.format("主机校验成功：全部%d个检查项通过", successCount));
         } else if (skippedCount == total) {
             this.status = CheckItem.Status.SKIPPED;
             // 全部检查项都已跳过
             this.checkResult = new CheckResult(10044, "主机校验已跳过：所有检查项已跳过");
+        } else if (hasSuccess && hasSkipped && !hasFailed) {
+            // 添加新条件：部分检查项通过，部分跳过，没有失败项
+            this.status = CheckItem.Status.SUCCESS; // 仍然使用SUCCESS状态
+            this.checkResult = new CheckResult(10001,
+                    String.format("主机校验成功：%d个检查项通过，%d个检查项已跳过",
+                            successCount, skippedCount));
         } else {
             // 部分检查项已跳过部分通过，仍使用SKIPPED状态，但前端可通过getStatusStr()获取"MIXED"
             this.status = CheckItem.Status.SKIPPED;
-            this.checkResult = new CheckResult(10043, 
-                String.format("主机校验不完整：已通过(%d)，已失败(%d)，已跳过(%d)", 
-                    successCount, failedCount, skippedCount));
+            this.checkResult = new CheckResult(10043,
+                    String.format("主机校验不完整：已通过(%d)，已失败(%d)，已跳过(%d)",
+                            successCount, failedCount, skippedCount));
         }
-        
+
         // 状态计算完成，标记缓存为有效
         this.statusCacheDirty = false;
     }
-
 
 }
