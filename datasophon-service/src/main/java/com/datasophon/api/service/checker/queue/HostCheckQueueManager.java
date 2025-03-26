@@ -1859,4 +1859,126 @@ public class HostCheckQueueManager {
             logger.error("更新主机信息缓存时发生错误: {}", e.getMessage(), e);
         }
     }
+
+    /**
+     * 处理修复任务完成后的操作
+     * 该方法会在修复任务完成后被调用，确保状态正确更新并刷新到UI
+     */
+    private void handleFixTaskCompletion(FixTask fixTask, boolean success) {
+        // 获取任务信息
+        Integer clusterId = fixTask.getClusterId();
+        HostInfo hostInfo = fixTask.getHostInfo();
+        CheckItem checkItem = fixTask.getCheckItem();
+
+        try {
+            if (success) {
+                // 修复成功后，强制更新状态为SUCCESS
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.SUCCESS, "修复成功");
+
+                // 重新计算主机状态
+                hostInfo.calculateStatus();
+
+                // 更新缓存中的主机信息
+                updateHostInfoCache(clusterId, hostInfo);
+
+                logger.info("修复任务完成后状态已更新: clusterId={}, hostname={}, itemId={}, 状态={}",
+                        clusterId, hostInfo.getHostname(), checkItem.getId(), CheckItem.Status.SUCCESS);
+            } else {
+                // 修复失败
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "修复失败");
+                hostInfo.calculateStatus();
+                updateHostInfoCache(clusterId, hostInfo);
+            }
+        } catch (Exception e) {
+            logger.error("处理修复任务完成后更新状态时出错", e);
+        }
+    }
+
+    /**
+     * 更新最大执行时间
+     * 
+     * @param maxTimeAtomic 最大时间原子变量
+     * @param currentTimeMs 当前执行时间
+     */
+    private void updateMaxExecutionTime(AtomicLong maxTimeAtomic, long currentTimeMs) {
+        long currentMax;
+        do {
+            currentMax = maxTimeAtomic.get();
+            if (currentTimeMs <= currentMax) {
+                break;
+            }
+        } while (!maxTimeAtomic.compareAndSet(currentMax, currentTimeMs));
+    }
+
+    /**
+     * 修复任务执行器
+     * 负责执行具体的修复操作并更新任务状态
+     */
+    private class ExecuteFixTaskJob implements Runnable {
+        private final FixTask fixTask;
+        private final List<CheckItem> fixItems;
+        private final long startTimeMs;
+        private final String taskKey;
+
+        public ExecuteFixTaskJob(FixTask fixTask, List<CheckItem> fixItems, String taskKey) {
+            this.fixTask = fixTask;
+            this.fixItems = fixItems;
+            this.startTimeMs = System.currentTimeMillis();
+            this.taskKey = taskKey;
+        }
+
+        @Override
+        public void run() {
+            boolean success = false;
+            try {
+                // 记录任务开始时间
+                fixTaskStartTimes.put(taskKey, System.currentTimeMillis());
+
+                // 获取任务信息
+                Integer clusterId = fixTask.getClusterId();
+                HostInfo hostInfo = fixTask.getHostInfo();
+                HostCheckServiceImpl hostCheckService = fixTask.getHostCheckService();
+
+                logger.info("开始执行修复任务: clusterId={}, hostname={}, itemId={}",
+                        clusterId, hostInfo.getHostname(), fixTask.getCheckItem().getId());
+
+                // 执行修复操作
+                success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
+
+                // 处理修复任务完成后的状态更新
+                handleFixTaskCompletion(fixTask, success);
+
+                // 计算执行时间
+                long executionTimeMs = System.currentTimeMillis() - startTimeMs;
+
+                // 更新统计信息
+                fixTasksProcessed.incrementAndGet();
+                if (success) {
+                    fixTasksSucceeded.incrementAndGet();
+                } else {
+                    fixTasksFailed.incrementAndGet();
+                }
+
+                // 更新总执行时间和最长执行时间
+                fixTasksTotalExecutionTimeMs.addAndGet(executionTimeMs);
+                updateMaxExecutionTime(fixTasksMaxExecutionTimeMs, executionTimeMs);
+
+                logger.info("修复任务完成: clusterId={}, hostname={}, itemId={}, 状态={}, 耗时={}ms",
+                        fixTask.getClusterId(), fixTask.getHostInfo().getHostname(),
+                        fixTask.getCheckItem().getId(),
+                        success ? "成功" : "失败", executionTimeMs);
+
+            } catch (Exception e) {
+                logger.error("执行修复任务时发生异常: {}", e.getMessage(), e);
+                fixTasksFailed.incrementAndGet();
+            } finally {
+                // 清理资源
+                runningFixTasks.remove(taskKey);
+                fixTaskKeysInQueue.remove(taskKey);
+                fixTaskStartTimes.remove(taskKey);
+            }
+        }
+    }
 }

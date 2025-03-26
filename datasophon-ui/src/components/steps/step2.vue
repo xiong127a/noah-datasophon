@@ -1322,7 +1322,7 @@ export default {
                            !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
                 },
                 on: {
-                  click: () => this.retryCheckItem(row.hostname, row.id)
+                  click: () => this.retryCheckItem(record.hostname, row.id)
                 }
               }, [
                 h('a-icon', {
@@ -1712,6 +1712,12 @@ export default {
 
     // 跳过检查项
     async skipCheckItem(hostname, itemId) {
+      // 防止hostname为undefined
+      if (!hostname) {
+        this.$message.error('主机名不能为空');
+        return;
+      }
+      
       // 查找对应的主机信息
       const host = this.dataSource.find(h => h.hostname === hostname);
       
@@ -1895,16 +1901,11 @@ export default {
 
     // 添加重试单个检查项的方法
     async retryCheckItem(hostname, itemId) {
-      // 查找对应的主机信息
-      const host = this.dataSource.find(h => h.hostname === hostname);
-      
-      // 删除以下检查，允许在主机检查过程中也能点击重试按钮
-      /*
-      if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
-        this.$message.warning('主机当前正在检查中，请稍后再尝试重试');
+      // 防止hostname为undefined
+      if (!hostname) {
+        this.$message.error('主机名不能为空');
         return;
       }
-      */
       
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
@@ -2107,41 +2108,34 @@ export default {
 
     // 查看日志
     viewItemLog(hostname, itemId, itemName) {
-      // 保存当前选择的检查项信息
-      this.currentLogHostname = hostname;
-      this.currentLogItemId = itemId;
-      this.currentLogItemName = itemName;
+      // 防止hostname为undefined
+      if (!hostname) {
+        this.$message.error('主机名不能为空');
+        return;
+      }
       
-      // 设置当前检查项信息，用于日志筛选组件
-      this.checkItem = {
+      // 设置日志查看对话框的数据
+      this.logDialogTitle = `${itemName || '检查项'} - 日志`;
+      this.logDialogVisible = true;
+      
+      // 重置日志内容
+      this.logContent = '正在加载日志...';
+      
+      // 调用API获取日志
+      this.$axiosGet(global.API.getCheckItemLog, {
         clusterId: this.clusterId,
         hostname: hostname,
-        id: itemId,
-        itemName: itemName
-      };
-      
-      // 打开日志弹窗并加载日志
-      this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
-      this.logVisible = true;
-      this.logContent = '';
-      
-      // 设置初始日志类型为全部日志
-      this.currentLogType = 'all';
-      
-      // 初始停止之前可能存在的自动刷新定时器
-      this.stopAutoRefresh();
-
-      // 等待DOM更新完成后设置初始筛选条件
-      this.$nextTick(() => {
-        if (this.$refs.logFilter) {
-          // 设置默认筛选条件
-          this.$refs.logFilter.filterType = 'min';
-          this.$refs.logFilter.selectedLevel = 'INFO';
-          // 手动触发筛选
-          this.$refs.logFilter.applyFilter();
+        itemId: itemId
+      }).then(res => {
+        if (res.code === 200) {
+          // 设置日志内容，替换换行符为HTML的换行标签
+          this.logContent = res.data ? res.data.replace(/\n/g, '<br>') : '暂无日志';
+        } else {
+          this.logContent = res.msg || '获取日志失败';
         }
-        // 获取日志数据
-        this.fetchItemLog();
+      }).catch(error => {
+        console.error('获取日志失败:', error);
+        this.logContent = '网络错误，获取日志失败';
       });
     },
     

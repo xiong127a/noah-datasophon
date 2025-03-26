@@ -406,6 +406,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 设置HTML格式化消息
                 setStyledHtmlMessage(hostInfo, checkItem, true, "专用Java环境修复成功", detailsBuilder);
 
+                // 确保检查项状态更新为SUCCESS，并正确同步到HostInfo
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.SUCCESS, "专用Java环境修复成功");
+
+                // 重新计算并更新主机状态
+                hostInfo.calculateStatus();
+
                 return true;
             } else {
                 logger.error("主机 {} 的专用JDK安装验证失败", hostInfo.getHostname());

@@ -345,7 +345,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             
             try {
                 // 使用密码直接建立连接，而不使用共享连接池
-                cacheLog.info("使用密码创建SSH连接: 主机={}, 端口={}, 用户={}", 
+                cacheLog.info("使用密码创建SSH连接: 主机=%s, 端口=%s, 用户=%s",
                     hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
                     
                 passwordSession = MinaUtils.openConnectionWithPassword(
