@@ -25,13 +25,16 @@
 -->
 <template>
   <div class="steps2 steps">
-    <div class="steps-title flex-bewteen-container pdr30">
-      <span>主机环境校验</span>
-      <div class="queue-controls">
+    <div class="hero-section">
+      <h1 class="hero-title">主机环境校验</h1>
+      <p class="hero-subtitle">验证主机环境配置，确保系统顺利部署</p>
+      
+      <div class="queue-status-area">
         <queue-status-indicator :queue-status="queueStatus" />
       </div>
     </div>
-    <div class="table-info mgt16 steps-body pdr30">
+
+    <div class="hosts-table-container">
       <a-table 
         @change="tableChange" 
         :columns="columns" 
@@ -55,7 +58,7 @@
       width="80%"
       :footer="null"
       @cancel="closeLogModal"
-      class="log-modal"
+      class="log-modal apple-modal"
       :bodyStyle="{ padding: '0' }"
     >
       <div class="log-container">
@@ -157,7 +160,7 @@
       okText="确认修复"
       cancelText="取消"
       okType="danger"
-      class="fix-confirm-modal"
+      class="fix-confirm-modal apple-modal"
     >
       <div class="fix-confirm-content">
         <div v-html="fixConfirmContent"></div>
@@ -165,6 +168,7 @@
     </a-modal>
   </div>
 </template>
+
 <script>
 import LogFilter from '../log/LogFilter.vue';
 import QueueStatusIndicator from '@/components/QueueStatusIndicator'
@@ -225,7 +229,173 @@ export default {
             return h('span', {}, [displayIndex]);
           },
         },
-        { title: "主机", key: "hostname", dataIndex: "hostname" },
+        { 
+          title: "主机", 
+          key: "hostname", 
+          dataIndex: "hostname" 
+        },
+        {
+          title: "操作",
+          key: "action",
+          width: "10%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            
+            return h('div', { class: 'action-buttons apple-actions' }, [
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('a-button', {
+                attrs: {
+                  type: 'danger',
+                  size: 'small'
+                },
+                class: 'apple-button danger',
+                on: {
+                  click: () => this.stopCheck(row)
+                }
+              }, ["终止"]) : null,
+              
+              // 重试按钮 - 非检查中时显示，检查中则禁用
+              !isChecking ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
+                },
+                class: 'apple-button primary',
+                on: {
+                  click: () => this.retryEnvironment(row)
+                }
+              }, ["重试"]) : null
+            ].filter(Boolean));
+          },
+        },
+        {
+          title: "操作系统",
+          key: "osType",
+          dataIndex: "osType",
+          width: "15%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            // 使用osInfo中的数据
+            const hasOsInfo = row.osInfo && row.osInfo.valid;
+            const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
+            const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
+            
+            // 创建详细的操作系统信息弹出框
+            const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
+              h('div', { class: 'os-detail-title' }, [
+                h('span', {}, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['发行版: ']),
+                h('span', {}, [row.osInfo.distribution])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['发行版ID: ']),
+                h('span', {}, [row.osInfo.distributionId])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['版本: ']),
+                h('span', {}, [row.osInfo.versionId])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['内核版本: ']),
+                h('span', {}, [row.osInfo.kernelVersion])
+              ])
+            ]) : h('div', {}, ['暂无详细信息']);
+            
+            // 获取操作系统对应的图标路径
+            const getOsIconPath = (osType) => {
+              const osLower = (osType || '').toLowerCase();
+              if (osLower.includes('centos')) {
+                return require('@/assets/os-logos/centos.svg');
+              } else if (osLower.includes('ubuntu')) {
+                return require('@/assets/os-logos/ubuntu.svg');
+              } else if (osLower.includes('debian')) {
+                return require('@/assets/os-logos/debian.svg');
+              } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
+                return require('@/assets/os-logos/redhat.svg');
+              } else if (osLower.includes('windows')) {
+                return require('@/assets/os-logos/windows.svg');
+              } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
+                return require('@/assets/os-logos/kylin.svg');
+              } else {
+                return require('@/assets/os-logos/linux-tux.svg');
+              }
+            };
+            
+            // 获取操作系统对应的颜色
+            const getOsColor = (osType) => {
+              const osLower = (osType || '').toLowerCase();
+              if (osLower.includes('centos')) {
+                return '#932279';
+              } else if (osLower.includes('ubuntu')) {
+                return '#E95420';
+              } else if (osLower.includes('debian')) {
+                return '#D70A53';
+              } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
+                return '#EE0000';
+              } else if (osLower.includes('windows')) {
+                return '#0078D6';
+              } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
+                return '#0066B3';
+              } else {
+                return '#87d068';
+              }
+            };
+            
+            const iconPath = getOsIconPath(osType);
+            const color = getOsColor(osType);
+            
+            return h('div', { class: 'os-info' }, [
+              h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayStyle: { maxWidth: '320px' }
+                }
+              }, [
+                // 简要信息(触发区域)
+                h('span', { 
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [osDetailContent]),
+                
+                // 显示的内容
+                h('span', { 
+                  class: 'os-type',
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: hasOsInfo ? 'pointer' : 'default'
+                  }
+                }, [
+                  h('img', {
+                    attrs: {
+                      src: iconPath,
+                      alt: osType,
+                      width: '20',
+                      height: '20'
+                    },
+                    class: 'os-logo',
+                    style: { 
+                      marginRight: '8px',
+                      verticalAlign: 'middle'
+                    }
+                  }),
+                  h('span', {
+                    style: {
+                      color: color
+                    }
+                  }, [
+                    osType === '-' ? '-' : (osType + (osVersion ? ' ' + osVersion : ''))
+                  ])
+                ])
+              ])
+            ]);
+          }
+        },
         {
           title: "当前受管",
           key: "managed",
@@ -417,41 +587,7 @@ export default {
             // 如果没有任何检查项，则显示占位符
             return h('span', {}, ['-']);
           },
-        },
-        {
-          title: "操作",
-          key: "action",
-          width: "25%",
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
-            
-            return h('div', { class: 'action-buttons' }, [
-              // 终止按钮 - 检查中时显示
-              isChecking ? h('a-button', {
-                attrs: {
-                  type: 'danger',
-                  size: 'small'
-                },
-                on: {
-                  click: () => this.stopCheck(row)
-                }
-              }, ["终止"]) : null,
-              
-              // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
-                },
-                on: {
-                  click: () => this.retryEnvironment(row)
-                }
-              }, ["重试"]) : null
-            ].filter(Boolean));
-          },
-        },
+        }
       ],
       selectedCheckItems: {}, // 存储每个主机选中的检查项 { hostname: [itemName1, itemName2] }
       logVisible: false,
@@ -1278,21 +1414,23 @@ export default {
     customExpandIcon({ expanded, onExpand, record }) {
       const h = this.$createElement;
       return h('div', {
-        class: 'expand-icon-wrapper',
+        class: ['apple-expand-icon', expanded ? 'expanded' : ''],
         on: {
           click: (e) => {
             onExpand(record, e);
           }
         }
       }, [
+        h('div', { class: 'expand-icon-inner' }, [
         h('a-icon', {
-          class: 'expand-icon',
           props: {
-            type: expanded ? 'down' : 'right'
-          }
-        }),
-        h('span', { class: 'expand-text' }, [
-          expanded ? '收起详情' : '查看详情'
+              type: 'right'
+            },
+            style: {
+              fontSize: '12px',
+              transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }
+          })
         ])
       ]);
     },
@@ -1751,931 +1889,657 @@ export default {
   },
 };
 </script>
+
 <style lang="less" scoped>
-.check-items-container {
-  padding: 0 20px;
+// 苹果设计系统颜色
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #30d158;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
 
-  .check-items-header {
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .header-summary {
-      font-size: 13px;
-      color: rgba(0, 0, 0, 0.65);
-
-      .ant-divider-vertical {
-        margin: 0 12px;
-      }
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-    }
-  }
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.ant-list-item-meta {
-  align-items: center;
-}
-
-.ant-list-item {
-  padding: 12px !important;
+.steps2 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
   
-  &:hover {
-    background-color: #f5f5f5;
-  }
-}
-
-.ant-list-item-meta-title {
-  margin-bottom: 0 !important;
-  line-height: 22px !important;
-}
-
-.ant-list-item-meta-description {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.expand-icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  color: #1890ff;
-  white-space: nowrap;
-  
-  &:hover {
-    opacity: 0.8;
-  }
-
-  .expand-icon {
-    font-size: 12px;
-    margin-right: 4px;
-    position: relative;
-    top: 1px;
-  }
-
-  .expand-text {
-    font-size: 13px;
-    line-height: 1;
-  }
-}
-
-.ant-table-row-expand-icon-cell {
-  padding-left: 16px !important;
-}
-
-.action-buttons {
-  position: relative;
-  display: flex;  // 改回flex布局
-  gap: 8px;  // 统一间距
-  flex-wrap: nowrap;  // 不换行
-  
-  .ant-btn {
-    padding: 0 8px;
-    min-width: 48px;
+  .hero-section {
     text-align: center;
-    height: 24px;  // 统一按钮高度
-    line-height: 22px;  // 统一文字行高
-  }
-}
-
-// 主列表的操作按钮样式保持不变
-.ant-table-row:not(.ant-table-expanded-row) .action-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 48px);
-  gap: 8px;
-  width: 160px;
-}
-
-.log-container {
-  padding: 20px;
-  height: calc(90vh - 150px);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-
-  .log-header {
-    margin-bottom: 16px;
-    padding: 12px 16px;
-    background-color: #fafafa;
-    border: 1px solid #f0f0f0;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    gap: 16px;
-    position: sticky;  // 添加sticky定位
-    top: 0;          // 固定在顶部
-    z-index: 10;     // 确保在内容之上
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-  
-  .header-section {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .log-content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: auto;
-    padding: 16px;
-    background-color: #ffffff;
-    border: 1px solid #f0f0f0;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #000000;
+    margin-bottom: 2.5rem;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    margin-top: 8px;  // 添加顶部间距
     
-    pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      margin: 0;
-      overflow-x: visible;
-      flex: 1;
-      padding: 0;
-    }
-
-    .no-log {
-      text-align: center;
-      padding: 12px;
-      color: rgba(0, 0, 0, 0.45);
+    .hero-title {
+      .apple-font();
+      font-size: 2.5rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     
-    /* 滚动条样式 */
-    &::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.2rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0 auto 1.5rem;
+      max-width: 600px;
     }
-
-    &::-webkit-scrollbar-track {
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #e8e8e8;
-      border-radius: 4px;
-      
-      &:hover {
-        background: #d9d9d9;
-      }
-    }
-
-    .log-source {
-      cursor: pointer;
-      transition: all 0.3s;
-      padding: 2px 6px;
-      border-radius: 2px;
-      
-      &:hover {
-        background-color: #f5f5f5;
-        color: #1890ff !important;
-      }
-      
-      &:active {
-        background-color: #e6f7ff;
-      }
+    
+    .queue-status-area {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
     }
   }
-}
-
-:global(.log-modal) {
-  top: 5vh;
   
-  .ant-modal-body {
-    position: relative;  // 添加相对定位
-    padding: 0;         // 移除默认内边距
-    max-height: 90vh;   // 限制最大高度
-    overflow: hidden;   // 隐藏溢出内容
-  }
-}
-
-.refresh-options {
-  display: flex;
+  .hosts-table-container {
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1400px;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    animation-fill-mode: both;
+    animation-delay: 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    
+    // 表格通用设置
+    /deep/ .ant-table {
+      .apple-font();
+      
+      .ant-table-thead > tr > th {
+        background-color: @apple-gray-light;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: @apple-black;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+      }
+      
+      .ant-table-tbody > tr > td {
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        transition: background-color 0.3s;
+      }
+      
+      .ant-table-tbody > tr:hover:not(.ant-table-expanded-row):not(.ant-table-row-selected) > td {
+        background-color: fadeout(@apple-gray-light, 50%);
+      }
+      
+      .ant-table-tbody > tr.ant-table-expanded-row > td, 
+      .ant-table-tbody > tr.ant-table-expanded-row:hover > td {
+        background-color: @apple-gray-light;
+        padding: 0;
+      }
+      
+      // 设置扩展行内部的样式
+      .ant-table-expanded-row {
+        .check-items-container {
+          padding: 1.5rem 2rem 1.5rem 3rem;
+          
+          .check-items-header {
+            display: flex;
+            justify-content: space-between;
   align-items: center;
-  gap: 12px;
-
-  .refresh-btn, .auto-refresh-btn {
-    height: 32px;
+            margin-bottom: 1.2rem;
+            
+            .header-summary {
+              .apple-font();
+              font-size: 1.1rem;
+              font-weight: 500;
+              color: @apple-black;
+              
+              .status-icon {
+                margin-right: 8px;
+              }
+              
+              .success-count {
+                color: @apple-green;
+                margin: 0 4px;
+              }
+              
+              .failed-count {
+                color: @apple-red;
+                margin: 0 4px;
+              }
+            }
+            
+            .header-actions {
+  display: flex;
+              gap: 10px;
+              
+              .apple-button {
+                height: 34px;
+                padding: 0 16px;
+    font-size: 14px;
+                font-weight: 500;
+                border-radius: 17px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                
+                &.primary {
+                  background: @apple-blue;
+                  border: none;
+                  color: white;
+                  
+                  &:hover {
+                    background: @apple-blue-hover;
+                  }
+                }
+                
+                &.secondary {
+                  background: @apple-gray-light;
+                  border: none;
+                  color: @apple-black;
+      
+      &:hover {
+                    background: darken(@apple-gray-light, 5%);
+                  }
+                }
+                
+                &.danger {
+                  background: fade(@apple-red, 10%);
+                  border: none;
+                  color: @apple-red;
+      
+      &:hover {
+                    background: fade(@apple-red, 15%);
+                  }
+                }
+              }
+            }
+          }
+          
+          // 子表格样式
+          .ant-table {
+            border-radius: 12px;
+            overflow: hidden;
+            
+            .ant-table-thead > tr > th {
+              background-color: rgba(0,0,0,0.02);
+              font-weight: 500;
+              font-size: 0.9rem;
+              color: @apple-black;
+              padding: 12px 16px;
+            }
+            
+            .ant-table-tbody > tr > td {
+              padding: 12px 16px;
+              font-size: 0.9rem;
+            }
+            
+            // 优化内嵌表格的选择框样式
+            .ant-checkbox-wrapper {
+              .ant-checkbox-inner {
     border-radius: 4px;
+                border-color: @apple-gray;
+                
+                &:after {
+                  border-color: white;
+                }
+              }
+              
+              .ant-checkbox-checked .ant-checkbox-inner {
+                background-color: @apple-blue;
+                border-color: @apple-blue;
+              }
+            }
+            
+            // 状态标签样式
+            .status-tag {
+              display: inline-flex;
+              align-items: center;
+              padding: 4px 12px;
+              border-radius: 12px;
+              font-size: 0.85rem;
+              font-weight: 500;
+              
+              .status-icon {
+                margin-right: 6px;
+              }
+              
+              &.success {
+                background-color: fade(@apple-green, 10%);
+                color: @apple-green;
+              }
+              
+              &.failed {
+                background-color: fade(@apple-red, 10%);
+                color: @apple-red;
+              }
+              
+              &.waiting {
+                background-color: fade(@apple-yellow, 10%);
+                color: darken(@apple-yellow, 15%);
+              }
+              
+              &.checking {
+                background-color: fade(@apple-blue, 10%);
+                color: @apple-blue;
+              }
+              
+              &.skipped {
+                background-color: fade(@apple-gray, 10%);
+                color: @apple-gray;
+              }
+            }
+            
+            // 操作按钮样式
+            .action-button {
+              height: 28px;
+              padding: 0 12px;
+              font-size: 0.85rem;
+              font-weight: 500;
+              border-radius: 14px;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              margin-right: 8px;
+              
+              &.view {
+                background: fade(@apple-blue, 10%);
+                border: none;
+                color: @apple-blue;
+                
+                &:hover {
+                  background: fade(@apple-blue, 15%);
+                }
+              }
+              
+              &.fix {
+                background: fade(@apple-red, 10%);
+                border: none;
+                color: @apple-red;
+                
+                &:hover {
+                  background: fade(@apple-red, 15%);
+                }
+              }
+              
+              &.retry {
+                background: fade(@apple-orange, 10%);
+                border: none;
+                color: @apple-orange;
+                
+                &:hover {
+                  background: fade(@apple-orange, 15%);
+                }
+              }
+              
+              &.skip {
+                background: fade(@apple-gray, 10%);
+                border: none;
+                color: @apple-gray;
+                
+                &:hover {
+                  background: fade(@apple-gray, 15%);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 自定义展开图标样式
+  /deep/ .apple-expand-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    
-    .anticon {
-      font-size: 14px;
-      margin-right: 6px;
-    }
-  }
-
-  .refresh-btn {
-    min-width: 100px;
-    padding: 0 16px;
-    background: #1890ff;
-    border-color: #1890ff;
-    
-    &:hover {
-      background: #40a9ff;
-      border-color: #40a9ff;
-    }
-  }
-
-  .auto-refresh-btn {
-    min-width: 130px;
-    padding: 0 12px;
-    background: #fff;
-    border-color: #d9d9d9;
-    color: rgba(0, 0, 0, 0.65);
-
-    &.ant-btn-primary {
-      background: #1890ff;
-      border-color: #1890ff;
-      color: #fff;
-    }
-    
-    .anticon-down {
-      font-size: 12px;
-      margin-left: 4px;
-      margin-right: 0;
-    }
-  }
-}
-
-.log-type-selector {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  
-  .filter-title {
-    white-space: nowrap;
-    margin-right: 10px;
-    font-size: 14px;
-    color: rgba(0, 0, 0, 0.85);
-  }
-  
-  .ant-radio-group {
-    display: flex;
-    
-    .ant-radio-button-wrapper {
-      text-align: center;
-      min-width: 80px;
-    }
-  }
-}
-
-.combined-filter-status {
-  margin: 4px 0;
-  padding: 8px 12px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-  border-left: 3px solid #1890ff;
-  width: 100%;
-}
-
-.filter-description {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.65);
-  
-  .highlight {
-    color: #1890ff;
-    font-weight: 500;
-  }
-}
-
-/* 主表格行高控制 */
-:deep(.host-check-table) {
-  .ant-table-thead > tr > th {
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-  }
-  
-  .ant-table-tbody > tr > td {
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
-    line-height: 1.5 !important;
-  }
-}
-
-.log-filter-container {
-  margin-bottom: 0;
-  padding: 0;
-  background-color: transparent;
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-}
-
-.reset-filter {
-  display: none; /* 隐藏原有的重置筛选按钮 */
-}
-
-.log-type-selector {
-  display: flex;
-  align-items: center;
-  
-  .filter-title {
-    white-space: nowrap;
-    margin-right: 10px;
-    font-size: 14px;
-    color: rgba(0, 0, 0, 0.85);
-  }
-  
-  .ant-radio-group {
-    display: flex;
-    
-    .ant-radio-button-wrapper {
-      text-align: center;
-      min-width: 80px;
-    }
-  }
-}
-
-.filter-area {
-  background-color: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-}
-
-/* 确认弹窗样式定制 - 现代美化版本 */
-:global(.check-item-confirm-modal) {
-  min-height: 220px;
-  
-  .ant-modal-content {
+    width: 24px;
+    height: 24px;
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    overflow: visible;
-    min-height: 220px;
-    border: 1px solid rgba(24, 144, 255, 0.1);
-    background: rgba(255, 255, 255, 0.98);
-    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    background-color: @apple-gray-light;
+    cursor: pointer;
+    transition: background-color 0.3s;
     
     &:hover {
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+      background-color: darken(@apple-gray-light, 3%);
     }
-  }
-  
-  .ant-modal-body {
-    padding: 0;
-  }
-  
-  // 在这里删除一些可能干扰焦点管理的CSS属性
-  .ant-modal-confirm-body-wrapper {
-    padding: 0;
-    min-height: 220px;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .ant-modal-confirm-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 24px 24px 0;
     
-    // 不要完全隐藏图标，只是调整显示
+    .expand-icon-inner {
+    display: flex;
+      align-items: center;
+      justify-content: center;
+      
     .anticon {
-      visibility: hidden;
-      position: absolute;
-      width: 0;
-      height: 0;
+        color: @apple-black;
+        transform: rotate(0);
+      }
     }
     
-    .ant-modal-confirm-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: rgba(0, 0, 0, 0.85);
-      line-height: 1.4;
-      display: block;
-      margin-bottom: 16px;
-      padding: 0;
-    }
-    
-    // 在这里调整内容区域的样式，确保正确处理焦点
-    .ant-modal-confirm-content {
-      word-break: break-all;
-      white-space: pre-wrap;
-      min-height: 120px;
-      max-height: 320px;
-      overflow: auto;
-      font-size: 14px;
-      line-height: 1.6;
-      color: rgba(0, 0, 0, 0.85);
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      outline: none; // 移除可能导致焦点问题的outline
+    &.expanded {
+      background-color: @apple-blue;
       
-      /* 自定义滚动条样式 */
-      &::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      
-      &::-webkit-scrollbar-track {
-        background: #f5f5f5;
-        border-radius: 3px;
-      }
-      
-      &::-webkit-scrollbar-thumb {
-        background: #ddd;
-        border-radius: 3px;
-        
-        &:hover {
-          background: #ccc;
-        }
+      .anticon {
+        color: white;
+        transform: rotate(90deg);
       }
     }
   }
   
-  // 确保按钮区域的可访问性
-  .ant-modal-confirm-btns {
-    margin-top: 0;
+  // 主机列表操作按钮样式
+  .apple-actions {
     display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    padding: 16px 24px 24px;
+    gap: 8px;
     
-    .ant-btn {
-      height: 40px;
-      padding: 0 24px;
+    .apple-button {
+      height: 32px;
+      padding: 0 16px;
       font-size: 14px;
       font-weight: 500;
-      border-radius: 8px;
-      margin-left: 12px;
-      // 移除以下可能导致焦点问题的属性
-      // visibility: visible !important;
-      // opacity: 1 !important;
-      // display: inline-flex !important;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.25s ease-in-out;
-      position: relative;
-      overflow: hidden;
-      
-      &::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 5px;
-        height: 5px;
-        background: rgba(255, 255, 255, 0.5);
-        opacity: 0;
-        border-radius: 100%;
-        transform: scale(1, 1) translate(-50%, -50%);
-        transform-origin: 50% 50%;
-      }
-      
-      &:focus:not(:active)::after {
-        animation: ripple 0.6s ease-out;
-      }
-    }
-    
-    // 保留按钮样式但确保它们可以正确接收焦点
-    .ant-btn-primary {
-      background-color: #1890ff;
-      border-color: #1890ff;
-      box-shadow: 0 2px 6px rgba(24, 144, 255, 0.4);
-      
-      &:hover {
-        background-color: #40a9ff;
-        border-color: #40a9ff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.45);
-      }
-      
-      &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(24, 144, 255, 0.4);
-      }
-      
-      // 添加焦点样式
-      &:focus {
-        outline: 2px solid rgba(24, 144, 255, 0.3);
-        outline-offset: 1px;
-      }
-    }
-    
-    .ant-btn-danger {
-      background-color: #ff4d4f;
-      border-color: #ff4d4f;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(255, 77, 79, 0.4);
-      
-      &:hover {
-        background-color: #ff7875;
-        border-color: #ff7875;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 77, 79, 0.45);
-      }
-      
-      &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.4);
-      }
-      
-      // 添加焦点样式
-      &:focus {
-        outline: 2px solid rgba(255, 77, 79, 0.3);
-        outline-offset: 1px;
-      }
-    }
-    
-    .confirm-fix-btn {
-      position: relative;
-      
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
-        background-size: 200% 200%;
-        animation: shimmer 2s infinite linear;
-      }
-    }
-    
-    .cancel-fix-btn {
-      border-color: #d9d9d9;
-      
-      &:hover {
-        color: #40a9ff;
-        border-color: #40a9ff;
-        background-color: rgba(24, 144, 255, 0.04);
-        transform: translateY(-2px);
-      }
-      
-      &:active {
-        transform: translateY(0);
-      }
-      
-      // 添加焦点样式
-      &:focus {
-        outline: 2px solid rgba(0, 0, 0, 0.1);
-        outline-offset: 1px;
-      }
-    }
-  }
-}
-
-/* 自定义确认对话框组件样式 */
-.modern-confirm-dialog {
-  .modal-custom-title {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16px;
-    
-    .title-icon {
-      margin-right: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      background: #1890ff;
-      border-radius: 6px;
-      color: white;
-      font-size: 16px;
-    }
-    
-    .title-text {
-      font-size: 18px;
-      font-weight: 600;
-      color: rgba(0, 0, 0, 0.85);
-    }
-  }
-  
-  .modal-content-wrapper {
-    display: flex;
-    padding: 0;
-    
-    .warning-icon-container {
-      flex-shrink: 0;
-      margin-right: 16px;
-      position: relative;
-      width: 40px;
-      height: 40px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
       
-      .warning-icon {
-        font-size: 28px;
-        color: #faad14;
-        z-index: 2;
-        animation: pulse 2s infinite ease-in-out;
-      }
-      
-      .pulse-ring {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background-color: rgba(250, 173, 20, 0.2);
-        z-index: 1;
-        animation: pulse-ring 2s ease-out infinite;
-      }
-    }
-    
-    .confirmation-content {
-      flex: 1;
-      padding: 16px;
-      background-color: #fff7e6;
-      border: 1px solid #ffe58f;
-      border-radius: 8px;
-      word-break: break-all;
-      white-space: pre-wrap;
-      line-height: 1.6;
-      overflow: auto;
-      max-height: 300px;
-      margin-left: 0 !important;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(250, 173, 20, 0.1);
+      &.primary {
+        background: @apple-blue;
+        border: none;
+        color: white;
       
       &:hover {
-        box-shadow: 0 4px 12px rgba(250, 173, 20, 0.15);
-      }
-    }
-  }
-}
-
-/* 波纹动画效果 */
-@keyframes ripple {
-  0% {
-    transform: scale(0, 0);
-    opacity: 1;
-  }
-  20% {
-    transform: scale(25, 25);
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(40, 40);
-  }
-}
-
-/* 闪光效果 */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* 脉冲效果 */
-@keyframes pulse {
-  0% {
-    transform: scale(0.95);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(0.95);
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.8;
-  }
-  70% {
-    transform: scale(1.2);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-}
-
-/* 删除之前所有复杂的确认弹窗样式，重新编写简单明了的样式 */
-:global(.fix-confirm-dialog) {
-  .ant-modal-content {
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  
-  .ant-modal-body {
-    padding: 24px;
-  }
-  
-  .ant-modal-confirm-body {
-    .ant-modal-confirm-title {
-      color: rgba(0, 0, 0, 0.85);
-      font-weight: 600;
-      font-size: 16px;
-      line-height: 1.4;
-      margin-bottom: 16px;
-    }
-    
-    .anticon {
-      color: #faad14;
-      font-size: 22px;
-      margin-right: 16px;
-      position: relative;
-      top: 0;
-    }
-    
-    .ant-modal-confirm-content {
-      margin: 8px 0 0 38px;
-      padding: 12px 16px;
-      background-color: #fff7e6;
-      border: 1px solid #ffe58f;
-      border-radius: 4px;
-      font-size: 14px;
-      line-height: 1.6;
-      color: rgba(0, 0, 0, 0.85);
-      max-height: 300px;
-      overflow-y: auto;
-      word-break: break-all;
-      white-space: pre-wrap;
-      
-      /* 美化滚动条 */
-      &::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+          background: darken(@apple-blue, 5%);
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0, 113, 227, 0.3);
       }
       
-      &::-webkit-scrollbar-track {
-        background: #f5f5f5;
-        border-radius: 3px;
+      &:active {
+        transform: translateY(0);
+        }
       }
       
-      &::-webkit-scrollbar-thumb {
-        background: #ddd;
-        border-radius: 3px;
-        
-        &:hover {
-          background: #ccc;
+      &.danger {
+        background: fade(@apple-red, 10%);
+        border: none;
+        color: @apple-red;
+      
+      &:hover {
+          background: fade(@apple-red, 15%);
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(255, 69, 58, 0.2);
+      }
+      
+      &:active {
+        transform: translateY(0);
         }
       }
     }
   }
   
-  .ant-modal-confirm-btns {
-    margin-top: 24px;
-    
-    .ant-btn {
-      height: 32px;
-      min-width: 80px;
-      padding: 0 15px;
-      font-size: 14px;
-      border-radius: 4px;
-      margin-left: 8px;
-    }
-    
-    .ant-btn-primary {
-      background-color: #1890ff;
-      border-color: #1890ff;
+  // 操作系统信息样式
+  .os-info {
+    .os-type {
+      font-size: 0.95rem;
+      color: @apple-black;
       
-      &:hover {
-        background-color: #40a9ff;
-        border-color: #40a9ff;
+      .anticon {
+        font-size: 16px;
+      }
+      
+      .os-logo {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        vertical-align: middle;
+        transition: transform 0.3s ease;
+      }
+      
+      &:hover .os-logo {
+        transform: scale(1.1);
       }
     }
+  }
+  
+  // 操作系统详情弹出框样式
+  .os-detail-popup {
+    padding: 4px;
+    min-width: 200px;
     
-    .ant-btn-danger {
-      background-color: #ff4d4f;
-      border-color: #ff4d4f;
-      color: #fff;
+    .os-detail-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .os-detail-item {
+      display: flex;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
       
-      &:hover {
-        background-color: #ff7875;
-        border-color: #ff7875;
+      strong {
+        min-width: 80px;
+        color: #666;
+      }
+      
+      span {
+        color: #333;
+        font-weight: 500;
       }
     }
   }
 }
 
-.fix-confirm-modal {
+// 苹果风格模态框样式
+:global(.apple-modal) {
   .ant-modal-content {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   }
   
   .ant-modal-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid #f0f0f0;
-    background-color: #fff;
-  }
-  
-  .ant-modal-title {
-    font-size: 16px;
-    line-height: 22px;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.85);
+    padding: 20px 24px;
+    background: @apple-white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    
+    .ant-modal-title {
+      .apple-font();
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: @apple-black;
+    }
   }
   
   .ant-modal-body {
     padding: 24px;
   }
-
-  .fix-confirm-content {
-    padding: 16px;
-    background-color: #fff7e6;
-    border: 1px solid #ffe58f;
-    border-radius: 4px;
-    margin-bottom: 16px;
-    font-size: 14px;
-    line-height: 1.6;
-    color: rgba(0, 0, 0, 0.85);
-    word-break: break-all;
-    white-space: pre-wrap;
-    
-    /* 自定义滚动条样式 */
-    &::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: #f5f5f5;
-      border-radius: 3px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background: #ddd;
-      border-radius: 3px;
-      
-      &:hover {
-        background: #ccc;
-      }
-    }
-  }
   
   .ant-modal-footer {
-    padding: 10px 24px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px 24px;
     
     .ant-btn {
-      height: 32px;
-      padding: 0 15px;
-      font-size: 14px;
-    }
-    
-    .ant-btn + .ant-btn {
-      margin-left: 8px;
-    }
-    
-    .ant-btn-primary {
-      background-color: #1890ff;
-      border-color: #1890ff;
+      height: 36px;
+      padding: 0 18px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       
-      &:hover {
-        background-color: #40a9ff;
-        border-color: #40a9ff;
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+        
+        &:hover {
+          background: @apple-blue-hover;
+        }
       }
-    }
-    
-    .ant-btn-danger {
-      background-color: #ff4d4f;
-      border-color: #ff4d4f;
-      color: #fff;
+      
+      &.ant-btn-dangerous {
+        background: @apple-red;
+        border: none;
+        color: white;
       
       &:hover {
-        background-color: #ff7875;
-        border-color: #ff7875;
+          background: darken(@apple-red, 5%);
+        }
+      }
+      
+      &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+        background: @apple-gray-light;
+        border: none;
+        color: @apple-black;
+        
+        &:hover {
+          background: darken(@apple-gray-light, 5%);
+        }
       }
     }
   }
 }
 
-/* 修复中状态样式 */
-.fixing-status {
-  color: #1890ff;
-  background-color: #e6f7ff;
-  border-color: #91d5ff;
+// 动画
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 日志模态框内容样式
+.log-modal {
+  .log-container {
+    display: flex;
+    flex-direction: column;
+    height: 70vh;
+    
+    .log-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      background-color: @apple-gray-light;
+      
+      .header-section {
+        margin-bottom: 12px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+      
+      .refresh-options {
+        display: flex;
+        gap: 10px;
+        
+        .refresh-btn, .auto-refresh-btn {
+          height: 36px;
+          padding: 0 16px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
+      
+      .filter-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        margin-top: 16px;
+        
+        .log-type-selector {
+          display: flex;
+          align-items: center;
+          
+          .filter-title {
+            margin-right: 8px;
+            font-weight: 500;
+            color: @apple-black;
+          }
+        }
+      }
+      
+      .combined-filter-status {
+        margin-top: 16px;
+        padding: 10px 16px;
+        background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+        
+        .filter-description {
+          font-size: 0.9rem;
+          color: @apple-gray;
+          
+          .highlight {
+            color: @apple-black;
+    font-weight: 500;
+          }
+        }
+      }
+    }
+    
+    .log-content {
+      flex: 1;
+      overflow: auto;
+      padding: 20px 24px;
+      background-color: #1e1e1e;
+      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      
+      pre {
+        margin: 0;
+        color: #e0e0e0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+// 确认弹窗内容样式
+.fix-confirm-content {
+  padding: 20px;
+  background-color: rgba(255, 69, 58, 0.05);
+  border-radius: 10px;
+  border-left: 4px solid @apple-red;
+  margin: 0;
+  
+  p {
+    margin: 0 0 10px;
+    line-height: 1.6;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 }
 </style>
+ritten_file>

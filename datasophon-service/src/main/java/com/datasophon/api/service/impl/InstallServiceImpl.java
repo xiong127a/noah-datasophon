@@ -44,6 +44,7 @@ import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -63,6 +64,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -363,7 +365,195 @@ public class InstallServiceImpl implements InstallService {
             setUnmanagedHostInfo(hostInfo);
         }
 
+        // 3. 尝试获取操作系统信息
+        try {
+            if (sshUser != null && sshPort != null) {
+                OsInfo osInfo = getHostOsInfo(hostInfo);
+                hostInfo.setOsInfo(osInfo);
+            }
+        } catch (Exception e) {
+            logger.warn("获取主机 {} 的操作系统信息失败: {}", host, e.getMessage());
+        }
+
         return hostInfo;
+    }
+
+    /**
+     * 获取主机的操作系统信息
+     * 
+     * @param hostInfo 主机信息
+     * @return 操作系统信息
+     */
+    private OsInfo getHostOsInfo(HostInfo hostInfo) {
+        OsInfo osInfo = new OsInfo();
+        ClientSession session = null;
+
+        try {
+            // 建立SSH连接
+            session = MinaUtils.openConnectionWithPassword(hostInfo.getHostname(), hostInfo.getSshPort(),
+                    hostInfo.getSshUser(), hostInfo.getSshPassword());
+
+            if (session == null) {
+                logger.warn("无法连接到主机: {}", hostInfo.getHostname());
+                return osInfo;
+            }
+
+            // 获取/etc/os-release文件内容
+            String osReleaseCommand = "cat /etc/os-release 2>/dev/null || echo 'Not Found'";
+            String osRelease = MinaUtils.execCmdWithResult(session, osReleaseCommand);
+
+            if (osRelease != null && !osRelease.contains("Not Found")) {
+                // 解析/etc/os-release文件内容
+                String distroId = extractValue(osRelease, "ID=");
+                osInfo.setDistributionId(distroId);
+
+                // 获取名称
+                String name = extractValue(osRelease, "NAME=");
+                osInfo.setDistribution(name);
+
+                // 获取版本ID
+                String versionId = extractValue(osRelease, "VERSION_ID=");
+                osInfo.setVersionId(versionId);
+
+                // 获取完整名称
+                String prettyName = extractValue(osRelease, "PRETTY_NAME=");
+                osInfo.setFullName(prettyName);
+
+                // 获取内核版本
+                String kernelVersion = MinaUtils.execCmdWithResult(session, "uname -r");
+                if (kernelVersion != null) {
+                    osInfo.setKernelVersion(kernelVersion.trim());
+                }
+
+                osInfo.setValid(true);
+            } else {
+                // 尝试其他方法获取OS信息
+                tryAlternativeOsDetection(osInfo, session);
+            }
+        } catch (Exception e) {
+            logger.error("获取主机操作系统信息时出错: {}", e.getMessage(), e);
+        } finally {
+            // 关闭连接
+            if (session != null && session.isOpen()) {
+                MinaUtils.closeConnection(session);
+            }
+        }
+
+        return osInfo;
+    }
+
+    /**
+     * 尝试使用其他方法获取操作系统信息
+     */
+    private void tryAlternativeOsDetection(OsInfo osInfo, ClientSession session) {
+        try {
+            // 尝试redhat-release
+            String result = MinaUtils.execCmdWithResult(session,
+                    "cat /etc/redhat-release 2>/dev/null || echo 'Not Found'");
+
+            if (result != null && !result.contains("Not Found")) {
+                osInfo.setFullName(result.trim());
+
+                if (result.toLowerCase().contains("centos")) {
+                    osInfo.setDistributionId("centos");
+                    osInfo.setDistribution("CentOS");
+                } else if (result.toLowerCase().contains("red hat")) {
+                    osInfo.setDistributionId("rhel");
+                    osInfo.setDistribution("Red Hat Enterprise Linux");
+                }
+
+                // 提取版本号
+                osInfo.setVersionId(extractVersionFromRelease(result));
+                osInfo.setValid(true);
+                return;
+            }
+
+            // 尝试lsb_release
+            result = MinaUtils.execCmdWithResult(session, "lsb_release -a 2>/dev/null || echo 'Not Found'");
+
+            if (result != null && !result.contains("Not Found")) {
+                String distro = extractFromLsb(result, "Distributor ID:");
+                String version = extractFromLsb(result, "Release:");
+                String description = extractFromLsb(result, "Description:");
+
+                osInfo.setDistributionId(distro.toLowerCase());
+                osInfo.setDistribution(distro);
+                osInfo.setVersionId(version);
+                osInfo.setFullName(description);
+                osInfo.setValid(true);
+                return;
+            }
+
+            // 最后尝试uname
+            result = MinaUtils.execCmdWithResult(session, "uname -a");
+
+            if (result != null && !result.isEmpty()) {
+                osInfo.setFullName(result.trim());
+                osInfo.setValid(true);
+            }
+        } catch (Exception e) {
+            logger.error("尝试备用方法获取操作系统信息时出错: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 从/etc/os-release文件中提取值
+     */
+    private String extractValue(String content, String key) {
+        if (content == null || key == null) {
+            return "";
+        }
+
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            if (line.trim().startsWith(key)) {
+                String value = line.substring(key.length()).trim();
+                // 移除引号
+                if (value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+    /**
+     * 从lsb_release输出中提取值
+     */
+    private String extractFromLsb(String content, String prefix) {
+        if (content == null || prefix == null) {
+            return "";
+        }
+
+        String[] lines = content.split("\n");
+        for (String line : lines) {
+            if (line.trim().startsWith(prefix)) {
+                return line.substring(prefix.length()).trim();
+            }
+        }
+
+        return "";
+    }
+
+    /**
+     * 从发行版信息中提取版本号
+     */
+    private String extractVersionFromRelease(String release) {
+        if (release == null) {
+            return "";
+        }
+
+        // 正则表达式匹配版本号
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\d+(\\.\\d+)*");
+        java.util.regex.Matcher matcher = pattern.matcher(release);
+
+        if (matcher.find()) {
+            return matcher.group();
+        }
+
+        return "";
     }
 
     /**

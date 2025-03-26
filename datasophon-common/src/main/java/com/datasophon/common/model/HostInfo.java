@@ -23,6 +23,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.datasophon.common.model.OsInfo;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -81,6 +82,11 @@ public class HostInfo implements Serializable {
     private Date createTime;
 
     private String cpuArchitecture;
+
+    /**
+     * 操作系统信息
+     */
+    private OsInfo osInfo;
 
     /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致

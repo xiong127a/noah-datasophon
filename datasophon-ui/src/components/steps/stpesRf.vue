@@ -290,27 +290,101 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 苹果设计系统颜色
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 .steps-rf {
   height: 100%;
   display: flex;
   justify-content: space-between;
   flex-direction: column;
+  
+  .steps-rf-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 100px; // 添加底部padding，为固定定位的footer留出空间
+  }
+  
   .footer {
-    // margin: 0 32px 0 auto;
-    // margin: 0 32px 0 0;
-    // margin: 0 auto;
-    width: 1300px;
-    height: 64px;
-    background: rgba(242, 244, 247, 0.5);
+    width: 100%;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid #e3e4e6;
     display: flex;
     justify-content: center;
     align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    
     button {
-      width: 86px;
+      height: 44px;
+      padding: 0 24px;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 22px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin: 0 8px;
+      
+      // 取消按钮样式
+      &.ant-btn {
+        background: @apple-gray-light;
+        border: none;
+        color: @apple-black;
+        
+        &:hover {
+          background: darken(@apple-gray-light, 5%);
+        }
+        
+        &:active {
+          background: darken(@apple-gray-light, 10%);
+        }
+      }
+      
+      // 下一步按钮样式
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+        
+        &:hover {
+          background: @apple-blue-hover;
+        }
+        
+        &:active {
+          background: darken(@apple-blue, 10%);
+        }
+        
+        &.ant-btn-loading {
+          opacity: 0.8;
+          pointer-events: none;
+          
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
     }
-    /deep/
-      .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
-      padding-left: 20px;
+    
+    /deep/ .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
+      padding-left: 24px;
+      
+      .anticon {
+        margin-right: 6px;
+      }
     }
   }
 }

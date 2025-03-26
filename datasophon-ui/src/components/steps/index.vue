@@ -124,59 +124,188 @@ export default {
 .steps-container {
   display: flex;
   height: 860px;
+  
+  // 苹果设计系统颜色
+  @apple-white: #ffffff;
+  @apple-black: #1d1d1f;
+  @apple-gray-light: #f5f5f7;
+  @apple-gray: #86868b;
+  @apple-blue: #0071e3;
+  @apple-blue-hover: #147CE5;
+
+  // 苹果设计系统字体
+  .apple-font() {
+    font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  
   .lf {
-    width: 216px;
-    border-right: 1px solid #e3e4e6;
-    padding: 32px 20px;
-    /deep/ .ant-steps-vertical > .ant-steps-item > .ant-steps-item-container > .ant-steps-item-tail {
-      padding: 23px 0 0;
-      left: 11px;
-    }
-    /deep/ .ant-steps-item {
-      height: 80px;
-      .ant-steps-item-title {
-        line-height: 23px;
-        font-size: 14px;
-        color: #666666;
-        letter-spacing: 0.39px;
-        font-weight: 500;
+    width: 280px;
+    background-color: @apple-white;
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 40px 30px;
+    overflow-y: auto;
+    animation: fadeIn 0.8s ease-out;
+    
+    /deep/ .ant-steps-vertical {
+      .ant-steps-item {
+        position: relative;
+        margin-bottom: 22px;
+        padding-bottom: 16px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .ant-steps-item-container {
+          display: flex;
+          align-items: flex-start;
+          
+          .ant-steps-item-tail {
+            position: absolute;
+            top: 40px;
+            left: 16px;
+            height: calc(100% - 24px);
+            padding: 0 !important;
+            
+            &::after {
+              height: 100%;
+              border-radius: 1px;
+              transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+          }
+          
+          .ant-steps-item-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 16px;
+            line-height: 32px;
+            text-align: center;
+            border: none;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: @apple-gray-light;
+            color: @apple-gray;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          }
+          
+          .ant-steps-item-content {
+            margin-top: 4px;
+            
+            .ant-steps-item-title {
+              .apple-font();
+              font-size: 15px;
+              line-height: 1.4;
+              color: @apple-gray;
+              font-weight: 500;
+              transition: all 0.3s;
+              padding-right: 8px;
+              
+              &::after {
+                display: none;
+              }
+            }
+            
+            .ant-steps-item-description {
+              .apple-font();
+              font-size: 13px;
+              color: @apple-gray;
+              padding-right: 0;
+            }
+          }
+        }
       }
-      .ant-steps-item-icon {
-        width: 23px;
-        height: 23px;
-        line-height: 23px;
-        // border-color: rgb(209,212,217);
-        font-size: 12px;
-        margin-right: 10px;
+      
+      // 成功完成的步骤
+      .ant-steps-item-finish {
+        .ant-steps-item-icon {
+          background-color: rgba(0, 113, 227, 0.1);
+          border-color: transparent;
+          
+          .ant-steps-icon {
+            color: @apple-blue;
+          }
+        }
+        
+        .ant-steps-item-content {
+          .ant-steps-item-title {
+            color: @apple-black;
+          }
+        }
+        
+        .ant-steps-item-tail::after {
+          background-color: @apple-blue;
+        }
       }
-    }
-    // 等待还未到的
-   /deep/ .ant-steps-item-wait {
-      .ant-steps-item-icon {
-        .ant-steps-icon {
-          color: #666666;
-          letter-spacing: 0;
-          font-weight: 400;
+      
+      // 当前激活的步骤
+      .ant-steps-item-process {
+        .ant-steps-item-icon {
+          background-color: @apple-blue;
+          border-color: transparent;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+          
+          .ant-steps-icon {
+            color: @apple-white;
+            font-weight: 600;
+            font-size: 15px;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+          }
+        }
+        
+        .ant-steps-item-content {
+          .ant-steps-item-title {
+            color: @apple-black;
+            font-weight: 600;
+            transform: translateX(4px);
+          }
+        }
+        
+        .ant-steps-item-tail::after {
+          background-color: @apple-gray-light;
+        }
+      }
+      
+      // 等待的步骤
+      .ant-steps-item-wait {
+        .ant-steps-item-icon {
+          background-color: @apple-gray-light;
+          border-color: transparent;
+          
+          .ant-steps-icon {
+            color: @apple-gray;
+          }
+        }
+        
+        .ant-steps-item-content {
+          .ant-steps-item-title {
+            color: @apple-gray;
+          }
+        }
+        
+        .ant-steps-item-tail::after {
+          background-color: @apple-gray-light;
         }
       }
     }
-    /deep/ .ant-steps-item-active {
-      .ant-steps-item-title {
-        line-height: 23px;
-        font-size: 14px;
-        color: #111111;
-        letter-spacing: 0.39px;
-        font-weight: 600;
-      }
-    }
-    // 灰色的线
-    /deep/ .ant-steps-item-process > .ant-steps-item-container > .ant-steps-item-tail::after {
-      background: #D1D4D9;
-    }
   }
+  
   .rf {
     flex: 1;
     padding: 32px 0 32px 30px;
+  }
+}
+
+// 动画
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>
