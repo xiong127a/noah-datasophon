@@ -139,7 +139,7 @@
         "filename": "be.conf",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
-        "configTargetRoles": ["SRBE"],
+        "configTargetRoles": "SRBE",
         "templateName": "starRocks-be.ftl",
         "includeParams": [
           "be_port",
@@ -162,7 +162,7 @@
         "filename": "cn.conf",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
-        "configTargetRoles": ["SRCN"],
+        "configTargetRoles": "SRCN",
         "templateName": "starRocks-be.ftl",
         "includeParams": [
           "be_port",
@@ -184,7 +184,7 @@
       {
         "filename": "fe.conf",
         "configFormat": "custom",
-        "configTargetRoles": ["SRFE"],
+        "configTargetRoles": "SRFE",
         "outputDirectory": "fe/conf",
         "templateName": "starRocks-fe.ftl",
         "includeParams": [
