@@ -144,7 +144,11 @@
             </div>
           </div>
         </div>
-        <div class="log-content" v-loading="logLoading">
+        <div class="log-content" :class="{'loading-container': logLoading}">
+          <div v-if="logLoading" class="custom-loading">
+            <a-icon type="loading" spin />
+            <span>加载中...</span>
+          </div>
           <pre v-html="logContent"></pre>
         </div>
       </div>
@@ -1855,23 +1859,77 @@ export default {
     }
 
     // 添加复制功能到window对象
-    window.copyToClipboard = (text) => {
-      navigator.clipboard.writeText(text).then(() => {
-        this.$message.success('已复制到剪贴板');
-      }).catch(() => {
-        // 如果clipboard API失败，使用传统方法
-        const textarea = document.createElement('textarea');
+    window.copyToClipboard = function(text) {
+      // 声明toast变量在函数最外层作用域
+      var toast;
+      var toastContent = '';
+      var toastStyle = '';
+      
+      // 直接实现复制功能，不依赖navigator.clipboard
+      try {
+        // 创建一个隐藏的textarea元素
+        var textarea = document.createElement('textarea');
         textarea.value = text;
+        // 设置样式使其不可见
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-100vh';
+        textarea.style.left = '-100vw';
+        textarea.style.opacity = '0';
+        
+        // 添加到DOM
         document.body.appendChild(textarea);
+        
+        // 选择文本
         textarea.select();
-        try {
-          document.execCommand('copy');
-          this.$message.success('已复制到剪贴板');
-        } catch (err) {
-          this.$message.error('复制失败');
-        }
+        textarea.setSelectionRange(0, 99999); // 兼容移动设备
+        
+        // 执行复制
+        var successful = document.execCommand('copy');
+        
+        // 移除元素
         document.body.removeChild(textarea);
-      });
+        
+        // 显示苹果风格的提示
+        if (successful) {
+          // 成功提示内容
+          toastContent = '<div style="display: flex; align-items: center;"><svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="margin-right: 8px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor"></path></svg><span>复制成功</span></div>';
+          toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.75); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
+        } else {
+          // 失败提示内容
+          toastContent = '<div style="display: flex; align-items: center;"><svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="margin-right: 8px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"></path></svg><span>复制失败</span></div>';
+          toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 59, 48, 0.9); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
+        }
+        
+      } catch (err) {
+        console.error('复制失败:', err);
+        
+        // 错误提示内容
+        toastContent = '<div style="display: flex; align-items: center;"><svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="margin-right: 8px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"></path></svg><span>复制失败</span></div>';
+        toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 59, 48, 0.9); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
+      }
+      
+      // 创建并显示toast提示
+      toast = document.createElement('div');
+      toast.innerHTML = toastContent;
+      toast.style.cssText = toastStyle;
+      
+      // 添加到DOM
+      document.body.appendChild(toast);
+      
+      // 显示动画
+      setTimeout(function() {
+        toast.style.opacity = '1';
+      }, 10);
+      
+      // 自动消失
+      setTimeout(function() {
+        toast.style.opacity = '0';
+        setTimeout(function() {
+          if (toast && toast.parentNode) {
+            document.body.removeChild(toast);
+          }
+        }, 300);
+      }, 2000);
     };
   },
   beforeDestroy() {
@@ -2511,14 +2569,47 @@ export default {
       flex: 1;
       overflow: auto;
       padding: 20px 24px;
-      background-color: #1e1e1e;
+      background-color: #f8f8fa;
+      border-radius: 0 0 12px 12px;
       font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
       
       pre {
         margin: 0;
-        color: #e0e0e0;
+        color: #333;
         font-size: 0.9rem;
         line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        
+        ::selection {
+          background: rgba(0, 113, 227, 0.2);
+        }
+        
+        // 设置不同日志级别的颜色
+        :deep(.log-info) {
+          color: #1c1c1e;
+        }
+        
+        :deep(.log-warn) {
+          color: #9f6000;
+        }
+        
+        :deep(.log-error) {
+          color: #d40000;
+        }
+        
+        :deep(.log-debug) {
+          color: #6a737d;
+        }
+        
+        :deep(.log-trace) {
+          color: #5c2699;
+        }
+        
+        :deep(.log-timestamp) {
+          color: #0071e3;
+          font-weight: 500;
+        }
       }
     }
   }
@@ -2540,6 +2631,24 @@ export default {
       margin-bottom: 0;
     }
   }
+}
+
+.loading-container {
+  position: relative;
+  min-height: 100px;
+}
+
+.custom-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: @apple-gray;
+  font-size: 14px;
 }
 </style>
 ritten_file>

@@ -258,7 +258,7 @@ public class LogEntry implements Serializable {
             sb.append(String.format(
                     "<div class=\"log-source\" style=\"color: #8c8c8c; font-size: 12px; cursor: pointer;\" " +
                             "data-clipboard=\"%s\" " +
-                            "onclick=\"navigator.clipboard.writeText(this.getAttribute('data-clipboard')).then(()=>this.setAttribute('title','已复制!')).catch(e=>console.error(e))\" "
+                            "onclick=\"copyToClipboard(this.getAttribute('data-clipboard'))\" "
                             +
                             "title=\"点击复制\">%s</div>",
                     classInfo, classInfo));
