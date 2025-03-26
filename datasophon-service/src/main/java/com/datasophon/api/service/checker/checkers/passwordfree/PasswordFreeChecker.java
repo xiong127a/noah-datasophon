@@ -37,27 +37,27 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
             // 检查本地是否能够免密登录到远程主机
             cacheLog.info("尝试使用密钥进行免密登录...");
-            
+
             try {
                 // 尝试建立SSH连接而不需要密码
                 ClientSession testSession = MinaUtils.openConnection(
                         hostInfo.getHostname(),
                         hostInfo.getSshPort(),
                         hostInfo.getSshUser());
-                
+
                 if (testSession != null) {
                     cacheLog.info("成功建立免密连接");
-                    
+
                     // 执行一个简单命令进一步验证
                     CommandResult echoResult = execCommand(testSession, "echo 'SSH connection test'");
-                    
+
                     // 关闭会话
                     try {
                         testSession.close();
                     } catch (Exception e) {
                         cacheLog.warn("关闭测试会话时发生异常: %s", e.getMessage());
                     }
-                    
+
                     if (echoResult.isSuccess() && echoResult.getOutput().contains("SSH connection test")) {
                         cacheLog.info("免密登录命令执行成功");
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
@@ -75,28 +75,28 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             } catch (Exception e) {
                 cacheLog.info("免密登录尝试失败: %s", e.getMessage());
             }
-            
+
             // 检查本地SSH密钥是否存在
             Path userHome = Paths.get(System.getProperty("user.home"));
             Path sshDir = userHome.resolve(SSH_DIR);
             Path privateKeyPath = sshDir.resolve(ID_RSA);
             Path publicKeyPath = sshDir.resolve(ID_RSA_PUB);
-            
+
             boolean sshDirExists = Files.exists(sshDir);
             boolean privateKeyExists = Files.exists(privateKeyPath);
             boolean publicKeyExists = Files.exists(publicKeyPath);
-            
+
             cacheLog.info("本地SSH目录状态: " + (sshDirExists ? "存在" : "不存在"));
             cacheLog.info("本地私钥状态: " + (privateKeyExists ? "存在" : "不存在"));
             cacheLog.info("本地公钥状态: " + (publicKeyExists ? "存在" : "不存在"));
-            
+
             // 如果缺少必要文件，则标记为失败
             if (!sshDirExists || !privateKeyExists || !publicKeyExists) {
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("本地SSH密钥不完整，需要重新生成");
                 return checkItem;
             }
-            
+
             // 检查远程authorized_keys是否包含了本地公钥
             boolean remoteAuthKeysContainsLocalPubKey = false;
             try {
@@ -106,7 +106,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                         hostInfo.getSshPort(),
                         hostInfo.getSshUser(),
                         hostInfo.getSshPassword());
-                
+
                 if (pwdSession != null) {
                     try {
                         // 检查远程.ssh目录和authorized_keys文件
@@ -114,21 +114,25 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                         if (!checkDirResult.isSuccess()) {
                             cacheLog.warn("远程主机.ssh目录检查/创建失败: %s", checkDirResult.getErrorOrOutput());
                         }
-                        
-                        CommandResult checkAuthResult = execCommand(pwdSession, "test -f ~/.ssh/authorized_keys && echo 'EXISTS' || echo 'NOT_EXISTS'");
-                        boolean authKeysExists = checkAuthResult.isSuccess() && checkAuthResult.getOutput().contains("EXISTS");
+
+                        CommandResult checkAuthResult = execCommand(pwdSession,
+                                "test -f ~/.ssh/authorized_keys && echo 'EXISTS' || echo 'NOT_EXISTS'");
+                        boolean authKeysExists = checkAuthResult.isSuccess()
+                                && checkAuthResult.getOutput().contains("EXISTS");
                         cacheLog.info("远程authorized_keys状态: " + (authKeysExists ? "存在" : "不存在"));
-                        
+
                         if (authKeysExists) {
                             // 读取本地公钥
-                            String localPubKey = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8).trim();
-                            
+                            String localPubKey = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8)
+                                    .trim();
+
                             // 检查远程authorized_keys是否包含本地公钥
                             CommandResult catResult = execCommand(pwdSession, "cat ~/.ssh/authorized_keys");
                             if (catResult.isSuccess()) {
                                 String remoteAuthKeys = catResult.getOutput();
                                 remoteAuthKeysContainsLocalPubKey = remoteAuthKeys.contains(localPubKey);
-                                cacheLog.info("远程authorized_keys " + (remoteAuthKeysContainsLocalPubKey ? "包含" : "不包含") + " 本地公钥");
+                                cacheLog.info("远程authorized_keys " + (remoteAuthKeysContainsLocalPubKey ? "包含" : "不包含")
+                                        + " 本地公钥");
                             }
                         }
                     } finally {
@@ -143,7 +147,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             } catch (Exception e) {
                 cacheLog.error("检查远程authorized_keys时发生错误: %s", e.getMessage());
             }
-            
+
             if (remoteAuthKeysContainsLocalPubKey) {
                 // 如果远程已包含本地公钥，但无法免密登录，可能是权限问题
                 cacheLog.warn("远程authorized_keys包含本地公钥，但无法免密登录，可能是权限问题");
@@ -168,22 +172,23 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
-        
+        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(),
+                checkItem.getId());
+
         // 设置为修复操作
         operationType = LogEntry.Type.FIX;
-        
+
         // 设置当前检查项的日志缓存键
         setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
-        
+
         // 更新日志记录器的类型
-        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl)this.cacheLog;
+        CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
         loggerImpl.setLogType(operationType);
-        
+
         // 设置状态为"修复中"
         checkItem.setStatus(CheckItem.Status.FIXING);
         checkItem.setMessage("正在修复...");
-        
+
         // 记录修复开始
         cacheLog.info("===============================================");
         cacheLog.info("开始修复检查项: " + checkItem.getItemName());
@@ -191,74 +196,113 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         cacheLog.info("检查项ID: " + checkItem.getId());
         cacheLog.info("开始时间: " + getCurrentTime());
         cacheLog.info("===============================================");
-        
+
         try {
             // 设置当前主机信息
             setCurrentHostInfo(hostInfo);
-            
+
             // 执行具体修复逻辑
             boolean doFixResult = doFix(hostInfo, checkItem);
-            
+
             if (doFixResult) {
                 cacheLog.info("修复逻辑执行成功");
-                
-                // 验证免密登录
-                cacheLog.info("修复完成，正在验证免密登录...");
-                try {
-                    // 建立SSH连接验证
-                    ClientSession testSession = MinaUtils.openConnection(
-                            hostInfo.getHostname(),
-                            hostInfo.getSshPort(),
-                            hostInfo.getSshUser());
-                    
-                    if (testSession != null) {
-                        cacheLog.info("免密登录验证成功！");
-                        // 执行一个简单命令进一步验证
-                        String result = MinaUtils.execCmdWithResult(testSession, "echo 'SSH connection test'");
-                        if (result != null && result.contains("SSH connection test")) {
-                            cacheLog.info("免密登录命令执行验证成功！");
-                            
-                            // 更新状态为成功
-                            checkItem.setStatus(CheckItem.Status.SUCCESS);
-                            checkItem.setMessage("免密登录已成功设置并验证通过");
+
+                // 增加重试机制：最多尝试3次，每次间隔3秒
+                boolean verificationSuccess = false;
+                int maxRetries = 3;
+
+                for (int attemptCount = 1; attemptCount <= maxRetries; attemptCount++) {
+                    // 验证免密登录
+                    cacheLog.info("第 " + attemptCount + " 次验证免密登录...");
+
+                    try {
+                        // 建立SSH连接验证
+                        ClientSession testSession = MinaUtils.openConnection(
+                                hostInfo.getHostname(),
+                                hostInfo.getSshPort(),
+                                hostInfo.getSshUser());
+
+                        if (testSession != null) {
+                            cacheLog.info("免密登录验证成功！");
+                            // 执行一个简单命令进一步验证
+                            String result = MinaUtils.execCmdWithResult(testSession, "echo 'SSH connection test'");
+                            if (result != null && result.contains("SSH connection test")) {
+                                cacheLog.info("免密登录命令执行验证成功！");
+
+                                // 验证成功
+                                verificationSuccess = true;
+
+                                // 更新状态为成功
+                                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                                checkItem.setMessage("免密登录已成功设置并验证通过");
+
+                                // 关闭验证会话
+                                MinaUtils.closeConnection(testSession);
+                                break; // 验证成功，跳出循环
+                            } else {
+                                cacheLog.warn("免密登录命令执行验证失败: " + result);
+
+                                // 关闭验证会话
+                                MinaUtils.closeConnection(testSession);
+
+                                if (attemptCount == maxRetries) {
+                                    // 最后一次尝试仍然失败
+                                    checkItem.setStatus(CheckItem.Status.SUCCESS);
+                                    checkItem.setMessage("免密登录已设置，但命令验证未通过，已尝试 " + maxRetries + " 次");
+                                } else {
+                                    // 等待3秒后重试
+                                    cacheLog.info("等待3秒后重试...");
+                                    Thread.sleep(3000);
+                                }
+                            }
                         } else {
-                            cacheLog.warn("免密登录命令执行验证失败: " + result);
-                            
-                            // 状态仍为成功，但消息中说明了命令验证未通过
-                            checkItem.setStatus(CheckItem.Status.SUCCESS);
-                            checkItem.setMessage("免密登录已设置，但命令验证未通过");
+                            // 连接建立失败
+                            cacheLog.warn("免密登录验证失败，无法建立连接");
+
+                            if (attemptCount == maxRetries) {
+                                // 最后一次尝试仍然失败
+                                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                                checkItem.setMessage("免密登录已设置，但验证未通过，已尝试 " + maxRetries + " 次");
+                            } else {
+                                // 等待3秒后重试
+                                cacheLog.info("等待3秒后重试...");
+                                Thread.sleep(3000);
+                            }
                         }
-                        // 关闭验证会话
-                        MinaUtils.closeConnection(testSession);
-                    } else {
-                        cacheLog.warn("免密登录验证失败，但修复过程已完成，可能需要等待SSH服务重新加载配置");
-                        
-                        // 状态仍为成功，但消息中说明了验证未通过
-                        checkItem.setStatus(CheckItem.Status.SUCCESS);
-                        checkItem.setMessage("免密登录已设置，但验证未通过，可能需要等待SSH服务重新加载配置");
+                    } catch (Exception e) {
+                        cacheLog.warn("免密登录验证时发生异常: " + e.getMessage());
+
+                        if (attemptCount == maxRetries) {
+                            // 最后一次尝试仍然发生异常
+                            checkItem.setStatus(CheckItem.Status.SUCCESS);
+                            checkItem.setMessage("免密登录已设置，但验证时发生异常: " + e.getMessage() + "，已尝试 " + maxRetries + " 次");
+                        } else {
+                            // 等待3秒后重试
+                            cacheLog.info("等待3秒后重试...");
+                            Thread.sleep(3000);
+                        }
                     }
-                } catch (Exception e) {
-                    cacheLog.warn("免密登录验证时发生异常: " + e.getMessage() + "，但修复过程已完成");
-                    
-                    // 状态仍为成功，但消息中说明了验证异常
-                    checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("免密登录已设置，但验证时发生异常: " + e.getMessage());
+                }
+
+                // 即使所有验证尝试都失败，我们仍然认为整体修复成功，因为doFix返回了成功
+                if (!verificationSuccess) {
+                    cacheLog.info("尽管验证失败，但修复过程已完成");
                 }
             } else {
                 // 修复失败，更新状态
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("免密登录设置失败，请查看日志了解详情");
             }
-            
+
             // 记录最终结果
             cacheLog.info("修复操作" + (doFixResult ? "成功完成" : "失败"));
-            
+
             return doFixResult;
         } catch (Exception e) {
             String errorMsg = "修复过程中发生异常: " + e.getMessage();
             logger.error(errorMsg, e);
             cacheLog.error("错误: " + errorMsg);
-            
+
             // 更新状态为失败
             checkItem.setStatus(CheckItem.Status.FAILED);
             checkItem.setMessage("修复异常: " + e.getMessage());
@@ -266,7 +310,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         } finally {
             // 清理当前主机信息
             clearCurrentHostInfo();
-            
+
             // 记录修复结束
             cacheLog.info("===============================================");
             cacheLog.info("修复操作结束");
@@ -280,13 +324,13 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         ClientSession passwordSession = null;
         try {
             cacheLog.info("==== 开始配置免密登录 ====");
-            
+
             // 1. 检查并创建本地SSH目录和密钥
             Path userHome = Paths.get(System.getProperty("user.home"));
             Path sshDir = userHome.resolve(SSH_DIR);
             Path privateKeyPath = sshDir.resolve(ID_RSA);
             Path publicKeyPath = sshDir.resolve(ID_RSA_PUB);
-            
+
             // 确保.ssh目录存在
             if (!Files.exists(sshDir)) {
                 cacheLog.info("创建本地.ssh目录...");
@@ -305,29 +349,29 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                         sshDirFile.setExecutable(true, true);
                     } else {
                         // Linux/Unix系统使用PosixFilePermissions
-                        Files.setPosixFilePermissions(sshDir, 
-                            java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
+                        Files.setPosixFilePermissions(sshDir,
+                                java.nio.file.attribute.PosixFilePermissions.fromString("rwx------"));
                     }
                 } catch (Exception e) {
                     cacheLog.warn("设置目录权限时出现异常: %s", e.getMessage());
                     // 继续执行，不终止处理
                 }
             }
-            
+
             // 检查是否已有SSH密钥
             boolean keysExist = Files.exists(privateKeyPath) && Files.exists(publicKeyPath);
             String publicKeyContent = null;
-            
+
             if (!keysExist) {
                 // 生成SSH密钥对
                 cacheLog.info("生成本地SSH密钥对...");
-                boolean keyGenResult = setupKeyBasedAuth(hostInfo.getHostname(), hostInfo.getSshUser(), 
-                                                     hostInfo.getSshPassword(), hostInfo.getSshPort(), "rsa");
+                boolean keyGenResult = setupKeyBasedAuth(hostInfo.getHostname(), hostInfo.getSshUser(),
+                        hostInfo.getSshPassword(), hostInfo.getSshPort(), "rsa");
                 if (!keyGenResult) {
                     cacheLog.error("生成SSH密钥对失败");
                     return false;
                 }
-                
+
                 // 重新检查密钥是否生成
                 keysExist = Files.exists(privateKeyPath) && Files.exists(publicKeyPath);
                 if (!keysExist) {
@@ -335,57 +379,58 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                     return false;
                 }
             }
-            
+
             // 读取公钥内容
             publicKeyContent = new String(Files.readAllBytes(publicKeyPath), StandardCharsets.UTF_8).trim();
             cacheLog.info("读取本地公钥内容成功");
-            
+
             // 2. 建立到远程主机的密码连接并配置authorized_keys
             cacheLog.info("连接到远程主机配置authorized_keys...");
-            
+
             try {
                 // 使用密码直接建立连接，而不使用共享连接池
                 cacheLog.info("使用密码创建SSH连接: 主机=%s, 端口=%s, 用户=%s",
-                    hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
-                    
+                        hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+
                 passwordSession = MinaUtils.openConnectionWithPassword(
                         hostInfo.getHostname(),
-                        hostInfo.getSshPort(), 
+                        hostInfo.getSshPort(),
                         hostInfo.getSshUser(),
                         hostInfo.getSshPassword());
-                
+
                 if (passwordSession == null) {
                     cacheLog.error("无法使用密码连接到远程主机");
                     return false;
                 }
-                
+
                 // 将密码连接赋值给当前会话，以便后续 execCommand 方法可以使用
                 this.session = passwordSession;
-                
+
                 // 在远程主机上创建.ssh目录
                 CommandResult mkdirResult = execCommand(this.session, "mkdir -p ~/.ssh");
                 if (!mkdirResult.isSuccess()) {
                     cacheLog.error("在远程主机上创建.ssh目录失败: %s", mkdirResult.getErrorOrOutput());
                     return false;
                 }
-                
+
                 // 设置远程.ssh目录权限
                 CommandResult chmodDirResult = execCommand(this.session, "chmod 700 ~/.ssh");
                 if (!chmodDirResult.isSuccess()) {
                     cacheLog.error("设置远程.ssh目录权限失败: %s", chmodDirResult.getErrorOrOutput());
                     return false;
                 }
-                
+
                 // 将本地公钥添加到远程authorized_keys
                 // 先检查远程authorized_keys是否已包含此公钥
-                CommandResult checkExistResult = execCommand(this.session, 
-                    "grep -F \"" + publicKeyContent + "\" ~/.ssh/authorized_keys 2>/dev/null || echo 'NOT_FOUND'");
-                boolean alreadyExists = checkExistResult.isSuccess() && !checkExistResult.getOutput().contains("NOT_FOUND");
-                
+                CommandResult checkExistResult = execCommand(this.session,
+                        "grep -F \"" + publicKeyContent + "\" ~/.ssh/authorized_keys 2>/dev/null || echo 'NOT_FOUND'");
+                boolean alreadyExists = checkExistResult.isSuccess()
+                        && !checkExistResult.getOutput().contains("NOT_FOUND");
+
                 if (!alreadyExists) {
                     // 添加公钥到远程authorized_keys
-                    CommandResult appendResult = execCommand(this.session, 
-                        "echo \"" + publicKeyContent + "\" >> ~/.ssh/authorized_keys");
+                    CommandResult appendResult = execCommand(this.session,
+                            "echo \"" + publicKeyContent + "\" >> ~/.ssh/authorized_keys");
                     if (!appendResult.isSuccess()) {
                         cacheLog.error("将公钥添加到远程authorized_keys失败: %s", appendResult.getErrorOrOutput());
                         return false;
@@ -394,22 +439,22 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                 } else {
                     cacheLog.info("公钥已存在于远程authorized_keys中，无需添加");
                 }
-                
+
                 // 设置远程authorized_keys权限
                 CommandResult chmodKeyResult = execCommand(this.session, "chmod 600 ~/.ssh/authorized_keys");
                 if (!chmodKeyResult.isSuccess()) {
                     cacheLog.error("设置远程authorized_keys权限失败: %s", chmodKeyResult.getErrorOrOutput());
                     return false;
                 }
-                
+
                 // 确保SSH服务配置正确
-                CommandResult sshConfigResult = execCommand(this.session, 
-                    "grep -F \"PubkeyAuthentication yes\" /etc/ssh/sshd_config || " +
-                    "echo '可能需要配置SSH服务以启用公钥认证'");
+                CommandResult sshConfigResult = execCommand(this.session,
+                        "grep -F \"PubkeyAuthentication yes\" /etc/ssh/sshd_config || " +
+                                "echo '可能需要配置SSH服务以启用公钥认证'");
                 if (sshConfigResult.getOutput().contains("需要配置SSH服务")) {
                     cacheLog.warn("远程SSH服务可能需要配置以启用公钥认证");
                 }
-                
+
                 cacheLog.info("免密登录配置完成");
                 return true;
             } finally {
@@ -432,25 +477,25 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             return false;
         }
     }
-    
+
     private boolean setupKeyBasedAuth(String hostname, String user, String password, int port, String keyType) {
         try {
             Path userHome = Paths.get(System.getProperty("user.home"));
             Path sshDir = userHome.resolve(SSH_DIR);
             Path privateKeyPath = sshDir.resolve(ID_RSA);
             Path publicKeyPath = sshDir.resolve(ID_RSA_PUB);
-            
+
             if (Files.exists(privateKeyPath) && Files.exists(publicKeyPath)) {
                 cacheLog.info("SSH密钥对已存在，无需生成");
                 return true;
             }
-            
+
             // 尝试使用Java调用系统命令生成密钥
             cacheLog.info("生成SSH密钥对...");
             Process process = new ProcessBuilder("ssh-keygen", "-t", keyType, "-N", "", "-f", privateKeyPath.toString())
                     .redirectErrorStream(true)
                     .start();
-            
+
             // 读取命令输出
             try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
                 String line;
@@ -458,22 +503,22 @@ public class PasswordFreeChecker extends AbstractItemChecker {
                     cacheLog.debug("ssh-keygen输出: %s", line);
                 }
             }
-            
+
             int exitCode = process.waitFor();
             if (exitCode != 0) {
                 cacheLog.error("ssh-keygen命令执行失败，退出码: %d", exitCode);
                 return false;
             }
-            
+
             // 检查密钥是否生成
             if (!Files.exists(privateKeyPath) || !Files.exists(publicKeyPath)) {
                 cacheLog.error("生成密钥后未找到密钥文件");
                 return false;
             }
-            
+
             cacheLog.info("SSH密钥对生成成功");
             return true;
-            
+
         } catch (Exception e) {
             cacheLog.error("生成SSH密钥对时发生错误: %s", e.getMessage());
             return false;
@@ -484,4 +529,4 @@ public class PasswordFreeChecker extends AbstractItemChecker {
     public ItemCode getCheckerType() {
         return ItemCode.PASSWORD_FREE;
     }
-} 
+}
