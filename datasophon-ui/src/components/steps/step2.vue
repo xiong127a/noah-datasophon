@@ -255,19 +255,19 @@ export default {
 
             // 使用主机的状态
             const hostStatus = row.statusStr || row.status || '';
-            
+
             // 如果主机有状态，直接显示
             if (hostStatus && statusMap[hostStatus]) {
               const status = statusMap[hostStatus];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
-                style: { 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  color: status.color 
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: status.color
                 }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -279,7 +279,7 @@ export default {
                 h('span', {}, [status.text])
               ]);
             }
-            
+
             return h('span', {}, ['-']);
           },
         },
@@ -424,7 +424,7 @@ export default {
           width: "25%",
           customRender: (text, row) => {
             const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING' || row.status === 'FIXING';
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
             
             return h('div', { class: 'action-buttons' }, [
               // 终止按钮 - 检查中时显示
@@ -443,40 +443,12 @@ export default {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  // 修改：处于CHECKING或FIXING状态时禁用重试按钮
-                  disabled: row.status === 'CHECKING' || row.status === 'FIXING' || 
-                           !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
+                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
                 },
                 on: {
-                  click: () => this.retryCheckItem(record.hostname, row.id)
+                  click: () => this.retryEnvironment(row)
                 }
-              }, ["重试"]) : null,
-              
-              // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当项目正在修复中时也禁用修复按钮
-                  disabled: isHostChecking || row.status === 'FIXING'
-                },
-                on: {
-                  click: () => this.fixCheckItem(record.hostname, row)
-                }
-              }, ["修复"]) : null,
-              
-              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当主机整体状态为检查中时，禁用按钮
-                  disabled: isHostChecking
-                },
-                on: {
-                  click: () => this.skipCheckItem(record.hostname, row.id)
-                }
-              }, ["跳过"]) : null
+              }, ["重试"]) : null
             ].filter(Boolean));
           },
         },
@@ -889,7 +861,7 @@ export default {
                            !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
                 },
                 on: {
-                  click: () => this.retryCheckItem(record.hostname, row.id)
+                  click: () => this.retryCheckItem(row.hostname, row.id)
                 }
               }, ["重试"]) : null,
               
