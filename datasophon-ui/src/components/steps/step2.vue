@@ -239,42 +239,6 @@ export default {
           dataIndex: "hostname" 
         },
         {
-          title: "操作",
-          key: "action",
-          width: "10%",
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
-            
-            return h('div', { class: 'action-buttons apple-actions' }, [
-              // 终止按钮 - 检查中时显示
-              isChecking ? h('a-button', {
-                attrs: {
-                  type: 'danger',
-                  size: 'small'
-                },
-                class: 'apple-button danger',
-                on: {
-                  click: () => this.stopCheck(row)
-                }
-              }, ["终止"]) : null,
-              
-              // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('a-button', {
-                attrs: {
-                  type: 'link',
-                  size: 'small',
-                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
-                },
-                class: 'apple-button primary',
-                on: {
-                  click: () => this.retryEnvironment(row)
-                }
-              }, ["重试"]) : null
-            ].filter(Boolean));
-          },
-        },
-        {
           title: "操作系统",
           key: "osType",
           dataIndex: "osType",
@@ -285,29 +249,6 @@ export default {
             const hasOsInfo = row.osInfo && row.osInfo.valid;
             const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
-            
-            // 创建详细的操作系统信息弹出框
-            const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
-              h('div', { class: 'os-detail-title' }, [
-                h('span', {}, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['发行版: ']),
-                h('span', {}, [row.osInfo.distribution])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['发行版ID: ']),
-                h('span', {}, [row.osInfo.distributionId])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['版本: ']),
-                h('span', {}, [row.osInfo.versionId])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['内核版本: ']),
-                h('span', {}, [row.osInfo.kernelVersion])
-              ])
-            ]) : h('div', {}, ['暂无详细信息']);
             
             // 获取操作系统对应的图标路径
             const getOsIconPath = (osType) => {
@@ -352,12 +293,68 @@ export default {
             const iconPath = getOsIconPath(osType);
             const color = getOsColor(osType);
             
+            // 创建详细的操作系统信息弹出框
+            const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
+              h('div', { class: 'os-detail-title' }, [
+                h('img', {
+                  attrs: {
+                    src: getOsIconPath(osType),
+                    alt: osType,
+                    width: '24',
+                    height: '24'
+                  },
+                  style: {
+                    marginRight: '10px',
+                    verticalAlign: 'middle',
+                    filter: 'none !important',
+                    borderRadius: '4px',
+                    backgroundColor: '#ffffff',
+                    padding: '2px'
+                  },
+                  domProps: {
+                    className: 'os-img-no-filter'
+                  }
+                }),
+                h('span', {}, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['发行版: ']),
+                h('span', {}, [row.osInfo.distribution])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['发行版ID: ']),
+                h('span', {}, [row.osInfo.distributionId])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['版本: ']),
+                h('span', {}, [row.osInfo.versionId])
+              ]),
+              h('div', { class: 'os-detail-item' }, [
+                h('strong', {}, ['内核版本: ']),
+                h('span', {}, [row.osInfo.kernelVersion])
+              ])
+            ]) : h('div', { 
+              class: 'os-detail-popup',
+              style: { 
+                padding: '16px',
+                textAlign: 'center',
+                color: '#8E8E93'
+              }
+            }, [
+              h('a-icon', {
+                props: { type: 'info-circle' },
+                style: { marginRight: '8px', color: '#8E8E93' }
+              }),
+              '暂无详细信息'
+            ]);
+            
             return h('div', { class: 'os-info' }, [
               h('a-tooltip', {
                 props: {
                   placement: 'right',
                   arrowPointAtCenter: true,
-                  overlayStyle: { maxWidth: '320px' }
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
                 }
               }, [
                 // 简要信息(触发区域)
@@ -406,7 +403,31 @@ export default {
           dataIndex: "managed",
           customRender: (text, row, index) => {
             const h = this.$createElement;
-            return h('span', {}, [text ? "是" : "否"]);
+            return h('div', { 
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500',
+                backgroundColor: text ? 'rgba(52, 199, 89, 0.1)' : 'rgba(142, 142, 147, 0.1)',
+                color: text ? '#34c759' : '#8e8e93',
+                transition: 'all 0.3s ease'
+              }
+            }, [
+              h('span', {
+                style: {
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: text ? '#34c759' : '#8e8e93',
+                  marginRight: '6px',
+                  display: 'inline-block'
+                }
+              }),
+              text ? "是" : "否"
+            ]);
           },
         },
         {
@@ -590,6 +611,42 @@ export default {
             
             // 如果没有任何检查项，则显示占位符
             return h('span', {}, ['-']);
+          },
+        },
+        {
+          title: "操作",
+          key: "action",
+          width: "10%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            
+            return h('div', { class: 'action-buttons apple-actions' }, [
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('a-button', {
+                attrs: {
+                  type: 'danger',
+                  size: 'small'
+                },
+                class: 'apple-button danger',
+                on: {
+                  click: () => this.stopCheck(row)
+                }
+              }, ["终止"]) : null,
+              
+              // 重试按钮 - 非检查中时显示，检查中则禁用
+              !isChecking ? h('a-button', {
+                attrs: {
+                  type: 'link',
+                  size: 'small',
+                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
+                },
+                class: 'apple-button primary',
+                on: {
+                  click: () => this.retryEnvironment(row)
+                }
+              }, ["重试"]) : null
+            ].filter(Boolean));
           },
         }
       ],
@@ -827,7 +884,17 @@ export default {
           title: '检查项',
           dataIndex: 'itemName',
           key: 'itemName',
-          width: '25%'
+          width: '25%',
+          customRender: (text) => {
+            const h = this.$createElement;
+            return h('div', {
+              style: {
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#1d1d1f'
+              }
+            }, [text]);
+          }
         },
         {
           title: '状态',
@@ -838,26 +905,39 @@ export default {
             const h = this.$createElement;
             // 使用字符串类型的状态映射
             const statusMap = {
-              'WAITING': { text: '待检查', color: '#faad14', icon: 'clock-circle' },
-              'SUCCESS': { text: '通过', color: '#52c41a', icon: 'check-circle' },
-              'FAILED': { text: '未通过', color: '#f5222d', icon: 'close-circle' },
-              'CHECKING': { text: '检查中', color: '#1890ff', icon: 'loading' },
-              'SKIPPED': { text: '已跳过', color: '#d9d9d9', icon: 'warning' },
-              'TERMINATING': { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
-              'FIXING': { text: '修复中', color: '#1890ff', icon: 'tool', spin: true }
+              'WAITING': { text: '待检查', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'clock-circle' },
+              'SUCCESS': { text: '通过', color: '#34C759', bgColor: 'rgba(52, 199, 89, 0.1)', icon: 'check-circle' },
+              'FAILED': { text: '未通过', color: '#FF3B30', bgColor: 'rgba(255, 59, 48, 0.1)', icon: 'close-circle' },
+              'CHECKING': { text: '检查中', color: '#007AFF', bgColor: 'rgba(0, 122, 255, 0.1)', icon: 'loading' },
+              'SKIPPED': { text: '已跳过', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'warning' },
+              'TERMINATING': { text: '终止中', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'stop', spin: true },
+              'FIXING': { text: '修复中', color: '#5856D6', bgColor: 'rgba(88, 86, 214, 0.1)', icon: 'tool', spin: true }
             };
 
-            const status = statusMap[text] || { text: '未知', color: '#999999', icon: 'question-circle' };
+            const status = statusMap[text] || { text: '未知', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'question-circle' };
 
-            return h('span', { style: { color: status.color } }, [
+            return h('div', { 
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                backgroundColor: status.bgColor,
+                fontSize: '13px',
+                fontWeight: '500',
+                color: status.color,
+                transition: 'all 0.2s ease'
+              }
+            }, [
               h('a-icon', {
                 props: {
                   type: status.icon,
-                  theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
-                  twoToneColor: status.color,
-                  spin: status.icon === 'loading'
+                  spin: status.spin || status.icon === 'loading'
                 },
-                style: { marginRight: '4px' }
+                style: { 
+                  marginRight: '6px',
+                  fontSize: '14px'
+                }
               }),
               status.text
             ]);
@@ -877,70 +957,102 @@ export default {
             // 不再限制文本长度，所有检查项都显示悬浮提示
             const displayText = text;
             
-            // 使用a-tooltip组件提供鼠标悬浮显示完整内容的功能
-            return h('a-tooltip', {
-              props: {
-                title: h('div', { 
+            // 根据状态设置颜色
+            const statusColor = row.status === 'SUCCESS' ? '#34C759' : 
+                             row.status === 'FAILED' ? '#FF3B30' :
+                             row.status === 'SKIPPED' ? '#8E8E93' :
+                             row.status === 'CHECKING' ? '#007AFF' : 
+                             row.status === 'FIXING' ? '#5856D6' : '#1d1d1f';
+            
+            const statusIcon = row.status === 'SUCCESS' ? 'check-circle' :
+                               row.status === 'FAILED' ? 'close-circle' :
+                               row.status === 'SKIPPED' ? 'warning' :
+                               row.status === 'CHECKING' ? 'loading' :
+                               row.status === 'FIXING' ? 'tool' : 'info-circle';
+            
+            const statusSpin = row.status === 'CHECKING' || row.status === 'FIXING';
+            const statusTheme = row.status !== 'CHECKING' && row.status !== 'FIXING' ? 'filled' : undefined;
+            
+            // 创建一个更符合苹果设计风格的tooltip内容
+            const tooltipContent = h('div', { 
                   class: 'check-result-tooltip',
                   style: {
                     maxWidth: '1200px',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)',
-                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                    color: '#333',
+                padding: '0',
+                borderRadius: '16px',
+                background: '#ffffff',
+                color: '#1d1d1f',
                     fontSize: '14px',
                     lineHeight: '1.6',
                     wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap'
+                whiteSpace: 'pre-wrap',
+                fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
+                overflow: 'hidden',
+                border: 'none',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05)'
                   }
                 }, [
                   // 添加标题行
                   h('div', {
                     style: {
-                      fontWeight: 'bold',
-                      marginBottom: '6px',
-                      borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-                      paddingBottom: '6px',
-                      color: row.status === 'SUCCESS' ? '#52c41a' : 
-                             row.status === 'FAILED' ? '#f5222d' :
-                             row.status === 'SKIPPED' ? '#d9d9d9' :
-                             row.status === 'CHECKING' ? '#1890ff' : 
-                             row.status === 'FIXING' ? '#1890ff' : '#333'
+                  fontWeight: '500',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+                  backgroundColor: statusColor,
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }
+              }, [
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center'
                     }
                   }, [
                     h('a-icon', {
                       props: {
-                        type: row.status === 'SUCCESS' ? 'check-circle' :
-                              row.status === 'FAILED' ? 'close-circle' :
-                              row.status === 'SKIPPED' ? 'warning' :
-                              row.status === 'CHECKING' ? 'loading' :
-                              row.status === 'FIXING' ? 'tool' : 'info-circle',
-                        theme: row.status !== 'CHECKING' && row.status !== 'FIXING' ? 'filled' : undefined,
-                        spin: row.status === 'CHECKING' || row.status === 'FIXING'
+                      type: statusIcon,
+                      theme: statusTheme,
+                      spin: statusSpin
                       },
                       style: {
                         marginRight: '8px',
+                      fontSize: '16px'
                       }
                     }),
                     '检查结果详情'
+                ])
                   ]),
                   // 添加检查结果内容
                   h('div', {
                     domProps: {
                       innerHTML: text
-                    }
-                  })
-                ]),
+                },
+                style: {
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  padding: '16px',
+                  maxHeight: '70vh',
+                  overflowY: 'auto'
+                }
+              })
+            ]);
+            
+            // 使用tooltip组件但覆盖默认样式
+            return h('a-tooltip', {
+              props: {
+                title: tooltipContent,
                 placement: 'top',
                 mouseEnterDelay: 0.3,
-                overlayClassName: 'custom-tooltip-overlay',
+                overlayClassName: 'apple-style-tooltip',
                 autoAdjustOverflow: true,
                 arrowPointAtCenter: true,
-                align: {
-                  offset: [0, 0]
-                }
-              }
+                color: '#ffffff',
+                getPopupContainer: () => document.body
+              },
+              class: 'custom-tooltip'
             }, [
               h('span', {
                 style: {
@@ -950,16 +1062,28 @@ export default {
                   whiteSpace: 'nowrap',
                   display: 'inline-block',
                   maxWidth: '100%',
-                  borderBottom: '1px dotted #ccc',
-                  color: row.status === 'SUCCESS' ? '#52c41a' : 
-                         row.status === 'FAILED' ? '#f5222d' :
-                         row.status === 'CHECKING' ? '#1890ff' :
-                         row.status === 'SKIPPED' ? '#d9d9d9' :
-                         row.status === 'FIXING' ? '#1890ff' : '#333',
-                  transition: 'color 0.3s'
+                  color: statusColor,
+                  transition: 'all 0.3s',
+                  fontSize: '14px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  backgroundColor: `${statusColor}15`, // 15是透明度，相当于rgba的0.1
+                  border: `1px solid ${statusColor}30` // 30是透明度，相当于rgba的0.2
                 },
                 class: 'check-result-text'
               }, [
+                // 状态图标
+                h('a-icon', {
+                  props: {
+                    type: statusIcon,
+                    theme: statusTheme,
+                    spin: statusSpin
+                  },
+                  style: {
+                    marginRight: '4px',
+                    fontSize: '12px'
+                  }
+                }),
                 // 在这里使用一个辅助函数去除HTML标签，只显示纯文本
                 h('span', {}, [
                   displayText.length > 20 ? 
@@ -979,57 +1103,135 @@ export default {
             const isChecking = row.status === 'CHECKING';
             const isFailed = row.status === 'FAILED';
             
-            return h('div', { class: 'action-buttons' }, [
+            return h('div', { 
+              class: 'action-buttons',
+              style: {
+                display: 'flex',
+                gap: '8px'
+              }
+            }, [
               // 终止按钮 - 检查中时显示
-              isChecking ? h('a-button', {
-                attrs: {
-                  type: 'danger',
-                  size: 'small'
+              isChecking ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                  color: '#FF3B30',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 },
                 on: {
                   click: () => this.stopCheckItem(record.hostname, row.id)
                 }
-              }, ["终止"]) : null,
+              }, [
+                h('a-icon', {
+                  props: { type: 'close' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "终止"
+              ]) : null,
               
               // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('a-button', {
+              !isChecking ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                  color: '#007AFF',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: row.status === 'CHECKING' || row.status === 'FIXING' || 
+                          !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: row.status === 'CHECKING' || row.status === 'FIXING' || 
+                          !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
                 attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 修改：处于CHECKING或FIXING状态时禁用重试按钮
                   disabled: row.status === 'CHECKING' || row.status === 'FIXING' || 
                            !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
                 },
                 on: {
                   click: () => this.retryCheckItem(row.hostname, row.id)
                 }
-              }, ["重试"]) : null,
+              }, [
+                h('a-icon', {
+                  props: { type: 'redo' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "重试"
+              ]) : null,
               
               // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
+              isFailed ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(88, 86, 214, 0.1)',
+                  color: '#5856D6',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
                 attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当项目正在修复中时也禁用修复按钮
                   disabled: isHostChecking || row.status === 'FIXING'
                 },
                 on: {
                   click: () => this.fixCheckItem(record.hostname, row)
                 }
-              }, ["修复"]) : null,
+              }, [
+                h('a-icon', {
+                  props: { type: 'tool' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "修复"
+              ]) : null,
               
               // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('a-button', {
+              isFailed ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(142, 142, 147, 0.1)',
+                  color: '#8E8E93',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isHostChecking ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isHostChecking ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
                 attrs: {
-                  type: 'link',
-                  size: 'small',
-                  // 当主机整体状态为检查中时，禁用按钮
                   disabled: isHostChecking
                 },
                 on: {
                   click: () => this.skipCheckItem(record.hostname, row.id)
                 }
-              }, ["跳过"]) : null
+              }, [
+                h('a-icon', {
+                  props: { type: 'forward' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "跳过"
+              ]) : null
             ].filter(Boolean));
           }
         },
@@ -1039,115 +1241,260 @@ export default {
           width: '15%',
           customRender: (text, row) => {
             const h = this.$createElement;
-            return h('a-button', {
+            return h('button', {
+              style: {
+                border: 'none',
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                color: '#007AFF',
+                padding: '6px 12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: row.status === 'WAITING' ? '0.5' : '1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              },
               attrs: {
-                type: 'link',
-                size: 'small',
                 disabled: row.status === 'WAITING'
               },
               on: {
                 click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
               }
-            }, ["查看日志"]);
+            }, [
+              h('a-icon', {
+                props: { type: 'file-text' },
+                style: { marginRight: '4px', fontSize: '12px' }
+              }),
+              "查看日志"
+            ]);
           }
         }
       ];
 
       // 创建header-summary部分
-      const headerSummary = h('div', { class: 'header-summary' }, [
-        h('span', {}, [`共 ${checkItems.length} 项检查`]),
-        h('a-divider', { props: { type: 'vertical' } }),
-        h('span', { style: { color: '#52c41a' } }, [
+      const headerSummary = h('div', { 
+        class: 'header-summary',
+        style: {
+          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }
+      }, [
+        h('span', {
+          style: {
+            fontWeight: '600',
+            color: '#1d1d1f'
+          }
+        }, [`共 ${checkItems.length} 项检查`]),
+        
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(52, 199, 89, 0.1)',
+            color: '#34C759',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
           h('a-icon', { 
-            props: { 
-              type: 'check-circle', 
-              theme: 'twoTone', 
-              twoToneColor: '#52c41a' 
-            }, 
-            style: { marginRight: '4px' } 
+            props: { type: 'check-circle' }, 
+            style: { marginRight: '6px' } 
           }),
           `${checkItems.filter(item => item.status === 'SUCCESS').length} 项通过`
         ]),
-        h('a-divider', { props: { type: 'vertical' } }),
-        h('span', { style: { color: '#f5222d' } }, [
+        
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 59, 48, 0.1)',
+            color: '#FF3B30',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
           h('a-icon', { 
-            props: { 
-              type: 'close-circle', 
-              theme: 'twoTone', 
-              twoToneColor: '#f5222d' 
-            }, 
-            style: { marginRight: '4px' } 
+            props: { type: 'close-circle' }, 
+            style: { marginRight: '6px' } 
           }),
           `${checkItems.filter(item => item.status === 'FAILED').length} 项失败`
         ]),
-        h('a-divider', { props: { type: 'vertical' } }),
-        h('span', { style: { color: '#faad14' } }, [
+        
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 149, 0, 0.1)',
+            color: '#FF9500',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
           h('a-icon', { 
             props: { type: 'clock-circle' }, 
-            style: { marginRight: '4px' } 
+            style: { marginRight: '6px' } 
           }),
           `${checkItems.filter(item => item.status === 'WAITING').length} 项待检查`
         ]),
-        h('a-divider', { props: { type: 'vertical' } }),
-        h('span', { style: { color: '#1890ff' } }, [
+        
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+            color: '#007AFF',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
           h('a-icon', { 
             props: { 
               type: 'loading',
               spin: true
             }, 
-            style: { marginRight: '4px' } 
+            style: { marginRight: '6px' } 
           }),
           `${checkItems.filter(item => item.status === 'CHECKING').length} 项检查中`
         ]),
-        h('a-divider', { props: { type: 'vertical' } }),
-        h('span', { style: { color: '#d9d9d9' } }, [
+        
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(142, 142, 147, 0.1)',
+            color: '#8E8E93',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
           h('a-icon', { 
-            props: { 
-              type: 'warning', 
-              theme: 'twoTone', 
-              twoToneColor: '#d9d9d9' 
-            }, 
-            style: { marginRight: '4px' } 
+            props: { type: 'warning' }, 
+            style: { marginRight: '6px' } 
           }),
           `${checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过`
         ])
       ]);
 
       // 创建header-actions部分
-      const headerActions = h('div', { class: 'header-actions' }, [
-        h('a-button', {
+      const headerActions = h('div', { 
+        class: 'header-actions',
+        style: {
+          display: 'flex',
+          gap: '12px'
+        }
+      }, [
+        h('button', {
+          style: {
+            backgroundColor: '#007AFF',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: !this.hasRetryableSelectedItems(record.hostname) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasRetryableSelectedItems(record.hostname) ? '0.6' : '1',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center'
+          },
           attrs: {
-            type: 'primary',
-            size: 'small',
-            // 修改：不再基于整个主机的检查状态禁用按钮
-            // 只检查是否有可重试的选中项
             disabled: !this.hasRetryableSelectedItems(record.hostname)
           },
-          style: { marginRight: '8px' },
           on: {
             click: () => this.retrySelectedItems(record.hostname)
           }
-        }, ['重试选中项']),
-        h('a-button', {
+        }, [
+          h('a-icon', {
+            props: { type: 'redo' },
+            style: { marginRight: '6px' }
+          }),
+          '重试选中项'
+        ]),
+        
+        h('button', {
+          style: {
+            backgroundColor: '#5856D6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: !this.hasFixableSelectedItems(record.hostname) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasFixableSelectedItems(record.hostname) ? '0.6' : '1',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center'
+          },
           attrs: {
-            type: 'primary',
-            size: 'small',
-            // 修改：不再基于整个主机的检查状态禁用按钮
-            // 只检查是否有可修复的选中项
             disabled: !this.hasFixableSelectedItems(record.hostname)
           },
           on: {
             click: () => this.fixSelectedItems(record.hostname)
           }
-        }, ['修复选中项'])
+        }, [
+          h('a-icon', {
+            props: { type: 'tool' },
+            style: { marginRight: '6px' }
+          }),
+          '修复选中项'
+        ])
       ]);
 
-      // 创建表格
-      return h('div', { class: 'check-items-container' }, [
-        h('div', { class: 'check-items-header' }, [
+      // 创建表格容器，添加苹果风格的样式
+      return h('div', { 
+        class: 'check-items-container',
+        style: {
+          padding: '24px',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+          margin: '0px',
+          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'
+        }
+      }, [
+        h('div', { 
+          class: 'check-items-header',
+          style: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }
+        }, [
           headerSummary,
           headerActions
         ]),
+        
+        // 添加分隔线
+        h('div', {
+          style: {
+            height: '1px',
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            margin: '0 0 20px 0'
+          }
+        }),
+        
         h('a-table', {
           props: {
             columns: columns,
@@ -1159,6 +1506,11 @@ export default {
               selectedRowKeys: this.selectedCheckItems[record.hostname] || [],
               onChange: (selectedRowKeys) => this.onCheckItemSelect(record.hostname, selectedRowKeys)
             }
+          },
+          class: 'apple-style-table',
+          style: {
+            borderRadius: '12px',
+            overflow: 'hidden'
           }
         })
       ]);
@@ -1900,7 +2252,7 @@ export default {
           toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 59, 48, 0.9); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
         }
         
-      } catch (err) {
+        } catch (err) {
         console.error('复制失败:', err);
         
         // 错误提示内容
@@ -2136,7 +2488,7 @@ export default {
               font-weight: 500;
               font-size: 0.9rem;
               color: @apple-black;
-              padding: 12px 16px;
+    padding: 12px 16px;
             }
             
             .ant-table-tbody > tr > td {
@@ -2234,8 +2586,8 @@ export default {
                 background: fade(@apple-orange, 10%);
                 border: none;
                 color: @apple-orange;
-                
-                &:hover {
+    
+    &:hover {
                   background: fade(@apple-orange, 15%);
                 }
               }
@@ -2259,7 +2611,7 @@ export default {
   // 自定义展开图标样式
   /deep/ .apple-expand-icon {
     display: inline-flex;
-    align-items: center;
+  align-items: center;
     justify-content: center;
     width: 24px;
     height: 24px;
@@ -2304,8 +2656,8 @@ export default {
       font-size: 14px;
       font-weight: 500;
       border-radius: 16px;
-      display: flex;
-      align-items: center;
+  display: flex;
+  align-items: center;
       justify-content: center;
       
       &.primary {
@@ -2368,33 +2720,76 @@ export default {
   
   // 操作系统详情弹出框样式
   .os-detail-popup {
-    padding: 4px;
-    min-width: 200px;
+    padding: 0;
+    min-width: 280px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: #ffffff;
+    animation: osFadeIn 0.3s ease-in-out;
     
     .os-detail-title {
       font-size: 1rem;
       font-weight: 600;
-      color: #333;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      color: #ffffff;
+      margin: 0;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #0066CC, #007AFF);
+      border-bottom: none;
+    display: flex;
+      align-items: center;
+      
+      img {
+        border-radius: 4px;
+        filter: none !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        width: 24px !important;
+        height: 24px !important;
+        object-fit: contain !important;
+        vertical-align: middle !important;
+        margin-right: 10px !important;
+      }
     }
     
     .os-detail-item {
-      display: flex;
-      margin-bottom: 8px;
+    display: flex;
+      padding: 12px 16px;
+      margin: 0;
       font-size: 0.9rem;
       line-height: 1.5;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      transition: background-color 0.2s ease;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+      }
       
       strong {
         min-width: 80px;
         color: #666;
+        font-weight: 500;
       }
       
       span {
-        color: #333;
-        font-weight: 500;
+        color: #1d1d1f;
+        font-weight: 600;
       }
+    }
+  }
+
+  @keyframes osFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
@@ -2459,8 +2854,8 @@ export default {
         background: @apple-gray-light;
         border: none;
         color: @apple-black;
-        
-        &:hover {
+      
+      &:hover {
           background: darken(@apple-gray-light, 5%);
         }
       }
@@ -2485,7 +2880,7 @@ export default {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+        transform: translateY(0);
   }
 }
 
@@ -2510,7 +2905,7 @@ export default {
       }
       
       .refresh-options {
-        display: flex;
+    display: flex;
         gap: 10px;
         
         .refresh-btn, .auto-refresh-btn {
@@ -2519,8 +2914,8 @@ export default {
           font-size: 0.9rem;
           font-weight: 500;
           border-radius: 18px;
-          display: flex;
-          align-items: center;
+      display: flex;
+      align-items: center;
           
           .anticon {
             margin-right: 6px;
@@ -2529,15 +2924,15 @@ export default {
       }
       
       .filter-area {
-        display: flex;
+    display: flex;
         flex-wrap: wrap;
         gap: 16px;
         align-items: center;
         margin-top: 16px;
         
         .log-type-selector {
-          display: flex;
-          align-items: center;
+      display: flex;
+      align-items: center;
           
           .filter-title {
             margin-right: 8px;
@@ -2551,7 +2946,7 @@ export default {
         margin-top: 16px;
         padding: 10px 16px;
         background-color: rgba(0, 0, 0, 0.02);
-    border-radius: 8px;
+      border-radius: 8px;
         
         .filter-description {
           font-size: 0.9rem;
@@ -2578,7 +2973,7 @@ export default {
         color: #333;
         font-size: 0.9rem;
         line-height: 1.5;
-        white-space: pre-wrap;
+      white-space: pre-wrap;
         word-break: break-word;
         
         ::selection {
@@ -2634,7 +3029,7 @@ export default {
 }
 
 .loading-container {
-  position: relative;
+      position: relative;
   min-height: 100px;
 }
 
@@ -2648,7 +3043,119 @@ export default {
   align-items: center;
   justify-content: center;
   color: @apple-gray;
-  font-size: 14px;
+      font-size: 14px;
+}
+
+// 添加Apple风格表格的CSS样式到样式部分
+.apple-style-table {
+  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  
+  /deep/ .ant-table-thead > tr > th {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: #1d1d1f;
+    font-weight: 600;
+    padding: 16px;
+    transition: background 0.2s ease;
+  }
+  
+  /deep/ .ant-table-tbody > tr > td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    transition: background 0.2s ease;
+  }
+  
+  /deep/ .ant-table-tbody > tr:hover > td {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  /deep/ .ant-table-row-selected > td {
+    background-color: rgba(0, 122, 255, 0.05) !important;
+  }
+  
+  /deep/ .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: #007AFF;
+    border-color: #007AFF;
+  }
+  
+  /deep/ .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+  /deep/ .ant-checkbox:hover .ant-checkbox-inner {
+    border-color: #007AFF;
+  }
+}
+
+.check-items-container {
+  animation: fadeInAndSlideUp 0.5s ease forwards;
+}
+
+@keyframes fadeInAndSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.check-result-tooltip {
+  max-height: 80vh;
+  overflow-y: hidden;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  border: none !important;
+  
+    &::-webkit-scrollbar {
+    width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+      
+      &:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+/* 强制覆盖样式 */
+/deep/ .ant-tooltip.apple-style-tooltip {
+  .ant-tooltip-content,
+  .ant-tooltip-arrow,
+  .ant-tooltip-inner {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .ant-tooltip-arrow::before {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// 修复按钮样式
+.action-buttons button {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-buttons button:hover {
+  filter: brightness(1.05);
+}
+
+.action-buttons button:active {
+  filter: brightness(0.95);
+  transform: translateY(1px);
 }
 </style>
 ritten_file>

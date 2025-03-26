@@ -1,9 +1,17 @@
 /* 检查结果悬浮提示样式 */
 .check-result-text {
   position: relative;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   
   &:hover {
     text-decoration: none;
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    filter: brightness(0.95);
+    transform: translateY(0);
   }
   
   &::after {
@@ -22,23 +30,242 @@
   }
 }
 
-.custom-tooltip-overlay {
+/* 操作系统tooltip专用样式 */
+.os-tooltip {
+  .ant-tooltip-inner {
+    background-color: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+  
+  .ant-tooltip-arrow::before {
+    background-color: #0066CC !important;
+  }
+  
+  .os-detail-popup {
+    background-color: #ffffff !important;
+    color: inherit !important;
+    padding: 0;
+    min-width: 280px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+    animation: osFadeIn 0.3s ease-in-out;
+    
+    .os-detail-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #0066CC, #007AFF);
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      
+      img {
+        filter: none !important;
+        border-radius: 4px;
+        background-color: #ffffff;
+        padding: 2px;
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+    }
+    
+    .os-detail-item {
+      display: flex;
+      padding: 12px 16px;
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      transition: background-color 0.2s ease;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+      }
+      
+      strong {
+        min-width: 80px;
+        color: #666;
+        font-weight: 500;
+      }
+      
+      span {
+        color: #1d1d1f;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+@keyframes osFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 完全覆盖Ant Design的Tooltip样式 */
+.ant-tooltip {
+  max-width: none !important;
+  
+  .ant-tooltip-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
   .ant-tooltip-arrow {
-    border-top-color: rgba(245, 247, 250, 0.95) !important;
+    border: none !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    
+    &::before {
+      background: white !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+  
+  .ant-tooltip-inner {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: transparent !important;
+  }
+}
+
+/* 苹果风格的tooltip样式 */
+.apple-style-tooltip {
+  animation: tooltipFadeIn 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  
+  /* 解决箭头的黑色边框问题 */
+  .ant-tooltip-arrow {
+    border: none !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    
+    &::before,
+    &:before {
+      background-color: #ffffff !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+  }
+  
+  /* 解决tooltip容器的背景问题 */
+  .ant-tooltip-content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.15));
   }
   
   .ant-tooltip-inner {
     background-color: transparent !important;
     box-shadow: none !important;
     padding: 0 !important;
+    color: transparent !important;
+    border: none !important;
+    border-radius: 16px !important; /* 更大的圆角 */
+    overflow: hidden !important;
   }
   
   .check-result-tooltip {
-    animation: fadeIn 0.3s ease-in-out;
+    animation: tooltipContentFadeIn 0.3s 0.05s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+    border-radius: 16px !important;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: none !important;
+    background-color: #ffffff !important;
   }
 }
 
-@keyframes fadeIn {
+/* 确保完全覆盖Ant Design的默认样式 */
+.ant-tooltip {
+  &.apple-style-tooltip {
+    border: none !important;
+    background: transparent !important;
+    
+    .ant-tooltip-content {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    .ant-tooltip-arrow {
+      border: none !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
+    
+    .ant-tooltip-inner {
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+}
+
+/* 给body添加样式避免被蚂蚁组件覆盖 */
+body {
+  .ant-tooltip-placement-top .ant-tooltip-arrow,
+  .ant-tooltip-placement-topLeft .ant-tooltip-arrow,
+  .ant-tooltip-placement-topRight .ant-tooltip-arrow {
+    border-bottom-color: transparent !important;
+    border-left-color: transparent !important;
+    border-right-color: transparent !important;
+    border-top-color: transparent !important;
+    background: transparent !important;
+  }
+  
+  /* 修复操作系统tooltip */
+  .os-tooltip {
+    .ant-tooltip-inner {
+      background-color: transparent !important;
+      padding: 0 !important;
+      color: inherit !important;
+    }
+    
+    .ant-tooltip-arrow {
+      display: block !important;
+      
+      &::before {
+        background-color: #0066CC !important;
+        display: block !important;
+      }
+    }
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tooltipContentFadeIn {
   from {
     opacity: 0;
     transform: translateY(5px);
@@ -47,4 +274,33 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.15);
+  }
+}
+
+.os-img-no-filter {
+  filter: none !important;
+  -webkit-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 4px !important;
+  background-color: #ffffff !important;
+  padding: 2px !important;
 } 
