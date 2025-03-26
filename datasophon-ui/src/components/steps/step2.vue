@@ -295,43 +295,201 @@ export default {
             
             // 创建详细的操作系统信息弹出框
             const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
-              h('div', { class: 'os-detail-title' }, [
-                h('img', {
-                  attrs: {
-                    src: getOsIconPath(osType),
-                    alt: osType,
-                    width: '24',
-                    height: '24'
-                  },
-                  style: {
-                    marginRight: '10px',
-                    verticalAlign: 'middle',
-                    filter: 'none !important',
-                    borderRadius: '4px',
-                    backgroundColor: '#ffffff',
-                    padding: '2px'
-                  },
-                  domProps: {
-                    className: 'os-img-no-filter'
-                  }
-                }),
-                h('span', {}, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`])
+              // 标题区域
+              h('div', { class: 'os-detail-header' }, [
+                h('div', { class: 'os-detail-icon-container' }, [
+                  h('img', {
+                    attrs: {
+                      src: getOsIconPath(osType),
+                      alt: osType,
+                      width: '64',
+                      height: '64'
+                    },
+                    class: 'os-img-no-filter',
+                    style: {
+                      filter: 'none !important',
+                      borderRadius: '12px'
+                    }
+                  })
+                ]),
+                h('div', { class: 'os-detail-title-container' }, [
+                  h('h3', { class: 'os-detail-title' }, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`]),
+                  h('div', { class: 'os-detail-subtitle' }, [row.osInfo.kernelVersion ? `内核版本 ${row.osInfo.kernelVersion}` : '']),
+                  h('div', { class: 'os-detail-subtitle' }, [row.osInfo.architecture ? `${row.osInfo.architecture} 架构` : ''])
+                ])
               ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['发行版: ']),
-                h('span', {}, [row.osInfo.distribution])
+              
+              // 内容区域包装元素
+              h('div', { class: 'os-detail-content' }, [
+                // 系统概览卡片
+                h('div', { class: 'os-detail-card' }, [
+                  h('div', { class: 'os-detail-card-header' }, [
+                    h('i', { class: 'anticon anticon-dashboard', style: { marginRight: '8px', color: '#007AFF' }}),
+                    h('span', {}, ['系统概览'])
+                  ]),
+                  
+                  // CPU信息
+                  h('div', { class: 'os-detail-info-row' }, [
+                    h('div', { class: 'os-detail-info-icon-container' }, [
+                      h('div', { class: 'os-detail-info-icon cpu' }, [
+                        h('i', { class: 'anticon anticon-api' })
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-info-content' }, [
+                      h('div', { class: 'os-detail-info-label' }, ['处理器']),
+                      h('div', { class: 'os-detail-info-value' }, [row.osInfo.cpuInfo || '未知']),
+                      h('div', { class: 'os-detail-info-subvalue' }, [
+                        row.osInfo.cpuCores ? 
+                          (row.osInfo.cpuCount > 1 ? 
+                            `${row.osInfo.cpuCount} 颗 CPU (${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程)` : 
+                            `${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程`
+                          ) : ''
+                      ])
+                    ])
+                  ]),
+                  
+                  // 内存信息
+                  h('div', { class: 'os-detail-info-row' }, [
+                    h('div', { class: 'os-detail-info-icon-container' }, [
+                      h('div', { class: 'os-detail-info-icon memory' }, [
+                        h('i', { class: 'anticon anticon-database' })
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-info-content' }, [
+                      h('div', { class: 'os-detail-info-label' }, ['内存']),
+                      h('div', { class: 'os-detail-info-value with-progress' }, [
+                        h('span', {}, [row.osInfo.totalMemory ? `${row.osInfo.totalMemory.toFixed(1)} GB` : '未知']),
+                        row.osInfo.totalMemory && row.osInfo.availableMemory ? 
+                          h('div', { class: 'os-detail-progress-container' }, [
+                            h('div', { 
+                              class: 'os-detail-progress-bar',
+                              style: {
+                                width: `${((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory * 100).toFixed(0)}%`,
+                                backgroundColor: ((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory > 0.8) ? '#FF3B30' : '#34C759'
+                              }
+                            })
+                          ]) : null
+                      ]),
+                      h('div', { class: 'os-detail-info-subvalue' }, [
+                        row.osInfo.totalMemory && row.osInfo.availableMemory ? 
+                          `可用: ${row.osInfo.availableMemory.toFixed(1)} GB (${((row.osInfo.availableMemory / row.osInfo.totalMemory) * 100).toFixed(1)}%)` : 
+                          ''
+                      ])
+                    ])
+                  ]),
+                  
+                  // 存储信息
+                  h('div', { class: 'os-detail-info-row' }, [
+                    h('div', { class: 'os-detail-info-icon-container' }, [
+                      h('div', { class: 'os-detail-info-icon storage' }, [
+                        h('i', { class: 'anticon anticon-hdd' })
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-info-content' }, [
+                      h('div', { class: 'os-detail-info-label' }, ['存储']),
+                      h('div', { class: 'os-detail-info-value with-progress' }, [
+                        h('span', {}, [
+                          row.osInfo.totalDisk ? 
+                            (row.osInfo.totalDisk >= 1024 ? `${(row.osInfo.totalDisk / 1024).toFixed(1)} TB` : `${row.osInfo.totalDisk.toFixed(1)} GB`) : 
+                            '未知'
+                        ]),
+                        row.osInfo.totalDisk && row.osInfo.availableDisk ? 
+                          h('div', { class: 'os-detail-progress-container' }, [
+                            h('div', { 
+                              class: 'os-detail-progress-bar',
+                              style: {
+                                width: `${((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk * 100).toFixed(0)}%`,
+                                backgroundColor: ((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk > 0.9) ? '#FF3B30' : '#34C759'
+                              }
+                            })
+                          ]) : null
+                      ]),
+                      h('div', { class: 'os-detail-info-subvalue' }, [
+                        row.osInfo.totalDisk && row.osInfo.availableDisk ? 
+                          `可用: ${row.osInfo.availableDisk >= 1024 ? (row.osInfo.availableDisk / 1024).toFixed(1) + ' TB' : row.osInfo.availableDisk.toFixed(1) + ' GB'} (${((row.osInfo.availableDisk / row.osInfo.totalDisk) * 100).toFixed(1)}%)` : 
+                          ''
+                      ])
+                    ])
+                  ]),
+                  
+                  // 交换空间信息
+                  row.osInfo.totalSwap > 0 ? h('div', { class: 'os-detail-info-row' }, [
+                    h('div', { class: 'os-detail-info-icon-container' }, [
+                      h('div', { class: 'os-detail-info-icon swap' }, [
+                        h('i', { class: 'anticon anticon-swap' })
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-info-content' }, [
+                      h('div', { class: 'os-detail-info-label' }, ['交换空间']),
+                      h('div', { class: 'os-detail-info-value with-progress' }, [
+                        h('span', {}, [
+                          row.osInfo.totalSwap ? `${row.osInfo.totalSwap.toFixed(1)} GB` : '未知'
+                        ]),
+                        row.osInfo.totalSwap && row.osInfo.availableSwap ? 
+                          h('div', { class: 'os-detail-progress-container' }, [
+                            h('div', { 
+                              class: 'os-detail-progress-bar',
+                              style: {
+                                width: `${((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap * 100).toFixed(0)}%`,
+                                backgroundColor: ((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap > 0.8) ? '#FF3B30' : '#34C759'
+                              }
+                            })
+                          ]) : null
+                      ]),
+                      h('div', { class: 'os-detail-info-subvalue' }, [
+                        row.osInfo.totalSwap && row.osInfo.availableSwap ? 
+                          `可用: ${row.osInfo.availableSwap.toFixed(1)} GB (${((row.osInfo.availableSwap / row.osInfo.totalSwap) * 100).toFixed(1)}%)` : 
+                          ''
+                      ])
+                    ])
+                  ]) : null,
+                  
+                  // 显卡信息（如果有）
+                  row.osInfo.gpuInfo ? h('div', { class: 'os-detail-info-row' }, [
+                    h('div', { class: 'os-detail-info-icon-container' }, [
+                      h('div', { class: 'os-detail-info-icon gpu' }, [
+                        h('i', { class: 'anticon anticon-appstore' })
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-info-content' }, [
+                      h('div', { class: 'os-detail-info-label' }, ['显卡']),
+                      h('div', { class: 'os-detail-info-value' }, [row.osInfo.gpuInfo || '未知'])
+                    ])
+                  ]) : null
+                ]),
+                
+                // 系统详情
+                h('div', { class: 'os-detail-card' }, [
+                  h('div', { class: 'os-detail-card-header' }, [
+                    h('i', { class: 'anticon anticon-info-circle', style: { marginRight: '8px', color: '#5856D6' }}),
+                    h('span', {}, ['系统详情'])
+                  ]),
+                  
+                  h('div', { class: 'os-detail-table' }, [
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['发行版']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distribution || '-'])
+                    ]),
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['发行版ID']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distributionId || '-'])
+                    ]),
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['系统版本']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.versionId || '-'])
+                    ]),
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['操作系统架构']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.architecture || '-'])
+                    ])
+                  ])
+                ])
               ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['发行版ID: ']),
-                h('span', {}, [row.osInfo.distributionId])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['版本: ']),
-                h('span', {}, [row.osInfo.versionId])
-              ]),
-              h('div', { class: 'os-detail-item' }, [
-                h('strong', {}, ['内核版本: ']),
-                h('span', {}, [row.osInfo.kernelVersion])
+              
+              // 底部信息区域
+              h('div', { class: 'os-detail-footer' }, [
+                h('span', { class: 'os-detail-footer-text' }, [`主机: ${row.hostname}`]),
+                h('span', { class: 'os-detail-footer-text' }, [`IP: ${row.ip || '-'}`])
               ])
             ]) : h('div', { 
               class: 'os-detail-popup',
@@ -341,11 +499,14 @@ export default {
                 color: '#8E8E93'
               }
             }, [
-              h('a-icon', {
-                props: { type: 'info-circle' },
-                style: { marginRight: '8px', color: '#8E8E93' }
-              }),
-              '暂无详细信息'
+              h('div', { class: 'os-detail-no-info' }, [
+                h('i', { 
+                  class: 'anticon anticon-info-circle',
+                  style: { fontSize: '32px', marginBottom: '16px', color: '#8E8E93' }
+                }),
+                h('div', { class: 'os-detail-no-info-text' }, ['暂无详细信息']),
+                h('div', { class: 'os-detail-no-info-subtext' }, ['尝试重新检查主机以获取系统信息'])
+              ])
             ]);
             
             return h('div', { class: 'os-info' }, [
@@ -2721,63 +2882,248 @@ export default {
   // 操作系统详情弹出框样式
   .os-detail-popup {
     padding: 0;
-    min-width: 280px;
+    min-width: 320px;
+    max-width: 420px;
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
     background-color: #ffffff;
     animation: osFadeIn 0.3s ease-in-out;
+    max-height: 80vh;
+    overflow-y: auto;
     
-    .os-detail-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #ffffff;
-      margin: 0;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, #0066CC, #007AFF);
-      border-bottom: none;
-    display: flex;
+    // 滚动条样式
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(0, 0, 0, 0.2);
+      border: 2px solid transparent;
+      background-clip: content-box;
+    }
+    
+    // 头部区域
+    .os-detail-header {
+      padding: 24px;
+      display: flex;
       align-items: center;
+      background: linear-gradient(135deg, #0066CC, #007AFF);
       
-      img {
-        border-radius: 4px;
-        filter: none !important;
-        background-color: transparent !important;
-        padding: 0 !important;
-        width: 24px !important;
-        height: 24px !important;
-        object-fit: contain !important;
-        vertical-align: middle !important;
-        margin-right: 10px !important;
+      .os-detail-icon-container {
+        margin-right: 20px;
+        
+        img {
+          background-color: #ffffff;
+          padding: 6px;
+          border-radius: 12px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+      }
+      
+      .os-detail-title-container {
+        color: #ffffff;
+        
+        .os-detail-title {
+          font-size: 1.3rem;
+          font-weight: 600;
+          margin: 0 0 4px 0;
+        }
+        
+        .os-detail-subtitle {
+          font-size: 0.9rem;
+          opacity: 0.9;
+          margin-bottom: 2px;
+        }
       }
     }
     
-    .os-detail-item {
-    display: flex;
-      padding: 12px 16px;
-      margin: 0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      transition: background-color 0.2s ease;
+    // 卡片样式
+    .os-detail-card {
+      margin: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      background-color: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
       
       &:last-child {
-        border-bottom: none;
+        margin-bottom: 16px;
       }
       
-      &:hover {
+      .os-detail-card-header {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         background-color: rgba(0, 0, 0, 0.02);
       }
       
-      strong {
-        min-width: 80px;
-        color: #666;
-        font-weight: 500;
+      // 信息行
+      .os-detail-info-row {
+        display: flex;
+        padding: 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .os-detail-info-icon-container {
+          margin-right: 16px;
+          
+          .os-detail-info-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            i {
+              font-size: 20px;
+              color: #ffffff;
+            }
+            
+            &.cpu {
+              background: linear-gradient(135deg, #FF2D55, #FF375F);
+            }
+            
+            &.memory {
+              background: linear-gradient(135deg, #007AFF, #0A84FF);
+            }
+            
+            &.storage {
+              background: linear-gradient(135deg, #5856D6, #5E5CE6);
+            }
+            
+            &.swap {
+              background: linear-gradient(135deg, #34C759, #30D158);
+            }
+            
+            &.gpu {
+              background: linear-gradient(135deg, #FF9500, #FF9F0A);
+            }
+          }
+        }
+        
+        .os-detail-info-content {
+          flex: 1;
+          
+          .os-detail-info-label {
+            font-size: 0.8rem;
+            color: #8E8E93;
+            margin-bottom: 6px;
+          }
+          
+          .os-detail-info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 6px;
+            
+            &.with-progress {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              
+              span {
+                margin-right: 10px;
+              }
+            }
+          }
+          
+          .os-detail-progress-container {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            
+            .os-detail-progress-bar {
+              height: 100%;
+              border-radius: 3px;
+              transition: width 0.3s ease;
+            }
+          }
+          
+          .os-detail-info-subvalue {
+            font-size: 0.8rem;
+            color: #8E8E93;
+          }
+        }
       }
       
-      span {
+      // 表格样式
+      .os-detail-table {
+        .os-detail-table-row {
+          display: flex;
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+          
+          &:last-child {
+            border-bottom: none;
+          }
+          
+          &:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+          }
+          
+          .os-detail-table-cell {
+            &.label {
+              width: 110px;
+              color: #8E8E93;
+              font-size: 0.9rem;
+            }
+            
+            &.value {
+              flex: 1;
+              font-weight: 500;
+              color: #1d1d1f;
+              font-size: 0.9rem;
+            }
+          }
+        }
+      }
+    }
+    
+    // 底部区域
+    .os-detail-footer {
+      padding: 12px 16px;
+      background-color: rgba(0, 0, 0, 0.02);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #8E8E93;
+    }
+    
+    // 无信息提示
+    .os-detail-no-info {
+      padding: 32px;
+      text-align: center;
+      
+      .os-detail-no-info-text {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 8px;
         color: #1d1d1f;
-        font-weight: 600;
+      }
+      
+      .os-detail-no-info-subtext {
+        font-size: 0.85rem;
+        color: #8E8E93;
       }
     }
   }

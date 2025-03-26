@@ -425,10 +425,126 @@ public class InstallServiceImpl implements InstallService {
                     osInfo.setKernelVersion(kernelVersion.trim());
                 }
 
+                // 获取系统架构
+                String architecture = MinaUtils.execCmdWithResult(session, "uname -m");
+                if (architecture != null) {
+                    osInfo.setArchitecture(architecture.trim());
+                    hostInfo.setCpuArchitecture(architecture.trim());
+                }
+
+                // 获取CPU信息
+                String cpuInfoCmd = "lscpu | grep 'Model name' | sed 's/Model name://g' | sed 's/^[ \t]*//g'";
+                String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
+                if (cpuInfo != null && !cpuInfo.isEmpty()) {
+                    osInfo.setCpuInfo(cpuInfo.trim());
+                } else {
+                    // 备用方法
+                    cpuInfo = MinaUtils.execCmdWithResult(session,
+                            "cat /proc/cpuinfo | grep 'model name' | head -n 1 | sed 's/model name.*: //g'");
+                    if (cpuInfo != null && !cpuInfo.isEmpty()) {
+                        osInfo.setCpuInfo(cpuInfo.trim());
+                    }
+                }
+
+                // 获取CPU核心数
+                String cpuCoresCmd = "nproc --all";
+                String cpuCores = MinaUtils.execCmdWithResult(session, cpuCoresCmd);
+                if (cpuCores != null && !cpuCores.isEmpty()) {
+                    try {
+                        osInfo.setCpuCores(Integer.parseInt(cpuCores.trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU核心数失败: {}", cpuCores);
+                    }
+                }
+
+                // 获取内存信息
+                String memInfoCmd = "free -m | grep 'Mem:' | awk '{print $2 \" \" $7}'";
+                String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
+                if (memInfo != null && !memInfo.isEmpty()) {
+                    String[] memParts = memInfo.trim().split("\\s+");
+                    if (memParts.length >= 2) {
+                        try {
+                            // 转换MB到GB并保留1位小数
+                            double totalMemoryMB = Double.parseDouble(memParts[0]);
+                            double availableMemoryMB = Double.parseDouble(memParts[1]);
+                            osInfo.setTotalMemory(Math.round(totalMemoryMB / 1024 * 10) / 10.0);
+                            osInfo.setAvailableMemory(Math.round(availableMemoryMB / 1024 * 10) / 10.0);
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析内存信息失败: {}", memInfo);
+                        }
+                    }
+                }
+
+                // 获取交换空间信息
+                String swapInfoCmd = "free -m | grep 'Swap:' | awk '{print $2 \" \" $4}'";
+                String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
+                if (swapInfo != null && !swapInfo.isEmpty()) {
+                    String[] swapParts = swapInfo.trim().split("\\s+");
+                    if (swapParts.length >= 2) {
+                        try {
+                            // 转换MB到GB并保留1位小数
+                            double totalSwapMB = Double.parseDouble(swapParts[0]);
+                            double availableSwapMB = Double.parseDouble(swapParts[1]);
+                            osInfo.setTotalSwap(Math.round(totalSwapMB / 1024 * 10) / 10.0);
+                            osInfo.setAvailableSwap(Math.round(availableSwapMB / 1024 * 10) / 10.0);
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析交换空间信息失败: {}", swapInfo);
+                        }
+                    }
+                }
+
+                // 获取磁盘信息
+                String diskInfoCmd = "df -h / | tail -n 1 | awk '{print $2 \" \" $4}'";
+                String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
+                if (diskInfo != null && !diskInfo.isEmpty()) {
+                    String[] diskParts = diskInfo.trim().split("\\s+");
+                    if (diskParts.length >= 2) {
+                        try {
+                            // 移除单位并转换为GB
+                            String totalDiskStr = diskParts[0].replaceAll("[^0-9.]", "");
+                            String availableDiskStr = diskParts[1].replaceAll("[^0-9.]", "");
+
+                            // 处理单位换算
+                            double totalDiskMultiplier = 1;
+                            double availableDiskMultiplier = 1;
+
+                            if (diskParts[0].endsWith("T")) {
+                                totalDiskMultiplier = 1024;
+                            }
+
+                            if (diskParts[1].endsWith("T")) {
+                                availableDiskMultiplier = 1024;
+                            }
+
+                            osInfo.setTotalDisk(Double.parseDouble(totalDiskStr) * totalDiskMultiplier);
+                            osInfo.setAvailableDisk(Double.parseDouble(availableDiskStr) * availableDiskMultiplier);
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析磁盘信息失败: {}", diskInfo);
+                        }
+                    }
+                }
+
+                // 尝试获取GPU信息
+                String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3";
+                String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
+                if (gpuInfo != null && !gpuInfo.isEmpty()) {
+                    osInfo.setGpuInfo(gpuInfo.trim());
+                } else {
+                    // 尝试使用nvidia-smi查询NVIDIA GPU
+                    gpuInfo = MinaUtils.execCmdWithResult(session,
+                            "which nvidia-smi && nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo ''");
+                    if (gpuInfo != null && !gpuInfo.isEmpty() && !gpuInfo.contains("which")) {
+                        osInfo.setGpuInfo(gpuInfo.trim());
+                    }
+                }
+
                 osInfo.setValid(true);
             } else {
                 // 尝试其他方法获取OS信息
                 tryAlternativeOsDetection(osInfo, session);
+
+                // 即使使用备用方法，也尝试获取其他硬件信息
+                collectHardwareInfo(osInfo, session);
             }
         } catch (Exception e) {
             logger.error("获取主机操作系统信息时出错: {}", e.getMessage(), e);
@@ -1143,5 +1259,250 @@ public class InstallServiceImpl implements InstallService {
             logger.error("执行检查失败", e);
             return Result.error("检查失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 收集硬件信息的辅助方法
+     */
+    private void collectHardwareInfo(OsInfo osInfo, ClientSession session) {
+        try {
+            // 获取系统架构
+            String architecture = MinaUtils.execCmdWithResult(session, "uname -m");
+            if (architecture != null) {
+                osInfo.setArchitecture(architecture.trim());
+            }
+
+            // 获取CPU详细信息 - 使用lscpu命令（最通用的方式）
+            String lscpuResult = MinaUtils.execCmdWithResult(session, "lscpu 2>/dev/null");
+            boolean useLscpu = lscpuResult != null && !lscpuResult.isEmpty()
+                    && !lscpuResult.contains("command not found");
+
+            if (useLscpu) {
+                // 从lscpu结果中提取信息
+                // 1. 获取CPU型号名称
+                String modelName = extractValueFromLscpu(lscpuResult, "Model name:");
+                if (modelName != null && !modelName.isEmpty()) {
+                    osInfo.setCpuInfo(modelName.trim());
+                }
+
+                // 2. 获取物理CPU数量
+                String cpuSockets = extractValueFromLscpu(lscpuResult, "Socket(s):");
+                if (cpuSockets != null && !cpuSockets.isEmpty()) {
+                    try {
+                        int count = Integer.parseInt(cpuSockets.trim());
+                        osInfo.setCpuCount(count > 0 ? count : 1);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析物理CPU数量失败: {}", cpuSockets);
+                        osInfo.setCpuCount(1);
+                    }
+                }
+
+                // 3. 获取每颗CPU的核心数
+                String coresPerSocket = extractValueFromLscpu(lscpuResult, "Core(s) per socket:");
+                if (coresPerSocket != null && !coresPerSocket.isEmpty()) {
+                    try {
+                        osInfo.setCpuCoresPerProcessor(Integer.parseInt(coresPerSocket.trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析每颗CPU的核心数失败: {}", coresPerSocket);
+                    }
+                }
+
+                // 4. 获取每核心的线程数
+                String threadsPerCore = extractValueFromLscpu(lscpuResult, "Thread(s) per core:");
+                if (threadsPerCore != null && !threadsPerCore.isEmpty()) {
+                    try {
+                        osInfo.setCpuThreadsPerCore(Integer.parseInt(threadsPerCore.trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析每核心的线程数失败: {}", threadsPerCore);
+                    }
+                }
+
+                // 5. 获取CPU总逻辑处理器数量
+                String logicalCpus = extractValueFromLscpu(lscpuResult, "CPU(s):");
+                if (logicalCpus != null && !logicalCpus.isEmpty()) {
+                    try {
+                        osInfo.setCpuLogicalCores(Integer.parseInt(logicalCpus.trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析逻辑处理器数量失败: {}", logicalCpus);
+                    }
+                }
+
+                // 如果未获取到CPU物理核心总数，则计算
+                if (osInfo.getCpuCoresPerProcessor() > 0 && osInfo.getCpuCount() > 0) {
+                    osInfo.setCpuCores(osInfo.getCpuCoresPerProcessor() * osInfo.getCpuCount());
+                }
+            } else {
+                // 回退方案: 使用/proc/cpuinfo获取CPU信息
+                logger.info("lscpu命令不可用，使用/proc/cpuinfo获取CPU信息");
+
+                // 获取CPU信息和型号
+                String cpuInfo = MinaUtils.execCmdWithResult(session,
+                        "cat /proc/cpuinfo | grep 'model name' | head -n 1 | sed 's/model name.*: //g'");
+                if (cpuInfo != null && !cpuInfo.isEmpty()) {
+                    osInfo.setCpuInfo(cpuInfo.trim());
+                }
+
+                // 获取物理CPU数量
+                String cpuCount = MinaUtils.execCmdWithResult(session,
+                        "grep 'physical id' /proc/cpuinfo | sort -u | wc -l");
+                if (cpuCount != null && !cpuCount.isEmpty()) {
+                    try {
+                        int count = Integer.parseInt(cpuCount.trim());
+                        osInfo.setCpuCount(count > 0 ? count : 1);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析物理CPU数量失败: {}", cpuCount);
+                        osInfo.setCpuCount(1);
+                    }
+                }
+
+                // 获取每颗CPU的核心数
+                String coresPerCpu = MinaUtils.execCmdWithResult(session,
+                        "grep 'cpu cores' /proc/cpuinfo | head -1 | awk '{print $4}'");
+                if (coresPerCpu != null && !coresPerCpu.isEmpty()) {
+                    try {
+                        osInfo.setCpuCoresPerProcessor(Integer.parseInt(coresPerCpu.trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析每颗CPU的核心数失败: {}", coresPerCpu);
+                    }
+                }
+
+                // 获取总的CPU逻辑核心数（包括超线程）
+                String logicalCores = MinaUtils.execCmdWithResult(session,
+                        "grep -c processor /proc/cpuinfo");
+                if (logicalCores != null && !logicalCores.isEmpty()) {
+                    try {
+                        int cores = Integer.parseInt(logicalCores.trim());
+                        osInfo.setCpuLogicalCores(cores);
+
+                        // 计算每核心的线程数
+                        if (osInfo.getCpuCoresPerProcessor() > 0 && osInfo.getCpuCount() > 0) {
+                            int threadsPerCore = cores / (osInfo.getCpuCoresPerProcessor() * osInfo.getCpuCount());
+                            osInfo.setCpuThreadsPerCore(threadsPerCore > 0 ? threadsPerCore : 2);
+                        }
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析逻辑处理器数量失败: {}", logicalCores);
+                    }
+                }
+
+                // 获取物理CPU核心总数（如果上面未计算出来）
+                if (osInfo.getCpuCores() == 0) {
+                    if (osInfo.getCpuCoresPerProcessor() > 0 && osInfo.getCpuCount() > 0) {
+                        osInfo.setCpuCores(osInfo.getCpuCoresPerProcessor() * osInfo.getCpuCount());
+                    } else {
+                        // 尝试使用nproc命令获取
+                        String cpuCores = MinaUtils.execCmdWithResult(session, "nproc --all 2>/dev/null || echo '0'");
+                        if (cpuCores != null && !cpuCores.isEmpty() && !cpuCores.equals("0")) {
+                            try {
+                                osInfo.setCpuCores(Integer.parseInt(cpuCores.trim()));
+
+                                // 如果未获取到每颗CPU的核心数，则计算
+                                if (osInfo.getCpuCoresPerProcessor() == 0 && osInfo.getCpuCount() > 0) {
+                                    osInfo.setCpuCoresPerProcessor(osInfo.getCpuCores() / osInfo.getCpuCount());
+                                }
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析CPU核心数失败: {}", cpuCores);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 获取内存和交换空间信息
+            String memInfo = MinaUtils.execCmdWithResult(session, "free -m | grep 'Mem:' | awk '{print $2 \" \" $7}'");
+            if (memInfo != null && !memInfo.isEmpty()) {
+                String[] memParts = memInfo.trim().split("\\s+");
+                if (memParts.length >= 2) {
+                    try {
+                        // 转换MB到GB并保留1位小数
+                        double totalMemoryMB = Double.parseDouble(memParts[0]);
+                        double availableMemoryMB = Double.parseDouble(memParts[1]);
+                        osInfo.setTotalMemory(Math.round(totalMemoryMB / 1024 * 10) / 10.0);
+                        osInfo.setAvailableMemory(Math.round(availableMemoryMB / 1024 * 10) / 10.0);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析内存信息失败: {}", memInfo);
+                    }
+                }
+            }
+
+            String swapInfo = MinaUtils.execCmdWithResult(session,
+                    "free -m | grep 'Swap:' | awk '{print $2 \" \" $4}'");
+            if (swapInfo != null && !swapInfo.isEmpty()) {
+                String[] swapParts = swapInfo.trim().split("\\s+");
+                if (swapParts.length >= 2) {
+                    try {
+                        // 转换MB到GB并保留1位小数
+                        double totalSwapMB = Double.parseDouble(swapParts[0]);
+                        double availableSwapMB = Double.parseDouble(swapParts[1]);
+                        osInfo.setTotalSwap(Math.round(totalSwapMB / 1024 * 10) / 10.0);
+                        osInfo.setAvailableSwap(Math.round(availableSwapMB / 1024 * 10) / 10.0);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析交换空间信息失败: {}", swapInfo);
+                    }
+                }
+            }
+
+            // 获取磁盘信息
+            String diskInfo = MinaUtils.execCmdWithResult(session, "df -h / | tail -n 1 | awk '{print $2 \" \" $4}'");
+            if (diskInfo != null && !diskInfo.isEmpty()) {
+                String[] diskParts = diskInfo.trim().split("\\s+");
+                if (diskParts.length >= 2) {
+                    try {
+                        // 移除单位并转换为GB
+                        String totalDiskStr = diskParts[0].replaceAll("[^0-9.]", "");
+                        String availableDiskStr = diskParts[1].replaceAll("[^0-9.]", "");
+
+                        // 处理单位换算
+                        double totalDiskMultiplier = 1;
+                        double availableDiskMultiplier = 1;
+
+                        if (diskParts[0].endsWith("T")) {
+                            totalDiskMultiplier = 1024;
+                        }
+
+                        if (diskParts[1].endsWith("T")) {
+                            availableDiskMultiplier = 1024;
+                        }
+
+                        osInfo.setTotalDisk(Double.parseDouble(totalDiskStr) * totalDiskMultiplier);
+                        osInfo.setAvailableDisk(Double.parseDouble(availableDiskStr) * availableDiskMultiplier);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析磁盘信息失败: {}", diskInfo);
+                    }
+                }
+            }
+
+            // 尝试获取GPU信息
+            String gpuInfo = MinaUtils.execCmdWithResult(session, "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3");
+            if (gpuInfo != null && !gpuInfo.isEmpty()) {
+                osInfo.setGpuInfo(gpuInfo.trim());
+            } else {
+                // 尝试使用nvidia-smi查询NVIDIA GPU
+                gpuInfo = MinaUtils.execCmdWithResult(session,
+                        "which nvidia-smi && nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo ''");
+                if (gpuInfo != null && !gpuInfo.isEmpty() && !gpuInfo.contains("which")) {
+                    osInfo.setGpuInfo(gpuInfo.trim());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("收集硬件信息时出错: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 从lscpu输出中提取特定字段的值
+     */
+    private String extractValueFromLscpu(String lscpuOutput, String fieldName) {
+        if (lscpuOutput == null || fieldName == null) {
+            return null;
+        }
+
+        String[] lines = lscpuOutput.split("\n");
+        for (String line : lines) {
+            if (line.trim().startsWith(fieldName)) {
+                return line.substring(fieldName.length()).trim();
+            }
+        }
+
+        return null;
     }
 }

@@ -119,6 +119,28 @@
         background-color: #ffffff !important;
         padding: 2px !important;
       }
+      
+      /* 修复tooltip滚动问题 */
+      .os-tooltip .ant-tooltip-inner {
+        max-height: none !important;
+        overflow: visible !important;
+      }
+      
+      .os-detail-popup {
+        max-height: 80vh !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      
+      .os-detail-content {
+        max-height: 60vh !important;
+        overflow-y: auto !important;
+      }
+      
+      .os-tooltip {
+        max-width: none !important;
+      }
     </style>
   </head>
   <body>
