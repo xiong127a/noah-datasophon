@@ -64,7 +64,7 @@ public class HostCheckController {
      * 
      * @param action 操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
      *               pauseTask(暂停定时任务), resumeTask(恢复定时任务), cleanupConnections(清理连接)
-     * @param scope  作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
+     * @param scopeCode  作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
      * @param taskId 定时任务ID，仅在pauseTask/resumeTask操作时需要
      */
     @GetMapping("/queueManager")
