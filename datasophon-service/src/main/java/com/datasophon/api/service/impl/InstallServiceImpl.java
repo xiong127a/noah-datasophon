@@ -74,6 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service("installService")
@@ -164,13 +165,18 @@ public class InstallServiceImpl implements InstallService {
             }
 
             // 直接返回主机列表和队列状态
-            return Result.success()
-                    .put("data", pagedHosts)
-                    .put(Constants.TOTAL, (long) hostList.size())
-                    .put("queueStatus", queueStatus);
+            Result success = Result.success();
+            success.put("data", pagedHosts);
+            success.put(Constants.TOTAL, (long) hostList.size());
+            success.put("queueStatus", queueStatus);
+            return success;
+
         } catch (Exception e) {
             logger.error(ExceptionUtil.getSimpleMessage(e));
-            return Result.success().put("data", Collections.emptyList()).put(Constants.TOTAL, 0L);
+            Result success = Result.success();
+            success.put("data", Collections.emptyList());
+            success.put(Constants.TOTAL, 0L);
+            return success;
         }
     }
 
@@ -216,49 +222,34 @@ public class InstallServiceImpl implements InstallService {
     private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, String hostsMd5, Integer sshPort,
             String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
-        // 创建SSH连接池，用于复用连接
-        Map<String, ClientSession> sessionMap = new HashMap<>();
 
-        try {
-            logger.info("解析主机列表");
-            String[] hostArray = hosts.split(Constants.COMMA);
+        logger.info("解析主机列表");
+        String[] hostArray = hosts.split(Constants.COMMA);
 
-            // 获取集群信息
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-            if (Objects.isNull(clusterInfo)) {
-                logger.error("集群信息不存在, clusterId: {}", clusterId);
-                return hostInfoMap;
-            }
-            String clusterCode = clusterInfo.getClusterCode();
-
-            // 2. 遍历处理每个主机，将结果存入临时Map
-            Map<String, HostInfo> tempMap = new HashMap<>();
-            for (String host : hostArray) {
-                processHost(host, sshPort, sshUser, sshPassword, clusterCode, tempMap, sessionMap);
-            }
-
-            List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
-            // 3. 将所有主机信息添加到返回结果中，以IP为键
-            for (HostInfo hostInfo : tempMap.values()) {
-                // 获取主机检查项列表
-                hostInfo.setCheckItems(checkItems);
-                // 使用IP作为键
-                hostInfoMap.put(hostInfo.getIp(), hostInfo);
-            }
-
+        // 获取集群信息
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        if (Objects.isNull(clusterInfo)) {
+            logger.error("集群信息不存在, clusterId: {}", clusterId);
             return hostInfoMap;
-        } finally {
-            // 关闭所有SSH连接
-            for (Map.Entry<String, ClientSession> entry : sessionMap.entrySet()) {
-                try {
-                    logger.info("关闭主机 {} 的SSH连接", entry.getKey());
-                    MinaUtils.closeConnection(entry.getValue());
-                } catch (Exception e) {
-                    logger.warn("关闭主机 {} 的SSH连接时发生异常: {}", entry.getKey(), e.getMessage());
-                }
-            }
-            logger.info("所有SSH连接已关闭");
         }
+        String clusterCode = clusterInfo.getClusterCode();
+
+        // 2. 遍历处理每个主机，将结果存入临时Map
+        Map<String, HostInfo> tempMap = new HashMap<>();
+        for (String host : hostArray) {
+            processHost(host, sshPort, sshUser, sshPassword, clusterCode, tempMap);
+        }
+
+        List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
+        // 3. 将所有主机信息添加到返回结果中，以IP为键
+        for (HostInfo hostInfo : tempMap.values()) {
+            // 获取主机检查项列表
+            hostInfo.setCheckItems(checkItems);
+            // 使用IP作为键
+            hostInfoMap.put(hostInfo.getIp(), hostInfo);
+        }
+
+        return hostInfoMap;
     }
 
     /**
@@ -274,30 +265,34 @@ public class InstallServiceImpl implements InstallService {
      * 处理单个主机信息
      */
     private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
-            Map<String, HostInfo> hostInfoMap, Map<String, ClientSession> sessionMap) {
+            Map<String, HostInfo> hostInfoMap) {
         // 添加参数日志
         logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", host, sshPort, sshUser,
                 StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterCode);
 
         // 1. 处理IP域格式 [x-y]
         if (host.contains("[") && host.contains("-")) {
-            processIpRange(host, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap, sessionMap);
+            processIpRange(host, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
             return;
         }
 
         // 2. 处理单个主机
-        HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterCode, sessionMap);
-        if (Objects.nonNull(hostInfo)) {
-            // 使用IP作为临时Map的键
-            hostInfoMap.put(hostInfo.getIp(), hostInfo);
-        }
+        HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterCode);
+        // 使用IP作为临时Map的键
+        hostInfoMap.put(hostInfo.getIp(), hostInfo);
+
+        // 设置初始状态
+        hostInfo.setOsInfoStatus("loading");
+
+        // 异步获取主机信息
+        getHostOsInfoAsync(hostInfo);
     }
 
     /**
      * 处理IP范围
      */
     private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
-            Map<String, HostInfo> hostInfoMap, Map<String, ClientSession> sessionMap) {
+            Map<String, HostInfo> hostInfoMap) {
         int start = host.indexOf("[");
         String prefix = host.substring(0, start);
         String range = host.substring(start + 1, host.length() - 1);
@@ -305,27 +300,23 @@ public class InstallServiceImpl implements InstallService {
 
         // 1. 处理字母范围，如[a-e]
         if (host.matches(Constants.HAS_EN)) {
-            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterCode, hostInfoMap,
-                    sessionMap);
+            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
             return;
         }
 
         // 2. 处理数字范围，如[1-5]
-        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap, sessionMap);
+        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
     }
 
     /**
      * 处理字母范围的主机名
      */
     private void processLetterRange(String prefix, String start, String end, Integer sshPort, String sshUser,
-            String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap,
-            Map<String, ClientSession> sessionMap) {
+            String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
         List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
         for (String suffix : hostList) {
-            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterCode, sessionMap);
-            if (Objects.nonNull(hostInfo)) {
-                hostInfoMap.put(hostInfo.getIp(), hostInfo);
-            }
+            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterCode);
+            hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
     }
 
@@ -333,27 +324,13 @@ public class InstallServiceImpl implements InstallService {
      * 处理数字范围的主机名
      */
     private void processNumberRange(String prefix, String[] range, Integer sshPort, String sshUser, String sshPassword,
-            String clusterCode, Map<String, HostInfo> hostInfoMap, Map<String, ClientSession> sessionMap) {
+            String clusterCode, Map<String, HostInfo> hostInfoMap) {
         int start = Integer.parseInt(range[0]);
         int end = Integer.parseInt(range[1]);
         for (int i = start; i <= end; i++) {
-            HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterCode, sessionMap);
-            if (Objects.nonNull(hostInfo)) {
-                hostInfoMap.put(hostInfo.getIp(), hostInfo);
-            }
+            HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterCode);
+            hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
-    }
-
-    /**
-     * 获取分页后的列表
-     */
-    private List<HostInfo> getPagedList(List<HostInfo> list, Integer offset, Integer pageSize) {
-        List<HostInfo> result = new ArrayList<>();
-        int limit = Math.min(offset + pageSize, list.size());
-        for (int i = offset; i < limit; i++) {
-            result.add(list.get(i));
-        }
-        return result;
     }
 
     /**
@@ -367,7 +344,7 @@ public class InstallServiceImpl implements InstallService {
      * @return 主机信息对象
      */
     private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-            String clusterCode, Map<String, ClientSession> sessionMap) {
+            String clusterCode) {
         HostInfo hostInfo = new HostInfo();
 
         // 1. 设置基本信息
@@ -377,31 +354,6 @@ public class InstallServiceImpl implements InstallService {
         hostInfo.setSshPassword(sshPassword);
         hostInfo.setClusterCode(clusterCode);
         hostInfo.setCreateTime(new Date());
-
-        // 获取真实主机名
-        String realHostname = null;
-        try {
-            // 获取或创建SSH连接
-            ClientSession session = getOrCreateSession(hostInfo, sessionMap);
-            if (session != null) {
-                // 尝试获取远程主机的真实主机名
-                realHostname = MinaUtils.getRemoteHostname(session);
-                logger.info("获取到主机 {} 的真实主机名: {}", host, realHostname);
-            } else {
-                logger.warn("无法连接到主机 {} 获取真实主机名", host);
-            }
-        } catch (Exception e) {
-            logger.warn("获取主机 {} 的真实主机名时发生异常: {}", host, e.getMessage());
-        }
-
-        // 设置主机名，如果获取真实主机名失败则使用IP
-        if (realHostname != null && !realHostname.trim().isEmpty()) {
-            hostInfo.setHostname(realHostname.trim());
-            logger.info("使用真实主机名: {}", realHostname);
-        } else {
-            hostInfo.setHostname(host);
-            logger.warn("无法获取真实主机名，使用IP地址作为主机名: {}", host);
-        }
 
         // 2. 检查主机是否已受管
         ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
@@ -414,7 +366,7 @@ public class InstallServiceImpl implements InstallService {
         // 3. 尝试获取操作系统信息
         try {
             if (sshUser != null && sshPort != null) {
-                OsInfo osInfo = getHostOsInfo(hostInfo, sessionMap);
+                OsInfo osInfo = getHostOsInfo(hostInfo);
                 hostInfo.setOsInfo(osInfo);
             }
         } catch (Exception e) {
@@ -427,31 +379,17 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 获取或创建SSH会话
      *
-     * @param sessionMap 会话缓存
      * @return SSH会话
      */
-    private ClientSession getOrCreateSession(HostInfo hostInfo, Map<String, ClientSession> sessionMap) {
+    private ClientSession getOrCreateSession(HostInfo hostInfo) {
         // 使用host作为连接池的键
         String ip = hostInfo.getIp();
-        if (sessionMap.containsKey(ip)) {
-            ClientSession existingSession = sessionMap.get(ip);
-            // 检查会话是否仍然可用
-            if (existingSession != null && existingSession.isOpen()) {
-                logger.debug("复用主机 {} 的SSH连接", ip);
-                return existingSession;
-            } else {
-                // 会话已关闭，从Map中移除
-                sessionMap.remove(ip);
-            }
-        }
-
         // 创建新会话
         try {
             logger.info("创建主机 {} 的新SSH连接", ip);
             ClientSession newSession = MinaUtils.openConnectionWithPassword(hostInfo);
             if (newSession != null) {
                 // 将新会话添加到Map中
-                sessionMap.put(ip, newSession);
                 logger.info("成功创建主机 {} 的SSH连接", ip);
             } else {
                 logger.warn("无法创建主机 {} 的SSH连接", ip);
@@ -464,21 +402,126 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * 获取主机的操作系统信息
+     * 异步获取主机的操作系统信息
      * 
-     * @param hostInfo   主机信息
-     * @param sessionMap SSH会话缓存
+     * @param hostInfo 主机信息
+     */
+    private void getHostOsInfoAsync(HostInfo hostInfo) {
+        // 设置初始状态，表示正在获取主机信息
+        hostInfo.setOsInfoStatus("loading");
+
+        // 使用CompletableFuture异步执行获取操作系统信息的任务
+        CompletableFuture.runAsync(() -> {
+            try {
+                logger.info("开始异步获取主机 {} 的操作系统信息", hostInfo.getIp());
+                OsInfo osInfo = getHostOsInfoInternal(hostInfo);
+
+                // 更新主机信息和缓存
+                hostInfo.setOsInfo(osInfo);
+                hostInfo.setOsInfoStatus("ready");
+
+                // 更新缓存
+                updateHostInfoCache(hostInfo);
+
+                logger.info("成功获取主机 {} 的操作系统信息", hostInfo.getIp());
+            } catch (Exception e) {
+                // 设置异常状态
+                hostInfo.setOsInfoStatus("error");
+                logger.error("异步获取主机 {} 的操作系统信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+
+                // 即使出错也要更新缓存，前端可以根据状态显示错误信息
+                updateHostInfoCache(hostInfo);
+            }
+        });
+    }
+
+    /**
+     * 更新缓存中的主机信息
+     */
+    private void updateHostInfoCache(HostInfo hostInfo) {
+        try {
+            // 获取缓存中的主机信息
+            Integer clusterId = hostInfo.getClusterId();
+            if (clusterId == null) {
+                logger.warn("主机 {} 未关联集群ID，无法更新缓存", hostInfo.getIp());
+                return;
+            }
+
+            String cacheKey = clusterId + Constants.HOST_MAP;
+            if (!CacheUtils.constainsKey(cacheKey)) {
+                logger.warn("找不到集群 {} 的主机缓存，无法更新", clusterId);
+                return;
+            }
+
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
+            if (hostMap != null) {
+                // 更新缓存中的主机信息
+                hostMap.put(hostInfo.getIp(), hostInfo);
+                CacheUtils.put(cacheKey, hostMap);
+                logger.debug("已更新集群 {} 中主机 {} 的缓存信息", clusterId, hostInfo.getIp());
+            }
+        } catch (Exception e) {
+            logger.error("更新主机 {} 的缓存信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取主机的操作系统信息（内部实现）
+     * 
+     * @param hostInfo 主机信息
      * @return 操作系统信息
      */
-    private OsInfo getHostOsInfo(HostInfo hostInfo, Map<String, ClientSession> sessionMap) {
+    private OsInfo getHostOsInfoInternal(HostInfo hostInfo) {
         OsInfo osInfo = new OsInfo();
 
         // 获取SSH会话
-        ClientSession session = getOrCreateSession(hostInfo, sessionMap);
+        ClientSession session = getOrCreateSession(hostInfo);
 
         if (session == null) {
-            logger.warn("无法连接到主机: {}", hostInfo.getHostname());
+            logger.warn("无法连接到主机: {}", hostInfo.getIp());
             return osInfo;
+        }
+
+        // 获取主机名（兼容Windows和Linux系统）
+        // 首先用简单的hostname命令（两个系统都支持）
+        String hostname = MinaUtils.execCmdWithResult(session, "hostname");
+        if (hostname != null && !hostname.isEmpty()) {
+            hostname = hostname.trim();
+
+            // 尝试获取完整主机名（FQDN）
+            // 对于Linux使用hostname -f, 对于Windows使用PowerShell命令
+            try {
+                // 检测操作系统类型（简单的方法，检查是否存在/etc目录）
+                String osCheck = MinaUtils.execCmdWithResult(session,
+                        "if [ -d /etc ]; then echo 'linux'; else echo 'windows'; fi");
+                if ("linux".equalsIgnoreCase(osCheck.trim())) {
+                    // Linux系统，尝试获取FQDN
+                    String fqdn = MinaUtils.execCmdWithResult(session, "hostname -f 2>/dev/null");
+                    if (fqdn != null && !fqdn.isEmpty() && !fqdn.equals(hostname)) {
+                        hostname = fqdn.trim();
+                        logger.debug("获取到Linux完整主机名(FQDN): {}", hostname);
+                    }
+                } else {
+                    // Windows系统，尝试使用PowerShell获取DNS主机名
+                    String winFqdn = MinaUtils.execCmdWithResult(session,
+                            "powershell -command \"(Get-WmiObject -Class Win32_ComputerSystem).DNSHostName + '.' + (Get-WmiObject -Class Win32_ComputerSystem).Domain\" 2>NUL");
+                    if (winFqdn != null && !winFqdn.isEmpty() && !winFqdn.equals(hostname)
+                            && !winFqdn.contains("'.'")) {
+                        hostname = winFqdn.trim();
+                        logger.debug("获取到Windows完整主机名(FQDN): {}", hostname);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("尝试获取完整主机名时出错，将使用简单主机名: {}", e.getMessage());
+            }
+
+            logger.debug("最终使用的主机名: {}", hostname);
+            // 将主机名设置到hostInfo对象中
+            hostInfo.setHostname(hostname);
+        } else {
+            logger.warn("无法获取主机 {} 的主机名，将使用IP代替", hostInfo.getIp());
+            // 如果获取主机名失败，则使用IP地址作为主机名
+            hostInfo.setHostname(hostInfo.getIp());
         }
 
         // 获取/etc/os-release文件内容
@@ -633,6 +676,23 @@ public class InstallServiceImpl implements InstallService {
         return osInfo;
     }
 
+    // 修改原有的方法调用，将同步调用改为异步调用
+    // 注意你需要修改所有调用getHostOsInfo的地方，改为调用getHostOsInfoAsync
+    private OsInfo getHostOsInfo(HostInfo hostInfo) {
+        // 立即启动异步任务获取完整信息
+        getHostOsInfoAsync(hostInfo);
+
+        // 返回一个空的OsInfo对象，表示信息正在获取中
+        OsInfo pendingInfo = new OsInfo();
+        pendingInfo.setValid(false);
+        pendingInfo.setFullName("获取中...");
+        return pendingInfo;
+    }
+
+    // 在HostInfo类中添加osInfoStatus字段，用于标识操作系统信息的获取状态
+    // 你需要编辑HostInfo类，添加以下字段：
+    // private String osInfoStatus; // 可能的值: "loading", "ready", "error"
+
     /**
      * 尝试替代方法获取操作系统信息
      */
@@ -767,7 +827,7 @@ public class InstallServiceImpl implements InstallService {
     public Result getHostCheckStatus(Integer clusterId, String sshUser, Integer sshPort) {
         // 获取检查结果列表
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        List<HostInfo> list = map.values().stream().collect(Collectors.toList());
+        List<HostInfo> list = new ArrayList<>(map.values());
         return Result.success(list);
     }
 
@@ -1198,7 +1258,9 @@ public class InstallServiceImpl implements InstallService {
             MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);
             if (ObjectUtil.isNotEmpty(session)) {
-                session.close();
+                if (session != null) {
+                    session.close();
+                }
             }
         }
         return Result.success();
@@ -1304,7 +1366,6 @@ public class InstallServiceImpl implements InstallService {
                         success = limit >= 65535;
                         message = success ? "文件句柄数配置正确" : "文件句柄数配置过低";
                     } catch (NumberFormatException e) {
-                        success = false;
                         message = "无法获取文件句柄数配置";
                     }
                     break;
@@ -1388,8 +1449,6 @@ public class InstallServiceImpl implements InstallService {
                         double availableMemoryMB = Double.parseDouble(memParts[1]);
                         osInfo.setTotalMemory(Math.round(totalMemoryMB / 1024 * 10) / 10.0);
                         osInfo.setAvailableMemory(Math.round(availableMemoryMB / 1024 * 10) / 10.0);
-                        logger.debug("获取到内存信息: 总共 {}GB, 可用 {}GB",
-                                osInfo.getTotalMemory(), osInfo.getAvailableMemory());
                     } catch (NumberFormatException e) {
                         logger.warn("解析内存信息失败: {}", memInfo);
                     }
@@ -1442,12 +1501,10 @@ public class InstallServiceImpl implements InstallService {
                         double load15 = Double.parseDouble(loadParts[2]);
 
                         // 存储负载信息（如果OsInfo类有对应字段）
-                        if (osInfo.getClass().getDeclaredField("load1Min") != null) {
-                            osInfo.getClass().getDeclaredMethod("setLoad1Min", Double.class).invoke(osInfo, load1);
-                            osInfo.getClass().getDeclaredMethod("setLoad5Min", Double.class).invoke(osInfo, load5);
-                            osInfo.getClass().getDeclaredMethod("setLoad15Min", Double.class).invoke(osInfo, load15);
-                            logger.debug("获取到系统负载: 1分钟 {}, 5分钟 {}, 15分钟 {}", load1, load5, load15);
-                        }
+                        osInfo.getClass().getDeclaredMethod("setLoad1Min", Double.class).invoke(osInfo, load1);
+                        osInfo.getClass().getDeclaredMethod("setLoad5Min", Double.class).invoke(osInfo, load5);
+                        osInfo.getClass().getDeclaredMethod("setLoad15Min", Double.class).invoke(osInfo, load15);
+                        logger.debug("获取到系统负载: 1分钟 {}, 5分钟 {}, 15分钟 {}", load1, load5, load15);
                     } catch (Exception e) {
                         logger.warn("设置系统负载信息失败: {}", e.getMessage());
                     }
@@ -1478,7 +1535,7 @@ public class InstallServiceImpl implements InstallService {
 
     /**
      * 从/etc/os-release文件内容中提取指定键的值
-     * 
+     *
      * @param content 文件内容
      * @param key     要查找的键（如ID=、NAME=等）
      * @return 找到的值，如果未找到则返回空字符串
@@ -1503,5 +1560,57 @@ public class InstallServiceImpl implements InstallService {
         }
 
         return "";
+    }
+
+    /**
+     * 新增一个方法，用于获取主机的操作系统信息状态
+     * 供前端查询主机信息是否已准备好
+     */
+    public Result getHostOsInfoStatus(Integer clusterId, String ip) {
+        try {
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (hostMap == null || !hostMap.containsKey(ip)) {
+                return Result.error("找不到指定主机信息");
+            }
+
+            HostInfo hostInfo = hostMap.get(ip);
+            String status = hostInfo.getOsInfoStatus();
+
+            return Result.success().put("status", status)
+                    .put("hostname", hostInfo.getHostname())
+                    .put("ip", hostInfo.getIp());
+        } catch (Exception e) {
+            logger.error("获取主机操作系统信息状态时出错", e);
+            return Result.error("系统异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 新增一个方法，用于获取集群中所有主机的操作系统信息状态
+     * 供前端批量查询主机信息是否已准备好
+     */
+    public Result getAllHostOsInfoStatus(Integer clusterId) {
+        try {
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (hostMap == null) {
+                return Result.error("找不到集群主机信息");
+            }
+
+            List<Map<String, Object>> statusList = new ArrayList<>();
+            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+                HostInfo hostInfo = entry.getValue();
+                Map<String, Object> statusInfo = new HashMap<>();
+                statusInfo.put("ip", hostInfo.getIp());
+                statusInfo.put("hostname", hostInfo.getHostname());
+                statusInfo.put("status", hostInfo.getOsInfoStatus());
+
+                statusList.add(statusInfo);
+            }
+
+            return Result.success(statusList);
+        } catch (Exception e) {
+            logger.error("获取集群所有主机操作系统信息状态时出错", e);
+            return Result.error("系统异常: " + e.getMessage());
+        }
     }
 }

@@ -237,7 +237,36 @@ export default {
           title: "主机名", 
           key: "hostname", 
           dataIndex: "hostname",
-          width: 180
+          width: 180,
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            
+            // 检查osInfoStatus状态，显示加载动画
+            if (row.osInfoStatus === 'loading') {
+              // 苹果风格的骨架屏加载动画
+              return h('div', {
+                class: 'os-info-loading',
+                style: {
+                  position: 'relative',
+                  height: '24px',
+                  width: '90%',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(240, 240, 240, 0.8)',
+                  overflow: 'hidden'
+                }
+              });
+            } else if (row.osInfoStatus === 'error') {
+              // 错误状态显示
+              return h('span', {
+                style: {
+                  color: '#FF3B30'
+                }
+              }, [row.hostname || row.ip || text]);
+            }
+            
+            // 正常显示主机名
+            return h('span', {}, [row.hostname || row.ip || text]);
+          }
         },
         { 
           title: "主机IP", 
@@ -252,6 +281,51 @@ export default {
           width: "15%",
           customRender: (text, row) => {
             const h = this.$createElement;
+            
+            // 检查osInfoStatus状态，显示加载动画
+            if (row.osInfoStatus === 'loading') {
+              // 创建加载中的操作系统信息浮窗
+              const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
+                h('div', { class: 'os-detail-loading-header' }),
+                h('div', { class: 'os-detail-loading-content' }, [
+                  h('div', { class: 'os-detail-loading-line short' }),
+                  h('div', { class: 'os-detail-loading-line medium' }),
+                  h('div', { class: 'os-detail-loading-line' }),
+                  h('div', { class: 'os-detail-loading-line short' }),
+                  h('div', { class: 'os-detail-loading-line medium' })
+                ])
+              ]);
+              
+              // 苹果风格的骨架屏加载动画
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 加载中浮窗内容
+                h('span', { 
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [loadingTooltipContent]),
+                
+                // 显示的加载内容
+                h('div', {
+                  class: 'os-info-loading',
+                  style: {
+                    position: 'relative',
+                    height: '24px',
+                    width: '90%',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(240, 240, 240, 0.8)',
+                    overflow: 'hidden'
+                  }
+                })
+              ]);
+            }
+            
             // 使用osInfo中的数据
             const hasOsInfo = row.osInfo && row.osInfo.valid;
             const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
@@ -568,6 +642,7 @@ export default {
           title: "当前受管",
           key: "managed",
           dataIndex: "managed",
+          width: "90px", // 添加固定宽度
           customRender: (text, row, index) => {
             const h = this.$createElement;
             return h('div', { 
@@ -2555,6 +2630,8 @@ export default {
         color: @apple-black;
         padding: 16px 20px;
         border-bottom: 1px solid rgba(0,0,0,0.05);
+        white-space: nowrap; // 防止列标题换行
+        text-align: center; // 表头文字居中
       }
       
       .ant-table-tbody > tr > td {
@@ -3514,4 +3591,101 @@ export default {
   filter: brightness(0.95);
   transform: translateY(1px);
 }
-</style>ritten_file>
+
+.hostname-skeleton {
+  width: 120px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.os-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.os-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(500%); }
+}
+
+/* 修改操作系统详情弹出框加载动画 */
+.os-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.os-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.os-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.os-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-line.short {
+  width: 70%;
+}
+
+.os-detail-loading-line.medium {
+  width: 85%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* 为操作系统详情弹出框添加动画 */
+@keyframes osFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

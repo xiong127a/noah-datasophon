@@ -88,6 +88,12 @@ public class HostInfo implements Serializable {
     private OsInfo osInfo;
 
     /**
+     * 操作系统信息获取状态
+     * 可能的值: "loading", "ready", "error"
+     */
+    private String osInfoStatus;
+
+    /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
      */
     private CheckItem.Status status;

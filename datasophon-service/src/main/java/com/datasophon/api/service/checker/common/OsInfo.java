@@ -1,9 +1,12 @@
 package com.datasophon.api.service.checker.common;
 
+import lombok.Data;
+
 /**
  * 操作系统信息类
  * 存储主机操作系统相关信息
  */
+@Data
 public class OsInfo {
     // 发行版ID，如 centos、ubuntu
     private String distributionId = "";
@@ -20,6 +23,12 @@ public class OsInfo {
     // Linux发行版类型
     private LinuxDistribution distribution = LinuxDistribution.OTHER;
 
+    /**
+     * -- GETTER --
+     *  判断信息是否有效
+     *
+     * @return 如果信息有效返回true，否则返回false
+     */
     // 信息是否有效
     private boolean valid = false;
 
@@ -50,11 +59,7 @@ public class OsInfo {
         }
 
         // 前缀匹配，如 "7" 匹配 "7.9"
-        if (versionId.startsWith(versionToCheck + ".") || versionToCheck.startsWith(versionId + ".")) {
-            return true;
-        }
-
-        return false;
+        return versionId.startsWith(versionToCheck + ".") || versionToCheck.startsWith(versionId + ".");
     }
 
     /**
@@ -161,15 +166,6 @@ public class OsInfo {
     }
 
     /**
-     * 判断信息是否有效
-     * 
-     * @return 如果信息有效返回true，否则返回false
-     */
-    public boolean isValid() {
-        return valid;
-    }
-
-    /**
      * 根据distributionId强制更新distribution枚举值
      * 解决某些情况下distributionId和distribution不一致的问题
      */
@@ -205,50 +201,6 @@ public class OsInfo {
     }
 
     // Getter 和 Setter 方法
-
-    public String getDistributionId() {
-        return distributionId;
-    }
-
-    public void setDistributionId(String distributionId) {
-        this.distributionId = distributionId;
-    }
-
-    public String getVersionId() {
-        return versionId;
-    }
-
-    public void setVersionId(String versionId) {
-        this.versionId = versionId;
-    }
-
-    public String getKernelVersion() {
-        return kernelVersion;
-    }
-
-    public void setKernelVersion(String kernelVersion) {
-        this.kernelVersion = kernelVersion;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public LinuxDistribution getDistribution() {
-        return distribution;
-    }
-
-    public void setDistribution(LinuxDistribution distribution) {
-        this.distribution = distribution;
-    }
-
-    public void setValid(boolean valid) {
-        this.valid = valid;
-    }
 
     @Override
     public String toString() {
