@@ -30,7 +30,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
     public CheckItem check(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) {
         try {
             cacheLog.info("==== SELinux检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
 
             // 更新状态为正在检查SELinux状态
             checkItem.setMessage("正在检查SELinux状态...");
@@ -38,7 +38,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             // 获取会话
             ClientSession session = hostInfo.getExternalSession();
             if (session == null) {
-                String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getHostname();
+                String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -224,7 +224,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             // 获取会话
             ClientSession session = hostInfo.getExternalSession();
             if (session == null) {
-                String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getHostname();
+                String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setMessage(errorMsg);

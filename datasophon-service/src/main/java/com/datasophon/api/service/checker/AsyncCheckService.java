@@ -328,7 +328,7 @@ public class AsyncCheckService {
      * @return 任务ID
      */
     public String executeCheckItemAsync(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        String taskKey = getTaskKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        String taskKey = getTaskKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
         // 检查任务是否已在运行
         if (isTaskRunning(taskKey)) {
@@ -350,14 +350,14 @@ public class AsyncCheckService {
 
         // 注册任务
         String taskId = taskManager.registerTask("CHECK",
-                "检查项: " + checkItem.getItemName() + ", 主机: " + hostInfo.getHostname(), future);
+                "检查项: " + checkItem.getItemName() + ", 主机: " + hostInfo.getIp(), future);
 
         // 记录任务信息
         TaskInfo taskInfo = new TaskInfo();
         taskInfo.taskId = taskId;
         taskInfo.future = future;
         taskInfo.clusterId = clusterId;
-        taskInfo.hostname = hostInfo.getHostname();
+        taskInfo.hostname = hostInfo.getIp();
         taskInfo.itemId = checkItem.getId();
 
         runningTasks.put(taskKey, taskInfo);
@@ -386,7 +386,7 @@ public class AsyncCheckService {
      * @return 任务ID
      */
     public String executeFixItemAsync(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        String taskKey = "FIX_" + getTaskKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        String taskKey = "FIX_" + getTaskKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
         // 检查任务是否已在运行
         if (isTaskRunning(taskKey)) {
@@ -408,14 +408,14 @@ public class AsyncCheckService {
 
         // 注册任务
         String taskId = taskManager.registerTask("FIX",
-                "修复检查项: " + checkItem.getItemName() + ", 主机: " + hostInfo.getHostname(), future);
+                "修复检查项: " + checkItem.getItemName() + ", 主机: " + hostInfo.getIp(), future);
 
         // 记录任务信息
         TaskInfo taskInfo = new TaskInfo();
         taskInfo.taskId = taskId;
         taskInfo.future = future;
         taskInfo.clusterId = clusterId;
-        taskInfo.hostname = hostInfo.getHostname();
+        taskInfo.hostname = hostInfo.getIp();
         taskInfo.itemId = checkItem.getId();
 
         runningTasks.put(taskKey, taskInfo);
@@ -570,7 +570,7 @@ public class AsyncCheckService {
      * @return SSH会话，如果创建失败则返回null
      */
     private ClientSession getOrCreateConnection(HostInfo hostInfo) {
-        String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
+        String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         // 增加总请求计数
         long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
@@ -590,7 +590,7 @@ public class AsyncCheckService {
                         // 尝试发送一个无害的命令来验证连接是否真正有效
                         CommandResult testResult = execCommand(session, "echo connection_test");
                         if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
-                            logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getHostname());
+                            logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
                             // 更新最后访问时间
                             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
@@ -600,10 +600,10 @@ public class AsyncCheckService {
 
                             return session;
                         } else {
-                            logger.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getHostname());
+                            logger.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getIp());
                         }
                     } else {
-                        logger.info("主机 {} 的SSH连接已关闭，将创建新连接", hostInfo.getHostname());
+                        logger.info("主机 {} 的SSH连接已关闭，将创建新连接", hostInfo.getIp());
                     }
                 } catch (Exception e) {
                     logger.warn("测试SSH连接时发生异常: {}", e.getMessage());
@@ -621,15 +621,14 @@ public class AsyncCheckService {
 
             // 创建新连接
             try {
-                logger.info("创建主机 {} 的新SSH连接", hostInfo.getHostname());
-                session = MinaUtils.openConnection(hostInfo.getHostname(),
-                        hostInfo.getSshPort(), hostInfo.getSshUser());
+                logger.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
+                session = MinaUtils.openConnection(hostInfo);
 
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
                     // 设置初始访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
-                    logger.info("成功创建主机 {} 的SSH连接", hostInfo.getHostname());
+                    logger.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
                 }
                 return session;
             } catch (Exception e) {
@@ -796,12 +795,12 @@ public class AsyncCheckService {
         if (clusterId != null && hostInfo != null && checkItem != null) {
             String cacheKey = clusterId + Constants.HOST_MAP;
             logger.debug("更新检查状态: 主机={}, 检查项ID={}, 状态={}, 消息={}",
-                    hostInfo.getHostname(), checkItem.getId(), checkItem.getStatus(), checkItem.getMessage());
+                    hostInfo.getIp(), checkItem.getId(), checkItem.getStatus(), checkItem.getMessage());
 
             try {
                 Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
                 if (hostInfoMap != null) {
-                    HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getHostname());
+                    HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getIp());
                     if (cachedHostInfo != null) {
                         boolean updated = false;
                         for (CheckItem item : cachedHostInfo.getCheckItems()) {
@@ -815,7 +814,7 @@ public class AsyncCheckService {
 
                         if (updated) {
                             cachedHostInfo.calculateStatus();
-                            hostInfoMap.put(hostInfo.getHostname(), cachedHostInfo);
+                            hostInfoMap.put(hostInfo.getIp(), cachedHostInfo);
                             CacheUtils.put(cacheKey, hostInfoMap);
                         }
                     }
@@ -1009,26 +1008,26 @@ public class AsyncCheckService {
     public List<CheckItem> batchExecuteCheck(Integer clusterId, HostInfo hostInfo, List<CheckItem> checkItems) {
         List<CheckItem> results = new ArrayList<>();
         ClientSession session = null;
-        String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
+        String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         try {
             // 尝试获取或创建一个连接
             session = getOrCreateConnection(hostInfo);
             if (session == null || !session.isOpen()) {
-                logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
+                logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getIp());
                 // 标记所有检查项为失败
                 for (CheckItem item : checkItems) {
                     item.setStatus(CheckItem.Status.FAILED);
                     item.setMessage("无法建立SSH连接");
 
                     // 记录失败日志到缓存日志 - 确保每个检查项都有日志记录
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
                     com.datasophon.common.model.LogEntry logEntry = new com.datasophon.common.model.LogEntry(
                             new Date(),
                             com.datasophon.common.model.LogEntry.Level.ERROR,
                             Thread.currentThread().getName(),
                             this.getClass().getSimpleName(),
-                            "无法建立到主机 " + hostInfo.getHostname() + " 的SSH连接",
+                            "无法建立到主机 " + hostInfo.getIp() + " 的SSH连接",
                             com.datasophon.common.model.LogEntry.Type.CHECK);
                     LogEntryManager.addLogEntry(logKey, logEntry);
 
@@ -1063,7 +1062,7 @@ public class AsyncCheckService {
                         item.setMessage("找不到检查器: " + item.getItemName());
 
                         // 记录失败日志到缓存日志
-                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_"
+                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_"
                                 + item.getId();
                         com.datasophon.common.model.LogEntry logEntry = new com.datasophon.common.model.LogEntry(
                                 new Date(),
@@ -1079,7 +1078,7 @@ public class AsyncCheckService {
                     }
 
                     // 手动创建并存储检查项的日志键和开始日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
 
                     // 记录检查开始日志
                     com.datasophon.common.model.LogEntry startLogEntry = new com.datasophon.common.model.LogEntry(
@@ -1139,7 +1138,7 @@ public class AsyncCheckService {
                     item.setMessage("检查异常: " + e.getMessage());
 
                     // 记录异常日志到缓存日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
                     com.datasophon.common.model.LogEntry exceptionLogEntry = new com.datasophon.common.model.LogEntry(
                             new Date(),
                             com.datasophon.common.model.LogEntry.Level.ERROR,
@@ -1161,7 +1160,7 @@ public class AsyncCheckService {
                     item.setMessage("批量检查异常: " + e.getMessage());
 
                     // 记录失败日志到缓存日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
                     com.datasophon.common.model.LogEntry errorLogEntry = new com.datasophon.common.model.LogEntry(
                             new Date(),
                             com.datasophon.common.model.LogEntry.Level.ERROR,
@@ -1195,7 +1194,7 @@ public class AsyncCheckService {
     public List<CheckItem> batchExecuteFix(Integer clusterId, HostInfo hostInfo, List<CheckItem> fixItems) {
         List<CheckItem> results = new ArrayList<>();
         ClientSession session = null;
-        String hostKey = hostInfo.getHostname() + ":" + hostInfo.getSshPort();
+        String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         try {
             // 检查是否包含免密登录检查项，如果包含则不使用连接池
@@ -1207,21 +1206,21 @@ public class AsyncCheckService {
                 // 尝试获取或创建一个连接
                 session = getOrCreateConnection(hostInfo);
                 if (session == null || !session.isOpen()) {
-                    logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getHostname());
+                    logger.error("无法建立到主机 {} 的SSH连接", hostInfo.getIp());
                     // 标记所有修复项为失败
                     for (CheckItem item : fixItems) {
                         item.setStatus(CheckItem.Status.FAILED);
                         item.setMessage("无法建立SSH连接");
 
                         // 记录失败日志到缓存日志
-                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_"
+                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_"
                                 + item.getId();
                         com.datasophon.common.model.LogEntry logEntry = new com.datasophon.common.model.LogEntry(
                                 new Date(),
                                 com.datasophon.common.model.LogEntry.Level.ERROR,
                                 Thread.currentThread().getName(),
                                 this.getClass().getSimpleName(),
-                                "无法建立到主机 " + hostInfo.getHostname() + " 的SSH连接",
+                                "无法建立到主机 " + hostInfo.getIp() + " 的SSH连接",
                                 com.datasophon.common.model.LogEntry.Type.FIX);
                         LogEntryManager.addLogEntry(logKey, logEntry);
 
@@ -1261,7 +1260,7 @@ public class AsyncCheckService {
                         item.setMessage("找不到检查器: " + item.getItemName());
 
                         // 记录失败日志到缓存日志
-                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_"
+                        String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_"
                                 + item.getId();
                         com.datasophon.common.model.LogEntry logEntry = new com.datasophon.common.model.LogEntry(
                                 new Date(),
@@ -1277,7 +1276,7 @@ public class AsyncCheckService {
                     }
 
                     // 手动创建并存储修复项的日志键和开始日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
 
                     // 记录修复开始日志
                     com.datasophon.common.model.LogEntry startLogEntry = new com.datasophon.common.model.LogEntry(
@@ -1382,7 +1381,7 @@ public class AsyncCheckService {
                     item.setMessage("修复异常: " + e.getMessage());
 
                     // 记录异常日志到缓存日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
                     com.datasophon.common.model.LogEntry exceptionLogEntry = new com.datasophon.common.model.LogEntry(
                             new Date(),
                             com.datasophon.common.model.LogEntry.Level.ERROR,
@@ -1404,7 +1403,7 @@ public class AsyncCheckService {
                     item.setMessage("批量修复异常: " + e.getMessage());
 
                     // 记录失败日志到缓存日志
-                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + item.getId();
+                    String logKey = "CHECK_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + item.getId();
                     com.datasophon.common.model.LogEntry errorLogEntry = new com.datasophon.common.model.LogEntry(
                             new Date(),
                             com.datasophon.common.model.LogEntry.Level.ERROR,

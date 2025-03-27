@@ -26,7 +26,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             // 获取会话
             ClientSession session = hostInfo.getExternalSession();
             if (session == null) {
-                String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getHostname();
+                String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -38,7 +38,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             if (selinuxChecker != null) {
                 // 获取集群ID
                 Integer clusterId = hostInfo.getClusterId();
-                selinuxChecker.setupLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
             }
 
             // 检查麒麟版本
@@ -350,7 +350,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             // 获取会话
             ClientSession session = hostInfo.getExternalSession();
             if (session == null) {
-                String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getHostname();
+                String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setMessage(errorMsg);
@@ -361,7 +361,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
             if (selinuxChecker != null) {
                 // 获取集群ID
                 Integer clusterId = hostInfo.getClusterId();
-                selinuxChecker.setupLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+                selinuxChecker.setupLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
             }
 
             // 检查麒麟版本

@@ -25,7 +25,7 @@ public class SELinuxChecker extends AbstractItemChecker {
         @Override
         protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
                 try {
-                        logger.info("开始检查主机 {} 的SELinux状态", hostInfo.getHostname());
+                        logger.info("开始检查主机 {} 的SELinux状态", hostInfo.getIp());
                         cacheLog.info("开始检查SELinux状态...");
 
                         // 更新检查项状态
@@ -35,7 +35,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         if (session == null) {
                                 // 检查hostInfo中是否有可用的会话
                                 if (!hostInfo.isSessionReady()) {
-                                        String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getHostname();
+                                        String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
                                         logger.error(errorMsg);
                                         cacheLog.error(errorMsg);
                                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -68,7 +68,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                                 return checkItem;
                         }
 
-                        logger.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+                        logger.info("主机 {} 操作系统: {}", hostInfo.getIp(), osInfo.getFullName());
                         cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
                         // 通过工厂获取对应的SELinux检查器策略
@@ -91,7 +91,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                                         + (StringUtils.isBlank(e.getMessage()) ? "未知错误" : e.getMessage()));
                         return checkItem;
                 } finally {
-                        logger.info("完成主机 {} 的SELinux检查", hostInfo.getHostname());
+                        logger.info("完成主机 {} 的SELinux检查", hostInfo.getIp());
                         cacheLog.info("SELinux检查完成");
                 }
         }
@@ -99,7 +99,7 @@ public class SELinuxChecker extends AbstractItemChecker {
         @Override
         protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
                 try {
-                        logger.info("开始修复主机 {} 的SELinux配置", hostInfo.getHostname());
+                        logger.info("开始修复主机 {} 的SELinux配置", hostInfo.getIp());
                         cacheLog.info("开始修复SELinux配置...");
 
                         // 更新修复项状态
@@ -109,7 +109,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         if (session == null) {
                                 // 检查hostInfo中是否有可用的会话
                                 if (!hostInfo.isSessionReady()) {
-                                        String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getHostname();
+                                        String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
                                         logger.error(errorMsg);
                                         cacheLog.error(errorMsg);
                                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -139,7 +139,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                                 return false;
                         }
 
-                        logger.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+                        logger.info("主机 {} 操作系统: {}", hostInfo.getIp(), osInfo.getFullName());
                         cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
                         // 通过工厂获取对应的SELinux检查器策略
@@ -159,10 +159,10 @@ public class SELinuxChecker extends AbstractItemChecker {
 
                         // 记录修复结果
                         if (result) {
-                                logger.info("主机 {} SELinux修复成功", hostInfo.getHostname());
+                                logger.info("主机 {} SELinux修复成功", hostInfo.getIp());
                                 cacheLog.info("SELinux修复成功");
                         } else {
-                                logger.warn("主机 {} SELinux修复失败", hostInfo.getHostname());
+                                logger.warn("主机 {} SELinux修复失败", hostInfo.getIp());
                                 cacheLog.warn("SELinux修复失败");
                         }
 
@@ -174,7 +174,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         checkItem.setMessage(errorMsg);
                         return false;
                 } finally {
-                        logger.info("完成主机 {} 的SELinux修复", hostInfo.getHostname());
+                        logger.info("完成主机 {} 的SELinux修复", hostInfo.getIp());
                         cacheLog.info("SELinux修复完成");
                 }
         }

@@ -41,7 +41,7 @@
         :loading="loading" 
         :dataSource="dataSource" 
         :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" 
-        rowKey="hostname" 
+        rowKey="ip" 
         :pagination="pagination"
         expandable
         :expandedRowRender="expandedRowRender"
@@ -115,7 +115,7 @@
               ref="logFilter"
               v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
               :clusterId="checkItem.clusterId" 
-              :hostname="checkItem.hostname" 
+              :ip="checkItem.ip" 
               :itemId="checkItem.id"
               v-model="logContent"
               hide-reset-button
@@ -216,7 +216,7 @@ export default {
       fixConfirmLoading: false,
       fixConfirmTitle: '',
       fixConfirmContent: '',
-      fixConfirmHostname: '',
+      fixConfirmIp: '',
       fixConfirmItem: null,
       columns: [
         {
@@ -234,9 +234,9 @@ export default {
           },
         },
         { 
-          title: "主机", 
-          key: "hostname", 
-          dataIndex: "hostname" 
+          title: "主机IP", 
+          key: "ip", 
+          dataIndex: "ip" 
         },
         {
           title: "操作系统",
@@ -488,7 +488,6 @@ export default {
               
               // 底部信息区域
               h('div', { class: 'os-detail-footer' }, [
-                h('span', { class: 'os-detail-footer-text' }, [`主机: ${row.hostname}`]),
                 h('span', { class: 'os-detail-footer-text' }, [`IP: ${row.ip || '-'}`])
               ])
             ]) : h('div', { 
@@ -817,7 +816,7 @@ export default {
       logContent: '',
       logLoading: false,
       autoRefreshInterval: 0,
-      currentLogHostname: null,
+      currentLogIp: null,
       currentLogItemId: null,
       currentLogItemName: null,
       refreshTimer: null,
@@ -833,7 +832,7 @@ export default {
       }
       
       return this.dataSource.some(host => {
-        const checkItems = this.checkItemsMap[host.hostname] || [];
+        const checkItems = this.checkItemsMap[host.ip] || [];
         return checkItems.some(item => item.status === 'CHECKING');
       });
     }
@@ -857,7 +856,10 @@ export default {
         page: this.pagination.current,
         clusterId: this.clusterId,
         ...this.steps1Data,
+        // 将hosts参数的值作为ips参数的值
+        ips: this.steps1Data.hosts
       };
+      
       
       this.isRequesting = true;
       
@@ -872,7 +874,7 @@ export default {
                 
                 // 将返回的checkItems数据保存到checkItemsMap中
                 if (host.checkItems) {
-                  this.$set(this.checkItemsMap, host.hostname, host.checkItems);
+                  this.$set(this.checkItemsMap, host.ip, host.checkItems);
                 }
               });
               
@@ -924,20 +926,20 @@ export default {
         return;
       }
       
-      // 提取需要检查的主机名列表
+      // 提取需要检查的主机IP列表（而不是主机名）
       // 只对未受管或状态为WAITING的主机进行检查
-      const hostnamesToCheck = hosts
+      const ipsToCheck = hosts
         .filter(host => !host.managed || host.status === 'WAITING')
-        .map(host => host.hostname);
+        .map(host => host.ip);
       
-      if (hostnamesToCheck.length === 0) {
+      if (ipsToCheck.length === 0) {
         console.log('没有需要检查的主机');
         return;
       }
       
       // 调用批量检查API
       try {
-        const res = await this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, hostnamesToCheck);
+        const res = await this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, ipsToCheck);
         if (res.code === 200) {
           console.log('成功启动主机检查:', res.msg);
           
@@ -998,18 +1000,18 @@ export default {
       this.selectedRowKeys = selectedRowKeys;
     },
     retryEnvironment(row) {
-      let hostnames = "";
+      let ips = "";
       if (row === "all") {
         if (this.selectedRowKeys.length < 1) {
           this.$message.warning("请至少选择一台主机！");
           return false;
         }
-        hostnames = this.selectedRowKeys.join(",");
+        ips = this.selectedRowKeys.join(",");
       } else {
-        hostnames = row.hostname;
+        ips = row.ip;
       }
       const params = {
-        hostnames,
+        ips,
         clusterId: this.clusterId,
         sshUser: this.steps1Data.sshUser,
         sshPort: this.steps1Data.sshPort,
@@ -1035,7 +1037,7 @@ export default {
     // 展开行渲染函数
     expandedRowRender(record) {
       const h = this.$createElement;
-      const checkItems = this.checkItemsMap[record.hostname] || [];
+      const checkItems = this.checkItemsMap[record.ip] || [];
       
       // 判断主机是否处于检查中状态
       const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
@@ -1288,7 +1290,7 @@ export default {
                   justifyContent: 'center'
                 },
                 on: {
-                  click: () => this.stopCheckItem(record.hostname, row.id)
+                  click: () => this.stopCheckItem(record.ip, row.id)
                 }
               }, [
                 h('a-icon', {
@@ -1322,7 +1324,7 @@ export default {
                            !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
                 },
                 on: {
-                  click: () => this.retryCheckItem(record.hostname, row.id)
+                  click: () => this.retryCheckItem(record.ip, row.id)
                 }
               }, [
                 h('a-icon', {
@@ -1353,7 +1355,7 @@ export default {
                   disabled: isHostChecking || row.status === 'FIXING'
                 },
                 on: {
-                  click: () => this.fixCheckItem(record.hostname, row)
+                  click: () => this.fixCheckItem(record.ip, row)
                 }
               }, [
                 h('a-icon', {
@@ -1384,7 +1386,7 @@ export default {
                   disabled: isHostChecking
                 },
                 on: {
-                  click: () => this.skipCheckItem(record.hostname, row.id)
+                  click: () => this.skipCheckItem(record.ip, row.id)
                 }
               }, [
                 h('a-icon', {
@@ -1422,7 +1424,7 @@ export default {
                 disabled: row.status === 'WAITING'
               },
               on: {
-                click: () => this.viewItemLog(record.hostname, row.id, row.itemName)
+                click: () => this.viewItemLog(record.ip, row.id, row.itemName)
               }
             }, [
               h('a-icon', {
@@ -1570,17 +1572,17 @@ export default {
             padding: '8px 16px',
             fontSize: '14px',
             fontWeight: '500',
-            cursor: !this.hasRetryableSelectedItems(record.hostname) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasRetryableSelectedItems(record.hostname) ? '0.6' : '1',
+            cursor: !this.hasRetryableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasRetryableSelectedItems(record.ip) ? '0.6' : '1',
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center'
           },
           attrs: {
-            disabled: !this.hasRetryableSelectedItems(record.hostname)
+            disabled: !this.hasRetryableSelectedItems(record.ip)
           },
           on: {
-            click: () => this.retrySelectedItems(record.hostname)
+            click: () => this.retrySelectedItems(record.ip)
           }
         }, [
           h('a-icon', {
@@ -1599,17 +1601,17 @@ export default {
             padding: '8px 16px',
             fontSize: '14px',
             fontWeight: '500',
-            cursor: !this.hasFixableSelectedItems(record.hostname) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasFixableSelectedItems(record.hostname) ? '0.6' : '1',
+            cursor: !this.hasFixableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasFixableSelectedItems(record.ip) ? '0.6' : '1',
             transition: 'all 0.2s ease',
             display: 'flex',
             alignItems: 'center'
           },
           attrs: {
-            disabled: !this.hasFixableSelectedItems(record.hostname)
+            disabled: !this.hasFixableSelectedItems(record.ip)
           },
           on: {
-            click: () => this.fixSelectedItems(record.hostname)
+            click: () => this.fixSelectedItems(record.ip)
           }
         }, [
           h('a-icon', {
@@ -1664,8 +1666,8 @@ export default {
             size: 'middle',
             rowKey: 'id',
             rowSelection: {
-              selectedRowKeys: this.selectedCheckItems[record.hostname] || [],
-              onChange: (selectedRowKeys) => this.onCheckItemSelect(record.hostname, selectedRowKeys)
+              selectedRowKeys: this.selectedCheckItems[record.ip] || [],
+              onChange: (selectedRowKeys) => this.onCheckItemSelect(record.ip, selectedRowKeys)
             }
           },
           class: 'apple-style-table',
@@ -1678,13 +1680,13 @@ export default {
     },
 
     // 选择检查项
-    onCheckItemSelect(hostname, selectedRowKeys) {
-      this.$set(this.selectedCheckItems, hostname, selectedRowKeys);
+    onCheckItemSelect(ip, selectedRowKeys) {
+      this.$set(this.selectedCheckItems, ip, selectedRowKeys);
     },
 
     // 重试选中的检查项
-    async retrySelectedItems(hostname) {
-      const selectedItems = this.selectedCheckItems[hostname] || [];
+    async retrySelectedItems(ip) {
+      const selectedItems = this.selectedCheckItems[ip] || [];
       if (selectedItems.length === 0) {
         this.$message.warning('请选择要重试的检查项');
         return;
@@ -1693,16 +1695,16 @@ export default {
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
           clusterId: this.clusterId,
-          hostname,
+          ip,
           itemNames: selectedItems
         });
+        
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
-          // 清空选择
-          this.$set(this.selectedCheckItems, hostname, []);
-          
           // 立即刷新一次，不等待5秒后的自动刷新
           this.getEnvironmentList(false);
+        } else {
+          this.$message.error(res.msg || '重试检查项失败');
         }
       } catch (error) {
         console.error('重试检查项失败:', error);
@@ -1711,9 +1713,9 @@ export default {
     },
 
     // 跳过检查项
-    async skipCheckItem(hostname, itemId) {
+    async skipCheckItem(ip, itemId) {
       // 查找对应的主机信息
-      const host = this.dataSource.find(h => h.hostname === hostname);
+      const host = this.dataSource.find(h => h.ip === ip);
       
       // 检查主机是否处于检查中状态
       if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
@@ -1724,14 +1726,14 @@ export default {
       try {
         const res = await this.$axiosPost(global.API.skipCheckItem, {
           clusterId: this.clusterId,
-          hostname,
-          itemId
+          ip: ip,
+          itemId: itemId
         });
         if (res.code === 200) {
           this.$message.success('已跳过该检查项');
           
           // 更新检查项状态
-          const items = this.checkItemsMap[hostname];
+          const items = this.checkItemsMap[ip];
           if (items) {
             const targetItem = items.find(item => item.id === itemId);
             if (targetItem) {
@@ -1739,7 +1741,7 @@ export default {
               targetItem.message = '已手动跳过此检查项';
               
               // 使用...items创建新数组，确保Vue能检测到变化
-              this.$set(this.checkItemsMap, hostname, [...items]);
+              this.$set(this.checkItemsMap, ip, [...items]);
               
               // 延迟1秒后刷新列表获取服务器最新状态
               setTimeout(() => {
@@ -1755,12 +1757,12 @@ export default {
     },
 
     // 获取主机校验项
-    async getHostCheckItems(hostname, isFirstHost = false) {
+    async getHostCheckItems(ip, isFirstHost = false) {
       try {
-        const res = await this.$axiosGet(global.API.getHostCheckItems + '?hostname=' + hostname + '&clusterId=' + this.clusterId);
+        const res = await this.$axiosGet(global.API.getHostCheckItems + '?ip=' + ip + '&clusterId=' + this.clusterId);
         if (res.code === 200) {
           // 设置检查项数据
-          this.$set(this.checkItemsMap, hostname, res.data);
+          this.$set(this.checkItemsMap, ip, res.data);
         }
       } catch (error) {
         console.error('获取主机校验项失败:', error);
@@ -1769,11 +1771,11 @@ export default {
     },
 
     // 使用自定义a-modal组件实现确认弹窗
-    async fixCheckItem(hostname, item) {
+    async fixCheckItem(ip, item) {
       if (item.status !== 'FAILED') return;
       
       // 查找对应的主机信息
-      const host = this.dataSource.find(h => h.hostname === hostname);
+      const host = this.dataSource.find(h => h.ip === ip);
       
       // 删除以下检查，允许在主机检查过程中也能点击修复按钮
       /* 
@@ -1787,7 +1789,7 @@ export default {
         // 获取确认信息
         const res = await this.$axiosGet(global.API.getCheckItemConfirmInfo, {
           clusterId: this.clusterId,
-          hostname: hostname,
+          ip: ip,
           itemId: item.id
         });
         
@@ -1802,14 +1804,14 @@ export default {
             // 设置弹窗数据
             this.fixConfirmTitle = '确认修复 - ' + itemName;
             this.fixConfirmContent = confirmMessage;
-            this.fixConfirmHostname = hostname;
+            this.fixConfirmIp = ip;
             this.fixConfirmItem = item;
             
             // 显示弹窗
             this.fixConfirmVisible = true;
           } else {
             // 无需确认，直接修复
-            this.doFixCheckItem(hostname, item, false);
+            this.doFixCheckItem(ip, item, false);
           }
         } else {
           // 处理API错误
@@ -1826,7 +1828,7 @@ export default {
       this.fixConfirmLoading = true;
       
       // 执行修复
-      this.doFixCheckItem(this.fixConfirmHostname, this.fixConfirmItem, true).then(() => {
+      this.doFixCheckItem(this.fixConfirmIp, this.fixConfirmItem, true).then(() => {
         this.fixConfirmVisible = false;
         this.fixConfirmLoading = false;
       }).catch(() => {
@@ -1840,8 +1842,8 @@ export default {
     },
 
     // 执行实际的修复操作
-    async doFixCheckItem(hostname, item, skipConfirm) {
-      console.log('执行修复操作:', hostname, item.id, skipConfirm); // 添加调试日志
+    async doFixCheckItem(ip, item, skipConfirm) {
+      console.log('执行修复操作:', ip, item.id, skipConfirm); // 添加调试日志
       
       // Set loading state
       this.$set(item, 'fixing', true);
@@ -1850,7 +1852,7 @@ export default {
         // Call fix API
         const res = await this.$axiosPost(global.API.fixCheckItem, {
           clusterId: this.clusterId,
-          hostname: hostname,
+          ip: ip,
           itemId: item.id,
           skipConfirm: skipConfirm
         });
@@ -1859,7 +1861,7 @@ export default {
           this.$message.success('修复操作已提交');
           // Refresh check item status after a delay
           setTimeout(() => {
-            this.getHostCheckItems(hostname);
+            this.getHostCheckItems(ip);
           }, 1000);
         }
         
@@ -1876,11 +1878,11 @@ export default {
     },
 
     // 修复所有检查项
-    async fixAllCheckItems(hostname) {
+    async fixAllCheckItems(ip) {
       try {
         const res = await this.$axiosPost(global.API.fixAllCheckItems, {
           clusterId: this.clusterId,
-          hostname
+          ip
         });
         if (res.code === 200) {
           this.$message.success('修复指令已发送');
@@ -1894,9 +1896,9 @@ export default {
     },
 
     // 添加重试单个检查项的方法
-    async retryCheckItem(hostname, itemId) {
+    async retryCheckItem(ip, itemId) {
       // 查找对应的主机信息
-      const host = this.dataSource.find(h => h.hostname === hostname);
+      const host = this.dataSource.find(h => h.ip === ip);
       
       // 删除以下检查，允许在主机检查过程中也能点击重试按钮
       /*
@@ -1909,7 +1911,7 @@ export default {
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
           clusterId: this.clusterId,
-          hostname,
+          ip: ip,
           itemNames: [itemId]  // 只重试选中的单个检查项
         });
         
@@ -1953,9 +1955,9 @@ export default {
     },
 
     // 检查是否有可修复的选中项
-    hasFixableSelectedItems(hostname) {
-      const selectedItems = this.selectedCheckItems[hostname] || [];
-      const items = this.checkItemsMap[hostname] || [];
+    hasFixableSelectedItems(ip) {
+      const selectedItems = this.selectedCheckItems[ip] || [];
+      const items = this.checkItemsMap[ip] || [];
       return selectedItems.some(itemId => {
         const item = items.find(i => i.id === itemId);
         return item && item.status === 'FAILED';
@@ -1963,8 +1965,8 @@ export default {
     },
 
     // 修复选中的检查项
-    async fixSelectedItems(hostname) {
-      const selectedItems = this.selectedCheckItems[hostname] || [];
+    async fixSelectedItems(ip) {
+      const selectedItems = this.selectedCheckItems[ip] || [];
       if (selectedItems.length === 0) {
         this.$message.warning('请选择要修复的检查项');
         return;
@@ -1973,14 +1975,14 @@ export default {
       try {
         const res = await this.$axiosPost(global.API.fixSelectedCheckItems, {
           clusterId: this.clusterId,
-          hostname,
+          ip: ip,
           itemIds: selectedItems.join(',')
         });
         
         if (res.code === 200) {
           this.$message.success('修复指令已发送');
           // 清空选择
-          this.$set(this.selectedCheckItems, hostname, []);
+          this.$set(this.selectedCheckItems, ip, []);
           // 通过轮询获取最新状态
           this.pollingSearch();
         }
@@ -1990,10 +1992,12 @@ export default {
       }
     },
 
-    // 检查是否有可重试的选中项
-    hasRetryableSelectedItems(hostname) {
-      const selectedItems = this.selectedCheckItems[hostname] || [];
-      const items = this.checkItemsMap[hostname] || [];
+    /**
+     * 检查是否有可重试的已选中项
+     */
+    hasRetryableSelectedItems(ip) {
+      const selectedItems = this.selectedCheckItems[ip] || [];
+      const items = this.checkItemsMap[ip] || [];
       
       if (selectedItems.length === 0) {
         return false;
@@ -2011,14 +2015,14 @@ export default {
      * 停止主机检查
      */
     stopCheck(row) {
-      if (!row || !row.hostname) {
-        this.$message.error('参数错误：主机名不能为空');
+      if (!row || !row.ip) {
+        this.$message.error('参数错误：主机IP不能为空');
         return;
       }
 
       try {
         // 立即将该主机所有正在检查的项状态更新为"终止中"
-        const items = this.checkItemsMap[row.hostname] || [];
+        const items = this.checkItemsMap[row.ip] || [];
         let hasUpdated = false;
         
         if (items && items.length > 0) {
@@ -2032,14 +2036,14 @@ export default {
           
           if (hasUpdated) {
             // 更新本地缓存，确保UI立即显示变化
-            this.$set(this.checkItemsMap, row.hostname, [...items]);
+            this.$set(this.checkItemsMap, row.ip, [...items]);
           }
         }
 
         // 调用后端API
         this.$axiosPost(global.API.stopHostCheck, { 
           clusterId: this.clusterId,
-          hostname: row.hostname
+          ip: row.ip
         }).then(res => {
           if (res && res.code === 200) {
             this.$message.success('已终止主机检查');
@@ -2070,7 +2074,7 @@ export default {
     retryCheck(row) {
       this.$axiosPost(global.API.rehostCheck, { 
         clusterId: this.clusterId,
-        hostnames: row.hostname
+        ips: row.ip
       }).then(res => {
         if (res.code === 200) {
           this.$message.success('已重新开始检查');
@@ -2106,22 +2110,22 @@ export default {
     },
 
     // 查看日志
-    viewItemLog(hostname, itemId, itemName) {
+    viewItemLog(ip, itemId, itemName) {
       // 保存当前选择的检查项信息
-      this.currentLogHostname = hostname;
+      this.currentLogIp = ip;
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
       
       // 设置当前检查项信息，用于日志筛选组件
       this.checkItem = {
         clusterId: this.clusterId,
-        hostname: hostname,
+        ip: ip,
         id: itemId,
         itemName: itemName
       };
       
       // 打开日志弹窗并加载日志
-      this.logModalTitle = `日志 - 主机: ${hostname}, 检查项: ${itemName}`;
+      this.logModalTitle = `日志 - 主机: ${ip}, 检查项: ${itemName}`;
       this.logVisible = true;
       this.logContent = '';
       
@@ -2147,7 +2151,7 @@ export default {
     
     // 获取检查项日志
     async fetchItemLog() {
-      if (!this.currentLogHostname || !this.currentLogItemId) {
+      if (!this.currentLogIp || !this.currentLogItemId) {
         return;
       }
       
@@ -2169,7 +2173,7 @@ export default {
         // 准备请求参数
         const params = { 
           clusterId: this.clusterId,
-          hostname: this.currentLogHostname,
+          ip: this.currentLogIp,
           itemId: this.currentLogItemId,
           logType: this.currentLogType,
           logLevel: logLevel,
@@ -2253,28 +2257,28 @@ export default {
     },
 
     // 终止单个检查项
-    async stopCheckItem(hostname, itemId) {
-      if (!hostname || !itemId) {
-        this.$message.error('参数错误：主机名或检查项ID不能为空');
+    async stopCheckItem(ip, itemId) {
+      if (!ip || !itemId) {
+        this.$message.error('参数错误：主机IP或检查项ID不能为空');
         return;
       }
 
       try {
         // 立即将检查项状态更新为"终止中"，提供用户视觉反馈
-        const items = this.checkItemsMap[hostname] || [];
+        const items = this.checkItemsMap[ip] || [];
         const targetItem = items.find(item => item.id === itemId);
         
         if (targetItem && targetItem.status === 'CHECKING') {
           targetItem.status = 'TERMINATING';
           targetItem.message = '正在终止检查...';
           // 更新本地缓存，确保UI立即显示变化
-          this.$set(this.checkItemsMap, hostname, [...items]);
+          this.$set(this.checkItemsMap, ip, [...items]);
         }
 
         // 调用后端API
         const res = await this.$axiosPost(global.API.stopCheckItem, { 
           clusterId: this.clusterId,
-          hostname: hostname,
+          ip: ip,
           itemId: itemId
         });
         
@@ -2300,7 +2304,7 @@ export default {
     closeLogModal() {
       this.logVisible = false;
       this.stopAutoRefresh();
-      this.currentLogHostname = null;
+      this.currentLogIp = null;
       this.currentLogItemId = null;
       this.currentLogItemName = null;
       // 清理checkItem
@@ -3503,5 +3507,4 @@ export default {
   filter: brightness(0.95);
   transform: translateY(1px);
 }
-</style>
-ritten_file>
+</style>ritten_file>

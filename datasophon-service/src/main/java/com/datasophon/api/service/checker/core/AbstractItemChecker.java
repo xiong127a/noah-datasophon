@@ -78,12 +78,12 @@ public abstract class AbstractItemChecker implements ItemChecker {
      */
     protected OsInfo getOsInfo(HostInfo hostInfo) throws InterruptedException {
         // 使用主机名作为缓存键
-        String cacheKey = hostInfo.getHostname();
+        String cacheKey = hostInfo.getIp();
 
         // 检查缓存中是否已存在该主机的OS信息
         OsInfo cachedInfo = hostOsInfoCache.get(cacheKey);
         if (cachedInfo != null && cachedInfo.isValid()) {
-            logger.debug("使用缓存的操作系统信息: {}, {}", hostInfo.getHostname(), cachedInfo);
+            logger.debug("使用缓存的操作系统信息: {}, {}", hostInfo.getIp(), cachedInfo);
             return cachedInfo;
         }
 
@@ -342,7 +342,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         if (hostInfo == null) {
             return "";
         }
-        return String.format("主机: %s, 端口: %d, 用户: %s", hostInfo.getHostname(), hostInfo.getSshPort(),
+        return String.format("主机: %s, 端口: %d, 用户: %s", hostInfo.getIp(), hostInfo.getSshPort(),
                 hostInfo.getSshUser());
     }
 
@@ -504,15 +504,14 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected void openSession(HostInfo hostInfo) {
         try {
             // 通过Mina工具打开SSH连接
-            cacheLog.info("开始连接到主机 %s, 端口: %d, 用户: %s", hostInfo.getHostname(),
+            cacheLog.info("开始连接到主机 %s, 端口: %d, 用户: %s", hostInfo.getIp(),
                     hostInfo.getSshPort(), hostInfo.getSshUser());
 
             // 明确初始化为null，确保之前可能的有效session被清理
             session = null;
 
             // 尝试建立会话连接
-            session = MinaUtils.openConnection(hostInfo.getHostname(),
-                    hostInfo.getSshPort(), hostInfo.getSshUser());
+            session = MinaUtils.openConnection(hostInfo);
 
             // 验证session是否成功建立
             if (session == null) {
@@ -587,13 +586,13 @@ public abstract class AbstractItemChecker implements ItemChecker {
         }
 
         hostInfo.setClusterId(clusterId);
-        logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+        logger.info("开始检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getIp(), checkItem.getId());
 
         // 设置为检查操作
         operationType = LogEntry.Type.CHECK;
 
         // 设置当前检查项的日志缓存键
-        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        setCurrentLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
         // 更新日志记录器的类型
         CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
@@ -609,9 +608,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
             setCurrentHostInfo(hostInfo);
 
             logger.info("开始建立SSH连接到主机: {}, 端口: {}, 用户: {}",
-                    hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                    hostInfo.getIp(), hostInfo.getSshPort(), hostInfo.getSshUser());
             cacheLog.info("开始建立SSH连接到主机: %s, 端口: %d, 用户: %s",
-                    hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                    hostInfo.getIp(), hostInfo.getSshPort(), hostInfo.getSshUser());
 
             try {
                 openSession(hostInfo);
@@ -634,7 +633,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
             // 明确检查session是否成功建立 - 增强处理
             if (session == null) {
-                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getHostname();
+                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getIp();
                 logger.error(errorMsg);
                 cacheLog.error(errorMsg);
 
@@ -654,7 +653,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 return checkItem;
             }
 
-            logger.info("成功连接到主机: {}, 开始执行检查项: {}", hostInfo.getHostname(), checkItem.getItemName());
+            logger.info("成功连接到主机: {}, 开始执行检查项: {}", hostInfo.getIp(), checkItem.getItemName());
 
             try {
                 // 确保cacheLog记录日志
@@ -698,19 +697,19 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 updateCheckStatus(clusterId, hostInfo, checkItem);
             }
         } catch (Exception e) {
-            logger.error("连接主机 {} 时发生异常: {}", hostInfo.getHostname(), e.getMessage(), e);
+            logger.error("连接主机 {} 时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
             checkItem.setStatus(CheckItem.Status.FAILED);
             checkItem.setMessage("连接主机失败: " + e.getMessage());
             updateCheckStatus(clusterId, hostInfo, checkItem);
         } finally {
             if (session != null && !hostInfo.isUseExistingSession()) {
                 // 只有当连接是由当前方法创建时才关闭它
-                logger.info("正在关闭到主机 {} 的SSH连接", hostInfo.getHostname());
+                logger.info("正在关闭到主机 {} 的SSH连接", hostInfo.getIp());
                 closeSession();
-                logger.info("已关闭到主机 {} 的SSH连接", hostInfo.getHostname());
+                logger.info("已关闭到主机 {} 的SSH连接", hostInfo.getIp());
             } else if (session != null) {
                 // 连接是外部提供的，不关闭
-                logger.debug("不关闭SSH连接，由外部管理: {}", hostInfo.getHostname());
+                logger.debug("不关闭SSH连接，由外部管理: {}", hostInfo.getIp());
                 session = null; // 仅清除引用
             }
             // 清理当前主机信息
@@ -734,14 +733,14 @@ public abstract class AbstractItemChecker implements ItemChecker {
         }
 
         hostInfo.setClusterId(clusterId);
-        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(),
+        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getIp(),
                 checkItem.getId());
 
         // 设置为修复操作
         operationType = LogEntry.Type.FIX;
 
         // 设置当前检查项的日志缓存键
-        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        setCurrentLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
         // 更新日志记录器的类型
         CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
@@ -750,7 +749,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
         // 记录修复开始
         cacheLog.info("===============================================");
         cacheLog.info("开始修复检查项: " + checkItem.getItemName());
-        cacheLog.info("主机: " + hostInfo.getHostname());
+        cacheLog.info("主机: " + hostInfo.getIp());
         cacheLog.info("检查项ID: " + checkItem.getId());
         cacheLog.info("开始时间: " + getCurrentTime());
         cacheLog.info("===============================================");
@@ -769,7 +768,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             openSession(hostInfo);
 
             if (session == null) {
-                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getHostname();
+                String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getIp();
                 logger.error(errorMsg);
                 cacheLog.error("错误: " + errorMsg);
                 cacheLog.error("修复失败: 无法连接到主机");
@@ -870,7 +869,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 cacheLog.info("SSH连接已关闭");
             } else if (session != null) {
                 // 连接是外部提供的，不关闭
-                logger.debug("不关闭SSH连接，由外部管理: {}", hostInfo.getHostname());
+                logger.debug("不关闭SSH连接，由外部管理: {}", hostInfo.getIp());
                 session = null; // 仅清除引用
             }
 
@@ -903,7 +902,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 设置初始状态
             hostInfo.setClusterId(clusterId);
             logger.info("使用已存在的SSH会话进行检查: {}, 主机: {}, 检查项ID: {}",
-                    checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+                    checkItem.getItemName(), hostInfo.getIp(), checkItem.getId());
 
             // 添加会话状态日志
             logSessionStatus(hostInfo);
@@ -912,7 +911,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             operationType = LogEntry.Type.CHECK;
 
             // 设置当前检查项的日志缓存键
-            setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            setCurrentLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 更新日志记录器的类型
             CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
@@ -944,7 +943,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 logger.error("等待外部Session超时，无法进行检查，useExistingSession={}, externalSession={}, 主机: {}",
                         hostInfo.isUseExistingSession(),
                         hostInfo.getExternalSession() != null ? "已设置" : "未设置",
-                        hostInfo.getHostname());
+                        hostInfo.getIp());
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("无法获取SSH会话");
                 updateCheckStatus(clusterId, hostInfo, checkItem);
@@ -1021,13 +1020,13 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 设置初始状态
             hostInfo.setClusterId(clusterId);
             logger.info("使用已存在的SSH会话进行修复: {}, 主机: {}, 检查项ID: {}",
-                    checkItem.getItemName(), hostInfo.getHostname(), checkItem.getId());
+                    checkItem.getItemName(), hostInfo.getIp(), checkItem.getId());
 
             // 设置为修复操作
             operationType = LogEntry.Type.FIX;
 
             // 设置当前检查项的日志缓存键
-            setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            setCurrentLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 更新日志记录器的类型
             CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
@@ -1036,7 +1035,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             // 记录修复开始
             cacheLog.info("===============================================");
             cacheLog.info("开始修复检查项: " + checkItem.getItemName());
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("检查项ID: " + checkItem.getId());
             cacheLog.info("开始时间: " + getCurrentTime());
             cacheLog.info("使用已存在的SSH会话");
@@ -1170,17 +1169,17 @@ public abstract class AbstractItemChecker implements ItemChecker {
     private void updateCheckStatus(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         String cacheKey = clusterId + Constants.HOST_MAP;
         logger.debug("更新检查状态: 主机={}, 检查项ID={}, 状态={}, 消息={}",
-                hostInfo.getHostname(), checkItem.getId(), checkItem.getStatus(), checkItem.getMessage());
+                hostInfo.getIp(), checkItem.getId(), checkItem.getStatus(), checkItem.getMessage());
 
         try {
             // 记录更新前的状态
             logger.info("正在更新检查项状态 - 主机: {}, 检查项: {}, 当前状态: {}, 新状态: {}",
-                    hostInfo.getHostname(), checkItem.getItemName(),
+                    hostInfo.getIp(), checkItem.getItemName(),
                     "更新前", checkItem.getStatus());
 
             Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
             if (hostInfoMap != null) {
-                HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getHostname());
+                HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getIp());
                 if (cachedHostInfo != null) {
                     boolean updated = false;
                     for (CheckItem item : cachedHostInfo.getCheckItems()) {
@@ -1199,17 +1198,17 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     }
 
                     if (!updated) {
-                        logger.warn("未找到要更新的检查项: 主机={}, 检查项ID={}", hostInfo.getHostname(), checkItem.getId());
+                        logger.warn("未找到要更新的检查项: 主机={}, 检查项ID={}", hostInfo.getIp(), checkItem.getId());
                     } else {
                         // 更新主机的整体状态（根据检查项状态计算）
                         cachedHostInfo.calculateStatus();
-                        hostInfoMap.put(hostInfo.getHostname(), cachedHostInfo);
+                        hostInfoMap.put(hostInfo.getIp(), cachedHostInfo);
                         CacheUtils.put(cacheKey, hostInfoMap);
                         logger.debug("缓存已更新: cacheKey={}, 主机状态={}",
                                 cacheKey, cachedHostInfo.getStatus());
                     }
                 } else {
-                    logger.warn("缓存中未找到主机信息: hostname={}", hostInfo.getHostname());
+                    logger.warn("缓存中未找到主机信息: hostname={}", hostInfo.getIp());
                 }
             } else {
                 logger.warn("缓存中未找到主机映射: cacheKey={}", cacheKey);
@@ -1290,7 +1289,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
         // 添加主机基本信息组
         html.append(HtmlStyleHelper.beginGroup());
-        html.append(HtmlStyleHelper.generatePropertyRow("主机", hostInfo.getHostname(), HtmlStyleHelper.Colors.INFO));
+        html.append(HtmlStyleHelper.generatePropertyRow("主机", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO));
         html.append(HtmlStyleHelper.generatePropertyRow("IP地址", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO));
         html.append(
                 HtmlStyleHelper.generatePropertyRow("检查时间", getCurrentTime(), HtmlStyleHelper.Colors.GRAY));

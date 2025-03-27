@@ -124,7 +124,7 @@ export default {
     // 设置默认值
     setTimeout(() => {
       this.form.setFieldsValue({
-        hosts: '192.168.200.21,192.168.30.200,192.168.30.201,192.168.30.202',
+        hosts: '192.168.200.21,192.168.30.[200-204]',
         sshUser: 'root',
         sshPort: 22,
         sshPassword: 'root'

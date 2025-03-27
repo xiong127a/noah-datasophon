@@ -27,7 +27,7 @@ public class FirewallChecker extends AbstractItemChecker {
         CheckLogger cacheLog = this.cacheLog;
 
         try {
-            log.info("开始检查主机 {} 的防火墙状态", hostInfo.getHostname());
+            log.info("开始检查主机 {} 的防火墙状态", hostInfo.getIp());
             cacheLog.info("开始检查防火墙状态...");
 
             // 更新检查项状态
@@ -37,7 +37,7 @@ public class FirewallChecker extends AbstractItemChecker {
             if (session == null) {
                 // 检查hostInfo中是否有可用的会话
                 if (!hostInfo.isSessionReady()) {
-                    String errorMsg = "SSH会话未就绪，无法执行防火墙检查: " + hostInfo.getHostname();
+                    String errorMsg = "SSH会话未就绪，无法执行防火墙检查: " + hostInfo.getIp();
                     log.error(errorMsg);
                     cacheLog.error(errorMsg);
                     checkItem.setStatus(CheckItem.Status.FAILED);
@@ -70,7 +70,7 @@ public class FirewallChecker extends AbstractItemChecker {
                 return checkItem;
             }
 
-            log.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+            log.info("主机 {} 操作系统: {}", hostInfo.getIp(), osInfo.getFullName());
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
@@ -176,7 +176,7 @@ public class FirewallChecker extends AbstractItemChecker {
             checkItem.setMessage("检查防火墙失败: " + (StringUtils.isBlank(e.getMessage()) ? "未知错误" : e.getMessage()));
             return checkItem;
         } finally {
-            log.info("完成主机 {} 的防火墙检查", hostInfo.getHostname());
+            log.info("完成主机 {} 的防火墙检查", hostInfo.getIp());
             cacheLog.info("防火墙检查完成");
         }
     }
@@ -186,7 +186,7 @@ public class FirewallChecker extends AbstractItemChecker {
         CheckLogger cacheLog = this.cacheLog;
 
         try {
-            log.info("开始修复主机 {} 的防火墙配置", hostInfo.getHostname());
+            log.info("开始修复主机 {} 的防火墙配置", hostInfo.getIp());
             cacheLog.info("开始修复防火墙配置...");
 
             // 更新修复项状态
@@ -196,7 +196,7 @@ public class FirewallChecker extends AbstractItemChecker {
             if (session == null) {
                 // 检查hostInfo中是否有可用的会话
                 if (!hostInfo.isSessionReady()) {
-                    String errorMsg = "SSH会话未就绪，无法执行防火墙修复: " + hostInfo.getHostname();
+                    String errorMsg = "SSH会话未就绪，无法执行防火墙修复: " + hostInfo.getIp();
                     log.error(errorMsg);
                     cacheLog.error(errorMsg);
                     checkItem.setStatus(CheckItem.Status.FAILED);
@@ -226,7 +226,7 @@ public class FirewallChecker extends AbstractItemChecker {
                 return false;
             }
 
-            log.info("主机 {} 操作系统: {}", hostInfo.getHostname(), osInfo.getFullName());
+            log.info("主机 {} 操作系统: {}", hostInfo.getIp(), osInfo.getFullName());
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
@@ -246,10 +246,10 @@ public class FirewallChecker extends AbstractItemChecker {
 
             // 记录修复结果
             if (result) {
-                log.info("主机 {} 防火墙修复成功", hostInfo.getHostname());
+                log.info("主机 {} 防火墙修复成功", hostInfo.getIp());
                 cacheLog.info("防火墙修复成功");
             } else {
-                log.warn("主机 {} 防火墙修复失败", hostInfo.getHostname());
+                log.warn("主机 {} 防火墙修复失败", hostInfo.getIp());
                 cacheLog.warn("防火墙修复失败");
             }
 
@@ -264,7 +264,7 @@ public class FirewallChecker extends AbstractItemChecker {
             checkItem.setMessage("修复防火墙失败: " + (StringUtils.isBlank(e.getMessage()) ? "未知错误" : e.getMessage()));
             return false;
         } finally {
-            log.info("完成主机 {} 的防火墙修复", hostInfo.getHostname());
+            log.info("完成主机 {} 的防火墙修复", hostInfo.getIp());
             cacheLog.info("防火墙修复完成");
         }
     }

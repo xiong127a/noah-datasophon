@@ -1,5 +1,4 @@
 <!--
-/*
  *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -310,67 +309,87 @@ export default {
   justify-content: space-between;
   flex-direction: column;
   
+  // 添加通用的steps类样式
+  :deep(.steps) {
+    padding-bottom: 30px; // 为所有步骤组件添加底部内边距，给footer留出空间
+  }
+  
   .steps-rf-container {
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 100px; // 添加底部padding，为固定定位的footer留出空间
+    padding-bottom: 16px; // 减小底部padding，因为footer不再是固定定位
   }
   
   .footer {
     width: 100%;
     height: 80px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid #e3e4e6;
+    background: rgba(255, 255, 255, 0.85); // 稍微调整透明度
+    backdrop-filter: blur(20px); // 增强模糊效果
+    -webkit-backdrop-filter: blur(20px);
+    border-top: none; // 移除分割线
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    z-index: 100;
+    position: relative;
+    margin-top: 20px;
+    z-index: 10;
+    box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.03); // 更微妙的阴影
     
     button {
       height: 44px;
+      min-width: 120px; // 确保按钮宽度一致
       padding: 0 24px;
       font-size: 15px;
       font-weight: 500;
       border-radius: 22px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 0 8px;
+      transition: all 0.25s cubic-bezier(0.2, 0.1, 0, 1); // 苹果风格的过渡效果
+      margin: 0 10px;
+      letter-spacing: -0.01em; // 微调字间距
       
-      // 取消按钮样式
+      // 取消按钮样式 - 轻色调设计
       &.ant-btn {
-        background: @apple-gray-light;
-        border: none;
+        background: transparent; // 透明背景
+        border: 1px solid rgba(0, 0, 0, 0.1); // 微妙的边框
         color: @apple-black;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         
         &:hover {
-          background: darken(@apple-gray-light, 5%);
+          background: rgba(0, 0, 0, 0.03);
+          border-color: rgba(0, 0, 0, 0.15);
+          transform: translateY(-1px);
         }
         
         &:active {
-          background: darken(@apple-gray-light, 10%);
+          background: rgba(0, 0, 0, 0.06);
+          transform: translateY(0);
+          transition: all 0.1s;
         }
       }
       
-      // 下一步按钮样式
+      // 下一步按钮样式 - 主要操作按钮
       &.ant-btn-primary {
         background: @apple-blue;
         border: none;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 113, 227, 0.2); // 蓝色阴影效果
         
         &:hover {
           background: @apple-blue-hover;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
         }
         
         &:active {
-          background: darken(@apple-blue, 10%);
+          background: darken(@apple-blue, 5%);
+          transform: translateY(0);
+          box-shadow: 0 1px 4px rgba(0, 113, 227, 0.2);
+          transition: all 0.1s;
         }
         
         &.ant-btn-loading {
-          opacity: 0.8;
+          opacity: 0.9;
           pointer-events: none;
+          box-shadow: 0 2px 6px rgba(0, 113, 227, 0.15);
           
           .anticon {
             margin-right: 6px;

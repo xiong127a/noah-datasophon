@@ -329,7 +329,7 @@ public class HostCheckQueueManager {
      */
     public void addCheckTask(Integer clusterId, HostInfo hostInfo, HostCheckServiceImpl hostCheckService) {
         ensureSystemRunning();
-        String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
+        String taskKey = getTaskKey(clusterId, hostInfo.getIp());
 
         // 检查任务是否已经在队列或正在运行
         if (taskKeysInQueue.contains(taskKey) || runningTasks.containsKey(taskKey)) {
@@ -340,7 +340,7 @@ public class HostCheckQueueManager {
         CheckTask task = new CheckTask(clusterId, hostInfo, hostCheckService);
         checkQueue.offer(task);
         taskKeysInQueue.add(taskKey);
-        logger.info("已添加检查任务到队列: 主机={}, 任务键={}", hostInfo.getHostname(), taskKey);
+        logger.info("已添加检查任务到队列: 主机={}, 任务键={}", hostInfo.getIp(), taskKey);
     }
 
     /**
@@ -350,18 +350,18 @@ public class HostCheckQueueManager {
     public void addPartialCheckTask(Integer clusterId, HostInfo hostInfo, List<CheckItem> itemsToCheck,
             HostCheckServiceImpl hostCheckService) {
         ensureSystemRunning();
-        String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
+        String taskKey = getTaskKey(clusterId, hostInfo.getIp());
 
         // 检查任务是否已经在队列或正在运行
         if (taskKeysInQueue.contains(taskKey) || runningTasks.containsKey(taskKey)) {
             logger.info("任务已经在队列或正在运行中，将取消旧任务并添加新任务: {}", taskKey);
             // 取消任何正在运行的任务
-            cancelTask(clusterId, hostInfo.getHostname());
+            cancelTask(clusterId, hostInfo.getIp());
         }
 
         // 创建一个修改后的HostInfo对象，只包含需要检查的项目
         HostInfo partialHostInfo = new HostInfo();
-        partialHostInfo.setHostname(hostInfo.getHostname());
+        partialHostInfo.setIp(hostInfo.getIp());
         partialHostInfo.setSshPort(hostInfo.getSshPort());
         partialHostInfo.setSshUser(hostInfo.getSshUser());
         partialHostInfo.setSshPassword(hostInfo.getSshPassword());
@@ -375,7 +375,7 @@ public class HostCheckQueueManager {
         taskKeysInQueue.add(taskKey);
 
         logger.info("已添加部分检查任务到队列: 主机={}, 检查项数量={}, 任务键={}",
-                hostInfo.getHostname(), itemsToCheck.size(), taskKey);
+                hostInfo.getIp(), itemsToCheck.size(), taskKey);
     }
 
     /**
@@ -454,17 +454,17 @@ public class HostCheckQueueManager {
      */
     public void addCheckTaskWithPriority(Integer clusterId, HostInfo hostInfo,
             HostCheckServiceImpl hostCheckService, int priority) {
-        String taskKey = getTaskKey(clusterId, hostInfo.getHostname());
+        String taskKey = getTaskKey(clusterId, hostInfo.getIp());
         try {
             // 如果任务已在运行，则不添加
             if (runningTasks.containsKey(taskKey)) {
-                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getHostname());
+                logger.info("主机 {} 的检查任务正在运行中，跳过本次添加", hostInfo.getIp());
                 return;
             }
 
             // 使用Set检查队列中是否已存在该任务
             if (taskKeysInQueue.contains(taskKey)) {
-                logger.info("主机 {} 的检查任务已在队列中等待执行，跳过本次添加", hostInfo.getHostname());
+                logger.info("主机 {} 的检查任务已在队列中等待执行，跳过本次添加", hostInfo.getIp());
                 return;
             }
 
@@ -493,12 +493,12 @@ public class HostCheckQueueManager {
             if (added) {
                 taskKeysInQueue.add(taskKey);
                 logger.info("成功添加主机 {} 的检查任务到队列，优先级: {}, 新队列大小: {}",
-                        hostInfo.getHostname(), priority, checkQueue.size());
+                        hostInfo.getIp(), priority, checkQueue.size());
             } else {
-                logger.error("添加主机 {} 的检查任务到队列失败，队列可能已满", hostInfo.getHostname());
+                logger.error("添加主机 {} 的检查任务到队列失败，队列可能已满", hostInfo.getIp());
             }
         } catch (Exception e) {
-            logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getHostname(), e.getMessage(), e);
+            logger.error("添加检查任务时发生错误: {}, {}", hostInfo.getIp(), e.getMessage(), e);
         }
     }
 
@@ -524,7 +524,7 @@ public class HostCheckQueueManager {
 
         // 同时从队列中移除待执行的任务
         checkQueue.removeIf(task -> {
-            boolean shouldRemove = getTaskKey(task.getClusterId(), task.getHostInfo().getHostname()).equals(taskKey);
+            boolean shouldRemove = getTaskKey(task.getClusterId(), task.getHostInfo().getIp()).equals(taskKey);
             if (shouldRemove) {
                 taskKeysInQueue.remove(taskKey);
             }
@@ -587,7 +587,7 @@ public class HostCheckQueueManager {
                     continue;
                 }
 
-                String hostname = task.getHostInfo().getHostname();
+                String hostname = task.getHostInfo().getIp();
                 String taskKey = getTaskKey(task.getClusterId(), hostname);
 
                 // 从任务跟踪集合中移除
@@ -815,19 +815,19 @@ public class HostCheckQueueManager {
             String originalThreadName = currentThread.getName();
 
             // 设置新的线程名
-            currentThread.setName("host-check-" + hostInfo.getHostname());
-            logger.info("开始执行主机 {} 的检查任务", hostInfo.getHostname());
+            currentThread.setName("host-check-" + hostInfo.getIp());
+            logger.info("开始执行主机 {} 的检查任务", hostInfo.getIp());
 
             long startTime = System.currentTimeMillis();
             tasksProcessed.incrementAndGet();
 
             try {
                 hostCheckService.processHostCheck(clusterId, hostInfo);
-                logger.info("主机 {} 的检查任务执行完成", hostInfo.getHostname());
+                logger.info("主机 {} 的检查任务执行完成", hostInfo.getIp());
                 tasksSucceeded.incrementAndGet();
             } catch (Exception e) {
                 logger.error("执行主机 {} 的检查任务时发生错误: {}",
-                        hostInfo.getHostname(), e.getMessage(), e);
+                        hostInfo.getIp(), e.getMessage(), e);
                 tasksFailed.incrementAndGet();
             } finally {
                 // 统计执行时间
@@ -1176,8 +1176,8 @@ public class HostCheckQueueManager {
         for (CheckTask task : checkQueue) {
             QueueTaskInfo taskInfo = new QueueTaskInfo();
             taskInfo.setClusterId(task.getClusterId());
-            taskInfo.setHostname(task.getHostInfo().getHostname());
-            taskInfo.setTaskId("waiting_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
+            taskInfo.setHostname(task.getHostInfo().getIp());
+            taskInfo.setTaskId("waiting_" + task.getClusterId() + ":" + task.getHostInfo().getIp());
             taskInfo.setStatus("等待中");
             taskInfo.setPriority(task.getPriority());
             taskInfo.setFixTask(false);
@@ -1200,12 +1200,12 @@ public class HostCheckQueueManager {
      * @param hostInfo  主机信息
      */
     public void processHostFix(Integer clusterId, HostInfo hostInfo) {
-        logger.info("开始为主机 {} 执行修复任务", hostInfo.getHostname());
+        logger.info("开始为主机 {} 执行修复任务", hostInfo.getIp());
 
         // 修复状态为FAILED的所有检查项
         List<CheckItem> checkItems = hostInfo.getCheckItems();
         if (checkItems == null || checkItems.isEmpty()) {
-            logger.warn("主机 {} 没有需要修复的检查项", hostInfo.getHostname());
+            logger.warn("主机 {} 没有需要修复的检查项", hostInfo.getIp());
             return;
         }
 
@@ -1233,7 +1233,7 @@ public class HostCheckQueueManager {
         }
 
         logger.info("主机 {} 的修复任务完成，成功修复 {} 项，失败 {} 项",
-                hostInfo.getHostname(), fixedCount, failedCount);
+                hostInfo.getIp(), fixedCount, failedCount);
     }
 
     /**
@@ -1316,20 +1316,20 @@ public class HostCheckQueueManager {
     public String addFixTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         try {
             // 生成任务标识和追踪键
-            String taskId = "FIX_" + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
-            String taskKey = getFixTaskKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            String taskId = "FIX_" + clusterId + "_" + hostInfo.getIp() + "_" + checkItem.getId();
+            String taskKey = getFixTaskKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 检查是否已经在队列中
             if (fixTaskKeysInQueue.contains(taskKey)) {
                 logger.info("主机 {} 的修复任务已在队列中, 项目: {}",
-                        hostInfo.getHostname(), checkItem.getItemName());
+                        hostInfo.getIp(), checkItem.getItemName());
                 return null;
             }
 
             // 检查是否正在运行
             if (runningFixTasks.containsKey(taskKey)) {
                 logger.info("主机 {} 的修复任务正在执行中, 项目: {}",
-                        hostInfo.getHostname(), checkItem.getItemName());
+                        hostInfo.getIp(), checkItem.getItemName());
                 return null;
             }
 
@@ -1371,7 +1371,7 @@ public class HostCheckQueueManager {
                     continue;
                 }
 
-                String hostname = task.getHostInfo().getHostname();
+                String hostname = task.getHostInfo().getIp();
                 String taskKey = getFixTaskKey(task.getClusterId(), hostname, task.getCheckItem().getId());
 
                 // 从任务跟踪集合中移除
@@ -1476,8 +1476,8 @@ public class HostCheckQueueManager {
         for (FixTask task : fixQueue) {
             QueueTaskInfo taskInfo = new QueueTaskInfo();
             taskInfo.setClusterId(task.getClusterId());
-            taskInfo.setHostname(task.getHostInfo().getHostname());
-            taskInfo.setTaskId("waiting_fix_" + task.getClusterId() + ":" + task.getHostInfo().getHostname());
+            taskInfo.setHostname(task.getHostInfo().getIp());
+            taskInfo.setTaskId("waiting_fix_" + task.getClusterId() + ":" + task.getHostInfo().getIp());
             taskInfo.setStatus("等待中");
             taskInfo.setFixTask(true);
             taskDetails.add(taskInfo);
@@ -1517,19 +1517,19 @@ public class HostCheckQueueManager {
         @Override
         public void run() {
             String originalThreadName = Thread.currentThread().getName();
-            Thread.currentThread().setName("host-fix-" + hostInfo.getHostname() + "-" + checkItem.getId());
+            Thread.currentThread().setName("host-fix-" + hostInfo.getIp() + "-" + checkItem.getId());
 
             long startTime = System.currentTimeMillis();
-            String logKey = "FIX_ITEM_LOG_" + clusterId + "_" + hostInfo.getHostname() + "_" + checkItem.getId();
+            String logKey = "FIX_ITEM_LOG_" + clusterId + "_" + hostInfo.getIp() + "_" + checkItem.getId();
 
             try {
                 // 记录任务开始日志
                 String startMessage = String.format("开始执行主机 %s 的修复任务: %s (ID: %d)",
-                        hostInfo.getHostname(), checkItem.getItemName(), checkItem.getId());
+                        hostInfo.getIp(), checkItem.getItemName(), checkItem.getId());
                 LogEntry startLogEntry = createLogEntry(LogEntry.Level.INFO, startMessage, LogEntry.Type.FIX);
                 LogEntryManager.addLogEntry(logKey, startLogEntry);
 
-                logger.info("开始执行主机 {} 的修复任务: {}", hostInfo.getHostname(), checkItem.getItemName());
+                logger.info("开始执行主机 {} 的修复任务: {}", hostInfo.getIp(), checkItem.getItemName());
 
                 // 标记修复任务为进行中
                 checkItem.setStatus(CheckItem.Status.FIXING);
@@ -1594,7 +1594,7 @@ public class HostCheckQueueManager {
                         if (success) {
                             fixTasksSucceeded.incrementAndGet();
 
-                            String successMsg = String.format("主机 %s 的免密登录修复任务执行成功", hostInfo.getHostname());
+                            String successMsg = String.format("主机 %s 的免密登录修复任务执行成功", hostInfo.getIp());
                             LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
                                     LogEntry.Type.FIX);
                             LogEntryManager.addLogEntry(logKey, successLogEntry);
@@ -1605,7 +1605,7 @@ public class HostCheckQueueManager {
                         } else {
                             fixTasksFailed.incrementAndGet();
 
-                            String failMsg = String.format("主机 %s 的免密登录修复任务执行失败", hostInfo.getHostname());
+                            String failMsg = String.format("主机 %s 的免密登录修复任务执行失败", hostInfo.getIp());
                             LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
                             LogEntryManager.addLogEntry(logKey, failLogEntry);
 
@@ -1615,7 +1615,7 @@ public class HostCheckQueueManager {
                         }
                     } catch (Exception e) {
                         String errorMsg = String.format("执行主机 %s 的免密登录修复任务时发生异常: %s",
-                                hostInfo.getHostname(), e.getMessage());
+                                hostInfo.getIp(), e.getMessage());
                         LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg,
                                 LogEntry.Type.FIX);
                         LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
@@ -1646,7 +1646,7 @@ public class HostCheckQueueManager {
                         fixTasksSucceeded.incrementAndGet();
 
                         String successMsg = String.format("主机 %s 的修复任务 %s 执行成功",
-                                hostInfo.getHostname(), checkItem.getItemName());
+                                hostInfo.getIp(), checkItem.getItemName());
                         LogEntry successLogEntry = createLogEntry(LogEntry.Level.INFO, successMsg,
                                 LogEntry.Type.FIX);
                         LogEntryManager.addLogEntry(logKey, successLogEntry);
@@ -1658,7 +1658,7 @@ public class HostCheckQueueManager {
                         fixTasksFailed.incrementAndGet();
 
                         String failMsg = String.format("主机 %s 的修复任务 %s 执行失败",
-                                hostInfo.getHostname(), checkItem.getItemName());
+                                hostInfo.getIp(), checkItem.getItemName());
                         LogEntry failLogEntry = createLogEntry(LogEntry.Level.WARN, failMsg, LogEntry.Type.FIX);
                         LogEntryManager.addLogEntry(logKey, failLogEntry);
 
@@ -1671,7 +1671,7 @@ public class HostCheckQueueManager {
             } catch (Exception e) {
                 // 处理异常情况
                 String errorMsg = String.format("执行主机 %s 的修复任务时发生异常: %s",
-                        hostInfo.getHostname(), e.getMessage());
+                        hostInfo.getIp(), e.getMessage());
                 LogEntry exceptionLogEntry = createLogEntry(LogEntry.Level.ERROR, errorMsg, LogEntry.Type.FIX);
                 LogEntryManager.addLogEntry(logKey, exceptionLogEntry);
 
@@ -1684,7 +1684,7 @@ public class HostCheckQueueManager {
             } finally {
                 // 记录任务完成
                 String endMessage = String.format("主机 %s 的修复任务 %s 已完成，耗时: %d 毫秒",
-                        hostInfo.getHostname(), checkItem.getItemName(), System.currentTimeMillis() - startTime);
+                        hostInfo.getIp(), checkItem.getItemName(), System.currentTimeMillis() - startTime);
                 LogEntry endLogEntry = createLogEntry(LogEntry.Level.INFO, endMessage, LogEntry.Type.FIX);
                 LogEntryManager.addLogEntry(logKey, endLogEntry);
 
@@ -1809,7 +1809,7 @@ public class HostCheckQueueManager {
 
             // 检查是否是免密检查项
             boolean isPasswordFreeItem = ItemCode.PASSWORD_FREE.equals(checkItem.getItemCode());
-            String taskKey = getFixTaskKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            String taskKey = getFixTaskKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 任务已在运行中，跳过
             if (runningFixTasks.containsKey(taskKey)) {
@@ -1822,7 +1822,7 @@ public class HostCheckQueueManager {
             fixTaskKeysInQueue.remove(taskKey);
 
             logger.info("正在处理修复任务: clusterId={}, 主机={}, 检查项={}",
-                    clusterId, hostInfo.getHostname(), checkItem.getItemName());
+                    clusterId, hostInfo.getIp(), checkItem.getItemName());
 
             // 将任务提交到线程池执行
             Future<?> future = fixExecutorService.submit(new HostFixTask(
@@ -1850,9 +1850,9 @@ public class HostCheckQueueManager {
         try {
             Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (map != null) {
-                map.put(hostInfo.getHostname(), hostInfo);
+                map.put(hostInfo.getIp(), hostInfo);
                 CacheUtils.put(clusterId + Constants.HOST_MAP, map);
-                logger.debug("已更新主机信息缓存: clusterId={}, hostname={}", clusterId, hostInfo.getHostname());
+                logger.debug("已更新主机信息缓存: clusterId={}, hostname={}", clusterId, hostInfo.getIp());
             } else {
                 logger.warn("无法更新主机信息缓存，未找到集群对应的缓存: clusterId={}", clusterId);
             }
@@ -1876,7 +1876,7 @@ public class HostCheckQueueManager {
                 // 记录修复前的状态以便日志记录
                 CheckItem.Status oldStatus = checkItem.getStatus();
                 logger.info("修复任务执行成功，准备更新状态: clusterId={}, hostname={}, itemId={}, 原状态={}",
-                        clusterId, hostInfo.getHostname(), checkItem.getId(), oldStatus);
+                        clusterId, hostInfo.getIp(), checkItem.getId(), oldStatus);
 
                 // 修复成功后，强制更新状态为SUCCESS
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
@@ -1889,7 +1889,7 @@ public class HostCheckQueueManager {
                 // 获取检查项代码，如果是JAVA_ENV，增加特殊处理
                 if ("JAVA_ENV".equals(checkItem.getItemCode())) {
                     logger.info("Java环境检查项修复成功，特别确保状态更新: clusterId={}, hostname={}, itemId={}, 原状态={}, 新状态=SUCCESS",
-                            clusterId, hostInfo.getHostname(), checkItem.getId(), oldStatus);
+                            clusterId, hostInfo.getIp(), checkItem.getId(), oldStatus);
 
                     // 直接遍历并更新检查项状态，确保修改生效
                     boolean foundInHost = false;
@@ -1923,7 +1923,7 @@ public class HostCheckQueueManager {
                 // 立即再次获取并检查状态，确保状态已经正确更新
                 Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
                 if (map != null) {
-                    HostInfo cachedInfo = map.get(hostInfo.getHostname());
+                    HostInfo cachedInfo = map.get(hostInfo.getIp());
                     if (cachedInfo != null) {
                         CheckItem cachedItem = null;
                         for (CheckItem item : cachedInfo.getCheckItems()) {
@@ -1935,16 +1935,16 @@ public class HostCheckQueueManager {
 
                         if (cachedItem != null) {
                             logger.info("修复任务完成后缓存状态确认: clusterId={}, hostname={}, itemId={}, 缓存状态={}",
-                                    clusterId, hostInfo.getHostname(), checkItem.getId(), cachedItem.getStatus());
+                                    clusterId, hostInfo.getIp(), checkItem.getId(), cachedItem.getStatus());
 
                             // 如果缓存中的状态不是SUCCESS，强制更新
                             if (cachedItem.getStatus() != CheckItem.Status.SUCCESS) {
                                 logger.warn("修复后状态未正确更新，强制更新状态: clusterId={}, hostname={}, itemId={}",
-                                        clusterId, hostInfo.getHostname(), checkItem.getId());
+                                        clusterId, hostInfo.getIp(), checkItem.getId());
                                 cachedItem.setStatus(CheckItem.Status.SUCCESS);
                                 cachedItem.setMessage("修复成功（状态已强制更新）");
                                 cachedInfo.calculateStatus();
-                                map.put(hostInfo.getHostname(), cachedInfo);
+                                map.put(hostInfo.getIp(), cachedInfo);
                                 CacheUtils.put(clusterId + Constants.HOST_MAP, map);
 
                                 // 对Java环境特殊处理，确保状态正确
@@ -1954,7 +1954,7 @@ public class HostCheckQueueManager {
                                         Thread.sleep(500); // 短暂延迟，等待其他可能的状态更新
 
                                         // 最终状态确认和强制更新
-                                        HostInfo finalInfo = map.get(hostInfo.getHostname());
+                                        HostInfo finalInfo = map.get(hostInfo.getIp());
                                         if (finalInfo != null) {
                                             for (CheckItem item : finalInfo.getCheckItems()) {
                                                 if (item.getId().equals(checkItem.getId()) &&
@@ -1964,7 +1964,7 @@ public class HostCheckQueueManager {
                                                     item.setStatus(CheckItem.Status.SUCCESS);
                                                     item.setMessage("Java环境修复成功（最终强制更新）");
                                                     finalInfo.calculateStatus();
-                                                    map.put(hostInfo.getHostname(), finalInfo);
+                                                    map.put(hostInfo.getIp(), finalInfo);
                                                     CacheUtils.put(clusterId + Constants.HOST_MAP, map);
                                                 }
                                             }
@@ -1980,11 +1980,11 @@ public class HostCheckQueueManager {
                 }
 
                 logger.info("修复任务完成后状态已更新: clusterId={}, hostname={}, itemId={}, 状态={}",
-                        clusterId, hostInfo.getHostname(), checkItem.getId(), CheckItem.Status.SUCCESS);
+                        clusterId, hostInfo.getIp(), checkItem.getId(), CheckItem.Status.SUCCESS);
             } else {
                 // 修复失败
                 logger.info("修复任务执行失败: clusterId={}, hostname={}, itemId={}",
-                        clusterId, hostInfo.getHostname(), checkItem.getId());
+                        clusterId, hostInfo.getIp(), checkItem.getId());
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 checkItem.setMessage("修复失败");
@@ -1994,7 +1994,7 @@ public class HostCheckQueueManager {
                 updateHostInfoCache(clusterId, hostInfo);
 
                 logger.info("修复任务失败后状态已更新: clusterId={}, hostname={}, itemId={}, 状态={}",
-                        clusterId, hostInfo.getHostname(), checkItem.getId(), CheckItem.Status.FAILED);
+                        clusterId, hostInfo.getIp(), checkItem.getId(), CheckItem.Status.FAILED);
             }
         } catch (Exception e) {
             logger.error("处理修复任务完成后更新状态时出错: {}", e.getMessage(), e);
@@ -2038,7 +2038,7 @@ public class HostCheckQueueManager {
 
         @Override
         public void run() {
-            logger.info("开始执行主机 {} 上的修复任务", fixTask.getHostInfo().getHostname());
+            logger.info("开始执行主机 {} 上的修复任务", fixTask.getHostInfo().getIp());
             Integer clusterId = fixTask.getClusterId();
             HostInfo hostInfo = fixTask.getHostInfo();
             HostCheckServiceImpl hostCheckService = fixTask.getHostCheckService();
@@ -2054,17 +2054,17 @@ public class HostCheckQueueManager {
             while (!success && attempts < MAX_RETRY_ATTEMPTS) {
                 attempts++;
                 try {
-                    logger.info("执行主机 {} 的修复任务，第 {} 次尝试，修复项: {}", hostInfo.getHostname(),
+                    logger.info("执行主机 {} 的修复任务，第 {} 次尝试，修复项: {}", hostInfo.getIp(),
                             attempts, String.join(", ", fixItemNames));
 
                     // 执行修复操作
                     success = hostCheckService.doHostFix(clusterId, hostInfo, fixItems);
 
                     if (success) {
-                        logger.info("主机 {} 的修复任务在第 {} 次尝试成功完成", hostInfo.getHostname(), attempts);
+                        logger.info("主机 {} 的修复任务在第 {} 次尝试成功完成", hostInfo.getIp(), attempts);
                         break; // 修复成功，跳出循环
                     } else {
-                        logger.warn("主机 {} 的修复任务第 {} 次尝试失败", hostInfo.getHostname(), attempts);
+                        logger.warn("主机 {} 的修复任务第 {} 次尝试失败", hostInfo.getIp(), attempts);
                         if (attempts < MAX_RETRY_ATTEMPTS) {
                             logger.info("将在 {} 毫秒后进行第 {} 次重试", RETRY_DELAY_MS, attempts + 1);
                             Thread.sleep(RETRY_DELAY_MS); // 延迟一段时间后重试
@@ -2072,7 +2072,7 @@ public class HostCheckQueueManager {
                     }
                 } catch (Exception e) {
                     lastException = e;
-                    logger.error("主机 {} 的修复任务第 {} 次尝试出现异常: {}", hostInfo.getHostname(),
+                    logger.error("主机 {} 的修复任务第 {} 次尝试出现异常: {}", hostInfo.getIp(),
                             attempts, e.getMessage(), e);
                     if (attempts < MAX_RETRY_ATTEMPTS) {
                         logger.info("将在 {} 毫秒后进行第 {} 次重试", RETRY_DELAY_MS, attempts + 1);
@@ -2097,16 +2097,16 @@ public class HostCheckQueueManager {
             if (success) {
                 fixTasksSucceeded.incrementAndGet();
                 logger.info("主机 {} 的修复任务成功完成，耗时 {} ms，尝试次数: {}/{}",
-                        hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
+                        hostInfo.getIp(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
             } else {
                 fixTasksFailed.incrementAndGet();
                 if (lastException != null) {
                     logger.error("主机 {} 的修复任务最终失败，耗时 {} ms，尝试次数: {}/{}, 最后错误: {}",
-                            hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS,
+                            hostInfo.getIp(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS,
                             lastException.getMessage());
                 } else {
                     logger.error("主机 {} 的修复任务最终失败，耗时 {} ms，尝试次数: {}/{}",
-                            hostInfo.getHostname(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
+                            hostInfo.getIp(), executionTimeMs, attempts, MAX_RETRY_ATTEMPTS);
                 }
             }
 

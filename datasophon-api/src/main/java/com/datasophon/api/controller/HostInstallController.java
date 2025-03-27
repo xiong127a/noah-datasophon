@@ -48,13 +48,13 @@ public class HostInstallController {
     @PostMapping("/analysisHostList")
     @UserPermission
     public Result analysisHostList(@RequestParam Integer clusterId,
-            @RequestParam @NotBlank(message = "主机列表不能为空") String hosts,
+            @RequestParam @NotBlank(message = "主机列表不能为空") String ips,
             @RequestParam @Pattern(regexp = "(?=.*?[a-z_])[a-zA-Z0-9._\\-]{1,30}", message = "非法的SSH用户名") String sshUser,
             @RequestParam @NotNull(message = "SSH端口必填") @Min(value = 1, message = "非法的SSH端口") @Max(value = 65535, message = "非法的SSH端口") Integer sshPort,
             @RequestParam @NotBlank(message = "SSH密码不能为空") String sshPassword,
             @RequestParam Integer page,
             @RequestParam Integer pageSize) {
-        return installService.analysisHostList(clusterId, hosts, sshUser, sshPort, sshPassword, page, pageSize);
+        return installService.analysisHostList(clusterId, ips, sshUser, sshPort, sshPassword, page, pageSize);
     }
 
     /**
@@ -107,20 +107,20 @@ public class HostInstallController {
      * 主机管理agent分发取消
      */
     @PostMapping("/cancelDispatcherHostAgent")
-    public Result cancelDispatcherHostAgent(Integer clusterId, String hostname, Integer installStateCode) {
-        return installService.cancelDispatcherHostAgent(clusterId, hostname, installStateCode);
+    public Result cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode) {
+        return installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
     }
 
     /**
      * 主机管理agent分发安装重试
      *
      * @param clusterId
-     * @param hostnames
+     * @param ips
      * @return
      */
     @PostMapping("/reStartDispatcherHostAgent")
-    public Result reStartDispatcherHostAgent(Integer clusterId, String hostnames) {
-        return installService.reStartDispatcherHostAgent(clusterId, hostnames);
+    public Result reStartDispatcherHostAgent(Integer clusterId, String ips) {
+        return installService.reStartDispatcherHostAgent(clusterId, ips);
     }
 
     /**

@@ -9,7 +9,6 @@ import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 @Component
 public class MemoryChecker extends AbstractItemChecker {
@@ -21,7 +20,7 @@ public class MemoryChecker extends AbstractItemChecker {
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 内存检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("最小可用内存要求: " + MIN_AVAILABLE_MEMORY_GB + "GB");
 
             // 更新状态为正在检查内存

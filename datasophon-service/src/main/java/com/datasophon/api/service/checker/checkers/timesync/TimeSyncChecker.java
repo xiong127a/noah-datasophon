@@ -24,7 +24,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 时间同步检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("最大允许时间差: " + MAX_TIME_DIFF_SECONDS + "秒");
 
             // 更新状态为正在获取远程服务器时间

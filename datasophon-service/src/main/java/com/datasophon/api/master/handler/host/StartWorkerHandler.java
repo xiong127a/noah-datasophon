@@ -55,7 +55,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
         
         // 检测Linux发行版
         String distroInfo = MinaUtils.detectLinuxDistro(session);
-        logger.info("主机 {} 的Linux发行版: {}", hostInfo.getHostname(), distroInfo);
+        logger.info("主机 {} 的Linux发行版: {}", hostInfo.getIp(), distroInfo);
         
         // 获取系统ID
         String osId = MinaUtils.execCmdWithResult(session, "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'").trim();
@@ -91,7 +91,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             hostInfo.setMessage(MessageResolverUtils.getMessage("modify.configuration.file.fail"));
             CommonUtils.updateInstallState(InstallState.FAILED, hostInfo);
         } else {
-            logger.info("准备安装和启动Worker服务: {}", hostInfo.getHostname());
+            logger.info("准备安装和启动Worker服务: {}", hostInfo.getIp());
             
             //Initialize environment
             MinaUtils.safeExecCommand(session, "ulimit -n 102400");
@@ -155,7 +155,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             hostInfo.setMessage(MessageResolverUtils.getMessage("start.host.management.agent"));
             
             // 8. 启动服务
-            logger.info("启动Worker服务: {}", hostInfo.getHostname());
+            logger.info("启动Worker服务: {}", hostInfo.getIp());
             if (useSystemd) {
                 result = MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
                 // 使用直接调用脚本的方式启动，确保参数正确
@@ -186,7 +186,7 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             hostInfo.setCreateTime(new Date());
         }
 
-        logger.info("end dispatcher host agent :{}", hostInfo.getHostname());
+        logger.info("end dispatcher host agent :{}", hostInfo.getIp());
         return true;
     }
 }

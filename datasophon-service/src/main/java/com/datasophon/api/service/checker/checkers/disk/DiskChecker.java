@@ -55,7 +55,7 @@ public class DiskChecker extends AbstractItemChecker {
             if (session == null) {
                 // 检查hostInfo中是否有可用的会话
                 if (!hostInfo.isSessionReady()) {
-                    String errorMsg = "SSH会话未就绪，无法执行磁盘检查: " + hostInfo.getHostname();
+                    String errorMsg = "SSH会话未就绪，无法执行磁盘检查: " + hostInfo.getIp();
                     log.error(errorMsg);
                     cacheLog.error(errorMsg);
                     checkItem.setStatus(CheckItem.Status.FAILED);
@@ -213,7 +213,7 @@ public class DiskChecker extends AbstractItemChecker {
 
             // 使用HostInfo中的SSH会话
             if (!hostInfo.isSessionReady()) {
-                String errorMsg = "SSH会话未就绪，无法生成磁盘清理建议: " + hostInfo.getHostname();
+                String errorMsg = "SSH会话未就绪，无法生成磁盘清理建议: " + hostInfo.getIp();
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
                 checkItem.setMessage(errorMsg);

@@ -27,13 +27,12 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.master.RackActor;
-import com.datasophon.api.service.ClusterRackService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.dto.QueryHostListPageDTO;
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteCmdCommand;
@@ -45,10 +44,10 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterHostMapper;
+import com.datasophon.domain.host.enums.HostState;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
@@ -280,19 +279,19 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     public Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
-            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
+            ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getIp());
             if (ObjectUtil.isNull(hostEntity)) {
                 ClusterHostDO clusterHostDO = new ClusterHostDO();
                 clusterHostDO.setClusterId(clusterId);
                 clusterHostDO.setCreateTime(hostInfo.getCreateTime());
-                clusterHostDO.setHostname(hostInfo.getHostname());
+                clusterHostDO.setHostname(hostInfo.getIp());
                 clusterHostDO.setIp(hostInfo.getIp());
                 clusterHostDO.setRack("/default-rack");
                 clusterHostDO.setHostState(HostState.RUNNING);
                 clusterHostDO.setManaged(MANAGED.YES);
                 clusterHostDO.setNodeLabel("default");
 
-                ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                ClientSession session = MinaUtils.openConnection(hostInfo);
                 String arch;
                 try {
                     arch = MinaUtils.executeCommandAndGetResult(session, "arch");

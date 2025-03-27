@@ -33,17 +33,14 @@ public class PasswordFreeChecker extends AbstractItemChecker {
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== 免密登录检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
 
             // 检查本地是否能够免密登录到远程主机
             cacheLog.info("尝试使用密钥进行免密登录...");
 
             try {
                 // 尝试建立SSH连接而不需要密码
-                ClientSession testSession = MinaUtils.openConnection(
-                        hostInfo.getHostname(),
-                        hostInfo.getSshPort(),
-                        hostInfo.getSshUser());
+                ClientSession testSession = MinaUtils.openConnection(hostInfo);
 
                 if (testSession != null) {
                     cacheLog.info("成功建立免密连接");
@@ -102,10 +99,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             try {
                 // 使用密码建立SSH连接
                 ClientSession pwdSession = MinaUtils.openConnectionWithPassword(
-                        hostInfo.getHostname(),
-                        hostInfo.getSshPort(),
-                        hostInfo.getSshUser(),
-                        hostInfo.getSshPassword());
+                        hostInfo);
 
                 if (pwdSession != null) {
                     try {
@@ -172,14 +166,14 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
     @Override
     public boolean fix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getHostname(),
+        logger.info("开始修复检查项: {}, 主机: {}, 检查项ID: {}", checkItem.getItemName(), hostInfo.getIp(),
                 checkItem.getId());
 
         // 设置为修复操作
         operationType = LogEntry.Type.FIX;
 
         // 设置当前检查项的日志缓存键
-        setCurrentLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+        setCurrentLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
 
         // 更新日志记录器的类型
         CheckLogger.LoggerImpl loggerImpl = (CheckLogger.LoggerImpl) this.cacheLog;
@@ -192,7 +186,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
         // 记录修复开始
         cacheLog.info("===============================================");
         cacheLog.info("开始修复检查项: " + checkItem.getItemName());
-        cacheLog.info("主机: " + hostInfo.getHostname());
+        cacheLog.info("主机: " + hostInfo.getIp());
         cacheLog.info("检查项ID: " + checkItem.getId());
         cacheLog.info("开始时间: " + getCurrentTime());
         cacheLog.info("===============================================");
@@ -217,10 +211,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
 
                     try {
                         // 建立SSH连接验证
-                        ClientSession testSession = MinaUtils.openConnection(
-                                hostInfo.getHostname(),
-                                hostInfo.getSshPort(),
-                                hostInfo.getSshUser());
+                        ClientSession testSession = MinaUtils.openConnection(hostInfo);
 
                         if (testSession != null) {
                             cacheLog.info("免密登录验证成功！");
@@ -365,7 +356,7 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             if (!keysExist) {
                 // 生成SSH密钥对
                 cacheLog.info("生成本地SSH密钥对...");
-                boolean keyGenResult = setupKeyBasedAuth(hostInfo.getHostname(), hostInfo.getSshUser(),
+                boolean keyGenResult = setupKeyBasedAuth(hostInfo.getIp(), hostInfo.getSshUser(),
                         hostInfo.getSshPassword(), hostInfo.getSshPort(), "rsa");
                 if (!keyGenResult) {
                     cacheLog.error("生成SSH密钥对失败");
@@ -390,13 +381,10 @@ public class PasswordFreeChecker extends AbstractItemChecker {
             try {
                 // 使用密码直接建立连接，而不使用共享连接池
                 cacheLog.info("使用密码创建SSH连接: 主机=%s, 端口=%s, 用户=%s",
-                        hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                        hostInfo.getIp(), hostInfo.getSshPort(), hostInfo.getSshUser());
 
                 passwordSession = MinaUtils.openConnectionWithPassword(
-                        hostInfo.getHostname(),
-                        hostInfo.getSshPort(),
-                        hostInfo.getSshUser(),
-                        hostInfo.getSshPassword());
+                        hostInfo);
 
                 if (passwordSession == null) {
                     cacheLog.error("无法使用密码连接到远程主机");

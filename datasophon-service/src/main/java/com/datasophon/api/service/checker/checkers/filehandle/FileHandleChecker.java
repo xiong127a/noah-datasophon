@@ -20,7 +20,7 @@ public class FileHandleChecker extends AbstractItemChecker {
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            cacheLog.debug("开始检查文件句柄数 - 主机: %s", hostInfo.getHostname());
+            cacheLog.debug("开始检查文件句柄数 - 主机: %s", hostInfo.getIp());
             cacheLog.debug("最小建议文件句柄数: %d", MIN_FILE_HANDLES);
             cacheLog.info("正在检查系统文件句柄数限制配置...");
 
@@ -195,7 +195,7 @@ public class FileHandleChecker extends AbstractItemChecker {
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
         try {
-            cacheLog.debug("开始修复系统文件句柄配置 - 主机: %s", hostInfo.getHostname());
+            cacheLog.debug("开始修复系统文件句柄配置 - 主机: %s", hostInfo.getIp());
 
             // 更新状态为正在修改limits.conf文件
             setCheckItemMessage(hostInfo, checkItem, "正在修改系统文件句柄限制配置...");

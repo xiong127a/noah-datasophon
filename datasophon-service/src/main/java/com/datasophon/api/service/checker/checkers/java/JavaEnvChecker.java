@@ -27,12 +27,12 @@ public class JavaEnvChecker extends AbstractItemChecker {
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
         try {
             cacheLog.info("==== 专用Java环境检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("专用JDK路径: " + DEFAULT_JDK_PATH);
 
             // 步骤1: 检查默认JDK路径是否存在
             cacheLog.info("\n步骤1: 检查专用JDK路径是否存在");
-            logger.info("检查主机 {} 的专用JDK路径 {}", hostInfo.getHostname(), DEFAULT_JDK_PATH);
+            logger.info("检查主机 {} 的专用JDK路径 {}", hostInfo.getIp(), DEFAULT_JDK_PATH);
 
             String jdkPathExistsCmd = "[ -d " + DEFAULT_JDK_PATH + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
             cacheLog.info("执行检查命令: " + jdkPathExistsCmd);
@@ -71,7 +71,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 步骤2: 检查该目录是否包含可执行的Java
             cacheLog.info("\n步骤2: 检查专用JDK路径的Java可执行性");
-            logger.info("主机 {} 存在专用JDK路径，检查Java可执行性", hostInfo.getHostname());
+            logger.info("主机 {} 存在专用JDK路径，检查Java可执行性", hostInfo.getIp());
 
             String javaExecutableCmd = "[ -f " + DEFAULT_JDK_PATH
                     + "/bin/java ] && echo 'EXECUTABLE' || echo 'NOT_EXECUTABLE'";
@@ -120,7 +120,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 步骤3: 检查专用JDK的Java版本
             cacheLog.info("\n步骤3: 检查专用JDK的Java版本");
-            logger.info("主机 {} 的专用JDK路径Java可执行，检查版本", hostInfo.getHostname());
+            logger.info("主机 {} 的专用JDK路径Java可执行，检查版本", hostInfo.getIp());
 
             String javaVersionCmd = DEFAULT_JDK_PATH + "/bin/java -version 2>&1";
             cacheLog.info("执行检查命令: " + javaVersionCmd);
@@ -276,14 +276,14 @@ public class JavaEnvChecker extends AbstractItemChecker {
         try {
             // 设置进度为60%
             hostInfo.setProgress(60);
-            logger.info("开始修复主机 {} 的专用Java环境", hostInfo.getHostname());
+            logger.info("开始修复主机 {} 的专用Java环境", hostInfo.getIp());
             cacheLog.info("==== 开始修复专用Java环境 ====");
             cacheLog.info("目标JDK路径: " + DEFAULT_JDK_PATH);
 
             // 检查系统架构
             CommandResult archResult = execCommand(session, "arch");
             String arch = archResult.getOutput().trim();
-            logger.info("主机 {} 的架构为 {}", hostInfo.getHostname(), arch);
+            logger.info("主机 {} 的架构为 {}", hostInfo.getIp(), arch);
             cacheLog.info("系统架构: " + arch);
 
             // 检查JDK目录是否存在
@@ -343,7 +343,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 根据不同架构安装对应的JDK
             if ("x86_64".equals(arch)) {
-                logger.info("主机 {} 上安装x86_64架构的JDK", hostInfo.getHostname());
+                logger.info("主机 {} 上安装x86_64架构的JDK", hostInfo.getIp());
                 cacheLog.info("安装x86_64架构的JDK");
                 hostInfo.setMessage("正在安装专用JDK...");
 
@@ -372,10 +372,10 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                     return false;
                 }
-                logger.info("主机 {} 的x86_64 JDK安装完成", hostInfo.getHostname());
+                logger.info("主机 {} 的x86_64 JDK安装完成", hostInfo.getIp());
                 cacheLog.info("x86_64 JDK安装完成");
             } else if ("aarch64".equals(arch)) {
-                logger.info("主机 {} 上安装ARM架构的JDK", hostInfo.getHostname());
+                logger.info("主机 {} 上安装ARM架构的JDK", hostInfo.getIp());
                 cacheLog.info("安装ARM架构的JDK");
                 hostInfo.setMessage("正在安装专用JDK...");
 
@@ -404,10 +404,10 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                     return false;
                 }
-                logger.info("主机 {} 的ARM JDK安装完成", hostInfo.getHostname());
+                logger.info("主机 {} 的ARM JDK安装完成", hostInfo.getIp());
                 cacheLog.info("ARM JDK安装完成");
             } else {
-                logger.error("主机 {} 的架构 {} 不受支持", hostInfo.getHostname(), arch);
+                logger.error("主机 {} 的架构 {} 不受支持", hostInfo.getIp(), arch);
                 cacheLog.error("不支持的系统架构: " + arch);
 
                 // 确保更新失败状态
@@ -427,7 +427,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             CommandResult verifyResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && test -f "
                     + DEFAULT_JDK_PATH + "/bin/java && echo 'success' || echo 'failed'");
             if (verifyResult.isSuccess() && "success".equals(verifyResult.getOutput().trim())) {
-                logger.info("主机 {} 的专用JDK安装验证成功", hostInfo.getHostname());
+                logger.info("主机 {} 的专用JDK安装验证成功", hostInfo.getIp());
                 cacheLog.info("专用JDK安装验证成功");
                 cacheLog.info("==== 专用Java环境修复完成 ====");
 
@@ -471,7 +471,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 hostInfo.calculateStatus();
 
                 // 记录状态更新
-                logger.info("主机 {} 的专用Java环境检查项状态已更新为成功", hostInfo.getHostname());
+                logger.info("主机 {} 的专用Java环境检查项状态已更新为成功", hostInfo.getIp());
                 cacheLog.info("专用Java环境检查项状态已更新为成功");
 
                 // 添加额外的状态确认和日志
@@ -499,7 +499,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 return true;
             } else {
-                logger.error("主机 {} 的专用JDK安装验证失败", hostInfo.getHostname());
+                logger.error("主机 {} 的专用JDK安装验证失败", hostInfo.getIp());
                 cacheLog.error("专用JDK安装验证失败");
                 cacheLog.info("==== 专用Java环境修复失败 ====");
 
@@ -543,13 +543,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 hostInfo.calculateStatus();
 
                 // 记录状态更新
-                logger.info("主机 {} 的专用Java环境检查项状态已更新为失败", hostInfo.getHostname());
+                logger.info("主机 {} 的专用Java环境检查项状态已更新为失败", hostInfo.getIp());
                 cacheLog.info("专用Java环境检查项状态已更新为失败");
 
                 return false;
             }
         } catch (Exception e) {
-            logger.error("修复主机 {} 的专用Java环境失败: {}", hostInfo.getHostname(), e.getMessage(), e);
+            logger.error("修复主机 {} 的专用Java环境失败: {}", hostInfo.getIp(), e.getMessage(), e);
             cacheLog.error("修复专用Java环境失败: " + e.getMessage());
             cacheLog.info("==== 专用Java环境修复失败 ====");
 
@@ -603,7 +603,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             hostInfo.calculateStatus();
 
             // 记录状态更新
-            logger.info("主机 {} 的专用Java环境检查项状态已更新为失败(异常)", hostInfo.getHostname());
+            logger.info("主机 {} 的专用Java环境检查项状态已更新为失败(异常)", hostInfo.getIp());
             cacheLog.info("专用Java环境检查项状态已更新为失败(异常)");
 
             return false;

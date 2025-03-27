@@ -18,12 +18,11 @@
 package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.datasophon.common.model.OsInfo;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -37,9 +36,9 @@ public class HostInfo implements Serializable {
 
     private Integer clusterId;
 
-    private String hostname;
-
     private String ip;
+
+    private String hostname;
 
     /**
      * 是否受管
@@ -122,6 +121,15 @@ public class HostInfo implements Serializable {
     @Getter
     @JsonIgnore
     private transient ClientSession externalSession = null;
+
+    public HostInfo(String ip, int sshPort, String sshUser) {
+        this.ip = ip;
+        this.sshPort = sshPort;
+        this.sshUser = sshUser;
+    }
+
+    public HostInfo() {
+    }
 
     /**
      * 会话是否准备就绪

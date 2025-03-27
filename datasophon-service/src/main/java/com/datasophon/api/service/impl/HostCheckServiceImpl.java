@@ -301,18 +301,18 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     public void processHostCheck(Integer clusterId, HostInfo hostInfo) {
         try {
-            logger.info("开始检查主机: {}", hostInfo.getHostname());
+            logger.info("开始检查主机: {}", hostInfo.getIp());
 
             // 记录当前线程名称和检查项总数
             logger.debug("检查线程: {}, 主机: {}, 集群ID: {}",
                     Thread.currentThread().getName(),
-                    hostInfo.getHostname(),
+                    hostInfo.getIp(),
                     clusterId);
 
             // 获取需要检查的项
             List<CheckItem> checkItems = new ArrayList<>(hostInfo.getCheckItems());
             if (checkItems.isEmpty()) {
-                logger.warn("主机 {} 没有可执行的检查项，检查提前结束", hostInfo.getHostname());
+                logger.warn("主机 {} 没有可执行的检查项，检查提前结束", hostInfo.getIp());
                 return;
             }
 
@@ -330,7 +330,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     .collect(Collectors.toList());
 
             if (itemsToCheck.isEmpty()) {
-                logger.info("主机 {} 没有需要执行的检查项，检查提前结束", hostInfo.getHostname());
+                logger.info("主机 {} 没有需要执行的检查项，检查提前结束", hostInfo.getIp());
                 updateHostInfoCache(clusterId, hostInfo);
                 return;
             }
@@ -346,10 +346,10 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 使用新增的doHostCheck方法进行批量检查，实现SSH连接复用
             doHostCheck(clusterId, hostInfo, itemsToCheck);
 
-            logger.info("主机 {} 的所有检查项执行完成", hostInfo.getHostname());
+            logger.info("主机 {} 的所有检查项执行完成", hostInfo.getIp());
 
         } catch (Exception e) {
-            logger.error("检查主机 {} 时发生错误: {}", hostInfo.getHostname(), e.getMessage(), e);
+            logger.error("检查主机 {} 时发生错误: {}", hostInfo.getIp(), e.getMessage(), e);
             // 将所有检查项设置为失败
             if (hostInfo.getCheckItems() != null) {
                 for (CheckItem item : hostInfo.getCheckItems()) {
@@ -370,32 +370,32 @@ public class HostCheckServiceImpl implements HostCheckService {
         try {
             logger.info("准备串行执行检查项: {}，主机: {}, 线程: {}",
                     checkItem.getItemName(),
-                    hostInfo.getHostname(),
+                    hostInfo.getIp(),
                     Thread.currentThread().getName());
 
             // 确保状态更新已发送到前端
             updateHostInfoCache(clusterId, hostInfo);
 
             // 初始化日志
-            String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
+            String logKey = getLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
             logger.debug("检查项日志键: {}", logKey);
 
             // 清除可能存在的旧日志
             LogEntryManager.clearLogEntries(logKey);
 
             // 创建日志记录器
-            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 添加日志头部信息
             cacheLog.info("==== 开始检查: " + checkItem.getItemName() + " ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("检查项ID: " + checkItem.getId());
             cacheLog.debug("检查项代码: " + checkItem.getItemCode());
             cacheLog.debug("集群ID: " + clusterId);
             cacheLog.debug("执行时间: " + formatDateToChinese(new Date()));
             cacheLog.debug("执行线程: " + Thread.currentThread().getName());
 
-            logger.debug("主机 {} 开始执行检查项 {}", hostInfo.getHostname(), checkItem.getItemName());
+            logger.debug("主机 {} 开始执行检查项 {}", hostInfo.getIp(), checkItem.getItemName());
             cacheLog.info("正在执行检查任务...");
 
             // 从工厂获取检查器实例
@@ -496,7 +496,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             updateHostInfoCache(clusterId, hostInfo);
 
             // 记录异常信息
-            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getIp(), checkItem.getId());
             cacheLog.error("执行检查时发生异常: " + e.getMessage());
             cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
             cacheLog.error("==== 检查失败 ====");
@@ -627,10 +627,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         ClientSession session = null;
         try {
-            session = MinaUtils.openConnection(
-                    hostInfo.getHostname(),
-                    hostInfo.getSshPort(),
-                    hostInfo.getSshUser());
+            session = MinaUtils.openConnection(hostInfo);
 
             if (session == null) {
                 return false;
@@ -682,7 +679,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 执行检查
                 processHostCheck(clusterId, hostInfo);
             } catch (Exception e) {
-                logger.error("重新检查主机 {} 时发生错误: {}", hostInfo.getHostname(), e.getMessage(), e);
+                logger.error("重新检查主机 {} 时发生错误: {}", hostInfo.getIp(), e.getMessage(), e);
 
                 // 将所有检查项设置为失败
                 if (hostInfo.getCheckItems() != null) {
@@ -732,7 +729,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     private void updateHostInfoCache(Integer clusterId, HostInfo hostInfo) {
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         if (map != null && hostInfo != null) {
-            map.put(hostInfo.getHostname(), hostInfo);
+            map.put(hostInfo.getIp(), hostInfo);
             CacheUtils.put(clusterId + Constants.HOST_MAP, map);
         }
     }
@@ -741,16 +738,16 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 批量检查多个主机
      *
      * @param clusterId 集群ID
-     * @param hostnames 主机名列表
+     * @param ips       主机IP列表
      * @return 操作结果
      */
     @Override
-    public Result batchCheckHosts(Integer clusterId, List<String> hostnames) {
+    public Result batchCheckHosts(Integer clusterId, List<String> ips) {
         if (clusterId == null) {
             return Result.error("集群ID不能为空");
         }
 
-        if (hostnames == null || hostnames.isEmpty()) {
+        if (ips == null || ips.isEmpty()) {
             return Result.error("主机列表不能为空");
         }
 
@@ -765,7 +762,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             Thread.currentThread().interrupt();
         }
 
-        logger.info("开始执行新的批量检查，主机数量: {}", hostnames.size());
+        logger.info("开始执行新的批量检查，主机数量: {}", ips.size());
 
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         if (map == null) {
@@ -775,9 +772,21 @@ public class HostCheckServiceImpl implements HostCheckService {
         List<String> successHosts = new ArrayList<>();
         List<String> failedHosts = new ArrayList<>();
 
-        for (String hostname : hostnames) {
+        // 将IP转换为hostname的映射表
+        Map<String, String> ipToHostnameMap = new HashMap<>();
+        for (Map.Entry<String, HostInfo> entry : map.entrySet()) {
+            HostInfo hostInfo = entry.getValue();
+            if (hostInfo != null && hostInfo.getIp() != null) {
+                ipToHostnameMap.put(hostInfo.getIp(), entry.getKey());
+            }
+        }
+
+        for (String ip : ips) {
             try {
-                if (map.containsKey(hostname)) {
+                // 通过IP查找对应的主机名
+                String hostname = ipToHostnameMap.get(ip);
+
+                if (hostname != null && map.containsKey(hostname)) {
                     HostInfo hostInfo = map.get(hostname);
 
                     // 将所有检查项重置为WAITING状态
@@ -793,14 +802,14 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                     // 对单个主机启动检查
                     checkSingleHost(clusterId, hostname);
-                    successHosts.add(hostname);
+                    successHosts.add(ip);
                 } else {
-                    failedHosts.add(hostname);
-                    logger.warn("主机 {} 不存在于集群缓存中", hostname);
+                    failedHosts.add(ip);
+                    logger.warn("IP {} 不存在对应的主机或不在集群缓存中", ip);
                 }
             } catch (Exception e) {
-                logger.error("启动主机 {} 检查失败: {}", hostname, e.getMessage(), e);
-                failedHosts.add(hostname);
+                logger.error("启动主机IP {} 检查失败: {}", ip, e.getMessage(), e);
+                failedHosts.add(ip);
             }
         }
 
@@ -990,7 +999,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             return;
         }
 
-        logger.info("开始重试主机: {} 的 {} 个检查项", hostInfo.getHostname(), itemsToCheck.size());
+        logger.info("开始重试主机: {} 的 {} 个检查项", hostInfo.getIp(), itemsToCheck.size());
 
         // 使用线程池并行执行每个检查项
         for (CheckItem item : itemsToCheck) {
@@ -999,7 +1008,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 String originalThreadName = Thread.currentThread().getName();
                 try {
                     // 设置线程名，方便日志识别
-                    Thread.currentThread().setName("check-" + hostInfo.getHostname() + "-item-" + item.getId());
+                    Thread.currentThread().setName("check-" + hostInfo.getIp() + "-item-" + item.getId());
 
                     logger.info("开始重试检查项: {}", item.getItemName());
 
@@ -1072,19 +1081,19 @@ public class HostCheckServiceImpl implements HostCheckService {
     public CheckItem executeCheckItem(HostInfo hostInfo, CheckItem checkItem, Integer clusterId) {
         try {
             // 检查项日志键和运行状态键
-            String logKey = getLogKey(clusterId, hostInfo.getHostname(), checkItem.getId());
-            String statusKey = CHECK_TASK_STATUS_PREFIX + clusterId + "_" + hostInfo.getHostname() + "_"
+            String logKey = getLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
+            String statusKey = CHECK_TASK_STATUS_PREFIX + clusterId + "_" + hostInfo.getIp() + "_"
                     + checkItem.getId();
 
             // 检查是否已经有任务在执行
             Boolean isRunning = (Boolean) CacheUtils.get(statusKey);
             if (isRunning != null && isRunning) {
-                logger.warn("检查项已在执行中: {} - {}", hostInfo.getHostname(), checkItem.getItemName());
+                logger.warn("检查项已在执行中: {} - {}", hostInfo.getIp(), checkItem.getItemName());
                 return checkItem; // 返回原检查项，表示已在执行中
             }
 
             // 创建日志记录器
-            CheckLogger cacheLog = createLogger(clusterId, hostInfo.getHostname(), checkItem.getId());
+            CheckLogger cacheLog = createLogger(clusterId, hostInfo.getIp(), checkItem.getId());
 
             // 清空之前的日志
             CacheUtils.put(logKey, "");
@@ -1093,7 +1102,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             String timestamp = sdf.format(new Date());
             cacheLog.info("开始检查项: " + checkItem.getItemName());
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("检查项ID: " + checkItem.getId());
             cacheLog.info("开始时间: " + timestamp);
             cacheLog.info("===============================================");
@@ -1767,20 +1776,32 @@ public class HostCheckServiceImpl implements HostCheckService {
     /**
      * 获取指定主机的检查项列表
      * 
-     * @param hostname  主机名
+     * @param ip        主机IP
      * @param clusterId 集群ID
      * @return 指定主机的检查项列表
      */
     @Override
-    public Result getHostCheckItems(String hostname, Integer clusterId) {
+    public Result getHostCheckItems(String ip, Integer clusterId) {
         // 从缓存中获取指定主机的检查项
         Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostInfoMap == null || !hostInfoMap.containsKey(hostname)) {
-            return Result.error("找不到主机信息: " + hostname);
+        if (hostInfoMap == null) {
+            return Result.error("找不到集群主机信息缓存");
         }
 
-        HostInfo hostInfo = hostInfoMap.get(hostname);
-        return Result.success(hostInfo.getCheckItems());
+        // 根据IP查找主机信息
+        HostInfo targetHost = null;
+        for (HostInfo hostInfo : hostInfoMap.values()) {
+            if (ip.equals(hostInfo.getIp())) {
+                targetHost = hostInfo;
+                break;
+            }
+        }
+
+        if (targetHost == null) {
+            return Result.error("找不到主机信息: " + ip);
+        }
+
+        return Result.success(targetHost.getCheckItems());
     }
 
     /**

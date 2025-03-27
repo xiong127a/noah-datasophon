@@ -53,19 +53,20 @@ public class HostCheckController {
      */
     @GetMapping("/getHostCheckItems")
     @UserPermission
-    public Result getHostCheckItems(@RequestParam String hostname, @RequestParam Integer clusterId) {
+    public Result getHostCheckItems(@RequestParam String ip, @RequestParam Integer clusterId) {
         // 委托给服务层处理业务逻辑
-        return hostCheckService.getHostCheckItems(hostname, clusterId);
+        return hostCheckService.getHostCheckItems(ip, clusterId);
     }
 
     /**
      * 控制主机检查队列管理器
      * 用于控制队列管理器的运行状态和定时任务
      * 
-     * @param action 操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
-     *               pauseTask(暂停定时任务), resumeTask(恢复定时任务), cleanupConnections(清理连接)
-     * @param scopeCode  作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
-     * @param taskId 定时任务ID，仅在pauseTask/resumeTask操作时需要
+     * @param action    操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
+     *                  pauseTask(暂停定时任务), resumeTask(恢复定时任务),
+     *                  cleanupConnections(清理连接)
+     * @param scopeCode 作用范围: all(所有), queue(仅队列), scheduler(仅定时任务)，默认为all
+     * @param taskId    定时任务ID，仅在pauseTask/resumeTask操作时需要
      */
     @GetMapping("/queueManager")
     @UserPermission
@@ -87,8 +88,8 @@ public class HostCheckController {
     @UserPermission
     public Result stopHostCheck(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostname) {
-        return hostCheckService.stopHostCheck(clusterId, hostname);
+            @RequestParam String ip) {
+        return hostCheckService.stopHostCheck(clusterId, ip);
     }
 
     /**
@@ -98,9 +99,9 @@ public class HostCheckController {
     @UserPermission
     public Result stopCheckItem(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostname,
+            @RequestParam String ip,
             @RequestParam Integer itemId) {
-        return hostCheckService.stopItemCheck(clusterId, hostname, itemId);
+        return hostCheckService.stopItemCheck(clusterId, ip, itemId);
     }
 
     /**
@@ -110,10 +111,10 @@ public class HostCheckController {
     @UserPermission
     public Result fixCheckItem(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
             @RequestParam("itemId") Integer itemId,
             @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
-        return hostCheckService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);
+        return hostCheckService.fixCheckItem(clusterId, ip, itemId, skipConfirm);
     }
 
     /**
@@ -123,9 +124,9 @@ public class HostCheckController {
     @UserPermission
     public Result fixSelectedCheckItems(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostname,
+            @RequestParam String ip,
             @RequestParam String itemIds) {
-        return hostCheckService.fixSelectedCheckItems(clusterId, hostname, itemIds);
+        return hostCheckService.fixSelectedCheckItems(clusterId, ip, itemIds);
     }
 
     /**
@@ -135,8 +136,8 @@ public class HostCheckController {
     @UserPermission
     public Result fixAllCheckItems(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostname) {
-        return hostCheckService.fixAllCheckItems(clusterId, hostname);
+            @RequestParam String ip) {
+        return hostCheckService.fixAllCheckItems(clusterId, ip);
     }
 
     /**
@@ -147,8 +148,8 @@ public class HostCheckController {
     @UserPermission
     public Result batchCheckHosts(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestBody List<String> hostnames) {
-        return hostCheckService.batchCheckHosts(clusterId, hostnames);
+            @RequestBody List<String> ips) {
+        return hostCheckService.batchCheckHosts(clusterId, ips);
     }
 
     /**
@@ -159,12 +160,12 @@ public class HostCheckController {
     @UserPermission
     public Result rehostCheck(
             @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String hostnames,
+            @RequestParam String ips,
             @RequestParam(required = false) String sshUser,
             @RequestParam(required = false) Integer sshPort) {
-        // 将主机名字符串转换为列表
-        List<String> hostnameList = Arrays.asList(hostnames.split(","));
-        return hostCheckService.batchCheckHosts(clusterId, hostnameList);
+        // 将IP字符串转换为列表
+        List<String> ipList = Arrays.asList(ips.split(","));
+        return hostCheckService.batchCheckHosts(clusterId, ipList);
     }
 
     /**
@@ -174,9 +175,9 @@ public class HostCheckController {
     @UserPermission
     public Result getCheckItemLog(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
             @RequestParam("itemId") Integer itemId) {
-        return hostCheckService.getCheckItemLog(clusterId, hostname, itemId);
+        return hostCheckService.getCheckItemLog(clusterId, ip, itemId);
     }
 
     /**
@@ -186,7 +187,7 @@ public class HostCheckController {
     @UserPermission
     public Result retryCheckItems(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
             @RequestParam("itemNames") String itemNamesStr) {
 
         if (clusterId == null) {
@@ -210,10 +211,10 @@ public class HostCheckController {
         }
 
         // 记录详细日志，帮助诊断
-        log.info("retryCheckItems请求参数: clusterId={}, hostname={}, itemNames={}, 解析后的itemIds={}",
-                clusterId, hostname, itemNamesStr, itemIds);
+        log.info("retryCheckItems请求参数: clusterId={}, ip={}, itemNames={}, 解析后的itemIds={}",
+                clusterId, ip, itemNamesStr, itemIds);
 
-        return hostCheckService.retryCheckItems(clusterId, hostname, itemIds);
+        return hostCheckService.retryCheckItems(clusterId, ip, itemIds);
     }
 
     /**
@@ -223,12 +224,12 @@ public class HostCheckController {
     @UserPermission
     public Result getLog(
             @RequestParam Integer clusterId,
-            @RequestParam String hostname,
+            @RequestParam String ip,
             @RequestParam Integer itemId,
             @RequestParam(required = false) String logType,
             @RequestParam(required = false) String logLevel,
             @RequestParam(required = false, defaultValue = "all") String filterMode) {
-        return hostCheckService.getFormattedLog(clusterId, hostname, itemId, logType, logLevel, filterMode);
+        return hostCheckService.getFormattedLog(clusterId, ip, itemId, logType, logLevel, filterMode);
     }
 
     /**
@@ -249,9 +250,9 @@ public class HostCheckController {
     @UserPermission
     public Result skipCheckItem(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
             @RequestParam("itemId") Integer itemId) {
-        return hostCheckService.skipCheckItem(clusterId, hostname, itemId);
+        return hostCheckService.skipCheckItem(clusterId, ip, itemId);
     }
 
     /**
@@ -272,9 +273,9 @@ public class HostCheckController {
     @UserPermission
     public Result getCheckItemConfirmInfo(
             @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("hostname") String hostname,
+            @RequestParam("ip") String ip,
             @RequestParam("itemId") Integer itemId) {
-        return hostCheckService.getCheckItemConfirmInfo(clusterId, hostname, itemId);
+        return hostCheckService.getCheckItemConfirmInfo(clusterId, ip, itemId);
     }
 
     /**

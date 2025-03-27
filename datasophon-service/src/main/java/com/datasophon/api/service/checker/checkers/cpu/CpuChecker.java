@@ -20,7 +20,7 @@ public class CpuChecker extends AbstractItemChecker {
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
             cacheLog.info("==== CPU检查开始 ====");
-            cacheLog.info("主机: " + hostInfo.getHostname());
+            cacheLog.info("主机: " + hostInfo.getIp());
             cacheLog.info("最小CPU核心数要求: " + MIN_CPU_CORES);
 
             // 更新状态为正在检查CPU核心数

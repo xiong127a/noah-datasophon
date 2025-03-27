@@ -44,7 +44,7 @@ public class CheckWorkerMd5Handler implements DispatcherWorkerHandler {
                         Constants.SLASH +
                         Constants.WORKER_PACKAGE_NAME + ".md5",
                 Charset.defaultCharset()).trim();
-        logger.info("{} worker package md5 value is : {}", hostInfo.getHostname(), md5);
+        logger.info("{} worker package md5 value is : {}", hostInfo.getIp(), md5);
         if (!md5.equals(checkWorkerMd5Result)) {
             logger.error("worker package md5 check failed");
             hostInfo.setErrMsg("worker package md5 check failed");

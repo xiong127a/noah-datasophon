@@ -49,13 +49,12 @@ public class DispatcherWorkerActor extends UntypedActor {
     public void onReceive(Object message) throws Throwable {
         DispatcherHostAgentCommand command = (DispatcherHostAgentCommand) message;
         HostInfo hostInfo = command.getHostInfo();
-        logger.info("start dispatcher host agent :{}", hostInfo.getHostname());
+        logger.info("start dispatcher host agent :{}", hostInfo.getIp());
         hostInfo.setMessage(
                 MessageResolverUtils.getMessage(
                         "distributed.host.management.agent.installation.package"));
         ClientSession session =
-                MinaUtils.openConnection(
-                        hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
+                MinaUtils.openConnection(hostInfo);
         DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
         handlerChain.addHandler(new UploadWorkerHandler());
         handlerChain.addHandler(new CheckWorkerMd5Handler());
