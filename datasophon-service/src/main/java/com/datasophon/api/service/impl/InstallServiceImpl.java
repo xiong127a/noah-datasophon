@@ -47,7 +47,6 @@ import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -137,7 +136,7 @@ public class InstallServiceImpl implements InstallService {
      */
     @Override
     public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
-                                   Integer page, Integer pageSize) {
+            Integer page, Integer pageSize) {
         try {
             if (StringUtils.isBlank(ips)) {
                 return Result.error("主机列表不能为空");
@@ -197,7 +196,7 @@ public class InstallServiceImpl implements InstallService {
      * @param sshPassword SSH密码
      */
     private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
-                                               String sshPassword) {
+            String sshPassword) {
         String hostsMd5 = SecureUtil.md5(hosts);
         // 1. 检查缓存中是否存在有效的主机列表
         if (isCacheValid(clusterId, hostsMd5)) {
@@ -211,6 +210,15 @@ public class InstallServiceImpl implements InstallService {
         CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
         CacheUtils.put(clusterId + Constants.HOST_MD5, hostsMd5);
         logger.info("主机列表已存入缓存");
+
+        // 缓存创建完成后，统一触发所有主机的操作系统信息收集
+        logger.info("开始统一触发所有主机的操作系统信息收集");
+        for (HostInfo hostInfo : hostMap.values()) {
+            // 设置初始状态
+            hostInfo.setOsInfoStatus("loading");
+            // 异步获取主机信息
+            osInfoService.getHostOsInfoAsync(hostInfo);
+        }
 
         return hostMap;
     }
@@ -227,7 +235,7 @@ public class InstallServiceImpl implements InstallService {
      * @return 主机信息映射，IP为键
      */
     private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, String hostsMd5, Integer sshPort,
-                                                  String sshUser, String sshPassword) {
+            String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
         logger.info("解析主机列表");
@@ -236,7 +244,8 @@ public class InstallServiceImpl implements InstallService {
         // 2. 遍历处理每个主机，将结果存入临时Map
         Map<String, HostInfo> tempMap = new HashMap<>();
         for (String host : hostArray) {
-            processHost(host, sshPort, sshUser, sshPassword, clusterId, tempMap);
+            // 只创建主机信息，不执行异步获取操作系统信息
+            processHostWithoutOsInfo(host, sshPort, sshUser, sshPassword, clusterId, tempMap);
         }
 
         List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
@@ -252,46 +261,28 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * 检查缓存是否有效
+     * 处理单个主机信息（不执行异步获取操作系统信息）
      */
-    private boolean isCacheValid(Integer clusterId, String hostsMd5) {
-        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)
-                && CacheUtils.constainsKey(clusterId + Constants.HOST_MD5)
-                && hostsMd5.equals(CacheUtils.getString(clusterId + Constants.HOST_MD5));
-    }
-
-    /**
-     * 处理单个主机信息
-     */
-    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, Integer clusterId,
-                             Map<String, HostInfo> hostInfoMap) {
-        // 添加参数日志
-        logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", host, sshPort, sshUser,
-                StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterId);
-
-        // 1. 处理IP域格式 [x-y]
-        if (host.contains("[") && host.contains("-")) {
-            processIpRange(host, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
+    private void processHostWithoutOsInfo(String host, Integer sshPort, String sshUser, String sshPassword,
+            Integer clusterId,
+            Map<String, HostInfo> hostInfoMap) {
+        // 1. 处理IP范围，如192.168.1.[1-5]
+        if (host.contains("[") && host.contains("]")) {
+            processIpRangeWithoutOsInfo(host, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
             return;
         }
 
-        // 2. 处理单个主机
+        // 2. 普通主机，直接创建主机信息
         HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterId);
-        // 使用IP作为临时Map的键
         hostInfoMap.put(hostInfo.getIp(), hostInfo);
-
-        // 设置初始状态
-        hostInfo.setOsInfoStatus("loading");
-
-        // 异步获取主机信息
-        getHostOsInfoAsync(hostInfo);
     }
 
     /**
-     * 处理IP范围
+     * 处理IP范围（不执行异步获取操作系统信息）
      */
-    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, Integer clusterId,
-                                Map<String, HostInfo> hostInfoMap) {
+    private void processIpRangeWithoutOsInfo(String host, Integer sshPort, String sshUser, String sshPassword,
+            Integer clusterId,
+            Map<String, HostInfo> hostInfoMap) {
         int start = host.indexOf("[");
         String prefix = host.substring(0, start);
         String range = host.substring(start + 1, host.length() - 1);
@@ -299,19 +290,21 @@ public class InstallServiceImpl implements InstallService {
 
         // 1. 处理字母范围，如[a-e]
         if (host.matches(Constants.HAS_EN)) {
-            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
+            processLetterRangeWithoutOsInfo(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterId,
+                    hostInfoMap);
             return;
         }
 
         // 2. 处理数字范围，如[1-5]
-        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
+        processNumberRangeWithoutOsInfo(prefix, split, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
     }
 
     /**
-     * 处理字母范围的主机名
+     * 处理字母范围的主机名（不执行异步获取操作系统信息）
      */
-    private void processLetterRange(String prefix, String start, String end, Integer sshPort, String sshUser,
-                                    String sshPassword, Integer clusterId, Map<String, HostInfo> hostInfoMap) {
+    private void processLetterRangeWithoutOsInfo(String prefix, String start, String end, Integer sshPort,
+            String sshUser,
+            String sshPassword, Integer clusterId, Map<String, HostInfo> hostInfoMap) {
         List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
         for (String suffix : hostList) {
             HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterId);
@@ -320,16 +313,26 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * 处理数字范围的主机名
+     * 处理数字范围的主机名（不执行异步获取操作系统信息）
      */
-    private void processNumberRange(String prefix, String[] range, Integer sshPort, String sshUser, String sshPassword,
-                                    Integer clusterId, Map<String, HostInfo> hostInfoMap) {
+    private void processNumberRangeWithoutOsInfo(String prefix, String[] range, Integer sshPort, String sshUser,
+            String sshPassword,
+            Integer clusterId, Map<String, HostInfo> hostInfoMap) {
         int start = Integer.parseInt(range[0]);
         int end = Integer.parseInt(range[1]);
         for (int i = start; i <= end; i++) {
             HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterId);
             hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
+    }
+
+    /**
+     * 检查缓存是否有效
+     */
+    private boolean isCacheValid(Integer clusterId, String hostsMd5) {
+        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)
+                && CacheUtils.constainsKey(clusterId + Constants.HOST_MD5)
+                && hostsMd5.equals(CacheUtils.getString(clusterId + Constants.HOST_MD5));
     }
 
     /**
@@ -342,7 +345,7 @@ public class InstallServiceImpl implements InstallService {
      * @return 主机信息对象
      */
     private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-                                    Integer clusterId) {
+            Integer clusterId) {
         HostInfo hostInfo = new HostInfo();
 
         // 1. 设置基本信息
@@ -359,16 +362,6 @@ public class InstallServiceImpl implements InstallService {
             setManagedHostInfo(hostInfo);
         } else {
             setUnmanagedHostInfo(hostInfo);
-        }
-
-        // 3. 尝试获取操作系统信息
-        try {
-            if (sshUser != null && sshPort != null) {
-                OsInfo osInfo = getHostOsInfo(hostInfo);
-                hostInfo.setOsInfo(osInfo);
-            }
-        } catch (Exception e) {
-            logger.warn("获取主机 {} 的操作系统信息失败: {}", host, e.getMessage());
         }
 
         return hostInfo;
@@ -397,16 +390,6 @@ public class InstallServiceImpl implements InstallService {
             logger.error("创建主机 {} 的SSH连接时发生异常: {}", ip, e.getMessage());
             return null;
         }
-    }
-
-    /**
-     * 异步获取主机的操作系统信息
-     *
-     * @param hostInfo 主机信息
-     */
-    @Override
-    public void getHostOsInfoAsync(HostInfo hostInfo) {
-        osInfoService.getHostOsInfoAsync(hostInfo);
     }
 
     /**
@@ -1066,9 +1049,9 @@ public class InstallServiceImpl implements InstallService {
     }
 
     // 修改方法，使用OsInfoService
-    private OsInfo getHostOsInfo(HostInfo hostInfo) {
+    private void getHostOsInfo(HostInfo hostInfo) {
         // 委托给OsInfoService实现
-        return osInfoService.getHostOsInfo(hostInfo);
+
     }
 
     @Override

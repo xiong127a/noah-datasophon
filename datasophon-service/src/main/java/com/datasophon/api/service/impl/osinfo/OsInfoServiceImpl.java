@@ -13,8 +13,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * 操作系统信息服务实现类
@@ -28,12 +33,53 @@ public class OsInfoServiceImpl implements OsInfoService {
     @Autowired
     private OsInfoCollectorFactory osInfoCollectorFactory;
 
+    // 为OS信息收集创建专用的高优先级线程池
+    private ExecutorService osInfoExecutor;
+    private ExecutorService hardwareInfoExecutor;
+
+    @PostConstruct
+    public void init() {
+        // 创建一个自定义线程工厂，设置线程为守护线程并设置最高优先级
+        ThreadFactory osInfoThreadFactory = r -> {
+            Thread t = new Thread(r, "os-info-collector");
+            t.setDaemon(true);
+            t.setPriority(Thread.MAX_PRIORITY); // 设置最高优先级
+            return t;
+        };
+
+        ThreadFactory hardwareInfoThreadFactory = r -> {
+            Thread t = new Thread(r, "hardware-info-collector");
+            t.setDaemon(true);
+            t.setPriority(Thread.MAX_PRIORITY); // 设置最高优先级
+            return t;
+        };
+
+        // 创建固定大小的线程池，专用于OS信息收集
+        osInfoExecutor = Executors.newFixedThreadPool(2, osInfoThreadFactory);
+        hardwareInfoExecutor = Executors.newFixedThreadPool(4, hardwareInfoThreadFactory);
+
+        logger.info("已初始化OS信息收集高优先级线程池");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        // 程序关闭时，关闭线程池
+        if (osInfoExecutor != null) {
+            osInfoExecutor.shutdown();
+        }
+        if (hardwareInfoExecutor != null) {
+            hardwareInfoExecutor.shutdown();
+        }
+        logger.info("已关闭OS信息收集线程池");
+    }
+
     @Override
     public void getHostOsInfoAsync(HostInfo hostInfo) {
         hostInfo.setOsInfoStatus("loading");
         // 立即更新缓存，让前端看到加载状态
         updateHostInfoCache(hostInfo);
 
+        // 使用高优先级线程池执行OS信息收集任务
         CompletableFuture.runAsync(() -> {
             try {
                 // 获取操作系统信息
@@ -45,19 +91,28 @@ public class OsInfoServiceImpl implements OsInfoService {
                 hostInfo.setOsInfoStatus("success");
                 updateHostInfoCache(hostInfo);
 
-                // 异步收集硬件信息
+                // 使用专用线程池异步收集硬件信息
                 CompletableFuture.runAsync(() -> {
                     try {
                         // 检查是否能获取到会话
                         ClientSession session = getOrCreateSession(hostInfo);
                         if (session != null) {
                             // 开始收集硬件信息
-                            collectHardwareInfo(osInfo, session);
-                            // 更新收集状态为成功
-                            osInfo.setHardwareCollectionStatus("success");
-                            hostInfo.setOsInfo(osInfo);
-                            updateHostInfoCache(hostInfo);
-                            logger.info("硬件信息收集完成: {}", hostInfo.getIp());
+                            // 使用收集器并传入缓存更新函数
+                            String osType = osInfo.getDistributionId().toLowerCase().contains("windows") ? "windows"
+                                    : "linux";
+                            IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
+                            if (collector != null) {
+                                collector.collectHardwareInfo(osInfo, session, this::updateHostInfoCache);
+                                logger.info("硬件信息收集完成: {}", hostInfo.getIp());
+                            } else {
+                                // 无法获取收集器，设置为错误状态
+                                osInfo.setHardwareCollectionStatus("error");
+                                osInfo.setLastUpdatedItem("无法获取收集器");
+                                hostInfo.setOsInfo(osInfo);
+                                updateHostInfoCache(hostInfo);
+                                logger.error("无法获取适用于{}的信息收集器: {}", osType, hostInfo.getIp());
+                            }
                         } else {
                             // 无法获取会话，设置为错误状态
                             osInfo.setHardwareCollectionStatus("error");
@@ -73,28 +128,17 @@ public class OsInfoServiceImpl implements OsInfoService {
                         hostInfo.setOsInfo(osInfo);
                         updateHostInfoCache(hostInfo);
                     }
-                });
+                }, hardwareInfoExecutor);
             } catch (Exception e) {
                 logger.error("获取操作系统信息时出错: {}", e.getMessage(), e);
                 hostInfo.setOsInfoStatus("error");
                 updateHostInfoCache(hostInfo);
             }
-        });
+        }, osInfoExecutor);
     }
 
     @Override
-    public OsInfo getHostOsInfo(HostInfo hostInfo) {
-        // 如果已经有操作系统信息，直接返回
-        if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().isValid()) {
-            return hostInfo.getOsInfo();
-        }
-
-        // 否则同步获取操作系统信息
-        return getHostOsInfoInternal(hostInfo);
-    }
-
-    @Override
-    public void updateHostInfoCache(HostInfo hostInfo) {
+    public synchronized void updateHostInfoCache(HostInfo hostInfo) {
         try {
             // 获取缓存中的主机信息
             Integer clusterId = hostInfo.getClusterId();
@@ -111,14 +155,87 @@ public class OsInfoServiceImpl implements OsInfoService {
 
             Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
             if (hostMap != null) {
+                // 记录更新前的状态
+                String ip = hostInfo.getIp();
+                String hostname = hostInfo.getHostname();
+                String osInfoStatus = hostInfo.getOsInfoStatus();
+                OsInfo osInfo = hostInfo.getOsInfo();
+                String hardwareStatus = osInfo != null ? osInfo.getHardwareCollectionStatus() : "unknown";
+                String lastUpdatedItem = osInfo != null ? osInfo.getLastUpdatedItem() : "unknown";
+
+                logger.debug("准备更新主机{}(IP:{})的缓存: 状态={}, 硬件收集状态={}, 最后更新项={}",
+                        hostname, ip, osInfoStatus, hardwareStatus, lastUpdatedItem);
+
+                // 创建主机信息的深拷贝，避免引用问题
+                HostInfo hostInfoCopy = deepCopyHostInfo(hostInfo);
+
                 // 更新缓存中的主机信息
-                hostMap.put(hostInfo.getIp(), hostInfo);
-                CacheUtils.put(cacheKey, hostMap);
-                logger.debug("已更新集群 {} 中主机 {} 的缓存信息", clusterId, hostInfo.getIp());
+                hostMap.put(ip, hostInfoCopy);
+
+                // 立即更新缓存
+                boolean updateSuccess = false;
+                try {
+                    CacheUtils.put(cacheKey, hostMap);
+                    updateSuccess = true;
+                } catch (Exception e) {
+                    logger.error("更新缓存失败: {}", e.getMessage(), e);
+                    // 尝试重新更新
+                    try {
+                        Thread.sleep(50); // 等待一段时间
+                        CacheUtils.put(cacheKey, hostMap);
+                        updateSuccess = true;
+                        logger.info("重试更新缓存成功");
+                    } catch (Exception e2) {
+                        logger.error("重试更新缓存失败: {}", e2.getMessage(), e2);
+                    }
+                }
+
+                if (updateSuccess) {
+                    logger.info("已成功更新集群 {} 中主机 {} 的缓存信息: 状态={}, 硬件收集状态={}, 最后更新项={}",
+                            clusterId, ip, osInfoStatus, hardwareStatus, lastUpdatedItem);
+                }
+            } else {
+                logger.warn("获取到的主机缓存映射为null, 集群ID: {}", clusterId);
             }
         } catch (Exception e) {
             logger.error("更新主机 {} 的缓存信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * 创建主机信息的深拷贝，避免引用问题
+     */
+    private HostInfo deepCopyHostInfo(HostInfo source) {
+        if (source == null) {
+            return null;
+        }
+
+        HostInfo copy = new HostInfo();
+
+        // 复制基本属性
+        copy.setIp(source.getIp());
+        copy.setHostname(source.getHostname());
+        copy.setSshUser(source.getSshUser());
+        copy.setSshPort(source.getSshPort());
+        copy.setSshPassword(source.getSshPassword());
+        copy.setManaged(source.isManaged());
+        copy.setProgress(source.getProgress());
+        copy.setInstallState(source.getInstallState());
+        copy.setInstallStateCode(source.getInstallStateCode());
+        copy.setMessage(source.getMessage());
+        copy.setErrMsg(source.getErrMsg());
+        copy.setClusterId(source.getClusterId());
+        copy.setCreateTime(source.getCreateTime());
+        copy.setCheckResult(source.getCheckResult());
+        copy.setCheckItems(source.getCheckItems());
+        copy.setOsInfoStatus(source.getOsInfoStatus());
+
+        // 复制OS信息
+        if (source.getOsInfo() != null) {
+            copy.setOsInfo(source.getOsInfo());
+        }
+
+        return copy;
     }
 
     /**
@@ -144,7 +261,8 @@ public class OsInfoServiceImpl implements OsInfoService {
             // 使用工厂获取相应的操作系统信息收集器
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
             if (collector != null) {
-                return collector.collectOsInfo(hostInfo, session, osInfo);
+                // 使用收集器并传入缓存更新函数
+                return collector.collectOsInfo(hostInfo, session, osInfo, this::updateHostInfoCache);
             } else {
                 logger.warn("未找到适用于{}操作系统的信息收集器", osType);
                 return osInfo;
@@ -194,29 +312,12 @@ public class OsInfoServiceImpl implements OsInfoService {
     }
 
     /**
-     * 收集硬件信息
-     */
-    private void collectHardwareInfo(OsInfo osInfo, ClientSession session) {
-        // 获取操作系统类型
-        String osType = osInfo.getDistributionId().toLowerCase().contains("windows") ? "windows" : "linux";
-
-        // 使用工厂获取相应的操作系统信息收集器
-        IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
-        if (collector != null) {
-            collector.collectHardwareInfo(osInfo, session);
-        } else {
-            logger.warn("未找到适用于{}操作系统的信息收集器", osType);
-            osInfo.setHardwareCollectionStatus("error");
-        }
-    }
-
-    /**
      * 获取或创建SSH会话
      */
     private ClientSession getOrCreateSession(HostInfo hostInfo) {
-        try {
-            ClientSession session = null;
+        ClientSession session = null;
 
+        try {
             String ip = hostInfo.getIp();
             Integer sshPort = hostInfo.getSshPort();
             String sshUser = hostInfo.getSshUser();
@@ -228,15 +329,33 @@ public class OsInfoServiceImpl implements OsInfoService {
                 return null;
             }
 
-            // 使用密码方式连接
-            session = MinaUtils.openConnectionWithPassword(hostInfo);
+            logger.info("创建到主机 {} 的SSH会话，用户: {}, 端口: {}", ip, sshUser, sshPort);
 
-            if (session == null) {
-                logger.warn("使用密码连接失败，尝试使用免密方式");
-                session = MinaUtils.openConnection(hostInfo);
+            // 使用密码方式连接
+            try {
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
+                if (session != null) {
+                    logger.info("成功使用密码连接到主机: {}", ip);
+                    return session;
+                }
+            } catch (Exception e) {
+                logger.warn("使用密码连接到主机 {} 失败: {}", ip, e.getMessage());
             }
 
-            return session;
+            // 尝试使用免密方式连接
+            try {
+                logger.info("尝试使用免密方式连接到主机: {}", ip);
+                session = MinaUtils.openConnection(hostInfo);
+                if (session != null) {
+                    logger.info("成功使用免密方式连接到主机: {}", ip);
+                    return session;
+                }
+            } catch (Exception e) {
+                logger.warn("使用免密方式连接到主机 {} 失败: {}", ip, e.getMessage());
+            }
+
+            logger.error("无法创建到主机 {} 的SSH会话", ip);
+            return null;
         } catch (Exception e) {
             logger.error("创建SSH会话时出错: {}", e.getMessage(), e);
             return null;

@@ -20,18 +20,33 @@ public interface IOsInfoCollector {
     /**
      * 收集操作系统信息
      * 
-     * @param hostInfo 主机信息
-     * @param session  SSH会话
-     * @param osInfo   操作系统信息对象（输出参数）
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象（输出参数）
+     * @param cacheUpdater 缓存更新函数
      * @return 操作系统信息对象
      */
-    OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo);
+    OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
      * 收集硬件信息（CPU、内存、存储等）
      * 
-     * @param osInfo  操作系统信息对象（将被更新）
-     * @param session SSH会话
+     * @param osInfo       操作系统信息对象（将被更新）
+     * @param session      SSH会话
+     * @param cacheUpdater 缓存更新函数
      */
-    void collectHardwareInfo(OsInfo osInfo, ClientSession session);
+    void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater);
+
+    /**
+     * 缓存更新器接口
+     */
+    @FunctionalInterface
+    interface CacheUpdater {
+        /**
+         * 更新主机信息缓存
+         * 
+         * @param hostInfo 要更新的主机信息
+         */
+        void updateCache(HostInfo hostInfo);
+    }
 }

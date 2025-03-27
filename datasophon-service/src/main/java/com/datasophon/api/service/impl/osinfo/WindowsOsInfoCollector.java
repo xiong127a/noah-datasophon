@@ -27,7 +27,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     }
 
     @Override
-    public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+    public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
             logger.info("开始收集Windows操作系统信息: {}", hostInfo.getIp());
 
@@ -42,6 +42,8 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                     osInfo.setHostname(hostname);
                     hostInfo.setHostname(hostname);
                     logger.info("通过注册表获取到计算机名: {}", hostname);
+                    // 立即更新缓存，使前端能看到主机名
+                    cacheUpdater.updateCache(hostInfo);
                 }
             }
 
@@ -56,11 +58,15 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                     String fqdn = osInfo.getHostname() + "." + domain;
                     osInfo.setFqdn(fqdn);
                     logger.info("通过注册表获取到FQDN: {}", fqdn);
+                    // 立即更新缓存，使前端能看到FQDN
+                    cacheUpdater.updateCache(hostInfo);
                 }
             }
 
             // 获取操作系统版本信息（已使用注册表方式）
             collectWindowsVersionInfo(osInfo, session);
+            // 更新缓存，使前端能看到Windows版本信息
+            cacheUpdater.updateCache(hostInfo);
 
             // 通过注册表获取CPU架构
             String archReg = MinaUtils.execCmdWithResult(session,
@@ -72,42 +78,72 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                     String architecture = archMatcher.group(1).trim();
                     osInfo.setArchitecture(architecture);
                     logger.info("通过注册表获取到CPU架构: {}", architecture);
+                    // 更新CPU架构信息
+                    cacheUpdater.updateCache(hostInfo);
                 }
             }
 
             osInfo.setValid(true);
+            // 完成时更新一次
+            cacheUpdater.updateCache(hostInfo);
             return osInfo;
         } catch (Exception e) {
             logger.error("收集Windows操作系统信息时出错: {}", e.getMessage(), e);
             osInfo.setValid(false);
+            // 出错时也更新缓存，标记错误状态
+            cacheUpdater.updateCache(hostInfo);
             return osInfo;
         }
     }
 
     @Override
-    public void collectHardwareInfo(OsInfo osInfo, ClientSession session) {
+    public void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater) {
         try {
             osInfo.setHardwareCollectionStatus("loading");
+            // 更新收集状态
+            HostInfo hostInfo = osInfo.getHostInfo();
+            cacheUpdater.updateCache(hostInfo);
 
             logger.info("开始收集Windows硬件信息");
 
             // 获取CPU信息
+            osInfo.setLastUpdatedItem("collecting_cpu");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectCpuInfo(osInfo, session);
 
             // 获取内存信息
+            osInfo.setLastUpdatedItem("collecting_memory");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectMemoryInfo(osInfo, session);
 
             // 获取存储信息
+            osInfo.setLastUpdatedItem("collecting_disk");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectStorageInfo(osInfo, session);
 
             // 获取GPU信息
+            osInfo.setLastUpdatedItem("collecting_gpu");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectGpuInfo(osInfo, session);
 
+            // 标记为完成
+            osInfo.setLastUpdatedItem("completed");
             osInfo.setHardwareCollectionStatus("success");
+            // 完成时更新一次
+            cacheUpdater.updateCache(hostInfo);
+
             logger.info("Windows硬件信息收集完成");
         } catch (Exception e) {
             logger.error("收集Windows硬件信息时出错: {}", e.getMessage(), e);
             osInfo.setHardwareCollectionStatus("error");
+            osInfo.setLastUpdatedItem("error");
+            // 出错时也更新
+            HostInfo hostInfo = osInfo.getHostInfo();
+            cacheUpdater.updateCache(hostInfo);
         }
     }
 
@@ -222,9 +258,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     private void collectCpuInfo(OsInfo osInfo, ClientSession session) {
         try {
             logger.info("开始收集CPU信息");
-            // 设置当前正在更新的项
-            osInfo.setLastUpdatedItem("collecting_cpu");
-
             // 通过注册表获取CPU信息
             String regPath = "HKLM\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor";
 
@@ -282,8 +315,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 更新最后收集的项目为CPU信息
-            osInfo.setLastUpdatedItem("cpuInfo");
         } catch (Exception e) {
             logger.error("通过注册表收集CPU信息失败: {}", e.getMessage(), e);
         }
@@ -295,9 +326,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     private void collectMemoryInfo(OsInfo osInfo, ClientSession session) {
         try {
             logger.info("开始收集内存信息");
-            // 设置当前正在更新的项
-            osInfo.setLastUpdatedItem("collecting_memory");
-
             // 通过注册表获取物理内存总量
             String regQuery = MinaUtils.execCmdWithResult(session,
                     "reg query \"HKLM\\HARDWARE\\RESOURCEMAP\\System Resources\\Physical Memory\" /v .Translated");
@@ -355,8 +383,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 更新最后收集的项目为内存信息
-            osInfo.setLastUpdatedItem("memoryInfo");
         } catch (Exception e) {
             logger.error("通过注册表收集内存信息失败: {}", e.getMessage(), e);
         }
@@ -368,9 +394,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     private void collectStorageInfo(OsInfo osInfo, ClientSession session) {
         try {
             logger.info("开始收集存储信息");
-            // 设置当前正在更新的项
-            osInfo.setLastUpdatedItem("collecting_disk");
-
             // 获取C盘总大小和可用空间
             String totalDisk = MinaUtils.execCmdWithResult(session,
                     "powershell -command \"(Get-PSDrive C).Used + (Get-PSDrive C).Free\"");
@@ -394,8 +417,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 更新最后收集的项目为磁盘信息
-            osInfo.setLastUpdatedItem("diskInfo");
         } catch (Exception e) {
             logger.error("收集存储信息时出错: {}", e.getMessage(), e);
         }
@@ -407,12 +428,6 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     private void collectGpuInfo(OsInfo osInfo, ClientSession session) {
         try {
             logger.info("开始收集GPU信息");
-            // 设置当前正在更新的项
-            osInfo.setLastUpdatedItem("collecting_gpu");
-
-            StringBuilder gpuInfo = new StringBuilder();
-            StringBuilder gpuMemory = new StringBuilder();
-
             // 通过注册表枚举所有显示适配器
             String regPath = "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
             String regQuery = MinaUtils.execCmdWithResult(session,
@@ -424,7 +439,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 Matcher matcher = pattern.matcher(regQuery);
                 while (matcher.find()) {
                     String model = matcher.group(1);
-                    gpuInfo.append(model).append("; ");
+                    osInfo.setGpuInfo(model);
                 }
             }
 
@@ -439,7 +454,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                         // 将十六进制转换为十进制
                         long bytes = Long.parseLong(matcher.group(1), 16);
                         double memoryGB = bytes / (1024.0 * 1024.0 * 1024.0);
-                        gpuMemory.append(String.format("%.1fGB", memoryGB));
+                        osInfo.setGpuMemory(memoryGB);
                     } catch (NumberFormatException e) {
                         logger.error("解析显存大小失败: {}", memoryQuery);
                     }
@@ -447,29 +462,14 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             }
 
             // 如果通过注册表没有获取到信息，尝试使用PowerShell
-            if (gpuInfo.length() == 0) {
+            if (osInfo.getGpuInfo().isEmpty()) {
                 String psGpuInfo = MinaUtils.execCmdWithResult(session,
                         "powershell -command \"(Get-WmiObject Win32_VideoController).Name\"");
                 if (StringUtils.isNotBlank(psGpuInfo)) {
-                    gpuInfo.append(psGpuInfo.trim());
+                    osInfo.setGpuInfo(psGpuInfo.trim());
                 }
             }
 
-            // 设置最终结果
-            if (gpuInfo.length() > 0) {
-                osInfo.setGpuInfo(gpuInfo.toString().replaceAll("; $", ""));
-            } else {
-                osInfo.setGpuInfo("未知");
-            }
-
-            if (gpuMemory.length() > 0) {
-                osInfo.setGpuMemory(Double.parseDouble(gpuMemory.toString().replace("GB", "")));
-            } else {
-                osInfo.setGpuMemory(0.0);
-            }
-
-            // 更新最后收集的项目为GPU信息
-            osInfo.setLastUpdatedItem("gpuInfo");
         } catch (Exception e) {
             logger.error("通过注册表获取GPU信息失败: {}", e.getMessage());
             osInfo.setGpuInfo("未知");

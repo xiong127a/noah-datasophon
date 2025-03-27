@@ -17,7 +17,6 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 
 public interface InstallService {
@@ -109,12 +108,5 @@ public interface InstallService {
      * @throws Exception
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
-
-    /**
-     * 异步获取主机操作系统信息
-     * 
-     * @param hostInfo 主机信息
-     */
-    void getHostOsInfoAsync(HostInfo hostInfo);
 
 }

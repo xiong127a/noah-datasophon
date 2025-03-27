@@ -28,7 +28,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     }
 
     @Override
-    public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+    public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
             logger.info("开始收集Linux系统信息: {}", hostInfo.getIp());
 
@@ -39,6 +39,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setHostname(hostname);
                 hostInfo.setHostname(hostname);
                 logger.info("获取到主机名: {}", hostname);
+                // 立即更新缓存，使前端能看到主机名
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 获取完全限定域名(FQDN)
@@ -47,15 +49,21 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 fqdn = fqdn.trim();
                 osInfo.setFqdn(fqdn);
                 logger.info("获取到FQDN: {}", fqdn);
+                // 立即更新缓存，使前端能看到FQDN
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 读取/etc/os-release文件获取发行版信息
             String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
             if (StringUtils.isNotBlank(osRelease)) {
                 parseOsRelease(osInfo, osRelease);
+                // 更新发行版信息
+                cacheUpdater.updateCache(hostInfo);
             } else {
                 // 如果没有/etc/os-release文件，尝试其他方法
                 tryAlternativeFiles(osInfo, session);
+                // 更新发行版信息
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 额外检查：如果distributionName和distributionId相同且都是数字，可能是Ubuntu版本误识别
@@ -77,6 +85,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             // 设置显示名称和主版本号
                             osInfo.setDisplayName("Ubuntu " + osInfo.getVersionId());
                             osInfo.setMajorVersion(parts[0]);
+                            // 更新Ubuntu信息
+                            cacheUpdater.updateCache(hostInfo);
                         }
                     } catch (Exception e) {
                         logger.warn("解析可能的Ubuntu版本时出错", e);
@@ -96,6 +106,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             // 设置显示名称和主版本号
                             osInfo.setDisplayName("Debian GNU/Linux " + osInfo.getVersionId());
                             osInfo.setMajorVersion(String.valueOf(version));
+                            // 更新Debian信息
+                            cacheUpdater.updateCache(hostInfo);
                         }
                     } catch (Exception e) {
                         logger.warn("解析可能的Debian版本时出错", e);
@@ -108,6 +120,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (StringUtils.isNotBlank(kernelVersion)) {
                 osInfo.setKernelVersion(kernelVersion.trim());
                 logger.info("获取到内核版本: {}", kernelVersion.trim());
+                // 更新内核版本信息
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 获取CPU架构
@@ -115,6 +129,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (StringUtils.isNotBlank(architecture)) {
                 osInfo.setArchitecture(architecture.trim());
                 logger.info("获取到CPU架构: {}", architecture.trim());
+                // 更新CPU架构信息
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 获取负载信息
@@ -129,6 +145,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         osInfo.setLoad15Min(Double.parseDouble(parts[2]));
                         logger.info("获取到负载信息: 1分钟={}, 5分钟={}, 15分钟={}",
                                 osInfo.getLoad1Min(), osInfo.getLoad5Min(), osInfo.getLoad15Min());
+                        // 更新负载信息
+                        cacheUpdater.updateCache(hostInfo);
                     } catch (NumberFormatException e) {
                         logger.warn("解析负载信息失败: {}", e.getMessage());
                     }
@@ -160,6 +178,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             + osInfo.getDistributionId().substring(1));
                 }
                 logger.info("根据distributionId设置distributionName: {}", osInfo.getDistributionName());
+                // 更新发行版名称
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 确保设置了显示名称
@@ -176,53 +196,77 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         osInfo.setDisplayName(osInfo.getDistributionName());
                     }
                 }
+                // 更新显示名称
+                cacheUpdater.updateCache(hostInfo);
             }
 
             // 标记OS信息为有效
             osInfo.setValid(true);
+            // 完成时更新一次
+            cacheUpdater.updateCache(hostInfo);
 
             return osInfo;
         } catch (Exception e) {
             logger.error("收集Linux系统信息时出错: {}", e.getMessage(), e);
             osInfo.setValid(false);
+            // 出错时也更新缓存，标记错误状态
+            cacheUpdater.updateCache(hostInfo);
             return osInfo;
         }
     }
 
     @Override
-    public void collectHardwareInfo(OsInfo osInfo, ClientSession session) {
+    public void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater) {
         logger.info("开始收集Linux硬件信息");
         osInfo.setHardwareCollectionStatus("collecting");
+        // 更新收集状态
+        HostInfo hostInfo = osInfo.getHostInfo();
+        cacheUpdater.updateCache(hostInfo);
 
         try {
             // 收集CPU信息
             osInfo.setLastUpdatedItem("collecting_cpu");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectCpuInfo(osInfo, session);
 
             // 收集内存信息
             osInfo.setLastUpdatedItem("collecting_memory");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectMemoryInfo(osInfo, session);
 
             // 收集磁盘信息
             osInfo.setLastUpdatedItem("collecting_disk");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectDiskInfo(osInfo, session);
 
-            // 收集交换空间信息
+            // 收集交换分区信息
             osInfo.setLastUpdatedItem("collecting_swap");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectSwapInfo(osInfo, session);
 
             // 收集GPU信息
             osInfo.setLastUpdatedItem("collecting_gpu");
+            // 更新当前正在处理的项
+            cacheUpdater.updateCache(hostInfo);
             collectGpuInfo(osInfo, session);
 
-            // 设置收集完成状态
-            osInfo.setHardwareCollectionStatus("success");
+            // 标记为完成
             osInfo.setLastUpdatedItem("completed");
+            osInfo.setHardwareCollectionStatus("success");
+            // 完成时更新一次
+            cacheUpdater.updateCache(hostInfo);
+
             logger.info("Linux硬件信息收集完成");
         } catch (Exception e) {
             logger.error("收集Linux硬件信息时出错: {}", e.getMessage(), e);
             osInfo.setHardwareCollectionStatus("error");
             osInfo.setLastUpdatedItem("error");
+            // 出错时也更新
+            cacheUpdater.updateCache(hostInfo);
         }
     }
 
