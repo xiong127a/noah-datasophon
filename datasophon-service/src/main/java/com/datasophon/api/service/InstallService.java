@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 
 public interface InstallService {
@@ -44,6 +45,14 @@ public interface InstallService {
      * @return 清理结果
      */
     Result cleanupHostCheckResources(Integer clusterId);
+
+    /**
+     * 清理主机环境校验缓存
+     * 
+     * @param clusterId 集群ID
+     * @return 清理结果
+     */
+    Result clearHostEnvCheckCache();
 
     Result cancelDispatcherHostAgent(Integer clusterId, String ip, Integer installStateCode);
 
@@ -100,5 +109,12 @@ public interface InstallService {
      * @throws Exception
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
+
+    /**
+     * 异步获取主机操作系统信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    void getHostOsInfoAsync(HostInfo hostInfo);
 
 }

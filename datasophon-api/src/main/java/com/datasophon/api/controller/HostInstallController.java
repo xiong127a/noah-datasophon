@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller;
 
+
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.utils.Result;
@@ -87,6 +88,17 @@ public class HostInstallController {
     @UserPermission
     public Result cleanupHostCheckResources(@RequestParam("clusterId") Integer clusterId) {
         return installService.cleanupHostCheckResources(clusterId);
+    }
+
+    /**
+     * 清理主机环境校验缓存
+     *
+     * @return 清理结果
+     */
+    @GetMapping("/clearHostEnvCheckCache")
+    @UserPermission
+    public Result clearHostEnvCheckCache() {
+        return installService.clearHostEnvCheckCache();
     }
 
     /**

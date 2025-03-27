@@ -33,8 +33,10 @@ import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
+import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.service.impl.osinfo.OsInfoCollectorFactory;
 import com.datasophon.api.utils.MessageResolverUtils;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
@@ -74,7 +76,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service("installService")
@@ -99,6 +100,12 @@ public class InstallServiceImpl implements InstallService {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @Autowired
+    private OsInfoCollectorFactory osInfoCollectorFactory;
+
+    @Autowired
+    private OsInfoService osInfoService;
 
     private static final String SSHUSER = "SSHUSER";
 
@@ -130,7 +137,7 @@ public class InstallServiceImpl implements InstallService {
      */
     @Override
     public Result analysisHostList(Integer clusterId, String ips, String sshUser, Integer sshPort, String sshPassword,
-            Integer page, Integer pageSize) {
+                                   Integer page, Integer pageSize) {
         try {
             if (StringUtils.isBlank(ips)) {
                 return Result.error("主机列表不能为空");
@@ -190,7 +197,7 @@ public class InstallServiceImpl implements InstallService {
      * @param sshPassword SSH密码
      */
     private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
-            String sshPassword) {
+                                               String sshPassword) {
         String hostsMd5 = SecureUtil.md5(hosts);
         // 1. 检查缓存中是否存在有效的主机列表
         if (isCacheValid(clusterId, hostsMd5)) {
@@ -220,24 +227,16 @@ public class InstallServiceImpl implements InstallService {
      * @return 主机信息映射，IP为键
      */
     private Map<String, HostInfo> processHostList(Integer clusterId, String hosts, String hostsMd5, Integer sshPort,
-            String sshUser, String sshPassword) {
+                                                  String sshUser, String sshPassword) {
         HashMap<String, HostInfo> hostInfoMap = new HashMap<>();
 
         logger.info("解析主机列表");
         String[] hostArray = hosts.split(Constants.COMMA);
 
-        // 获取集群信息
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        if (Objects.isNull(clusterInfo)) {
-            logger.error("集群信息不存在, clusterId: {}", clusterId);
-            return hostInfoMap;
-        }
-        String clusterCode = clusterInfo.getClusterCode();
-
         // 2. 遍历处理每个主机，将结果存入临时Map
         Map<String, HostInfo> tempMap = new HashMap<>();
         for (String host : hostArray) {
-            processHost(host, sshPort, sshUser, sshPassword, clusterCode, tempMap);
+            processHost(host, sshPort, sshUser, sshPassword, clusterId, tempMap);
         }
 
         List<CheckItem> checkItems = hostCheckService.getHostCheckItems();
@@ -264,20 +263,20 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 处理单个主机信息
      */
-    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
-            Map<String, HostInfo> hostInfoMap) {
+    private void processHost(String host, Integer sshPort, String sshUser, String sshPassword, Integer clusterId,
+                             Map<String, HostInfo> hostInfoMap) {
         // 添加参数日志
         logger.info("处理主机连接参数: host={}, sshPort={}, sshUser={}, sshPassword={}, clusterCode={}", host, sshPort, sshUser,
-                StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterCode);
+                StringUtils.isNotBlank(sshPassword) ? "******" : "null", clusterId);
 
         // 1. 处理IP域格式 [x-y]
         if (host.contains("[") && host.contains("-")) {
-            processIpRange(host, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+            processIpRange(host, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
             return;
         }
 
         // 2. 处理单个主机
-        HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterCode);
+        HostInfo hostInfo = createHostInfo(host, sshPort, sshUser, sshPassword, clusterId);
         // 使用IP作为临时Map的键
         hostInfoMap.put(hostInfo.getIp(), hostInfo);
 
@@ -291,8 +290,8 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 处理IP范围
      */
-    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, String clusterCode,
-            Map<String, HostInfo> hostInfoMap) {
+    private void processIpRange(String host, Integer sshPort, String sshUser, String sshPassword, Integer clusterId,
+                                Map<String, HostInfo> hostInfoMap) {
         int start = host.indexOf("[");
         String prefix = host.substring(0, start);
         String range = host.substring(start + 1, host.length() - 1);
@@ -300,22 +299,22 @@ public class InstallServiceImpl implements InstallService {
 
         // 1. 处理字母范围，如[a-e]
         if (host.matches(Constants.HAS_EN)) {
-            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+            processLetterRange(prefix, split[0], split[1], sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
             return;
         }
 
         // 2. 处理数字范围，如[1-5]
-        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterCode, hostInfoMap);
+        processNumberRange(prefix, split, sshPort, sshUser, sshPassword, clusterId, hostInfoMap);
     }
 
     /**
      * 处理字母范围的主机名
      */
     private void processLetterRange(String prefix, String start, String end, Integer sshPort, String sshUser,
-            String sshPassword, String clusterCode, Map<String, HostInfo> hostInfoMap) {
+                                    String sshPassword, Integer clusterId, Map<String, HostInfo> hostInfoMap) {
         List<String> hostList = PlaceholderUtils.getNewEquipmentNoList(start, end);
         for (String suffix : hostList) {
-            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterCode);
+            HostInfo hostInfo = createHostInfo(prefix + suffix, sshPort, sshUser, sshPassword, clusterId);
             hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
     }
@@ -324,11 +323,11 @@ public class InstallServiceImpl implements InstallService {
      * 处理数字范围的主机名
      */
     private void processNumberRange(String prefix, String[] range, Integer sshPort, String sshUser, String sshPassword,
-            String clusterCode, Map<String, HostInfo> hostInfoMap) {
+                                    Integer clusterId, Map<String, HostInfo> hostInfoMap) {
         int start = Integer.parseInt(range[0]);
         int end = Integer.parseInt(range[1]);
         for (int i = start; i <= end; i++) {
-            HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterCode);
+            HostInfo hostInfo = createHostInfo(prefix + i, sshPort, sshUser, sshPassword, clusterId);
             hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
     }
@@ -340,11 +339,10 @@ public class InstallServiceImpl implements InstallService {
      * @param sshPort     SSH端口
      * @param sshUser     SSH用户名
      * @param sshPassword SSH密码
-     * @param clusterCode 集群编码
      * @return 主机信息对象
      */
     private HostInfo createHostInfo(String host, Integer sshPort, String sshUser, String sshPassword,
-            String clusterCode) {
+                                    Integer clusterId) {
         HostInfo hostInfo = new HostInfo();
 
         // 1. 设置基本信息
@@ -352,7 +350,7 @@ public class InstallServiceImpl implements InstallService {
         hostInfo.setSshPort(sshPort);
         hostInfo.setSshUser(sshUser);
         hostInfo.setSshPassword(sshPassword);
-        hostInfo.setClusterCode(clusterCode);
+        hostInfo.setClusterId(clusterId);
         hostInfo.setCreateTime(new Date());
 
         // 2. 检查主机是否已受管
@@ -403,401 +401,12 @@ public class InstallServiceImpl implements InstallService {
 
     /**
      * 异步获取主机的操作系统信息
-     * 
+     *
      * @param hostInfo 主机信息
      */
-    private void getHostOsInfoAsync(HostInfo hostInfo) {
-        // 设置初始状态，表示正在获取主机信息
-        hostInfo.setOsInfoStatus("loading");
-
-        // 使用CompletableFuture异步执行获取操作系统信息的任务
-        CompletableFuture.runAsync(() -> {
-            try {
-                logger.info("开始异步获取主机 {} 的操作系统信息", hostInfo.getIp());
-                OsInfo osInfo = getHostOsInfoInternal(hostInfo);
-
-                // 更新主机信息和缓存
-                hostInfo.setOsInfo(osInfo);
-                hostInfo.setOsInfoStatus("ready");
-
-                // 更新缓存
-                updateHostInfoCache(hostInfo);
-
-                logger.info("成功获取主机 {} 的操作系统信息", hostInfo.getIp());
-            } catch (Exception e) {
-                // 设置异常状态
-                hostInfo.setOsInfoStatus("error");
-                logger.error("异步获取主机 {} 的操作系统信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
-
-                // 即使出错也要更新缓存，前端可以根据状态显示错误信息
-                updateHostInfoCache(hostInfo);
-            }
-        });
-    }
-
-    /**
-     * 更新缓存中的主机信息
-     */
-    private void updateHostInfoCache(HostInfo hostInfo) {
-        try {
-            // 获取缓存中的主机信息
-            Integer clusterId = hostInfo.getClusterId();
-            if (clusterId == null) {
-                logger.warn("主机 {} 未关联集群ID，无法更新缓存", hostInfo.getIp());
-                return;
-            }
-
-            String cacheKey = clusterId + Constants.HOST_MAP;
-            if (!CacheUtils.constainsKey(cacheKey)) {
-                logger.warn("找不到集群 {} 的主机缓存，无法更新", clusterId);
-                return;
-            }
-
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
-            if (hostMap != null) {
-                // 更新缓存中的主机信息
-                hostMap.put(hostInfo.getIp(), hostInfo);
-                CacheUtils.put(cacheKey, hostMap);
-                logger.debug("已更新集群 {} 中主机 {} 的缓存信息", clusterId, hostInfo.getIp());
-            }
-        } catch (Exception e) {
-            logger.error("更新主机 {} 的缓存信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 获取主机的操作系统信息（内部实现）
-     * 
-     * @param hostInfo 主机信息
-     * @return 操作系统信息
-     */
-    private OsInfo getHostOsInfoInternal(HostInfo hostInfo) {
-        OsInfo osInfo = new OsInfo();
-
-        // 获取SSH会话
-        ClientSession session = getOrCreateSession(hostInfo);
-
-        if (session == null) {
-            logger.warn("无法连接到主机: {}", hostInfo.getIp());
-            return osInfo;
-        }
-
-        // 获取主机名（兼容Windows和Linux系统）
-        // 首先用简单的hostname命令（两个系统都支持）
-        String hostname = MinaUtils.execCmdWithResult(session, "hostname");
-        if (hostname != null && !hostname.isEmpty()) {
-            hostname = hostname.trim();
-
-            // 尝试获取完整主机名（FQDN）
-            // 对于Linux使用hostname -f, 对于Windows使用PowerShell命令
-            try {
-                // 检测操作系统类型（简单的方法，检查是否存在/etc目录）
-                String osCheck = MinaUtils.execCmdWithResult(session,
-                        "if [ -d /etc ]; then echo 'linux'; else echo 'windows'; fi");
-                if ("linux".equalsIgnoreCase(osCheck.trim())) {
-                    // Linux系统，尝试获取FQDN
-                    String fqdn = MinaUtils.execCmdWithResult(session, "hostname -f 2>/dev/null");
-                    if (fqdn != null && !fqdn.isEmpty() && !fqdn.equals(hostname)) {
-                        hostname = fqdn.trim();
-                        logger.debug("获取到Linux完整主机名(FQDN): {}", hostname);
-                    }
-                } else {
-                    // Windows系统，尝试使用PowerShell获取DNS主机名
-                    String winFqdn = MinaUtils.execCmdWithResult(session,
-                            "powershell -command \"(Get-WmiObject -Class Win32_ComputerSystem).DNSHostName + '.' + (Get-WmiObject -Class Win32_ComputerSystem).Domain\" 2>NUL");
-                    if (winFqdn != null && !winFqdn.isEmpty() && !winFqdn.equals(hostname)
-                            && !winFqdn.contains("'.'")) {
-                        hostname = winFqdn.trim();
-                        logger.debug("获取到Windows完整主机名(FQDN): {}", hostname);
-                    }
-                }
-            } catch (Exception e) {
-                logger.warn("尝试获取完整主机名时出错，将使用简单主机名: {}", e.getMessage());
-            }
-
-            logger.debug("最终使用的主机名: {}", hostname);
-            // 将主机名设置到hostInfo对象中
-            hostInfo.setHostname(hostname);
-        } else {
-            logger.warn("无法获取主机 {} 的主机名，将使用IP代替", hostInfo.getIp());
-            // 如果获取主机名失败，则使用IP地址作为主机名
-            hostInfo.setHostname(hostInfo.getIp());
-        }
-
-        // 获取/etc/os-release文件内容
-        String osReleaseCommand = "cat /etc/os-release 2>/dev/null || echo 'Not Found'";
-        String osRelease = MinaUtils.execCmdWithResult(session, osReleaseCommand);
-
-        if (osRelease != null && !osRelease.contains("Not Found")) {
-            // 解析/etc/os-release文件内容
-            String distroId = extractValue(osRelease, "ID=");
-            osInfo.setDistributionId(distroId);
-
-            // 获取名称
-            String name = extractValue(osRelease, "NAME=");
-            osInfo.setDistribution(name);
-
-            // 获取版本ID
-            String versionId = extractValue(osRelease, "VERSION_ID=");
-            osInfo.setVersionId(versionId);
-
-            // 获取完整名称
-            String prettyName = extractValue(osRelease, "PRETTY_NAME=");
-            osInfo.setFullName(prettyName);
-
-            // 获取内核版本
-            String kernelVersion = MinaUtils.execCmdWithResult(session, "uname -r");
-            if (kernelVersion != null) {
-                osInfo.setKernelVersion(kernelVersion.trim());
-            }
-
-            // 获取系统架构
-            String architecture = MinaUtils.execCmdWithResult(session, "uname -m");
-            if (architecture != null) {
-                osInfo.setArchitecture(architecture.trim());
-                hostInfo.setCpuArchitecture(architecture.trim());
-            }
-
-            // 获取CPU信息
-            String cpuInfoCmd = "lscpu | grep 'Model name' | sed 's/Model name://g' | sed 's/^[ \t]*//g'";
-            String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
-            if (cpuInfo != null && !cpuInfo.isEmpty()) {
-                osInfo.setCpuInfo(cpuInfo.trim());
-            } else {
-                // 备用方法
-                cpuInfo = MinaUtils.execCmdWithResult(session,
-                        "cat /proc/cpuinfo | grep 'model name' | head -n 1 | sed 's/model name.*: //g'");
-                if (cpuInfo != null && !cpuInfo.isEmpty()) {
-                    osInfo.setCpuInfo(cpuInfo.trim());
-                }
-            }
-
-            // 获取CPU核心数
-            String cpuCoresCmd = "nproc --all";
-            String cpuCores = MinaUtils.execCmdWithResult(session, cpuCoresCmd);
-            if (cpuCores != null && !cpuCores.isEmpty()) {
-                try {
-                    osInfo.setCpuCores(Integer.parseInt(cpuCores.trim()));
-                } catch (NumberFormatException e) {
-                    logger.warn("解析CPU核心数失败: {}", cpuCores);
-                }
-            }
-
-            // 获取内存信息
-            String memInfoCmd = "free -m | grep 'Mem:' | awk '{print $2 \" \" $7}'";
-            String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
-            if (memInfo != null && !memInfo.isEmpty()) {
-                String[] memParts = memInfo.trim().split("\\s+");
-                if (memParts.length >= 2) {
-                    try {
-                        // 转换MB到GB并保留1位小数
-                        double totalMemoryMB = Double.parseDouble(memParts[0]);
-                        double availableMemoryMB = Double.parseDouble(memParts[1]);
-                        osInfo.setTotalMemory(Math.round(totalMemoryMB / 1024 * 10) / 10.0);
-                        osInfo.setAvailableMemory(Math.round(availableMemoryMB / 1024 * 10) / 10.0);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析内存信息失败: {}", memInfo);
-                    }
-                }
-            }
-
-            // 获取交换空间信息
-            String swapInfoCmd = "free -m | grep 'Swap:' | awk '{print $2 \" \" $4}'";
-            String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
-            if (swapInfo != null && !swapInfo.isEmpty()) {
-                String[] swapParts = swapInfo.trim().split("\\s+");
-                if (swapParts.length >= 2) {
-                    try {
-                        // 转换MB到GB并保留1位小数
-                        double totalSwapMB = Double.parseDouble(swapParts[0]);
-                        double availableSwapMB = Double.parseDouble(swapParts[1]);
-                        osInfo.setTotalSwap(Math.round(totalSwapMB / 1024 * 10) / 10.0);
-                        osInfo.setAvailableSwap(Math.round(availableSwapMB / 1024 * 10) / 10.0);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析交换空间信息失败: {}", swapInfo);
-                    }
-                }
-            }
-
-            // 获取磁盘信息
-            String diskInfoCmd = "df -h / | tail -n 1 | awk '{print $2 \" \" $4}'";
-            String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
-            if (diskInfo != null && !diskInfo.isEmpty()) {
-                String[] diskParts = diskInfo.trim().split("\\s+");
-                if (diskParts.length >= 2) {
-                    try {
-                        // 移除单位并转换为GB
-                        String totalDiskStr = diskParts[0].replaceAll("[^0-9.]", "");
-                        String availableDiskStr = diskParts[1].replaceAll("[^0-9.]", "");
-
-                        // 处理单位换算
-                        double totalDiskMultiplier = 1;
-                        double availableDiskMultiplier = 1;
-
-                        if (diskParts[0].endsWith("T")) {
-                            totalDiskMultiplier = 1024;
-                        }
-
-                        if (diskParts[1].endsWith("T")) {
-                            availableDiskMultiplier = 1024;
-                        }
-
-                        osInfo.setTotalDisk(Double.parseDouble(totalDiskStr) * totalDiskMultiplier);
-                        osInfo.setAvailableDisk(Double.parseDouble(availableDiskStr) * availableDiskMultiplier);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析磁盘信息失败: {}", diskInfo);
-                    }
-                }
-            }
-
-            // 尝试获取GPU信息
-            String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3";
-            String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
-            if (gpuInfo != null && !gpuInfo.isEmpty()) {
-                osInfo.setGpuInfo(gpuInfo.trim());
-            } else {
-                // 尝试使用nvidia-smi查询NVIDIA GPU
-                gpuInfo = MinaUtils.execCmdWithResult(session,
-                        "which nvidia-smi && nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo ''");
-                if (gpuInfo != null && !gpuInfo.isEmpty() && !gpuInfo.contains("which")) {
-                    osInfo.setGpuInfo(gpuInfo.trim());
-                }
-            }
-
-            osInfo.setValid(true);
-        } else {
-            // 尝试替代方法获取操作系统信息
-            tryAlternativeOsDetection(osInfo, session);
-        }
-
-        // 收集硬件信息
-        collectHardwareInfo(osInfo, session);
-
-        return osInfo;
-    }
-
-    // 修改原有的方法调用，将同步调用改为异步调用
-    // 注意你需要修改所有调用getHostOsInfo的地方，改为调用getHostOsInfoAsync
-    private OsInfo getHostOsInfo(HostInfo hostInfo) {
-        // 立即启动异步任务获取完整信息
-        getHostOsInfoAsync(hostInfo);
-
-        // 返回一个空的OsInfo对象，表示信息正在获取中
-        OsInfo pendingInfo = new OsInfo();
-        pendingInfo.setValid(false);
-        pendingInfo.setFullName("获取中...");
-        return pendingInfo;
-    }
-
-    // 在HostInfo类中添加osInfoStatus字段，用于标识操作系统信息的获取状态
-    // 你需要编辑HostInfo类，添加以下字段：
-    // private String osInfoStatus; // 可能的值: "loading", "ready", "error"
-
-    /**
-     * 尝试替代方法获取操作系统信息
-     */
-    private void tryAlternativeOsDetection(OsInfo osInfo, ClientSession session) {
-        try {
-            // 检查是否是CentOS/RHEL (查看/etc/redhat-release)
-            String redhatCmd = "cat /etc/redhat-release 2>/dev/null || echo 'Not Found'";
-            String redhatRelease = MinaUtils.execCmdWithResult(session, redhatCmd);
-            if (redhatRelease != null && !redhatRelease.contains("Not Found")) {
-                String release = redhatRelease.trim();
-                osInfo.setFullName(release);
-
-                if (release.toLowerCase().contains("centos")) {
-                    osInfo.setDistribution("CentOS");
-                    osInfo.setDistributionId("centos");
-                } else if (release.toLowerCase().contains("red hat")) {
-                    osInfo.setDistribution("Red Hat Enterprise Linux");
-                    osInfo.setDistributionId("rhel");
-                }
-
-                // 提取版本号
-                String version = extractVersionFromRelease(release);
-                osInfo.setVersionId(version);
-
-                osInfo.setValid(true);
-                logger.info("从redhat-release获取到操作系统信息: {}, 版本: {}", release, version);
-                return;
-            }
-
-            // 使用lsb_release命令
-            String lsbCmd = "lsb_release -a 2>/dev/null || echo 'Not Found'";
-            String lsbOutput = MinaUtils.execCmdWithResult(session, lsbCmd);
-            if (lsbOutput != null && !lsbOutput.contains("Not Found")) {
-                String distro = extractFromLsb(lsbOutput, "Distributor ID:");
-                String version = extractFromLsb(lsbOutput, "Release:");
-                String description = extractFromLsb(lsbOutput, "Description:");
-
-                osInfo.setFullName(description);
-                osInfo.setDistribution(distro);
-                osInfo.setDistributionId(distro.toLowerCase());
-                osInfo.setVersionId(version);
-                osInfo.setValid(true);
-
-                logger.info("从lsb_release获取到操作系统信息: {}, 版本: {}", description, version);
-                return;
-            }
-
-            // 最后尝试使用uname
-            String unameCmd = "uname -a";
-            String unameOutput = MinaUtils.execCmdWithResult(session, unameCmd);
-            if (unameOutput != null) {
-                osInfo.setFullName(unameOutput.trim());
-                osInfo.setDistribution("Unknown Linux");
-                osInfo.setDistributionId("unknown");
-                osInfo.setValid(true);
-
-                logger.info("从uname获取到操作系统信息: {}", unameOutput.trim());
-            }
-        } catch (Exception e) {
-            logger.error("尝试替代方法获取操作系统信息时出错: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 从LSB Release输出中提取信息
-     */
-    private String extractFromLsb(String content, String prefix) {
-        if (content == null || prefix == null) {
-            return "";
-        }
-
-        for (String line : content.split("\n")) {
-            line = line.trim();
-            if (line.startsWith(prefix)) {
-                return line.substring(prefix.length()).trim();
-            }
-        }
-        return "";
-    }
-
-    /**
-     * 从发行版字符串中提取版本号
-     */
-    private String extractVersionFromRelease(String release) {
-        if (release == null) {
-            return "";
-        }
-
-        // 尝试提取类似 "7.9"、"8.3" 这样的版本号
-        String versionPattern = "\\d+(\\.\\d+)+";
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(versionPattern);
-        java.util.regex.Matcher matcher = pattern.matcher(release);
-        if (matcher.find()) {
-            return matcher.group();
-        }
-
-        // 尝试提取单个数字版本
-        String singleVersionPattern = "\\s\\d+\\s";
-        pattern = java.util.regex.Pattern.compile(singleVersionPattern);
-        matcher = pattern.matcher(release);
-        if (matcher.find()) {
-            return matcher.group().trim();
-        }
-
-        return "";
+    @Override
+    public void getHostOsInfoAsync(HostInfo hostInfo) {
+        osInfoService.getHostOsInfoAsync(hostInfo);
     }
 
     /**
@@ -1405,164 +1014,6 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
-     * 收集硬件信息
-     */
-    private void collectHardwareInfo(OsInfo osInfo, ClientSession session) {
-        try {
-            // 获取CPU型号
-            String cpuInfoCmd = "lscpu | grep 'Model name' | sed 's/Model name://g' | sed 's/^[ \t]*//g'";
-            String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
-            if (cpuInfo != null && !cpuInfo.isEmpty()) {
-                osInfo.setCpuInfo(cpuInfo.trim());
-                logger.debug("获取到CPU信息: {}", cpuInfo.trim());
-            } else {
-                // 备用方法
-                cpuInfo = MinaUtils.execCmdWithResult(session,
-                        "cat /proc/cpuinfo | grep 'model name' | head -n 1 | sed 's/model name.*: //g'");
-                if (cpuInfo != null && !cpuInfo.isEmpty()) {
-                    osInfo.setCpuInfo(cpuInfo.trim());
-                    logger.debug("通过备用方法获取到CPU信息: {}", cpuInfo.trim());
-                }
-            }
-
-            // 获取CPU核心数
-            String cpuCoresCmd = "nproc --all";
-            String cpuCores = MinaUtils.execCmdWithResult(session, cpuCoresCmd);
-            if (cpuCores != null && !cpuCores.isEmpty()) {
-                try {
-                    osInfo.setCpuCores(Integer.parseInt(cpuCores.trim()));
-                    logger.debug("获取到CPU核心数: {}", cpuCores.trim());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析CPU核心数失败: {}", cpuCores);
-                }
-            }
-
-            // 获取内存信息
-            String memInfoCmd = "free -m | grep 'Mem:' | awk '{print $2 \" \" $7}'";
-            String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
-            if (memInfo != null && !memInfo.isEmpty()) {
-                String[] memParts = memInfo.trim().split("\\s+");
-                if (memParts.length >= 2) {
-                    try {
-                        // 转换MB到GB并保留1位小数
-                        double totalMemoryMB = Double.parseDouble(memParts[0]);
-                        double availableMemoryMB = Double.parseDouble(memParts[1]);
-                        osInfo.setTotalMemory(Math.round(totalMemoryMB / 1024 * 10) / 10.0);
-                        osInfo.setAvailableMemory(Math.round(availableMemoryMB / 1024 * 10) / 10.0);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析内存信息失败: {}", memInfo);
-                    }
-                }
-            }
-
-            // 获取磁盘信息
-            String diskInfoCmd = "df -h / | tail -n 1 | awk '{print $2 \" \" $4}'";
-            String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
-            if (diskInfo != null && !diskInfo.isEmpty()) {
-                String[] diskParts = diskInfo.trim().split("\\s+");
-                if (diskParts.length >= 2) {
-                    try {
-                        // 提取数字部分并确定单位
-                        String totalDiskStr = diskParts[0].replaceAll("[^0-9.]", "");
-                        String availableDiskStr = diskParts[1].replaceAll("[^0-9.]", "");
-
-                        double totalDiskMultiplier = 1;
-                        double availableDiskMultiplier = 1;
-
-                        if (diskParts[0].toUpperCase().endsWith("T")) {
-                            totalDiskMultiplier = 1024;
-                        }
-
-                        if (diskParts[1].toUpperCase().endsWith("T")) {
-                            availableDiskMultiplier = 1024;
-                        }
-
-                        double totalDisk = Double.parseDouble(totalDiskStr) * totalDiskMultiplier;
-                        double availableDisk = Double.parseDouble(availableDiskStr) * availableDiskMultiplier;
-
-                        osInfo.setTotalDisk(totalDisk);
-                        osInfo.setAvailableDisk(availableDisk);
-                        logger.debug("获取到磁盘信息: 总共 {}GB, 可用 {}GB", totalDisk, availableDisk);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析磁盘信息失败: {}", diskInfo);
-                    }
-                }
-            }
-
-            // 收集系统负载信息
-            String loadInfoCmd = "cat /proc/loadavg";
-            String loadInfo = MinaUtils.execCmdWithResult(session, loadInfoCmd);
-            if (loadInfo != null && !loadInfo.isEmpty()) {
-                String[] loadParts = loadInfo.trim().split("\\s+");
-                if (loadParts.length >= 3) {
-                    try {
-                        double load1 = Double.parseDouble(loadParts[0]);
-                        double load5 = Double.parseDouble(loadParts[1]);
-                        double load15 = Double.parseDouble(loadParts[2]);
-
-                        // 存储负载信息（如果OsInfo类有对应字段）
-                        osInfo.getClass().getDeclaredMethod("setLoad1Min", Double.class).invoke(osInfo, load1);
-                        osInfo.getClass().getDeclaredMethod("setLoad5Min", Double.class).invoke(osInfo, load5);
-                        osInfo.getClass().getDeclaredMethod("setLoad15Min", Double.class).invoke(osInfo, load15);
-                        logger.debug("获取到系统负载: 1分钟 {}, 5分钟 {}, 15分钟 {}", load1, load5, load15);
-                    } catch (Exception e) {
-                        logger.warn("设置系统负载信息失败: {}", e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.error("收集硬件信息时出错: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 从lscpu输出中提取特定字段的值
-     */
-    private String extractValueFromLscpu(String lscpuOutput, String fieldName) {
-        if (lscpuOutput == null || fieldName == null) {
-            return null;
-        }
-
-        String[] lines = lscpuOutput.split("\n");
-        for (String line : lines) {
-            if (line.trim().startsWith(fieldName)) {
-                return line.substring(fieldName.length()).trim();
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * 从/etc/os-release文件内容中提取指定键的值
-     *
-     * @param content 文件内容
-     * @param key     要查找的键（如ID=、NAME=等）
-     * @return 找到的值，如果未找到则返回空字符串
-     */
-    private String extractValue(String content, String key) {
-        if (content == null || key == null) {
-            return "";
-        }
-
-        String[] lines = content.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.startsWith(key)) {
-                String value = line.substring(key.length()).trim();
-                // 移除引号（如果有）
-                if ((value.startsWith("\"") && value.endsWith("\"")) ||
-                        (value.startsWith("'") && value.endsWith("'"))) {
-                    value = value.substring(1, value.length() - 1);
-                }
-                return value;
-            }
-        }
-
-        return "";
-    }
-
-    /**
      * 新增一个方法，用于获取主机的操作系统信息状态
      * 供前端查询主机信息是否已准备好
      */
@@ -1611,6 +1062,26 @@ public class InstallServiceImpl implements InstallService {
         } catch (Exception e) {
             logger.error("获取集群所有主机操作系统信息状态时出错", e);
             return Result.error("系统异常: " + e.getMessage());
+        }
+    }
+
+    // 修改方法，使用OsInfoService
+    private OsInfo getHostOsInfo(HostInfo hostInfo) {
+        // 委托给OsInfoService实现
+        return osInfoService.getHostOsInfo(hostInfo);
+    }
+
+    @Override
+    public Result clearHostEnvCheckCache() {
+        try {
+
+            logger.debug("删除主机检查项缓存");
+            CacheUtils.clear();
+            logger.info("主机环境校验缓存清理完成");
+            return Result.success();
+        } catch (Exception e) {
+            logger.error("清理主机环境校验缓存失败", e);
+            return Result.error("清理主机环境校验缓存失败: " + e.getMessage());
         }
     }
 }

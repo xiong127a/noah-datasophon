@@ -137,10 +137,14 @@ export default {
           if (!err) {
             flag = true;
             this.steps1Data = values;
+            
+            // 直接进入下一步，不再调用clearHostEnvCheckCache
+            this.currentStepsAdd();
           } else {
             flag = false;
           }
         });
+        return; // 添加return，防止下方的代码执行
       }
       if (this.stepsNumber === 2) {
         const self = this;
@@ -150,20 +154,19 @@ export default {
           if (!flag) self.$message.warning(res.data || "存在未检验成功的主机");
           if (!flag) return false;
           
-          // 主机检查完成后，额外调用清理资源接口
-          this.$axiosPost(global.API.cleanupHostCheckResources, {
+          // 主机检查完成后，直接分析主机列表
+          this.$axiosPost(global.API.analysisHostList, {
             clusterId: this.clusterId
-          }).then((cleanupRes) => {
-            if (cleanupRes.code !== 200) {
-              console.warn("清理主机检查资源失败:", cleanupRes.msg);
-            } else {
-              console.info("清理主机检查资源成功");
+          }).then((analysisRes) => {
+            if (analysisRes.code !== 200) {
+              console.warn("分析主机列表失败:", analysisRes.msg);
+              self.$message.warning("分析主机列表失败，请检查主机状态");
             }
-            // 无论清理结果如何，都进入下一步
+            // 无论分析结果如何，都进入下一步
             this.currentStepsAdd();
           }).catch((err) => {
-            console.error("清理主机检查资源出错:", err);
-            // 即使清理出错，也进入下一步
+            console.error("分析主机列表出错:", err);
+            // 即使分析出错，也进入下一步
             this.currentStepsAdd();
           });
         });

@@ -23,4 +23,4 @@ import '@/api/request'
 
 
 global.API = api// 挂在全局接口
-global.intervalTime = 5000
+global.intervalTime = 1000

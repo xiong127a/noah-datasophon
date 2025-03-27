@@ -41,6 +41,11 @@ public class HostInfo implements Serializable {
     private String hostname;
 
     /**
+     * 完全限定域名(FQDN)
+     */
+    private String fqdn;
+
+    /**
      * 是否受管
      */
     private boolean managed;

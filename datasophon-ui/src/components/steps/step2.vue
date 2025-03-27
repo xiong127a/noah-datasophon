@@ -1,4 +1,4 @@
-<!--
+﻿<!--
  *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -35,6 +35,23 @@
     </div>
 
     <div class="hosts-table-container">
+      <!-- 添加表格操作按钮区域 -->
+      <div class="table-operations" style="margin-bottom: 16px; display: flex; justify-content: flex-end; align-items: center;">
+        <div class="operation-group">
+          <a-button 
+            class="apple-batch-button"
+            :disabled="selectedRowKeys.length === 0"
+            @click="retryEnvironment('all')"
+          >
+            <template v-if="selectedRowKeys.length === 0">
+              <a-icon type="redo" />选择主机以重试
+            </template>
+            <template v-else>
+              <a-icon type="redo" />重试已选 {{ selectedRowKeys.length }} 台主机
+            </template>
+          </a-button>
+        </div>
+      </div>
       <a-table 
         @change="tableChange" 
         :columns="columns" 
@@ -418,13 +435,20 @@ export default {
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, ['处理器']),
-                      h('div', { class: 'os-detail-info-value' }, [row.osInfo.cpuInfo || '未知']),
+                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'cpuInfo') ? 
+                        h('div', { class: 'os-detail-info-value loading' }, [
+                          h('div', { class: 'loading-animation' }),
+                          h('span', { class: 'loading-text' }, ['正在收集...'])
+                        ]) : 
+                        h('div', { class: 'os-detail-info-value' }, [row.osInfo.cpuInfo || '未知']),
                       h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.cpuCores ? 
-                          (row.osInfo.cpuCount > 1 ? 
-                            `${row.osInfo.cpuCount} 颗 CPU (${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程)` : 
-                            `${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程`
-                          ) : ''
+                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'cpuCores') ?
+                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
+                          (row.osInfo.cpuCores ? 
+                            (row.osInfo.cpuCount > 1 ? 
+                              `${row.osInfo.cpuCount} 颗 CPU (${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程)` : 
+                              `${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程`
+                            ) : '')
                       ])
                     ])
                   ]),
@@ -438,23 +462,30 @@ export default {
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, ['内存']),
-                      h('div', { class: 'os-detail-info-value with-progress' }, [
-                        h('span', {}, [row.osInfo.totalMemory ? `${row.osInfo.totalMemory.toFixed(1)} GB` : '未知']),
-                        row.osInfo.totalMemory && row.osInfo.availableMemory ? 
-                          h('div', { class: 'os-detail-progress-container' }, [
-                            h('div', { 
-                              class: 'os-detail-progress-bar',
-                              style: {
-                                width: `${((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory * 100).toFixed(0)}%`,
-                                backgroundColor: ((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory > 0.8) ? '#FF3B30' : '#34C759'
-                              }
-                            })
-                          ]) : null
-                      ]),
+                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'memoryInfo') ? 
+                        h('div', { class: 'os-detail-info-value loading' }, [
+                          h('div', { class: 'loading-animation' }),
+                          h('span', { class: 'loading-text' }, ['正在收集...'])
+                        ]) : 
+                        h('div', { class: 'os-detail-info-value with-progress' }, [
+                          h('span', {}, [row.osInfo.totalMemory ? `${row.osInfo.totalMemory.toFixed(1)} GB` : '未知']),
+                          row.osInfo.totalMemory && row.osInfo.availableMemory ? 
+                            h('div', { class: 'os-detail-progress-container' }, [
+                              h('div', { 
+                                class: 'os-detail-progress-bar',
+                                style: {
+                                  width: `${((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory * 100).toFixed(0)}%`,
+                                  backgroundColor: ((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory > 0.8) ? '#FF3B30' : '#34C759'
+                                }
+                              })
+                            ]) : null
+                        ]),
                       h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.totalMemory && row.osInfo.availableMemory ? 
-                          `可用: ${row.osInfo.availableMemory.toFixed(1)} GB (${((row.osInfo.availableMemory / row.osInfo.totalMemory) * 100).toFixed(1)}%)` : 
-                          ''
+                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'memoryInfo') ?
+                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
+                          (row.osInfo.totalMemory && row.osInfo.availableMemory ? 
+                            `可用: ${row.osInfo.availableMemory.toFixed(1)} GB (${((row.osInfo.availableMemory / row.osInfo.totalMemory) * 100).toFixed(1)}%)` : 
+                            '')
                       ])
                     ])
                   ]),
@@ -468,27 +499,41 @@ export default {
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, ['存储']),
-                      h('div', { class: 'os-detail-info-value with-progress' }, [
-                        h('span', {}, [
-                          row.osInfo.totalDisk ? 
-                            (row.osInfo.totalDisk >= 1024 ? `${(row.osInfo.totalDisk / 1024).toFixed(1)} TB` : `${row.osInfo.totalDisk.toFixed(1)} GB`) : 
-                            '未知'
+                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'diskInfo') ? 
+                        h('div', { class: 'os-detail-info-value loading' }, [
+                          h('div', { class: 'loading-animation' }),
+                          h('span', { class: 'loading-text' }, ['正在收集...'])
+                        ]) : 
+                        h('div', { class: 'os-detail-info-value with-progress' }, [
+                          h('span', {}, [
+                            row.osInfo.totalDisk ? 
+                              (typeof row.osInfo.totalDisk === 'number' ? 
+                                (row.osInfo.totalDisk >= 1099511627776 ? `${((row.osInfo.totalDisk / 1099511627776)).toFixed(1)} TB` : `${((row.osInfo.totalDisk / 1073741824)).toFixed(1)} GB`) :
+                                (row.osInfo.totalDisk >= 1024 ? `${(row.osInfo.totalDisk / 1024).toFixed(1)} TB` : `${row.osInfo.totalDisk} GB`)
+                              ) : 
+                              '未知'
+                          ]),
+                          row.osInfo.totalDisk && row.osInfo.availableDisk ? 
+                            h('div', { class: 'os-detail-progress-container' }, [
+                              h('div', { 
+                                class: 'os-detail-progress-bar',
+                                style: {
+                                  width: `${((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk * 100).toFixed(0)}%`,
+                                  backgroundColor: ((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk > 0.9) ? '#FF3B30' : '#34C759'
+                                }
+                              })
+                            ]) : null
                         ]),
-                        row.osInfo.totalDisk && row.osInfo.availableDisk ? 
-                          h('div', { class: 'os-detail-progress-container' }, [
-                            h('div', { 
-                              class: 'os-detail-progress-bar',
-                              style: {
-                                width: `${((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk * 100).toFixed(0)}%`,
-                                backgroundColor: ((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk > 0.9) ? '#FF3B30' : '#34C759'
-                              }
-                            })
-                          ]) : null
-                      ]),
                       h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.totalDisk && row.osInfo.availableDisk ? 
-                          `可用: ${row.osInfo.availableDisk >= 1024 ? (row.osInfo.availableDisk / 1024).toFixed(1) + ' TB' : row.osInfo.availableDisk.toFixed(1) + ' GB'} (${((row.osInfo.availableDisk / row.osInfo.totalDisk) * 100).toFixed(1)}%)` : 
-                          ''
+                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'diskInfo') ?
+                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
+                          (row.osInfo.totalDisk && row.osInfo.availableDisk ? 
+                            `可用: ${
+                              typeof row.osInfo.availableDisk === 'number' ?
+                                (row.osInfo.availableDisk >= 1099511627776 ? ((row.osInfo.availableDisk / 1099511627776)).toFixed(1) + ' TB' : ((row.osInfo.availableDisk / 1073741824)).toFixed(1) + ' GB') :
+                                (row.osInfo.availableDisk >= 1024 ? (row.osInfo.availableDisk / 1024).toFixed(1) + ' TB' : row.osInfo.availableDisk + ' GB')
+                            } (${((row.osInfo.availableDisk / row.osInfo.totalDisk) * 100).toFixed(1)}%)` : 
+                            '')
                       ])
                     ])
                   ]),
@@ -502,25 +547,40 @@ export default {
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, ['交换空间']),
-                      h('div', { class: 'os-detail-info-value with-progress' }, [
-                        h('span', {}, [
-                          row.osInfo.totalSwap ? `${row.osInfo.totalSwap.toFixed(1)} GB` : '未知'
+                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'swapInfo') ? 
+                        h('div', { class: 'os-detail-info-value loading' }, [
+                          h('div', { class: 'loading-animation' }),
+                          h('span', { class: 'loading-text' }, ['正在收集...'])
+                        ]) : 
+                        h('div', { class: 'os-detail-info-value with-progress' }, [
+                          h('span', {}, [
+                            row.osInfo.totalSwap ? 
+                              (typeof row.osInfo.totalSwap === 'number' ?
+                                `${((row.osInfo.totalSwap / 1073741824)).toFixed(1)} GB` :
+                                `${row.osInfo.totalSwap} GB`
+                              ) : '未知'
+                          ]),
+                          row.osInfo.totalSwap && row.osInfo.availableSwap ? 
+                            h('div', { class: 'os-detail-progress-container' }, [
+                              h('div', { 
+                                class: 'os-detail-progress-bar',
+                                style: {
+                                  width: `${((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap * 100).toFixed(0)}%`,
+                                  backgroundColor: ((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap > 0.8) ? '#FF3B30' : '#34C759'
+                                }
+                              })
+                            ]) : null
                         ]),
-                        row.osInfo.totalSwap && row.osInfo.availableSwap ? 
-                          h('div', { class: 'os-detail-progress-container' }, [
-                            h('div', { 
-                              class: 'os-detail-progress-bar',
-                              style: {
-                                width: `${((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap * 100).toFixed(0)}%`,
-                                backgroundColor: ((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap > 0.8) ? '#FF3B30' : '#34C759'
-                              }
-                            })
-                          ]) : null
-                      ]),
                       h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.totalSwap && row.osInfo.availableSwap ? 
-                          `可用: ${row.osInfo.availableSwap.toFixed(1)} GB (${((row.osInfo.availableSwap / row.osInfo.totalSwap) * 100).toFixed(1)}%)` : 
-                          ''
+                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'swapInfo') ?
+                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
+                          (row.osInfo.totalSwap && row.osInfo.availableSwap ? 
+                            `可用: ${
+                              typeof row.osInfo.availableSwap === 'number' ?
+                                `${((row.osInfo.availableSwap / 1073741824)).toFixed(1)} GB` :
+                                `${row.osInfo.availableSwap} GB`
+                            } (${((row.osInfo.availableSwap / row.osInfo.totalSwap) * 100).toFixed(1)}%)` : 
+                            '')
                       ])
                     ])
                   ]) : null,
@@ -534,9 +594,17 @@ export default {
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, ['显卡']),
-                      h('div', { class: 'os-detail-info-value' }, [row.osInfo.gpuInfo || '未知'])
+                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'gpuInfo') ? 
+                        h('div', { class: 'os-detail-info-value loading' }, [
+                          h('div', { class: 'loading-animation' }),
+                          h('span', { class: 'loading-text' }, ['正在收集...'])
+                        ]) : 
+                        h('div', { class: 'os-detail-info-value' }, [row.osInfo.gpuInfo || '未知']),
+                      row.osInfo.gpuMemory > 0 ? h('div', { class: 'gpu-memory-info' }, [
+                        `显存: ${row.osInfo.gpuMemory.toFixed(1)} GB`
+                      ]) : null
                     ])
-                  ]) : null
+                  ]) : null,
                 ]),
                 
                 // 系统详情
@@ -547,6 +615,14 @@ export default {
                   ]),
                   
                   h('div', { class: 'os-detail-table' }, [
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['主机名']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.hostname || '-'])
+                    ]),
+                    h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['完整域名']),
+                      h('div', { class: 'os-detail-table-cell value' }, [row.fqdn || row.hostname || '-'])
+                    ]),
                     h('div', { class: 'os-detail-table-row' }, [
                       h('div', { class: 'os-detail-table-cell label' }, ['发行版']),
                       h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distribution || '-'])
@@ -560,7 +636,7 @@ export default {
                       h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.versionId || '-'])
                     ]),
                     h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['操作系统架构']),
+                      h('div', { class: 'os-detail-table-cell label' }, ['系统架构']),
                       h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.architecture || '-'])
                     ])
                   ])
@@ -862,6 +938,7 @@ export default {
           customRender: (text, row) => {
             const h = this.$createElement;
             const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            const isWaiting = row.status === 'WAITING' || row.statusStr === 'WAITING';
             
             return h('div', { class: 'action-buttons apple-actions' }, [
               // 终止按钮 - 检查中时显示
@@ -876,12 +953,12 @@ export default {
                 }
               }, ["终止"]) : null,
               
-              // 重试按钮 - 非检查中时显示，检查中则禁用
+              // 重试按钮 - 非检查中且非等待检查时显示
               !isChecking ? h('a-button', {
                 attrs: {
                   type: 'link',
                   size: 'small',
-                  disabled: false // 主机列表的重试按钮始终可用，除非正在检查中
+                  disabled: isWaiting // 等待检查时禁用
                 },
                 class: 'apple-button primary',
                 on: {
@@ -2188,7 +2265,7 @@ export default {
       if (self.timer) clearInterval(self.timer);
       self.timer = setInterval(() => {
         self.getEnvironmentList(true);
-      }, 5000);
+      }, 1000);
     },
 
     // 查看日志
@@ -3687,5 +3764,139 @@ export default {
 @keyframes osFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.steps-container {
+  // 添加硬件信息收集状态的动画和样式
+  .os-detail-info-value.loading {
+    display: flex;
+    align-items: center;
+    color: #8E8E93;
+  }
+  
+  .loading-animation {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 122, 255, 0.1);
+    border-top-color: rgba(0, 122, 255, 0.8);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+    color: #8E8E93;
+  }
+  
+  .loading-text-simple {
+    font-size: 14px;
+    color: #8E8E93;
+    font-style: italic;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  // OS信息加载动画
+  .os-info-loading {
+    position: relative;
+    overflow: hidden;
+    
+    &:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0) 100%);
+      animation: shimmer 1.5s infinite;
+    }
+  }
+  
+  @keyframes shimmer {
+    to {
+      left: 100%;
+    }
+  }
+  
+  @keyframes osFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.gpu-memory-info {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8e8e93;
+  line-height: 1.2;
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f2f2f7;
+  border-radius: 4px;
+}
+
+.table-operations {
+  .operation-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    .apple-batch-button {
+      height: 40px;
+      padding: 0 20px;
+      border: none;
+      background: linear-gradient(180deg, #0A84FF 0%, #0066CC 100%);
+      border-radius: 20px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+      
+      .anticon {
+        font-size: 14px;
+        margin-right: 6px;
+      }
+      
+      &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        background: linear-gradient(180deg, #0091FF 0%, #0077ED 100%);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+      }
+      
+      &:active:not(:disabled) {
+        transform: translateY(0);
+        background: linear-gradient(180deg, #0077ED 0%, #0066CC 100%);
+        box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+      }
+      
+      &:disabled {
+        background: linear-gradient(180deg, #E5E5EA 0%, #D1D1D6 100%);
+        color: #8E8E93;
+        box-shadow: none;
+        cursor: not-allowed;
+        
+        .anticon {
+          opacity: 0.5;
+        }
+      }
+    }
+  }
 }
 </style>
