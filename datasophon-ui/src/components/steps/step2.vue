@@ -234,9 +234,16 @@ export default {
           },
         },
         { 
+          title: "主机名", 
+          key: "hostname", 
+          dataIndex: "hostname",
+          width: 180
+        },
+        { 
           title: "主机IP", 
           key: "ip", 
-          dataIndex: "ip" 
+          dataIndex: "ip",
+          width: 150
         },
         {
           title: "操作系统",

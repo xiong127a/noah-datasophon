@@ -528,7 +528,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             for (CheckItem item : hostInfo.getCheckItems()) {
                 if (item.getStatus() == CheckItem.Status.CHECKING || item.getStatus() == CheckItem.Status.WAITING) {
                     updates.put(item.getId(), CheckItem.Status.SKIPPED);
-                    item.setMessage("检查已终止");
+                    item.setMessage("已手动跳过此检查项");
                 }
             }
 
@@ -602,7 +602,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             boolean updated = hostInfo.updateCheckItemStatus(
                     itemId,
                     CheckItem.Status.SKIPPED,
-                    "检查已终止");
+                    "已手动跳过此检查项");
 
             if (!updated) {
                 return Result.error("检查项状态更新失败");
