@@ -162,8 +162,11 @@ public class HostCheckQueueManager {
         logger.info("正在初始化主机检查队列管理器...");
         startQueueProcessor();
         startFixQueueProcessor();
-        startScheduledTasks();
-        logger.info("主机检查队列管理器初始化完成");
+        // 注释掉自动启动定时任务的代码
+        // startScheduledTasks();
+        // 将定时任务标志设置为已停用
+        scheduledTasksEnabled.set(false);
+        logger.info("主机检查队列管理器初始化完成，定时任务默认关闭");
     }
 
     /**
@@ -749,7 +752,7 @@ public class HostCheckQueueManager {
                 }
             }
         }
-        
+
         // 同样检查修复任务超时
         for (Map.Entry<String, Long> entry : fixTaskStartTimes.entrySet()) {
             String taskKey = entry.getKey();
@@ -783,7 +786,7 @@ public class HostCheckQueueManager {
             }
             return false;
         });
-        
+
         // 清理修复队列中已完成但未正确移除的任务
         runningFixTasks.entrySet().removeIf(entry -> {
             if (entry.getValue().isDone() || entry.getValue().isCancelled()) {

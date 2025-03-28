@@ -105,8 +105,11 @@ public class AsyncCheckService {
     @PostConstruct
     public void init() {
         logger.info("初始化异步检查服务...");
-        startScheduledTasks();
-        logger.info("异步检查服务初始化完成");
+        // 注释掉自动启动定时任务的代码
+        // startScheduledTasks();
+        // 将定时任务标志设置为已停用
+        scheduledTasksEnabled.set(false);
+        logger.info("异步检查服务初始化完成，定时任务默认关闭");
     }
 
     /**

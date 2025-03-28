@@ -274,21 +274,20 @@ export default {
               ]);
             }
             
-            // 检查osInfoStatus状态，显示加载动画
-            // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
-            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null) {
-              // 创建加载中的操作系统信息浮窗
-              const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
-                h('div', { class: 'os-detail-loading-header' }),
-                h('div', { class: 'os-detail-loading-content' }, [
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' }),
-                  h('div', { class: 'os-detail-loading-line' }),
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' })
+            // 检查hostnameStatus状态，显示加载动画
+            if (row.hostnameStatus === 'loading') {
+              // 创建加载中的主机名信息浮窗
+              const loadingTooltipContent = h('div', { class: 'hostname-detail-loading' }, [
+                h('div', { class: 'hostname-detail-loading-header' }),
+                h('div', { class: 'hostname-detail-loading-content' }, [
+                  h('div', { class: 'hostname-detail-loading-line short' }),
+                  h('div', { class: 'hostname-detail-loading-line medium' }),
+                  h('div', { class: 'hostname-detail-loading-line' }),
+                  h('div', { class: 'hostname-detail-loading-line short' }),
+                  h('div', { class: 'hostname-detail-loading-line medium' })
                 ]),
                 h('div', { 
-                  class: 'os-detail-loading-text',
+                  class: 'hostname-detail-loading-text',
                   style: {
                     fontSize: '14px',
                     textAlign: 'center',
@@ -296,7 +295,7 @@ export default {
                     marginTop: '12px',
                     fontWeight: '500'
                   }
-                }, ['正在优雅检索主机名信息...'])
+                }, ['正在收集主机名信息...'])
               ]);
               
               // 苹果风格的骨架屏加载动画
@@ -304,23 +303,23 @@ export default {
                 props: {
                   placement: 'right',
                   arrowPointAtCenter: true,
-                  overlayClassName: 'os-tooltip',
+                  overlayClassName: 'hostname-tooltip',
                   getPopupContainer: () => document.body
                 }
               }, [
                 // 加载中浮窗内容
                 h('span', { 
                   slot: 'title',
-                  class: 'os-detail-tooltip'
+                  class: 'hostname-detail-tooltip'
                 }, [loadingTooltipContent]),
                 
                 // 显示的加载内容
                 h('div', {
-                  class: 'os-info-loading',
+                  class: 'hostname-info-loading',
                   style: {
                     position: 'relative',
                     height: '24px',
-                    width: '90%',
+                    width: '100%',
                     borderRadius: '4px',
                     backgroundColor: 'rgba(240, 240, 240, 0.8)',
                     overflow: 'hidden',
@@ -336,13 +335,75 @@ export default {
                       color: '#8E8E93',
                       fontWeight: '500',
                       position: 'relative',
-                      zIndex: 2
+                      zIndex: 2,
+                      whiteSpace: 'nowrap'  // 防止文字换行
                     }
                   }, ['正在检索主机名...'])
                 ])
               ]);
-            } else if (row.osInfoStatus === 'error') {
-              // 错误状态显示
+            }
+            
+            // 处理hostnameStatus为'pending'的情况
+            if (row.hostnameStatus === 'pending') {
+              // 创建等待状态的主机名信息浮窗
+              const pendingTooltipContent = h('div', { class: 'hostname-detail-waiting' }, [
+                h('div', { class: 'hostname-detail-waiting-header' }),
+                h('div', { class: 'hostname-detail-waiting-content' }, [
+                  h('a-icon', { 
+                    props: { type: 'clock-circle' }, 
+                    style: { fontSize: '32px', color: '#FAAD14', marginBottom: '12px' } 
+                  }),
+                  h('div', { 
+                    style: {
+                      fontSize: '14px',
+                      textAlign: 'center',
+                      color: '#FAAD14',
+                      fontWeight: '500'
+                    }
+                  }, ['等待收集主机名信息'])
+                ])
+              ]);
+              
+              // 等待收集状态显示
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'hostname-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 等待中浮窗内容
+                h('span', { 
+                  slot: 'title',
+                  class: 'hostname-detail-tooltip'
+                }, [pendingTooltipContent]),
+                
+                // 显示的等待内容
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '24px'
+                  }
+                }, [
+                  h('a-icon', { 
+                    props: { type: 'clock-circle' }, 
+                    style: { marginRight: '6px', color: '#FAAD14' } 
+                  }),
+                  h('span', {
+                    style: {
+                      fontSize: '12px', 
+                      color: '#FAAD14',
+                      fontWeight: '500'
+                    }
+                  }, ['等待收集主机名信息'])
+                ])
+              ]);
+            }
+            
+            // 添加处理主机名信息显示错误的情况
+            if (row.hostnameStatus === 'error') {
               return h('div', {
                 style: {
                   display: 'flex',
@@ -354,24 +415,21 @@ export default {
                   props: { type: 'warning' },
                   style: { marginRight: '6px' }
                 }),
-                '系统信息获取失败'
+                '主机名获取失败'
               ]);
             }
             
-            // 当主机名为null时也显示加载状态
-            if (!row.hostname) {
-              // 苹果风格的骨架屏加载动画
+            // 当主机名为null时，显示暂无主机名
+            if (row.hostname === null) {
               return h('div', {
-                class: 'os-info-loading',
                 style: {
-                  position: 'relative',
-                  height: '24px',
-                  width: '90%',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                  overflow: 'hidden'
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#8E8E93'
                 }
-              });
+              }, [
+                h('span', {}, ['暂无主机名'])
+              ]);
             }
             
             // 正常显示主机名，添加悬浮卡片
@@ -395,121 +453,45 @@ export default {
                 ])
               ]),
               
-              // DNS和hosts文件信息部分
+              // DNS服务器信息部分
               h('div', { class: 'hostname-detail-section' }, [
-                h('div', { class: 'hostname-detail-title' }, ['DNS和Hosts配置']),
-                // DNS信息
-                h('div', { class: 'hostname-detail-block' }, [
-                  h('div', { class: 'hostname-detail-subtitle' }, [
-                    h('span', { style: { display: 'flex', alignItems: 'center' } }, [
-                      h('a-icon', { 
-                        props: { type: 'global' }, 
-                        style: { marginRight: '6px', color: '#007AFF' } 
-                      }),
-                      'DNS服务器',
-                      // 添加状态图标
-                      row.dnsStatus === 'success' ? 
-                        h('a-icon', { 
-                          props: { type: 'check-circle' }, 
-                          style: { marginLeft: '6px', color: '#34C759', fontSize: '14px' } 
-                        }) :
-                        row.dnsStatus === 'error' ?
-                          h('a-icon', { 
-                            props: { type: 'close-circle' }, 
-                            style: { marginLeft: '6px', color: '#FF3B30', fontSize: '14px' } 
-                          }) :
-                          row.dnsStatus === 'loading' ?
-                            h('a-icon', { 
-                              props: { type: 'loading' }, 
-                              style: { marginLeft: '6px', color: '#007AFF', fontSize: '14px' } 
-                            }) : null
-                    ])
-                  ]),
-                  row.dnsStatus === 'loading' ? 
-                    h('div', { class: 'hostname-detail-loading' }, [
-                      h('div', { class: 'loading-animation' }),
-                      h('span', { class: 'loading-text' }, ['正在读取DNS服务器信息...'])
-                    ]) : 
-                    row.dnsStatus === 'error' ?
-                      h('div', { class: 'hostname-detail-error' }, [
-                        h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                        '读取DNS服务器信息失败'
-                      ]) :
-                      row.osInfo && row.osInfo.dnsServers ? 
-                        h('pre', { 
-                          class: 'hostname-detail-hosts-content',
-                          style: {
-                            maxHeight: '100px',
-                            overflow: 'auto',
-                            margin: '8px 0',
-                            padding: '12px',
-                            backgroundColor: '#F5F5F7',
-                            borderRadius: '8px',
-                            fontFamily: 'monospace',
-                            fontSize: '12px',
-                            lineHeight: '1.5',
-                            color: '#1D1D1F',
-                            border: '1px solid #E5E5EA'
-                          }
-                        }, [row.osInfo.dnsServers]) : 
-                        h('div', { class: 'hostname-detail-empty' }, ['未获取到DNS服务器信息'])
+                h('div', { class: 'hostname-detail-title' }, [
+                  h('i', { class: 'anticon anticon-cloud', style: { marginRight: '6px', color: '#007AFF' } }),
+                  '网络配置信息'
                 ]),
-                
-                // Hosts文件信息
-                h('div', { class: 'hostname-detail-block' }, [
-                  h('div', { class: 'hostname-detail-subtitle' }, [
-                    h('span', { style: { display: 'flex', alignItems: 'center' } }, [
-                      h('a-icon', { 
-                        props: { type: 'file-text' }, 
-                        style: { marginRight: '6px', color: '#007AFF' } 
-                      }),
-                      'Hosts文件',
-                      // 添加状态图标
-                      row.hostsFileStatus === 'success' ? 
-                        h('a-icon', { 
-                          props: { type: 'check-circle' }, 
-                          style: { marginLeft: '6px', color: '#34C759', fontSize: '14px' } 
-                        }) :
-                        row.hostsFileStatus === 'error' ?
-                          h('a-icon', { 
-                            props: { type: 'close-circle' }, 
-                            style: { marginLeft: '6px', color: '#FF3B30', fontSize: '14px' } 
-                          }) :
-                          row.hostsFileStatus === 'loading' ?
-                            h('a-icon', { 
-                              props: { type: 'loading' }, 
-                              style: { marginLeft: '6px', color: '#007AFF', fontSize: '14px' } 
-                            }) : null
+                h('div', { class: 'hostname-detail-content' }, [
+                  h('div', { class: 'hostname-detail-item' }, [
+                    h('span', { class: 'hostname-detail-label' }, ['DNS服务器:']),
+                    h('span', { class: 'hostname-detail-value' }, [
+                      row.osInfo && row.osInfo.dnsServers ? row.osInfo.dnsServers : '未配置DNS'
                     ])
-                  ]),
-                  row.hostsFileStatus === 'loading' ? 
-                    h('div', { class: 'hostname-detail-loading' }, [
-                      h('div', { class: 'loading-animation' }),
-                      h('span', { class: 'loading-text' }, ['正在读取hosts文件...'])
-                    ]) : 
-                    row.hostsFileStatus === 'error' ?
-                      h('div', { class: 'hostname-detail-error' }, [
-                        h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                        '读取hosts文件失败'
-                      ]) :
-                      h('pre', { 
-                        class: 'hostname-detail-hosts-content',
-                        style: {
-                          maxHeight: '200px',
-                          overflow: 'auto',
-                          margin: '8px 0',
-                          padding: '12px',
-                          backgroundColor: '#F5F5F7',
-                          borderRadius: '8px',
-                          fontFamily: 'monospace',
-                          fontSize: '12px',
-                          lineHeight: '1.5',
-                          color: '#1D1D1F',
-                          border: '1px solid #E5E5EA'
-                        }
-                      }, [row.hostsFile || '# 暂无hosts文件内容'])
+                  ])
                 ])
-              ])
+              ]),
+              
+              // hosts文件信息部分
+              row.hostsFile ? h('div', { class: 'hostname-detail-section' }, [
+                h('div', { class: 'hostname-detail-title' }, [
+                  h('i', { class: 'anticon anticon-file-text', style: { marginRight: '6px', color: '#FF9500' } }),
+                  'Hosts文件内容'
+                ]),
+                h('div', { class: 'hostname-detail-content' }, [
+                  h('pre', { 
+                    class: 'hostname-detail-hosts-file',
+                    style: {
+                      maxHeight: '150px',
+                      overflow: 'auto',
+                      background: 'rgba(0, 0, 0, 0.03)',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all'
+                    }
+                  }, [row.hostsFile])
+                ])
+              ]) : null
             ]);
             
             return h('a-tooltip', {
@@ -567,13 +549,13 @@ export default {
           title: "操作系统",
           key: "osType",
           dataIndex: "osType",
-          width: "25%",  // 增加操作系统列宽度
+          width: "10%",  // 减小操作系统列宽度，从15%改为10%
           customRender: (text, row) => {
             const h = this.$createElement;
             
             // 检查osInfoStatus状态，显示加载动画
             // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
-            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null) {
+            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null || row.osStatus === 'loading') {
               // 如果SSH连接失败，则显示错误状态而不是加载状态
               if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
                 return h('div', {
@@ -658,6 +640,82 @@ export default {
               ]);
             }
             
+            // 处理osStatus为'pending'的情况
+            if (row.osStatus === 'pending') {
+              // 创建等待状态的操作系统信息浮窗
+              const pendingTooltipContent = h('div', { class: 'os-detail-waiting' }, [
+                h('div', { class: 'os-detail-waiting-header' }),
+                h('div', { class: 'os-detail-waiting-content' }, [
+                  h('a-icon', { 
+                    props: { type: 'clock-circle' }, 
+                    style: { fontSize: '32px', color: '#FAAD14', marginBottom: '12px' } 
+                  }),
+                  h('div', { 
+                    style: {
+                      fontSize: '14px',
+                      textAlign: 'center',
+                      color: '#FAAD14',
+                      fontWeight: '500'
+                    }
+                  }, ['等待收集操作系统信息'])
+                ])
+              ]);
+              
+              // 等待收集状态显示
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 等待中浮窗内容
+                h('span', { 
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [pendingTooltipContent]),
+                
+                // 显示的等待内容
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '24px'
+                  }
+                }, [
+                  h('a-icon', { 
+                    props: { type: 'clock-circle' }, 
+                    style: { marginRight: '6px', color: '#FAAD14' } 
+                  }),
+                  h('span', {
+                    style: {
+                      fontSize: '12px', 
+                      color: '#FAAD14',
+                      fontWeight: '500'
+                    }
+                  }, ['等待收集操作系统信息'])
+                ])
+              ]);
+            }
+            
+            // 添加处理操作系统信息显示错误的情况
+            if (row.osInfoStatus === 'error' || row.osStatus === 'error') {
+              return h('div', {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#FF3B30'
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'warning' },
+                  style: { marginRight: '6px' }
+                }),
+                '操作系统信息获取失败'
+              ]);
+            }
+            
             // 使用osInfo中的数据
             const hasOsInfo = row.osInfo && row.osInfo.valid;
             const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
@@ -713,7 +771,7 @@ export default {
                 h('div', { class: 'os-detail-icon-container' }, [
                   h('img', {
                     attrs: {
-                      src: getOsIconPath(osType),
+                      src: iconPath,
                       alt: osType,
                       width: '64',
                       height: '64'
@@ -776,6 +834,11 @@ export default {
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : 
+                            row.cpuStatus === 'pending' ?
+                              h('a-icon', { 
+                                props: { type: 'clock-circle' }, 
+                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.cpuStatus === 'loading' ? 
@@ -788,9 +851,14 @@ export default {
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取CPU信息失败'
                           ]) :
+                          row.cpuStatus === 'pending' ?
+                            h('div', { class: 'os-detail-info-value waiting' }, [
+                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                              '等待收集CPU信息'
+                            ]) :
                           h('div', { class: 'os-detail-info-value' }, [
                             row.osInfo && row.osInfo.cpuModel ? row.osInfo.cpuModel : '未知'
-                          ])
+                      ])
                     ])
                   ]),
                   
@@ -829,6 +897,11 @@ export default {
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : 
+                            row.memoryStatus === 'pending' ?
+                              h('a-icon', { 
+                                props: { type: 'clock-circle' }, 
+                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.memoryStatus === 'loading' ? 
@@ -841,11 +914,16 @@ export default {
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取内存信息失败'
                           ]) :
+                          row.memoryStatus === 'pending' ?
+                            h('div', { class: 'os-detail-info-value waiting' }, [
+                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                              '等待收集内存信息'
+                            ]) :
                           h('div', { class: 'os-detail-info-value' }, [
                             row.osInfo && row.osInfo.memTotal ? 
                               `总内存: ${row.osInfo.memTotal}` : 
                               '未知'
-                          ])
+                      ])
                     ])
                   ]),
                   
@@ -884,6 +962,11 @@ export default {
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : 
+                            row.diskStatus === 'pending' ?
+                              h('a-icon', { 
+                                props: { type: 'clock-circle' }, 
+                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.diskStatus === 'loading' ? 
@@ -896,11 +979,16 @@ export default {
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取磁盘信息失败'
                           ]) :
+                          row.diskStatus === 'pending' ?
+                            h('div', { class: 'os-detail-info-value waiting' }, [
+                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                              '等待收集磁盘信息'
+                            ]) :
                           h('div', { class: 'os-detail-info-value' }, [
                             row.osInfo && row.osInfo.diskTotal ? 
                               `总空间: ${row.osInfo.diskTotal}` : 
                               '未知'
-                          ])
+                      ])
                     ])
                   ]),
                   
@@ -939,6 +1027,11 @@ export default {
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : 
+                            row.swapStatus === 'pending' ?
+                              h('a-icon', { 
+                                props: { type: 'clock-circle' }, 
+                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.swapStatus === 'loading' ? 
@@ -951,6 +1044,11 @@ export default {
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取交换空间信息失败'
                           ]) :
+                          row.swapStatus === 'pending' ?
+                            h('div', { class: 'os-detail-info-value waiting' }, [
+                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                              '等待收集交换空间信息'
+                            ]) :
                           h('div', { class: 'os-detail-info-value' }, [
                             row.osInfo && row.osInfo.swapTotal ? 
                               `交换空间: ${row.osInfo.swapTotal}` : 
@@ -994,6 +1092,11 @@ export default {
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : 
+                            row.gpuStatus === 'pending' ?
+                              h('a-icon', { 
+                                props: { type: 'clock-circle' }, 
+                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.gpuStatus === 'loading' ? 
@@ -1006,6 +1109,11 @@ export default {
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取GPU信息失败'
                           ]) :
+                          row.gpuStatus === 'pending' ?
+                            h('div', { class: 'os-detail-info-value waiting' }, [
+                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                              '等待收集GPU信息'
+                            ]) :
                           h('div', { class: 'os-detail-info-value' }, [
                             row.osInfo && row.osInfo.gpuModel ? 
                               row.osInfo.gpuModel : 
@@ -1016,6 +1124,94 @@ export default {
                 ])
               ])
             ]) : null;
+            
+            // 返回操作系统信息显示
+            if (hasOsInfo) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 悬浮显示的详细内容
+                h('span', { 
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [osDetailContent]),
+                
+                // 显示的操作系统信息
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center'
+                  }
+                }, [
+                  // 操作系统图标
+                  h('div', {
+                    style: {
+                      width: '24px',
+                      height: '24px',
+                      marginRight: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                      justifyContent: 'center'
+                  }
+                }, [
+                  h('img', {
+                    attrs: {
+                      src: iconPath,
+                        alt: osType
+                    },
+                    style: { 
+                        width: '20px',
+                        height: '20px'
+                      }
+                    })
+                  ]),
+                  
+                  // 操作系统名称和版本
+                  h('div', {
+                    style: {
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }
+                  }, [
+                    h('span', {
+                      style: {
+                        color: '#1D1D1F',
+                        fontWeight: '500',
+                        fontSize: '13px',
+                        lineHeight: '1.3'
+                      }
+                    }, [osType]),
+                    osVersion ? h('span', {
+                      style: {
+                        color: '#8E8E93',
+                        fontSize: '11px',
+                        lineHeight: '1.3'
+                      }
+                    }, [osVersion]) : null
+                ])
+              ])
+            ]);
+          }
+            
+            // 当没有有效的osInfo时，显示简单的信息
+            return h('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center'
+              }
+            }, [
+              h('span', {
+                style: {
+                  color: '#8E8E93',
+                  fontSize: '13px'
+                }
+              }, [text || '未知操作系统'])
+            ]);
           }
         },
         {
@@ -5224,5 +5420,28 @@ export default {
 .os-detail-info-subvalue {
   font-size: 0.8rem;
   color: #8E8E93;
+}
+
+// 添加CSS样式到组件样式部分
+.hostname-detail-waiting,
+.os-detail-info-value.waiting {
+  display: flex;
+  align-items: center;
+  color: #FAAD14;
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.os-detail-waiting {
+  padding: 16px;
+  width: 300px;
+  text-align: center;
+}
+
+.os-detail-waiting-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
 }
 </style>

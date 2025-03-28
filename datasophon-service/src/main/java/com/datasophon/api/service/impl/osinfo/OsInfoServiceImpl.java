@@ -106,15 +106,15 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     @Override
     public void getHostOsInfoAsync(HostInfo hostInfo) {
-        // 保存原始主机名，避免在异步处理中丢失
-        final String originalHostname = hostInfo.getHostname();
-        logger.debug("开始异步获取主机信息, IP:{}, 原始主机名:{}", hostInfo.getIp(), originalHostname);
+        // 记录主机信息收集开始时间
+        logger.info("主机信息收集流程：");
+        logger.info("IP: {}, 开始收集信息", hostInfo.getIp());
 
-        // 初始化各状态为loading
-        hostInfo.setOsInfoStatus("loading");
-        hostInfo.setSshConnectStatus("connecting");
-        hostInfo.setHostnameStatus("loading");
-        hostInfo.setOsStatus("loading");
+        // 初始化状态为pending，表示等待收集
+        // 对所有状态设置为pending，表示等待收集
+        hostInfo.setOsInfoStatus("pending");
+        hostInfo.setHostnameStatus("pending");
+        hostInfo.setOsStatus("pending");
         hostInfo.setDnsStatus("pending");
         hostInfo.setHostsFileStatus("pending");
         hostInfo.setCpuStatus("pending");
@@ -126,79 +126,24 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 立即更新缓存，让前端看到加载状态
         updateHostInfoCache(hostInfo);
 
-        // 将主机信息收集任务添加到队列
+        // 将主机信息收集任务添加到队列，按IP排序串行执行
         queueManager.addHostToQueue(hostInfo, null);
     }
 
     /**
      * 处理主机信息收集流程
      * 该方法由队列管理器调用，按照指定的顺序获取主机信息
+     * 
+     * @deprecated 不再直接使用该方法，改为使用队列管理器的分阶段收集
      */
+    @Deprecated
     private void processHostInfoCollection(HostInfo hostInfo) {
-        // 保存原始主机名，避免在异步处理中丢失
-        final String originalHostname = hostInfo.getHostname();
+        // 此方法已被弃用，不再直接使用
+        // 改为使用队列管理器的分阶段串行收集机制
+        logger.info("不再使用此方法收集主机信息");
 
-        // 使用Spring管理的线程池执行OS信息收集任务
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 获取操作系统信息
-                OsInfo osInfo = getHostOsInfoInternal(hostInfo);
-
-                // 确保主机名不会丢失
-                if (StringUtils.isBlank(hostInfo.getHostname()) && StringUtils.isNotBlank(originalHostname)) {
-                    logger.info("检测到主机名为空，恢复原始主机名: {}", originalHostname);
-                    hostInfo.setHostname(originalHostname);
-                }
-
-                // 确保OsInfo中的主机名与HostInfo一致
-                if (osInfo != null && StringUtils.isNotBlank(hostInfo.getHostname())) {
-                    if (StringUtils.isBlank(osInfo.getHostname())) {
-                        osInfo.setHostname(hostInfo.getHostname());
-                        logger.debug("设置OSInfo主机名为: {}", hostInfo.getHostname());
-                    }
-                }
-
-                // 如果SSH连接失败，直接返回错误状态
-                if ("error".equals(hostInfo.getSshConnectStatus())) {
-                    logger.warn("主机 {} 的SSH连接失败，不再继续收集硬件信息", hostInfo.getIp());
-                    updateHostInfoCache(hostInfo);
-                    return;
-                }
-
-                // 设置数据
-                hostInfo.setOsInfo(osInfo);
-                hostInfo.setOsInfoStatus("success");
-                hostInfo.setSshConnectStatus("success"); // 设置SSH连接成功状态
-
-                // 设置硬件收集状态为collecting
-                if (osInfo != null) {
-                    osInfo.setHardwareCollectionStatus("collecting");
-                }
-
-                updateHostInfoCache(hostInfo);
-
-                // 添加硬件信息收集任务到队列
-                queueManager.addHostToCpuInfoQueue(hostInfo, osInfo, this);
-
-            } catch (Exception e) {
-                logger.error("获取操作系统信息时出错: {}", e.getMessage(), e);
-                hostInfo.setOsInfoStatus("error");
-                hostInfo.setSshConnectStatus("error"); // 设置SSH连接错误状态
-
-                // 确保即使出错时也保留主机名
-                if (StringUtils.isBlank(hostInfo.getHostname()) && StringUtils.isNotBlank(originalHostname)) {
-                    hostInfo.setHostname(originalHostname);
-                }
-
-                // 如果osInfo不为空，设置错误信息
-                if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setValid(false);
-                    hostInfo.getOsInfo().setErrorMessage("SSH连接异常: " + e.getMessage());
-                }
-
-                updateHostInfoCache(hostInfo);
-            }
-        }, osInfoExecutor);
+        // 将主机添加到队列管理器
+        queueManager.addHostToQueue(hostInfo, null);
     }
 
     /**
@@ -259,6 +204,9 @@ public class OsInfoServiceImpl implements OsInfoService {
         private volatile boolean processingSwapInfo = false; // 交换空间处理状态
         private volatile boolean processingGpuInfo = false;
 
+        // 当前正在处理的主机索引
+        private int currentHostIndex = 0;
+
         /**
          * 构造函数
          * 
@@ -272,6 +220,8 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 如果处理器未运行，则启动相应的处理器
          */
         private synchronized void startProcessingIfNeeded() {
+            logger.info("当前收集阶段: {}, 待处理主机数: {}", currentStage, sortedHostList.size());
+
             // 按照阶段顺序执行处理
             switch (currentStage) {
                 case HOST_NAME:
@@ -281,41 +231,57 @@ public class OsInfoServiceImpl implements OsInfoService {
                     break;
                 case OS_TYPE:
                     if (!processingOsInfo && hostNameCollectionCompleted == sortedHostList.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processOsTypeCollection();
                     }
                     break;
                 case DNS: // DNS服务器收集阶段
                     if (!processingDns && osTypeCollectionCompleted == sortedHostList.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processDnsCollection();
                     }
                     break;
                 case HOSTS: // hosts文件收集阶段
                     if (!processingHosts && dnsCollectionCompleted == sortedHostList.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processHostsFileCollection();
                     }
                     break;
                 case CPU_INFO:
                     if (!processingCpuInfo && hostsFileCollectionCompleted == sortedHostList.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processCpuInfoQueue();
                     }
                     break;
                 case MEMORY_INFO:
                     if (!processingMemoryInfo && cpuInfoCollectionCompleted == sortedHardwareTasks.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processMemoryInfoQueue();
                     }
                     break;
                 case DISK_INFO:
                     if (!processingDiskInfo && memoryInfoCollectionCompleted == sortedHardwareTasks.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processDiskInfoQueue();
                     }
                     break;
                 case SWAP_INFO: // 交换空间收集阶段
                     if (!processingSwapInfo && diskInfoCollectionCompleted == sortedHardwareTasks.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processSwapInfoQueue();
                     }
                     break;
                 case GPU_INFO:
                     if (!processingGpuInfo && swapInfoCollectionCompleted == sortedHardwareTasks.size()) {
+                        // 重置当前主机索引，准备下一阶段收集
+                        currentHostIndex = 0;
                         processGpuInfoQueue();
                     }
                     break;
@@ -342,15 +308,19 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 处理主机名收集
+         * 修改为串行处理，一次只处理一台主机
          */
         private void processHostNameCollection() {
             processingOsInfo = true;
 
-            // 使用CompletableFuture处理排序后的主机列表
+            // 使用CompletableFuture处理当前主机
             CompletableFuture.runAsync(() -> {
                 try {
-                    for (HostInfo hostInfo : sortedHostList) {
-                        logger.info("开始收集主机名: {}", hostInfo.getIp());
+                    // 确保索引在有效范围内
+                    if (currentHostIndex < sortedHostList.size()) {
+                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
+                        logger.info("开始收集主机名 [{}/{}]: {}",
+                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
 
                         // 设置主机名收集状态为"loading"
                         hostInfo.setMessage("正在收集主机名...");
@@ -368,7 +338,12 @@ public class OsInfoServiceImpl implements OsInfoService {
                                 hostInfo.setSshConnectStatus("error");
                                 hostInfo.setHostnameStatus("error");
                                 service.updateHostInfoCache(hostInfo);
-                                continue;
+                                // 继续处理下一台主机
+                                currentHostIndex++;
+                                hostNameCollectionCompleted++;
+                                processingOsInfo = false;
+                                startProcessingIfNeeded();
+                                return;
                             }
 
                             // 执行主机名收集命令
@@ -385,7 +360,6 @@ public class OsInfoServiceImpl implements OsInfoService {
                                 hostInfo.setMessage("主机名收集完成");
                                 hostInfo.setSshConnectStatus("success");
                                 hostInfo.setHostnameStatus("success");
-                                // 注意：不要在这里设置osInfoStatus为success，因为整个OS信息收集还没完成
                             } else {
                                 // 未能获取主机名
                                 logger.warn("未能获取主机{}的主机名", hostInfo.getIp());
@@ -413,8 +387,9 @@ public class OsInfoServiceImpl implements OsInfoService {
                             service.updateHostInfoCache(hostInfo);
                         }
 
-                        // 更新计数器
+                        // 更新计数器和当前索引
                         hostNameCollectionCompleted++;
+                        currentHostIndex++;
 
                         // 短暂休眠，避免CPU占用过高
                         try {
@@ -422,16 +397,18 @@ public class OsInfoServiceImpl implements OsInfoService {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
+
+                        // 检查是否完成所有主机
+                        if (hostNameCollectionCompleted == sortedHostList.size()) {
+                            // 所有主机名收集完成，进入下一阶段
+                            logger.info("所有主机名收集完成，进入操作系统类型收集阶段");
+                            currentStage = CollectionStage.OS_TYPE;
+                        }
                     }
-
-                    // 所有主机名收集完成，进入下一阶段
-                    logger.info("所有主机名收集完成，进入操作系统类型收集阶段");
-                    currentStage = CollectionStage.OS_TYPE;
-
-                    // 开始处理操作系统类型
-                    processOsTypeCollection();
                 } finally {
                     processingOsInfo = false;
+                    // 如果还有主机待处理，继续处理
+                    startProcessingIfNeeded();
                 }
             }, service.hostnameExecutor);
         }
@@ -451,21 +428,26 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 按顺序处理操作系统类型收集
+         * 修改为串行处理，一次只处理一台主机
          */
         private void processOsTypeCollection() {
             processingOsInfo = true;
 
-            // 使用CompletableFuture处理排序后的主机列表
+            // 使用CompletableFuture处理当前主机
             CompletableFuture.runAsync(() -> {
                 try {
-                    for (HostInfo hostInfo : sortedHostList) {
-                        logger.info("开始收集操作系统类型: {}", hostInfo.getIp());
+                    // 确保索引在有效范围内
+                    if (currentHostIndex < sortedHostList.size()) {
+                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
+                        logger.info("开始收集操作系统类型 [{}/{}]: {}",
+                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
 
                         // 执行操作系统类型收集
                         processOsType(hostInfo);
 
-                        // 更新计数器
+                        // 更新计数器和当前索引
                         osTypeCollectionCompleted++;
+                        currentHostIndex++;
 
                         // 短暂休眠，避免CPU占用过高
                         try {
@@ -473,16 +455,18 @@ public class OsInfoServiceImpl implements OsInfoService {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
+
+                        // 检查是否完成所有主机
+                        if (osTypeCollectionCompleted == sortedHostList.size()) {
+                            // 所有操作系统类型收集完成，进入下一阶段
+                            logger.info("所有操作系统类型收集完成，进入DNS服务器收集阶段");
+                            currentStage = CollectionStage.DNS;
+                        }
                     }
-
-                    // 所有操作系统类型收集完成，进入下一阶段
-                    logger.info("所有操作系统类型收集完成，进入DNS服务器收集阶段");
-                    currentStage = CollectionStage.DNS;
-
-                    // 开始DNS服务器收集
-                    processDnsCollection();
                 } finally {
                     processingOsInfo = false;
+                    // 如果还有主机待处理，继续处理
+                    startProcessingIfNeeded();
                 }
             }, service.osInfoExecutor);
         }
@@ -526,21 +510,26 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 按顺序处理DNS服务器收集
+         * 修改为串行处理，一次只处理一台主机
          */
         private void processDnsCollection() {
             processingDns = true;
 
-            // 使用CompletableFuture处理排序后的主机列表
+            // 使用CompletableFuture处理当前主机
             CompletableFuture.runAsync(() -> {
                 try {
-                    for (HostInfo hostInfo : sortedHostList) {
-                        logger.info("开始收集DNS服务器信息: {}", hostInfo.getIp());
+                    // 确保索引在有效范围内
+                    if (currentHostIndex < sortedHostList.size()) {
+                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
+                        logger.info("开始收集DNS服务器信息 [{}/{}]: {}",
+                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
 
                         // 执行DNS服务器收集
                         processDnsServers(hostInfo);
 
-                        // 更新计数器
+                        // 更新计数器和当前索引
                         dnsCollectionCompleted++;
+                        currentHostIndex++;
 
                         // 短暂休眠，避免CPU占用过高
                         try {
@@ -548,16 +537,18 @@ public class OsInfoServiceImpl implements OsInfoService {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
+
+                        // 检查是否完成所有主机
+                        if (dnsCollectionCompleted == sortedHostList.size()) {
+                            // 所有DNS服务器收集完成，进入下一阶段
+                            logger.info("所有DNS服务器收集完成，进入Hosts文件收集阶段");
+                            currentStage = CollectionStage.HOSTS;
+                        }
                     }
-
-                    // 所有DNS服务器收集完成，进入下一阶段
-                    logger.info("所有DNS服务器收集完成，进入Hosts文件收集阶段");
-                    currentStage = CollectionStage.HOSTS;
-
-                    // 开始Hosts文件收集
-                    processHostsFileCollection();
                 } finally {
                     processingDns = false;
+                    // 如果还有主机待处理，继续处理
+                    startProcessingIfNeeded();
                 }
             }, service.dnsExecutor); // 使用专用的DNS服务器收集线程池
         }
@@ -642,21 +633,26 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 按顺序处理Hosts文件收集
+         * 修改为串行处理，一次只处理一台主机
          */
         private void processHostsFileCollection() {
             processingHosts = true;
 
-            // 使用CompletableFuture处理排序后的主机列表
+            // 使用CompletableFuture处理当前主机
             CompletableFuture.runAsync(() -> {
                 try {
-                    for (HostInfo hostInfo : sortedHostList) {
-                        logger.info("开始收集Hosts文件: {}", hostInfo.getIp());
+                    // 确保索引在有效范围内
+                    if (currentHostIndex < sortedHostList.size()) {
+                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
+                        logger.info("开始收集Hosts文件 [{}/{}]: {}",
+                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
 
                         // 执行Hosts文件收集
                         processHostsFile(hostInfo);
 
-                        // 更新计数器
+                        // 更新计数器和当前索引
                         hostsFileCollectionCompleted++;
+                        currentHostIndex++;
 
                         // 短暂休眠，避免CPU占用过高
                         try {
@@ -664,16 +660,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                         }
+
+                        // 检查是否完成所有主机
+                        if (hostsFileCollectionCompleted == sortedHostList.size()) {
+                            // 所有Hosts文件收集完成，进入下一阶段
+                            logger.info("所有Hosts文件收集完成，进入CPU信息收集阶段");
+                            currentStage = CollectionStage.CPU_INFO;
+                            // 准备CPU收集队列
+                            prepareCpuInfoQueue();
+                        }
                     }
-
-                    // 所有Hosts文件收集完成，进入下一阶段
-                    logger.info("所有Hosts文件收集完成，进入CPU信息收集阶段");
-                    currentStage = CollectionStage.CPU_INFO;
-
-                    // 准备CPU收集队列
-                    prepareCpuInfoQueue();
                 } finally {
                     processingHosts = false;
+                    // 如果还有主机待处理，继续处理
+                    startProcessingIfNeeded();
                 }
             }, service.hostsFileExecutor); // 使用专用的Hosts文件收集线程池
         }
