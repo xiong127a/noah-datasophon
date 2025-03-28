@@ -213,4 +213,13 @@ public interface HostCheckService {
          * @return 检查项列表
          */
         Result getHostCheckItems(String ip, Integer clusterId);
+
+        /**
+         * 开始检查主机
+         * 从缓存中获取主机列表并开始检查
+         *
+         * @param clusterId 集群ID
+         * @return 操作结果
+         */
+        Result startHostCheck(Integer clusterId);
 }

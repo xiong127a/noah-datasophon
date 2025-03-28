@@ -38,17 +38,14 @@
       <!-- 添加表格操作按钮区域 -->
       <div class="table-operations" style="margin-bottom: 16px; display: flex; justify-content: flex-end; align-items: center;">
         <div class="operation-group">
+          <!-- 开始检查/重试/终止检查三合一按钮 -->
           <a-button 
-            class="apple-batch-button"
-            :disabled="selectedRowKeys.length === 0"
-            @click="retryEnvironment('all')"
+            class="apple-button"
+            :class="isCheckingActive ? 'apple-danger-button' : 'apple-primary-button'"
+            @click="handleCheckAction"
           >
-            <template v-if="selectedRowKeys.length === 0">
-              <a-icon type="redo" />选择主机以重试
-            </template>
-            <template v-else>
-              <a-icon type="redo" />重试已选 {{ selectedRowKeys.length }} 台主机
-            </template>
+            <a-icon :type="isCheckingActive ? 'stop' : (hasStartedCheck ? 'redo' : 'play-circle')" />
+            <span>{{ isCheckingActive ? '终止检查' : (hasStartedCheck ? '重试检查' : '开始检查') }}</span>
           </a-button>
         </div>
       </div>
@@ -206,6 +203,11 @@ export default {
   },
   data() {
     return {
+      loading: false,
+      isRequesting: false,
+      isCheckingActive: false, // 是否有检查正在进行中
+      hasStartedCheck: false, // 是否已开始过检查
+      dataSource: [],
       selectedRowKeys: [],
       pagination: {
         total: 0,
@@ -216,9 +218,6 @@ export default {
         showTotal: (total) => `共 ${total} 条`,
       },
       timer: null,
-      isRequesting: false,
-      dataSource: [],
-      loading: false,
       firstDataLoaded: false,
       checkItemsMap: {}, // 存储每个主机的校验项
       checkItem: null, // 当前查看日志的检查项
@@ -278,11 +277,27 @@ export default {
                 style: {
                   color: '#FF3B30'
                 }
-              }, [row.hostname || row.ip || text]);
+              }, [row.hostname || '正在获取...']);
+            }
+            
+            // 当主机名为null时也显示加载状态
+            if (!row.hostname) {
+              // 苹果风格的骨架屏加载动画
+              return h('div', {
+                class: 'os-info-loading',
+                style: {
+                  position: 'relative',
+                  height: '24px',
+                  width: '90%',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(240, 240, 240, 0.8)',
+                  overflow: 'hidden'
+                }
+              });
             }
             
             // 正常显示主机名
-            return h('span', {}, [row.hostname || row.ip || text]);
+            return h('span', {}, [row.hostname]);
           }
         },
         { 
@@ -300,7 +315,8 @@ export default {
             const h = this.$createElement;
             
             // 检查osInfoStatus状态，显示加载动画
-            if (row.osInfoStatus === 'loading') {
+            // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
+            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null) {
               // 创建加载中的操作系统信息浮窗
               const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
                 h('div', { class: 'os-detail-loading-header' }),
@@ -617,11 +633,15 @@ export default {
                   h('div', { class: 'os-detail-table' }, [
                     h('div', { class: 'os-detail-table-row' }, [
                       h('div', { class: 'os-detail-table-cell label' }, ['主机名']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.hostname || '-'])
+                      h('div', { class: 'os-detail-table-cell value' }, [
+                        row.hostname ? row.hostname : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
+                      ])
                     ]),
                     h('div', { class: 'os-detail-table-row' }, [
                       h('div', { class: 'os-detail-table-cell label' }, ['完整域名']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.fqdn || row.hostname || '-'])
+                      h('div', { class: 'os-detail-table-cell value' }, [
+                        row.fqdn ? row.fqdn : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
+                      ])
                     ]),
                     h('div', { class: 'os-detail-table-row' }, [
                       h('div', { class: 'os-detail-table-cell label' }, ['发行版']),
@@ -1037,10 +1057,21 @@ export default {
                 }
               });
               
-              // 只在第一次成功获取数据时调用批量检查
-              if (!this.firstDataLoaded) {
-                this.startBatchCheckHosts(res.data);
-                this.firstDataLoaded = true; // 标记已经加载过数据
+              // 检查是否有主机正在进行检查
+              this.updateCheckingStatus(res.data);
+              
+              // 检查是否有主机已完成检查，用于判断是否已开始过检查
+              if (res.data && res.data.length > 0) {
+                const hasCompletedChecks = res.data.some(host => {
+                  // 只要有一个主机的检查项不是WAITING状态，说明已经开始过检查
+                  const checkItems = host.checkItems || [];
+                  return checkItems.length > 0 && 
+                         checkItems.some(item => item.status !== 'WAITING');
+                });
+                
+                if (hasCompletedChecks) {
+                  this.hasStartedCheck = true;
+                }
               }
             }
             
@@ -1078,6 +1109,57 @@ export default {
     
     /**
      * 启动批量检查主机
+     * 提取主机名列表，调用后端接口开始检查
+     */
+    async startHostCheck() {
+      // 调用开始检查API，只传递clusterId参数
+      try {
+        const params = {
+          clusterId: this.clusterId
+        };
+        
+        const res = await this.$axiosPost(global.API.startHostCheck, params);
+        if (res.code === 200) {
+          this.$message.success('已开始主机检查');
+          this.isCheckingActive = true;
+          
+          // 立即刷新一次，不等待自动刷新
+          this.getEnvironmentList(false);
+        } else {
+          this.$message.error('开始主机检查失败: ' + res.msg);
+        }
+      } catch (err) {
+        console.error('调用开始检查API失败:', err);
+        this.$message.error('开始主机检查出错');
+      }
+    },
+    
+    /**
+     * 终止批量检查主机
+     */
+    async stopHostCheck() {
+      // 调用终止检查API
+      try {
+        const params = {
+          clusterId: this.clusterId
+        };
+        
+        const res = await this.$axiosPost(global.API.stopHostCheck, params);
+        if (res.code === 200) {
+          this.$message.success(res.msg || '已终止主机检查');
+          
+          // 立即刷新一次，不等待自动刷新
+          this.getEnvironmentList(false);
+        } else {
+          this.$message.error('终止主机检查失败: ' + res.msg);
+        }
+      } catch (err) {
+        console.error('调用终止检查API失败:', err);
+        this.$message.error('终止主机检查出错');
+      }
+    },
+    
+    /**
      * 提取主机名列表，调用后端接口开始检查
      */
     async startBatchCheckHosts(hosts) {
@@ -1161,10 +1243,7 @@ export default {
     retryEnvironment(row) {
       let ips = "";
       if (row === "all") {
-        if (this.selectedRowKeys.length < 1) {
-          this.$message.warning("请至少选择一台主机！");
-          return false;
-        }
+        // 不再需要检查选择的行
         ips = this.selectedRowKeys.join(",");
       } else {
         ips = row.ip;
@@ -2524,8 +2603,55 @@ export default {
       
       return styleMap[status] || '';
     },
+
+    /**
+     * 更新检查状态
+     * 判断是否有主机正在进行检查，更新按钮状态
+     */
+    updateCheckingStatus(hostList) {
+      if (!hostList || hostList.length === 0) {
+        this.isCheckingActive = false;
+        return;
+      }
+      
+      // 判断是否有主机正在检查
+      const hasCheckingHost = hostList.some(host => {
+        // 检查主机状态
+        if (host.status === 'CHECKING' || host.statusStr === 'CHECKING') {
+          return true;
+        }
+        
+        // 检查所有检查项状态
+        const checkItems = host.checkItems || [];
+        return checkItems.some(item => item.status === 'CHECKING');
+      });
+      
+      this.isCheckingActive = hasCheckingHost;
+    },
+
+    /**
+     * 处理检查操作
+     * 根据当前状态调用开始检查或重试检查
+     */
+    async handleCheckAction() {
+      if (this.isCheckingActive) {
+        // 当前正在检查中，执行终止操作
+        await this.stopHostCheck();
+      } else if (this.hasStartedCheck) {
+        // 如果已经开始过检查，则调用重试
+        this.retryEnvironment('all');
+      } else {
+        // 首次开始检查
+        await this.startHostCheck();
+        // 标记已开始过检查
+        this.hasStartedCheck = true;
+      }
+    },
   },
   mounted() {
+    // 重置初始状态
+    this.hasStartedCheck = false;
+    
     // 直接开始轮询
     this.pollingSearch();
     
@@ -3897,6 +4023,106 @@ export default {
         }
       }
     }
+  }
+}
+
+// 添加苹果风格按钮样式
+.apple-button {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  
+  .anticon {
+    margin-right: 6px;
+    font-size: 16px;
+  }
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  &:disabled {
+    background-color: #f5f5f7;
+    color: rgba(0, 0, 0, 0.25);
+    border-color: #d9d9d9;
+    box-shadow: none;
+    
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
+}
+
+.apple-primary-button {
+  background: linear-gradient(135deg, #0a84ff, #0066ff);
+  border: none;
+  color: white;
+  
+  &:hover {
+    background: linear-gradient(135deg, #1d90ff, #0070ff);
+  }
+  
+  &:active {
+    background: linear-gradient(135deg, #0070e0, #0060e0);
+  }
+}
+
+.apple-danger-button {
+  background: linear-gradient(135deg, #ff453a, #ff3b30);
+  border: none;
+  color: white;
+  
+  &:hover {
+    background: linear-gradient(135deg, #ff5147, #ff4b40);
+  }
+  
+  &:active {
+    background: linear-gradient(135deg, #e03a30, #d0362c);
+  }
+}
+
+.apple-batch-button {
+  background: #f5f5f7;
+  border: 1px solid #e0e0e5;
+  color: #1d1d1f;
+  
+  &:hover {
+    background: #f8f8fa;
+    border-color: #d9d9df;
+  }
+  
+  &:active {
+    background: #eaeaed;
+    border-color: #d0d0d5;
+  }
+}
+
+// 表格操作区域样式
+.table-operations {
+  padding: 8px 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  z-index: 1;
+  
+  .operation-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 </style>

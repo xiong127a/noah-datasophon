@@ -17,9 +17,9 @@
 
 package com.datasophon.api.controller;
 
-
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.InstallService;
+import com.datasophon.api.service.HostCheckService;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
@@ -34,6 +34,9 @@ public class HostInstallController {
 
     @Autowired
     private InstallService installService;
+
+    @Autowired
+    private HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤
@@ -164,34 +167,15 @@ public class HostInstallController {
     }
 
     /**
-     * 修复单个检查项
+     * 开始主机检查
+     * 
+     * @param clusterId 集群ID
+     * @return 开始检查结果
      */
-    @PostMapping("/fixCheckItem")
+    @PostMapping("/startHostCheck")
     @UserPermission
-    public Result fixCheckItem(
-            @RequestParam("clusterId") Integer clusterId,
-            @RequestParam("hostname") String hostname,
-            @RequestParam("itemId") Integer itemId,
-            @RequestParam(value = "skipConfirm", required = false, defaultValue = "false") Boolean skipConfirm) {
-        return installService.fixCheckItem(clusterId, hostname, itemId, skipConfirm);
-    }
-
-    /**
-     * 修复选中的多个检查项
-     */
-    @PostMapping("/fixSelectedCheckItems")
-    @UserPermission
-    public Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds) {
-        return installService.fixSelectedCheckItems(clusterId, hostname, itemIds);
-    }
-
-    /**
-     * 修复所有检查项
-     */
-    @PostMapping("/fixAllCheckItems")
-    @UserPermission
-    public Result fixAllCheckItems(Integer clusterId, String hostname) {
-        return installService.fixAllCheckItems(clusterId, hostname);
+    public Result startHostCheck(@RequestParam Integer clusterId) {
+        return hostCheckService.startHostCheck(clusterId);
     }
 
 }

@@ -61,7 +61,7 @@ public class HostCheckController {
     /**
      * 控制主机检查队列管理器
      * 用于控制队列管理器的运行状态和定时任务
-     * 
+     *
      * @param action    操作类型: status(获取状态), pause(暂停), resume(恢复), shutdown(关闭)
      *                  pauseTask(暂停定时任务), resumeTask(恢复定时任务),
      *                  cleanupConnections(清理连接)
@@ -169,6 +169,19 @@ public class HostCheckController {
     }
 
     /**
+     * 开始主机检查
+     *
+     * @param clusterId 集群ID
+     * @param ips       主机IP列表，逗号分隔
+     * @return 开始检查结果
+     */
+    @PostMapping("/startHostCheck")
+    @UserPermission
+    public Result startHostCheck(@RequestParam Integer clusterId) {
+        return hostCheckService.startHostCheck(clusterId);
+    }
+
+    /**
      * 获取检查项的实时日志
      */
     @PostMapping("/getCheckItemLog")
@@ -234,7 +247,7 @@ public class HostCheckController {
 
     /**
      * 获取可用的日志级别
-     * 
+     *
      * @return 日志级别列表
      */
     @GetMapping("/log-levels")
@@ -257,7 +270,7 @@ public class HostCheckController {
 
     /**
      * 获取可用的日志类型
-     * 
+     *
      * @return 日志类型列表
      */
     @GetMapping("/log-types")
@@ -295,7 +308,7 @@ public class HostCheckController {
 
     /**
      * 配置定时任务执行间隔
-     * 
+     *
      * @param type       任务类型：taskCleanup或connectionCleanup
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
@@ -370,7 +383,7 @@ public class HostCheckController {
 
     /**
      * 修改定时任务执行间隔
-     * 
+     *
      * @param taskId          任务ID
      * @param intervalSeconds 执行间隔（秒）
      * @return 操作结果
@@ -397,7 +410,7 @@ public class HostCheckController {
 
     /**
      * 更新队列健康监控任务间隔
-     * 
+     *
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
      */
@@ -420,7 +433,7 @@ public class HostCheckController {
 
     /**
      * 更新任务超时监控任务间隔
-     * 
+     *
      * @param intervalMs 执行间隔（毫秒）
      * @return 操作结果
      */

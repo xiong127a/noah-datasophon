@@ -46,6 +46,7 @@ export default {
   stopCheckItem: path + '/host/check/stopCheckItem', // 终止单个检查项检查
   skipCheckItem: path + '/host/check/skipCheckItem', // 跳过检查项
   stopHostCheck: path + '/host/check/stopHostCheck', // 终止主机所有检查项
+  startHostCheck: path + '/host/check/startHostCheck', // 开始主机检查
   retryCheckItems: path + '/host/check/retryCheckItems', // 重试检查项
   getCheckItemConfirmInfo: path + '/host/check/getCheckItemConfirmInfo', // 获取检查项确认信息
   queueManager: path + '/host/check/queueManager', // 控制队列系统

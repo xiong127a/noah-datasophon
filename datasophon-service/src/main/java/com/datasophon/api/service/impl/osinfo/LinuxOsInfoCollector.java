@@ -226,30 +226,35 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         try {
             // 收集CPU信息
             osInfo.setLastUpdatedItem("collecting_cpu");
+            logger.info("收集CPU信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectCpuInfo(osInfo, session);
 
             // 收集内存信息
             osInfo.setLastUpdatedItem("collecting_memory");
+            logger.info("收集内存信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectMemoryInfo(osInfo, session);
 
             // 收集磁盘信息
             osInfo.setLastUpdatedItem("collecting_disk");
+            logger.info("收集磁盘信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectDiskInfo(osInfo, session);
 
             // 收集交换分区信息
             osInfo.setLastUpdatedItem("collecting_swap");
+            logger.info("收集交换分区信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectSwapInfo(osInfo, session);
 
             // 收集GPU信息
             osInfo.setLastUpdatedItem("collecting_gpu");
+            logger.info("收集GPU信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectGpuInfo(osInfo, session);
@@ -265,7 +270,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             logger.error("收集Linux硬件信息时出错: {}", e.getMessage(), e);
             osInfo.setHardwareCollectionStatus("error");
             osInfo.setLastUpdatedItem("error");
-            // 出错时也更新
+            // 出错时更新状态
             cacheUpdater.updateCache(hostInfo);
         }
     }
@@ -773,235 +778,418 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         return "";
     }
 
-    private void collectCpuInfo(OsInfo osInfo, ClientSession session) {
+    /**
+     * 收集CPU信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
+     */
+    public void collectCpuInfo(OsInfo osInfo, ClientSession session) {
         logger.debug("开始收集CPU信息");
 
-        // 获取CPU型号
-        String cpuInfoCmd = "cat /proc/cpuinfo | grep 'model name' | head -n 1 | cut -d ':' -f 2";
-        String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
-        if (StringUtils.isNotBlank(cpuInfo)) {
-            osInfo.setCpuInfo(cpuInfo.trim());
-            osInfo.setLastUpdatedItem("cpuInfo");
-            logger.debug("获取到CPU型号: {}", cpuInfo.trim());
-        }
-
-        // 获取物理CPU数量
-        String cpuCountCmd = "cat /proc/cpuinfo | grep 'physical id' | sort -u | wc -l";
-        String cpuCountStr = MinaUtils.execCmdWithResult(session, cpuCountCmd);
-        if (StringUtils.isNotBlank(cpuCountStr)) {
-            try {
-                int cpuCount = Integer.parseInt(cpuCountStr.trim());
-                osInfo.setCpuCount(cpuCount > 0 ? cpuCount : 1);
-                logger.debug("获取到物理CPU数量: {}", osInfo.getCpuCount());
-            } catch (NumberFormatException e) {
-                logger.warn("解析物理CPU数量失败: {}", cpuCountStr);
-            }
-        }
-
-        // 获取每颗CPU的核心数
-        String coresPerCpuCmd = "cat /proc/cpuinfo | grep 'cpu cores' | head -n 1 | cut -d ':' -f 2";
-        String coresPerCpuStr = MinaUtils.execCmdWithResult(session, coresPerCpuCmd);
-        if (StringUtils.isNotBlank(coresPerCpuStr)) {
-            try {
-                int coresPerCpu = Integer.parseInt(coresPerCpuStr.trim());
-                osInfo.setCpuCoresPerProcessor(coresPerCpu);
-                osInfo.setCpuCores(coresPerCpu * osInfo.getCpuCount());
-                osInfo.setLastUpdatedItem("cpuCores");
-                logger.debug("获取到每颗CPU的核心数: {}, 总核心数: {}",
-                        osInfo.getCpuCoresPerProcessor(), osInfo.getCpuCores());
-            } catch (NumberFormatException e) {
-                logger.warn("解析每颗CPU核心数失败: {}", coresPerCpuStr);
-            }
-        }
-
-        // 获取CPU线程数量（逻辑处理器数）
-        String logicalCoresCmd = "nproc";
-        String logicalCoresStr = MinaUtils.execCmdWithResult(session, logicalCoresCmd);
-        if (StringUtils.isNotBlank(logicalCoresStr)) {
-            try {
-                int logicalCores = Integer.parseInt(logicalCoresStr.trim());
-                osInfo.setCpuLogicalCores(logicalCores);
-
-                // 计算每核心的线程数
-                if (osInfo.getCpuCores() > 0) {
-                    osInfo.setCpuThreadsPerCore(logicalCores / osInfo.getCpuCores());
+        try {
+            // 使用lscpu命令获取详细CPU信息
+            String lscpuOutput = MinaUtils.execCmdWithResult(session, "lscpu");
+            if (StringUtils.isNotBlank(lscpuOutput)) {
+                // 解析CPU型号
+                Pattern modelNamePattern = Pattern.compile("Model name:\\s+(.+)");
+                Matcher modelNameMatcher = modelNamePattern.matcher(lscpuOutput);
+                if (modelNameMatcher.find()) {
+                    String cpuModel = modelNameMatcher.group(1).trim();
+                    osInfo.setCpuModel(cpuModel);
+                    logger.debug("获取到CPU型号: {}", cpuModel);
                 }
 
-                logger.debug("获取到CPU逻辑处理器数量: {}, 每核心线程数: {}",
-                        logicalCores, osInfo.getCpuThreadsPerCore());
-            } catch (NumberFormatException e) {
-                logger.warn("解析CPU逻辑处理器数量失败: {}", logicalCoresStr);
-            }
-        }
-    }
-
-    private void collectMemoryInfo(OsInfo osInfo, ClientSession session) {
-        logger.debug("开始收集内存信息");
-
-        // 获取内存信息
-        String memInfoCmd = "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'";
-        String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
-
-        if (StringUtils.isNotBlank(memInfo)) {
-            Pattern totalPattern = Pattern.compile("MemTotal:\\s+(\\d+)\\s+kB");
-            Pattern availablePattern = Pattern.compile("MemAvailable:\\s+(\\d+)\\s+kB");
-
-            Matcher totalMatcher = totalPattern.matcher(memInfo);
-            Matcher availableMatcher = availablePattern.matcher(memInfo);
-
-            if (totalMatcher.find()) {
-                try {
-                    long totalKb = Long.parseLong(totalMatcher.group(1));
-                    double totalGb = totalKb / (1024.0 * 1024.0);
-                    osInfo.setTotalMemory(Math.round(totalGb * 10) / 10.0);
-                    logger.debug("获取到内存总量: {} GB", osInfo.getTotalMemory());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析内存总量失败: {}", totalMatcher.group(1));
-                }
-            }
-
-            if (availableMatcher.find()) {
-                try {
-                    long availableKb = Long.parseLong(availableMatcher.group(1));
-                    double availableGb = availableKb / (1024.0 * 1024.0);
-                    osInfo.setAvailableMemory(Math.round(availableGb * 10) / 10.0);
-                    logger.debug("获取到可用内存: {} GB", osInfo.getAvailableMemory());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析可用内存失败: {}", availableMatcher.group(1));
-                }
-            }
-
-            osInfo.setLastUpdatedItem("memoryInfo");
-        }
-    }
-
-    private void collectDiskInfo(OsInfo osInfo, ClientSession session) {
-        logger.debug("开始收集磁盘信息");
-
-        // 获取磁盘信息，排除tmpfs, devtmpfs等临时文件系统
-        String diskInfoCmd = "df -BG | grep -v -E 'tmpfs|devtmpfs|overlay|udev|/dev/loop|docker'";
-        String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
-
-        if (StringUtils.isNotBlank(diskInfo)) {
-            double totalDisk = 0;
-            double availableDisk = 0;
-
-            String[] lines = diskInfo.split("\n");
-            for (String line : lines) {
-                if (line.trim().startsWith("Filesystem") || line.trim().isEmpty()) {
-                    continue;
-                }
-
-                String[] parts = line.trim().split("\\s+");
-                if (parts.length >= 4) {
+                // 解析CPU频率
+                Pattern cpuFreqPattern = Pattern.compile("CPU MHz:\\s+(\\d+\\.?\\d*)");
+                Matcher cpuFreqMatcher = cpuFreqPattern.matcher(lscpuOutput);
+                if (cpuFreqMatcher.find()) {
                     try {
-                        double size = Double.parseDouble(parts[1].replace("G", ""));
-                        double available = Double.parseDouble(parts[3].replace("G", ""));
-
-                        totalDisk += size;
-                        availableDisk += available;
+                        double freqMHz = Double.parseDouble(cpuFreqMatcher.group(1).trim());
+                        // 转换MHz为GHz
+                        double freqGHz = Math.round(freqMHz / 1000 * 100) / 100.0;
+                        osInfo.setCpuFrequency(freqGHz);
+                        logger.debug("获取到CPU频率: {} GHz", freqGHz);
                     } catch (NumberFormatException e) {
-                        logger.warn("解析磁盘信息失败: {}", line);
+                        logger.warn("解析CPU频率失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析CPU数量
+                Pattern cpuCountPattern = Pattern.compile("Socket\\(s\\):\\s+(\\d+)");
+                Matcher cpuCountMatcher = cpuCountPattern.matcher(lscpuOutput);
+                if (cpuCountMatcher.find()) {
+                    try {
+                        int cpuCount = Integer.parseInt(cpuCountMatcher.group(1).trim());
+                        osInfo.setCpuCount(cpuCount);
+                        logger.debug("获取到CPU物理数量: {}", cpuCount);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU数量失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析每CPU的核心数
+                Pattern coresPerCpuPattern = Pattern.compile("Core\\(s\\) per socket:\\s+(\\d+)");
+                Matcher coresPerCpuMatcher = coresPerCpuPattern.matcher(lscpuOutput);
+                if (coresPerCpuMatcher.find()) {
+                    try {
+                        int coresPerCpu = Integer.parseInt(coresPerCpuMatcher.group(1).trim());
+                        osInfo.setCpuCoresPerProcessor(coresPerCpu);
+                        logger.debug("获取到每CPU核心数: {}", coresPerCpu);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析每CPU核心数失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析每核心的线程数
+                Pattern threadsPerCorePattern = Pattern.compile("Thread\\(s\\) per core:\\s+(\\d+)");
+                Matcher threadsPerCoreMatcher = threadsPerCorePattern.matcher(lscpuOutput);
+                if (threadsPerCoreMatcher.find()) {
+                    try {
+                        int threadsPerCore = Integer.parseInt(threadsPerCoreMatcher.group(1).trim());
+                        osInfo.setCpuThreadsPerCore(threadsPerCore);
+                        logger.debug("获取到每核心线程数: {}", threadsPerCore);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析每核心线程数失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析CPU总核心数
+                Pattern cpuCoresPattern = Pattern.compile("CPU\\(s\\):\\s+(\\d+)");
+                Matcher cpuCoresMatcher = cpuCoresPattern.matcher(lscpuOutput);
+                if (cpuCoresMatcher.find()) {
+                    try {
+                        int cpuCores = Integer.parseInt(cpuCoresMatcher.group(1).trim());
+                        osInfo.setCpuLogicalCores(cpuCores);
+
+                        // 计算物理核心数 = CPU数量 * 每CPU的核心数
+                        if (osInfo.getCpuCount() != null && osInfo.getCpuCoresPerProcessor() != null) {
+                            int physicalCores = osInfo.getCpuCount() * osInfo.getCpuCoresPerProcessor();
+                            osInfo.setCpuCores(physicalCores);
+                            osInfo.setCpuCoreNum(physicalCores); // 设置别名
+                            logger.debug("计算得到物理CPU核心数: {}", physicalCores);
+                        } else {
+                            // 如果无法计算物理核心，使用逻辑核心数代替
+                            osInfo.setCpuCores(cpuCores);
+                            osInfo.setCpuCoreNum(cpuCores); // 设置别名
+                            logger.debug("无法计算物理CPU核心数，使用逻辑核心数: {}", cpuCores);
+                        }
+
+                        logger.debug("获取到CPU逻辑核心数: {}", cpuCores);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU核心数失败: {}", e.getMessage());
                     }
                 }
             }
 
-            osInfo.setTotalDisk((long) (totalDisk * 1024 * 1024 * 1024));
-            osInfo.setAvailableDisk((long) (availableDisk * 1024 * 1024 * 1024));
+            // 读取/proc/cpuinfo获取完整CPU信息
+            String cpuinfoOutput = MinaUtils.execCmdWithResult(session,
+                    "cat /proc/cpuinfo | grep -E 'processor|model name|cpu MHz'");
+            if (StringUtils.isNotBlank(cpuinfoOutput)) {
+                osInfo.setCpuInfo(cpuinfoOutput);
+                logger.debug("获取到完整CPU信息");
+            }
+
+            // 获取负载信息
+            String loadAvgOutput = MinaUtils.execCmdWithResult(session, "cat /proc/loadavg");
+            if (StringUtils.isNotBlank(loadAvgOutput)) {
+                String[] loadParts = loadAvgOutput.trim().split("\\s+");
+                if (loadParts.length >= 3) {
+                    try {
+                        osInfo.setLoad1Min(Double.parseDouble(loadParts[0]));
+                        osInfo.setLoad5Min(Double.parseDouble(loadParts[1]));
+                        osInfo.setLoad15Min(Double.parseDouble(loadParts[2]));
+                        logger.debug("获取到系统负载: 1分钟={}, 5分钟={}, 15分钟={}",
+                                osInfo.getLoad1Min(), osInfo.getLoad5Min(), osInfo.getLoad15Min());
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析系统负载失败: {}", e.getMessage());
+                    }
+                }
+            }
+
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("cpuInfo");
+
+            logger.info("CPU信息收集完成");
+        } catch (Exception e) {
+            logger.error("收集CPU信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
+        }
+    }
+
+    /**
+     * 收集内存信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
+     */
+    public void collectMemoryInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集内存信息");
+
+        try {
+            // 读取/proc/meminfo获取内存信息
+            String meminfoOutput = MinaUtils.execCmdWithResult(session, "cat /proc/meminfo");
+            if (StringUtils.isNotBlank(meminfoOutput)) {
+                // 解析总内存
+                Pattern totalMemPattern = Pattern.compile("MemTotal:\\s+(\\d+)\\s+kB");
+                Matcher totalMemMatcher = totalMemPattern.matcher(meminfoOutput);
+                if (totalMemMatcher.find()) {
+                    try {
+                        long totalMemKB = Long.parseLong(totalMemMatcher.group(1).trim());
+                        // 保存原始字节数
+                        osInfo.setTotalMem(totalMemKB * 1024);
+                        // 转换为GB并保留一位小数
+                        double totalMemGB = Math.round(totalMemKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        osInfo.setTotalMemory(totalMemGB);
+                        logger.debug("获取到总内存: {} GB", totalMemGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析总内存失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析可用内存（MemAvailable或MemFree）
+                Pattern availableMemPattern = Pattern.compile("MemAvailable:\\s+(\\d+)\\s+kB");
+                Matcher availableMemMatcher = availableMemPattern.matcher(meminfoOutput);
+                if (availableMemMatcher.find()) {
+                    try {
+                        long availableMemKB = Long.parseLong(availableMemMatcher.group(1).trim());
+                        // 保存原始字节数
+                        osInfo.setAvailableMem(availableMemKB * 1024);
+                        // 转换为GB并保留一位小数
+                        double availableMemGB = Math.round(availableMemKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        osInfo.setAvailableMemory(availableMemGB);
+                        logger.debug("获取到可用内存: {} GB", availableMemGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析可用内存失败: {}", e.getMessage());
+                    }
+                } else {
+                    // 如果没有MemAvailable，则使用MemFree
+                    Pattern freeMemPattern = Pattern.compile("MemFree:\\s+(\\d+)\\s+kB");
+                    Matcher freeMemMatcher = freeMemPattern.matcher(meminfoOutput);
+                    if (freeMemMatcher.find()) {
+                        try {
+                            long freeMemKB = Long.parseLong(freeMemMatcher.group(1).trim());
+                            // 保存原始字节数
+                            osInfo.setAvailableMem(freeMemKB * 1024);
+                            // 转换为GB并保留一位小数
+                            double freeMemGB = Math.round(freeMemKB / 1024.0 / 1024.0 * 10) / 10.0;
+                            osInfo.setAvailableMemory(freeMemGB);
+                            logger.debug("获取到空闲内存: {} GB", freeMemGB);
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析空闲内存失败: {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("memoryInfo");
+
+            logger.info("内存信息收集完成");
+        } catch (Exception e) {
+            logger.error("收集内存信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
+        }
+    }
+
+    /**
+     * 收集磁盘信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
+     */
+    public void collectDiskInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集磁盘信息");
+
+        try {
+            // 使用df命令获取磁盘使用情况
+            String dfOutput = MinaUtils.execCmdWithResult(session, "df -P");
+            if (StringUtils.isNotBlank(dfOutput)) {
+                // 解析磁盘信息
+                String[] lines = dfOutput.split("\n");
+                long totalBytes = 0;
+                long availableBytes = 0;
+
+                for (int i = 1; i < lines.length; i++) { // 跳过标题行
+                    String line = lines[i].trim();
+                    String[] parts = line.split("\\s+");
+
+                    if (parts.length >= 6) {
+                        try {
+                            // 排除没有路径前缀的特殊文件系统
+                            if (parts[0].startsWith("/") || parts[5].startsWith("/")) {
+                                long size = Long.parseLong(parts[1]) * 1024; // 转换为字节
+                                long avail = Long.parseLong(parts[3]) * 1024; // 转换为字节
+
+                                totalBytes += size;
+                                availableBytes += avail;
+                            }
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析磁盘信息失败: {}", line);
+                        }
+                    }
+                }
+
+                // 保存原始字节数
+                osInfo.setTotalDiskBytes(totalBytes);
+                osInfo.setAvailableDiskBytes(availableBytes);
+
+                // 使用接受Long类型的setter方法，传入字节数
+                osInfo.setTotalDisk(totalBytes);
+                osInfo.setAvailableDisk(availableBytes);
+
+                // 计算GB值用于日志记录
+                double totalDiskGB = Math.round(totalBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+                double availableDiskGB = Math.round(availableBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+                logger.debug("获取到磁盘总容量: {} GB, 可用容量: {} GB", totalDiskGB, availableDiskGB);
+            }
+
+            // 更新硬件收集状态
             osInfo.setLastUpdatedItem("diskInfo");
 
-            logger.debug("获取到磁盘总量: {} GB, 可用磁盘: {} GB",
-                    osInfo.getTotalDisk(), osInfo.getAvailableDisk());
+            logger.info("磁盘信息收集完成");
+        } catch (Exception e) {
+            logger.error("收集磁盘信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 
-    private void collectSwapInfo(OsInfo osInfo, ClientSession session) {
-        logger.debug("开始收集交换空间信息");
+    /**
+     * 收集交换分区信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
+     */
+    public void collectSwapInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集交换分区信息");
 
-        // 获取swap信息
-        String swapInfoCmd = "cat /proc/meminfo | grep -E 'SwapTotal|SwapFree'";
-        String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
+        try {
+            // 读取/proc/meminfo中的交换分区信息
+            String swapInfoOutput = MinaUtils.execCmdWithResult(session, "grep Swap /proc/meminfo");
+            if (StringUtils.isNotBlank(swapInfoOutput)) {
+                // 解析交换分区总容量
+                Pattern totalSwapPattern = Pattern.compile("SwapTotal:\\s+(\\d+)\\s+kB");
+                Matcher totalSwapMatcher = totalSwapPattern.matcher(swapInfoOutput);
+                if (totalSwapMatcher.find()) {
+                    try {
+                        long totalSwapKB = Long.parseLong(totalSwapMatcher.group(1).trim());
+                        // 计算字节数
+                        long totalSwapBytes = totalSwapKB * 1024;
+                        // 保存原始字节数
+                        osInfo.setTotalSwapBytes(totalSwapBytes);
+                        // 使用接受Long类型的setter方法
+                        osInfo.setTotalSwap(totalSwapBytes);
 
-        if (StringUtils.isNotBlank(swapInfo)) {
-            Pattern totalPattern = Pattern.compile("SwapTotal:\\s+(\\d+)\\s+kB");
-            Pattern freePattern = Pattern.compile("SwapFree:\\s+(\\d+)\\s+kB");
+                        // 计算GB值用于日志记录
+                        double totalSwapGB = Math.round(totalSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        logger.debug("获取到交换分区总容量: {} GB", totalSwapGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析交换分区总容量失败: {}", e.getMessage());
+                    }
+                }
 
-            Matcher totalMatcher = totalPattern.matcher(swapInfo);
-            Matcher freeMatcher = freePattern.matcher(swapInfo);
+                // 解析交换分区可用容量
+                Pattern freeSwapPattern = Pattern.compile("SwapFree:\\s+(\\d+)\\s+kB");
+                Matcher freeSwapMatcher = freeSwapPattern.matcher(swapInfoOutput);
+                if (freeSwapMatcher.find()) {
+                    try {
+                        long freeSwapKB = Long.parseLong(freeSwapMatcher.group(1).trim());
+                        // 计算字节数
+                        long freeSwapBytes = freeSwapKB * 1024;
+                        // 保存原始字节数
+                        osInfo.setAvailableSwapBytes(freeSwapBytes);
+                        // 使用接受Long类型的setter方法
+                        osInfo.setAvailableSwap(freeSwapBytes);
 
-            if (totalMatcher.find()) {
-                try {
-                    long totalKb = Long.parseLong(totalMatcher.group(1));
-                    double totalGb = totalKb / (1024.0 * 1024.0);
-                    osInfo.setTotalSwap((long) (totalGb * 1024 * 1024 * 1024));
-                    logger.debug("获取到交换空间总量: {} GB", osInfo.getTotalSwap());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析交换空间总量失败: {}", totalMatcher.group(1));
+                        // 计算GB值用于日志记录
+                        double freeSwapGB = Math.round(freeSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        logger.debug("获取到交换分区可用容量: {} GB", freeSwapGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析交换分区可用容量失败: {}", e.getMessage());
+                    }
                 }
             }
 
-            if (freeMatcher.find()) {
-                try {
-                    long freeKb = Long.parseLong(freeMatcher.group(1));
-                    double freeGb = freeKb / (1024.0 * 1024.0);
-                    osInfo.setAvailableSwap((long) (freeGb * 1024 * 1024 * 1024));
-                    logger.debug("获取到可用交换空间: {} GB", osInfo.getAvailableSwap());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析可用交换空间失败: {}", freeMatcher.group(1));
-                }
-            }
-
+            // 更新硬件收集状态
             osInfo.setLastUpdatedItem("swapInfo");
+
+            logger.info("交换分区信息收集完成");
+        } catch (Exception e) {
+            logger.error("收集交换分区信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 
-    private void collectGpuInfo(OsInfo osInfo, ClientSession session) {
+    /**
+     * 收集GPU信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
+     */
+    public void collectGpuInfo(OsInfo osInfo, ClientSession session) {
         logger.debug("开始收集GPU信息");
 
-        // 尝试获取GPU信息
-        String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3";
-        String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
-        if (gpuInfo != null && !gpuInfo.isEmpty()) {
-            osInfo.setGpuInfo(gpuInfo.trim());
-            // 获取显存信息 - 先尝试通过lspci详细输出获取
-            String gpuMemoryCmd = "lspci -v | grep -i vga -A 10 | grep -i 'memory.*size' | head -n 1 | sed -r 's/.*size=([0-9]+)[Mm].*/\\1/g'";
-            String gpuMemoryStr = MinaUtils.execCmdWithResult(session, gpuMemoryCmd);
-            if (gpuMemoryStr != null && !gpuMemoryStr.isEmpty()) {
-                try {
-                    // 转换MB到GB
-                    double gpuMemoryMB = Double.parseDouble(gpuMemoryStr.trim());
-                    osInfo.setGpuMemory(Math.round(gpuMemoryMB / 1024 * 10) / 10.0);
-                    logger.debug("获取到GPU显存: {} GB", osInfo.getGpuMemory());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析GPU显存失败: {}", gpuMemoryStr);
-                }
-            }
-            // 更新硬件收集状态
-            osInfo.setLastUpdatedItem("gpuInfo");
-        } else {
-            // 尝试使用nvidia-smi查询NVIDIA GPU
-            gpuInfo = MinaUtils.execCmdWithResult(session,
-                    "which nvidia-smi && nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo ''");
-            if (gpuInfo != null && !gpuInfo.isEmpty() && !gpuInfo.contains("which")) {
+        try {
+            // 尝试获取GPU信息
+            String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3";
+            String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
+            if (gpuInfo != null && !gpuInfo.isEmpty()) {
                 osInfo.setGpuInfo(gpuInfo.trim());
-
-                // 获取NVIDIA显存
-                String gpuMemoryCmd = "nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits";
+                // 获取显存信息 - 先尝试通过lspci详细输出获取
+                String gpuMemoryCmd = "lspci -v | grep -i vga -A 10 | grep -i 'memory.*size' | head -n 1 | sed -r 's/.*size=([0-9]+)[Mm].*/\\1/g'";
                 String gpuMemoryStr = MinaUtils.execCmdWithResult(session, gpuMemoryCmd);
                 if (gpuMemoryStr != null && !gpuMemoryStr.isEmpty()) {
                     try {
-                        // 转换MB到GB并保留1位小数
+                        // 转换MB到GB
                         double gpuMemoryMB = Double.parseDouble(gpuMemoryStr.trim());
                         osInfo.setGpuMemory(Math.round(gpuMemoryMB / 1024 * 10) / 10.0);
-                        logger.debug("获取到NVIDIA GPU显存: {} GB", osInfo.getGpuMemory());
+                        logger.debug("获取到GPU显存: {} GB", osInfo.getGpuMemory());
                     } catch (NumberFormatException e) {
-                        logger.warn("解析NVIDIA GPU显存失败: {}", gpuMemoryStr);
+                        logger.warn("解析GPU显存失败: {}", gpuMemoryStr);
                     }
                 }
 
-                // 更新硬件收集状态
-                osInfo.setLastUpdatedItem("gpuInfo");
+                logger.debug("获取到GPU信息: {}", gpuInfo.trim());
+            } else {
+                // 尝试使用nvidia-smi获取NVIDIA GPU信息
+                String nvidiaCmd = "which nvidia-smi && nvidia-smi --query-gpu=name,memory.total --format=csv,noheader";
+                String nvidiaSmiOutput = MinaUtils.execCmdWithResult(session, nvidiaCmd);
+                if (nvidiaSmiOutput != null && !nvidiaSmiOutput.isEmpty()
+                        && !nvidiaSmiOutput.contains("which: no nvidia-smi")) {
+                    osInfo.setGpuInfo(nvidiaSmiOutput.trim());
+
+                    // 提取显存信息
+                    Pattern memPattern = Pattern.compile("(\\d+) MiB");
+                    Matcher memMatcher = memPattern.matcher(nvidiaSmiOutput);
+                    if (memMatcher.find()) {
+                        try {
+                            double gpuMemoryMB = Double.parseDouble(memMatcher.group(1).trim());
+                            osInfo.setGpuMemory(Math.round(gpuMemoryMB / 1024 * 10) / 10.0);
+                            logger.debug("获取到NVIDIA GPU显存: {} GB", osInfo.getGpuMemory());
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析NVIDIA GPU显存失败: {}", e.getMessage());
+                        }
+                    }
+
+                    logger.debug("获取到NVIDIA GPU信息: {}", nvidiaSmiOutput.trim());
+                } else {
+                    osInfo.setGpuInfo("无GPU或无法检测");
+                    logger.debug("未检测到GPU信息");
+                }
             }
+
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("gpuInfo");
+
+            logger.info("GPU信息收集完成");
+        } catch (Exception e) {
+            logger.error("收集GPU信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 }

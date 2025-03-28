@@ -108,24 +108,28 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
 
             // 获取CPU信息
             osInfo.setLastUpdatedItem("collecting_cpu");
+            logger.info("收集CPU信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectCpuInfo(osInfo, session);
 
             // 获取内存信息
             osInfo.setLastUpdatedItem("collecting_memory");
+            logger.info("收集内存信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectMemoryInfo(osInfo, session);
 
             // 获取存储信息
             osInfo.setLastUpdatedItem("collecting_disk");
+            logger.info("收集磁盘信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectStorageInfo(osInfo, session);
 
             // 获取GPU信息
             osInfo.setLastUpdatedItem("collecting_gpu");
+            logger.info("收集GPU信息...");
             // 更新当前正在处理的项
             cacheUpdater.updateCache(hostInfo);
             collectGpuInfo(osInfo, session);
@@ -254,226 +258,395 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
 
     /**
      * 收集CPU信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
      */
-    private void collectCpuInfo(OsInfo osInfo, ClientSession session) {
+    public void collectCpuInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集Windows CPU信息");
+
         try {
-            logger.info("开始收集CPU信息");
-            // 通过注册表获取CPU信息
-            String regPath = "HKLM\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor";
+            // 使用wmic命令获取CPU信息
+            String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed /Value";
+            String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
 
-            // 获取CPU型号
-            String cpuModelReg = MinaUtils.execCmdWithResult(session,
-                    "reg query " + regPath + "\\0 /v ProcessorNameString");
-            if (StringUtils.isNotBlank(cpuModelReg)) {
-                Pattern pattern = Pattern.compile("ProcessorNameString\\s+REG_SZ\\s+(.+)");
-                Matcher matcher = pattern.matcher(cpuModelReg);
-                if (matcher.find()) {
-                    osInfo.setCpuModel(matcher.group(1).trim());
-                    logger.info("通过注册表获取到CPU型号: {}", osInfo.getCpuModel());
+            if (StringUtils.isNotBlank(cpuInfo)) {
+                // 解析CPU型号
+                Pattern namePattern = Pattern.compile("Name=(.+)");
+                Matcher nameMatcher = namePattern.matcher(cpuInfo);
+                if (nameMatcher.find()) {
+                    String cpuModel = nameMatcher.group(1).trim();
+                    osInfo.setCpuModel(cpuModel);
+                    osInfo.setCpuInfo(cpuModel); // 同时设置完整信息
+                    logger.debug("获取到CPU型号: {}", cpuModel);
                 }
-            }
 
-            // 获取CPU核心数（物理核心）
-            String cpuCountReg = MinaUtils.execCmdWithResult(session,
-                    "reg query " + regPath + " /s /v FeatureSet");
-            if (StringUtils.isNotBlank(cpuCountReg)) {
-                int coreCount = StringUtils.countMatches(cpuCountReg, "HKEY_LOCAL_MACHINE");
-                osInfo.setCpuCoreNum(coreCount);
-                logger.info("通过注册表获取到CPU物理核心数: {}", coreCount);
-            }
-
-            // 获取CPU频率
-            String cpuFreqReg = MinaUtils.execCmdWithResult(session,
-                    "reg query " + regPath + "\\0 /v ~MHz");
-            if (StringUtils.isNotBlank(cpuFreqReg)) {
-                Pattern pattern = Pattern.compile("~MHz\\s+REG_DWORD\\s+0x([0-9a-fA-F]+)");
-                Matcher matcher = pattern.matcher(cpuFreqReg);
-                if (matcher.find()) {
-                    double freq = Long.parseLong(matcher.group(1), 16) / 1000.0;
-                    osInfo.setCpuFrequency(freq);
-                    logger.info("通过注册表获取到CPU频率: {}GHz", freq);
-                }
-            }
-
-            // 获取CPU逻辑核心数
-            String logicalCoresCmd = MinaUtils.execCmdWithResult(session,
-                    "powershell -command \"(Get-WmiObject -class Win32_processor).NumberOfLogicalProcessors\"");
-            if (StringUtils.isNotBlank(logicalCoresCmd)) {
-                try {
-                    int logicalCores = Integer.parseInt(logicalCoresCmd.trim());
-                    osInfo.setCpuLogicalCores(logicalCores);
-
-                    // 计算每核心的线程数
-                    if (osInfo.getCpuCores() > 0) {
-                        osInfo.setCpuThreadsPerCore(logicalCores / osInfo.getCpuCores());
+                // 解析CPU频率
+                Pattern freqPattern = Pattern.compile("MaxClockSpeed=(\\d+)");
+                Matcher freqMatcher = freqPattern.matcher(cpuInfo);
+                if (freqMatcher.find()) {
+                    try {
+                        int freqMHz = Integer.parseInt(freqMatcher.group(1).trim());
+                        // 转换MHz为GHz
+                        double freqGHz = Math.round(freqMHz / 1000.0 * 100) / 100.0;
+                        osInfo.setCpuFrequency(freqGHz);
+                        logger.debug("获取到CPU频率: {} GHz", freqGHz);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU频率失败: {}", e.getMessage());
                     }
+                }
 
-                    logger.info("获取到CPU逻辑处理器数量: {}, 每核心线程数: {}",
-                            logicalCores, osInfo.getCpuThreadsPerCore());
-                } catch (NumberFormatException e) {
-                    logger.warn("解析CPU逻辑处理器数量失败: {}", logicalCoresCmd);
+                // 解析物理核心数
+                Pattern coresPattern = Pattern.compile("NumberOfCores=(\\d+)");
+                Matcher coresMatcher = coresPattern.matcher(cpuInfo);
+                if (coresMatcher.find()) {
+                    try {
+                        int cores = Integer.parseInt(coresMatcher.group(1).trim());
+                        osInfo.setCpuCores(cores);
+                        osInfo.setCpuCoreNum(cores); // 设置别名
+                        logger.debug("获取到CPU物理核心数: {}", cores);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU核心数失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析逻辑处理器数量
+                Pattern logicalPattern = Pattern.compile("NumberOfLogicalProcessors=(\\d+)");
+                Matcher logicalMatcher = logicalPattern.matcher(cpuInfo);
+                if (logicalMatcher.find()) {
+                    try {
+                        int logical = Integer.parseInt(logicalMatcher.group(1).trim());
+                        osInfo.setCpuLogicalCores(logical);
+
+                        // 计算每核心的线程数
+                        if (osInfo.getCpuCores() != null && osInfo.getCpuCores() > 0) {
+                            int threadsPerCore = logical / osInfo.getCpuCores();
+                            osInfo.setCpuThreadsPerCore(threadsPerCore);
+                            logger.debug("计算得到每核心线程数: {}", threadsPerCore);
+                        }
+
+                        logger.debug("获取到CPU逻辑处理器数量: {}", logical);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析逻辑处理器数量失败: {}", e.getMessage());
+                    }
+                }
+
+                // 设置CPU物理数量，Windows默认为1
+                osInfo.setCpuCount(1);
+
+                // 计算每颗CPU的核心数
+                if (osInfo.getCpuCores() != null) {
+                    osInfo.setCpuCoresPerProcessor(osInfo.getCpuCores());
                 }
             }
 
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("cpuInfo");
+
+            logger.info("Windows CPU信息收集完成");
         } catch (Exception e) {
-            logger.error("通过注册表收集CPU信息失败: {}", e.getMessage(), e);
+            logger.error("收集Windows CPU信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 
     /**
      * 收集内存信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
      */
-    private void collectMemoryInfo(OsInfo osInfo, ClientSession session) {
+    public void collectMemoryInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集Windows内存信息");
+
         try {
-            logger.info("开始收集内存信息");
-            // 通过注册表获取物理内存总量
-            String regQuery = MinaUtils.execCmdWithResult(session,
-                    "reg query \"HKLM\\HARDWARE\\RESOURCEMAP\\System Resources\\Physical Memory\" /v .Translated");
+            // 使用wmic命令获取内存信息
+            String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
+            String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
 
-            if (StringUtils.isNotBlank(regQuery)) {
-                Pattern pattern = Pattern.compile("Memory Range.*?Length\\s+0x([0-9a-fA-F]+)");
-                Matcher matcher = pattern.matcher(regQuery);
-                long totalMem = 0;
-                while (matcher.find()) {
-                    totalMem += Long.parseLong(matcher.group(1), 16);
-                }
-                osInfo.setTotalMem(totalMem);
-                logger.info("通过注册表获取到物理内存总量: {}GB", formatGigabytes(totalMem));
-            }
-
-            // 获取可用内存（需要配合性能计数器）
-            String perfQuery = MinaUtils.execCmdWithResult(session,
-                    "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Perflib\\009\" /v Counter");
-            if (StringUtils.isNotBlank(perfQuery)) {
-                String[] lines = perfQuery.split("\r\n");
-                for (String line : lines) {
-                    if (line.contains("Available Bytes")) {
-                        String[] parts = line.trim().split("\\s+");
-                        if (parts.length >= 2) {
-                            String counterIndex = parts[0];
-                            String availableMem = MinaUtils.execCmdWithResult(session,
-                                    "typeperf \"\\Memory\\Available Bytes\" -sc 1");
-                            if (StringUtils.isNotBlank(availableMem)) {
-                                Pattern memPattern = Pattern.compile("\"([0-9.]+)\"");
-                                Matcher memMatcher = memPattern.matcher(availableMem);
-                                if (memMatcher.find()) {
-                                    long availableBytes = (long) (Double.parseDouble(memMatcher.group(1)));
-                                    osInfo.setAvailableMem(availableBytes);
-                                    logger.info("通过性能计数器获取到可用内存: {}GB", formatGigabytes(availableBytes));
-                                }
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // 如果无法通过性能计数器获取可用内存，尝试使用PowerShell
-            if (osInfo.getAvailableMem() == 0) {
-                String psAvailableMem = MinaUtils.execCmdWithResult(session,
-                        "powershell -command \"(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory * 1024\"");
-                if (StringUtils.isNotBlank(psAvailableMem)) {
+            if (StringUtils.isNotBlank(memInfo)) {
+                // 解析总内存
+                Pattern totalPattern = Pattern.compile("TotalVisibleMemorySize=(\\d+)");
+                Matcher totalMatcher = totalPattern.matcher(memInfo);
+                if (totalMatcher.find()) {
                     try {
-                        long availableBytes = Long.parseLong(psAvailableMem.trim());
-                        osInfo.setAvailableMem(availableBytes);
-                        logger.info("通过PowerShell获取到可用内存: {}GB", formatGigabytes(availableBytes));
+                        long totalMemKB = Long.parseLong(totalMatcher.group(1).trim());
+                        // 保存原始字节数
+                        osInfo.setTotalMem(totalMemKB * 1024);
+                        // 转换为GB并保留一位小数
+                        double totalMemGB = Math.round(totalMemKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        osInfo.setTotalMemory(totalMemGB);
+                        logger.debug("获取到总内存: {} GB", totalMemGB);
                     } catch (NumberFormatException e) {
-                        logger.warn("解析PowerShell可用内存失败: {}", psAvailableMem);
+                        logger.warn("解析总内存失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析可用内存
+                Pattern freePattern = Pattern.compile("FreePhysicalMemory=(\\d+)");
+                Matcher freeMatcher = freePattern.matcher(memInfo);
+                if (freeMatcher.find()) {
+                    try {
+                        long freeMemKB = Long.parseLong(freeMatcher.group(1).trim());
+                        // 保存原始字节数
+                        osInfo.setAvailableMem(freeMemKB * 1024);
+                        // 转换为GB并保留一位小数
+                        double freeMemGB = Math.round(freeMemKB / 1024.0 / 1024.0 * 10) / 10.0;
+                        osInfo.setAvailableMemory(freeMemGB);
+                        logger.debug("获取到可用内存: {} GB", freeMemGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析可用内存失败: {}", e.getMessage());
                     }
                 }
             }
 
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("memoryInfo");
+
+            logger.info("Windows内存信息收集完成");
         } catch (Exception e) {
-            logger.error("通过注册表收集内存信息失败: {}", e.getMessage(), e);
+            logger.error("收集Windows内存信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 
     /**
      * 收集存储信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
      */
-    private void collectStorageInfo(OsInfo osInfo, ClientSession session) {
+    public void collectStorageInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集Windows存储信息");
+
         try {
-            logger.info("开始收集存储信息");
-            // 获取C盘总大小和可用空间
-            String totalDisk = MinaUtils.execCmdWithResult(session,
-                    "powershell -command \"(Get-PSDrive C).Used + (Get-PSDrive C).Free\"");
-            if (StringUtils.isNotBlank(totalDisk)) {
-                try {
-                    osInfo.setTotalDisk(Long.parseLong(totalDisk.trim()));
-                    logger.info("获取到C盘总大小: {}GB", formatGigabytes(osInfo.getTotalDisk()));
-                } catch (NumberFormatException e) {
-                    logger.warn("解析C盘总大小失败: {}", totalDisk);
+            // 使用wmic命令获取磁盘信息
+            String diskInfoCmd = "wmic logicaldisk get DeviceID, Size, FreeSpace /Value";
+            String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
+
+            if (StringUtils.isNotBlank(diskInfo)) {
+                // 分割每个磁盘的信息
+                String[] diskEntries = diskInfo.split("\r\n\r\n");
+
+                long totalBytes = 0;
+                long availableBytes = 0;
+
+                for (String entry : diskEntries) {
+                    if (StringUtils.isBlank(entry))
+                        continue;
+
+                    // 提取设备ID、大小和可用空间
+                    String deviceId = null;
+                    Long size = null;
+                    Long freeSpace = null;
+
+                    Pattern devicePattern = Pattern.compile("DeviceID=([A-Z]:)");
+                    Matcher deviceMatcher = devicePattern.matcher(entry);
+                    if (deviceMatcher.find()) {
+                        deviceId = deviceMatcher.group(1);
+                    }
+
+                    Pattern sizePattern = Pattern.compile("Size=(\\d+)");
+                    Matcher sizeMatcher = sizePattern.matcher(entry);
+                    if (sizeMatcher.find()) {
+                        try {
+                            size = Long.parseLong(sizeMatcher.group(1));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析磁盘大小失败: {}", entry);
+                        }
+                    }
+
+                    Pattern freePattern = Pattern.compile("FreeSpace=(\\d+)");
+                    Matcher freeMatcher = freePattern.matcher(entry);
+                    if (freeMatcher.find()) {
+                        try {
+                            freeSpace = Long.parseLong(freeMatcher.group(1));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析磁盘可用空间失败: {}", entry);
+                        }
+                    }
+
+                    // 如果获取到了所有信息，则累加到总量
+                    if (deviceId != null && size != null && freeSpace != null) {
+                        // 排除特殊驱动器（如光驱或网络驱动器，通常这些都有大小）
+                        if (size > 0) {
+                            totalBytes += size;
+                            availableBytes += freeSpace;
+                            logger.debug("磁盘 {} 大小: {} GB, 可用: {} GB",
+                                    deviceId,
+                                    Math.round(size / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0,
+                                    Math.round(freeSpace / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0);
+                        }
+                    }
+                }
+
+                // 保存原始字节数
+                osInfo.setTotalDiskBytes(totalBytes);
+                osInfo.setAvailableDiskBytes(availableBytes);
+
+                // 转换为GB并保留一位小数
+                double totalDiskGB = Math.round(totalBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+                double availableDiskGB = Math.round(availableBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+
+                // 使用接受Long类型的setter方法
+                osInfo.setTotalDisk(totalBytes);
+                osInfo.setAvailableDisk(availableBytes);
+
+                logger.debug("获取到磁盘总容量: {} GB, 可用容量: {} GB", totalDiskGB, availableDiskGB);
+            }
+
+            // Windows虚拟内存信息（交换空间）
+            String pagingInfoCmd = "wmic pagefile get CurrentUsage, AllocatedBaseSize /Value";
+            String pagingInfo = MinaUtils.execCmdWithResult(session, pagingInfoCmd);
+
+            if (StringUtils.isNotBlank(pagingInfo)) {
+                // 解析交换空间（分页文件）总容量
+                Pattern totalSwapPattern = Pattern.compile("AllocatedBaseSize=(\\d+)");
+                Matcher totalSwapMatcher = totalSwapPattern.matcher(pagingInfo);
+                if (totalSwapMatcher.find()) {
+                    try {
+                        long totalSwapMB = Long.parseLong(totalSwapMatcher.group(1).trim());
+                        // 计算字节数
+                        long totalSwapBytes = totalSwapMB * 1024 * 1024;
+                        // 保存原始字节数
+                        osInfo.setTotalSwapBytes(totalSwapBytes);
+                        // 使用接受Long类型的setter方法
+                        osInfo.setTotalSwap(totalSwapBytes);
+
+                        // 计算GB值用于日志
+                        double totalSwapGB = Math.round(totalSwapMB / 1024.0 * 10) / 10.0;
+                        logger.debug("获取到交换空间总容量: {} GB", totalSwapGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析交换空间总容量失败: {}", e.getMessage());
+                    }
+                }
+
+                // 解析交换空间使用量
+                Pattern usageSwapPattern = Pattern.compile("CurrentUsage=(\\d+)");
+                Matcher usageSwapMatcher = usageSwapPattern.matcher(pagingInfo);
+                if (usageSwapMatcher.find() && osInfo.getTotalSwapBytes() != null) {
+                    try {
+                        long usageSwapMB = Long.parseLong(usageSwapMatcher.group(1).trim());
+                        // 计算可用空间
+                        long totalSwapMB = osInfo.getTotalSwapBytes() / (1024 * 1024);
+                        long availableSwapMB = totalSwapMB - usageSwapMB;
+                        if (availableSwapMB < 0)
+                            availableSwapMB = 0;
+
+                        // 计算字节数
+                        long availableSwapBytes = availableSwapMB * 1024 * 1024;
+                        // 保存原始字节数
+                        osInfo.setAvailableSwapBytes(availableSwapBytes);
+                        // 使用接受Long类型的setter方法
+                        osInfo.setAvailableSwap(availableSwapBytes);
+
+                        // 计算GB值用于日志
+                        double availableSwapGB = Math.round(availableSwapMB / 1024.0 * 10) / 10.0;
+                        logger.debug("获取到交换空间可用容量: {} GB", availableSwapGB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析交换空间使用量失败: {}", e.getMessage());
+                    }
                 }
             }
 
-            String freeDisk = MinaUtils.execCmdWithResult(session,
-                    "powershell -command \"(Get-PSDrive C).Free\"");
-            if (StringUtils.isNotBlank(freeDisk)) {
-                try {
-                    osInfo.setAvailableDisk(Long.parseLong(freeDisk.trim()));
-                    logger.info("获取到C盘可用空间: {}GB", formatGigabytes(osInfo.getAvailableDisk()));
-                } catch (NumberFormatException e) {
-                    logger.warn("解析C盘可用空间失败: {}", freeDisk);
-                }
-            }
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("diskInfo");
 
+            logger.info("Windows存储信息收集完成");
         } catch (Exception e) {
-            logger.error("收集存储信息时出错: {}", e.getMessage(), e);
+            logger.error("收集Windows存储信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 
     /**
      * 收集GPU信息
+     * 单独提取方法以便队列系统调用
+     * 
+     * @param osInfo  操作系统信息对象
+     * @param session SSH会话
      */
-    private void collectGpuInfo(OsInfo osInfo, ClientSession session) {
+    public void collectGpuInfo(OsInfo osInfo, ClientSession session) {
+        logger.debug("开始收集Windows GPU信息");
+
         try {
-            logger.info("开始收集GPU信息");
-            // 通过注册表枚举所有显示适配器
-            String regPath = "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
-            String regQuery = MinaUtils.execCmdWithResult(session,
-                    "reg query " + regPath + " /s /v DriverDesc");
+            // 使用wmic命令获取显卡信息
+            String gpuInfoCmd = "wmic path win32_VideoController get Name, AdapterRAM /Value";
+            String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
 
-            // 解析显卡型号
-            if (StringUtils.isNotBlank(regQuery)) {
-                Pattern pattern = Pattern.compile("DriverDesc\\s+REG_SZ\\s+(.+)");
-                Matcher matcher = pattern.matcher(regQuery);
-                while (matcher.find()) {
-                    String model = matcher.group(1);
-                    osInfo.setGpuInfo(model);
+            if (StringUtils.isNotBlank(gpuInfo)) {
+                // 解析GPU名称
+                Pattern namePattern = Pattern.compile("Name=(.+)");
+                Matcher nameMatcher = namePattern.matcher(gpuInfo);
+                if (nameMatcher.find()) {
+                    String gpuName = nameMatcher.group(1).trim();
+                    osInfo.setGpuInfo(gpuName);
+                    logger.debug("获取到GPU名称: {}", gpuName);
                 }
-            }
 
-            // 获取显存信息（单位MB）
-            String memoryQuery = MinaUtils.execCmdWithResult(session,
-                    "reg query " + regPath + "\\0000 /v HardwareInformation.qwMemorySize");
-            if (StringUtils.isNotBlank(memoryQuery)) {
-                Pattern pattern = Pattern.compile("qwMemorySize\\s+REG_BINARY\\s+([0-9a-fA-F]+)");
-                Matcher matcher = pattern.matcher(memoryQuery);
-                if (matcher.find()) {
+                // 解析GPU显存
+                Pattern ramPattern = Pattern.compile("AdapterRAM=(\\d+)");
+                Matcher ramMatcher = ramPattern.matcher(gpuInfo);
+                if (ramMatcher.find()) {
                     try {
-                        // 将十六进制转换为十进制
-                        long bytes = Long.parseLong(matcher.group(1), 16);
-                        double memoryGB = bytes / (1024.0 * 1024.0 * 1024.0);
-                        osInfo.setGpuMemory(memoryGB);
+                        long ramBytes = Long.parseLong(ramMatcher.group(1).trim());
+                        // 转换为GB并保留一位小数
+                        double ramGB = Math.round(ramBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+                        osInfo.setGpuMemory(ramGB);
+                        logger.debug("获取到GPU显存: {} GB", ramGB);
                     } catch (NumberFormatException e) {
-                        logger.error("解析显存大小失败: {}", memoryQuery);
+                        logger.warn("解析GPU显存失败: {}", e.getMessage());
                     }
                 }
-            }
+            } else {
+                // 如果wmic命令没有返回有效结果，尝试使用PowerShell
+                String psGpuCmd = "powershell -Command \"Get-WmiObject -Class Win32_VideoController | Select-Object -Property Name, AdapterRAM | ConvertTo-Csv -NoTypeInformation\"";
+                String psGpuInfo = MinaUtils.execCmdWithResult(session, psGpuCmd);
 
-            // 如果通过注册表没有获取到信息，尝试使用PowerShell
-            if (osInfo.getGpuInfo().isEmpty()) {
-                String psGpuInfo = MinaUtils.execCmdWithResult(session,
-                        "powershell -command \"(Get-WmiObject Win32_VideoController).Name\"");
-                if (StringUtils.isNotBlank(psGpuInfo)) {
-                    osInfo.setGpuInfo(psGpuInfo.trim());
+                if (StringUtils.isNotBlank(psGpuInfo) && psGpuInfo.contains("Name")) {
+                    String[] lines = psGpuInfo.split("\r\n");
+                    if (lines.length > 1) {
+                        // 解析CSV格式输出
+                        String dataLine = lines[1];
+                        String[] values = dataLine.split(",");
+
+                        if (values.length >= 1) {
+                            String gpuName = values[0].replace("\"", "").trim();
+                            osInfo.setGpuInfo(gpuName);
+                            logger.debug("通过PowerShell获取到GPU名称: {}", gpuName);
+
+                            if (values.length >= 2) {
+                                try {
+                                    String ramValue = values[1].replace("\"", "").trim();
+                                    if (!ramValue.isEmpty() && !ramValue.equalsIgnoreCase("null")) {
+                                        long ramBytes = Long.parseLong(ramValue);
+                                        // 转换为GB并保留一位小数
+                                        double ramGB = Math.round(ramBytes / 1024.0 / 1024.0 / 1024.0 * 10) / 10.0;
+                                        osInfo.setGpuMemory(ramGB);
+                                        logger.debug("通过PowerShell获取到GPU显存: {} GB", ramGB);
+                                    }
+                                } catch (NumberFormatException e) {
+                                    logger.warn("通过PowerShell解析GPU显存失败: {}", e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    osInfo.setGpuInfo("无GPU或无法检测");
+                    logger.debug("未检测到GPU信息");
                 }
             }
 
+            // 更新硬件收集状态
+            osInfo.setLastUpdatedItem("gpuInfo");
+
+            logger.info("Windows GPU信息收集完成");
         } catch (Exception e) {
-            logger.error("通过注册表获取GPU信息失败: {}", e.getMessage());
-            osInfo.setGpuInfo("未知");
-            osInfo.setGpuMemory(0.0);
+            logger.error("收集Windows GPU信息时出错: {}", e.getMessage(), e);
+            throw e; // 向上抛出异常，由调用者处理
         }
     }
 

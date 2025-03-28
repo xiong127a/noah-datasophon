@@ -142,7 +142,7 @@ public class InstallServiceImpl implements InstallService {
                 return Result.error("主机列表不能为空");
             }
 
-            Map<String, HostInfo> hostMap = saveHostInfo(clusterId, ips, sshUser, sshPort, sshPassword);
+            Map<String, HostInfo> hostMap = saveHostInfo(clusterId, ips, sshUser, sshPort, sshPassword, true);
 
             // 如果没有获取到主机信息,返回错误提示
             if (Objects.isNull(hostMap)) {
@@ -189,14 +189,15 @@ public class InstallServiceImpl implements InstallService {
     /**
      * 保存主机信息到缓存
      *
-     * @param clusterId   集群ID
-     * @param hosts       主机列表字符串
-     * @param sshUser     SSH用户名
-     * @param sshPort     SSH端口
-     * @param sshPassword SSH密码
+     * @param clusterId             集群ID
+     * @param hosts                 主机列表字符串
+     * @param sshUser               SSH用户名
+     * @param sshPort               SSH端口
+     * @param sshPassword           SSH密码
+     * @param startOsInfoCollection 是否开始操作系统信息收集
      */
     private Map<String, HostInfo> saveHostInfo(Integer clusterId, String hosts, String sshUser, Integer sshPort,
-            String sshPassword) {
+            String sshPassword, boolean startOsInfoCollection) {
         String hostsMd5 = SecureUtil.md5(hosts);
         // 1. 检查缓存中是否存在有效的主机列表
         if (isCacheValid(clusterId, hostsMd5)) {
@@ -211,13 +212,15 @@ public class InstallServiceImpl implements InstallService {
         CacheUtils.put(clusterId + Constants.HOST_MD5, hostsMd5);
         logger.info("主机列表已存入缓存");
 
-        // 缓存创建完成后，统一触发所有主机的操作系统信息收集
-        logger.info("开始统一触发所有主机的操作系统信息收集");
-        for (HostInfo hostInfo : hostMap.values()) {
-            // 设置初始状态
-            hostInfo.setOsInfoStatus("loading");
-            // 异步获取主机信息
-            osInfoService.getHostOsInfoAsync(hostInfo);
+        // 如果需要，触发所有主机的操作系统信息收集
+        if (startOsInfoCollection) {
+            logger.info("开始统一触发所有主机的操作系统信息收集");
+            for (HostInfo hostInfo : hostMap.values()) {
+                // 设置初始状态
+                hostInfo.setOsInfoStatus("loading");
+                // 异步获取主机信息
+                osInfoService.getHostOsInfoAsync(hostInfo);
+            }
         }
 
         return hostMap;
@@ -901,11 +904,6 @@ public class InstallServiceImpl implements InstallService {
             result.add(list.get(i));
         }
         return result;
-    }
-
-    @Override
-    public Result fixCheckItem(Integer clusterId, String ip, Integer itemId) {
-        return hostCheckService.fixCheckItem(clusterId, ip, itemId);
     }
 
     @Override

@@ -47,8 +47,6 @@ public interface InstallService {
 
     /**
      * 清理主机环境校验缓存
-     * 
-     * @param clusterId 集群ID
      * @return 清理结果
      */
     Result clearHostEnvCheckCache();
@@ -58,16 +56,6 @@ public interface InstallService {
     Result dispatcherHostAgentCompleted(Integer clusterId);
 
     Result generateHostAgentCommand(String clusterHostIds, String commandType) throws Exception;
-
-    /**
-     * 修复单个检查项
-     * 
-     * @param clusterId 集群ID
-     * @param ip        主机IP
-     * @param itemId    检查项ID
-     * @return 修复结果
-     */
-    Result fixCheckItem(Integer clusterId, String ip, Integer itemId);
 
     /**
      * 修复单个检查项（支持跳过确认）

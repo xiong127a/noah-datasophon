@@ -1805,6 +1805,40 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
+     * 开始检查主机
+     * 从缓存中获取主机列表并开始检查
+     *
+     * @param clusterId 集群ID
+     * @return 操作结果
+     */
+    @Override
+    public Result startHostCheck(Integer clusterId) {
+        if (clusterId == null) {
+            return Result.error("集群ID不能为空");
+        }
+
+        // 从缓存中获取主机列表
+        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        if (map == null || map.isEmpty()) {
+            return Result.error("找不到集群的主机信息，请先解析主机列表");
+        }
+
+        // 筛选出需要检查的主机（未受管主机）
+        List<String> ipsToCheck = map.values().stream()
+                .map(HostInfo::getIp)
+                .collect(Collectors.toList());
+
+        if (ipsToCheck.isEmpty()) {
+            return Result.error("没有需要检查的主机");
+        }
+
+        logger.info("开始执行全局检查，未受管主机数量: {}", ipsToCheck.size());
+
+        // 调用批量检查方法执行检查
+        return batchCheckHosts(clusterId, ipsToCheck);
+    }
+
+    /**
      * 批量执行主机修复
      * 使用SSH连接复用功能
      */
