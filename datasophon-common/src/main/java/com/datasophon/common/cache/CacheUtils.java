@@ -21,6 +21,8 @@ import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.lang.StringUtils;
+import com.datasophon.common.Constants;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -173,5 +175,54 @@ public class CacheUtils {
         }
 
         return matchedKeys.toArray(new String[0]);
+    }
+
+    /**
+     * 更新主机信息缓存
+     * 
+     * @param clusterId 集群ID
+     * @param ip        主机IP
+     * @param hostInfo  主机信息对象
+     */
+    public static void putHostInfo(Integer clusterId, String ip, Object hostInfo) {
+        if (clusterId == null || StringUtils.isBlank(ip) || hostInfo == null) {
+            logger.warn("更新主机缓存参数无效: clusterId={}, ip={}", clusterId, ip);
+            return;
+        }
+
+        String cacheKey = clusterId + Constants.HOST_MAP;
+
+        try {
+            // 获取当前缓存
+            Map<String, Object> hostMap = (Map<String, Object>) get(cacheKey);
+            if (hostMap == null) {
+                // 如果缓存不存在，创建新的Map
+                hostMap = new ConcurrentHashMap<>();
+            }
+
+            // 更新特定主机信息
+            hostMap.put(ip, hostInfo);
+
+            // 保存回缓存
+            put(cacheKey, hostMap);
+
+            logger.debug("已更新主机缓存: clusterId={}, ip={}", clusterId, ip);
+        } catch (Exception e) {
+            logger.error("更新主机缓存失败: clusterId={}, ip={}, 原因: {}", clusterId, ip, e.getMessage(), e);
+
+            // 重试一次
+            try {
+                Thread.sleep(50);
+                Map<String, Object> hostMap = (Map<String, Object>) get(cacheKey);
+                if (hostMap == null) {
+                    hostMap = new ConcurrentHashMap<>();
+                }
+                hostMap.put(ip, hostInfo);
+                put(cacheKey, hostMap);
+                logger.info("重试更新主机缓存成功: clusterId={}, ip={}", clusterId, ip);
+            } catch (Exception e2) {
+                logger.error("重试更新主机缓存失败: clusterId={}, ip={}, 原因: {}", clusterId, ip, e2.getMessage(), e2);
+            }
+        }
     }
 }

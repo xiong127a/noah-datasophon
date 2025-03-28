@@ -400,18 +400,89 @@ export default {
                 h('div', { class: 'hostname-detail-title' }, ['DNS和Hosts配置']),
                 // DNS信息
                 h('div', { class: 'hostname-detail-block' }, [
-                  h('div', { class: 'hostname-detail-subtitle' }, ['DNS服务器']),
-                  row.osInfo && row.osInfo.dnsServers ? 
-                    h('div', { class: 'hostname-detail-content dns-servers' }, [
-                      row.osInfo.dnsServers
+                  h('div', { class: 'hostname-detail-subtitle' }, [
+                    h('span', { style: { display: 'flex', alignItems: 'center' } }, [
+                      h('a-icon', { 
+                        props: { type: 'global' }, 
+                        style: { marginRight: '6px', color: '#007AFF' } 
+                      }),
+                      'DNS服务器',
+                      // 添加状态图标
+                      row.dnsStatus === 'success' ? 
+                        h('a-icon', { 
+                          props: { type: 'check-circle' }, 
+                          style: { marginLeft: '6px', color: '#34C759', fontSize: '14px' } 
+                        }) :
+                        row.dnsStatus === 'error' ?
+                          h('a-icon', { 
+                            props: { type: 'close-circle' }, 
+                            style: { marginLeft: '6px', color: '#FF3B30', fontSize: '14px' } 
+                          }) :
+                          row.dnsStatus === 'loading' ?
+                            h('a-icon', { 
+                              props: { type: 'loading' }, 
+                              style: { marginLeft: '6px', color: '#007AFF', fontSize: '14px' } 
+                            }) : null
+                    ])
+                  ]),
+                  row.dnsStatus === 'loading' ? 
+                    h('div', { class: 'hostname-detail-loading' }, [
+                      h('div', { class: 'loading-animation' }),
+                      h('span', { class: 'loading-text' }, ['正在读取DNS服务器信息...'])
                     ]) : 
-                    h('div', { class: 'hostname-detail-empty' }, ['未获取到DNS服务器信息'])
+                    row.dnsStatus === 'error' ?
+                      h('div', { class: 'hostname-detail-error' }, [
+                        h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                        '读取DNS服务器信息失败'
+                      ]) :
+                      row.osInfo && row.osInfo.dnsServers ? 
+                        h('pre', { 
+                          class: 'hostname-detail-hosts-content',
+                          style: {
+                            maxHeight: '100px',
+                            overflow: 'auto',
+                            margin: '8px 0',
+                            padding: '12px',
+                            backgroundColor: '#F5F5F7',
+                            borderRadius: '8px',
+                            fontFamily: 'monospace',
+                            fontSize: '12px',
+                            lineHeight: '1.5',
+                            color: '#1D1D1F',
+                            border: '1px solid #E5E5EA'
+                          }
+                        }, [row.osInfo.dnsServers]) : 
+                        h('div', { class: 'hostname-detail-empty' }, ['未获取到DNS服务器信息'])
                 ]),
                 
                 // Hosts文件信息
                 h('div', { class: 'hostname-detail-block' }, [
-                  h('div', { class: 'hostname-detail-subtitle' }, ['Hosts文件']),
-                  row.hostsFileStatus === 'loading' || row.hostsFileStatus === null ? 
+                  h('div', { class: 'hostname-detail-subtitle' }, [
+                    h('span', { style: { display: 'flex', alignItems: 'center' } }, [
+                      h('a-icon', { 
+                        props: { type: 'file-text' }, 
+                        style: { marginRight: '6px', color: '#007AFF' } 
+                      }),
+                      'Hosts文件',
+                      // 添加状态图标
+                      row.hostsFileStatus === 'success' ? 
+                        h('a-icon', { 
+                          props: { type: 'check-circle' }, 
+                          style: { marginLeft: '6px', color: '#34C759', fontSize: '14px' } 
+                        }) :
+                        row.hostsFileStatus === 'error' ?
+                          h('a-icon', { 
+                            props: { type: 'close-circle' }, 
+                            style: { marginLeft: '6px', color: '#FF3B30', fontSize: '14px' } 
+                          }) :
+                          row.hostsFileStatus === 'loading' ?
+                            h('a-icon', { 
+                              props: { type: 'loading' }, 
+                              style: { marginLeft: '6px', color: '#007AFF', fontSize: '14px' } 
+                            }) : null
+                    ])
+                  ]),
+                  row.hostsFileStatus === 'loading' ? 
                     h('div', { class: 'hostname-detail-loading' }, [
                       h('div', { class: 'loading-animation' }),
                       h('span', { class: 'loading-text' }, ['正在读取hosts文件...'])
@@ -635,7 +706,7 @@ export default {
             const iconPath = getOsIconPath(osType);
             const color = getOsColor(osType);
             
-            // 创建详细的操作系统信息弹出框
+            // 创建详细的操作系统信息弹出框（添加硬件信息部分）
             const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
               // 标题区域
               h('div', { class: 'os-detail-header' }, [
@@ -663,309 +734,288 @@ export default {
               
               // 内容区域包装元素
               h('div', { class: 'os-detail-content' }, [
-                // 系统概览卡片
+                // 硬件信息卡片
                 h('div', { class: 'os-detail-card' }, [
                   h('div', { class: 'os-detail-card-header' }, [
-                    h('i', { class: 'anticon anticon-dashboard', style: { marginRight: '8px', color: '#007AFF' }}),
-                    h('span', {}, ['系统概览'])
+                    h('i', { class: 'anticon anticon-desktop', style: { marginRight: '8px', color: '#007AFF' }}),
+                    h('span', {}, ['硬件信息'])
                   ]),
                   
                   // CPU信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { class: 'os-detail-info-icon cpu' }, [
+                      h('div', { 
+                        class: 'os-detail-info-icon cpu',
+                        style: {
+                          backgroundColor: row.cpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
+                                          row.cpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                                          'rgba(0, 122, 255, 0.1)',
+                          color: row.cpuStatus === 'success' ? '#34C759' : 
+                                row.cpuStatus === 'error' ? '#FF3B30' : 
+                                '#007AFF'
+                        }
+                      }, [
                         h('i', { class: 'anticon anticon-api' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, ['处理器']),
-                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'cpuInfo') ? 
+                      h('div', { class: 'os-detail-info-label' }, [
+                        h('span', {}, ['处理器']),
+                        // 添加状态图标
+                        row.cpuStatus === 'success' ? 
+                          h('a-icon', { 
+                            props: { type: 'check-circle' }, 
+                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
+                          }) :
+                          row.cpuStatus === 'error' ?
+                            h('a-icon', { 
+                              props: { type: 'close-circle' }, 
+                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                            }) :
+                            row.cpuStatus === 'loading' ?
+                              h('a-icon', { 
+                                props: { type: 'loading' }, 
+                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : null
+                      ]),
+                      row.cpuStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
-                          h('span', { class: 'loading-text' }, ['正在收集...'])
-                        ]) : 
-                        h('div', { class: 'os-detail-info-value' }, [row.osInfo.cpuInfo || '未知']),
-                      h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'cpuCores') ?
-                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
-                          (row.osInfo.cpuCores ? 
-                            (row.osInfo.cpuCount > 1 ? 
-                              `${row.osInfo.cpuCount} 颗 CPU (${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程)` : 
-                              `${row.osInfo.cpuCores} 核 / ${row.osInfo.cpuLogicalCores || row.osInfo.cpuCores * row.osInfo.cpuThreadsPerCore} 线程`
-                            ) : '')
-                      ])
+                          h('span', {}, ['正在收集CPU信息...'])
+                        ]) :
+                        row.cpuStatus === 'error' ?
+                          h('div', { class: 'os-detail-info-value error' }, [
+                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                            '获取CPU信息失败'
+                          ]) :
+                          h('div', { class: 'os-detail-info-value' }, [
+                            row.osInfo && row.osInfo.cpuModel ? row.osInfo.cpuModel : '未知'
+                          ])
                     ])
                   ]),
                   
                   // 内存信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { class: 'os-detail-info-icon memory' }, [
+                      h('div', { 
+                        class: 'os-detail-info-icon memory',
+                        style: {
+                          backgroundColor: row.memoryStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
+                                          row.memoryStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                                          'rgba(0, 122, 255, 0.1)',
+                          color: row.memoryStatus === 'success' ? '#34C759' : 
+                                row.memoryStatus === 'error' ? '#FF3B30' : 
+                                '#007AFF'
+                        }
+                      }, [
                         h('i', { class: 'anticon anticon-database' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, ['内存']),
-                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'memoryInfo') ? 
+                      h('div', { class: 'os-detail-info-label' }, [
+                        h('span', {}, ['内存']),
+                        // 添加状态图标
+                        row.memoryStatus === 'success' ? 
+                          h('a-icon', { 
+                            props: { type: 'check-circle' }, 
+                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
+                          }) :
+                          row.memoryStatus === 'error' ?
+                            h('a-icon', { 
+                              props: { type: 'close-circle' }, 
+                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                            }) :
+                            row.memoryStatus === 'loading' ?
+                              h('a-icon', { 
+                                props: { type: 'loading' }, 
+                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : null
+                      ]),
+                      row.memoryStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
-                          h('span', { class: 'loading-text' }, ['正在收集...'])
-                        ]) : 
-                        h('div', { class: 'os-detail-info-value with-progress' }, [
-                          h('span', {}, [row.osInfo.totalMemory ? `${row.osInfo.totalMemory.toFixed(1)} GB` : '未知']),
-                          row.osInfo.totalMemory && row.osInfo.availableMemory ? 
-                            h('div', { class: 'os-detail-progress-container' }, [
-                              h('div', { 
-                                class: 'os-detail-progress-bar',
-                                style: {
-                                  width: `${((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory * 100).toFixed(0)}%`,
-                                  backgroundColor: ((row.osInfo.totalMemory - row.osInfo.availableMemory) / row.osInfo.totalMemory > 0.8) ? '#FF3B30' : '#34C759'
-                                }
-                              })
-                            ]) : null
-                        ]),
-                      h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'memoryInfo') ?
-                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
-                          (row.osInfo.totalMemory && row.osInfo.availableMemory ? 
-                            `可用: ${row.osInfo.availableMemory.toFixed(1)} GB (${((row.osInfo.availableMemory / row.osInfo.totalMemory) * 100).toFixed(1)}%)` : 
-                            '')
-                      ])
+                          h('span', {}, ['正在收集内存信息...'])
+                        ]) :
+                        row.memoryStatus === 'error' ?
+                          h('div', { class: 'os-detail-info-value error' }, [
+                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                            '获取内存信息失败'
+                          ]) :
+                          h('div', { class: 'os-detail-info-value' }, [
+                            row.osInfo && row.osInfo.memTotal ? 
+                              `总内存: ${row.osInfo.memTotal}` : 
+                              '未知'
+                          ])
                     ])
                   ]),
                   
-                  // 存储信息
+                  // 磁盘信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { class: 'os-detail-info-icon storage' }, [
+                      h('div', { 
+                        class: 'os-detail-info-icon disk',
+                        style: {
+                          backgroundColor: row.diskStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
+                                          row.diskStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                                          'rgba(0, 122, 255, 0.1)',
+                          color: row.diskStatus === 'success' ? '#34C759' : 
+                                row.diskStatus === 'error' ? '#FF3B30' : 
+                                '#007AFF'
+                        }
+                      }, [
                         h('i', { class: 'anticon anticon-hdd' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, ['存储']),
-                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'diskInfo') ? 
+                      h('div', { class: 'os-detail-info-label' }, [
+                        h('span', {}, ['磁盘']),
+                        // 添加状态图标
+                        row.diskStatus === 'success' ? 
+                          h('a-icon', { 
+                            props: { type: 'check-circle' }, 
+                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
+                          }) :
+                          row.diskStatus === 'error' ?
+                            h('a-icon', { 
+                              props: { type: 'close-circle' }, 
+                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                            }) :
+                            row.diskStatus === 'loading' ?
+                              h('a-icon', { 
+                                props: { type: 'loading' }, 
+                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : null
+                      ]),
+                      row.diskStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
-                          h('span', { class: 'loading-text' }, ['正在收集...'])
-                        ]) : 
-                        h('div', { class: 'os-detail-info-value with-progress' }, [
-                          h('span', {}, [
-                            row.osInfo.totalDisk ? 
-                              (typeof row.osInfo.totalDisk === 'number' ? 
-                                (row.osInfo.totalDisk >= 1099511627776 ? `${((row.osInfo.totalDisk / 1099511627776)).toFixed(1)} TB` : `${((row.osInfo.totalDisk / 1073741824)).toFixed(1)} GB`) :
-                                (row.osInfo.totalDisk >= 1024 ? `${(row.osInfo.totalDisk / 1024).toFixed(1)} TB` : `${row.osInfo.totalDisk} GB`)
-                              ) : 
+                          h('span', {}, ['正在收集磁盘信息...'])
+                        ]) :
+                        row.diskStatus === 'error' ?
+                          h('div', { class: 'os-detail-info-value error' }, [
+                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                            '获取磁盘信息失败'
+                          ]) :
+                          h('div', { class: 'os-detail-info-value' }, [
+                            row.osInfo && row.osInfo.diskTotal ? 
+                              `总空间: ${row.osInfo.diskTotal}` : 
                               '未知'
-                          ]),
-                          row.osInfo.totalDisk && row.osInfo.availableDisk ? 
-                            h('div', { class: 'os-detail-progress-container' }, [
-                              h('div', { 
-                                class: 'os-detail-progress-bar',
-                                style: {
-                                  width: `${((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk * 100).toFixed(0)}%`,
-                                  backgroundColor: ((row.osInfo.totalDisk - row.osInfo.availableDisk) / row.osInfo.totalDisk > 0.9) ? '#FF3B30' : '#34C759'
-                                }
-                              })
-                            ]) : null
-                        ]),
-                      h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'diskInfo') ?
-                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
-                          (row.osInfo.totalDisk && row.osInfo.availableDisk ? 
-                            `可用: ${
-                              typeof row.osInfo.availableDisk === 'number' ?
-                                (row.osInfo.availableDisk >= 1099511627776 ? ((row.osInfo.availableDisk / 1099511627776)).toFixed(1) + ' TB' : ((row.osInfo.availableDisk / 1073741824)).toFixed(1) + ' GB') :
-                                (row.osInfo.availableDisk >= 1024 ? (row.osInfo.availableDisk / 1024).toFixed(1) + ' TB' : row.osInfo.availableDisk + ' GB')
-                            } (${((row.osInfo.availableDisk / row.osInfo.totalDisk) * 100).toFixed(1)}%)` : 
-                            '')
-                      ])
+                          ])
                     ])
                   ]),
                   
                   // 交换空间信息
-                  row.osInfo.totalSwap > 0 ? h('div', { class: 'os-detail-info-row' }, [
+                  h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { class: 'os-detail-info-icon swap' }, [
+                      h('div', { 
+                        class: 'os-detail-info-icon swap',
+                        style: {
+                          backgroundColor: row.swapStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
+                                          row.swapStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                                          'rgba(0, 122, 255, 0.1)',
+                          color: row.swapStatus === 'success' ? '#34C759' : 
+                                row.swapStatus === 'error' ? '#FF3B30' : 
+                                '#007AFF'
+                        }
+                      }, [
                         h('i', { class: 'anticon anticon-swap' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, ['交换空间']),
-                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'swapInfo') ? 
+                      h('div', { class: 'os-detail-info-label' }, [
+                        h('span', {}, ['交换空间']),
+                        // 添加状态图标
+                        row.swapStatus === 'success' ? 
+                          h('a-icon', { 
+                            props: { type: 'check-circle' }, 
+                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
+                          }) :
+                          row.swapStatus === 'error' ?
+                            h('a-icon', { 
+                              props: { type: 'close-circle' }, 
+                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                            }) :
+                            row.swapStatus === 'loading' ?
+                              h('a-icon', { 
+                                props: { type: 'loading' }, 
+                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : null
+                      ]),
+                      row.swapStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
-                          h('span', { class: 'loading-text' }, ['正在收集...'])
-                        ]) : 
-                        h('div', { class: 'os-detail-info-value with-progress' }, [
-                          h('span', {}, [
-                            row.osInfo.totalSwap ? 
-                              (typeof row.osInfo.totalSwap === 'number' ?
-                                `${((row.osInfo.totalSwap / 1073741824)).toFixed(1)} GB` :
-                                `${row.osInfo.totalSwap} GB`
-                              ) : '未知'
-                          ]),
-                          row.osInfo.totalSwap && row.osInfo.availableSwap ? 
-                            h('div', { class: 'os-detail-progress-container' }, [
-                              h('div', { 
-                                class: 'os-detail-progress-bar',
-                                style: {
-                                  width: `${((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap * 100).toFixed(0)}%`,
-                                  backgroundColor: ((row.osInfo.totalSwap - row.osInfo.availableSwap) / row.osInfo.totalSwap > 0.8) ? '#FF3B30' : '#34C759'
-                                }
-                              })
-                            ]) : null
-                        ]),
-                      h('div', { class: 'os-detail-info-subvalue' }, [
-                        row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'swapInfo') ?
-                          h('span', { class: 'loading-text-simple' }, ['收集中...']) :
-                          (row.osInfo.totalSwap && row.osInfo.availableSwap ? 
-                            `可用: ${
-                              typeof row.osInfo.availableSwap === 'number' ?
-                                `${((row.osInfo.availableSwap / 1073741824)).toFixed(1)} GB` :
-                                `${row.osInfo.availableSwap} GB`
-                            } (${((row.osInfo.availableSwap / row.osInfo.totalSwap) * 100).toFixed(1)}%)` : 
-                            '')
-                      ])
+                          h('span', {}, ['正在收集交换空间信息...'])
+                        ]) :
+                        row.swapStatus === 'error' ?
+                          h('div', { class: 'os-detail-info-value error' }, [
+                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                            '获取交换空间信息失败'
+                          ]) :
+                          h('div', { class: 'os-detail-info-value' }, [
+                            row.osInfo && row.osInfo.swapTotal ? 
+                              `交换空间: ${row.osInfo.swapTotal}` : 
+                              '未知'
+                          ])
                     ])
-                  ]) : null,
+                  ]),
                   
-                  // 显卡信息（如果有）
-                  row.osInfo.gpuInfo ? h('div', { class: 'os-detail-info-row' }, [
+                  // GPU信息
+                  h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { class: 'os-detail-info-icon gpu' }, [
+                      h('div', { 
+                        class: 'os-detail-info-icon gpu',
+                        style: {
+                          backgroundColor: row.gpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
+                                          row.gpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                                          'rgba(0, 122, 255, 0.1)',
+                          color: row.gpuStatus === 'success' ? '#34C759' : 
+                                row.gpuStatus === 'error' ? '#FF3B30' : 
+                                '#007AFF'
+                        }
+                      }, [
                         h('i', { class: 'anticon anticon-appstore' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, ['显卡']),
-                      row.osInfo.hardwareCollectionStatus === 'collecting' && (!row.osInfo.lastUpdatedItem || row.osInfo.lastUpdatedItem !== 'gpuInfo') ? 
+                      h('div', { class: 'os-detail-info-label' }, [
+                        h('span', {}, ['GPU']),
+                        // 添加状态图标
+                        row.gpuStatus === 'success' ? 
+                          h('a-icon', { 
+                            props: { type: 'check-circle' }, 
+                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
+                          }) :
+                          row.gpuStatus === 'error' ?
+                            h('a-icon', { 
+                              props: { type: 'close-circle' }, 
+                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                            }) :
+                            row.gpuStatus === 'loading' ?
+                              h('a-icon', { 
+                                props: { type: 'loading' }, 
+                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
+                              }) : null
+                      ]),
+                      row.gpuStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
-                          h('span', { class: 'loading-text' }, ['正在收集...'])
-                        ]) : 
-                        h('div', { class: 'os-detail-info-value' }, [row.osInfo.gpuInfo || '未知']),
-                      row.osInfo.gpuMemory > 0 ? h('div', { class: 'gpu-memory-info' }, [
-                        `显存: ${row.osInfo.gpuMemory.toFixed(1)} GB`
-                      ]) : null
-                    ])
-                  ]) : null,
-                ]),
-                
-                // 系统详情
-                h('div', { class: 'os-detail-card' }, [
-                  h('div', { class: 'os-detail-card-header' }, [
-                    h('i', { class: 'anticon anticon-info-circle', style: { marginRight: '8px', color: '#5856D6' }}),
-                    h('span', {}, ['系统详情'])
-                  ]),
-                  
-                  h('div', { class: 'os-detail-table' }, [
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['主机名']),
-                      h('div', { class: 'os-detail-table-cell value' }, [
-                        row.hostname ? row.hostname : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['完整域名']),
-                      h('div', { class: 'os-detail-table-cell value' }, [
-                        row.fqdn ? row.fqdn : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['DNS服务器']),
-                      h('div', { class: 'os-detail-table-cell value' }, [
-                        row.osInfo.dnsServers ? row.osInfo.dnsServers : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['发行版']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distribution || '-'])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['发行版ID']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distributionId || '-'])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['系统版本']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.versionId || '-'])
-                    ]),
-                    h('div', { class: 'os-detail-table-row' }, [
-                      h('div', { class: 'os-detail-table-cell label' }, ['系统架构']),
-                      h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.architecture || '-'])
+                          h('span', {}, ['正在收集GPU信息...'])
+                        ]) :
+                        row.gpuStatus === 'error' ?
+                          h('div', { class: 'os-detail-info-value error' }, [
+                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                            '获取GPU信息失败'
+                          ]) :
+                          h('div', { class: 'os-detail-info-value' }, [
+                            row.osInfo && row.osInfo.gpuModel ? 
+                              row.osInfo.gpuModel : 
+                              '未检测到GPU设备'
+                          ])
                     ])
                   ])
                 ])
-              ]),
-              
-              // 底部信息区域
-              h('div', { class: 'os-detail-footer' }, [
-                h('span', { class: 'os-detail-footer-text' }, [`IP: ${row.ip || '-'}`])
               ])
-            ]) : h('div', { 
-              class: 'os-detail-popup',
-              style: { 
-                padding: '16px',
-                textAlign: 'center',
-                color: '#8E8E93'
-              }
-            }, [
-              h('div', { class: 'os-detail-no-info' }, [
-                h('i', { 
-                  class: 'anticon anticon-info-circle',
-                  style: { fontSize: '32px', marginBottom: '16px', color: '#8E8E93' }
-                }),
-                h('div', { class: 'os-detail-no-info-text' }, ['暂无详细信息']),
-                h('div', { class: 'os-detail-no-info-subtext' }, ['尝试重新检查主机以获取系统信息'])
-              ])
-            ]);
-            
-            return h('div', { class: 'os-info' }, [
-              h('a-tooltip', {
-                props: {
-                  placement: 'right',
-                  arrowPointAtCenter: true,
-                  overlayClassName: 'os-tooltip',
-                  getPopupContainer: () => document.body
-                }
-              }, [
-                // 简要信息(触发区域)
-                h('span', { 
-                  slot: 'title',
-                  class: 'os-detail-tooltip'
-                }, [osDetailContent]),
-                
-                // 显示的内容
-                h('span', { 
-                  class: 'os-type',
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    cursor: hasOsInfo ? 'pointer' : 'default'
-                  }
-                }, [
-                  h('img', {
-                    attrs: {
-                      src: iconPath,
-                      alt: osType,
-                      width: '20',
-                      height: '20'
-                    },
-                    class: 'os-logo',
-                    style: { 
-                      marginRight: '8px',
-                      verticalAlign: 'middle'
-                    }
-                  }),
-                  h('span', {
-                    style: {
-                      color: color
-                    }
-                  }, [
-                    osType === '-' ? '-' : (osType + (osVersion ? ' ' + osVersion : ''))
-                  ])
-                ])
-              ])
-            ]);
+            ]) : null;
           }
         },
         {
@@ -4665,5 +4715,514 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+.log-modal-status-label {
+  font-size: 13px;
+  color: #666;
+  margin-right: 6px;
+}
+
+/* 主机名和相关DNS/hosts悬浮框样式 */
+.hostname-detail-tooltip {
+  padding: 16px;
+  min-width: 360px;
+  max-width: 520px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.hostname-detail-section {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.hostname-detail-content {
+  margin-bottom: 12px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.hostname-detail-label {
+  font-weight: 500;
+  color: #8e8e93;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.hostname-detail-value {
+  flex: 1;
+  color: #1d1d1f;
+}
+
+.hostname-detail-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.hostname-detail-block {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-empty {
+  padding: 12px;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+  color: #8e8e93;
+  font-style: italic;
+  text-align: center;
+}
+
+.hostname-detail-loading {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(0, 122, 255, 0.05);
+  border-radius: 8px;
+  color: #007aff;
+}
+
+.hostname-detail-error {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(255, 59, 48, 0.05);
+  border-radius: 8px;
+  color: #ff3b30;
+}
+
+.loading-animation {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 122, 255, 0.3);
+  border-top-color: #007aff;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 13px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 操作系统和硬件信息悬浮框样式 */
+.os-detail-popup {
+  padding: 20px;
+  width: 460px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.os-detail-header {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.os-detail-icon-container {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.os-detail-title-container {
+  flex: 1;
+}
+
+.os-detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 8px 0;
+}
+
+.os-detail-subtitle {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0 0 4px 0;
+}
+
+.os-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.os-detail-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.os-detail-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.os-detail-info-icon-container {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.os-detail-info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.cpu {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.memory {
+  background-color: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+}
+
+.os-detail-info-icon.disk {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+}
+
+.os-detail-info-icon.swap {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.os-detail-info-icon.gpu {
+  background-color: rgba(175, 82, 222, 0.1);
+  color: #af52de;
+}
+
+.os-detail-info-content {
+  flex: 1;
+}
+
+.os-detail-info-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value.loading {
+  display: flex;
+  align-items: center;
+  color: #007aff;
+  font-size: 13px;
+}
+
+.os-detail-info-value.error {
+  color: #ff3b30;
+}
+
+.os-info {
+  .os-type {
+    font-size: 0.95rem;
+    color: @apple-black;
+    
+    .anticon {
+      font-size: 16px;
+    }
+    
+    .os-logo {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      vertical-align: middle;
+      transition: transform 0.3s ease;
+    }
+    
+    &:hover .os-logo {
+      transform: scale(1.1);
+    }
+  }
+}
+
+.os-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.os-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  to { transform: translateX(500%); }
+}
+
+.os-detail-popup {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.os-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.os-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.os-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-line.short {
+  width: 70%;
+}
+
+.os-detail-loading-line.medium {
+  width: 85%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.os-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.os-detail-header {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.os-detail-icon-container {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.os-detail-title-container {
+  flex: 1;
+}
+
+.os-detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 8px 0;
+}
+
+.os-detail-subtitle {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0 0 4px 0;
+}
+
+.os-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.os-detail-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.os-detail-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.os-detail-info-icon-container {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.os-detail-info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.cpu {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.memory {
+  background-color: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+}
+
+.os-detail-info-icon.disk {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+}
+
+.os-detail-info-icon.swap {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.os-detail-info-icon.gpu {
+  background-color: rgba(175, 82, 222, 0.1);
+  color: #af52de;
+}
+
+.os-detail-info-content {
+  flex: 1;
+}
+
+.os-detail-info-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value.loading {
+  display: flex;
+  align-items: center;
+  color: #007aff;
+  font-size: 13px;
+}
+
+.os-detail-info-value.error {
+  color: #ff3b30;
+}
+
+.os-detail-info-value.with-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.os-detail-progress-container {
+  flex: 1;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.os-detail-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.os-detail-info-subvalue {
+  font-size: 0.8rem;
+  color: #8E8E93;
 }
 </style>

@@ -115,6 +115,12 @@ public class HostInfo implements Serializable {
     private String hostsFile;
 
     /**
+     * 硬件信息收集的总体状态
+     * 可能的值: "loading", "success", "error"
+     */
+    private String hardwareStatus;
+
+    /**
      * 状态缓存是否失效 - 不序列化此字段
      */
     private transient boolean statusCacheDirty = true;
@@ -143,6 +149,17 @@ public class HostInfo implements Serializable {
     @Getter
     @JsonIgnore
     private transient ClientSession externalSession = null;
+
+    // 各信息项的独立状态字段
+    private String hostnameStatus; // 主机名收集状态
+    private String osStatus; // 操作系统信息收集状态
+    private String dnsStatus; // DNS服务器信息收集状态
+    private String hostsFileStatus; // hosts文件收集状态
+    private String cpuStatus; // CPU信息收集状态
+    private String memoryStatus; // 内存信息收集状态
+    private String diskStatus; // 磁盘信息收集状态
+    private String swapStatus; // 交换空间信息收集状态
+    private String gpuStatus; // GPU信息收集状态
 
     public HostInfo(String ip, int sshPort, String sshUser) {
         this.ip = ip;
@@ -388,6 +405,79 @@ public class HostInfo implements Serializable {
 
         // 状态计算完成，标记缓存为有效
         this.statusCacheDirty = false;
+    }
+
+    // 添加对应的getter和setter方法
+    public String getHostnameStatus() {
+        return hostnameStatus;
+    }
+
+    public void setHostnameStatus(String hostnameStatus) {
+        this.hostnameStatus = hostnameStatus;
+    }
+
+    public String getOsStatus() {
+        return osStatus;
+    }
+
+    public void setOsStatus(String osStatus) {
+        this.osStatus = osStatus;
+    }
+
+    public String getDnsStatus() {
+        return dnsStatus;
+    }
+
+    public void setDnsStatus(String dnsStatus) {
+        this.dnsStatus = dnsStatus;
+    }
+
+    public String getHostsFileStatus() {
+        return hostsFileStatus;
+    }
+
+    public void setHostsFileStatus(String hostsFileStatus) {
+        this.hostsFileStatus = hostsFileStatus;
+    }
+
+    public String getCpuStatus() {
+        return cpuStatus;
+    }
+
+    public void setCpuStatus(String cpuStatus) {
+        this.cpuStatus = cpuStatus;
+    }
+
+    public String getMemoryStatus() {
+        return memoryStatus;
+    }
+
+    public void setMemoryStatus(String memoryStatus) {
+        this.memoryStatus = memoryStatus;
+    }
+
+    public String getDiskStatus() {
+        return diskStatus;
+    }
+
+    public void setDiskStatus(String diskStatus) {
+        this.diskStatus = diskStatus;
+    }
+
+    public String getSwapStatus() {
+        return swapStatus;
+    }
+
+    public void setSwapStatus(String swapStatus) {
+        this.swapStatus = swapStatus;
+    }
+
+    public String getGpuStatus() {
+        return gpuStatus;
+    }
+
+    public void setGpuStatus(String gpuStatus) {
+        this.gpuStatus = gpuStatus;
     }
 
 }
