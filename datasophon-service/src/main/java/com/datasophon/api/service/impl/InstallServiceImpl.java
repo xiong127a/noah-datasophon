@@ -233,7 +233,6 @@ public class InstallServiceImpl implements InstallService {
 
         // 将结果存入缓存
         CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-        CacheUtils.put(clusterId + Constants.HOST_MD5, hostsMd5);
         logger.info("主机列表已存入缓存");
 
         // 如果需要，触发所有主机的操作系统信息收集
@@ -357,9 +356,7 @@ public class InstallServiceImpl implements InstallService {
      * 检查缓存是否有效
      */
     private boolean isCacheValid(Integer clusterId, String hostsMd5) {
-        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP)
-                && CacheUtils.constainsKey(clusterId + Constants.HOST_MD5)
-                && hostsMd5.equals(CacheUtils.getString(clusterId + Constants.HOST_MD5));
+        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP);
     }
 
     /**

@@ -234,13 +234,8 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             // remove the host from the cache
             Map<String, HostInfo> map =
                     (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-            String md5 = SecureUtil.md5(host.getHostname());
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
-            }
-            if (CacheUtils.constainsKey(clusterCode + Constants.HOST_MD5)
-                    && md5.equals(CacheUtils.getString(clusterCode + Constants.HOST_MD5))) {
-                CacheUtils.removeKey(clusterCode + Constants.HOST_MD5);
             }
         }
         return Result.success();
