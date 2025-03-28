@@ -240,50 +240,49 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         logger.info("开始收集Linux硬件信息");
         osInfo.setHardwareCollectionStatus("collecting");
         // 更新收集状态
-        HostInfo hostInfo = osInfo.getHostInfo();
-        cacheUpdater.updateCache(hostInfo);
+        cacheUpdater.updateCache(null); // 让回调函数处理缓存更新
 
         try {
             // 收集CPU信息
             osInfo.setLastUpdatedItem("collecting_cpu");
             logger.info("收集CPU信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectCpuInfo(osInfo, session);
 
             // 收集内存信息
             osInfo.setLastUpdatedItem("collecting_memory");
             logger.info("收集内存信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectMemoryInfo(osInfo, session);
 
             // 收集磁盘信息
             osInfo.setLastUpdatedItem("collecting_disk");
             logger.info("收集磁盘信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectDiskInfo(osInfo, session);
 
             // 收集交换分区信息
             osInfo.setLastUpdatedItem("collecting_swap");
             logger.info("收集交换分区信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectSwapInfo(osInfo, session);
 
             // 收集GPU信息
             osInfo.setLastUpdatedItem("collecting_gpu");
             logger.info("收集GPU信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectGpuInfo(osInfo, session);
 
             // 标记为完成
             osInfo.setLastUpdatedItem("completed");
             osInfo.setHardwareCollectionStatus("success");
             // 完成时更新一次
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
 
             logger.info("Linux硬件信息收集完成");
         } catch (Exception e) {
@@ -291,7 +290,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             osInfo.setHardwareCollectionStatus("error");
             osInfo.setLastUpdatedItem("error");
             // 出错时更新状态
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
         }
     }
 

@@ -185,11 +185,16 @@ public class OsInfoServiceImpl implements OsInfoService {
                     return;
                 }
 
-                // 设置硬件收集状态为collecting，并立即更新缓存
-                osInfo.setHardwareCollectionStatus("collecting");
+                // 设置数据
                 hostInfo.setOsInfo(osInfo);
                 hostInfo.setOsInfoStatus("success");
                 hostInfo.setSshConnectStatus("success"); // 设置SSH连接成功状态
+                
+                // 设置硬件收集状态为collecting
+                if (osInfo != null) {
+                    osInfo.setHardwareCollectionStatus("collecting");
+                }
+                
                 updateHostInfoCache(hostInfo);
 
                 // 添加硬件信息收集任务到队列
@@ -238,6 +243,24 @@ public class OsInfoServiceImpl implements OsInfoService {
         private volatile boolean processingGpuInfo = false;
 
         /**
+         * 如果处理器未运行，则启动相应的处理器
+         */
+        private synchronized void startProcessingIfNeeded() {
+            if (!processingCpuInfo && !cpuInfoQueue.isEmpty()) {
+                processCpuInfoQueue();
+            }
+            if (!processingMemoryInfo && !memoryInfoQueue.isEmpty()) {
+                processMemoryInfoQueue();
+            }
+            if (!processingDiskInfo && !diskInfoQueue.isEmpty()) {
+                processDiskInfoQueue();
+            }
+            if (!processingGpuInfo && !gpuInfoQueue.isEmpty()) {
+                processGpuInfoQueue();
+            }
+        }
+
+        /**
          * 添加主机到系统信息收集队列
          */
         public synchronized void addHostToQueue(HostInfo hostInfo, Consumer<HostInfo> processor) {
@@ -253,46 +276,37 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 添加主机到CPU信息收集队列
          */
         public synchronized void addHostToCpuInfoQueue(HostInfo hostInfo, OsInfo osInfo, OsInfoServiceImpl service) {
-            ClientSession session = null;
             try {
-                // 获取SSH会话
-                session = service.getOrCreateSession(hostInfo);
-                if (session != null) {
-                    // 确定操作系统类型
-                    String osType = osInfo.getDistributionId().toLowerCase().contains("windows") ? "windows" : "linux";
-                    IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
-
-                    if (collector != null) {
-                        // 创建硬件信息收集任务
-                        HardwareInfoTask task = new HardwareInfoTask(hostInfo, osInfo, session, collector, service);
-                        cpuInfoQueue.add(task);
-
-                        // 如果当前没有处理任务，则开始处理
-                        if (!processingCpuInfo) {
-                            processCpuInfoQueue();
-                        }
-                    } else {
-                        // 无法获取收集器，设置为错误状态
-                        osInfo.setHardwareCollectionStatus("error");
-                        osInfo.setLastUpdatedItem("无法获取收集器");
-                        hostInfo.setOsInfo(osInfo);
-                        service.updateHostInfoCache(hostInfo);
-                        logger.error("无法获取适用于{}的信息收集器: {}", osType, hostInfo.getIp());
-                    }
-                } else {
-                    // 无法获取会话，设置为错误状态
-                    osInfo.setHardwareCollectionStatus("error");
-                    osInfo.setLastUpdatedItem("会话连接失败");
-                    hostInfo.setOsInfo(osInfo);
-                    service.updateHostInfoCache(hostInfo);
-                    logger.error("无法获取SSH会话，硬件信息收集失败: {}", hostInfo.getIp());
+                // 获取会话
+                ClientSession session = getOrCreateSession(hostInfo);
+                if (session == null) {
+                    logger.warn("无法创建SSH会话，跳过硬件信息收集: {}", hostInfo.getIp());
+                    return;
                 }
+
+                // 确定操作系统类型
+                String osType = detectOperatingSystemType(session);
+                IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
+                if (collector == null) {
+                    logger.warn("未找到适用于{}操作系统的信息收集器", osType);
+                    return;
+                }
+
+                // 确保OsInfo有初始的硬件收集状态
+                if (osInfo.getHardwareCollectionStatus() == null) {
+                    osInfo.setHardwareCollectionStatus("pending");
+                }
+
+                // 创建任务并添加到队列
+                HardwareInfoTask task = new HardwareInfoTask(hostInfo, osInfo, session, collector, service);
+                cpuInfoQueue.add(task);
+
+                // 如果处理器未运行，开始处理
+                startProcessingIfNeeded();
+
+                logger.info("已将主机 {} 添加到CPU信息收集队列", hostInfo.getIp());
             } catch (Exception e) {
-                logger.error("准备硬件信息收集时出错: {}", e.getMessage(), e);
-                osInfo.setHardwareCollectionStatus("error");
-                osInfo.setLastUpdatedItem("准备硬件收集失败");
-                hostInfo.setOsInfo(osInfo);
-                service.updateHostInfoCache(hostInfo);
+                logger.error("添加主机到CPU信息收集队列时出错: {}", e.getMessage(), e);
             }
         }
 
@@ -725,6 +739,13 @@ public class OsInfoServiceImpl implements OsInfoService {
     @Override
     public synchronized void updateHostInfoCache(HostInfo hostInfo) {
         try {
+            // 如果传入的是null，尝试从当前处理中的任务获取hostInfo
+            if (hostInfo == null) {
+                // 目前我们简单地记录日志并返回，后续可以改进为从线程上下文获取当前处理的任务
+                logger.debug("更新缓存时传入的hostInfo为null，跳过此次更新");
+                return;
+            }
+            
             // 获取缓存中的主机信息
             Integer clusterId = hostInfo.getClusterId();
             if (clusterId == null) {
@@ -819,6 +840,8 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 复制基本属性
         copy.setIp(source.getIp());
         copy.setHostname(source.getHostname()); // 确保主机名被正确复制
+        copy.setFqdn(source.getFqdn()); // 复制FQDN
+        copy.setHostsFile(source.getHostsFile()); // 复制hosts文件内容
         copy.setSshUser(source.getSshUser());
         copy.setSshPort(source.getSshPort());
         copy.setSshPassword(source.getSshPassword());
@@ -850,6 +873,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             osInfoCopy.setFullName(sourceOsInfo.getFullName());
             osInfoCopy.setKernelVersion(sourceOsInfo.getKernelVersion());
             osInfoCopy.setArchitecture(sourceOsInfo.getArchitecture());
+            osInfoCopy.setDnsServers(sourceOsInfo.getDnsServers());
             osInfoCopy.setCpuInfo(sourceOsInfo.getCpuInfo());
             osInfoCopy.setCpuModel(sourceOsInfo.getCpuModel());
 
@@ -902,7 +926,6 @@ public class OsInfoServiceImpl implements OsInfoService {
      */
     private OsInfo getHostOsInfoInternal(HostInfo hostInfo) {
         OsInfo osInfo = new OsInfo();
-        osInfo.setHostInfo(hostInfo);
         hostInfo.setOsInfo(osInfo);
 
         ClientSession session = null;

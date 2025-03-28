@@ -100,9 +100,8 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     public void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater) {
         try {
             osInfo.setHardwareCollectionStatus("loading");
-            // 更新收集状态
-            HostInfo hostInfo = osInfo.getHostInfo();
-            cacheUpdater.updateCache(hostInfo);
+            // 更新收集状态，不再依赖hostInfo
+            cacheUpdater.updateCache(null);
 
             logger.info("开始收集Windows硬件信息");
 
@@ -110,44 +109,43 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             osInfo.setLastUpdatedItem("collecting_cpu");
             logger.info("收集CPU信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectCpuInfo(osInfo, session);
 
             // 获取内存信息
             osInfo.setLastUpdatedItem("collecting_memory");
             logger.info("收集内存信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectMemoryInfo(osInfo, session);
 
             // 获取存储信息
             osInfo.setLastUpdatedItem("collecting_disk");
             logger.info("收集磁盘信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectStorageInfo(osInfo, session);
 
             // 获取GPU信息
             osInfo.setLastUpdatedItem("collecting_gpu");
             logger.info("收集GPU信息...");
             // 更新当前正在处理的项
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
             collectGpuInfo(osInfo, session);
 
             // 标记为完成
             osInfo.setLastUpdatedItem("completed");
             osInfo.setHardwareCollectionStatus("success");
             // 完成时更新一次
-            cacheUpdater.updateCache(hostInfo);
+            cacheUpdater.updateCache(null);
 
             logger.info("Windows硬件信息收集完成");
         } catch (Exception e) {
             logger.error("收集Windows硬件信息时出错: {}", e.getMessage(), e);
             osInfo.setHardwareCollectionStatus("error");
             osInfo.setLastUpdatedItem("error");
-            // 出错时也更新
-            HostInfo hostInfo = osInfo.getHostInfo();
-            cacheUpdater.updateCache(hostInfo);
+            // 出错时也更新，不再依赖hostInfo
+            cacheUpdater.updateCache(null);
         }
     }
 

@@ -240,14 +240,6 @@ public class OsInfo implements Serializable {
     private String displayName;
 
     /**
-     * 关联的主机信息
-     * 用于在硬件信息收集过程中更新主机缓存
-     * 添加@JsonIgnore避免序列化循环引用
-     */
-    @JsonIgnore
-    private transient HostInfo hostInfo;
-
-    /**
      * 获取操作系统主版本号
      * 如7.9返回7
      */
