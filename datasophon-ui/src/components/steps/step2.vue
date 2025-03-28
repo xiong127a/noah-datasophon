@@ -286,7 +286,17 @@ export default {
                   h('div', { class: 'os-detail-loading-line' }),
                   h('div', { class: 'os-detail-loading-line short' }),
                   h('div', { class: 'os-detail-loading-line medium' })
-                ])
+                ]),
+                h('div', { 
+                  class: 'os-detail-loading-text',
+                  style: {
+                    fontSize: '14px',
+                    textAlign: 'center',
+                    color: '#007AFF',
+                    marginTop: '12px',
+                    fontWeight: '500'
+                  }
+                }, ['正在优雅检索主机名信息...'])
               ]);
               
               // 苹果风格的骨架屏加载动画
@@ -313,9 +323,23 @@ export default {
                     width: '90%',
                     borderRadius: '4px',
                     backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }
-                })
+                }, [
+                  // 添加加载中文字
+                  h('span', {
+                    style: {
+                      fontSize: '12px', 
+                      color: '#8E8E93',
+                      fontWeight: '500',
+                      position: 'relative',
+                      zIndex: 2
+                    }
+                  }, ['正在检索主机名...'])
+                ])
               ]);
             } else if (row.osInfoStatus === 'error') {
               // 错误状态显示
@@ -350,21 +374,119 @@ export default {
               });
             }
             
-            // 正常显示主机名
-            return h('span', {}, [row.hostname]);
+            // 正常显示主机名，添加悬浮卡片
+            const tooltipContent = h('div', { class: 'hostname-detail-tooltip' }, [
+              // 主机名信息部分
+              h('div', { class: 'hostname-detail-section' }, [
+                h('div', { class: 'hostname-detail-title' }, ['主机基本信息']),
+                h('div', { class: 'hostname-detail-content' }, [
+                  h('div', { class: 'hostname-detail-item' }, [
+                    h('span', { class: 'hostname-detail-label' }, ['主机名:']),
+                    h('span', { class: 'hostname-detail-value' }, [row.hostname || '-'])
+                  ]),
+                  h('div', { class: 'hostname-detail-item' }, [
+                    h('span', { class: 'hostname-detail-label' }, ['完整域名:']),
+                    h('span', { class: 'hostname-detail-value' }, [row.fqdn || '-'])
+                  ]),
+                  h('div', { class: 'hostname-detail-item' }, [
+                    h('span', { class: 'hostname-detail-label' }, ['IP地址:']),
+                    h('span', { class: 'hostname-detail-value' }, [row.ip || '-'])
+                  ])
+                ])
+              ]),
+              
+              // DNS和hosts文件信息部分
+              h('div', { class: 'hostname-detail-section' }, [
+                h('div', { class: 'hostname-detail-title' }, ['DNS和Hosts配置']),
+                // DNS信息
+                h('div', { class: 'hostname-detail-block' }, [
+                  h('div', { class: 'hostname-detail-subtitle' }, ['DNS服务器']),
+                  row.osInfo && row.osInfo.dnsServers ? 
+                    h('div', { class: 'hostname-detail-content dns-servers' }, [
+                      row.osInfo.dnsServers
+                    ]) : 
+                    h('div', { class: 'hostname-detail-empty' }, ['未获取到DNS服务器信息'])
+                ]),
+                
+                // Hosts文件信息
+                h('div', { class: 'hostname-detail-block' }, [
+                  h('div', { class: 'hostname-detail-subtitle' }, ['Hosts文件']),
+                  row.hostsFileStatus === 'loading' || row.hostsFileStatus === null ? 
+                    h('div', { class: 'hostname-detail-loading' }, [
+                      h('div', { class: 'loading-animation' }),
+                      h('span', { class: 'loading-text' }, ['正在读取hosts文件...'])
+                    ]) : 
+                    row.hostsFileStatus === 'error' ?
+                      h('div', { class: 'hostname-detail-error' }, [
+                        h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                        '读取hosts文件失败'
+                      ]) :
+                      h('pre', { 
+                        class: 'hostname-detail-hosts-content',
+                        style: {
+                          maxHeight: '200px',
+                          overflow: 'auto',
+                          margin: '8px 0',
+                          padding: '12px',
+                          backgroundColor: '#F5F5F7',
+                          borderRadius: '8px',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          lineHeight: '1.5',
+                          color: '#1D1D1F',
+                          border: '1px solid #E5E5EA'
+                        }
+                      }, [row.hostsFile || '# 暂无hosts文件内容'])
+                ])
+              ])
+            ]);
+            
+            return h('a-tooltip', {
+              props: {
+                placement: 'right',
+                arrowPointAtCenter: true,
+                overlayClassName: 'hostname-tooltip',
+                getPopupContainer: () => document.body
+              }
+            }, [
+              // 悬浮显示的内容
+              h('span', { slot: 'title' }, [tooltipContent]),
+              
+              // 显示的主机名（可点击）
+              h('span', {
+                style: {
+                  cursor: 'pointer',
+                  color: '#007AFF',
+                  fontWeight: '500',
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }
+              }, [
+                row.hostname,
+                h('a-icon', {
+                  props: { type: 'info-circle' },
+                  style: { 
+                    marginLeft: '6px', 
+                    fontSize: '14px',
+                    color: '#8E8E93',
+                    opacity: 0.7
+                  }
+                })
+              ])
+            ]);
           }
         },
         { 
           title: "主机IP", 
           key: "ip", 
           dataIndex: "ip",
-          width: 150
+          width: 120  // 缩小IP列宽度
         },
         {
           title: "操作系统",
           key: "osType",
           dataIndex: "osType",
-          width: "15%",
+          width: "25%",  // 增加操作系统列宽度
           customRender: (text, row) => {
             const h = this.$createElement;
             
@@ -397,7 +519,17 @@ export default {
                   h('div', { class: 'os-detail-loading-line' }),
                   h('div', { class: 'os-detail-loading-line short' }),
                   h('div', { class: 'os-detail-loading-line medium' })
-                ])
+                ]),
+                h('div', { 
+                  class: 'os-detail-loading-text',
+                  style: {
+                    fontSize: '14px',
+                    textAlign: 'center',
+                    color: '#007AFF',
+                    marginTop: '12px',
+                    fontWeight: '500'
+                  }
+                }, ['正在优雅地检索操作系统信息...'])
               ]);
               
               // 苹果风格的骨架屏加载动画
@@ -421,12 +553,27 @@ export default {
                   style: {
                     position: 'relative',
                     height: '24px',
-                    width: '90%',
+                    width: '100%',
                     borderRadius: '4px',
                     backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }
-                })
+                }, [
+                  // 添加加载中文字
+                  h('span', {
+                    style: {
+                      fontSize: '12px', 
+                      color: '#8E8E93',
+                      fontWeight: '500',
+                      position: 'relative',
+                      zIndex: 2,
+                      whiteSpace: 'nowrap'  // 防止文字换行
+                    }
+                  }, ['正在检索操作系统...'])
+                ])
               ]);
             }
             
@@ -812,58 +959,6 @@ export default {
           }
         },
         {
-          title: "Hosts文件",
-          key: "hostsFile",
-          dataIndex: "hostsFile",
-          width: 100,
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            
-            // hosts文件内容
-            const hostsContent = row.hostsFile ? row.hostsFile : "# 暂无hosts文件内容";
-            
-            return h('a-tooltip', {
-              props: {
-                placement: 'right',
-                autoAdjustOverflow: true,
-                overlayClassName: 'hosts-file-tooltip',
-                getPopupContainer: () => document.body
-              }
-            }, [
-              // 悬浮展示内容
-              h('pre', {
-                slot: 'title',
-                style: {
-                  maxHeight: '400px',
-                  maxWidth: '600px',
-                  overflow: 'auto',
-                  margin: '0',
-                  padding: '10px',
-                  backgroundColor: '#f8f8f8',
-                  borderRadius: '4px',
-                  border: '1px solid #e8e8e8',
-                  fontSize: '12px',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all'
-                }
-              }, [hostsContent]),
-              
-              // 触发悬浮的图标
-              h('a-icon', {
-                props: {
-                  type: 'file-text',
-                  theme: 'filled'
-                },
-                style: {
-                  fontSize: '16px',
-                  color: '#1890ff',
-                  cursor: 'pointer'
-                }
-              })
-            ]);
-          }
-        },
-        {
           title: "当前受管",
           key: "managed",
           dataIndex: "managed",
@@ -899,8 +994,8 @@ export default {
         },
         {
           title: "状态",
-          key: "hostStatus",
-          width: "15%",
+          key: "status",
+          width: "15%",  // 增加状态列宽度
           customRender: (text, row) => {
             const h = this.$createElement;
 
@@ -948,7 +1043,7 @@ export default {
         {
           title: "检查项",
           key: "checkItem",
-          width: "20%",
+          width: "18%",  // 增加检查项列宽度
           customRender: (text, row) => {
             const h = this.$createElement;
 
@@ -2807,6 +2902,36 @@ export default {
         this.hasStartedCheck = true;
       }
     },
+
+    // 添加方法到methods部分
+    showHostsFilePreview(row) {
+      // 创建hosts文件预览弹窗
+      this.$confirm({
+        title: `${row.hostname} 的hosts文件`,
+        icon: h => h('a-icon', { props: { type: 'file-text', theme: 'twoTone', twoToneColor: '#34C759' } }),
+        content: h => {
+          const hostsContent = row.hostsFile || '暂无hosts文件内容';
+          return h('div', {
+            style: {
+              maxHeight: '400px',
+              overflow: 'auto',
+              padding: '16px',
+              backgroundColor: '#F5F5F7',
+              borderRadius: '8px',
+              fontFamily: 'monospace',
+              whiteSpace: 'pre-wrap',
+              fontSize: '13px',
+              lineHeight: '1.6'
+            }
+          }, [hostsContent]);
+        },
+        width: 600,
+        okText: '关闭',
+        cancelText: null,
+        okType: 'default',
+        class: 'hosts-file-preview-modal'
+      });
+    },
   },
   mounted() {
     // 重置初始状态
@@ -4298,5 +4423,213 @@ export default {
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.hosts-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hosts-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.hosts-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.hosts-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.hosts-detail-loading-line.short {
+  width: 70%;
+}
+
+.hosts-detail-loading-line.medium {
+  width: 85%;
+}
+
+.hosts-detail-loading-line.long {
+  width: 100%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.hosts-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.hosts-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.hosts-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  to { transform: translateX(500%); }
+}
+
+.hosts-file-tooltip {
+  max-width: 650px;
+  
+  pre {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 文件图标容器悬停效果
+.file-icon-container {
+  &:hover {
+    .anticon {
+      color: #0A84FF;
+    }
+  }
+}
+
+// 添加hostname tooltip的样式
+.hostname-detail-tooltip {
+  min-width: 400px;
+  max-width: 500px;
+  padding: 16px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.hostname-detail-section {
+  margin-bottom: 16px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 8px;
+}
+
+.hostname-detail-subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1D1D1F;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-block {
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-content {
+  padding: 0 0 0 8px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.hostname-detail-label {
+  width: 80px;
+  color: #8E8E93;
+  flex-shrink: 0;
+}
+
+.hostname-detail-value {
+  color: #1D1D1F;
+  flex: 1;
+  word-break: break-all;
+}
+
+.hostname-detail-empty {
+  color: #8E8E93;
+  font-style: italic;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.hostname-detail-loading {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.hostname-detail-error {
+  color: #FF3B30;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.dns-servers {
+  font-family: monospace;
+  background-color: #F5F5F7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hostname-detail-hosts-content {
+  width: 100%;
+  font-size: 12px;
 }
 </style>

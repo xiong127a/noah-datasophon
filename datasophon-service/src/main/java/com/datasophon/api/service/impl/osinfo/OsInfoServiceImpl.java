@@ -57,14 +57,14 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 创建一个自定义线程工厂，设置线程为守护线程并设置最高优先级
         ThreadFactory osInfoThreadFactory = r -> {
             Thread t = new Thread(r, "os-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.MAX_PRIORITY); // 设置最高优先级
             return t;
         };
 
         ThreadFactory hardwareInfoThreadFactory = r -> {
             Thread t = new Thread(r, "hardware-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.MAX_PRIORITY - 1); // 设置次高优先级
             return t;
         };
@@ -72,28 +72,28 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 创建四个硬件信息收集线程工厂
         ThreadFactory cpuInfoThreadFactory = r -> {
             Thread t = new Thread(r, "cpu-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.NORM_PRIORITY + 3);
             return t;
         };
 
         ThreadFactory memoryInfoThreadFactory = r -> {
             Thread t = new Thread(r, "memory-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.NORM_PRIORITY + 2);
             return t;
         };
 
         ThreadFactory diskInfoThreadFactory = r -> {
             Thread t = new Thread(r, "disk-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.NORM_PRIORITY + 1);
             return t;
         };
 
         ThreadFactory gpuInfoThreadFactory = r -> {
             Thread t = new Thread(r, "gpu-info-collector");
-            t.setDaemon(true);
+            t.setDaemon(false);
             t.setPriority(Thread.NORM_PRIORITY);
             return t;
         };
