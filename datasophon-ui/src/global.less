@@ -527,4 +527,28 @@ body {
   border-radius: 4px !important;
   background-color: #ffffff !important;
   padding: 2px !important;
+}
+
+/* Hosts文件悬浮展示样式 */
+.hosts-file-tooltip {
+  max-width: 800px !important;
+
+  .ant-tooltip-inner {
+    background-color: #ffffff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .ant-tooltip-arrow::before {
+    background-color: #ffffff;
+  }
+
+  pre {
+    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #333333;
+  }
 } 

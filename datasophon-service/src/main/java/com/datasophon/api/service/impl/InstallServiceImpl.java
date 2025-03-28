@@ -155,6 +155,30 @@ public class InstallServiceImpl implements InstallService {
             // 计算每个主机的状态
             hostList.forEach(HostInfo::calculateStatus);
 
+            // 确保hostsFile信息和操作系统信息可用于前端
+            hostList.forEach(hostInfo -> {
+                // 确保hostsFile信息可用于前端
+                if (hostInfo.getHostsFile() == null) {
+                    hostInfo.setHostsFile(""); // 避免前端收到null
+                }
+
+                // 确保操作系统信息可用于前端
+                if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDistribution() == null) {
+                    hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+                }
+
+                // 确保SSH连接状态信息可用于前端
+                if (hostInfo.getSshConnectStatus() == null) {
+                    // 如果osInfoStatus是error，则认为SSH连接失败
+                    if ("error".equals(hostInfo.getOsInfoStatus())) {
+                        hostInfo.setSshConnectStatus("error");
+                    } else {
+                        // 默认设为connecting，让前端显示加载中
+                        hostInfo.setSshConnectStatus("connecting");
+                    }
+                }
+            });
+
             // 分页处理
             int offset = (page - 1) * pageSize;
             int end = Math.min(offset + pageSize, hostList.size());

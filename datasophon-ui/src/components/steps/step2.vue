@@ -257,27 +257,81 @@ export default {
           customRender: (text, row) => {
             const h = this.$createElement;
             
-            // 检查osInfoStatus状态，显示加载动画
-            if (row.osInfoStatus === 'loading') {
-              // 苹果风格的骨架屏加载动画
+            // 优先检查SSH连接状态
+            if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
               return h('div', {
-                class: 'os-info-loading',
                 style: {
-                  position: 'relative',
-                  height: '24px',
-                  width: '90%',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                  overflow: 'hidden'
-                }
-              });
-            } else if (row.osInfoStatus === 'error') {
-              // 错误状态显示
-              return h('span', {
-                style: {
+                  display: 'flex',
+                  alignItems: 'center',
                   color: '#FF3B30'
                 }
-              }, [row.hostname || '正在获取...']);
+              }, [
+                h('a-icon', {
+                  props: { type: 'warning' },
+                  style: { marginRight: '6px' }
+                }),
+                'SSH连接失败'
+              ]);
+            }
+            
+            // 检查osInfoStatus状态，显示加载动画
+            // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
+            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null) {
+              // 创建加载中的操作系统信息浮窗
+              const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
+                h('div', { class: 'os-detail-loading-header' }),
+                h('div', { class: 'os-detail-loading-content' }, [
+                  h('div', { class: 'os-detail-loading-line short' }),
+                  h('div', { class: 'os-detail-loading-line medium' }),
+                  h('div', { class: 'os-detail-loading-line' }),
+                  h('div', { class: 'os-detail-loading-line short' }),
+                  h('div', { class: 'os-detail-loading-line medium' })
+                ])
+              ]);
+              
+              // 苹果风格的骨架屏加载动画
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 加载中浮窗内容
+                h('span', { 
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [loadingTooltipContent]),
+                
+                // 显示的加载内容
+                h('div', {
+                  class: 'os-info-loading',
+                  style: {
+                    position: 'relative',
+                    height: '24px',
+                    width: '90%',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(240, 240, 240, 0.8)',
+                    overflow: 'hidden'
+                  }
+                })
+              ]);
+            } else if (row.osInfoStatus === 'error') {
+              // 错误状态显示
+              return h('div', {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#FF3B30'
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'warning' },
+                  style: { marginRight: '6px' }
+                }),
+                '系统信息获取失败'
+              ]);
             }
             
             // 当主机名为null时也显示加载状态
@@ -317,6 +371,23 @@ export default {
             // 检查osInfoStatus状态，显示加载动画
             // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
             if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null) {
+              // 如果SSH连接失败，则显示错误状态而不是加载状态
+              if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
+                return h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#FF3B30'
+                  }
+                }, [
+                  h('a-icon', {
+                    props: { type: 'warning' },
+                    style: { marginRight: '6px' }
+                  }),
+                  '无法连接SSH'
+                ]);
+              }
+
               // 创建加载中的操作系统信息浮窗
               const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
                 h('div', { class: 'os-detail-loading-header' }),
@@ -644,6 +715,12 @@ export default {
                       ])
                     ]),
                     h('div', { class: 'os-detail-table-row' }, [
+                      h('div', { class: 'os-detail-table-cell label' }, ['DNS服务器']),
+                      h('div', { class: 'os-detail-table-cell value' }, [
+                        row.osInfo.dnsServers ? row.osInfo.dnsServers : h('span', { style: { color: '#8E8E93', fontStyle: 'italic' } }, ['正在获取...'])
+                      ])
+                    ]),
+                    h('div', { class: 'os-detail-table-row' }, [
                       h('div', { class: 'os-detail-table-cell label' }, ['发行版']),
                       h('div', { class: 'os-detail-table-cell value' }, [row.osInfo.distribution || '-'])
                     ]),
@@ -731,6 +808,58 @@ export default {
                   ])
                 ])
               ])
+            ]);
+          }
+        },
+        {
+          title: "Hosts文件",
+          key: "hostsFile",
+          dataIndex: "hostsFile",
+          width: 100,
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            
+            // hosts文件内容
+            const hostsContent = row.hostsFile ? row.hostsFile : "# 暂无hosts文件内容";
+            
+            return h('a-tooltip', {
+              props: {
+                placement: 'right',
+                autoAdjustOverflow: true,
+                overlayClassName: 'hosts-file-tooltip',
+                getPopupContainer: () => document.body
+              }
+            }, [
+              // 悬浮展示内容
+              h('pre', {
+                slot: 'title',
+                style: {
+                  maxHeight: '400px',
+                  maxWidth: '600px',
+                  overflow: 'auto',
+                  margin: '0',
+                  padding: '10px',
+                  backgroundColor: '#f8f8f8',
+                  borderRadius: '4px',
+                  border: '1px solid #e8e8e8',
+                  fontSize: '12px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all'
+                }
+              }, [hostsContent]),
+              
+              // 触发悬浮的图标
+              h('a-icon', {
+                props: {
+                  type: 'file-text',
+                  theme: 'filled'
+                },
+                style: {
+                  fontSize: '16px',
+                  color: '#1890ff',
+                  cursor: 'pointer'
+                }
+              })
             ]);
           }
         },
@@ -1054,6 +1183,37 @@ export default {
                 // 将返回的checkItems数据保存到checkItemsMap中
                 if (host.checkItems) {
                   this.$set(this.checkItemsMap, host.ip, host.checkItems);
+                }
+                
+                // 检查SSH连接状态
+                if (host.checkItems && host.checkItems.length > 0) {
+                  // 查找SSH相关的检查项，如果有且状态为FAILED，则标记SSH连接失败
+                  const sshCheckItems = host.checkItems.filter(item => 
+                    item.itemCode === 'SSH_CONNECTION' || 
+                    item.itemName.includes('SSH') || 
+                    item.itemCode === 'PASSWORD_FREE');
+                    
+                  if (sshCheckItems.length > 0 && sshCheckItems.some(item => item.status === 'FAILED')) {
+                    host.hasSSHError = true;
+                    host.sshConnectStatus = 'error';
+                  }
+                }
+                
+                // 如果osInfoStatus为error，也标记SSH可能有问题
+                if (host.osInfoStatus === 'error') {
+                  host.hasSSHError = true;
+                  host.sshConnectStatus = 'error';
+                }
+                
+                // 如果sshStatus字段存在并且状态为error，也标记SSH连接失败
+                if (host.sshStatus === 'error' || host.sshStatus === 'ERROR' || 
+                    host.sshConnectStatus === 'error' || host.sshConnectStatus === 'ERROR') {
+                  host.hasSSHError = true;
+                  host.sshConnectStatus = 'error';
+                  // 如果正在获取OS信息，则将状态改为error而非loading
+                  if (host.osInfoStatus === 'loading') {
+                    host.osInfoStatus = 'error';
+                  }
                 }
               });
               
@@ -4124,5 +4284,19 @@ export default {
     align-items: center;
     gap: 8px;
   }
+}
+
+.hosts-file-tooltip {
+  max-height: 400px;
+  max-width: 600px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  background-color: #f8f8f8;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

@@ -142,6 +142,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         logger.debug("开始异步获取主机信息, IP:{}, 原始主机名:{}", hostInfo.getIp(), originalHostname);
 
         hostInfo.setOsInfoStatus("loading");
+        hostInfo.setSshConnectStatus("connecting"); // 添加SSH连接状态
         // 立即更新缓存，让前端看到加载状态
         updateHostInfoCache(hostInfo);
 
@@ -177,10 +178,18 @@ public class OsInfoServiceImpl implements OsInfoService {
                     }
                 }
 
+                // 如果SSH连接失败，直接返回错误状态
+                if ("error".equals(hostInfo.getSshConnectStatus())) {
+                    logger.warn("主机 {} 的SSH连接失败，不再继续收集硬件信息", hostInfo.getIp());
+                    updateHostInfoCache(hostInfo);
+                    return;
+                }
+
                 // 设置硬件收集状态为collecting，并立即更新缓存
                 osInfo.setHardwareCollectionStatus("collecting");
                 hostInfo.setOsInfo(osInfo);
                 hostInfo.setOsInfoStatus("success");
+                hostInfo.setSshConnectStatus("success"); // 设置SSH连接成功状态
                 updateHostInfoCache(hostInfo);
 
                 // 添加硬件信息收集任务到队列
@@ -189,10 +198,17 @@ public class OsInfoServiceImpl implements OsInfoService {
             } catch (Exception e) {
                 logger.error("获取操作系统信息时出错: {}", e.getMessage(), e);
                 hostInfo.setOsInfoStatus("error");
+                hostInfo.setSshConnectStatus("error"); // 设置SSH连接错误状态
 
                 // 确保即使出错时也保留主机名
                 if (StringUtils.isBlank(hostInfo.getHostname()) && StringUtils.isNotBlank(originalHostname)) {
                     hostInfo.setHostname(originalHostname);
+                }
+
+                // 如果osInfo不为空，设置错误信息
+                if (hostInfo.getOsInfo() != null) {
+                    hostInfo.getOsInfo().setValid(false);
+                    hostInfo.getOsInfo().setErrorMessage("SSH连接异常: " + e.getMessage());
                 }
 
                 updateHostInfoCache(hostInfo);
@@ -893,7 +909,13 @@ public class OsInfoServiceImpl implements OsInfoService {
         try {
             session = getOrCreateSession(hostInfo);
             if (session == null) {
-                logger.warn("无法创建SSH会话");
+                logger.warn("无法创建SSH会话，主机IP: {}", hostInfo.getIp());
+                // 设置SSH连接失败状态
+                hostInfo.setOsInfoStatus("error");
+                hostInfo.setSshConnectStatus("error");
+                // 设置更详细的错误信息
+                osInfo.setValid(false);
+                osInfo.setErrorMessage("无法创建SSH连接，请检查SSH配置");
                 return osInfo;
             }
 
@@ -912,6 +934,12 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
         } catch (Exception e) {
             logger.error("获取主机操作系统信息时出错: {}", e.getMessage(), e);
+            // 设置SSH连接错误状态
+            hostInfo.setOsInfoStatus("error");
+            hostInfo.setSshConnectStatus("error");
+            // 设置更详细的错误信息
+            osInfo.setValid(false);
+            osInfo.setErrorMessage("SSH连接异常: " + e.getMessage());
             return osInfo;
         }
     }

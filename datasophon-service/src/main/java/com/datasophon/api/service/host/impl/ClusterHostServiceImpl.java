@@ -110,6 +110,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
+        
+        // 获取集群代码，用于查询主机信息缓存
+        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        String clusterCode = clusterInfo.getClusterCode();
+        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+        
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
             BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
@@ -119,6 +125,21 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
             queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
+            
+            // 从缓存中获取hosts文件内容和操作系统类型
+            if (hostInfoMap != null) {
+                HostInfo hostInfo = hostInfoMap.get(clusterHostDO.getHostname());
+                if (hostInfo != null) {
+                    // 设置hosts文件内容
+                    queryHostListPageDTO.setHostsFile(hostInfo.getHostsFile());
+                    
+                    // 设置操作系统类型
+                    if (hostInfo.getOsInfo() != null) {
+                        queryHostListPageDTO.setOsType(hostInfo.getOsInfo().getDistribution());
+                    }
+                }
+            }
+            
             hostListPageDTOS.add(queryHostListPageDTO);
         }
         int count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)

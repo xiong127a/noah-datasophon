@@ -71,4 +71,14 @@ public class QueryHostListPageDTO {
     private String nodeLabel;
 
     private Integer serviceRoleNum;
+    
+    /**
+     * 主机的hosts文件内容
+     */
+    private String hostsFile;
+    
+    /**
+     * 操作系统类型
+     */
+    private String osType;
 }

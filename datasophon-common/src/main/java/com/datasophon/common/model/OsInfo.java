@@ -69,6 +69,11 @@ public class OsInfo implements Serializable {
     private String architecture = "";
 
     /**
+     * DNS服务器信息
+     */
+    private String dnsServers = "";
+
+    /**
      * CPU信息（如型号、核心数）
      */
     private String cpuInfo = "";
@@ -187,6 +192,11 @@ public class OsInfo implements Serializable {
      * 信息是否有效
      */
     private boolean valid = false;
+
+    /**
+     * 错误信息
+     */
+    private String errorMessage = "";
 
     /**
      * 1分钟负载

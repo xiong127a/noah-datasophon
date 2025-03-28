@@ -48,8 +48,28 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (StringUtils.isNotBlank(fqdn)) {
                 fqdn = fqdn.trim();
                 osInfo.setFqdn(fqdn);
+                hostInfo.setFqdn(fqdn);
                 logger.info("获取到FQDN: {}", fqdn);
                 // 立即更新缓存，使前端能看到FQDN
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 读取/etc/hosts文件内容
+            String hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts 2>/dev/null");
+            if (StringUtils.isNotBlank(hostsFile)) {
+                hostInfo.setHostsFile(hostsFile);
+                logger.info("获取到hosts文件内容");
+                // 立即更新缓存，使前端能看到hosts文件内容
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 获取DNS服务器信息
+            String dnsInfo = MinaUtils.execCmdWithResult(session, "cat /etc/resolv.conf | grep nameserver | awk '{print $2}' | tr '\\n' ' '");
+            if (StringUtils.isNotBlank(dnsInfo)) {
+                dnsInfo = dnsInfo.trim();
+                osInfo.setDnsServers(dnsInfo);
+                logger.info("获取到DNS服务器信息: {}", dnsInfo);
+                // 立即更新缓存，使前端能看到DNS服务器信息
                 cacheUpdater.updateCache(hostInfo);
             }
 

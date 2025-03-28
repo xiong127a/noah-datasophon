@@ -99,9 +99,20 @@ public class HostInfo implements Serializable {
     private String osInfoStatus;
 
     /**
+     * SSH连接状态
+     * 可能的值: "success", "error", "connecting"
+     */
+    private String sshConnectStatus;
+
+    /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
      */
     private CheckItem.Status status;
+
+    /**
+     * hosts文件内容
+     */
+    private String hostsFile;
 
     /**
      * 状态缓存是否失效 - 不序列化此字段
