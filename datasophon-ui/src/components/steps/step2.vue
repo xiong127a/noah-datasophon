@@ -238,7 +238,7 @@ export default {
         {
           title: "序号",
           key: "index",
-          width: 70,
+          width: 50,
           customRender: (text, row, index) => {
             const h = this.$createElement;
             const displayIndex = parseInt(
@@ -480,7 +480,17 @@ export default {
           title: "主机IP", 
           key: "ip", 
           dataIndex: "ip",
-          width: 120  // 缩小IP列宽度
+          width: 130,
+          customRender: (text) => {
+            const h = this.$createElement;
+            return h('span', { 
+              style: { 
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              } 
+            }, [text]);
+          }
         },
         {
           title: "操作系统",
@@ -4631,5 +4641,29 @@ export default {
 .hostname-detail-hosts-content {
   width: 100%;
   font-size: 12px;
+}
+
+.host-check-table {
+  // 调整多选框和展开按钮列的宽度
+  /deep/ .ant-table-selection-column {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 8px !important;
+    padding-right: 0 !important;
+  }
+  
+  /deep/ .ant-table-row-expand-icon-cell {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 0 !important;
+    padding-right: 8px !important;
+  }
+
+  // 确保所有列的内容不换行
+  /deep/ .ant-table-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 </style>
