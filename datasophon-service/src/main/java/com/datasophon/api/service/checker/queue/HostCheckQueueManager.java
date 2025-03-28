@@ -749,6 +749,29 @@ public class HostCheckQueueManager {
                 }
             }
         }
+        
+        // 同样检查修复任务超时
+        for (Map.Entry<String, Long> entry : fixTaskStartTimes.entrySet()) {
+            String taskKey = entry.getKey();
+            long startTime = entry.getValue();
+            long runningTime = now - startTime;
+
+            // 修复任务运行时间超过阈值
+            if (runningTime > TASK_TIMEOUT_MS) {
+                logger.warn("修复任务 {} 执行时间过长: {} 分钟，考虑取消",
+                        taskKey, runningTime / 60000);
+
+                // 可以选择自动取消长时间运行的修复任务
+                Future<?> future = runningFixTasks.get(taskKey);
+                if (future != null && !future.isDone()) {
+                    logger.warn("自动取消超时修复任务: {}", taskKey);
+                    future.cancel(true);
+                    runningFixTasks.remove(taskKey);
+                    fixTaskStartTimes.remove(taskKey);
+                    fixTasksFailed.incrementAndGet();
+                }
+            }
+        }
 
         // 清理已完成但未正确移除的任务
         runningTasks.entrySet().removeIf(entry -> {
@@ -756,6 +779,17 @@ public class HostCheckQueueManager {
                 String taskKey = entry.getKey();
                 logger.info("清理已完成/已取消但未移除的任务: {}", taskKey);
                 taskStartTimes.remove(taskKey);
+                return true;
+            }
+            return false;
+        });
+        
+        // 清理修复队列中已完成但未正确移除的任务
+        runningFixTasks.entrySet().removeIf(entry -> {
+            if (entry.getValue().isDone() || entry.getValue().isCancelled()) {
+                String taskKey = entry.getKey();
+                logger.info("清理已完成/已取消但未移除的修复任务: {}", taskKey);
+                fixTaskStartTimes.remove(taskKey);
                 return true;
             }
             return false;
@@ -846,6 +880,8 @@ public class HostCheckQueueManager {
 
                 // 移除任务
                 runningTasks.remove(taskKey);
+                // 确保从taskStartTimes中删除任务记录，防止任务完成后仍被当作超时任务
+                taskStartTimes.remove(taskKey);
 
                 // 恢复原始线程名
                 currentThread.setName(originalThreadName);
@@ -1430,7 +1466,7 @@ public class HostCheckQueueManager {
                         Thread.sleep(5000);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
-                        break;
+                        break; // 如果线程被中断，退出重试
                     }
                     consecutiveErrorCount = 0;
                 }
@@ -1703,6 +1739,8 @@ public class HostCheckQueueManager {
 
                 // 移除任务
                 runningFixTasks.remove(taskKey);
+                // 确保从fixTaskStartTimes中删除任务记录，防止任务完成后仍被当作超时任务
+                fixTaskStartTimes.remove(taskKey);
 
                 // 恢复原始线程名
                 Thread.currentThread().setName(originalThreadName);
