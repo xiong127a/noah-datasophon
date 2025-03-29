@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import org.apache.commons.lang.StringUtils;
@@ -29,68 +30,90 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     @Override
     public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
-            logger.info("开始收集Windows操作系统信息: {}", hostInfo.getIp());
+            logger.info("开始收集Windows系统信息: {}", hostInfo.getIp());
 
-            // 通过注册表获取主机名
-            String hostnameReg = MinaUtils.execCmdWithResult(session,
-                    "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v Hostname");
-            if (StringUtils.isNotBlank(hostnameReg)) {
-                Pattern hostPattern = Pattern.compile("Hostname\\s+REG_SZ\\s+(.+)");
-                Matcher hostMatcher = hostPattern.matcher(hostnameReg);
-                if (hostMatcher.find()) {
-                    String hostname = hostMatcher.group(1).trim();
-                    osInfo.setHostname(hostname);
-                    hostInfo.setHostname(hostname);
-                    logger.info("通过注册表获取到计算机名: {}", hostname);
-                    // 立即更新缓存，使前端能看到主机名
-                    cacheUpdater.updateCache(hostInfo);
-                }
-            }
-
-            // 通过注册表获取FQDN（主机名+域名）
-            String domainReg = MinaUtils.execCmdWithResult(session,
-                    "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\" /v Domain");
-            if (StringUtils.isNotBlank(domainReg)) {
-                Pattern domainPattern = Pattern.compile("Domain\\s+REG_SZ\\s+(.+)");
-                Matcher domainMatcher = domainPattern.matcher(domainReg);
-                if (domainMatcher.find()) {
-                    String domain = domainMatcher.group(1).trim();
-                    String fqdn = osInfo.getHostname() + "." + domain;
-                    osInfo.setFqdn(fqdn);
-                    logger.info("通过注册表获取到FQDN: {}", fqdn);
-                    // 立即更新缓存，使前端能看到FQDN
-                    cacheUpdater.updateCache(hostInfo);
-                }
-            }
-
-            // 获取操作系统版本信息（已使用注册表方式）
-            collectWindowsVersionInfo(osInfo, session);
-            // 更新缓存，使前端能看到Windows版本信息
+            // 设置状态为COLLECTING，并立即更新缓存
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.COLLECTING);
             cacheUpdater.updateCache(hostInfo);
 
-            // 通过注册表获取CPU架构
-            String archReg = MinaUtils.execCmdWithResult(session,
-                    "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\" /v PROCESSOR_ARCHITECTURE");
-            if (StringUtils.isNotBlank(archReg)) {
-                Pattern archPattern = Pattern.compile("PROCESSOR_ARCHITECTURE\\s+REG_SZ\\s+(.+)");
-                Matcher archMatcher = archPattern.matcher(archReg);
-                if (archMatcher.find()) {
-                    String architecture = archMatcher.group(1).trim();
-                    osInfo.setArchitecture(architecture);
-                    logger.info("通过注册表获取到CPU架构: {}", architecture);
-                    // 更新CPU架构信息
-                    cacheUpdater.updateCache(hostInfo);
-                }
+            // 获取主机名
+            String hostname = MinaUtils.execCmdWithResult(session, "hostname");
+            if (StringUtils.isNotBlank(hostname)) {
+                hostname = hostname.trim();
+                osInfo.setHostname(hostname);
+                hostInfo.setHostname(hostname);
+                logger.info("获取到主机名: {}", hostname);
+                cacheUpdater.updateCache(hostInfo);
             }
 
+            // 使用systeminfo命令获取OS信息
+            String sysInfoCmd = "systeminfo | findstr /B /C:\"OS Name\" /C:\"OS Version\"";
+            String sysInfoOutput = MinaUtils.execCmdWithResult(session, sysInfoCmd);
+            if (StringUtils.isNotBlank(sysInfoOutput)) {
+                parseSystemInfo(osInfo, sysInfoOutput);
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 读取hosts文件
+            String hostsFile = MinaUtils.execCmdWithResult(session,
+                    "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
+            if (StringUtils.isNotBlank(hostsFile)) {
+                hostInfo.setHostsFile(hostsFile);
+                logger.info("获取到hosts文件内容");
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 获取DNS服务器信息
+            String dnsInfo = MinaUtils.execCmdWithResult(session,
+                    "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses\"");
+            if (StringUtils.isNotBlank(dnsInfo)) {
+                dnsInfo = dnsInfo.trim().replaceAll("\r\n", ", ");
+                osInfo.setDnsServers(dnsInfo);
+                logger.info("获取到DNS服务器信息: {}", dnsInfo);
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 获取处理器架构
+            String architectureCmd = "echo %PROCESSOR_ARCHITECTURE%";
+            String architecture = MinaUtils.execCmdWithResult(session, architectureCmd);
+            if (StringUtils.isNotBlank(architecture)) {
+                osInfo.setArchitecture(architecture.trim());
+                logger.info("获取到处理器架构: {}", architecture.trim());
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 确保设置了操作系统完整名称
+            if (StringUtils.isBlank(osInfo.getFullName()) &&
+                    StringUtils.isNotBlank(osInfo.getDistributionId())) {
+                String fullName = osInfo.getDistributionId();
+                if (StringUtils.isNotBlank(osInfo.getVersionId())) {
+                    fullName += " " + osInfo.getVersionId();
+                }
+                osInfo.setFullName(fullName);
+                cacheUpdater.updateCache(hostInfo);
+            }
+
+            // 标记OS信息为有效
             osInfo.setValid(true);
-            // 完成时更新一次
+
+            // 设置操作系统信息收集成功
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+
+            // 完成时更新缓存
             cacheUpdater.updateCache(hostInfo);
+
+            logger.info("Windows操作系统信息收集完成：distributionId={}, version={}, 设置状态：osInfoStatus={}",
+                    osInfo.getDistributionId(), osInfo.getVersionId(), hostInfo.getOsInfoStatus());
+
             return osInfo;
         } catch (Exception e) {
-            logger.error("收集Windows操作系统信息时出错: {}", e.getMessage(), e);
+            logger.error("收集Windows系统信息时出错: {}", e.getMessage(), e);
             osInfo.setValid(false);
-            // 出错时也更新缓存，标记错误状态
+
+            // 设置错误状态
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+
+            // 出错时也更新缓存
             cacheUpdater.updateCache(hostInfo);
             return osInfo;
         }
@@ -99,7 +122,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     @Override
     public void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater) {
         try {
-            osInfo.setHardwareCollectionStatus("loading");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.COLLECTING);
             // 更新收集状态，不再依赖hostInfo
             cacheUpdater.updateCache(null);
 
@@ -135,14 +158,14 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
 
             // 标记为完成
             osInfo.setLastUpdatedItem("completed");
-            osInfo.setHardwareCollectionStatus("success");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
             // 完成时更新一次
             cacheUpdater.updateCache(null);
 
             logger.info("Windows硬件信息收集完成");
         } catch (Exception e) {
             logger.error("收集Windows硬件信息时出错: {}", e.getMessage(), e);
-            osInfo.setHardwareCollectionStatus("error");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
             osInfo.setLastUpdatedItem("error");
             // 出错时也更新，不再依赖hostInfo
             cacheUpdater.updateCache(null);
@@ -732,6 +755,63 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
         if (freeMatcher.find()) {
             long freeKb = Long.parseLong(freeMatcher.group(1));
             osInfo.setAvailableMem(freeKb * 1024L); // 转换为字节
+        }
+    }
+
+    /**
+     * 解析Windows系统信息输出
+     */
+    private void parseSystemInfo(OsInfo osInfo, String systemInfoOutput) {
+        try {
+            // 分析OS Name行
+            Pattern namePattern = Pattern.compile("OS Name:\\s+(.+)");
+            Matcher nameMatcher = namePattern.matcher(systemInfoOutput);
+            if (nameMatcher.find()) {
+                String osName = nameMatcher.group(1).trim();
+                osInfo.setFullName(osName);
+
+                // 设置发行版信息
+                if (osName.contains("Windows 10")) {
+                    osInfo.setDistributionId("windows");
+                    osInfo.setVersionId("10");
+                    osInfo.setDistributionName("Windows");
+                } else if (osName.contains("Windows 11")) {
+                    osInfo.setDistributionId("windows");
+                    osInfo.setVersionId("11");
+                    osInfo.setDistributionName("Windows");
+                } else if (osName.contains("Windows Server")) {
+                    osInfo.setDistributionId("windows-server");
+                    osInfo.setDistributionName("Windows Server");
+
+                    // 解析Server版本
+                    if (osName.contains("2016")) {
+                        osInfo.setVersionId("2016");
+                    } else if (osName.contains("2019")) {
+                        osInfo.setVersionId("2019");
+                    } else if (osName.contains("2022")) {
+                        osInfo.setVersionId("2022");
+                    }
+                } else {
+                    // 默认设置
+                    osInfo.setDistributionId("windows");
+                    osInfo.setDistributionName("Windows");
+                }
+
+                logger.info("解析到Windows系统名称: {}", osName);
+            }
+
+            // 分析OS Version行
+            Pattern versionPattern = Pattern.compile("OS Version:\\s+(.+)");
+            Matcher versionMatcher = versionPattern.matcher(systemInfoOutput);
+            if (versionMatcher.find()) {
+                String osVersion = versionMatcher.group(1).trim();
+                if (StringUtils.isBlank(osInfo.getVersionId())) {
+                    osInfo.setVersionId(osVersion);
+                }
+                logger.info("解析到Windows系统版本: {}", osVersion);
+            }
+        } catch (Exception e) {
+            logger.warn("解析Windows系统信息时出错: {}", e.getMessage());
         }
     }
 }

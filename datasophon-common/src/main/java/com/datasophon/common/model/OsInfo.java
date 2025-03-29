@@ -241,17 +241,17 @@ public class OsInfo implements Serializable {
     /**
      * CPU信息状态：success, error, collecting
      */
-    private String cpuStatus;
+    private OsInfoStatusEnum cpuStatus;
 
     /**
      * 内存信息状态：success, error, collecting
      */
-    private String memoryStatus;
+    private OsInfoStatusEnum memoryStatus;
 
     /**
      * 磁盘信息状态：success, error, collecting
      */
-    private String diskStatus;
+    private OsInfoStatusEnum diskStatus;
 
     /**
      * Linux发行版枚举
@@ -552,21 +552,21 @@ public class OsInfo implements Serializable {
      * 设置CPU信息状态
      */
     public void setCpuStatus(OsInfoStatusEnum status) {
-        this.cpuStatus = status.getCode();
+        this.cpuStatus = status;
     }
 
     /**
      * 设置内存信息状态
      */
     public void setMemoryStatus(OsInfoStatusEnum status) {
-        this.memoryStatus = status.getCode();
+        this.memoryStatus = status;
     }
 
     /**
      * 设置磁盘信息状态
      */
     public void setDiskStatus(OsInfoStatusEnum status) {
-        this.diskStatus = status.getCode();
+        this.diskStatus = status;
     }
 
     /**

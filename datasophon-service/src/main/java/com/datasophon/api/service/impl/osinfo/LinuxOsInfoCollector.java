@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +32,10 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
             logger.info("开始收集Linux系统信息: {}", hostInfo.getIp());
+
+            // 设置状态为COLLECTING，并立即更新缓存
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.COLLECTING);
+            cacheUpdater.updateCache(hostInfo);
 
             // 获取主机名
             String hostname = MinaUtils.execCmdWithResult(session, "hostname");
@@ -223,13 +228,24 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 标记OS信息为有效
             osInfo.setValid(true);
+
+            // 设置操作系统信息收集成功
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+
             // 完成时更新一次
             cacheUpdater.updateCache(hostInfo);
+
+            logger.info("Linux操作系统信息收集完成：distributionId={}, version={}, 设置状态：osInfoStatus={}",
+                    osInfo.getDistributionId(), osInfo.getVersionId(), hostInfo.getOsInfoStatus());
 
             return osInfo;
         } catch (Exception e) {
             logger.error("收集Linux系统信息时出错: {}", e.getMessage(), e);
             osInfo.setValid(false);
+
+            // 设置错误状态
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+
             // 出错时也更新缓存，标记错误状态
             cacheUpdater.updateCache(hostInfo);
             return osInfo;
@@ -239,7 +255,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     @Override
     public void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater) {
         logger.info("开始收集Linux硬件信息");
-        osInfo.setHardwareCollectionStatus("collecting");
+        osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.COLLECTING);
         // 更新收集状态
         cacheUpdater.updateCache(null); // 让回调函数处理缓存更新
 
@@ -281,14 +297,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 标记为完成
             osInfo.setLastUpdatedItem("completed");
-            osInfo.setHardwareCollectionStatus("success");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
             // 完成时更新一次
             cacheUpdater.updateCache(null);
 
             logger.info("Linux硬件信息收集完成");
         } catch (Exception e) {
             logger.error("收集Linux硬件信息时出错: {}", e.getMessage(), e);
-            osInfo.setHardwareCollectionStatus("error");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
             osInfo.setLastUpdatedItem("error");
             // 出错时更新状态
             cacheUpdater.updateCache(null);

@@ -16,12 +16,15 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.annotation.Resource;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -33,1448 +36,994 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     private static final Logger logger = LoggerFactory.getLogger(OsInfoServiceImpl.class);
 
+    // SSH会话缓存，以IP:PORT为键
+    private final Map<String, ClientSession> sessionCache = new ConcurrentHashMap<>();
+
     @Autowired
     private OsInfoCollectorFactory osInfoCollectorFactory;
 
     // 使用Spring的ThreadPoolTaskExecutor替代原来的ExecutorService
-    @Autowired
-    private ThreadPoolTaskExecutor hostnameExecutor;
+    @Resource(name = "hardwareInfoExecutor")
+    private ThreadPoolTaskExecutor hostInfoExecutor;
 
-    @Autowired
-    private ThreadPoolTaskExecutor osInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor dnsExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor hostsFileExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor cpuInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor memoryInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor diskInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor swapInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor gpuInfoExecutor;
-
-    @Autowired
-    private ThreadPoolTaskExecutor hardwareInfoExecutor;
-
-    // 添加主机信息收集队列管理器
+    // 保留缓存管理对象
     private final HostInfoCollectionQueueManager queueManager = new HostInfoCollectionQueueManager(this);
 
     @PostConstruct
     public void init() {
-        logger.info("=====================================================");
-        logger.info("初始化OS信息收集服务，线程池由Spring管理");
-        logger.info("信息收集线程池配置如下（按优先级排序）：");
-        logger.info("1. hostnameExecutor: 主机名收集（最高优先级）");
-        logger.info("2. osInfoExecutor: 操作系统信息收集（次高优先级）");
-        logger.info("3. dnsExecutor: DNS服务器信息收集（高优先级）");
-        logger.info("4. hostsFileExecutor: hosts文件收集（中高优先级）");
-        logger.info("5. cpuInfoExecutor: CPU信息收集（中优先级）");
-        logger.info("6. memoryInfoExecutor: 内存信息收集（中优先级）");
-        logger.info("7. diskInfoExecutor: 磁盘信息收集（中优先级）");
-        logger.info("8. swapInfoExecutor: 交换空间信息收集（中优先级）");
-        logger.info("9. gpuInfoExecutor: GPU信息收集（中优先级）");
-        logger.info("");
-        logger.info("主机信息收集流程：");
-        logger.info("1. 按IP地址排序所有主机");
-        logger.info("2. 收集每个主机的主机名");
-        logger.info("3. 收集每个主机的操作系统信息");
-        logger.info("4. 收集每个主机的DNS服务器信息");
-        logger.info("5. 收集每个主机的hosts文件信息");
-        logger.info("6. 收集每个主机的CPU信息");
-        logger.info("7. 收集每个主机的内存信息");
-        logger.info("8. 收集每个主机的磁盘信息");
-        logger.info("9. 收集每个主机的交换空间信息");
-        logger.info("10. 收集每个主机的GPU信息");
-        logger.info("每收集一步都会立即更新缓存，让前端能够及时显示信息");
-        logger.info("=====================================================");
+        logger.debug("=====================================================");
+        logger.debug("初始化OS信息收集服务，使用硬件信息线程池");
+        logger.debug("信息收集流程：");
+        logger.debug("1. 同时处理最多3台主机");
+        logger.debug("2. 每台主机按顺序收集全部信息（主机名、OS类型、DNS、hosts文件、CPU、内存、磁盘等）");
+        logger.debug("3. 每收集完一项信息立即更新缓存");
+        logger.debug("4. 一台主机收集完毕后自动开始下一台主机");
+        logger.debug("=====================================================");
     }
 
     @PreDestroy
     public void destroy() {
         logger.info("OsInfoServiceImpl正在关闭...");
+        // 清理所有缓存的SSH会话
+        closeAllSessions();
     }
 
+    /**
+     * 关闭所有缓存的SSH会话
+     */
+    private void closeAllSessions() {
+        logger.info("清理SSH连接缓存，关闭所有会话，当前缓存连接数: {}", sessionCache.size());
+        for (Map.Entry<String, ClientSession> entry : sessionCache.entrySet()) {
+            try {
+                ClientSession session = entry.getValue();
+                if (session != null && session.isOpen()) {
+                    logger.info("关闭主机{}的SSH会话", entry.getKey());
+                    session.close();
+                }
+            } catch (Exception e) {
+                logger.warn("关闭SSH会话时出错: {}", e.getMessage());
+            }
+        }
+        sessionCache.clear();
+        logger.info("SSH连接缓存清理完成");
+    }
+
+    /**
+     * 异步收集主机OS信息
+     */
     @Override
     public void getHostOsInfoAsync(HostInfo hostInfo) {
-        // 记录主机信息收集开始时间
+        if (hostInfo == null) {
+            return;
+        }
+
         logger.info("主机信息收集流程：");
         logger.info("IP: {}, 开始收集信息", hostInfo.getIp());
 
-        // 初始化状态为LOADING，使用枚举
-        // 对所有状态设置为LOADING
-        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setOsStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setDnsStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setHostsFileStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-
-        // 立即更新缓存，让前端看到加载状态
-        updateHostInfoCache(hostInfo);
-
-        // 将主机信息收集任务添加到队列，按IP排序串行执行
-        queueManager.addHostToQueue(hostInfo, null);
-    }
-
-    /**
-     * 处理主机信息收集流程
-     * 该方法由队列管理器调用，按照指定的顺序获取主机信息
-     * 
-     * @deprecated 不再直接使用该方法，改为使用队列管理器的分阶段收集
-     */
-    @Deprecated
-    private void processHostInfoCollection(HostInfo hostInfo) {
-        // 此方法已被弃用，不再直接使用
-        // 改为使用队列管理器的分阶段串行收集机制
-        logger.info("不再使用此方法收集主机信息");
-
-        // 将主机添加到队列管理器
-        queueManager.addHostToQueue(hostInfo, null);
-    }
-
-    /**
-     * 主机信息收集队列管理器
-     * 管理多个阶段的收集队列，确保所有主机按阶段同步收集信息
-     */
-    private static class HostInfoCollectionQueueManager {
-        // 持有外部类引用
-        private final OsInfoServiceImpl service;
-
-        // 用于收集基本系统信息的队列
-        private final Queue<HostInfo> osInfoQueue = new ConcurrentLinkedQueue<>();
-
-        // 用于按阶段收集硬件信息的队列
-        private final Queue<HardwareInfoTask> cpuInfoQueue = new ConcurrentLinkedQueue<>();
-        private final Queue<HardwareInfoTask> memoryInfoQueue = new ConcurrentLinkedQueue<>();
-        private final Queue<HardwareInfoTask> diskInfoQueue = new ConcurrentLinkedQueue<>();
-        private final Queue<HardwareInfoTask> gpuInfoQueue = new ConcurrentLinkedQueue<>();
-
-        // 用于存储已排序的主机任务
-        private final List<HostInfo> sortedHostList = new ArrayList<>();
-        private final List<HardwareInfoTask> sortedHardwareTasks = new ArrayList<>();
-
-        // 跟踪各阶段完成状态的计数器
-        private int hostNameCollectionCompleted = 0;
-        private int osTypeCollectionCompleted = 0;
-        private int dnsCollectionCompleted = 0; // DNS收集计数器
-        private int hostsFileCollectionCompleted = 0; // 主机文件收集计数器
-        private int cpuInfoCollectionCompleted = 0;
-        private int memoryInfoCollectionCompleted = 0;
-        private int diskInfoCollectionCompleted = 0;
-        private int swapInfoCollectionCompleted = 0; // 新增交换空间收集计数器
-        private int gpuInfoCollectionCompleted = 0;
-
-        // 标记当前收集阶段
-        private enum CollectionStage {
-            HOST_NAME, // 收集主机名
-            OS_TYPE, // 收集操作系统类型
-            DNS, // 收集DNS服务器信息
-            HOSTS, // 收集hosts文件
-            CPU_INFO, // 收集CPU信息
-            MEMORY_INFO, // 收集内存信息
-            DISK_INFO, // 收集磁盘信息
-            SWAP_INFO, // 收集交换空间信息
-            GPU_INFO, // 收集GPU信息
-            COMPLETED // 所有收集完成
+        // 判断是否需要重置计数器（单台主机收集不重置，多台主机时重置）
+        if (queueManager.totalHostCount.get() == 0) {
+            // 队列为空，说明是一个新的批次，重置计数器
+            queueManager.resetCounters();
+            logger.info("开始新的批次收集，已重置计数器");
         }
 
-        private volatile CollectionStage currentStage = CollectionStage.HOST_NAME;
+        // 将主机添加到收集队列
+        queueManager.addHostToQueue(hostInfo, null);
+    }
 
-        // 标记各队列处理状态
-        private volatile boolean processingOsInfo = false;
-        private volatile boolean processingDns = false; // DNS处理状态
-        private volatile boolean processingHosts = false; // hosts文件处理状态
-        private volatile boolean processingCpuInfo = false;
-        private volatile boolean processingMemoryInfo = false;
-        private volatile boolean processingDiskInfo = false;
-        private volatile boolean processingSwapInfo = false; // 交换空间处理状态
-        private volatile boolean processingGpuInfo = false;
+    /**
+     * 管理主机信息收集队列的类
+     * 负责对多台主机的信息收集进行调度和管理
+     */
+    private static class HostInfoCollectionQueueManager {
 
-        // 当前正在处理的主机索引
-        private int currentHostIndex = 0;
+        private final OsInfoServiceImpl service;
 
-        /**
-         * 构造函数
-         * 
-         * @param service 外部服务实例
-         */
+        // 待处理的主机队列
+        private final Queue<HostInfo> hostQueue = new ConcurrentLinkedQueue<>();
+
+        // 排序后的主机列表
+        private final List<HostInfo> sortedHostList = new ArrayList<>();
+
+        // 当前正在处理的主机数量
+        private final AtomicInteger processingHostCount = new AtomicInteger(0);
+
+        // 最大同时处理的主机数量
+        private static final int MAX_CONCURRENT_HOSTS = 3;
+
+        // 总共处理的主机数量
+        private final AtomicInteger totalHostCount = new AtomicInteger(0);
+
+        // 已完成处理的主机数量
+        private final AtomicInteger completedHostCount = new AtomicInteger(0);
+
         public HostInfoCollectionQueueManager(OsInfoServiceImpl service) {
             this.service = service;
         }
 
         /**
-         * 如果处理器未运行，则启动相应的处理器
-         */
-        private synchronized void startProcessingIfNeeded() {
-            logger.info("当前收集阶段: {}, 待处理主机数: {}", currentStage, sortedHostList.size());
-
-            // 按照阶段顺序执行处理
-            switch (currentStage) {
-                case HOST_NAME:
-                    if (!processingOsInfo && !sortedHostList.isEmpty()) {
-                        processHostNameCollection();
-                    }
-                    break;
-                case OS_TYPE:
-                    if (!processingOsInfo && hostNameCollectionCompleted == sortedHostList.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processOsTypeCollection();
-                    }
-                    break;
-                case DNS: // DNS服务器收集阶段
-                    if (!processingDns && osTypeCollectionCompleted == sortedHostList.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processDnsCollection();
-                    }
-                    break;
-                case HOSTS: // hosts文件收集阶段
-                    if (!processingHosts && dnsCollectionCompleted == sortedHostList.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processHostsFileCollection();
-                    }
-                    break;
-                case CPU_INFO:
-                    if (!processingCpuInfo && hostsFileCollectionCompleted == sortedHostList.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processCpuInfoQueue();
-                    }
-                    break;
-                case MEMORY_INFO:
-                    if (!processingMemoryInfo && cpuInfoCollectionCompleted == sortedHardwareTasks.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processMemoryInfoQueue();
-                    }
-                    break;
-                case DISK_INFO:
-                    if (!processingDiskInfo && memoryInfoCollectionCompleted == sortedHardwareTasks.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processDiskInfoQueue();
-                    }
-                    break;
-                case SWAP_INFO: // 交换空间收集阶段
-                    if (!processingSwapInfo && diskInfoCollectionCompleted == sortedHardwareTasks.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processSwapInfoQueue();
-                    }
-                    break;
-                case GPU_INFO:
-                    if (!processingGpuInfo && swapInfoCollectionCompleted == sortedHardwareTasks.size()) {
-                        // 重置当前主机索引，准备下一阶段收集
-                        currentHostIndex = 0;
-                        processGpuInfoQueue();
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        /**
-         * 添加主机到系统信息收集队列，按IP地址排序
+         * 将主机添加到收集队列
          */
         public synchronized void addHostToQueue(HostInfo hostInfo, Consumer<HostInfo> processor) {
-            // 添加到排序列表
+            if (hostInfo == null) {
+                return;
+            }
+
+            // 初始化主机状态
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("等待收集主机信息...");
+            service.updateHostInfoCache(hostInfo);
+
+            // 添加到队列
+            hostQueue.offer(hostInfo);
+
+            // 添加到排序列表并增加计数
             sortedHostList.add(hostInfo);
+            int total = totalHostCount.incrementAndGet();
+            logger.info("已添加主机{}到收集队列，当前队列总数: {}", hostInfo.getIp(), total);
 
-            // 排序（按IP地址排序）
-            sortedHostList.sort(Comparator.comparing(HostInfo::getIp));
-
-            // 如果当前没有处理任务，且处于主机名收集阶段，则开始处理
-            if (!processingOsInfo && currentStage == CollectionStage.HOST_NAME) {
-                processHostNameCollection();
-            }
+            // 开始处理队列
+            startProcessingIfNeeded();
         }
 
         /**
-         * 处理主机名收集
-         * 修改为串行处理，一次只处理一台主机
+         * 根据需要开始处理队列
          */
-        private void processHostNameCollection() {
-            processingOsInfo = true;
+        private synchronized void startProcessingIfNeeded() {
+            // 如果已经达到最大并发数，不再增加
+            if (processingHostCount.get() >= MAX_CONCURRENT_HOSTS) {
+                logger.debug("当前已有{}台主机正在处理中，达到最大并发数", processingHostCount.get());
+                return;
+            }
 
-            // 使用CompletableFuture处理当前主机
+            // 检查队列中是否还有主机待处理
+            HostInfo hostInfo = hostQueue.poll();
+            if (hostInfo == null) {
+                logger.debug("队列中无待处理主机");
+                return;
+            }
+
+            // 增加处理计数
+            processingHostCount.incrementAndGet();
+
+            // 异步处理该主机的全部信息收集
             CompletableFuture.runAsync(() -> {
                 try {
-                    // 确保索引在有效范围内
-                    if (currentHostIndex < sortedHostList.size()) {
-                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
-                        logger.info("开始收集主机名 [{}/{}]: {}",
-                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
-
-                        // 设置主机名收集状态为LOADING
-                        hostInfo.setMessage("正在收集主机名...");
-                        hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
-                        service.updateHostInfoCache(hostInfo);
-                        logger.info("主机 {} 状态更新：hostnameStatus={}, 开始收集主机名",
-                                hostInfo.getIp(), hostInfo.getHostnameStatus());
-
-                        try {
-                            // 执行主机名收集
-                            ClientSession session = service.getOrCreateSession(hostInfo);
-                            if (session == null) {
-                                // 如果无法创建SSH会话，设置错误状态
-                                logger.warn("创建SSH会话失败，无法收集主机名: {}", hostInfo.getIp());
-                                hostInfo.setMessage("无法收集主机名: SSH连接失败");
-                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                                service.updateHostInfoCache(hostInfo);
-                                logger.info("主机 {} 状态更新：hostnameStatus={}, SSH连接失败",
-                                        hostInfo.getIp(), hostInfo.getHostnameStatus());
-                                // 继续处理下一台主机
-                                currentHostIndex++;
-                                hostNameCollectionCompleted++;
-                                processingOsInfo = false;
-                                startProcessingIfNeeded();
-                                return;
-                            }
-
-                            // 执行主机名收集命令
-                            String hostname = executeCommand(session, "hostname");
-                            if (StringUtils.isNotBlank(hostname)) {
-                                hostInfo.setHostname(hostname.trim());
-                                // 尝试获取FQDN（完全限定域名）
-                                String fqdn = executeCommand(session, "hostname -f");
-                                if (StringUtils.isNotBlank(fqdn)) {
-                                    hostInfo.setFqdn(fqdn.trim());
-                                }
-
-                                // 设置主机名收集成功状态
-                                hostInfo.setMessage("主机名收集完成");
-                                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
-                                logger.info("主机 {} 主机名收集成功：hostname={}, fqdn={}, hostnameStatus={}",
-                                        hostInfo.getIp(), hostInfo.getHostname(), hostInfo.getFqdn(),
-                                        hostInfo.getHostnameStatus());
-                            } else {
-                                // 未能获取主机名
-                                logger.warn("未能获取主机{}的主机名", hostInfo.getIp());
-                                hostInfo.setMessage("未能获取主机名");
-                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                                logger.info("主机 {} 状态更新：hostnameStatus={}, 未能获取主机名",
-                                        hostInfo.getIp(), hostInfo.getHostnameStatus());
-                            }
-
-                            // 无论成功或失败，立即更新缓存
-                            service.updateHostInfoCache(hostInfo);
-
-                            // 尝试关闭会话
-                            try {
-                                session.close();
-                            } catch (Exception e) {
-                                logger.warn("关闭SSH会话时出错: {}", e.getMessage());
-                            }
-                        } catch (Exception e) {
-                            // 处理异常
-                            logger.error("收集主机名时出错: {}", e.getMessage(), e);
-                            hostInfo.setMessage("收集主机名失败: " + e.getMessage());
-                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                            service.updateHostInfoCache(hostInfo);
-                            logger.info("主机 {} 状态更新：hostnameStatus={}, 收集主机名异常: {}",
-                                    hostInfo.getIp(), hostInfo.getHostnameStatus(), e.getMessage());
-                        }
-
-                        // 更新计数器和当前索引
-                        hostNameCollectionCompleted++;
-                        currentHostIndex++;
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(50);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-
-                        // 检查是否完成所有主机
-                        if (hostNameCollectionCompleted == sortedHostList.size()) {
-                            // 所有主机名收集完成，进入下一阶段
-                            logger.info("所有主机名收集完成，进入操作系统类型收集阶段");
-                            currentStage = CollectionStage.OS_TYPE;
-                        }
-                    }
+                    logger.info("开始收集主机 {} 的全部信息", hostInfo.getIp());
+                    collectAllInfoForHost(hostInfo);
+                } catch (Exception e) {
+                    logger.error("收集主机 {} 信息时发生错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("信息收集失败: " + e.getMessage());
+                    service.updateHostInfoCache(hostInfo);
                 } finally {
-                    processingOsInfo = false;
-                    // 如果还有主机待处理，继续处理
+                    // 完成一台主机的处理，减少计数并增加完成计数
+                    processingHostCount.decrementAndGet();
+                    int completed = completedHostCount.incrementAndGet();
+                    int total = totalHostCount.get();
+
+                    // 记录进度
+                    logger.info("已完成 {}/{} 台主机的信息收集",
+                            completed, total);
+
+                    // 继续处理下一台主机
                     startProcessingIfNeeded();
                 }
-            }, service.hostnameExecutor);
+            }, service.hostInfoExecutor);
         }
 
         /**
-         * 执行SSH命令并返回结果
+         * 为单台主机收集所有信息
+         * 按顺序收集：主机名 -> OS类型 -> DNS -> Hosts文件 -> CPU -> 内存 -> 磁盘 -> 交换空间 -> GPU
          */
-        private String executeCommand(ClientSession session, String command) {
-            try {
-                String result = MinaUtils.execCmdWithResult(session, command);
-                return result;
-            } catch (Exception e) {
-                logger.warn("执行命令 {} 失败: {}", command, e.getMessage());
-                return null;
+        private void collectAllInfoForHost(HostInfo hostInfo) {
+            // 1. 收集主机名
+            collectHostName(hostInfo);
+
+            // 如果主机名收集失败，跳过后续步骤
+            if (hostInfo.getHostnameStatus() != OsInfoStatusEnum.SUCCESS) {
+                logger.warn("主机 {} 主机名收集失败，跳过后续信息收集", hostInfo.getIp());
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("主机名收集失败，无法继续");
+                service.updateHostInfoCache(hostInfo);
+                return;
             }
+
+            // 2. 收集操作系统类型
+            collectOsType(hostInfo);
+
+            // 如果操作系统类型收集失败，跳过后续步骤
+            if (hostInfo.getOsInfoStatus() != OsInfoStatusEnum.SUCCESS) {
+                logger.warn("主机 {} 操作系统类型收集失败，跳过后续信息收集", hostInfo.getIp());
+                hostInfo.setMessage("操作系统类型收集失败，无法继续");
+                service.updateHostInfoCache(hostInfo);
+                return;
+            }
+
+            // 获取会话和操作系统对象
+            ClientSession session = service.getOrCreateSession(hostInfo);
+            OsInfo osInfo = hostInfo.getOsInfo();
+            // 使用缓存的osType字段
+            String osType = osInfo != null ? osInfo.getDistributionId() : "linux"; // 默认为linux
+            IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
+
+            if (session == null || osInfo == null || collector == null) {
+                logger.error("主机 {} 缺少必要信息，无法继续收集", hostInfo.getIp());
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("缺少必要信息，无法继续");
+                service.updateHostInfoCache(hostInfo);
+                return;
+            }
+
+            // 3. 收集DNS信息
+            collectDnsInfo(hostInfo, osInfo, session, collector);
+
+            // 4. 收集Hosts文件
+            collectHostsFile(hostInfo, osInfo, session, collector);
+
+            // 5. 收集CPU信息
+            collectCpuInfo(hostInfo, osInfo, session, collector);
+
+            // 6. 收集内存信息
+            collectMemoryInfo(hostInfo, osInfo, session, collector);
+
+            // 7. 收集磁盘信息
+            collectDiskInfo(hostInfo, osInfo, session, collector);
+
+            // 8. 收集交换空间信息
+            collectSwapInfo(hostInfo, osInfo, session, collector);
+
+            // 9. 收集GPU信息
+            collectGpuInfo(hostInfo, osInfo, session, collector);
+
+            // 全部完成，设置最终状态
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
+            osInfo.setLastUpdatedItem("completed");
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+            hostInfo.setMessage("所有信息收集完成");
+            service.updateHostInfoCache(hostInfo);
+
+            logger.info("主机 {} 全部信息收集完成", hostInfo.getIp());
         }
 
         /**
-         * 按顺序处理操作系统类型收集
-         * 修改为串行处理，一次只处理一台主机
+         * 收集主机名
          */
-        private void processOsTypeCollection() {
-            processingOsInfo = true;
+        private void collectHostName(HostInfo hostInfo) {
+            logger.info("开始收集主机名: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
 
-            // 使用CompletableFuture处理当前主机
-            CompletableFuture.runAsync(() -> {
-                try {
-                    // 确保索引在有效范围内
-                    if (currentHostIndex < sortedHostList.size()) {
-                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
-                        logger.info("开始收集操作系统类型 [{}/{}]: {}",
-                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
+            // 设置状态为正在收集
+            hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集主机名...");
+            service.updateHostInfoCache(hostInfo);
 
-                        // 执行操作系统类型收集
-                        processOsType(hostInfo);
-
-                        // 更新计数器和当前索引
-                        osTypeCollectionCompleted++;
-                        currentHostIndex++;
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(50);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-
-                        // 检查是否完成所有主机
-                        if (osTypeCollectionCompleted == sortedHostList.size()) {
-                            // 所有操作系统类型收集完成，进入下一阶段
-                            logger.info("所有操作系统类型收集完成，进入DNS服务器收集阶段");
-                            currentStage = CollectionStage.DNS;
-                        }
-                    }
-                } finally {
-                    processingOsInfo = false;
-                    // 如果还有主机待处理，继续处理
-                    startProcessingIfNeeded();
-                }
-            }, service.osInfoExecutor);
-        }
-
-        /**
-         * 收集单个主机的操作系统类型
-         */
-        private void processOsType(HostInfo hostInfo) {
             try {
-                // 设置操作系统收集状态
-                hostInfo.setOsStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setMessage("正在收集操作系统信息...");
+                // 创建SSH会话
+                logger.info("开始创建SSH会话：{}", hostInfo.getIp());
+                ClientSession session = service.getOrCreateSession(hostInfo);
+
+                if (session == null) {
+                    throw new Exception("无法创建SSH会话");
+                }
+
+                // 执行获取主机名命令
+                String hostname = executeCommand(session, "hostname").trim();
+                if (hostname.isEmpty()) {
+                    throw new Exception("获取主机名失败");
+                }
+
+                logger.info("主机名获取成功: {}, 开始获取FQDN", hostname);
+
+                // 获取FQDN
+                String fqdn = executeCommand(session, "hostname -f").trim();
+                if (fqdn.isEmpty()) {
+                    fqdn = hostname; // 如果获取FQDN失败，使用主机名作为FQDN
+                }
+
+                logger.info("FQDN获取成功: {}", fqdn);
+
+                // 更新主机信息
+                hostInfo.setHostname(hostname);
+                hostInfo.setFqdn(fqdn);
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("主机名收集成功");
                 service.updateHostInfoCache(hostInfo);
 
-                // 获取操作系统信息
-                OsInfo osInfo = service.getHostOsInfoInternal(hostInfo);
+                logger.info("主机 {} 主机名收集成功：hostname={}, fqdn={}, hostnameStatus=success",
+                        hostInfo.getIp(), hostname, fqdn);
+                logger.info("主机 {} 主机名收集总用时: {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
 
-                // 设置数据
+            } catch (Exception e) {
+                logger.error("收集主机名时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("主机名收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 收集操作系统类型
+         */
+        private void collectOsType(HostInfo hostInfo) {
+            logger.info("开始收集操作系统类型: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
+
+            // 设置状态为正在收集
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集操作系统类型...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 获取SSH会话
+                ClientSession session = service.getOrCreateSession(hostInfo);
+
+                if (session == null) {
+                    throw new Exception("无法创建SSH会话");
+                }
+
+                // 检测操作系统类型
+                String osType = service.detectOperatingSystemType(session);
+                logger.info("主机 {} 的操作系统类型为: {}", hostInfo.getIp(), osType);
+
+                // 创建操作系统信息对象
+                OsInfo osInfo = new OsInfo();
+                osInfo.setHostname(hostInfo.getHostname());
+                osInfo.setFqdn(hostInfo.getFqdn());
+
+                // 使用对应的收集器收集操作系统信息
+                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
+                if (collector == null) {
+                    throw new Exception("不支持的操作系统类型: " + osType);
+                }
+
+                // 收集操作系统信息 - 使用正确的方法签名
+                OsInfo collectedOsInfo = collector.collectOsInfo(hostInfo, session, osInfo,
+                        service::updateHostInfoCache);
+                if (collectedOsInfo != null) {
+                    osInfo = collectedOsInfo; // 使用收集到的信息
+                }
+
+                // 设置操作系统类型 - 直接设置到OsInfo上
+                osInfo.setDistributionId(osType);
                 hostInfo.setOsInfo(osInfo);
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("操作系统信息收集完成");
+                hostInfo.setMessage("操作系统类型收集成功");
 
-                // 设置硬件收集状态为collecting
-                if (osInfo != null) {
-                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.COLLECTING);
-                }
+                // 初始化所有硬件收集状态
+                hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+                hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
+                hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+                hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+                hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
 
-                // 立即更新缓存，让前端看到结果
+                // 设置操作系统信息收集状态
+                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
+                osInfo.setLastUpdatedItem("os_info_collected");
+
+                // 更新缓存
                 service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} 操作系统信息收集成功：{} {}，已设置状态：osInfoStatus=success",
+                        hostInfo.getIp(), osInfo.getDistribution(), osInfo.getVersionId());
+                logger.info("主机 {} 操作系统类型收集总用时: {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
+
             } catch (Exception e) {
-                logger.error("收集操作系统类型时出错: {}", e.getMessage(), e);
+                logger.error("收集操作系统类型时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("收集操作系统信息失败: " + e.getMessage());
+                hostInfo.setMessage("操作系统类型收集失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 按顺序处理DNS服务器收集
-         * 修改为串行处理，一次只处理一台主机
+         * 收集DNS信息
          */
-        private void processDnsCollection() {
-            processingDns = true;
+        private void collectDnsInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集DNS信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
 
-            // 使用CompletableFuture处理当前主机
-            CompletableFuture.runAsync(() -> {
-                try {
-                    // 确保索引在有效范围内
-                    if (currentHostIndex < sortedHostList.size()) {
-                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
-                        logger.info("开始收集DNS服务器信息 [{}/{}]: {}",
-                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
+            // 设置状态为正在收集
+            hostInfo.setMessage("正在收集DNS信息...");
+            service.updateHostInfoCache(hostInfo);
 
-                        // 执行DNS服务器收集
-                        processDnsServers(hostInfo);
-
-                        // 更新计数器和当前索引
-                        dnsCollectionCompleted++;
-                        currentHostIndex++;
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(50);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-
-                        // 检查是否完成所有主机
-                        if (dnsCollectionCompleted == sortedHostList.size()) {
-                            // 所有DNS服务器收集完成，进入下一阶段
-                            logger.info("所有DNS服务器收集完成，进入Hosts文件收集阶段");
-                            currentStage = CollectionStage.HOSTS;
-                        }
-                    }
-                } finally {
-                    processingDns = false;
-                    // 如果还有主机待处理，继续处理
-                    startProcessingIfNeeded();
-                }
-            }, service.dnsExecutor); // 使用专用的DNS服务器收集线程池
-        }
-
-        /**
-         * 收集DNS服务器信息
-         */
-        private void processDnsServers(HostInfo hostInfo) {
             try {
-                // 设置DNS收集状态
-                hostInfo.setDnsStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setMessage("正在收集DNS服务器信息...");
-                service.updateHostInfoCache(hostInfo);
-
-                ClientSession session = service.getOrCreateSession(hostInfo);
-                if (session == null) {
-                    logger.warn("创建SSH会话失败，无法收集DNS服务器信息: {}", hostInfo.getIp());
-                    // 使用临时字段标记状态
-                    hostInfo.setMessage("无法收集DNS服务器信息: SSH连接失败");
-                    hostInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
-                    service.updateHostInfoCache(hostInfo);
-                    return;
-                }
-
-                // 收集DNS服务器信息
-                collectDnsServers(hostInfo, session);
-
-                // 更新状态
-                hostInfo.setMessage("DNS服务器信息收集完成");
-                hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
-                service.updateHostInfoCache(hostInfo);
-
-                // 关闭会话
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    logger.warn("关闭SSH会话时出错: {}", e.getMessage());
-                }
-            } catch (Exception e) {
-                logger.error("收集DNS服务器信息时出错: {}", e.getMessage(), e);
-                hostInfo.setMessage("收集DNS服务器信息失败: " + e.getMessage());
-                hostInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
-                service.updateHostInfoCache(hostInfo);
-            }
-        }
-
-        /**
-         * 收集DNS服务器信息
-         */
-        private void collectDnsServers(HostInfo hostInfo, ClientSession session) {
-            try {
-                OsInfo osInfo = hostInfo.getOsInfo();
-                if (osInfo == null) {
-                    logger.warn("主机 {} 的osInfo为空，无法收集DNS服务器信息", hostInfo.getIp());
-                    return;
-                }
-
-                String dnsCommand;
+                // 收集DNS服务器信息 - 使用命令直接收集
+                String dnsServers;
                 if (osInfo.getDistributionId() != null &&
                         osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                    // Windows系统获取DNS命令
-                    dnsCommand = "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | ForEach-Object { $_ }\"";
+                    // Windows系统收集DNS
+                    dnsServers = MinaUtils.execCmdWithResult(session,
+                            "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | ForEach-Object { $_ }\"");
                 } else {
-                    // Linux系统获取DNS命令
-                    dnsCommand = "cat /etc/resolv.conf | grep nameserver | awk '{print $2}'";
+                    // Linux系统收集DNS
+                    dnsServers = MinaUtils.execCmdWithResult(session,
+                            "cat /etc/resolv.conf | grep nameserver | awk '{print $2}'");
                 }
 
-                String dnsServers = MinaUtils.execCmdWithResult(session, dnsCommand);
-
-                if (StringUtils.isNotBlank(dnsServers)) {
-                    osInfo.setDnsServers(dnsServers.trim());
-                    // 立即更新缓存
-                    service.updateHostInfoCache(hostInfo);
-                    logger.info("成功收集DNS服务器信息: {}", hostInfo.getIp());
-                } else {
-                    logger.warn("主机 {} 未返回DNS服务器信息", hostInfo.getIp());
-                }
-            } catch (Exception e) {
-                logger.error("收集DNS服务器信息时出错: {}", e.getMessage(), e);
-            }
-        }
-
-        /**
-         * 按顺序处理Hosts文件收集
-         * 修改为串行处理，一次只处理一台主机
-         */
-        private void processHostsFileCollection() {
-            processingHosts = true;
-
-            // 使用CompletableFuture处理当前主机
-            CompletableFuture.runAsync(() -> {
-                try {
-                    // 确保索引在有效范围内
-                    if (currentHostIndex < sortedHostList.size()) {
-                        HostInfo hostInfo = sortedHostList.get(currentHostIndex);
-                        logger.info("开始收集Hosts文件 [{}/{}]: {}",
-                                currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
-
-                        // 执行Hosts文件收集
-                        processHostsFile(hostInfo);
-
-                        // 更新计数器和当前索引
-                        hostsFileCollectionCompleted++;
-                        currentHostIndex++;
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(50);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-
-                        // 检查是否完成所有主机
-                        if (hostsFileCollectionCompleted == sortedHostList.size()) {
-                            // 所有Hosts文件收集完成，进入下一阶段
-                            logger.info("所有Hosts文件收集完成，进入CPU信息收集阶段");
-                            currentStage = CollectionStage.CPU_INFO;
-                            // 准备CPU收集队列
-                            prepareCpuInfoQueue();
-                        }
-                    }
-                } finally {
-                    processingHosts = false;
-                    // 如果还有主机待处理，继续处理
-                    startProcessingIfNeeded();
-                }
-            }, service.hostsFileExecutor); // 使用专用的Hosts文件收集线程池
-        }
-
-        /**
-         * 收集单个主机的Hosts文件
-         */
-        private void processHostsFile(HostInfo hostInfo) {
-            try {
-                // 设置hosts文件收集状态
-                hostInfo.setHostsFileStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setMessage("正在收集Hosts文件...");
+                // 更新操作系统信息
+                osInfo.setDnsServers(dnsServers);
+                osInfo.setLastUpdatedItem("dns_collected");
+                hostInfo.setMessage("DNS信息收集成功");
                 service.updateHostInfoCache(hostInfo);
 
-                ClientSession session = service.getOrCreateSession(hostInfo);
-                if (session == null) {
-                    logger.warn("创建SSH会话失败，无法收集Hosts文件: {}", hostInfo.getIp());
-                    // 使用临时字段标记状态
-                    hostInfo.setMessage("无法收集Hosts文件: SSH连接失败");
-                    hostInfo.setHostsFileStatus(OsInfoStatusEnum.ERROR);
-                    service.updateHostInfoCache(hostInfo);
-                    return;
-                }
+                logger.info("主机 {} DNS信息收集成功：{}，耗时 {}ms",
+                        hostInfo.getIp(), dnsServers, System.currentTimeMillis() - startTime);
 
-                // 收集Hosts文件
-                collectHostsFile(hostInfo, session);
-
-                // 更新状态
-                hostInfo.setMessage("Hosts文件收集完成");
-                hostInfo.setHostsFileStatus(OsInfoStatusEnum.SUCCESS);
-                service.updateHostInfoCache(hostInfo);
-
-                // 关闭会话
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    logger.warn("关闭SSH会话时出错: {}", e.getMessage());
-                }
             } catch (Exception e) {
-                logger.error("收集Hosts文件时出错: {}", e.getMessage(), e);
-                hostInfo.setMessage("收集Hosts文件失败: " + e.getMessage());
-                hostInfo.setHostsFileStatus(OsInfoStatusEnum.ERROR);
+                logger.error("收集DNS信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setMessage("DNS信息收集失败: " + e.getMessage() + "，继续收集其他信息");
                 service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 收集hosts文件
+         * 收集Hosts文件
          */
-        private void collectHostsFile(HostInfo hostInfo, ClientSession session) {
-            try {
-                OsInfo osInfo = hostInfo.getOsInfo();
-                if (osInfo == null) {
-                    logger.warn("主机 {} 的osInfo为空，无法收集hosts文件", hostInfo.getIp());
-                    return;
-                }
+        private void collectHostsFile(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集Hosts文件: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
 
-                String hostsCommand;
+            // 设置状态为正在收集
+            hostInfo.setMessage("正在收集Hosts文件...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 收集Hosts文件内容 - 使用命令直接收集
+                String hostsFile;
                 if (osInfo.getDistributionId() != null &&
                         osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                    // Windows系统获取hosts文件命令
-                    hostsCommand = "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"";
+                    // Windows系统收集hosts
+                    hostsFile = MinaUtils.execCmdWithResult(session,
+                            "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
                 } else {
-                    // Linux系统获取hosts文件命令
-                    hostsCommand = "cat /etc/hosts";
+                    // Linux系统收集hosts
+                    hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts");
                 }
 
-                String hostsFile = MinaUtils.execCmdWithResult(session, hostsCommand);
+                // 更新操作系统信息
+                // 注意：Hosts文件内容较大，可能需要存储在单独的字段或数据库中
+                hostInfo.setMessage("Hosts文件收集成功");
+                osInfo.setLastUpdatedItem("hosts_collected");
+                hostInfo.setHostsFile(hostsFile); // 假设HostInfo有hostFile字段
+                service.updateHostInfoCache(hostInfo);
 
-                if (StringUtils.isNotBlank(hostsFile)) {
-                    hostInfo.setHostsFile(hostsFile.trim());
-                    // 立即更新缓存
-                    service.updateHostInfoCache(hostInfo);
-                    logger.info("成功收集Hosts文件: {}", hostInfo.getIp());
-                } else {
-                    logger.warn("主机 {} 未返回Hosts文件内容", hostInfo.getIp());
-                }
+                logger.info("主机 {} Hosts文件收集成功，耗时 {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
+
             } catch (Exception e) {
-                logger.error("收集hosts文件时出错: {}", e.getMessage(), e);
+                logger.error("收集Hosts文件时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setMessage("Hosts文件收集失败: " + e.getMessage() + "，继续收集其他信息");
+                service.updateHostInfoCache(hostInfo);
             }
-        }
-
-        /**
-         * 准备CPU信息收集队列
-         */
-        private void prepareCpuInfoQueue() {
-            // 清空并重新准备硬件任务列表
-            sortedHardwareTasks.clear();
-
-            for (HostInfo hostInfo : sortedHostList) {
-                try {
-                    // 只处理状态正常的主机
-                    if (OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
-                        ClientSession session = service.getOrCreateSession(hostInfo);
-                        if (session == null) {
-                            logger.warn("无法创建SSH会话，跳过硬件信息收集: {}", hostInfo.getIp());
-                            continue;
-                        }
-
-                        OsInfo osInfo = hostInfo.getOsInfo();
-                        if (osInfo == null) {
-                            logger.warn("主机 {} 的操作系统信息为空，跳过硬件信息收集", hostInfo.getIp());
-                            continue;
-                        }
-
-                        // 确定操作系统类型
-                        String osType = service.detectOperatingSystemType(session);
-                        IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
-                        if (collector == null) {
-                            logger.warn("未找到适用于{}操作系统的信息收集器", osType);
-                            continue;
-                        }
-
-                        // 确保OsInfo有初始的硬件收集状态
-                        if (osInfo.getHardwareCollectionStatus() == null) {
-                            osInfo.setHardwareCollectionStatus("pending");
-                        }
-
-                        // 创建任务并添加到排序列表
-                        HardwareInfoTask task = new HardwareInfoTask(hostInfo, osInfo, session, collector, service);
-                        sortedHardwareTasks.add(task);
-                    }
-                } catch (Exception e) {
-                    logger.error("准备硬件信息收集任务时出错: {}, 主机: {}", e.getMessage(), hostInfo.getIp(), e);
-                }
-            }
-
-            // 对硬件任务进行IP排序
-            sortedHardwareTasks.sort(Comparator.comparing(task -> task.hostInfo.getIp()));
-
-            // 开始处理CPU信息收集
-            if (!sortedHardwareTasks.isEmpty()) {
-                processCpuInfoQueue();
-            } else {
-                logger.warn("没有可用的硬件信息收集任务");
-                currentStage = CollectionStage.COMPLETED;
-            }
-        }
-
-        /**
-         * 处理CPU信息收集队列
-         */
-        private void processCpuInfoQueue() {
-            processingCpuInfo = true;
-
-            // 使用cpuInfoExecutor处理队列中的所有任务
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task == null || task.hostInfo == null) {
-                            continue;
-                        }
-
-                        logger.info("开始收集CPU信息: {}", task.hostInfo.getIp());
-
-                        // 收集CPU信息
-                        try {
-                            // 设置正在收集CPU信息
-                            task.osInfo.setLastUpdatedItem("collecting_cpu");
-                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-                            task.hostInfo.setMessage("正在收集CPU信息...");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 从收集器获取CPU信息收集方法并执行
-                            collectCpuInfo(task);
-
-                            // 设置成功状态
-                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
-                            task.hostInfo.setMessage("CPU信息收集完成");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 设置硬件信息收集成功
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-
-                            // 更新计数器
-                            cpuInfoCollectionCompleted++;
-                        } catch (Exception e) {
-                            logger.error("收集CPU信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
-                            task.osInfo.setLastUpdatedItem("CPU收集失败");
-                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                            task.hostInfo.setMessage("CPU信息收集失败: " + e.getMessage());
-                            service.updateHostInfoCache(task.hostInfo);
-                        }
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    // 所有主机的CPU信息收集完成，进入下一阶段
-                    logger.info("所有主机的CPU信息收集完成，进入内存信息收集阶段");
-                    currentStage = CollectionStage.MEMORY_INFO;
-
-                    // 开始处理内存信息收集
-                    processMemoryInfoQueue();
-                } finally {
-                    processingCpuInfo = false;
-                }
-            }, service.cpuInfoExecutor);
-        }
-
-        /**
-         * 处理内存信息收集队列
-         */
-        private void processMemoryInfoQueue() {
-            processingMemoryInfo = true;
-
-            // 使用memoryInfoExecutor处理队列中的所有任务
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task == null || task.hostInfo == null) {
-                            continue;
-                        }
-
-                        logger.info("开始收集内存信息: {}", task.hostInfo.getIp());
-
-                        // 收集内存信息
-                        try {
-                            // 设置正在收集内存信息
-                            task.osInfo.setLastUpdatedItem("collecting_memory");
-                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-                            task.hostInfo.setMessage("正在收集内存信息...");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 从收集器获取内存信息收集方法并执行
-                            collectMemoryInfo(task);
-
-                            // 设置成功状态
-                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
-                            task.hostInfo.setMessage("内存信息收集完成");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 设置硬件信息收集成功
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-
-                            // 更新计数器
-                            memoryInfoCollectionCompleted++;
-                        } catch (Exception e) {
-                            logger.error("收集内存信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
-                            task.osInfo.setLastUpdatedItem("内存收集失败");
-                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                            task.hostInfo.setMessage("内存信息收集失败: " + e.getMessage());
-                            service.updateHostInfoCache(task.hostInfo);
-                        }
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    // 所有主机的内存信息收集完成，进入下一阶段
-                    logger.info("所有主机的内存信息收集完成，进入磁盘信息收集阶段");
-                    currentStage = CollectionStage.DISK_INFO;
-
-                    // 开始处理磁盘信息收集
-                    processDiskInfoQueue();
-                } finally {
-                    processingMemoryInfo = false;
-                }
-            }, service.memoryInfoExecutor);
-        }
-
-        /**
-         * 处理磁盘信息收集队列
-         */
-        private void processDiskInfoQueue() {
-            processingDiskInfo = true;
-
-            // 使用diskInfoExecutor处理队列中的所有任务
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task == null || task.hostInfo == null) {
-                            continue;
-                        }
-
-                        logger.info("开始收集磁盘信息: {}", task.hostInfo.getIp());
-
-                        // 收集磁盘信息
-                        try {
-                            // 设置正在收集磁盘信息
-                            task.osInfo.setLastUpdatedItem("collecting_disk");
-                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-                            task.hostInfo.setMessage("正在收集磁盘信息...");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 根据操作系统类型收集磁盘信息
-                            if (task.osInfo.getDistributionId() != null &&
-                                    task.osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                                // Windows系统磁盘信息
-                                collectDiskInfoWindows(task);
-                            } else {
-                                // Linux系统磁盘信息
-                                collectDiskInfoLinux(task);
-                            }
-
-                            // 设置成功状态
-                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
-                            task.hostInfo.setMessage("磁盘信息收集完成");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 设置硬件信息收集成功
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-
-                            // 更新计数器
-                            diskInfoCollectionCompleted++;
-                        } catch (Exception e) {
-                            logger.error("收集磁盘信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
-                            task.osInfo.setLastUpdatedItem("磁盘收集失败");
-                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.ERROR);
-                            task.hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
-                            service.updateHostInfoCache(task.hostInfo);
-                        }
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    // 所有主机的磁盘信息收集完成，进入交换空间收集阶段
-                    logger.info("所有主机的磁盘信息收集完成，进入交换空间收集阶段");
-                    currentStage = CollectionStage.SWAP_INFO;
-
-                    // 开始处理交换空间信息收集
-                    processSwapInfoQueue();
-                } finally {
-                    processingDiskInfo = false;
-                }
-            }, service.diskInfoExecutor);
-        }
-
-        /**
-         * 处理交换空间信息收集队列
-         */
-        private void processSwapInfoQueue() {
-            processingSwapInfo = true;
-
-            // 使用swapInfoExecutor处理队列中的所有任务
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task == null || task.hostInfo == null) {
-                            continue;
-                        }
-
-                        logger.info("开始收集交换空间信息: {}", task.hostInfo.getIp());
-
-                        // 收集交换空间信息
-                        try {
-                            // 设置正在收集交换空间信息
-                            task.osInfo.setLastUpdatedItem("collecting_swap");
-                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-                            task.hostInfo.setMessage("正在收集交换空间信息...");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // Windows系统通常没有交换分区的概念
-                            if (task.osInfo.getDistributionId() != null &&
-                                    !task.osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                                // 只为Linux系统收集交换空间信息
-                                collectSwapInfoLinux(task);
-                            } else {
-                                logger.info("Windows系统跳过交换空间收集: {}", task.hostInfo.getIp());
-                            }
-
-                            // 设置成功状态
-                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
-                            task.hostInfo.setMessage("交换空间信息收集完成");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 设置硬件信息收集成功
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-
-                            // 更新计数器
-                            swapInfoCollectionCompleted++;
-                        } catch (Exception e) {
-                            logger.error("收集交换空间信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
-                            task.osInfo.setLastUpdatedItem("交换空间收集失败");
-                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
-                            task.hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
-                            service.updateHostInfoCache(task.hostInfo);
-                        }
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    // 所有主机的交换空间信息收集完成，进入GPU信息收集阶段
-                    logger.info("所有主机的交换空间信息收集完成，进入GPU信息收集阶段");
-                    currentStage = CollectionStage.GPU_INFO;
-
-                    // 开始处理GPU信息收集
-                    processGpuInfoQueue();
-                } finally {
-                    processingSwapInfo = false;
-                }
-            }, service.swapInfoExecutor);
-        }
-
-        /**
-         * 处理GPU信息收集队列
-         */
-        private void processGpuInfoQueue() {
-            processingGpuInfo = true;
-
-            // 使用gpuInfoExecutor处理队列中的所有任务
-            CompletableFuture.runAsync(() -> {
-                try {
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task == null || task.hostInfo == null) {
-                            continue;
-                        }
-
-                        logger.info("开始收集GPU信息: {}", task.hostInfo.getIp());
-
-                        // 收集GPU信息
-                        try {
-                            // 设置正在收集GPU信息
-                            task.osInfo.setLastUpdatedItem("collecting_gpu");
-                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-                            task.hostInfo.setMessage("正在收集GPU信息...");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 从收集器获取GPU信息收集方法并执行
-                            collectGpuInfo(task);
-
-                            // 设置成功状态
-                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
-                            task.hostInfo.setMessage("GPU信息收集完成");
-                            task.osInfo.setLastUpdatedItem("completed");
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            // 更新计数器
-                            gpuInfoCollectionCompleted++;
-
-                            logger.info("硬件信息收集完成: {}, 主机名: {}",
-                                    task.hostInfo.getIp(),
-                                    task.hostInfo.getHostname());
-                        } catch (Exception e) {
-                            logger.error("收集GPU信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
-                            task.osInfo.setLastUpdatedItem("GPU收集失败");
-                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.ERROR);
-                            task.hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
-                            service.updateHostInfoCache(task.hostInfo);
-                        }
-
-                        // 短暂休眠，避免CPU占用过高
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-
-                    // 所有主机的GPU信息收集完成，整个收集过程完成
-                    logger.info("所有主机的信息收集完成");
-                    currentStage = CollectionStage.COMPLETED;
-
-                    // 遍历所有收集任务，设置完成状态
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task != null && task.hostInfo != null) {
-                            // 设置整体收集完成状态
-                            task.hostInfo.setMessage("所有信息收集完成");
-                            service.updateHostInfoCache(task.hostInfo);
-
-                            logger.info("主机 {} 的所有信息收集已完成", task.hostInfo.getIp());
-                        }
-                    }
-
-                    // 更新服务缓存中主机的信息收集状态
-                    logger.info("更新所有主机的整体收集完成状态");
-
-                    // 关闭所有会话
-                    for (HardwareInfoTask task : sortedHardwareTasks) {
-                        if (task != null && task.session != null) {
-                            try {
-                                task.session.close();
-                            } catch (Exception e) {
-                                logger.warn("关闭会话时出错: {}", e.getMessage());
-                            }
-                        }
-                    }
-                } finally {
-                    processingGpuInfo = false;
-                }
-            }, service.gpuInfoExecutor);
         }
 
         /**
          * 收集CPU信息
          */
-        private void collectCpuInfo(HardwareInfoTask task) {
-            if (task.osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                collectCpuInfoWindows(task);
-            } else {
-                collectCpuInfoLinux(task);
-            }
-        }
+        private void collectCpuInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集CPU信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
 
-        /**
-         * 收集Linux系统CPU信息
-         */
-        private void collectCpuInfoLinux(HardwareInfoTask task) {
+            // 设置状态为正在收集
+            osInfo.setLastUpdatedItem("collecting_cpu");
+            hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集CPU信息...");
+            service.updateHostInfoCache(hostInfo);
+
             try {
-                String cpuInfoCmd = "cat /proc/cpuinfo";
-                String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
+                // 直接使用系统收集器的方法进行CPU信息收集
+                if (osInfo.getDistributionId() != null &&
+                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                    // Windows系统收集CPU信息
+                    String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
+                    String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
 
-                if (StringUtils.isNotBlank(cpuInfo)) {
-                    // 首先设置CPU状态为加载中
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.COLLECTING);
-                    task.service.updateHostInfoCache(task.hostInfo);
-
-                    // 调用LinuxOsInfoCollector解析CPU信息
-                    LinuxOsInfoCollector linuxCollector = new LinuxOsInfoCollector();
-                    linuxCollector.parseCpuInfo(task.osInfo, cpuInfo);
-
-                    // 再执行top命令获取CPU使用率
-                    String topCpuInfo = MinaUtils.execCmdWithResult(task.session, "top -bn1 | grep '%Cpu'");
-                    if (StringUtils.isNotBlank(topCpuInfo)) {
-                        linuxCollector.parseCpuUsage(task.osInfo, topCpuInfo);
+                    if (StringUtils.isNotBlank(cpuInfo)) {
+                        // 解析Windows CPU信息
+                        parseWindowsCpuInfo(osInfo, cpuInfo);
                     }
-
-                    // 设置CPU状态为成功
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
-                    logger.info("Linux CPU信息收集完成：{}, 型号: {}, 核心数: {}",
-                            task.hostInfo.getIp(), task.osInfo.getCpuModel(), task.osInfo.getCpuCores());
                 } else {
-                    // 如果命令执行结果为空，设置失败状态
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                    logger.warn("Linux CPU信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+                    // Linux系统收集CPU信息
+                    String cpuInfoCmd = "cat /proc/cpuinfo";
+                    String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
+
+                    if (StringUtils.isNotBlank(cpuInfo)) {
+                        // 解析Linux CPU信息
+                        parseLinuxCpuInfo(osInfo, cpuInfo);
+                    }
                 }
+
+                // 更新状态
+                hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("CPU信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} CPU信息收集成功：{}，{}核，耗时 {}ms",
+                        hostInfo.getIp(), osInfo.getCpuModel(), osInfo.getCpuCores(),
+                        System.currentTimeMillis() - startTime);
+
             } catch (Exception e) {
-                // 发生异常，设置失败状态
-                task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                logger.error("Linux CPU信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
-            } finally {
-                // 无论成功或失败，都更新缓存
-                task.service.updateHostInfoCache(task.hostInfo);
+                logger.error("收集CPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                osInfo.setLastUpdatedItem("CPU收集失败");
+                hostInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("CPU信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 收集Windows系统CPU信息
+         * 解析Linux CPU信息
          */
-        private void collectCpuInfoWindows(HardwareInfoTask task) {
-            try {
-                String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
-                String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
+        private void parseLinuxCpuInfo(OsInfo osInfo, String cpuInfo) {
+            // 解析物理CPU数量
+            int physicalId = -1;
+            int cpuCount = 0;
 
-                if (StringUtils.isNotBlank(cpuInfo)) {
-                    // 首先设置CPU状态为加载中
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.COLLECTING);
-                    task.service.updateHostInfoCache(task.hostInfo);
+            // 解析CPU型号
+            String model = "";
 
-                    // 调用WindowsOsInfoCollector解析CPU信息
-                    WindowsOsInfoCollector windowsCollector = new WindowsOsInfoCollector();
-                    windowsCollector.parseCpuInfo(task.osInfo, cpuInfo);
+            // 解析核心数
+            int cores = 0;
 
-                    // 设置CPU状态为成功
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
-                    logger.info("Windows CPU信息收集完成：{}, 型号: {}, 核心数: {}",
-                            task.hostInfo.getIp(), task.osInfo.getCpuModel(), task.osInfo.getCpuCores());
-                } else {
-                    // 如果命令执行结果为空，设置失败状态
-                    task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                    logger.warn("Windows CPU信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+            String[] lines = cpuInfo.split("\n");
+            for (String line : lines) {
+                if (line.contains("physical id")) {
+                    int id = Integer.parseInt(line.split(":")[1].trim());
+                    if (id > physicalId) {
+                        physicalId = id;
+                        cpuCount = physicalId + 1;
+                    }
+                } else if (line.contains("model name") && model.isEmpty()) {
+                    model = line.split(":")[1].trim();
+                } else if (line.contains("cpu cores") && cores == 0) {
+                    cores = Integer.parseInt(line.split(":")[1].trim());
                 }
-            } catch (Exception e) {
-                // 发生异常，设置失败状态
-                task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                logger.error("Windows CPU信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
-            } finally {
-                // 无论成功或失败，都更新缓存
-                task.service.updateHostInfoCache(task.hostInfo);
             }
+
+            if (cpuCount == 0)
+                cpuCount = 1; // 至少有一个CPU
+            if (cores == 0) {
+                // 尝试计算逻辑处理器数量
+                int processors = 0;
+                for (String line : lines) {
+                    if (line.contains("processor")) {
+                        processors++;
+                    }
+                }
+                cores = processors > 0 ? processors / cpuCount : 1;
+            }
+
+            // 设置CPU信息
+            osInfo.setCpuModel(model);
+            osInfo.setCpuCores(cores);
+            osInfo.setCpuCount(cpuCount);
+            osInfo.setCpuCoresPerProcessor(cores);
+            osInfo.setCpuLogicalCores(cores * cpuCount);
+        }
+
+        /**
+         * 解析Windows CPU信息
+         */
+        private void parseWindowsCpuInfo(OsInfo osInfo, String cpuInfo) {
+            String model = "";
+            int cores = 0;
+            int logicalProcessors = 0;
+
+            String[] lines = cpuInfo.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("Name=")) {
+                    model = line.substring(5).trim();
+                } else if (line.startsWith("NumberOfCores=")) {
+                    cores = Integer.parseInt(line.substring(14).trim());
+                } else if (line.startsWith("NumberOfLogicalProcessors=")) {
+                    logicalProcessors = Integer.parseInt(line.substring(26).trim());
+                }
+            }
+
+            // 设置CPU信息
+            osInfo.setCpuModel(model);
+            osInfo.setCpuCores(cores);
+            osInfo.setCpuLogicalCores(logicalProcessors);
+            osInfo.setCpuCount(cores > 0 ? logicalProcessors / cores : 1);
+            osInfo.setCpuCoresPerProcessor(cores);
         }
 
         /**
          * 收集内存信息
          */
-        private void collectMemoryInfo(HardwareInfoTask task) {
-            if (task.osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                collectMemoryInfoWindows(task);
-            } else {
-                collectMemoryInfoLinux(task);
+        private void collectMemoryInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集内存信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
+
+            // 设置状态为正在收集
+            osInfo.setLastUpdatedItem("collecting_memory");
+            hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集内存信息...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 直接使用命令收集内存信息
+                if (osInfo.getDistributionId() != null &&
+                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                    // Windows系统收集内存信息
+                    String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
+                    String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
+
+                    if (StringUtils.isNotBlank(memInfo)) {
+                        // 解析Windows内存信息
+                        parseWindowsMemoryInfo(osInfo, memInfo);
+                    }
+                } else {
+                    // Linux系统收集内存信息
+                    String memInfoCmd = "cat /proc/meminfo";
+                    String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
+
+                    if (StringUtils.isNotBlank(memInfo)) {
+                        // 解析Linux内存信息
+                        parseLinuxMemoryInfo(osInfo, memInfo);
+                    }
+                }
+
+                // 更新状态
+                hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("内存信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} 内存信息收集成功：总内存 {}GB，可用内存 {}GB，耗时 {}ms",
+                        hostInfo.getIp(), osInfo.getTotalMemory(), osInfo.getAvailableMemory(),
+                        System.currentTimeMillis() - startTime);
+
+            } catch (Exception e) {
+                logger.error("收集内存信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                osInfo.setLastUpdatedItem("内存收集失败");
+                hostInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("内存信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 收集Linux系统内存信息
+         * 解析Linux内存信息
          */
-        private void collectMemoryInfoLinux(HardwareInfoTask task) {
-            try {
-                String memInfoCmd = "cat /proc/meminfo";
-                String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
+        private void parseLinuxMemoryInfo(OsInfo osInfo, String memInfo) {
+            long totalMem = 0;
+            long availableMem = 0;
 
-                if (StringUtils.isNotBlank(memInfo)) {
-                    // 首先设置内存状态为加载中
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.COLLECTING);
-                    task.service.updateHostInfoCache(task.hostInfo);
-
-                    // 调用LinuxOsInfoCollector解析内存信息
-                    LinuxOsInfoCollector linuxCollector = new LinuxOsInfoCollector();
-                    linuxCollector.parseMemoryInfo(task.osInfo, memInfo);
-
-                    // 设置内存状态为成功
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
-                    logger.info("Linux 内存信息收集完成：{}, 总内存: {}MB, 可用内存: {}MB",
-                            task.hostInfo.getIp(), task.osInfo.getTotalMemory(), task.osInfo.getAvailableMemory());
-                } else {
-                    // 如果命令执行结果为空，设置失败状态
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                    logger.warn("Linux 内存信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+            String[] lines = memInfo.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("MemTotal:")) {
+                    // MemTotal以KB为单位
+                    totalMem = Long.parseLong(line.replaceAll("[^0-9]", "")) * 1024;
+                } else if (line.startsWith("MemAvailable:") || line.startsWith("MemFree:")) {
+                    // 首选MemAvailable，其次使用MemFree，也是KB为单位
+                    availableMem = Long.parseLong(line.replaceAll("[^0-9]", "")) * 1024;
                 }
-            } catch (Exception e) {
-                // 发生异常，设置失败状态
-                task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                logger.error("Linux 内存信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
-            } finally {
-                // 无论成功或失败，都更新缓存
-                task.service.updateHostInfoCache(task.hostInfo);
             }
+
+            // 设置内存信息
+            osInfo.setTotalMem(totalMem);
+            osInfo.setAvailableMem(availableMem);
         }
 
         /**
-         * 收集Windows系统内存信息
+         * 解析Windows内存信息
          */
-        private void collectMemoryInfoWindows(HardwareInfoTask task) {
-            try {
-                String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
-                String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
+        private void parseWindowsMemoryInfo(OsInfo osInfo, String memInfo) {
+            long totalMem = 0;
+            long availableMem = 0;
 
-                if (StringUtils.isNotBlank(memInfo)) {
-                    // 首先设置内存状态为加载中
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.COLLECTING);
-                    task.service.updateHostInfoCache(task.hostInfo);
-
-                    // 调用WindowsOsInfoCollector解析内存信息
-                    WindowsOsInfoCollector windowsCollector = new WindowsOsInfoCollector();
-                    windowsCollector.parseMemoryInfo(task.osInfo, memInfo);
-
-                    // 设置内存状态为成功
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
-                    logger.info("Windows 内存信息收集完成：{}, 总内存: {}MB, 可用内存: {}MB",
-                            task.hostInfo.getIp(), task.osInfo.getTotalMemory(), task.osInfo.getAvailableMemory());
-                } else {
-                    // 如果命令执行结果为空，设置失败状态
-                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                    logger.warn("Windows 内存信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+            String[] lines = memInfo.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("TotalVisibleMemorySize=")) {
+                    // Windows中为KB单位
+                    totalMem = Long.parseLong(line.substring(23).trim()) * 1024;
+                } else if (line.startsWith("FreePhysicalMemory=")) {
+                    availableMem = Long.parseLong(line.substring(19).trim()) * 1024;
                 }
-            } catch (Exception e) {
-                // 发生异常，设置失败状态
-                task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                logger.error("Windows 内存信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
-            } finally {
-                // 无论成功或失败，都更新缓存
-                task.service.updateHostInfoCache(task.hostInfo);
             }
+
+            // 设置内存信息
+            osInfo.setTotalMem(totalMem);
+            osInfo.setAvailableMem(availableMem);
         }
 
         /**
          * 收集磁盘信息
          */
-        private void collectDiskInfoWindows(HardwareInfoTask task) {
-            String diskInfoCmd = "wmic logicaldisk get DeviceID, Size, FreeSpace /Value";
-            String diskInfo = MinaUtils.execCmdWithResult(task.session, diskInfoCmd);
+        private void collectDiskInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集磁盘信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
 
-            // TODO：解析磁盘信息并更新osInfo对象
-            // 这里可以调用WindowsOsInfoCollector中的解析方法
+            // 设置状态为正在收集
+            osInfo.setLastUpdatedItem("collecting_disk");
+            hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集磁盘信息...");
+            service.updateHostInfoCache(hostInfo);
 
-            task.service.updateHostInfoCache(task.hostInfo);
+            try {
+                // 直接使用命令收集磁盘信息
+                if (osInfo.getDistributionId() != null &&
+                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                    // Windows系统收集磁盘信息
+                    String diskInfoCmd = "wmic logicaldisk where DeviceID='C:' get Size,FreeSpace /Value";
+                    String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
+
+                    if (StringUtils.isNotBlank(diskInfo)) {
+                        // 解析Windows磁盘信息
+                        parseWindowsDiskInfo(osInfo, diskInfo);
+                    }
+                } else {
+                    // Linux系统收集磁盘信息
+                    String diskInfoCmd = "df -P -k /";
+                    String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
+
+                    if (StringUtils.isNotBlank(diskInfo)) {
+                        // 解析Linux磁盘信息
+                        parseLinuxDiskInfo(osInfo, diskInfo);
+                    }
+                }
+
+                // 更新状态
+                hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("磁盘信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} 磁盘信息收集成功：总磁盘 {}GB，可用磁盘 {}GB，耗时 {}ms",
+                        hostInfo.getIp(), osInfo.getTotalDisk(), osInfo.getAvailableDisk(),
+                        System.currentTimeMillis() - startTime);
+
+            } catch (Exception e) {
+                logger.error("收集磁盘信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                osInfo.setLastUpdatedItem("磁盘收集失败");
+                hostInfo.setDiskStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
         }
 
         /**
-         * 收集Linux磁盘信息
+         * 解析Linux磁盘信息
          */
-        private void collectDiskInfoLinux(HardwareInfoTask task) {
-            String diskInfoCmd = "df -P";
-            String diskInfo = MinaUtils.execCmdWithResult(task.session, diskInfoCmd);
+        private void parseLinuxDiskInfo(OsInfo osInfo, String diskInfo) {
+            String[] lines = diskInfo.split("\n");
+            if (lines.length >= 2) {
+                String[] parts = lines[1].trim().split("\\s+");
+                if (parts.length >= 4) {
+                    // df -k输出的单位是KB，需要乘以1024转换为字节
+                    long totalBlocks = Long.parseLong(parts[1].trim()) * 1024;
+                    long availBlocks = Long.parseLong(parts[3].trim()) * 1024;
 
-            // TODO：解析磁盘信息并更新osInfo对象
-            // 这里可以调用LinuxOsInfoCollector中的解析方法
-
-            task.service.updateHostInfoCache(task.hostInfo);
+                    // 设置磁盘信息
+                    osInfo.setTotalDisk(totalBlocks);
+                    osInfo.setAvailableDisk(availBlocks);
+                }
+            }
         }
 
         /**
-         * 收集Linux交换分区信息
+         * 解析Windows磁盘信息
          */
-        private void collectSwapInfoLinux(HardwareInfoTask task) {
-            String swapInfoCmd = "grep Swap /proc/meminfo";
-            String swapInfo = MinaUtils.execCmdWithResult(task.session, swapInfoCmd);
+        private void parseWindowsDiskInfo(OsInfo osInfo, String diskInfo) {
+            long totalSize = 0;
+            long freeSpace = 0;
 
-            // TODO：解析交换分区信息并更新osInfo对象
-            // 这里可以调用LinuxOsInfoCollector中的解析方法
+            String[] lines = diskInfo.split("[\r\n]+");
+            for (String line : lines) {
+                if (line.startsWith("Size=")) {
+                    totalSize = Long.parseLong(line.substring(5).trim());
+                } else if (line.startsWith("FreeSpace=")) {
+                    freeSpace = Long.parseLong(line.substring(10).trim());
+                }
+            }
 
-            task.service.updateHostInfoCache(task.hostInfo);
+            // 设置磁盘信息
+            osInfo.setTotalDisk(totalSize);
+            osInfo.setAvailableDisk(freeSpace);
+        }
+
+        /**
+         * 收集交换空间信息
+         */
+        private void collectSwapInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集交换空间信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
+
+            // 设置状态为正在收集
+            osInfo.setLastUpdatedItem("collecting_swap");
+            hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集交换空间信息...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 检查是否Linux系统，Windows不收集交换空间
+                if (osInfo.getDistributionId() != null &&
+                        !osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                    // 收集交换空间信息
+                    String swapInfoCmd = "grep Swap /proc/meminfo";
+                    String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
+
+                    if (StringUtils.isNotBlank(swapInfo)) {
+                        // 解析Linux交换空间信息
+                        parseLinuxSwapInfo(osInfo, swapInfo);
+                    }
+                } else {
+                    logger.info("Windows系统跳过交换空间收集: {}", hostInfo.getIp());
+                }
+
+                // 更新状态
+                hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("交换空间信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} 交换空间信息收集成功：总交换空间 {}GB，可用交换空间 {}GB，耗时 {}ms",
+                        hostInfo.getIp(), osInfo.getTotalSwap(), osInfo.getAvailableSwap(),
+                        System.currentTimeMillis() - startTime);
+
+            } catch (Exception e) {
+                logger.error("收集交换空间信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                osInfo.setLastUpdatedItem("交换空间收集失败");
+                hostInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 解析Linux交换空间信息
+         */
+        private void parseLinuxSwapInfo(OsInfo osInfo, String swapInfo) {
+            long swapTotal = 0;
+            long swapFree = 0;
+
+            String[] lines = swapInfo.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("SwapTotal:")) {
+                    // SwapTotal以KB为单位
+                    swapTotal = Long.parseLong(line.replaceAll("[^0-9]", "")) * 1024;
+                } else if (line.startsWith("SwapFree:")) {
+                    // SwapFree以KB为单位
+                    swapFree = Long.parseLong(line.replaceAll("[^0-9]", "")) * 1024;
+                }
+            }
+
+            // 设置交换空间信息
+            osInfo.setTotalSwap(swapTotal);
+            osInfo.setAvailableSwap(swapFree);
         }
 
         /**
          * 收集GPU信息
          */
-        private void collectGpuInfo(HardwareInfoTask task) {
-            if (task.osInfo.getDistributionId().toLowerCase().contains("windows")) {
-                collectGpuInfoWindows(task);
-            } else {
-                collectGpuInfoLinux(task);
+        private void collectGpuInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            logger.info("开始收集GPU信息: {}", hostInfo.getIp());
+            long startTime = System.currentTimeMillis();
+
+            // 设置状态为正在收集
+            osInfo.setLastUpdatedItem("collecting_gpu");
+            hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集GPU信息...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 收集GPU信息
+                if (osInfo.getDistributionId() != null &&
+                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                    // Windows系统收集GPU信息
+                    String gpuInfoCmd = "wmic path win32_VideoController get Name, AdapterRAM /Value";
+                    String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
+
+                    if (StringUtils.isNotBlank(gpuInfo)) {
+                        // 解析Windows GPU信息
+                        parseWindowsGpuInfo(osInfo, gpuInfo);
+                    }
+                } else {
+                    // Linux系统收集GPU信息
+                    String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d'";
+                    String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
+
+                    if (StringUtils.isNotBlank(gpuInfo)) {
+                        // 解析Linux GPU信息
+                        parseLinuxGpuInfo(osInfo, gpuInfo);
+                    }
+                }
+
+                // 更新状态
+                hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("GPU信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 {} GPU信息收集成功，耗时 {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
+
+            } catch (Exception e) {
+                logger.error("收集GPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+                osInfo.setLastUpdatedItem("GPU收集失败");
+                hostInfo.setGpuStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 收集Windows GPU信息
+         * 解析Linux GPU信息
          */
-        private void collectGpuInfoWindows(HardwareInfoTask task) {
-            String gpuInfoCmd = "wmic path win32_VideoController get Name, AdapterRAM /Value";
-            String gpuInfo = MinaUtils.execCmdWithResult(task.session, gpuInfoCmd);
-
-            // TODO：解析GPU信息并更新osInfo对象
-            // 这里可以调用WindowsOsInfoCollector中的解析方法
-
-            task.service.updateHostInfoCache(task.hostInfo);
+        private void parseLinuxGpuInfo(OsInfo osInfo, String gpuInfo) {
+            // 简单设置GPU信息
+            osInfo.setGpuInfo(gpuInfo.trim());
         }
 
         /**
-         * 收集Linux GPU信息
+         * 解析Windows GPU信息
          */
-        private void collectGpuInfoLinux(HardwareInfoTask task) {
-            String gpuInfoCmd = "lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3";
-            String gpuInfo = MinaUtils.execCmdWithResult(task.session, gpuInfoCmd);
+        private void parseWindowsGpuInfo(OsInfo osInfo, String gpuInfo) {
+            String gpuName = "";
+            long gpuMemory = 0;
 
-            // TODO：解析GPU信息并更新osInfo对象
-            // 这里可以调用LinuxOsInfoCollector中的解析方法
+            String[] lines = gpuInfo.split("\n");
+            for (String line : lines) {
+                if (line.startsWith("Name=")) {
+                    gpuName = line.substring(5).trim();
+                } else if (line.startsWith("AdapterRAM=")) {
+                    try {
+                        gpuMemory = Long.parseLong(line.substring(11).trim());
+                    } catch (NumberFormatException e) {
+                        // 忽略解析错误
+                    }
+                }
+            }
 
-            task.service.updateHostInfoCache(task.hostInfo);
+            // 设置GPU信息
+            osInfo.setGpuInfo(gpuName);
+            // 转换为GB
+            osInfo.setGpuMemory(gpuMemory / (1024.0 * 1024.0 * 1024.0));
         }
 
         /**
-         * 添加主机到CPU信息收集队列
-         * 此方法保留用于兼容现有代码，实际上新的收集流程不会直接调用此方法
+         * 执行命令并返回结果
          */
-        public synchronized void addHostToCpuInfoQueue(HostInfo hostInfo, OsInfo osInfo, OsInfoServiceImpl service) {
-            // 由于我们现在使用排序列表进行收集，这个方法只是为了兼容性而保留
-            // 实际上，所有的主机收集任务都应该通过addHostToQueue方法添加
-            logger.debug("使用旧方法添加主机到CPU信息收集队列: {}", hostInfo.getIp());
-
-            // 如果主机不在排序列表中，将其添加到主机列表中
-            if (!sortedHostList.contains(hostInfo)) {
-                addHostToQueue(hostInfo, null);
+        private String executeCommand(ClientSession session, String command) {
+            try {
+                // 使用MinaUtils直接执行命令
+                String result = MinaUtils.execCmdWithResult(session, command);
+                if (result != null) {
+                    return result;
+                } else {
+                    throw new Exception("命令执行失败: " + command);
+                }
+            } catch (Exception e) {
+                logger.error("执行命令失败: {}, 错误: {}", command, e.getMessage(), e);
+                throw new RuntimeException("执行命令失败: " + command, e);
             }
         }
-    }
 
-    /**
-     * 硬件信息收集任务类
-     * 封装硬件信息收集所需的数据
-     */
-    private static class HardwareInfoTask {
-        final HostInfo hostInfo;
-        final OsInfo osInfo;
-        final ClientSession session;
-        final IOsInfoCollector collector;
-        final OsInfoServiceImpl service;
+        /**
+         * 重置所有计数器
+         */
+        public synchronized void resetCounters() {
+            // 清空结果列表但保留当前处理中的任务
+            sortedHostList.clear();
 
-        public HardwareInfoTask(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector, OsInfoServiceImpl service) {
-            this.hostInfo = hostInfo;
-            this.osInfo = osInfo;
-            this.session = session;
-            this.collector = collector;
-            this.service = service;
+            // 重置完成计数
+            completedHostCount.set(0);
+
+            // 不重置processingHostCount，因为可能有正在处理的主机
+
+            // 如果当前没有处理中的主机，那么也可以重置总数
+            if (processingHostCount.get() == 0) {
+                totalHostCount.set(0);
+            }
+
+            logger.info("主机信息收集计数器已重置");
         }
     }
 
@@ -1513,6 +1062,10 @@ public class OsInfoServiceImpl implements OsInfoService {
                 // 设置更详细的错误信息
                 osInfo.setValid(false);
                 osInfo.setErrorMessage("无法创建SSH连接，请检查SSH配置");
+                // 立即更新缓存
+                updateHostInfoCache(hostInfo);
+                logger.error("主机 {} 无法创建SSH会话，已设置状态：osInfoStatus={}, sshConnectStatus={}",
+                        hostInfo.getIp(), hostInfo.getOsInfoStatus(), hostInfo.getSshConnectStatus());
                 return osInfo;
             }
 
@@ -1524,9 +1077,15 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
             if (collector != null) {
                 // 使用收集器并传入缓存更新函数
-                return collector.collectOsInfo(hostInfo, session, osInfo, this::updateHostInfoCache);
+                OsInfo result = collector.collectOsInfo(hostInfo, session, osInfo, this::updateHostInfoCache);
+                logger.info("主机 {} 操作系统信息收集成功：{}，已设置状态：osInfoStatus={}",
+                        hostInfo.getIp(), result.getFullName(), hostInfo.getOsInfoStatus());
+                return result;
             } else {
                 logger.warn("未找到适用于{}操作系统的信息收集器", osType);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("未找到适用的操作系统信息收集器");
+                updateHostInfoCache(hostInfo);
                 return osInfo;
             }
         } catch (Exception e) {
@@ -1537,73 +1096,91 @@ public class OsInfoServiceImpl implements OsInfoService {
             // 设置更详细的错误信息
             osInfo.setValid(false);
             osInfo.setErrorMessage("SSH连接异常: " + e.getMessage());
+            updateHostInfoCache(hostInfo);
             return osInfo;
         }
     }
 
     /**
-     * 检测操作系统类型（Windows或Linux）
+     * 检测操作系统类型
      */
     public String detectOperatingSystemType(ClientSession session) {
+        // 首先尝试执行uname命令，适用于Linux/Unix系统
         try {
-            // 尝试执行Windows命令
-            String windowsCheck = MinaUtils.execCmdWithResult(session, "powershell -command \"$env:OS\"");
-            if (windowsCheck != null && windowsCheck.toLowerCase().contains("windows")) {
+            String unameResult = MinaUtils.execCmdWithResult(session, "uname -a");
+            if (StringUtils.isNotBlank(unameResult)) {
+                logger.info("检测到Linux系统: {}", unameResult.trim());
+                return "linux";
+            }
+        } catch (Exception e) {
+            logger.debug("执行uname命令失败，尝试其他方法: {}", e.getMessage());
+        }
+
+        // 尝试检查/etc/os-release文件，适用于大多数现代Linux发行版
+        try {
+            String osReleaseResult = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
+            if (StringUtils.isNotBlank(osReleaseResult)) {
+                logger.info("检测到Linux系统，发现/etc/os-release文件");
+                return "linux";
+            }
+        } catch (Exception e) {
+            logger.debug("检查/etc/os-release失败: {}", e.getMessage());
+        }
+
+        // 最后尝试Windows特有命令，避免在Linux上执行可能导致的错误
+        try {
+            String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+            if (StringUtils.isNotBlank(winVerResult) &&
+                    (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
+                logger.info("检测到Windows系统: {}", winVerResult.trim());
                 return "windows";
             }
-
-            // 尝试执行Linux命令
-            String linuxCheck = MinaUtils.execCmdWithResult(session, "uname -a");
-            if (linuxCheck != null && linuxCheck.toLowerCase().contains("linux")) {
-                return "linux";
-            }
-
-            // 尝试检查/etc/os-release文件
-            String osReleaseCheck = MinaUtils.execCmdWithResult(session, "test -f /etc/os-release && echo 'exists'");
-            if (osReleaseCheck != null && osReleaseCheck.trim().equals("exists")) {
-                return "linux";
-            }
-
-            // 尝试执行lsb_release命令
-            String lsbReleaseCheck = MinaUtils.execCmdWithResult(session, "which lsb_release && echo 'exists'");
-            if (lsbReleaseCheck != null && lsbReleaseCheck.trim().equals("exists")) {
-                return "linux";
-            }
-
-            // 默认假设为Linux
-            logger.warn("无法确定操作系统类型，默认为Linux");
-            return "linux";
         } catch (Exception e) {
-            logger.error("检测操作系统类型时出错: {}", e.getMessage(), e);
-            return "linux";
+            logger.debug("执行Windows版本命令失败: {}", e.getMessage());
         }
+
+        // 默认返回linux，因为大多数情况是Linux系统
+        logger.warn("无法明确检测操作系统类型，默认假设为Linux");
+        return "linux";
     }
 
     /**
-     * 获取或创建SSH会话
+     * 获取或创建SSH会话，优先从缓存获取
      */
     public ClientSession getOrCreateSession(HostInfo hostInfo) {
-        ClientSession session = null;
+        String ip = hostInfo.getIp();
+        Integer sshPort = hostInfo.getSshPort();
 
+        if (StringUtils.isBlank(ip) || sshPort == null ||
+                StringUtils.isBlank(hostInfo.getSshUser()) || StringUtils.isBlank(hostInfo.getSshPassword())) {
+            logger.warn("创建SSH会话失败: 缺少必要的连接参数");
+            return null;
+        }
+
+        // 生成缓存键
+        String cacheKey = ip + ":" + sshPort;
+
+        // 尝试从缓存获取会话
+        ClientSession session = sessionCache.get(cacheKey);
+
+        // 验证会话是否有效
+        if (session != null && session.isOpen()) {
+            logger.info("从缓存复用主机{}的SSH会话", ip);
+            return session;
+        }
+
+        // 如果缓存中没有有效会话，则创建新会话
         try {
-            String ip = hostInfo.getIp();
-            Integer sshPort = hostInfo.getSshPort();
-            String sshUser = hostInfo.getSshUser();
-            String sshPassword = hostInfo.getSshPassword();
-
-            if (StringUtils.isBlank(ip) || sshPort == null || StringUtils.isBlank(sshUser)
-                    || StringUtils.isBlank(sshPassword)) {
-                logger.warn("创建SSH会话失败: 缺少必要的连接参数");
-                return null;
-            }
-
-            logger.info("创建到主机 {} 的SSH会话，用户: {}, 端口: {}", ip, sshUser, sshPort);
+            logger.info("创建到主机 {} 的新SSH会话，用户: {}, 端口: {}", ip, hostInfo.getSshUser(), sshPort);
 
             // 使用密码方式连接
             try {
                 session = MinaUtils.openConnectionWithPassword(hostInfo);
                 if (session != null) {
                     logger.info("成功使用密码连接到主机: {}", ip);
+                    // 将新会话存入缓存
+                    sessionCache.put(cacheKey, session);
+                    logger.info("将主机{}的SSH会话加入缓存", ip);
                     return session;
                 }
             } catch (Exception e) {
@@ -1616,6 +1193,9 @@ public class OsInfoServiceImpl implements OsInfoService {
                 session = MinaUtils.openConnection(hostInfo);
                 if (session != null) {
                     logger.info("成功使用免密方式连接到主机: {}", ip);
+                    // 将新会话存入缓存
+                    sessionCache.put(cacheKey, session);
+                    logger.info("将主机{}的SSH会话加入缓存", ip);
                     return session;
                 }
             } catch (Exception e) {

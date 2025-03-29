@@ -97,19 +97,19 @@ public class HostInfo implements Serializable {
      * 操作系统信息收集状态
      * 可能的值: LOADING, SUCCESS, ERROR
      */
-    private String osInfoStatus;
+    private OsInfoStatusEnum osInfoStatus;
 
     /**
      * SSH连接状态
      * 可能的值: SUCCESS, ERROR, LOADING
      */
-    private String sshConnectStatus;
+    private OsInfoStatusEnum sshConnectStatus;
 
     /**
      * 硬件信息收集状态
      * 可能的值: LOADING, SUCCESS, ERROR
      */
-    private String hardwareStatus;
+    private OsInfoStatusEnum hardwareStatus;
 
     /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
@@ -152,15 +152,15 @@ public class HostInfo implements Serializable {
     private transient ClientSession externalSession = null;
 
     // 各信息项的独立状态字段
-    private String hostnameStatus; // 主机名收集状态
-    private String osStatus; // 操作系统信息收集状态
-    private String dnsStatus; // DNS服务器信息收集状态
-    private String hostsFileStatus; // hosts文件收集状态
-    private String cpuStatus; // CPU信息收集状态
-    private String memoryStatus; // 内存信息收集状态
-    private String diskStatus; // 磁盘信息收集状态
-    private String swapStatus; // 交换空间信息收集状态
-    private String gpuStatus; // GPU信息收集状态
+    private OsInfoStatusEnum hostnameStatus; // 主机名收集状态
+    private OsInfoStatusEnum osStatus; // 操作系统信息收集状态
+    private OsInfoStatusEnum dnsStatus; // DNS服务器信息收集状态
+    private OsInfoStatusEnum hostsFileStatus; // hosts文件收集状态
+    private OsInfoStatusEnum cpuStatus; // CPU信息收集状态
+    private OsInfoStatusEnum memoryStatus; // 内存信息收集状态
+    private OsInfoStatusEnum diskStatus; // 磁盘信息收集状态
+    private OsInfoStatusEnum swapStatus; // 交换空间信息收集状态
+    private OsInfoStatusEnum gpuStatus; // GPU信息收集状态
 
     public HostInfo(String ip, int sshPort, String sshUser) {
         this.ip = ip;
@@ -409,91 +409,91 @@ public class HostInfo implements Serializable {
     }
 
     // 添加对应的getter和setter方法
-    public String getHostnameStatus() {
+    public OsInfoStatusEnum getHostnameStatus() {
         return hostnameStatus;
     }
 
     public void setHostnameStatus(OsInfoStatusEnum status) {
-        this.hostnameStatus = status.getCode();
+        this.hostnameStatus = status;
     }
 
-    public String getOsStatus() {
+    public OsInfoStatusEnum getOsStatus() {
         return osStatus;
     }
 
     public void setOsStatus(OsInfoStatusEnum status) {
-        this.osStatus = status.getCode();
+        this.osStatus = status;
     }
 
-    public String getDnsStatus() {
+    public OsInfoStatusEnum getDnsStatus() {
         return dnsStatus;
     }
 
     public void setDnsStatus(OsInfoStatusEnum status) {
-        this.dnsStatus = status.getCode();
+        this.dnsStatus = status;
     }
 
-    public String getHostsFileStatus() {
+    public OsInfoStatusEnum getHostsFileStatus() {
         return hostsFileStatus;
     }
 
     public void setHostsFileStatus(OsInfoStatusEnum status) {
-        this.hostsFileStatus = status.getCode();
+        this.hostsFileStatus = status;
     }
 
-    public String getCpuStatus() {
+    public OsInfoStatusEnum getCpuStatus() {
         return cpuStatus;
     }
 
     public void setCpuStatus(OsInfoStatusEnum status) {
-        this.cpuStatus = status.getCode();
+        this.cpuStatus = status;
     }
 
-    public String getMemoryStatus() {
+    public OsInfoStatusEnum getMemoryStatus() {
         return memoryStatus;
     }
 
     public void setMemoryStatus(OsInfoStatusEnum status) {
-        this.memoryStatus = status.getCode();
+        this.memoryStatus = status;
     }
 
-    public String getDiskStatus() {
+    public OsInfoStatusEnum getDiskStatus() {
         return diskStatus;
     }
 
     public void setDiskStatus(OsInfoStatusEnum status) {
-        this.diskStatus = status.getCode();
+        this.diskStatus = status;
     }
 
-    public String getSwapStatus() {
+    public OsInfoStatusEnum getSwapStatus() {
         return swapStatus;
     }
 
     public void setSwapStatus(OsInfoStatusEnum status) {
-        this.swapStatus = status.getCode();
+        this.swapStatus = status;
     }
 
-    public String getGpuStatus() {
+    public OsInfoStatusEnum getGpuStatus() {
         return gpuStatus;
     }
 
     public void setGpuStatus(OsInfoStatusEnum status) {
-        this.gpuStatus = status.getCode();
+        this.gpuStatus = status;
     }
 
-    public String getOsInfoStatus() {
+    public OsInfoStatusEnum getOsInfoStatus() {
         return osInfoStatus;
     }
 
     public void setOsInfoStatus(OsInfoStatusEnum status) {
-        this.osInfoStatus = status.getCode();
+        this.osInfoStatus = status;
     }
 
-    public String getSshConnectStatus() {
+    public OsInfoStatusEnum getSshConnectStatus() {
         return sshConnectStatus;
     }
 
     public void setSshConnectStatus(OsInfoStatusEnum status) {
-        this.sshConnectStatus = status.getCode();
+        this.sshConnectStatus = status;
     }
 }

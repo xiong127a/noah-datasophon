@@ -230,22 +230,37 @@ public class InstallServiceImpl implements InstallService {
             return (HashMap<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         }
 
+        logger.info("处理主机列表: 集群ID={}, 主机数量={}, 用户={}, 端口={}",
+                clusterId, hosts.split(Constants.COMMA).length, sshUser, sshPort);
+
         Map<String, HostInfo> hostMap = processHostList(clusterId, hosts, hostsMd5, sshPort, sshUser, sshPassword);
 
         // 将结果存入缓存
         CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-        logger.info("主机列表已存入缓存");
+        logger.info("主机列表已存入缓存，共{}台主机", hostMap.size());
 
         // 如果需要，触发所有主机的操作系统信息收集
         if (startOsInfoCollection) {
             logger.info("开始统一触发所有主机的操作系统信息收集");
-            for (HostInfo hostInfo : hostMap.values()) {
+            // 排序主机列表，保证按IP地址顺序处理
+            List<HostInfo> sortedHosts = new ArrayList<>(hostMap.values());
+            sortedHosts.sort(Comparator.comparing(HostInfo::getIp));
+
+            // 逐个触发主机信息收集，确保每次只处理一台主机
+            for (HostInfo hostInfo : sortedHosts) {
                 // 设置初始状态
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+                logger.info("触发主机[{}]的信息收集", hostInfo.getIp());
 
-                // 异步获取主机信息
-                osInfoService.getHostOsInfoAsync(hostInfo);
+                try {
+                    // 异步获取主机信息
+                    osInfoService.getHostOsInfoAsync(hostInfo);
+                } catch (Exception e) {
+                    logger.error("触发主机[{}]信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
+                }
             }
+
+            logger.info("所有主机信息收集任务已触发，将按照队列顺序逐一执行");
         }
 
         return hostMap;
