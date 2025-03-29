@@ -274,11 +274,15 @@ export default {
               ]);
             }
             
-            // 检查hostnameStatus状态，显示加载动画
-            if (row.hostnameStatus === 'loading') {
-              // 创建加载中的主机名信息浮窗
+            // 修改判断顺序，优先检查状态
+            // 1. 首先检查hostnameStatus状态（最高优先级）
+            if (this.checkStatus(row.hostnameStatus, 'loading')) {
+              // 创建加载中的主机名信息浮窗 - 苹果风格设计
               const loadingTooltipContent = h('div', { class: 'hostname-detail-loading' }, [
+                // 添加顶部加载动画区域
                 h('div', { class: 'hostname-detail-loading-header' }),
+                
+                // 中间内容区域加载动画
                 h('div', { class: 'hostname-detail-loading-content' }, [
                   h('div', { class: 'hostname-detail-loading-line short' }),
                   h('div', { class: 'hostname-detail-loading-line medium' }),
@@ -286,19 +290,14 @@ export default {
                   h('div', { class: 'hostname-detail-loading-line short' }),
                   h('div', { class: 'hostname-detail-loading-line medium' })
                 ]),
-                h('div', { 
-                  class: 'hostname-detail-loading-text',
-                  style: {
-                    fontSize: '14px',
-                    textAlign: 'center',
-                    color: '#007AFF',
-                    marginTop: '12px',
-                    fontWeight: '500'
-                  }
-                }, ['正在收集主机名信息...'])
+                
+                // 底部加载文字
+                h('div', { class: 'hostname-detail-loading-text' }, [
+                  '正在优雅地获取主机信息...'
+                ])
               ]);
               
-              // 苹果风格的骨架屏加载动画
+              // 苹果风格的加载状态显示，与操作系统一致
               return h('a-tooltip', {
                 props: {
                   placement: 'right',
@@ -310,12 +309,12 @@ export default {
                 // 加载中浮窗内容
                 h('span', { 
                   slot: 'title',
-                  class: 'hostname-detail-tooltip'
+                  class: 'hostname-detail-tooltip-container'
                 }, [loadingTooltipContent]),
                 
                 // 显示的加载内容
                 h('div', {
-                  class: 'hostname-info-loading',
+                  class: 'os-info-loading',
                   style: {
                     position: 'relative',
                     height: '24px',
@@ -331,79 +330,20 @@ export default {
                   // 添加加载中文字
                   h('span', {
                     style: {
-                      fontSize: '12px', 
+                      fontSize: '13px', 
                       color: '#8E8E93',
                       fontWeight: '500',
                       position: 'relative',
                       zIndex: 2,
-                      whiteSpace: 'nowrap'  // 防止文字换行
+                      whiteSpace: 'nowrap'
                     }
-                  }, ['正在检索主机名...'])
+                  }, ['正在优雅地获取主机名...'])
                 ])
               ]);
             }
             
-            // 处理hostnameStatus为'pending'的情况
-            if (row.hostnameStatus === 'pending') {
-              // 创建等待状态的主机名信息浮窗
-              const pendingTooltipContent = h('div', { class: 'hostname-detail-waiting' }, [
-                h('div', { class: 'hostname-detail-waiting-header' }),
-                h('div', { class: 'hostname-detail-waiting-content' }, [
-                  h('a-icon', { 
-                    props: { type: 'clock-circle' }, 
-                    style: { fontSize: '32px', color: '#FAAD14', marginBottom: '12px' } 
-                  }),
-                  h('div', { 
-                    style: {
-                      fontSize: '14px',
-                      textAlign: 'center',
-                      color: '#FAAD14',
-                      fontWeight: '500'
-                    }
-                  }, ['等待收集主机名信息'])
-                ])
-              ]);
-              
-              // 等待收集状态显示
-              return h('a-tooltip', {
-                props: {
-                  placement: 'right',
-                  arrowPointAtCenter: true,
-                  overlayClassName: 'hostname-tooltip',
-                  getPopupContainer: () => document.body
-                }
-              }, [
-                // 等待中浮窗内容
-                h('span', { 
-                  slot: 'title',
-                  class: 'hostname-detail-tooltip'
-                }, [pendingTooltipContent]),
-                
-                // 显示的等待内容
-                h('div', {
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: '24px'
-                  }
-                }, [
-                  h('a-icon', { 
-                    props: { type: 'clock-circle' }, 
-                    style: { marginRight: '6px', color: '#FAAD14' } 
-                  }),
-                  h('span', {
-                    style: {
-                      fontSize: '12px', 
-                      color: '#FAAD14',
-                      fontWeight: '500'
-                    }
-                  }, ['等待收集主机名信息'])
-                ])
-              ]);
-            }
-            
-            // 添加处理主机名信息显示错误的情况
-            if (row.hostnameStatus === 'error') {
+            // 2. 其次检查是否有错误状态
+            if (this.checkStatus(row.hostnameStatus, 'error')) {
               return h('div', {
                 style: {
                   display: 'flex',
@@ -419,7 +359,23 @@ export default {
               ]);
             }
             
-            // 当主机名为null时，显示暂无主机名
+            // 3. 检查成功状态
+            if (this.checkStatus(row.hostnameStatus, 'success')) {
+              // 主机名收集成功但hostname为null的情况
+              if (row.hostname === null) {
+                return h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#8E8E93'
+                  }
+                }, [
+                  h('span', {}, ['主机名为空'])
+                ]);
+              }
+            }
+            
+            // 4. 最后检查主机名是否为null（最低优先级）
             if (row.hostname === null) {
               return h('div', {
                 style: {
@@ -432,11 +388,32 @@ export default {
               ]);
             }
             
+            // 4. 最后是正常显示主机名
             // 正常显示主机名，添加悬浮卡片
             const tooltipContent = h('div', { class: 'hostname-detail-tooltip' }, [
               // 主机名信息部分
               h('div', { class: 'hostname-detail-section' }, [
-                h('div', { class: 'hostname-detail-title' }, ['主机基本信息']),
+                h('div', { class: 'hostname-detail-title' }, [
+                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
+                    h('svg', {
+                      attrs: {
+                        viewBox: '0 0 24 24',
+                        width: '16',
+                        height: '16',
+                        fill: 'none',
+                        stroke: '#007AFF',
+                        'stroke-width': '2',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round'
+                      },
+                      style: { marginRight: '8px' }
+                    }, [
+                      h('path', { attrs: { d: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' } }),
+                      h('polyline', { attrs: { points: '9 22 9 12 15 12 15 22' } })
+                    ]),
+                    '主机基本信息'
+                  ])
+                ]),
                 h('div', { class: 'hostname-detail-content' }, [
                   h('div', { class: 'hostname-detail-item' }, [
                     h('span', { class: 'hostname-detail-label' }, ['主机名:']),
@@ -456,13 +433,29 @@ export default {
               // DNS服务器信息部分
               h('div', { class: 'hostname-detail-section' }, [
                 h('div', { class: 'hostname-detail-title' }, [
-                  h('i', { class: 'anticon anticon-cloud', style: { marginRight: '6px', color: '#007AFF' } }),
-                  '网络配置信息'
+                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
+                    h('svg', {
+                      attrs: {
+                        viewBox: '0 0 24 24',
+                        width: '16',
+                        height: '16',
+                        fill: 'none',
+                        stroke: '#5AC8FA',
+                        'stroke-width': '2',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round'
+                      },
+                      style: { marginRight: '8px' }
+                    }, [
+                      h('path', { attrs: { d: 'M22 12h-4l-3 9L9 3l-3 9H2' } })
+                    ]),
+                    '网络配置信息'
+                  ])
                 ]),
                 h('div', { class: 'hostname-detail-content' }, [
                   h('div', { class: 'hostname-detail-item' }, [
                     h('span', { class: 'hostname-detail-label' }, ['DNS服务器:']),
-                    h('span', { class: 'hostname-detail-value' }, [
+                    h('span', { class: 'hostname-detail-value dns-servers' }, [
                       row.osInfo && row.osInfo.dnsServers ? row.osInfo.dnsServers : '未配置DNS'
                     ])
                   ])
@@ -470,28 +463,37 @@ export default {
               ]),
               
               // hosts文件信息部分
-              row.hostsFile ? h('div', { class: 'hostname-detail-section' }, [
+              h('div', { class: 'hostname-detail-section' }, [
                 h('div', { class: 'hostname-detail-title' }, [
-                  h('i', { class: 'anticon anticon-file-text', style: { marginRight: '6px', color: '#FF9500' } }),
-                  'Hosts文件内容'
+                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
+                    h('svg', {
+                      attrs: {
+                        viewBox: '0 0 24 24',
+                        width: '16',
+                        height: '16',
+                        fill: 'none',
+                        stroke: '#FF9500',
+                        'stroke-width': '2',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round'
+                      },
+                      style: { marginRight: '8px' }
+                    }, [
+                      h('path', { attrs: { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' } }),
+                      h('polyline', { attrs: { points: '14 2 14 8 20 8' } }),
+                      h('line', { attrs: { x1: '16', y1: '13', x2: '8', y2: '13' } }),
+                      h('line', { attrs: { x1: '16', y1: '17', x2: '8', y2: '17' } }),
+                      h('polyline', { attrs: { points: '10 9 9 9 8 9' } })
+                    ]),
+                    'Hosts文件内容'
+                  ])
                 ]),
                 h('div', { class: 'hostname-detail-content' }, [
-                  h('pre', { 
-                    class: 'hostname-detail-hosts-file',
-                    style: {
-                      maxHeight: '150px',
-                      overflow: 'auto',
-                      background: 'rgba(0, 0, 0, 0.03)',
-                      padding: '8px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all'
-                    }
-                  }, [row.hostsFile])
+                  row.hostsFile ? 
+                    h('pre', { class: 'hostname-detail-hosts-file' }, [row.hostsFile]) : 
+                    h('div', { class: 'hostname-detail-empty' }, ['暂无hosts文件内容'])
                 ])
-              ]) : null
+              ])
             ]);
             
             return h('a-tooltip', {
@@ -507,24 +509,35 @@ export default {
               
               // 显示的主机名（可点击）
               h('span', {
+                class: 'hostname-display',
                 style: {
                   cursor: 'pointer',
-                  color: '#007AFF',
-                  fontWeight: '500',
                   display: 'inline-flex',
                   alignItems: 'center'
                 }
               }, [
                 row.hostname,
-                h('a-icon', {
-                  props: { type: 'info-circle' },
+                h('svg', {
+                  attrs: {
+                    viewBox: '0 0 24 24',
+                    width: '14',
+                    height: '14',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '2',
+                    'stroke-linecap': 'round',
+                    'stroke-linejoin': 'round'
+                  },
                   style: { 
-                    marginLeft: '6px', 
-                    fontSize: '14px',
+                    marginLeft: '6px',
                     color: '#8E8E93',
-                    opacity: 0.7
+                    opacity: 0.8
                   }
-                })
+                }, [
+                  h('circle', { attrs: { cx: '12', cy: '12', r: '10' } }),
+                  h('line', { attrs: { x1: '12', y1: '16', x2: '12', y2: '12' } }),
+                  h('line', { attrs: { x1: '12', y1: '8', x2: '12.01', y2: '8' } })
+                ])
               ])
             ]);
           }
@@ -554,10 +567,13 @@ export default {
             const h = this.$createElement;
             
             // 检查osInfoStatus状态，显示加载动画
-            // 当osInfoStatus为'loading'或osInfo为null时都显示加载动画
-            if (row.osInfoStatus === 'loading' || row.osInfo === null || row.osInfoStatus === null || row.osStatus === 'loading') {
+            // 当osInfoStatus为loading或osInfo为null时都显示加载动画
+            if (this.checkStatus(row.osInfoStatus, 'loading') || 
+                row.osInfo === null || row.osInfoStatus === null || 
+                this.checkStatus(row.osStatus, 'loading') || 
+                this.checkStatus(row.osStatus, 'pending')) {
               // 如果SSH连接失败，则显示错误状态而不是加载状态
-              if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
+              if (this.checkStatus(row.sshConnectStatus, 'error') || row.hasSSHError === true) {
                 return h('div', {
                   style: {
                     display: 'flex',
@@ -640,67 +656,9 @@ export default {
               ]);
             }
             
-            // 处理osStatus为'pending'的情况
-            if (row.osStatus === 'pending') {
-              // 创建等待状态的操作系统信息浮窗
-              const pendingTooltipContent = h('div', { class: 'os-detail-waiting' }, [
-                h('div', { class: 'os-detail-waiting-header' }),
-                h('div', { class: 'os-detail-waiting-content' }, [
-                  h('a-icon', { 
-                    props: { type: 'clock-circle' }, 
-                    style: { fontSize: '32px', color: '#FAAD14', marginBottom: '12px' } 
-                  }),
-                  h('div', { 
-                    style: {
-                      fontSize: '14px',
-                      textAlign: 'center',
-                      color: '#FAAD14',
-                      fontWeight: '500'
-                    }
-                  }, ['等待收集操作系统信息'])
-                ])
-              ]);
-              
-              // 等待收集状态显示
-              return h('a-tooltip', {
-                props: {
-                  placement: 'right',
-                  arrowPointAtCenter: true,
-                  overlayClassName: 'os-tooltip',
-                  getPopupContainer: () => document.body
-                }
-              }, [
-                // 等待中浮窗内容
-                h('span', { 
-                  slot: 'title',
-                  class: 'os-detail-tooltip'
-                }, [pendingTooltipContent]),
-                
-                // 显示的等待内容
-                h('div', {
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    height: '24px'
-                  }
-                }, [
-                  h('a-icon', { 
-                    props: { type: 'clock-circle' }, 
-                    style: { marginRight: '6px', color: '#FAAD14' } 
-                  }),
-                  h('span', {
-                    style: {
-                      fontSize: '12px', 
-                      color: '#FAAD14',
-                      fontWeight: '500'
-                    }
-                  }, ['等待收集操作系统信息'])
-                ])
-              ]);
-            }
-            
             // 添加处理操作系统信息显示错误的情况
-            if (row.osInfoStatus === 'error' || row.osStatus === 'error') {
+            if (this.checkStatus(row.osInfoStatus, 'error') || 
+                this.checkStatus(row.osStatus, 'error')) {
               return h('div', {
                 style: {
                   display: 'flex',
@@ -805,11 +763,11 @@ export default {
                       h('div', { 
                         class: 'os-detail-info-icon cpu',
                         style: {
-                          backgroundColor: row.cpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
-                                          row.cpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                          backgroundColor: this.checkStatus(row.cpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
+                                          this.checkStatus(row.cpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
                                           'rgba(0, 122, 255, 0.1)',
-                          color: row.cpuStatus === 'success' ? '#34C759' : 
-                                row.cpuStatus === 'error' ? '#FF3B30' : 
+                          color: this.checkStatus(row.cpuStatus, 'success') ? '#34C759' : 
+                                this.checkStatus(row.cpuStatus, 'error') ? '#FF3B30' : 
                                 '#007AFF'
                         }
                       }, [
@@ -820,25 +778,20 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['处理器']),
                         // 添加状态图标
-                        row.cpuStatus === 'success' ? 
+                        this.checkStatus(row.cpuStatus, 'success') ? 
                           h('a-icon', { 
                             props: { type: 'check-circle' }, 
                             style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
                           }) :
-                          row.cpuStatus === 'error' ?
+                          this.checkStatus(row.cpuStatus, 'error') ?
                             h('a-icon', { 
                               props: { type: 'close-circle' }, 
                               style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
                             }) :
-                            row.cpuStatus === 'loading' ?
+                            this.checkStatus(row.cpuStatus, 'loading') ?
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : 
-                            row.cpuStatus === 'pending' ?
-                              h('a-icon', { 
-                                props: { type: 'clock-circle' }, 
-                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.cpuStatus === 'loading' ? 
@@ -868,11 +821,11 @@ export default {
                       h('div', { 
                         class: 'os-detail-info-icon memory',
                         style: {
-                          backgroundColor: row.memoryStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
-                                          row.memoryStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                          backgroundColor: this.checkStatus(row.memoryStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
+                                          this.checkStatus(row.memoryStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
                                           'rgba(0, 122, 255, 0.1)',
-                          color: row.memoryStatus === 'success' ? '#34C759' : 
-                                row.memoryStatus === 'error' ? '#FF3B30' : 
+                          color: this.checkStatus(row.memoryStatus, 'success') ? '#34C759' : 
+                                this.checkStatus(row.memoryStatus, 'error') ? '#FF3B30' : 
                                 '#007AFF'
                         }
                       }, [
@@ -883,46 +836,39 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['内存']),
                         // 添加状态图标
-                        row.memoryStatus === 'success' ? 
+                        this.checkStatus(row.memoryStatus, 'success') ? 
                           h('a-icon', { 
                             props: { type: 'check-circle' }, 
                             style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
                           }) :
-                          row.memoryStatus === 'error' ?
+                          this.checkStatus(row.memoryStatus, 'error') ?
                             h('a-icon', { 
                               props: { type: 'close-circle' }, 
                               style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
                             }) :
-                            row.memoryStatus === 'loading' ?
+                            this.checkStatus(row.memoryStatus, 'loading') ?
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : 
-                            row.memoryStatus === 'pending' ?
-                              h('a-icon', { 
-                                props: { type: 'clock-circle' }, 
-                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
-                      row.memoryStatus === 'loading' ? 
+                      this.checkStatus(row.memoryStatus, 'loading') ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
                           h('span', {}, ['正在收集内存信息...'])
                         ]) :
-                        row.memoryStatus === 'error' ?
+                        this.checkStatus(row.memoryStatus, 'error') ?
                           h('div', { class: 'os-detail-info-value error' }, [
                             h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
                             '获取内存信息失败'
                           ]) :
-                          row.memoryStatus === 'pending' ?
+                          this.checkStatus(row.memoryStatus, 'pending') ?
                             h('div', { class: 'os-detail-info-value waiting' }, [
                               h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
                               '等待收集内存信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.memTotal ? 
-                              `总内存: ${row.osInfo.memTotal}` : 
-                              '未知'
+                            row.osInfo && row.osInfo.totalMemory ? `${row.osInfo.totalMemory} GB` : '未知'
                       ])
                     ])
                   ]),
@@ -1497,6 +1443,28 @@ export default {
     }
   },
   methods: {
+    /**
+     * 检查状态是否匹配目标状态
+     * 支持status为collecting或loading时与loading目标状态匹配
+     * @param {string} status 当前状态
+     * @param {string} targetStatus 目标状态
+     * @returns {boolean} 是否匹配
+     */
+    checkStatus(status, targetStatus) {
+      if (!status) return false
+      
+      // 处理大小写兼容
+      const statusLower = status.toLowerCase()
+      const targetLower = targetStatus.toLowerCase()
+      
+      // 特殊处理loading状态，collecting也视为loading
+      if (targetLower === 'loading') {
+        return statusLower === 'loading' || statusLower === 'collecting'
+      }
+      
+      return statusLower === targetLower
+    },
+
     tableChange(pagination) {
       this.pagination.current = pagination.current;
       this.pagination.pageSize = pagination.pageSize
@@ -4422,9 +4390,65 @@ export default {
   width: 85%;
 }
 
+.hostname-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.hostname-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.hostname-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-line.short {
+  width: 70%;
+}
+
+.hostname-detail-loading-line.medium {
+  width: 85%;
+}
+
+.hostname-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -100% 0;
+  }
 }
 
 /* 为操作系统详情弹出框添加动画 */
@@ -5443,5 +5467,354 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-top: 16px;
+}
+
+// 更新样式部分
+.hostname-tooltip {
+  .ant-tooltip-inner {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  
+  .ant-tooltip-arrow {
+    border-right-color: #ffffff !important;
+    display: block !important;
+    
+    &::before {
+      background-color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+.hostname-detail-tooltip {
+  min-width: 400px;
+  max-width: 500px;
+  padding: 20px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  animation: tooltipContentFadeIn 0.2s ease-out;
+  will-change: transform, opacity;
+}
+
+.hostname-detail-section {
+  margin-bottom: 20px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-content {
+  padding: 0 0 0 8px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-label {
+  width: 80px;
+  color: #8E8E93;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.hostname-detail-value {
+  color: #1D1D1F;
+  flex: 1;
+  word-break: break-all;
+  
+  &.dns-servers {
+    font-family: "SF Mono", "Menlo", monospace;
+    background-color: rgba(0, 122, 255, 0.08);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #007AFF;
+  }
+}
+
+.hostname-detail-hosts-file {
+  max-height: 200px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: "SF Mono", "Menlo", monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  margin: 0;
+  border-left: 3px solid #FF9500;
+  color: #1D1D1F;
+  width: 100%;
+}
+
+.hostname-detail-empty {
+  color: #8E8E93;
+  font-style: italic;
+  font-size: 13px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.hostname-display {
+  &:hover {
+    color: #0A84FF;
+    text-decoration: underline;
+    
+    svg {
+      color: #0A84FF;
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes tooltipContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hostname-detail-loading {
+  min-width: 400px;
+  max-width: 500px;
+  min-height: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: hostname-fade-in 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-loading-header {
+  height: 60px;
+  background: linear-gradient(135deg, #f5f5f7, #e5e5ea);
+  animation: hostname-pulse 1.5s infinite ease-in-out;
+}
+
+.hostname-detail-loading-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.hostname-detail-loading-skeleton {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-loading-title {
+  height: 18px;
+  width: 120px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hostname-detail-loading-item {
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-loading-label {
+  width: 70px;
+  height: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-value {
+  height: 12px;
+  flex: 1;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-value.short {
+  width: 40%;
+}
+
+.hostname-detail-loading-value.medium {
+  width: 70%;
+}
+
+.hostname-detail-loading-file {
+  height: 80px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 8px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-footer {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #f5f5f7;
+}
+
+.hostname-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  
+  span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin: 0 2px;
+    background-color: #007AFF;
+    border-radius: 50%;
+    animation: hostname-loading-bounce 1.4s infinite ease-in-out both;
+    
+    &:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+    
+    &:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+  }
+}
+
+.hostname-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  font-weight: 500;
+}
+
+.hostname-display-loading {
+  position: relative;
+  
+  .hostname-loading-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #007AFF;
+    animation: hostname-pulse 1.5s infinite ease-in-out;
+  }
+}
+
+// 等待状态样式
+.hostname-detail-pending {
+  min-width: 300px;
+  max-width: 400px;
+  min-height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: hostname-fade-in 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-pending-content {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hostname-detail-pending-icon {
+  margin-bottom: 16px;
+  animation: hostname-pending-pulse 2s infinite ease-in-out;
+}
+
+.hostname-detail-pending-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #FAAD14;
+  margin-bottom: 8px;
+}
+
+.hostname-detail-pending-subtitle {
+  font-size: 13px;
+  color: #8E8E93;
+}
+
+.hostname-detail-tooltip-container {
+  padding: 0;
+}
+
+@keyframes hostname-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes hostname-pending-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes hostname-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes hostname-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hostname-loading-bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  }
+  40% { 
+    transform: scale(1);
+  }
 }
 </style>

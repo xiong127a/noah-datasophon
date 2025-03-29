@@ -3,6 +3,7 @@ package com.datasophon.api.service.impl.osinfo;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import org.apache.commons.lang.StringUtils;
@@ -110,18 +111,18 @@ public class OsInfoServiceImpl implements OsInfoService {
         logger.info("主机信息收集流程：");
         logger.info("IP: {}, 开始收集信息", hostInfo.getIp());
 
-        // 初始化状态为pending，表示等待收集
-        // 对所有状态设置为pending，表示等待收集
-        hostInfo.setOsInfoStatus("pending");
-        hostInfo.setHostnameStatus("pending");
-        hostInfo.setOsStatus("pending");
-        hostInfo.setDnsStatus("pending");
-        hostInfo.setHostsFileStatus("pending");
-        hostInfo.setCpuStatus("pending");
-        hostInfo.setMemoryStatus("pending");
-        hostInfo.setDiskStatus("pending");
-        hostInfo.setSwapStatus("pending");
-        hostInfo.setGpuStatus("pending");
+        // 初始化状态为LOADING，使用枚举
+        // 对所有状态设置为LOADING
+        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setOsStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setDnsStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setHostsFileStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
 
         // 立即更新缓存，让前端看到加载状态
         updateHostInfoCache(hostInfo);
@@ -322,10 +323,12 @@ public class OsInfoServiceImpl implements OsInfoService {
                         logger.info("开始收集主机名 [{}/{}]: {}",
                                 currentHostIndex + 1, sortedHostList.size(), hostInfo.getIp());
 
-                        // 设置主机名收集状态为"loading"
+                        // 设置主机名收集状态为LOADING
                         hostInfo.setMessage("正在收集主机名...");
-                        hostInfo.setHostnameStatus("loading");
+                        hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
                         service.updateHostInfoCache(hostInfo);
+                        logger.info("主机 {} 状态更新：hostnameStatus={}, 开始收集主机名",
+                                hostInfo.getIp(), hostInfo.getHostnameStatus());
 
                         try {
                             // 执行主机名收集
@@ -334,10 +337,12 @@ public class OsInfoServiceImpl implements OsInfoService {
                                 // 如果无法创建SSH会话，设置错误状态
                                 logger.warn("创建SSH会话失败，无法收集主机名: {}", hostInfo.getIp());
                                 hostInfo.setMessage("无法收集主机名: SSH连接失败");
-                                hostInfo.setOsInfoStatus("error");
-                                hostInfo.setSshConnectStatus("error");
-                                hostInfo.setHostnameStatus("error");
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
                                 service.updateHostInfoCache(hostInfo);
+                                logger.info("主机 {} 状态更新：hostnameStatus={}, SSH连接失败",
+                                        hostInfo.getIp(), hostInfo.getHostnameStatus());
                                 // 继续处理下一台主机
                                 currentHostIndex++;
                                 hostNameCollectionCompleted++;
@@ -358,14 +363,19 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                                 // 设置主机名收集成功状态
                                 hostInfo.setMessage("主机名收集完成");
-                                hostInfo.setSshConnectStatus("success");
-                                hostInfo.setHostnameStatus("success");
+                                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+                                logger.info("主机 {} 主机名收集成功：hostname={}, fqdn={}, hostnameStatus={}",
+                                        hostInfo.getIp(), hostInfo.getHostname(), hostInfo.getFqdn(),
+                                        hostInfo.getHostnameStatus());
                             } else {
                                 // 未能获取主机名
                                 logger.warn("未能获取主机{}的主机名", hostInfo.getIp());
                                 hostInfo.setMessage("未能获取主机名");
-                                hostInfo.setOsInfoStatus("error");
-                                hostInfo.setHostnameStatus("error");
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                                logger.info("主机 {} 状态更新：hostnameStatus={}, 未能获取主机名",
+                                        hostInfo.getIp(), hostInfo.getHostnameStatus());
                             }
 
                             // 无论成功或失败，立即更新缓存
@@ -381,10 +391,12 @@ public class OsInfoServiceImpl implements OsInfoService {
                             // 处理异常
                             logger.error("收集主机名时出错: {}", e.getMessage(), e);
                             hostInfo.setMessage("收集主机名失败: " + e.getMessage());
-                            hostInfo.setOsInfoStatus("error");
-                            hostInfo.setSshConnectStatus("error");
-                            hostInfo.setHostnameStatus("error");
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
                             service.updateHostInfoCache(hostInfo);
+                            logger.info("主机 {} 状态更新：hostnameStatus={}, 收集主机名异常: {}",
+                                    hostInfo.getIp(), hostInfo.getHostnameStatus(), e.getMessage());
                         }
 
                         // 更新计数器和当前索引
@@ -477,7 +489,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         private void processOsType(HostInfo hostInfo) {
             try {
                 // 设置操作系统收集状态
-                hostInfo.setOsStatus("loading");
+                hostInfo.setOsStatus(OsInfoStatusEnum.LOADING);
                 hostInfo.setMessage("正在收集操作系统信息...");
                 service.updateHostInfoCache(hostInfo);
 
@@ -486,23 +498,23 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 设置数据
                 hostInfo.setOsInfo(osInfo);
-                hostInfo.setOsInfoStatus("success");
-                hostInfo.setSshConnectStatus("success");
-                hostInfo.setOsStatus("success");
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
                 hostInfo.setMessage("操作系统信息收集完成");
 
                 // 设置硬件收集状态为collecting
                 if (osInfo != null) {
-                    osInfo.setHardwareCollectionStatus("collecting");
+                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.COLLECTING);
                 }
 
                 // 立即更新缓存，让前端看到结果
                 service.updateHostInfoCache(hostInfo);
             } catch (Exception e) {
                 logger.error("收集操作系统类型时出错: {}", e.getMessage(), e);
-                hostInfo.setOsInfoStatus("error");
-                hostInfo.setSshConnectStatus("error");
-                hostInfo.setOsStatus("error");
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
                 hostInfo.setMessage("收集操作系统信息失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
             }
@@ -559,7 +571,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         private void processDnsServers(HostInfo hostInfo) {
             try {
                 // 设置DNS收集状态
-                hostInfo.setDnsStatus("loading");
+                hostInfo.setDnsStatus(OsInfoStatusEnum.LOADING);
                 hostInfo.setMessage("正在收集DNS服务器信息...");
                 service.updateHostInfoCache(hostInfo);
 
@@ -568,7 +580,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     logger.warn("创建SSH会话失败，无法收集DNS服务器信息: {}", hostInfo.getIp());
                     // 使用临时字段标记状态
                     hostInfo.setMessage("无法收集DNS服务器信息: SSH连接失败");
-                    hostInfo.setDnsStatus("error");
+                    hostInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
                     service.updateHostInfoCache(hostInfo);
                     return;
                 }
@@ -578,7 +590,7 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 更新状态
                 hostInfo.setMessage("DNS服务器信息收集完成");
-                hostInfo.setDnsStatus("success");
+                hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
                 service.updateHostInfoCache(hostInfo);
 
                 // 关闭会话
@@ -590,7 +602,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             } catch (Exception e) {
                 logger.error("收集DNS服务器信息时出错: {}", e.getMessage(), e);
                 hostInfo.setMessage("收集DNS服务器信息失败: " + e.getMessage());
-                hostInfo.setDnsStatus("error");
+                hostInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
                 service.updateHostInfoCache(hostInfo);
             }
         }
@@ -684,7 +696,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         private void processHostsFile(HostInfo hostInfo) {
             try {
                 // 设置hosts文件收集状态
-                hostInfo.setHostsFileStatus("loading");
+                hostInfo.setHostsFileStatus(OsInfoStatusEnum.LOADING);
                 hostInfo.setMessage("正在收集Hosts文件...");
                 service.updateHostInfoCache(hostInfo);
 
@@ -693,7 +705,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     logger.warn("创建SSH会话失败，无法收集Hosts文件: {}", hostInfo.getIp());
                     // 使用临时字段标记状态
                     hostInfo.setMessage("无法收集Hosts文件: SSH连接失败");
-                    hostInfo.setHostsFileStatus("error");
+                    hostInfo.setHostsFileStatus(OsInfoStatusEnum.ERROR);
                     service.updateHostInfoCache(hostInfo);
                     return;
                 }
@@ -703,7 +715,7 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 更新状态
                 hostInfo.setMessage("Hosts文件收集完成");
-                hostInfo.setHostsFileStatus("success");
+                hostInfo.setHostsFileStatus(OsInfoStatusEnum.SUCCESS);
                 service.updateHostInfoCache(hostInfo);
 
                 // 关闭会话
@@ -715,7 +727,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             } catch (Exception e) {
                 logger.error("收集Hosts文件时出错: {}", e.getMessage(), e);
                 hostInfo.setMessage("收集Hosts文件失败: " + e.getMessage());
-                hostInfo.setHostsFileStatus("error");
+                hostInfo.setHostsFileStatus(OsInfoStatusEnum.ERROR);
                 service.updateHostInfoCache(hostInfo);
             }
         }
@@ -766,7 +778,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             for (HostInfo hostInfo : sortedHostList) {
                 try {
                     // 只处理状态正常的主机
-                    if ("success".equals(hostInfo.getOsInfoStatus())) {
+                    if (OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
                         ClientSession session = service.getOrCreateSession(hostInfo);
                         if (session == null) {
                             logger.warn("无法创建SSH会话，跳过硬件信息收集: {}", hostInfo.getIp());
@@ -833,7 +845,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         try {
                             // 设置正在收集CPU信息
                             task.osInfo.setLastUpdatedItem("collecting_cpu");
-                            task.hostInfo.setCpuStatus("loading");
+                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
                             task.hostInfo.setMessage("正在收集CPU信息...");
                             service.updateHostInfoCache(task.hostInfo);
 
@@ -841,17 +853,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                             collectCpuInfo(task);
 
                             // 设置成功状态
-                            task.hostInfo.setCpuStatus("success");
+                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
                             task.hostInfo.setMessage("CPU信息收集完成");
                             service.updateHostInfoCache(task.hostInfo);
+
+                            // 设置硬件信息收集成功
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
                             // 更新计数器
                             cpuInfoCollectionCompleted++;
                         } catch (Exception e) {
                             logger.error("收集CPU信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus("error");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
                             task.osInfo.setLastUpdatedItem("CPU收集失败");
-                            task.hostInfo.setCpuStatus("error");
+                            task.hostInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
                             task.hostInfo.setMessage("CPU信息收集失败: " + e.getMessage());
                             service.updateHostInfoCache(task.hostInfo);
                         }
@@ -896,7 +911,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         try {
                             // 设置正在收集内存信息
                             task.osInfo.setLastUpdatedItem("collecting_memory");
-                            task.hostInfo.setMemoryStatus("loading");
+                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
                             task.hostInfo.setMessage("正在收集内存信息...");
                             service.updateHostInfoCache(task.hostInfo);
 
@@ -904,17 +919,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                             collectMemoryInfo(task);
 
                             // 设置成功状态
-                            task.hostInfo.setMemoryStatus("success");
+                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
                             task.hostInfo.setMessage("内存信息收集完成");
                             service.updateHostInfoCache(task.hostInfo);
+
+                            // 设置硬件信息收集成功
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
                             // 更新计数器
                             memoryInfoCollectionCompleted++;
                         } catch (Exception e) {
                             logger.error("收集内存信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus("error");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
                             task.osInfo.setLastUpdatedItem("内存收集失败");
-                            task.hostInfo.setMemoryStatus("error");
+                            task.hostInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
                             task.hostInfo.setMessage("内存信息收集失败: " + e.getMessage());
                             service.updateHostInfoCache(task.hostInfo);
                         }
@@ -959,7 +977,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         try {
                             // 设置正在收集磁盘信息
                             task.osInfo.setLastUpdatedItem("collecting_disk");
-                            task.hostInfo.setDiskStatus("loading");
+                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
                             task.hostInfo.setMessage("正在收集磁盘信息...");
                             service.updateHostInfoCache(task.hostInfo);
 
@@ -974,17 +992,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                             }
 
                             // 设置成功状态
-                            task.hostInfo.setDiskStatus("success");
+                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
                             task.hostInfo.setMessage("磁盘信息收集完成");
                             service.updateHostInfoCache(task.hostInfo);
+
+                            // 设置硬件信息收集成功
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
                             // 更新计数器
                             diskInfoCollectionCompleted++;
                         } catch (Exception e) {
                             logger.error("收集磁盘信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus("error");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
                             task.osInfo.setLastUpdatedItem("磁盘收集失败");
-                            task.hostInfo.setDiskStatus("error");
+                            task.hostInfo.setDiskStatus(OsInfoStatusEnum.ERROR);
                             task.hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
                             service.updateHostInfoCache(task.hostInfo);
                         }
@@ -1029,7 +1050,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         try {
                             // 设置正在收集交换空间信息
                             task.osInfo.setLastUpdatedItem("collecting_swap");
-                            task.hostInfo.setSwapStatus("loading");
+                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
                             task.hostInfo.setMessage("正在收集交换空间信息...");
                             service.updateHostInfoCache(task.hostInfo);
 
@@ -1043,17 +1064,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                             }
 
                             // 设置成功状态
-                            task.hostInfo.setSwapStatus("success");
+                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
                             task.hostInfo.setMessage("交换空间信息收集完成");
                             service.updateHostInfoCache(task.hostInfo);
+
+                            // 设置硬件信息收集成功
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
 
                             // 更新计数器
                             swapInfoCollectionCompleted++;
                         } catch (Exception e) {
                             logger.error("收集交换空间信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus("error");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
                             task.osInfo.setLastUpdatedItem("交换空间收集失败");
-                            task.hostInfo.setSwapStatus("error");
+                            task.hostInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
                             task.hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
                             service.updateHostInfoCache(task.hostInfo);
                         }
@@ -1098,7 +1122,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                         try {
                             // 设置正在收集GPU信息
                             task.osInfo.setLastUpdatedItem("collecting_gpu");
-                            task.hostInfo.setGpuStatus("loading");
+                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
                             task.hostInfo.setMessage("正在收集GPU信息...");
                             service.updateHostInfoCache(task.hostInfo);
 
@@ -1106,10 +1130,10 @@ public class OsInfoServiceImpl implements OsInfoService {
                             collectGpuInfo(task);
 
                             // 设置成功状态
-                            task.hostInfo.setGpuStatus("success");
+                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
                             task.hostInfo.setMessage("GPU信息收集完成");
                             task.osInfo.setLastUpdatedItem("completed");
-                            task.osInfo.setHardwareCollectionStatus("success");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
                             service.updateHostInfoCache(task.hostInfo);
 
                             // 更新计数器
@@ -1120,9 +1144,9 @@ public class OsInfoServiceImpl implements OsInfoService {
                                     task.hostInfo.getHostname());
                         } catch (Exception e) {
                             logger.error("收集GPU信息时出错: {}", e.getMessage(), e);
-                            task.osInfo.setHardwareCollectionStatus("error");
+                            task.osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
                             task.osInfo.setLastUpdatedItem("GPU收集失败");
-                            task.hostInfo.setGpuStatus("error");
+                            task.hostInfo.setGpuStatus(OsInfoStatusEnum.ERROR);
                             task.hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
                             service.updateHostInfoCache(task.hostInfo);
                         }
@@ -1181,29 +1205,81 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 收集Windows系统CPU信息
-         */
-        private void collectCpuInfoWindows(HardwareInfoTask task) {
-            String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
-            String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
-
-            // TODO：解析CPU信息并更新osInfo对象
-            // 这里可以调用WindowsOsInfoCollector中的解析方法
-
-            task.service.updateHostInfoCache(task.hostInfo);
-        }
-
-        /**
          * 收集Linux系统CPU信息
          */
         private void collectCpuInfoLinux(HardwareInfoTask task) {
-            String cpuInfoCmd = "cat /proc/cpuinfo";
-            String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
+            try {
+                String cpuInfoCmd = "cat /proc/cpuinfo";
+                String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
 
-            // TODO：解析CPU信息并更新osInfo对象
-            // 这里可以调用LinuxOsInfoCollector中的解析方法
+                if (StringUtils.isNotBlank(cpuInfo)) {
+                    // 首先设置CPU状态为加载中
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.COLLECTING);
+                    task.service.updateHostInfoCache(task.hostInfo);
 
-            task.service.updateHostInfoCache(task.hostInfo);
+                    // 调用LinuxOsInfoCollector解析CPU信息
+                    LinuxOsInfoCollector linuxCollector = new LinuxOsInfoCollector();
+                    linuxCollector.parseCpuInfo(task.osInfo, cpuInfo);
+
+                    // 再执行top命令获取CPU使用率
+                    String topCpuInfo = MinaUtils.execCmdWithResult(task.session, "top -bn1 | grep '%Cpu'");
+                    if (StringUtils.isNotBlank(topCpuInfo)) {
+                        linuxCollector.parseCpuUsage(task.osInfo, topCpuInfo);
+                    }
+
+                    // 设置CPU状态为成功
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
+                    logger.info("Linux CPU信息收集完成：{}, 型号: {}, 核心数: {}",
+                            task.hostInfo.getIp(), task.osInfo.getCpuModel(), task.osInfo.getCpuCores());
+                } else {
+                    // 如果命令执行结果为空，设置失败状态
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
+                    logger.warn("Linux CPU信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+                }
+            } catch (Exception e) {
+                // 发生异常，设置失败状态
+                task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
+                logger.error("Linux CPU信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
+            } finally {
+                // 无论成功或失败，都更新缓存
+                task.service.updateHostInfoCache(task.hostInfo);
+            }
+        }
+
+        /**
+         * 收集Windows系统CPU信息
+         */
+        private void collectCpuInfoWindows(HardwareInfoTask task) {
+            try {
+                String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
+                String cpuInfo = MinaUtils.execCmdWithResult(task.session, cpuInfoCmd);
+
+                if (StringUtils.isNotBlank(cpuInfo)) {
+                    // 首先设置CPU状态为加载中
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.COLLECTING);
+                    task.service.updateHostInfoCache(task.hostInfo);
+
+                    // 调用WindowsOsInfoCollector解析CPU信息
+                    WindowsOsInfoCollector windowsCollector = new WindowsOsInfoCollector();
+                    windowsCollector.parseCpuInfo(task.osInfo, cpuInfo);
+
+                    // 设置CPU状态为成功
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
+                    logger.info("Windows CPU信息收集完成：{}, 型号: {}, 核心数: {}",
+                            task.hostInfo.getIp(), task.osInfo.getCpuModel(), task.osInfo.getCpuCores());
+                } else {
+                    // 如果命令执行结果为空，设置失败状态
+                    task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
+                    logger.warn("Windows CPU信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+                }
+            } catch (Exception e) {
+                // 发生异常，设置失败状态
+                task.osInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
+                logger.error("Windows CPU信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
+            } finally {
+                // 无论成功或失败，都更新缓存
+                task.service.updateHostInfoCache(task.hostInfo);
+            }
         }
 
         /**
@@ -1218,33 +1294,79 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 收集Windows系统内存信息
-         */
-        private void collectMemoryInfoWindows(HardwareInfoTask task) {
-            String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
-            String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
-
-            // TODO：解析内存信息并更新osInfo对象
-            // 这里可以调用WindowsOsInfoCollector中的解析方法
-
-            task.service.updateHostInfoCache(task.hostInfo);
-        }
-
-        /**
          * 收集Linux系统内存信息
          */
         private void collectMemoryInfoLinux(HardwareInfoTask task) {
-            String memInfoCmd = "cat /proc/meminfo";
-            String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
+            try {
+                String memInfoCmd = "cat /proc/meminfo";
+                String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
 
-            // TODO：解析内存信息并更新osInfo对象
-            // 这里可以调用LinuxOsInfoCollector中的解析方法
+                if (StringUtils.isNotBlank(memInfo)) {
+                    // 首先设置内存状态为加载中
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.COLLECTING);
+                    task.service.updateHostInfoCache(task.hostInfo);
 
-            task.service.updateHostInfoCache(task.hostInfo);
+                    // 调用LinuxOsInfoCollector解析内存信息
+                    LinuxOsInfoCollector linuxCollector = new LinuxOsInfoCollector();
+                    linuxCollector.parseMemoryInfo(task.osInfo, memInfo);
+
+                    // 设置内存状态为成功
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
+                    logger.info("Linux 内存信息收集完成：{}, 总内存: {}MB, 可用内存: {}MB",
+                            task.hostInfo.getIp(), task.osInfo.getTotalMemory(), task.osInfo.getAvailableMemory());
+                } else {
+                    // 如果命令执行结果为空，设置失败状态
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                    logger.warn("Linux 内存信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+                }
+            } catch (Exception e) {
+                // 发生异常，设置失败状态
+                task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                logger.error("Linux 内存信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
+            } finally {
+                // 无论成功或失败，都更新缓存
+                task.service.updateHostInfoCache(task.hostInfo);
+            }
         }
 
         /**
-         * 收集Windows磁盘信息
+         * 收集Windows系统内存信息
+         */
+        private void collectMemoryInfoWindows(HardwareInfoTask task) {
+            try {
+                String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
+                String memInfo = MinaUtils.execCmdWithResult(task.session, memInfoCmd);
+
+                if (StringUtils.isNotBlank(memInfo)) {
+                    // 首先设置内存状态为加载中
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.COLLECTING);
+                    task.service.updateHostInfoCache(task.hostInfo);
+
+                    // 调用WindowsOsInfoCollector解析内存信息
+                    WindowsOsInfoCollector windowsCollector = new WindowsOsInfoCollector();
+                    windowsCollector.parseMemoryInfo(task.osInfo, memInfo);
+
+                    // 设置内存状态为成功
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
+                    logger.info("Windows 内存信息收集完成：{}, 总内存: {}MB, 可用内存: {}MB",
+                            task.hostInfo.getIp(), task.osInfo.getTotalMemory(), task.osInfo.getAvailableMemory());
+                } else {
+                    // 如果命令执行结果为空，设置失败状态
+                    task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                    logger.warn("Windows 内存信息获取失败：{}, 命令执行结果为空", task.hostInfo.getIp());
+                }
+            } catch (Exception e) {
+                // 发生异常，设置失败状态
+                task.osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                logger.error("Windows 内存信息收集异常：{}, 错误: {}", task.hostInfo.getIp(), e.getMessage(), e);
+            } finally {
+                // 无论成功或失败，都更新缓存
+                task.service.updateHostInfoCache(task.hostInfo);
+            }
+        }
+
+        /**
+         * 收集磁盘信息
          */
         private void collectDiskInfoWindows(HardwareInfoTask task) {
             String diskInfoCmd = "wmic logicaldisk get DeviceID, Size, FreeSpace /Value";
@@ -1386,8 +1508,8 @@ public class OsInfoServiceImpl implements OsInfoService {
             if (session == null) {
                 logger.warn("无法创建SSH会话，主机IP: {}", hostInfo.getIp());
                 // 设置SSH连接失败状态
-                hostInfo.setOsInfoStatus("error");
-                hostInfo.setSshConnectStatus("error");
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                 // 设置更详细的错误信息
                 osInfo.setValid(false);
                 osInfo.setErrorMessage("无法创建SSH连接，请检查SSH配置");
@@ -1410,8 +1532,8 @@ public class OsInfoServiceImpl implements OsInfoService {
         } catch (Exception e) {
             logger.error("获取主机操作系统信息时出错: {}", e.getMessage(), e);
             // 设置SSH连接错误状态
-            hostInfo.setOsInfoStatus("error");
-            hostInfo.setSshConnectStatus("error");
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
             // 设置更详细的错误信息
             osInfo.setValid(false);
             osInfo.setErrorMessage("SSH连接异常: " + e.getMessage());

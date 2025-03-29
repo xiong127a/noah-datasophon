@@ -1,7 +1,7 @@
 package com.datasophon.api.service.checker.checkers.firewall;
 
 import com.datasophon.api.service.checker.common.CommandResult;
-import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import org.slf4j.Logger;

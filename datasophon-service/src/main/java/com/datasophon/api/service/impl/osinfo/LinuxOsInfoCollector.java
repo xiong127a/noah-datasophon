@@ -64,7 +64,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             }
 
             // 获取DNS服务器信息
-            String dnsInfo = MinaUtils.execCmdWithResult(session, "cat /etc/resolv.conf | grep nameserver | awk '{print $2}' | tr '\\n' ' '");
+            String dnsInfo = MinaUtils.execCmdWithResult(session,
+                    "cat /etc/resolv.conf | grep nameserver | awk '{print $2}' | tr '\\n' ' '");
             if (StringUtils.isNotBlank(dnsInfo)) {
                 dnsInfo = dnsInfo.trim();
                 osInfo.setDnsServers(dnsInfo);
@@ -456,7 +457,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 设置版本ID并更新主版本
+            // 如果有VERSION_ID，更新分发版名称和版本显示
             String versionId = osReleaseData.get("VERSION_ID");
             if (StringUtils.isNotBlank(versionId)) {
                 // 移除引号（如果存在）
@@ -468,39 +469,28 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setVersionId(versionId);
                 osInfo.setDistributionVersion(versionId);
 
-                // 设置主版本号（例如从20.04中提取20）
+                // 设置主版本号
+                String majorVersion = versionId;
                 if (versionId.contains(".")) {
-                    String majorVersion = versionId.split("\\.")[0];
-                    osInfo.setMajorVersion(majorVersion);
-                } else {
-                    osInfo.setMajorVersion(versionId);
+                    majorVersion = versionId.split("\\.")[0];
                 }
+                osInfo.setMajorVersion(majorVersion);
+
+                // 格式化显示名称
+                String distribution = osInfo.getDistributionType().toString();
+                osInfo.setFullName(distribution + " " + versionId);
+                osInfo.setDisplayName(distribution + " " + versionId);
+
+                logger.debug("从/etc/os-release解析到发行版: {}，版本: {}，显示名称: {}",
+                        osInfo.getDistributionName(), osInfo.getVersionId(), osInfo.getDisplayName());
             }
 
-            // 如果有VERSION字段，设置更完整的版本描述
-            String version = osReleaseData.get("VERSION");
-            if (StringUtils.isNotBlank(version)) {
-                // 如果fullName未设置，使用distribution + version
-                if (StringUtils.isBlank(osInfo.getFullName())) {
-                    osInfo.setFullName(osInfo.getDistribution() + " " + version);
-                }
-
-                // 如果displayName未设置，也使用此格式
-                if (StringUtils.isBlank(osInfo.getDisplayName())) {
-                    osInfo.setDisplayName(osInfo.getDistribution() + " " + version);
-                }
-            } else if (StringUtils.isBlank(osInfo.getFullName()) && StringUtils.isNotBlank(versionId)) {
-                // 如果没有VERSION字段但有VERSION_ID，使用distribution + versionId
-                osInfo.setFullName(osInfo.getDistribution() + " " + versionId);
-
-                // 如果displayName未设置，也使用此格式
-                if (StringUtils.isBlank(osInfo.getDisplayName())) {
-                    osInfo.setDisplayName(osInfo.getDistribution() + " " + versionId);
-                }
+            // 设置显示名称
+            if (osInfo.getFullName() != null) {
+                osInfo.setDisplayName(osInfo.getDistributionType().toString() + " " + versionId);
+            } else {
+                osInfo.setDisplayName(osInfo.getDistributionType().toString() + " " + versionId);
             }
-
-            logger.debug("从/etc/os-release解析到发行版: {}，版本: {}，显示名称: {}",
-                    osInfo.getDistributionName(), osInfo.getVersionId(), osInfo.getDisplayName());
         } catch (Exception e) {
             logger.error("解析/etc/os-release内容时出错", e);
         }
@@ -1209,6 +1199,169 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集GPU信息时出错: {}", e.getMessage(), e);
             throw e; // 向上抛出异常，由调用者处理
+        }
+    }
+
+    /**
+     * 解析CPU信息
+     *
+     * @param osInfo        CPU信息对象
+     * @param cpuInfoOutput CPU信息命令输出
+     */
+    public void parseCpuInfo(OsInfo osInfo, String cpuInfoOutput) {
+        if (StringUtils.isBlank(cpuInfoOutput)) {
+            return;
+        }
+
+        // 解析CPU型号
+        Pattern modelPattern = Pattern.compile("model name\\s*:\\s*(.+)");
+        Matcher modelMatcher = modelPattern.matcher(cpuInfoOutput);
+        if (modelMatcher.find()) {
+            String cpuModel = modelMatcher.group(1).trim();
+            osInfo.setCpuModel(cpuModel);
+        }
+
+        // 解析物理CPU数量
+        int physicalId = -1;
+        int cpuCount = 0;
+        Pattern physicalIdPattern = Pattern.compile("physical id\\s*:\\s*(\\d+)");
+        Matcher physicalIdMatcher = physicalIdPattern.matcher(cpuInfoOutput);
+        while (physicalIdMatcher.find()) {
+            int id = Integer.parseInt(physicalIdMatcher.group(1));
+            if (id > physicalId) {
+                physicalId = id;
+                cpuCount = id + 1;
+            }
+        }
+        if (cpuCount > 0) {
+            osInfo.setCpuCount(cpuCount);
+        } else {
+            osInfo.setCpuCount(1); // 默认至少有1个物理CPU
+        }
+
+        // 解析每个CPU的核心数
+        Pattern coresPattern = Pattern.compile("cpu cores\\s*:\\s*(\\d+)");
+        Matcher coresMatcher = coresPattern.matcher(cpuInfoOutput);
+        if (coresMatcher.find()) {
+            int coresPerCpu = Integer.parseInt(coresMatcher.group(1));
+            osInfo.setCpuCoresPerProcessor(coresPerCpu);
+            osInfo.setCpuCoreNum(coresPerCpu * osInfo.getCpuCount());
+        }
+
+        // 解析处理器总数（逻辑核心数）
+        int processorCount = 0;
+        Pattern processorPattern = Pattern.compile("processor\\s*:\\s*(\\d+)");
+        Matcher processorMatcher = processorPattern.matcher(cpuInfoOutput);
+        while (processorMatcher.find()) {
+            int id = Integer.parseInt(processorMatcher.group(1));
+            if (id > processorCount) {
+                processorCount = id;
+            }
+        }
+        osInfo.setCpuLogicalCores(processorCount + 1);
+
+        // 计算每核心线程数
+        if (osInfo.getCpuCores() > 0) {
+            osInfo.setCpuThreadsPerCore(osInfo.getCpuLogicalCores() / osInfo.getCpuCores());
+        }
+
+        // 解析CPU频率
+        Pattern mhzPattern = Pattern.compile("cpu MHz\\s*:\\s*([\\d\\.]+)");
+        Matcher mhzMatcher = mhzPattern.matcher(cpuInfoOutput);
+        if (mhzMatcher.find()) {
+            float mhz = Float.parseFloat(mhzMatcher.group(1));
+            osInfo.setCpuFrequency(mhz / 1000.0); // 转换为GHz
+        }
+    }
+
+    /**
+     * 解析CPU使用率
+     *
+     * @param osInfo    CPU信息对象
+     * @param topOutput top命令输出
+     */
+    public void parseCpuUsage(OsInfo osInfo, String topOutput) {
+        if (StringUtils.isBlank(topOutput)) {
+            return;
+        }
+
+        // top命令的%Cpu行输出格式类似: "%Cpu(s): 2.0 us, 0.7 sy, 0.0 ni, 97.3 id, 0.0 wa, 0.0 hi,
+        // 0.0 si, 0.0 st"
+        Pattern cpuUsagePattern = Pattern.compile("([\\d\\.]+)\\s+id");
+        Matcher matcher = cpuUsagePattern.matcher(topOutput);
+        if (matcher.find()) {
+            String idleStr = matcher.group(1);
+            double idle = Double.parseDouble(idleStr);
+            double usage = 100.0 - idle;
+            // 这里可以设置到osInfo对象中，如果有CPU使用率字段的话
+        }
+    }
+
+    /**
+     * 解析内存信息
+     *
+     * @param osInfo        内存信息对象
+     * @param memInfoOutput 内存信息命令输出
+     */
+    public void parseMemoryInfo(OsInfo osInfo, String memInfoOutput) {
+        if (StringUtils.isBlank(memInfoOutput)) {
+            return;
+        }
+
+        // 解析总内存
+        Pattern totalPattern = Pattern.compile("MemTotal:\\s+(\\d+)\\s+kB");
+        Matcher totalMatcher = totalPattern.matcher(memInfoOutput);
+        if (totalMatcher.find()) {
+            long totalKb = Long.parseLong(totalMatcher.group(1));
+            osInfo.setTotalMem(totalKb * 1024L); // 转换为字节
+        }
+
+        // 解析可用内存（MemAvailable或者计算Free+Buffers+Cached）
+        Pattern availablePattern = Pattern.compile("MemAvailable:\\s+(\\d+)\\s+kB");
+        Matcher availableMatcher = availablePattern.matcher(memInfoOutput);
+        if (availableMatcher.find()) {
+            long availableKb = Long.parseLong(availableMatcher.group(1));
+            osInfo.setAvailableMem(availableKb * 1024L); // 转换为字节
+        } else {
+            // 如果没有MemAvailable（较老的内核版本）
+            long freeKb = 0;
+            long buffersKb = 0;
+            long cachedKb = 0;
+
+            Pattern freePattern = Pattern.compile("MemFree:\\s+(\\d+)\\s+kB");
+            Matcher freeMatcher = freePattern.matcher(memInfoOutput);
+            if (freeMatcher.find()) {
+                freeKb = Long.parseLong(freeMatcher.group(1));
+            }
+
+            Pattern buffersPattern = Pattern.compile("Buffers:\\s+(\\d+)\\s+kB");
+            Matcher buffersMatcher = buffersPattern.matcher(memInfoOutput);
+            if (buffersMatcher.find()) {
+                buffersKb = Long.parseLong(buffersMatcher.group(1));
+            }
+
+            Pattern cachedPattern = Pattern.compile("Cached:\\s+(\\d+)\\s+kB");
+            Matcher cachedMatcher = cachedPattern.matcher(memInfoOutput);
+            if (cachedMatcher.find()) {
+                cachedKb = Long.parseLong(cachedMatcher.group(1));
+            }
+
+            osInfo.setAvailableMem((freeKb + buffersKb + cachedKb) * 1024L); // 转换为字节
+        }
+
+        // 解析交换空间
+        Pattern swapTotalPattern = Pattern.compile("SwapTotal:\\s+(\\d+)\\s+kB");
+        Matcher swapTotalMatcher = swapTotalPattern.matcher(memInfoOutput);
+        if (swapTotalMatcher.find()) {
+            long swapTotalKb = Long.parseLong(swapTotalMatcher.group(1));
+            osInfo.setTotalSwap(swapTotalKb * 1024L);
+        }
+
+        Pattern swapFreePattern = Pattern.compile("SwapFree:\\s+(\\d+)\\s+kB");
+        Matcher swapFreeMatcher = swapFreePattern.matcher(memInfoOutput);
+        if (swapFreeMatcher.find()) {
+            long swapFreeKb = Long.parseLong(swapFreeMatcher.group(1));
+            osInfo.setAvailableSwap(swapFreeKb * 1024L);
         }
     }
 }

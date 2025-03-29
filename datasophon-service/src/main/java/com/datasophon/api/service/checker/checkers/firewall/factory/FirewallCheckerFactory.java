@@ -6,8 +6,7 @@ import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS7Fir
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS8FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOSFirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.UbuntuFirewallChecker;
-import com.datasophon.api.service.checker.common.LinuxDistribution;
-import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,7 @@ public class FirewallCheckerFactory {
             return new GenericFirewallChecker();
         }
 
-        LinuxDistribution distribution = osInfo.getDistribution();
+        OsInfo.LinuxDistribution distribution = osInfo.getDistributionType();
         String osVersion = osInfo.getVersionId();
 
         log.info("为操作系统 {} {} 创建防火墙检查器", distribution, osVersion);

@@ -44,6 +44,7 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
@@ -170,11 +171,11 @@ public class InstallServiceImpl implements InstallService {
                 // 确保SSH连接状态信息可用于前端
                 if (hostInfo.getSshConnectStatus() == null) {
                     // 如果osInfoStatus是error，则认为SSH连接失败
-                    if ("error".equals(hostInfo.getOsInfoStatus())) {
-                        hostInfo.setSshConnectStatus("error");
+                    if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
+                        hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     } else {
-                        // 默认设为connecting，让前端显示加载中
-                        hostInfo.setSshConnectStatus("connecting");
+                        // 默认设为LOADING，让前端显示加载中
+                        hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
                     }
                 }
             });
@@ -240,7 +241,8 @@ public class InstallServiceImpl implements InstallService {
             logger.info("开始统一触发所有主机的操作系统信息收集");
             for (HostInfo hostInfo : hostMap.values()) {
                 // 设置初始状态
-                hostInfo.setOsInfoStatus("loading");
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+
                 // 异步获取主机信息
                 osInfoService.getHostOsInfoAsync(hostInfo);
             }
@@ -1027,7 +1029,8 @@ public class InstallServiceImpl implements InstallService {
             }
 
             HostInfo hostInfo = hostMap.get(ip);
-            String status = hostInfo.getOsInfoStatus();
+            // 使用toString()获取状态的字符串表示，兼容前端
+            String status = hostInfo.getOsInfoStatus() != null ? hostInfo.getOsInfoStatus().toString() : null;
 
             return Result.success().put("status", status)
                     .put("hostname", hostInfo.getHostname())
@@ -1055,7 +1058,9 @@ public class InstallServiceImpl implements InstallService {
                 Map<String, Object> statusInfo = new HashMap<>();
                 statusInfo.put("ip", hostInfo.getIp());
                 statusInfo.put("hostname", hostInfo.getHostname());
-                statusInfo.put("status", hostInfo.getOsInfoStatus());
+                // 使用toString()获取状态的字符串表示，兼容前端
+                statusInfo.put("status",
+                        hostInfo.getOsInfoStatus() != null ? hostInfo.getOsInfoStatus().toString() : null);
 
                 statusList.add(statusInfo);
             }

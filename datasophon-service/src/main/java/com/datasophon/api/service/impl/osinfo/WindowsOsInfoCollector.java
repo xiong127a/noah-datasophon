@@ -661,4 +661,77 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
     private String formatGigabytes(Double bytes) {
         return String.format("%.2f", bytes / (1024.0 * 1024.0 * 1024.0));
     }
+
+    /**
+     * 解析Windows CPU信息
+     *
+     * @param osInfo        CPU信息对象
+     * @param cpuInfoOutput CPU信息命令输出
+     */
+    public void parseCpuInfo(OsInfo osInfo, String cpuInfoOutput) {
+        if (StringUtils.isBlank(cpuInfoOutput)) {
+            return;
+        }
+
+        // 解析CPU型号
+        Pattern namePattern = Pattern.compile("Name=(.*)");
+        Matcher nameMatcher = namePattern.matcher(cpuInfoOutput);
+        if (nameMatcher.find()) {
+            String cpuModel = nameMatcher.group(1).trim();
+            osInfo.setCpuModel(cpuModel);
+        }
+
+        // 解析核心数
+        Pattern coresPattern = Pattern.compile("NumberOfCores=(\\d+)");
+        Matcher coresMatcher = coresPattern.matcher(cpuInfoOutput);
+        if (coresMatcher.find()) {
+            int cores = Integer.parseInt(coresMatcher.group(1));
+            osInfo.setCpuCoreNum(cores);
+            osInfo.setCpuCoresPerProcessor(cores);
+        }
+
+        // 解析逻辑处理器数
+        Pattern logicalPattern = Pattern.compile("NumberOfLogicalProcessors=(\\d+)");
+        Matcher logicalMatcher = logicalPattern.matcher(cpuInfoOutput);
+        if (logicalMatcher.find()) {
+            int logicalCores = Integer.parseInt(logicalMatcher.group(1));
+            osInfo.setCpuLogicalCores(logicalCores);
+
+            // 计算每核心线程数
+            if (osInfo.getCpuCores() > 0) {
+                osInfo.setCpuThreadsPerCore(logicalCores / osInfo.getCpuCores());
+            }
+        }
+
+        // 假设只有一个物理CPU
+        osInfo.setCpuCount(1);
+    }
+
+    /**
+     * 解析Windows内存信息
+     *
+     * @param osInfo        内存信息对象
+     * @param memInfoOutput 内存信息命令输出
+     */
+    public void parseMemoryInfo(OsInfo osInfo, String memInfoOutput) {
+        if (StringUtils.isBlank(memInfoOutput)) {
+            return;
+        }
+
+        // 解析总内存（单位为KB）
+        Pattern totalPattern = Pattern.compile("TotalVisibleMemorySize=(\\d+)");
+        Matcher totalMatcher = totalPattern.matcher(memInfoOutput);
+        if (totalMatcher.find()) {
+            long totalKb = Long.parseLong(totalMatcher.group(1));
+            osInfo.setTotalMem(totalKb * 1024L); // 转换为字节
+        }
+
+        // 解析可用内存（单位为KB）
+        Pattern freePattern = Pattern.compile("FreePhysicalMemory=(\\d+)");
+        Matcher freeMatcher = freePattern.matcher(memInfoOutput);
+        if (freeMatcher.find()) {
+            long freeKb = Long.parseLong(freeMatcher.group(1));
+            osInfo.setAvailableMem(freeKb * 1024L); // 转换为字节
+        }
+    }
 }

@@ -18,6 +18,7 @@
 package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.Getter;
@@ -93,16 +94,22 @@ public class HostInfo implements Serializable {
     private OsInfo osInfo;
 
     /**
-     * 操作系统信息获取状态
-     * 可能的值: "loading", "ready", "error"
+     * 操作系统信息收集状态
+     * 可能的值: LOADING, SUCCESS, ERROR
      */
     private String osInfoStatus;
 
     /**
      * SSH连接状态
-     * 可能的值: "success", "error", "connecting"
+     * 可能的值: SUCCESS, ERROR, LOADING
      */
     private String sshConnectStatus;
+
+    /**
+     * 硬件信息收集状态
+     * 可能的值: LOADING, SUCCESS, ERROR
+     */
+    private String hardwareStatus;
 
     /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
@@ -113,12 +120,6 @@ public class HostInfo implements Serializable {
      * hosts文件内容
      */
     private String hostsFile;
-
-    /**
-     * 硬件信息收集的总体状态
-     * 可能的值: "loading", "success", "error"
-     */
-    private String hardwareStatus;
 
     /**
      * 状态缓存是否失效 - 不序列化此字段
@@ -412,72 +413,87 @@ public class HostInfo implements Serializable {
         return hostnameStatus;
     }
 
-    public void setHostnameStatus(String hostnameStatus) {
-        this.hostnameStatus = hostnameStatus;
+    public void setHostnameStatus(OsInfoStatusEnum status) {
+        this.hostnameStatus = status.getCode();
     }
 
     public String getOsStatus() {
         return osStatus;
     }
 
-    public void setOsStatus(String osStatus) {
-        this.osStatus = osStatus;
+    public void setOsStatus(OsInfoStatusEnum status) {
+        this.osStatus = status.getCode();
     }
 
     public String getDnsStatus() {
         return dnsStatus;
     }
 
-    public void setDnsStatus(String dnsStatus) {
-        this.dnsStatus = dnsStatus;
+    public void setDnsStatus(OsInfoStatusEnum status) {
+        this.dnsStatus = status.getCode();
     }
 
     public String getHostsFileStatus() {
         return hostsFileStatus;
     }
 
-    public void setHostsFileStatus(String hostsFileStatus) {
-        this.hostsFileStatus = hostsFileStatus;
+    public void setHostsFileStatus(OsInfoStatusEnum status) {
+        this.hostsFileStatus = status.getCode();
     }
 
     public String getCpuStatus() {
         return cpuStatus;
     }
 
-    public void setCpuStatus(String cpuStatus) {
-        this.cpuStatus = cpuStatus;
+    public void setCpuStatus(OsInfoStatusEnum status) {
+        this.cpuStatus = status.getCode();
     }
 
     public String getMemoryStatus() {
         return memoryStatus;
     }
 
-    public void setMemoryStatus(String memoryStatus) {
-        this.memoryStatus = memoryStatus;
+    public void setMemoryStatus(OsInfoStatusEnum status) {
+        this.memoryStatus = status.getCode();
     }
 
     public String getDiskStatus() {
         return diskStatus;
     }
 
-    public void setDiskStatus(String diskStatus) {
-        this.diskStatus = diskStatus;
+    public void setDiskStatus(OsInfoStatusEnum status) {
+        this.diskStatus = status.getCode();
     }
 
     public String getSwapStatus() {
         return swapStatus;
     }
 
-    public void setSwapStatus(String swapStatus) {
-        this.swapStatus = swapStatus;
+    public void setSwapStatus(OsInfoStatusEnum status) {
+        this.swapStatus = status.getCode();
     }
 
     public String getGpuStatus() {
         return gpuStatus;
     }
 
-    public void setGpuStatus(String gpuStatus) {
-        this.gpuStatus = gpuStatus;
+    public void setGpuStatus(OsInfoStatusEnum status) {
+        this.gpuStatus = status.getCode();
     }
 
+    public String getOsInfoStatus() {
+        return osInfoStatus;
+    }
+
+    public void setOsInfoStatus(OsInfoStatusEnum status) {
+        this.osInfoStatus = status.getCode();
+    }
+
+    public String getSshConnectStatus() {
+        return sshConnectStatus;
+    }
+
+    public void setSshConnectStatus(OsInfoStatusEnum status) {
+        this.sshConnectStatus = status.getCode();
+    }
 }

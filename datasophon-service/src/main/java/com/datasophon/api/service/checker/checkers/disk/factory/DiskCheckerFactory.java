@@ -11,8 +11,7 @@ import com.datasophon.api.service.checker.checkers.disk.os.kylin.KylinV4DiskChec
 import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.Ubuntu22DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.Ubuntu24DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.os.ubuntu.UbuntuDiskChecker;
-import com.datasophon.api.service.checker.common.LinuxDistribution;
-import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,7 @@ public class DiskCheckerFactory {
             return new GenericDiskChecker();
         }
 
-        LinuxDistribution distribution = osInfo.getDistribution();
+        OsInfo.LinuxDistribution distribution = osInfo.getDistributionType();
         if (distribution == null) {
             log.warn("未能识别操作系统类型，使用通用磁盘检查器");
             return new GenericDiskChecker();

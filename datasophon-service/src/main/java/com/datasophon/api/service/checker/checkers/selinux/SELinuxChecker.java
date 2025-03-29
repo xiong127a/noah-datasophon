@@ -3,7 +3,7 @@ package com.datasophon.api.service.checker.checkers.selinux;
 import com.datasophon.api.service.checker.checkers.selinux.factory.SELinuxCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
-import com.datasophon.api.service.checker.common.OsInfo;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
