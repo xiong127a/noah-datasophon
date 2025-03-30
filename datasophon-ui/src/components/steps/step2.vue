@@ -293,7 +293,7 @@ export default {
                 
                 // 底部加载文字
                 h('div', { class: 'hostname-detail-loading-text' }, [
-                  '正在优雅地获取主机信息...'
+                  '正在获取主机信息...'
                 ])
               ]);
               
@@ -337,7 +337,7 @@ export default {
                       zIndex: 2,
                       whiteSpace: 'nowrap'
                     }
-                  }, ['正在优雅地获取主机名...'])
+                  }, ['正在获取主机名...'])
                 ])
               ]);
             }
@@ -384,7 +384,7 @@ export default {
                   color: '#8E8E93'
                 }
               }, [
-                h('span', {}, ['暂无主机名'])
+                h('span', {}, ['正在获取主机名...'])
               ]);
             }
             
@@ -608,7 +608,7 @@ export default {
                     marginTop: '12px',
                     fontWeight: '500'
                   }
-                }, ['正在优雅地检索操作系统信息...'])
+                }, ['正在获取操作系统信息...'])
               ]);
               
               // 苹果风格的骨架屏加载动画
@@ -810,7 +810,18 @@ export default {
                               '等待收集CPU信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.cpuModel ? row.osInfo.cpuModel : '未知'
+                            // 改为显示更多CPU详情，包括型号、数量、核心数和线程数
+                            row.osInfo && row.osInfo.cpuModel ? 
+                              h('div', {}, [
+                                h('div', { style: { fontWeight: '500' } }, [row.osInfo.cpuModel]),
+                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
+                                  h('span', {}, [
+                                    `${row.osInfo.cpuCount || 1} 个处理器 × ${row.osInfo.cpuCores || 1} 核心/处理器 × ${row.osInfo.cpuThreadsPerCore || 1} 线程/核心 = ${row.osInfo.cpuLogicalCores || 1} 逻辑核心`
+                                  ]),
+                                  row.osInfo.cpuFrequency && row.osInfo.cpuFrequency > 0 ? 
+                                    h('span', { style: { marginLeft: '4px' } }, [`(${row.osInfo.cpuFrequency.toFixed(1)} GHz)`]) : null
+                                ])
+                              ]) : '未知'
                       ])
                     ])
                   ]),
@@ -852,7 +863,7 @@ export default {
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
                               }) : null
                       ]),
-                      this.checkStatus(row.memoryStatus, 'loading') ? 
+                      row.memoryStatus === 'loading' ? 
                         h('div', { class: 'os-detail-info-value loading' }, [
                           h('div', { class: 'loading-animation' }),
                           h('span', {}, ['正在收集内存信息...'])
@@ -868,7 +879,33 @@ export default {
                               '等待收集内存信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.totalMemory ? `${row.osInfo.totalMemory} GB` : '未知'
+                            // 改为显示更详细的内存信息
+                            row.osInfo && row.osInfo.totalMemory ? 
+                              h('div', {}, [
+                                h('div', { style: { fontWeight: '500' } }, [
+                                  `总内存: ${row.osInfo.totalMemory} GB`
+                                ]),
+                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
+                                  `已用: ${(row.osInfo.totalMemory - row.osInfo.availableMemory).toFixed(1)} GB，可用: ${row.osInfo.availableMemory} GB`
+                                ]),
+                                h('div', { style: { marginTop: '6px' } }, [
+                                  h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '2px' } }, [
+                                    h('span', {}, [`使用率: ${(100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1)}%`]),
+                                    h('span', {}, [`${(row.osInfo.totalMemory - row.osInfo.availableMemory).toFixed(1)}/${row.osInfo.totalMemory} GB`])
+                                  ]),
+                                  h('a-progress', {
+                                    props: {
+                                      percent: (100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1),
+                                      showInfo: false,
+                                      strokeColor: {
+                                        '0%': '#108ee9',
+                                        '100%': '#87d068',
+                                      },
+                                      strokeWidth: 6
+                                    }
+                                  })
+                                ])
+                              ]) : '未知'
                       ])
                     ])
                   ]),
@@ -877,13 +914,13 @@ export default {
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
                       h('div', { 
-                        class: 'os-detail-info-icon disk',
+                        class: 'os-detail-info-icon storage',
                         style: {
-                          backgroundColor: row.diskStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
-                                          row.diskStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                          backgroundColor: this.checkStatus(row.diskStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
+                                          this.checkStatus(row.diskStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
                                           'rgba(0, 122, 255, 0.1)',
-                          color: row.diskStatus === 'success' ? '#34C759' : 
-                                row.diskStatus === 'error' ? '#FF3B30' : 
+                          color: this.checkStatus(row.diskStatus, 'success') ? '#34C759' : 
+                                this.checkStatus(row.diskStatus, 'error') ? '#FF3B30' : 
                                 '#007AFF'
                         }
                       }, [
@@ -894,25 +931,20 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['磁盘']),
                         // 添加状态图标
-                        row.diskStatus === 'success' ? 
+                        this.checkStatus(row.diskStatus, 'success') ? 
                           h('a-icon', { 
                             props: { type: 'check-circle' }, 
                             style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
                           }) :
-                          row.diskStatus === 'error' ?
+                          this.checkStatus(row.diskStatus, 'error') ?
                             h('a-icon', { 
                               props: { type: 'close-circle' }, 
                               style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
                             }) :
-                            row.diskStatus === 'loading' ?
+                            this.checkStatus(row.diskStatus, 'loading') ?
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : 
-                            row.diskStatus === 'pending' ?
-                              h('a-icon', { 
-                                props: { type: 'clock-circle' }, 
-                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.diskStatus === 'loading' ? 
@@ -931,9 +963,35 @@ export default {
                               '等待收集磁盘信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.diskTotal ? 
-                              `总空间: ${row.osInfo.diskTotal}` : 
-                              '未知'
+                            // 改为显示更详细的磁盘信息
+                            row.osInfo && row.osInfo.totalDisk ? 
+                              h('div', {}, [
+                                h('div', { style: { fontWeight: '500' } }, [
+                                  `总空间: ${row.osInfo.totalDisk} GB`
+                                ]),
+                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
+                                  `已用: ${(row.osInfo.totalDisk - row.osInfo.availableDisk).toFixed(1)} GB，可用: ${row.osInfo.availableDisk} GB`
+                                ]),
+                                h('div', { style: { marginTop: '6px' } }, [
+                                  h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '2px' } }, [
+                                    h('span', {}, [
+                                      `使用率: ${(100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1)}%`
+                                    ]),
+                                    h('span', {}, [
+                                      `${(row.osInfo.totalDisk - row.osInfo.availableDisk).toFixed(1)}/${row.osInfo.totalDisk} GB`
+                                    ])
+                                  ]),
+                                  h('a-progress', {
+                                    props: {
+                                      percent: (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1),
+                                      showInfo: false,
+                                      strokeColor: (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 90) ? '#ff4d4f' : 
+                                                  (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 70) ? '#faad14' : '#52c41a',
+                                      strokeWidth: 6
+                                    }
+                                  })
+                                ])
+                              ]) : '未知'
                       ])
                     ])
                   ]),
@@ -944,11 +1002,11 @@ export default {
                       h('div', { 
                         class: 'os-detail-info-icon swap',
                         style: {
-                          backgroundColor: row.swapStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
-                                          row.swapStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                          backgroundColor: this.checkStatus(row.swapStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
+                                          this.checkStatus(row.swapStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
                                           'rgba(0, 122, 255, 0.1)',
-                          color: row.swapStatus === 'success' ? '#34C759' : 
-                                row.swapStatus === 'error' ? '#FF3B30' : 
+                          color: this.checkStatus(row.swapStatus, 'success') ? '#34C759' : 
+                                this.checkStatus(row.swapStatus, 'error') ? '#FF3B30' : 
                                 '#007AFF'
                         }
                       }, [
@@ -959,12 +1017,12 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['交换空间']),
                         // 添加状态图标
-                        row.swapStatus === 'success' ? 
+                        this.checkStatus(row.swapStatus, 'success') ? 
                           h('a-icon', { 
                             props: { type: 'check-circle' }, 
                             style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
                           }) :
-                          row.swapStatus === 'error' ?
+                          this.checkStatus(row.swapStatus, 'error') ?
                             h('a-icon', { 
                               props: { type: 'close-circle' }, 
                               style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
@@ -996,8 +1054,10 @@ export default {
                               '等待收集交换空间信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.swapTotal ? 
-                              `交换空间: ${row.osInfo.swapTotal}` : 
+                            row.osInfo && row.osInfo.totalSwap !== undefined ? 
+                              row.osInfo.totalSwap === 0 ? 
+                                '未开启交换空间' : 
+                                `交换空间: ${row.osInfo.totalSwap}GB` : 
                               '未知'
                           ])
                     ])
@@ -1009,40 +1069,35 @@ export default {
                       h('div', { 
                         class: 'os-detail-info-icon gpu',
                         style: {
-                          backgroundColor: row.gpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' : 
-                                          row.gpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' : 
+                          backgroundColor: this.checkStatus(row.gpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
+                                          this.checkStatus(row.gpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
                                           'rgba(0, 122, 255, 0.1)',
-                          color: row.gpuStatus === 'success' ? '#34C759' : 
-                                row.gpuStatus === 'error' ? '#FF3B30' : 
+                          color: this.checkStatus(row.gpuStatus, 'success') ? '#34C759' : 
+                                this.checkStatus(row.gpuStatus, 'error') ? '#FF3B30' : 
                                 '#007AFF'
                         }
                       }, [
-                        h('i', { class: 'anticon anticon-appstore' })
+                        h('i', { class: 'anticon anticon-radar-chart' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['GPU']),
                         // 添加状态图标
-                        row.gpuStatus === 'success' ? 
+                        this.checkStatus(row.gpuStatus, 'success') ? 
                           h('a-icon', { 
                             props: { type: 'check-circle' }, 
                             style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
                           }) :
-                          row.gpuStatus === 'error' ?
+                          this.checkStatus(row.gpuStatus, 'error') ?
                             h('a-icon', { 
                               props: { type: 'close-circle' }, 
                               style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
                             }) :
-                            row.gpuStatus === 'loading' ?
+                            this.checkStatus(row.gpuStatus, 'loading') ?
                               h('a-icon', { 
                                 props: { type: 'loading' }, 
                                 style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : 
-                            row.gpuStatus === 'pending' ?
-                              h('a-icon', { 
-                                props: { type: 'clock-circle' }, 
-                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
                               }) : null
                       ]),
                       row.gpuStatus === 'loading' ? 
@@ -1061,9 +1116,22 @@ export default {
                               '等待收集GPU信息'
                             ]) :
                           h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.gpuModel ? 
-                              row.osInfo.gpuModel : 
-                              '未检测到GPU设备'
+                          // 改为显示更详细的GPU信息
+                          row.osInfo ? 
+                            h('div', {}, [
+                              (row.osInfo.gpuInfo && !row.osInfo.gpuInfo.startsWith('ERROR:') && row.osInfo.gpuInfo !== '未检测到GPU设备') ? 
+                                h('div', {}, [
+                                  h('div', { style: { fontWeight: '500' } }, [
+                                    row.osInfo.gpuInfo
+                                  ]),
+                                  h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
+                                    row.osInfo.gpuMemory && row.osInfo.gpuMemory > 0 ? 
+                                      `显存: ${row.osInfo.gpuMemory.toFixed(1)} GB` : 
+                                      '显存信息未获取到'
+                                  ])
+                                ]) : 
+                                h('div', { style: { color: '#666' } }, ['未检测到GPU设备或无法获取GPU信息'])
+                            ]) : '未知'
                           ])
                     ])
                   ])
@@ -3260,352 +3328,30 @@ export default {
 </script>
 
 <style lang="less" scoped>
-// 苹果设计系统颜色
-@apple-white: #ffffff;
-@apple-black: #1d1d1f;
-@apple-gray-light: #f5f5f7;
-@apple-gray: #86868b;
-@apple-blue: #0071e3;
-@apple-blue-hover: #147CE5;
-@apple-red: #ff453a;
-@apple-green: #30d158;
-@apple-yellow: #ffd60a;
-@apple-orange: #ff9f0a;
+@import '../../assets/less/theme.less';
 
-// 苹果设计系统字体
+// Apple风格变量定义
+@apple-blue: #007AFF;
+@apple-blue-hover: #0062CC;
+@apple-red: #FF3B30;
+@apple-red-hover: #D82D22;
+@apple-green: #34C759;
+@apple-orange: #FF9500;
+@apple-purple: #AF52DE;
+@apple-gray-light: #F2F2F7;
+@apple-gray: #AEAEB2;
+@apple-gray-dark: #8E8E93;
+@apple-black: #1D1D1F;
+@apple-white: #FFFFFF;
+
+// Apple风格混合函数
 .apple-font() {
-  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
-.steps2 {
-  margin: 0;
-  max-width: 100%;
-  background-color: @apple-white;
-  overflow: hidden;
-  animation: fadeIn 0.8s ease-out;
-  
-  .hero-section {
-    text-align: center;
-    margin-bottom: 2.5rem;
-    position: relative;
-    
-    .hero-title {
-      .apple-font();
-      font-size: 2.5rem;
-      font-weight: 600;
-      line-height: 1.1;
-      letter-spacing: -0.022em;
-      color: @apple-black;
-      margin-bottom: 0.8rem;
-      background: linear-gradient(120deg, @apple-black, #505050);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    
-    .hero-subtitle {
-      .apple-font();
-      font-size: 1.2rem;
-      line-height: 1.4;
-      letter-spacing: 0;
-      font-weight: 400;
-      color: @apple-gray;
-      margin: 0 auto 1.5rem;
-      max-width: 600px;
-    }
-    
-    .queue-status-area {
-      display: flex;
-      justify-content: center;
-      margin-top: 1rem;
-    }
-  }
-  
-  .hosts-table-container {
-    border-radius: 12px;
-    margin: 0 auto;
-    max-width: 1400px;
-    overflow: hidden;
-    animation: slideUp 0.6s ease-out;
-    animation-fill-mode: both;
-    animation-delay: 0.2s;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    
-    // 表格通用设置
-    /deep/ .ant-table {
-      .apple-font();
-      
-      .ant-table-thead > tr > th {
-        background-color: @apple-gray-light;
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: @apple-black;
-        padding: 16px 20px;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        white-space: nowrap; // 防止列标题换行
-        text-align: center; // 表头文字居中
-      }
-      
-      .ant-table-tbody > tr > td {
-        padding: 14px 20px;
-        border-bottom: 1px solid rgba(0,0,0,0.03);
-        transition: background-color 0.3s;
-      }
-      
-      .ant-table-tbody > tr:hover:not(.ant-table-expanded-row):not(.ant-table-row-selected) > td {
-        background-color: fadeout(@apple-gray-light, 50%);
-      }
-      
-      .ant-table-tbody > tr.ant-table-expanded-row > td, 
-      .ant-table-tbody > tr.ant-table-expanded-row:hover > td {
-        background-color: @apple-gray-light;
-        padding: 0;
-      }
-      
-      // 设置扩展行内部的样式
-      .ant-table-expanded-row {
-        .check-items-container {
-          padding: 1.5rem 2rem 1.5rem 3rem;
-          
-          .check-items-header {
-            display: flex;
-            justify-content: space-between;
-  align-items: center;
-            margin-bottom: 1.2rem;
-            
-            .header-summary {
-              .apple-font();
-              font-size: 1.1rem;
-              font-weight: 500;
-              color: @apple-black;
-              
-              .status-icon {
-                margin-right: 8px;
-              }
-              
-              .success-count {
-                color: @apple-green;
-                margin: 0 4px;
-              }
-              
-              .failed-count {
-                color: @apple-red;
-                margin: 0 4px;
-              }
-            }
-            
-            .header-actions {
-  display: flex;
-              gap: 10px;
-              
-              .apple-button {
-                height: 34px;
-                padding: 0 16px;
-    font-size: 14px;
-                font-weight: 500;
-                border-radius: 17px;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                
-                &.primary {
-                  background: @apple-blue;
-                  border: none;
-                  color: white;
-                  
-                  &:hover {
-                    background: @apple-blue-hover;
-                  }
-                }
-                
-                &.secondary {
-                  background: @apple-gray-light;
-                  border: none;
-                  color: @apple-black;
-      
-      &:hover {
-                    background: darken(@apple-gray-light, 5%);
-                  }
-                }
-                
-                &.danger {
-                  background: fade(@apple-red, 10%);
-                  border: none;
-                  color: @apple-red;
-      
-      &:hover {
-                    background: fade(@apple-red, 15%);
-                  }
-                }
-              }
-            }
-          }
-          
-          // 子表格样式
-          .ant-table {
-            border-radius: 12px;
-            overflow: hidden;
-            
-            .ant-table-thead > tr > th {
-              background-color: rgba(0,0,0,0.02);
-              font-weight: 500;
-              font-size: 0.9rem;
-              color: @apple-black;
-    padding: 12px 16px;
-            }
-            
-            .ant-table-tbody > tr > td {
-              padding: 12px 16px;
-              font-size: 0.9rem;
-            }
-            
-            // 优化内嵌表格的选择框样式
-            .ant-checkbox-wrapper {
-              .ant-checkbox-inner {
-    border-radius: 4px;
-                border-color: @apple-gray;
-                
-                &:after {
-                  border-color: white;
-                }
-              }
-              
-              .ant-checkbox-checked .ant-checkbox-inner {
-                background-color: @apple-blue;
-                border-color: @apple-blue;
-              }
-            }
-            
-            // 状态标签样式
-            .status-tag {
-              display: inline-flex;
-    align-items: center;
-              padding: 4px 12px;
-              border-radius: 12px;
-              font-size: 0.85rem;
-              font-weight: 500;
-              
-              .status-icon {
-                margin-right: 6px;
-              }
-              
-              &.success {
-                background-color: fade(@apple-green, 10%);
-                color: @apple-green;
-              }
-              
-              &.failed {
-                background-color: fade(@apple-red, 10%);
-                color: @apple-red;
-              }
-              
-              &.waiting {
-                background-color: fade(@apple-yellow, 10%);
-                color: darken(@apple-yellow, 15%);
-              }
-              
-              &.checking {
-                background-color: fade(@apple-blue, 10%);
-                color: @apple-blue;
-              }
-              
-              &.skipped {
-                background-color: fade(@apple-gray, 10%);
-                color: @apple-gray;
-              }
-            }
-            
-            // 操作按钮样式
-            .action-button {
-              height: 28px;
-              padding: 0 12px;
-              font-size: 0.85rem;
-              font-weight: 500;
-              border-radius: 14px;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-              margin-right: 8px;
-              
-              &.view {
-                background: fade(@apple-blue, 10%);
-                border: none;
-                color: @apple-blue;
-      
-      &:hover {
-                  background: fade(@apple-blue, 15%);
-                }
-              }
-              
-              &.fix {
-                background: fade(@apple-red, 10%);
-                border: none;
-                color: @apple-red;
-      
-      &:hover {
-                  background: fade(@apple-red, 15%);
-                }
-              }
-              
-              &.retry {
-                background: fade(@apple-orange, 10%);
-                border: none;
-                color: @apple-orange;
-    
-    &:hover {
-                  background: fade(@apple-orange, 15%);
-                }
-              }
-              
-              &.skip {
-                background: fade(@apple-gray, 10%);
-                border: none;
-                color: @apple-gray;
-                
-                &:hover {
-                  background: fade(@apple-gray, 15%);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  // 自定义展开图标样式
-  /deep/ .apple-expand-icon {
-    display: inline-flex;
-  align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 12px;
-    background-color: @apple-gray-light;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    
-    &:hover {
-      background-color: darken(@apple-gray-light, 3%);
-    }
-    
-    .expand-icon-inner {
-  display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    .anticon {
-        color: @apple-black;
-        transform: rotate(0);
-      }
-    }
-    
-    &.expanded {
-      background-color: @apple-blue;
-      
-      .anticon {
-        color: white;
-        transform: rotate(90deg);
-      }
-    }
-  }
-  
+.steps-container {
   // 主机列表操作按钮样式
   .apple-actions {
     display: flex;
@@ -3679,6 +3425,11 @@ export default {
     }
   }
   
+  // 基础样式
+  .os-tooltip {
+    max-width: none !important;
+  }
+  
   // 操作系统详情弹出框样式
   .os-detail-popup {
   padding: 0;
@@ -3692,7 +3443,6 @@ export default {
     max-height: 80vh;
     overflow-y: auto;
     
-    // 滚动条样式
     &::-webkit-scrollbar {
       width: 8px;
     }
@@ -3713,27 +3463,31 @@ export default {
       border: 2px solid transparent;
       background-clip: content-box;
     }
+    }
     
     // 头部区域
     .os-detail-header {
-      padding: 24px;
+    padding: 20px;
     display: flex;
       align-items: center;
-      background: linear-gradient(135deg, #0066CC, #007AFF);
+    background: linear-gradient(135deg, #F5F5F7, #E5E5EA);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       
       .os-detail-icon-container {
         margin-right: 20px;
         
         img {
-          background-color: #ffffff;
+        width: 48px;
+        height: 48px;
           padding: 6px;
           border-radius: 12px;
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: white;
         }
       }
       
       .os-detail-title-container {
-        color: #ffffff;
+      color: #1D1D1F;
         
         .os-detail-title {
           font-size: 1.3rem;
@@ -3743,38 +3497,43 @@ export default {
         
         .os-detail-subtitle {
           font-size: 0.9rem;
-          opacity: 0.9;
+        color: #86868B;
           margin-bottom: 2px;
         }
       }
     }
+  
+  // 内容区域
+  .os-detail-content {
+    padding: 16px 20px;
+  }
     
     // 卡片样式
     .os-detail-card {
-      margin: 16px;
+    margin-bottom: 16px;
     border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       background-color: #ffffff;
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      
-      &:last-child {
-        margin-bottom: 16px;
-      }
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    overflow: hidden;
       
       .os-detail-card-header {
+      display: flex;
+      align-items: center;
         padding: 12px 16px;
-        font-size: 0.95rem;
-        font-weight: 600;
+      background-color: #F5F5F7;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        background-color: rgba(0, 0, 0, 0.02);
+      font-weight: 600;
+      font-size: 14px;
+      color: #1D1D1F;
+    }
       }
       
-      // 信息行
+  // 信息行样式
       .os-detail-info-row {
     display: flex;
-        padding: 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
         
         &:last-child {
           border-bottom: none;
@@ -3782,6 +3541,8 @@ export default {
         
         .os-detail-info-icon-container {
           margin-right: 16px;
+      display: flex;
+      align-items: center;
           
           .os-detail-info-icon {
             width: 36px;
@@ -3793,27 +3554,31 @@ export default {
             
             i {
               font-size: 20px;
-              color: #ffffff;
             }
             
             &.cpu {
-              background: linear-gradient(135deg, #FF2D55, #FF375F);
+          background-color: rgba(0, 122, 255, 0.1);
+          color: #007AFF;
             }
             
             &.memory {
-              background: linear-gradient(135deg, #007AFF, #0A84FF);
+          background-color: rgba(255, 149, 0, 0.1);
+          color: #FF9500;
             }
             
             &.storage {
-              background: linear-gradient(135deg, #5856D6, #5E5CE6);
+          background-color: rgba(52, 199, 89, 0.1);
+          color: #34C759;
             }
             
             &.swap {
-              background: linear-gradient(135deg, #34C759, #30D158);
+          background-color: rgba(175, 82, 222, 0.1);
+          color: #AF52DE;
             }
             
             &.gpu {
-              background: linear-gradient(135deg, #FF9500, #FF9F0A);
+          background-color: rgba(255, 59, 48, 0.1);
+          color: #FF3B30;
             }
           }
         }
@@ -3822,112 +3587,132 @@ export default {
           flex: 1;
           
           .os-detail-info-label {
-            font-size: 0.8rem;
-            color: #8E8E93;
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        color: #86868B;
             margin-bottom: 6px;
           }
           
           .os-detail-info-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #1d1d1f;
-            margin-bottom: 6px;
-            
-            &.with-progress {
+        font-size: 14px;
+        color: #1D1D1F;
+        word-break: break-word;
+        
+        &.loading {
               display: flex;
-              justify-content: space-between;
       align-items: center;
-              
-              span {
-                margin-right: 10px;
-              }
-            }
-          }
+          color: #007AFF;
           
-          .os-detail-progress-container {
-            flex: 1;
-            height: 6px;
-            background-color: rgba(0, 0, 0, 0.05);
-            border-radius: 3px;
-            overflow: hidden;
-            
-            .os-detail-progress-bar {
-              height: 100%;
-              border-radius: 3px;
-              transition: width 0.3s ease;
-            }
-          }
-          
-          .os-detail-info-subvalue {
-            font-size: 0.8rem;
-            color: #8E8E93;
+          .loading-animation {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(0, 122, 255, 0.3);
+            border-top: 2px solid #007AFF;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: spin 1s linear infinite;
           }
         }
+        
+        &.error {
+          color: #FF3B30;
+        }
+        
+        &.waiting {
+          color: #FAAD14;
+        }
       }
+    }
+  }
+  
+  // 信息区样式
+  .info-section {
+    margin-bottom: 20px;
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1D1D1F;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
       
-      // 表格样式
-      .os-detail-table {
-        .os-detail-table-row {
+      .icon {
+        margin-right: 6px;
+        color: #007AFF;
+        font-size: 16px;
+      }
+    }
+    
+    .info-row {
           display: flex;
-          padding: 12px 16px;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
           
           &:last-child {
             border-bottom: none;
           }
       
-      &:hover {
-            background-color: rgba(0, 0, 0, 0.02);
-          }
+      .info-label {
+        color: #86868B;
+        font-size: 13px;
+        flex: 0 0 40%;
+      }
+      
+      .info-value {
+        color: #1D1D1F;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: right;
+        word-break: break-word;
+        flex: 0 0 60%;
+      }
+      
+      .progress-container {
+        width: 100%;
+        margin-top: 6px;
+        
+        .progress-bar {
+          height: 6px;
+          width: 100%;
+          background-color: #F5F5F7;
+          border-radius: 3px;
+          overflow: hidden;
           
-          .os-detail-table-cell {
-            &.label {
-              width: 110px;
-              color: #8E8E93;
-              font-size: 0.9rem;
+          .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            
+            &.normal {
+              background-color: #34C759;
             }
             
-            &.value {
-              flex: 1;
-              font-weight: 500;
-              color: #1d1d1f;
-              font-size: 0.9rem;
+            &.warning {
+              background-color: #FF9500;
+            }
+            
+            &.danger {
+              background-color: #FF3B30;
             }
           }
         }
-      }
-    }
-    
-    // 底部区域
-    .os-detail-footer {
-      padding: 12px 16px;
-      background-color: rgba(0, 0, 0, 0.02);
-      border-top: 1px solid rgba(0, 0, 0, 0.05);
+        
+        .progress-text {
       display: flex;
       justify-content: space-between;
-      font-size: 0.8rem;
-      color: #8E8E93;
-    }
-    
-    // 无信息提示
-    .os-detail-no-info {
-      padding: 32px;
-      text-align: center;
-      
-      .os-detail-no-info-text {
-        font-size: 1rem;
-        font-weight: 500;
-        margin-bottom: 8px;
-        color: #1d1d1f;
-      }
-      
-      .os-detail-no-info-subtext {
-        font-size: 0.85rem;
-        color: #8E8E93;
+          font-size: 12px;
+          color: #86868B;
+          margin-top: 4px;
+        }
       }
     }
   }
-
+  
+  // 动画相关
   @keyframes osFadeIn {
     from {
       opacity: 0;
@@ -3937,6 +3722,42 @@ export default {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  // 加载相关样式
+  .os-detail-info-value.loading {
+    display: flex;
+    align-items: center;
+    color: #8E8E93;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+    color: #8E8E93;
+  }
+  
+  .loading-text-simple {
+    font-size: 14px;
+    color: #8E8E93;
+    font-style: italic;
+  }
+  
+  // GPU信息样式
+  .gpu-memory-info {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.2;
+    display: inline-block;
+    padding: 2px 6px;
+    background-color: #f2f2f7;
+    border-radius: 4px;
   }
 }
 
@@ -4009,387 +3830,18 @@ export default {
   }
 }
 
-// 动画
+// 其他全局动画
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-        transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-// 日志模态框内容样式
-.log-modal {
-  .log-container {
-    display: flex;
-    flex-direction: column;
-    height: 70vh;
-    
-    .log-header {
-      padding: 16px 24px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      background-color: @apple-gray-light;
-      
-      .header-section {
-        margin-bottom: 12px;
-        
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-      
-      .refresh-options {
-    display: flex;
-        gap: 10px;
-        
-        .refresh-btn, .auto-refresh-btn {
-          height: 36px;
-          padding: 0 16px;
-          font-size: 0.9rem;
-          font-weight: 500;
-          border-radius: 18px;
-      display: flex;
-      align-items: center;
-          
-          .anticon {
-            margin-right: 6px;
-          }
-        }
-      }
-      
-      .filter-area {
-    display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        align-items: center;
-        margin-top: 16px;
-        
-        .log-type-selector {
-      display: flex;
-      align-items: center;
-          
-          .filter-title {
-            margin-right: 8px;
-            font-weight: 500;
-            color: @apple-black;
-          }
-        }
-      }
-      
-      .combined-filter-status {
-        margin-top: 16px;
-        padding: 10px 16px;
-        background-color: rgba(0, 0, 0, 0.02);
-      border-radius: 8px;
-        
-        .filter-description {
-          font-size: 0.9rem;
-          color: @apple-gray;
-          
-          .highlight {
-            color: @apple-black;
-    font-weight: 500;
-          }
-        }
-      }
-    }
-    
-    .log-content {
-      flex: 1;
-      overflow: auto;
-      padding: 20px 24px;
-      background-color: #f8f8fa;
-      border-radius: 0 0 12px 12px;
-      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-      
-      pre {
-        margin: 0;
-        color: #333;
-        font-size: 0.9rem;
-        line-height: 1.5;
-      white-space: pre-wrap;
-        word-break: break-word;
-        
-        ::selection {
-          background: rgba(0, 113, 227, 0.2);
-        }
-        
-        // 设置不同日志级别的颜色
-        :deep(.log-info) {
-          color: #1c1c1e;
-        }
-        
-        :deep(.log-warn) {
-          color: #9f6000;
-        }
-        
-        :deep(.log-error) {
-          color: #d40000;
-        }
-        
-        :deep(.log-debug) {
-          color: #6a737d;
-        }
-        
-        :deep(.log-trace) {
-          color: #5c2699;
-        }
-        
-        :deep(.log-timestamp) {
-          color: #0071e3;
-          font-weight: 500;
-        }
-      }
-    }
-  }
-}
-
-// 确认弹窗内容样式
-.fix-confirm-content {
-  padding: 20px;
-  background-color: rgba(255, 69, 58, 0.05);
-  border-radius: 10px;
-  border-left: 4px solid @apple-red;
-  margin: 0;
-  
-  p {
-    margin: 0 0 10px;
-    line-height: 1.6;
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-}
-
-.loading-container {
-      position: relative;
-  min-height: 100px;
-}
-
-.custom-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: @apple-gray;
-      font-size: 14px;
-}
-
-// 添加Apple风格表格的CSS样式到样式部分
-.apple-style-table {
-  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  
-  /deep/ .ant-table-thead > tr > th {
-    background-color: rgba(0, 0, 0, 0.02);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    color: #1d1d1f;
-    font-weight: 600;
-    padding: 16px;
-    transition: background 0.2s ease;
-  }
-  
-  /deep/ .ant-table-tbody > tr > td {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 16px;
-    transition: background 0.2s ease;
-  }
-  
-  /deep/ .ant-table-tbody > tr:hover > td {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-  
-  /deep/ .ant-table-row-selected > td {
-    background-color: rgba(0, 122, 255, 0.05) !important;
-  }
-  
-  /deep/ .ant-checkbox-checked .ant-checkbox-inner {
-    background-color: #007AFF;
-    border-color: #007AFF;
-  }
-  
-  /deep/ .ant-checkbox-wrapper:hover .ant-checkbox-inner,
-  /deep/ .ant-checkbox:hover .ant-checkbox-inner {
-    border-color: #007AFF;
-  }
-}
-
-.check-items-container {
-  animation: fadeInAndSlideUp 0.5s ease forwards;
-}
-
-@keyframes fadeInAndSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.check-result-tooltip {
-  max-height: 80vh;
-  overflow-y: hidden;
-  border-radius: 16px !important;
-  box-shadow: none !important;
-  border: none !important;
-  
-    &::-webkit-scrollbar {
-    width: 8px;
-    }
-    
-    &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.03);
-    border-radius: 8px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-      
-      &:hover {
-      background: rgba(0, 0, 0, 0.2);
-    }
-  }
-}
-
-/* 强制覆盖样式 */
-/deep/ .ant-tooltip.apple-style-tooltip {
-  .ant-tooltip-content,
-  .ant-tooltip-arrow,
-  .ant-tooltip-inner {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-  
-  .ant-tooltip-arrow::before {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-}
-
-// 修复按钮样式
-.action-buttons button {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.action-buttons button:hover {
-  filter: brightness(1.05);
-}
-
-.action-buttons button:active {
-  filter: brightness(0.95);
-  transform: translateY(1px);
-}
-
-.hostname-skeleton {
-  width: 120px;
-  height: 18px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
-}
-
-.os-info-loading {
-  position: relative;
-  height: 24px;
-  width: 90%;
-  border-radius: 4px;
-  background-color: rgba(240, 240, 240, 0.8);
-  overflow: hidden;
-}
-
-.os-info-loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 30%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-  animation: shine 1.5s infinite;
-}
-
-@keyframes shine {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(500%); }
-}
-
-/* 修改操作系统详情弹出框加载动画 */
-.os-detail-loading {
-  padding: 0;
-  min-width: 320px;
-  max-width: 420px;
-  min-height: 200px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: osFadeIn 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.os-detail-loading-header {
-  height: 100px;
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-.os-detail-loading-content {
-  padding: 16px;
-  flex: 1;
-}
-
-.os-detail-loading-line {
-  height: 12px;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.os-detail-loading-line.short {
-  width: 70%;
-}
-
-.os-detail-loading-line.medium {
-  width: 85%;
-}
-
+// 主机名相关样式
 .hostname-detail-loading {
   padding: 0;
   min-width: 320px;
@@ -4446,1375 +3898,16 @@ export default {
 }
 
 @keyframes shimmer {
-  to {
-    background-position: -100% 0;
-  }
+  to { background-position: -100% 0; }
 }
 
-/* 为操作系统详情弹出框添加动画 */
-@keyframes osFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.steps-container {
-  // 添加硬件信息收集状态的动画和样式
-  .os-detail-info-value.loading {
+.form-row {
     display: flex;
-    align-items: center;
-    color: #8E8E93;
-  }
-  
-  .loading-animation {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(0, 122, 255, 0.1);
-    border-top-color: rgba(0, 122, 255, 0.8);
-    border-radius: 50%;
-    margin-right: 8px;
-    animation: spin 1s linear infinite;
-  }
-  
-  .loading-text {
-    font-size: 14px;
-    color: #8E8E93;
-  }
-  
-  .loading-text-simple {
-    font-size: 14px;
-    color: #8E8E93;
-    font-style: italic;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
-  // OS信息加载动画
-  .os-info-loading {
-    position: relative;
-    overflow: hidden;
-    
-    &:after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 50%;
-      height: 100%;
-      background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        rgba(255, 255, 255, 0) 100%);
-      animation: shimmer 1.5s infinite;
-    }
-  }
-  
-  @keyframes shimmer {
-    to {
-      left: 100%;
-    }
-  }
-  
-  @keyframes osFadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
-
-.gpu-memory-info {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #8e8e93;
-  line-height: 1.2;
-  display: inline-block;
-  padding: 2px 6px;
-  background-color: #f2f2f7;
-  border-radius: 4px;
-}
-
-.table-operations {
-  .operation-group {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    .apple-batch-button {
-      height: 40px;
-      padding: 0 20px;
-      border: none;
-      background: linear-gradient(180deg, #0A84FF 0%, #0066CC 100%);
-      border-radius: 20px;
-      color: white;
-      font-size: 14px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
       justify-content: center;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
-      
-      .anticon {
-        font-size: 14px;
-        margin-right: 6px;
-      }
-      
-      &:hover:not(:disabled) {
-        transform: translateY(-1px);
-        background: linear-gradient(180deg, #0091FF 0%, #0077ED 100%);
-        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
-      }
-      
-      &:active:not(:disabled) {
-        transform: translateY(0);
-        background: linear-gradient(180deg, #0077ED 0%, #0066CC 100%);
-        box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
-      }
-      
-      &:disabled {
-        background: linear-gradient(180deg, #E5E5EA 0%, #D1D1D6 100%);
-        color: #8E8E93;
-        box-shadow: none;
-        cursor: not-allowed;
-        
-        .anticon {
-          opacity: 0.5;
-        }
-      }
-    }
-  }
-}
+  margin-top: 2em;
 
-// 添加苹果风格按钮样式
-.apple-button {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  
-  .anticon {
-    margin-right: 6px;
-    font-size: 16px;
-  }
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  &:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  
-  &:disabled {
-    background-color: #f5f5f7;
-    color: rgba(0, 0, 0, 0.25);
-    border-color: #d9d9d9;
-    box-shadow: none;
-    
-    &:hover {
-      transform: none;
-      box-shadow: none;
-    }
-  }
-}
-
-.apple-primary-button {
-  background: linear-gradient(135deg, #0a84ff, #0066ff);
-  border: none;
-  color: white;
-  
-  &:hover {
-    background: linear-gradient(135deg, #1d90ff, #0070ff);
-  }
-  
-  &:active {
-    background: linear-gradient(135deg, #0070e0, #0060e0);
-  }
-}
-
-.apple-danger-button {
-  background: linear-gradient(135deg, #ff453a, #ff3b30);
-  border: none;
-  color: white;
-  
-  &:hover {
-    background: linear-gradient(135deg, #ff5147, #ff4b40);
-  }
-  
-  &:active {
-    background: linear-gradient(135deg, #e03a30, #d0362c);
-  }
-}
-
-.apple-batch-button {
-  background: #f5f5f7;
-  border: 1px solid #e0e0e5;
-  color: #1d1d1f;
-  
-  &:hover {
-    background: #f8f8fa;
-    border-color: #d9d9df;
-  }
-  
-  &:active {
-    background: #eaeaed;
-    border-color: #d0d0d5;
-  }
-}
-
-// 表格操作区域样式
-.table-operations {
-  padding: 8px 0;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  z-index: 1;
-  
-  .operation-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-}
-
-.hosts-file-tooltip {
-  max-height: 400px;
-  max-width: 600px;
-  overflow: auto;
-  margin: 0;
-  padding: 10px;
-  background-color: #f8f8f8;
-  border-radius: 4px;
-  border: 1px solid #e8e8e8;
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.hosts-detail-loading {
-  padding: 0;
-  min-width: 320px;
-  max-width: 420px;
-  min-height: 200px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: osFadeIn 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.hosts-detail-loading-header {
-  height: 100px;
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-.hosts-detail-loading-content {
-  padding: 16px;
-  flex: 1;
-}
-
-.hosts-detail-loading-line {
-  height: 12px;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.hosts-detail-loading-line.short {
-  width: 70%;
-}
-
-.hosts-detail-loading-line.medium {
-  width: 85%;
-}
-
-.hosts-detail-loading-line.long {
-  width: 100%;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes shimmer {
-  to {
-    background-position: -100% 0;
-  }
-}
-
-.hosts-detail-loading-text {
-  font-size: 14px;
-  color: #007AFF;
-  text-align: center;
-  margin-top: 12px;
-  font-weight: 500;
-}
-
-.hosts-info-loading {
-  position: relative;
-  height: 24px;
-  width: 90%;
-  border-radius: 4px;
-  background-color: rgba(240, 240, 240, 0.8);
-  overflow: hidden;
-}
-
-.hosts-info-loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 30%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-  animation: shine 1.5s infinite;
-}
-
-@keyframes shine {
-  to { transform: translateX(500%); }
-}
-
-.hosts-file-tooltip {
-  max-width: 650px;
-  
-  pre {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-}
-
-// 文件图标容器悬停效果
-.file-icon-container {
-  &:hover {
-    .anticon {
-      color: #0A84FF;
-    }
-  }
-}
-
-// 添加hostname tooltip的样式
-.hostname-detail-tooltip {
-  min-width: 400px;
-  max-width: 500px;
-  padding: 16px;
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-.hostname-detail-section {
-  margin-bottom: 16px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.hostname-detail-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1D1D1F;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  padding-bottom: 8px;
-}
-
-.hostname-detail-subtitle {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1D1D1F;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.hostname-detail-block {
-  margin-bottom: 12px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.hostname-detail-content {
-  padding: 0 0 0 8px;
-}
-
-.hostname-detail-item {
-  display: flex;
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.hostname-detail-label {
-  width: 80px;
-  color: #8E8E93;
-  flex-shrink: 0;
-}
-
-.hostname-detail-value {
-  color: #1D1D1F;
-  flex: 1;
-  word-break: break-all;
-}
-
-.hostname-detail-empty {
-  color: #8E8E93;
-  font-style: italic;
-  font-size: 13px;
-  padding: 4px 8px;
-}
-
-.hostname-detail-loading {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-}
-
-.hostname-detail-error {
-  color: #FF3B30;
-  display: flex;
-  align-items: center;
-  padding: 8px;
-}
-
-.dns-servers {
-  font-family: monospace;
-  background-color: #F5F5F7;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.hostname-detail-hosts-content {
-  width: 100%;
-  font-size: 12px;
-}
-
-.host-check-table {
-  // 调整多选框和展开按钮列的宽度
-  /deep/ .ant-table-selection-column {
-    width: 30px !important;
-    min-width: 30px !important;
-    padding-left: 8px !important;
-    padding-right: 0 !important;
-  }
-  
-  /deep/ .ant-table-row-expand-icon-cell {
-    width: 30px !important;
-    min-width: 30px !important;
-    padding-left: 0 !important;
-    padding-right: 8px !important;
-  }
-
-  // 确保所有列的内容不换行
-  /deep/ .ant-table-cell {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.log-modal-status-label {
-  font-size: 13px;
-  color: #666;
-  margin-right: 6px;
-}
-
-/* 主机名和相关DNS/hosts悬浮框样式 */
-.hostname-detail-tooltip {
-  padding: 16px;
-  min-width: 360px;
-  max-width: 520px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-.hostname-detail-section {
-  margin-bottom: 16px;
-}
-
-.hostname-detail-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #e5e5ea;
-}
-
-.hostname-detail-content {
-  margin-bottom: 12px;
-}
-
-.hostname-detail-item {
-  display: flex;
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-
-.hostname-detail-label {
-  font-weight: 500;
-  color: #8e8e93;
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.hostname-detail-value {
-  flex: 1;
-  color: #1d1d1f;
-}
-
-.hostname-detail-subtitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin-bottom: 8px;
-  margin-top: 12px;
-}
-
-.hostname-detail-block {
-  margin-bottom: 16px;
-}
-
-.hostname-detail-empty {
-  padding: 12px;
-  background-color: #f5f5f7;
-  border-radius: 8px;
-  color: #8e8e93;
-  font-style: italic;
-  text-align: center;
-}
-
-.hostname-detail-loading {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background-color: rgba(0, 122, 255, 0.05);
-  border-radius: 8px;
-  color: #007aff;
-}
-
-.hostname-detail-error {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  background-color: rgba(255, 59, 48, 0.05);
-  border-radius: 8px;
-  color: #ff3b30;
-}
-
-.loading-animation {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(0, 122, 255, 0.3);
-  border-top-color: #007aff;
-  border-radius: 50%;
-  margin-right: 8px;
-  animation: spin 1s linear infinite;
-}
-
-.loading-text {
-  font-size: 13px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 操作系统和硬件信息悬浮框样式 */
-.os-detail-popup {
-  padding: 20px;
-  width: 460px;
-  max-width: 100%;
-  background: #fff;
-  border-radius: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-.os-detail-header {
-  display: flex;
-  margin-bottom: 24px;
-}
-
-.os-detail-icon-container {
-  width: 64px;
-  height: 64px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.os-detail-title-container {
-  flex: 1;
-}
-
-.os-detail-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin: 0 0 8px 0;
-}
-
-.os-detail-subtitle {
-  font-size: 14px;
-  color: #6e6e73;
-  margin: 0 0 4px 0;
-}
-
-.os-detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.os-detail-card {
-  background: #f5f5f7;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.os-detail-card-header {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-row {
-  display: flex;
-  margin-bottom: 12px;
-}
-
-.os-detail-info-icon-container {
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.os-detail-info-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  background-color: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.os-detail-info-icon.cpu {
-  background-color: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.os-detail-info-icon.memory {
-  background-color: rgba(88, 86, 214, 0.1);
-  color: #5856d6;
-}
-
-.os-detail-info-icon.disk {
-  background-color: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
-}
-
-.os-detail-info-icon.swap {
-  background-color: rgba(52, 199, 89, 0.1);
-  color: #34c759;
-}
-
-.os-detail-info-icon.gpu {
-  background-color: rgba(175, 82, 222, 0.1);
-  color: #af52de;
-}
-
-.os-detail-info-content {
-  flex: 1;
-}
-
-.os-detail-info-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1d1d1f;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-value {
-  font-size: 13px;
-  color: #6e6e73;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-value.loading {
-  display: flex;
-  align-items: center;
-  color: #007aff;
-  font-size: 13px;
-}
-
-.os-detail-info-value.error {
-  color: #ff3b30;
-}
-
-.os-info {
-  .os-type {
-    font-size: 0.95rem;
-    color: @apple-black;
-    
-    .anticon {
-      font-size: 16px;
-    }
-    
-    .os-logo {
-      width: 20px;
-      height: 20px;
-      object-fit: contain;
-      vertical-align: middle;
-      transition: transform 0.3s ease;
-    }
-    
-    &:hover .os-logo {
-      transform: scale(1.1);
-    }
-  }
-}
-
-.os-info-loading {
-  position: relative;
-  height: 24px;
-  width: 90%;
-  border-radius: 4px;
-  background-color: rgba(240, 240, 240, 0.8);
-  overflow: hidden;
-}
-
-.os-info-loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 30%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-  animation: shine 1.5s infinite;
-}
-
-@keyframes shine {
-  to { transform: translateX(500%); }
-}
-
-.os-detail-popup {
-  padding: 0;
-  min-width: 320px;
-  max-width: 420px;
-  min-height: 200px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: osFadeIn 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.os-detail-loading-header {
-  height: 100px;
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-.os-detail-loading-content {
-  padding: 16px;
-  flex: 1;
-}
-
-.os-detail-loading-line {
-  height: 12px;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.os-detail-loading-line.short {
-  width: 70%;
-}
-
-.os-detail-loading-line.medium {
-  width: 85%;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes shimmer {
-  to {
-    background-position: -100% 0;
-  }
-}
-
-.os-detail-loading-text {
-  font-size: 14px;
-  color: #007AFF;
-  text-align: center;
-  margin-top: 12px;
-  font-weight: 500;
-}
-
-.os-detail-header {
-  display: flex;
-  margin-bottom: 24px;
-}
-
-.os-detail-icon-container {
-  width: 64px;
-  height: 64px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.os-detail-title-container {
-  flex: 1;
-}
-
-.os-detail-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin: 0 0 8px 0;
-}
-
-.os-detail-subtitle {
-  font-size: 14px;
-  color: #6e6e73;
-  margin: 0 0 4px 0;
-}
-
-.os-detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.os-detail-card {
-  background: #f5f5f7;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.os-detail-card-header {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1d1d1f;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-row {
-  display: flex;
-  margin-bottom: 12px;
-}
-
-.os-detail-info-icon-container {
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.os-detail-info-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  background-color: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.os-detail-info-icon.cpu {
-  background-color: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.os-detail-info-icon.memory {
-  background-color: rgba(88, 86, 214, 0.1);
-  color: #5856d6;
-}
-
-.os-detail-info-icon.disk {
-  background-color: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
-}
-
-.os-detail-info-icon.swap {
-  background-color: rgba(52, 199, 89, 0.1);
-  color: #34c759;
-}
-
-.os-detail-info-icon.gpu {
-  background-color: rgba(175, 82, 222, 0.1);
-  color: #af52de;
-}
-
-.os-detail-info-content {
-  flex: 1;
-}
-
-.os-detail-info-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1d1d1f;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-value {
-  font-size: 13px;
-  color: #6e6e73;
-  display: flex;
-  align-items: center;
-}
-
-.os-detail-info-value.loading {
-  display: flex;
-  align-items: center;
-  color: #007aff;
-  font-size: 13px;
-}
-
-.os-detail-info-value.error {
-  color: #ff3b30;
-}
-
-.os-detail-info-value.with-progress {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.os-detail-progress-container {
-  flex: 1;
-  height: 6px;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.os-detail-progress-bar {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.os-detail-info-subvalue {
-  font-size: 0.8rem;
-  color: #8E8E93;
-}
-
-// 添加CSS样式到组件样式部分
-.hostname-detail-waiting,
-.os-detail-info-value.waiting {
-  display: flex;
-  align-items: center;
-  color: #FAAD14;
-  font-size: 12px;
-  padding: 6px 0;
-}
-
-.os-detail-waiting {
-  padding: 16px;
-  width: 300px;
-  text-align: center;
-}
-
-.os-detail-waiting-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 16px;
-}
-
-// 更新样式部分
-.hostname-tooltip {
-  .ant-tooltip-inner {
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  
-  .ant-tooltip-arrow {
-    border-right-color: #ffffff !important;
-    display: block !important;
-    
-    &::before {
-      background-color: #ffffff !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-  }
-}
-
-.hostname-detail-tooltip {
-  min-width: 400px;
-  max-width: 500px;
-  padding: 20px;
-  background: #FFFFFF;
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  animation: tooltipContentFadeIn 0.2s ease-out;
-  will-change: transform, opacity;
-}
-
-.hostname-detail-section {
-  margin-bottom: 20px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.hostname-detail-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1D1D1F;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  padding-bottom: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.hostname-detail-content {
-  padding: 0 0 0 8px;
-}
-
-.hostname-detail-item {
-  display: flex;
-  margin-bottom: 8px;
-  font-size: 13px;
-  line-height: 1.5;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.hostname-detail-label {
-  width: 80px;
-  color: #8E8E93;
-  flex-shrink: 0;
-  font-weight: 500;
-}
-
-.hostname-detail-value {
-  color: #1D1D1F;
-  flex: 1;
-  word-break: break-all;
-  
-  &.dns-servers {
-    font-family: "SF Mono", "Menlo", monospace;
-    background-color: rgba(0, 122, 255, 0.08);
-    padding: 6px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: #007AFF;
-  }
-}
-
-.hostname-detail-hosts-file {
-  max-height: 200px;
-  overflow: auto;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-family: "SF Mono", "Menlo", monospace;
-  white-space: pre-wrap;
-  word-break: break-all;
-  line-height: 1.5;
-  margin: 0;
-  border-left: 3px solid #FF9500;
-  color: #1D1D1F;
-  width: 100%;
-}
-
-.hostname-detail-empty {
-  color: #8E8E93;
-  font-style: italic;
-  font-size: 13px;
-  padding: 8px;
-  background-color: rgba(0, 0, 0, 0.03);
-  border-radius: 6px;
-  text-align: center;
-}
-
-.hostname-display {
-  &:hover {
-    color: #0A84FF;
-    text-decoration: underline;
-    
-    svg {
-      color: #0A84FF;
-      opacity: 1;
-    }
-  }
-}
-
-@keyframes tooltipContentFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hostname-detail-loading {
-  min-width: 400px;
-  max-width: 500px;
-  min-height: 320px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: hostname-fade-in 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.hostname-detail-loading-header {
-  height: 60px;
-  background: linear-gradient(135deg, #f5f5f7, #e5e5ea);
-  animation: hostname-pulse 1.5s infinite ease-in-out;
-}
-
-.hostname-detail-loading-content {
-  padding: 20px;
-  flex: 1;
-}
-
-.hostname-detail-loading-skeleton {
-  margin-bottom: 16px;
-}
-
-.hostname-detail-loading-title {
-  height: 18px;
-  width: 120px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  margin-bottom: 16px;
-  background-size: 200% 100%;
-  animation: hostname-shimmer 1.5s infinite;
-}
-
-.hostname-detail-loading-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hostname-detail-loading-item {
-  display: flex;
-  align-items: center;
-}
-
-.hostname-detail-loading-label {
-  width: 70px;
-  height: 12px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  margin-right: 12px;
-  flex-shrink: 0;
-  background-size: 200% 100%;
-  animation: hostname-shimmer 1.5s infinite;
-}
-
-.hostname-detail-loading-value {
-  height: 12px;
-  flex: 1;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  background-size: 200% 100%;
-  animation: hostname-shimmer 1.5s infinite;
-}
-
-.hostname-detail-loading-value.short {
-  width: 40%;
-}
-
-.hostname-detail-loading-value.medium {
-  width: 70%;
-}
-
-.hostname-detail-loading-file {
-  height: 80px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 8px;
-  background-size: 200% 100%;
-  animation: hostname-shimmer 1.5s infinite;
-}
-
-.hostname-detail-loading-footer {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-top: 1px solid #f5f5f7;
-}
-
-.hostname-loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  
-  span {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin: 0 2px;
-    background-color: #007AFF;
-    border-radius: 50%;
-    animation: hostname-loading-bounce 1.4s infinite ease-in-out both;
-    
-    &:nth-child(1) {
-      animation-delay: -0.32s;
-    }
-    
-    &:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-  }
-}
-
-.hostname-detail-loading-text {
-  font-size: 14px;
-  color: #007AFF;
-  font-weight: 500;
-}
-
-.hostname-display-loading {
-  position: relative;
-  
-  .hostname-loading-pulse {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #007AFF;
-    animation: hostname-pulse 1.5s infinite ease-in-out;
-  }
-}
-
-// 等待状态样式
-.hostname-detail-pending {
-  min-width: 300px;
-  max-width: 400px;
-  min-height: 180px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: hostname-fade-in 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.hostname-detail-pending-content {
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.hostname-detail-pending-icon {
-  margin-bottom: 16px;
-  animation: hostname-pending-pulse 2s infinite ease-in-out;
-}
-
-.hostname-detail-pending-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #FAAD14;
-  margin-bottom: 8px;
-}
-
-.hostname-detail-pending-subtitle {
-  font-size: 13px;
-  color: #8E8E93;
-}
-
-.hostname-detail-tooltip-container {
-  padding: 0;
-}
-
-@keyframes hostname-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes hostname-pending-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes hostname-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
-@keyframes hostname-fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes hostname-loading-bounce {
-  0%, 80%, 100% { 
-    transform: scale(0);
-  }
-  40% { 
-    transform: scale(1);
+  .form-control {
+    margin-right: 1em;
   }
 }
 </style>
