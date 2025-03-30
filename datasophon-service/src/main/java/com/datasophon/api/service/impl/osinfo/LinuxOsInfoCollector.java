@@ -1102,41 +1102,84 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 if (totalSwapMatcher.find()) {
                     try {
                         long totalSwapKB = Long.parseLong(totalSwapMatcher.group(1).trim());
-                        // 计算字节数
-                        long totalSwapBytes = totalSwapKB * 1024;
-                        // 保存原始字节数
-                        osInfo.setTotalSwapBytes(totalSwapBytes);
-                        // 使用接受Long类型的setter方法
-                        osInfo.setTotalSwap(totalSwapBytes);
 
-                        // 计算GB值用于日志记录
-                        double totalSwapGB = Math.round(totalSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
-                        logger.debug("获取到交换分区总容量: {} GB", totalSwapGB);
+                        // 检查交换空间是否开启（总容量为0表示未开启）
+                        if (totalSwapKB <= 0) {
+                            logger.warn("Linux主机交换空间未开启 (SwapTotal=0)");
+
+                            // 设置交换空间值为0
+                            osInfo.setTotalSwapBytes(0L);
+                            osInfo.setTotalSwap(0L);
+                            osInfo.setAvailableSwapBytes(0L);
+                            osInfo.setAvailableSwap(0L);
+
+                            // 更新错误信息
+                            String currentError = osInfo.getErrorMessage();
+                            if (StringUtils.isBlank(currentError)) {
+                                osInfo.setErrorMessage("交换空间未开启");
+                            } else {
+                                osInfo.setErrorMessage(currentError + "; 交换空间未开启");
+                            }
+                        } else {
+                            // 交换空间已开启
+                            // 计算字节数
+                            long totalSwapBytes = totalSwapKB * 1024;
+                            // 保存原始字节数
+                            osInfo.setTotalSwapBytes(totalSwapBytes);
+                            // 使用接受Long类型的setter方法
+                            osInfo.setTotalSwap(totalSwapBytes);
+
+                            // 计算GB值用于日志记录
+                            double totalSwapGB = Math.round(totalSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
+                            logger.debug("获取到交换分区总容量: {} GB", totalSwapGB);
+
+                            // 解析交换分区可用容量
+                            Pattern freeSwapPattern = Pattern.compile("SwapFree:\\s+(\\d+)\\s+kB");
+                            Matcher freeSwapMatcher = freeSwapPattern.matcher(swapInfoOutput);
+                            if (freeSwapMatcher.find()) {
+                                try {
+                                    long freeSwapKB = Long.parseLong(freeSwapMatcher.group(1).trim());
+                                    // 计算字节数
+                                    long freeSwapBytes = freeSwapKB * 1024;
+                                    // 保存原始字节数
+                                    osInfo.setAvailableSwapBytes(freeSwapBytes);
+                                    // 使用接受Long类型的setter方法
+                                    osInfo.setAvailableSwap(freeSwapBytes);
+
+                                    // 计算GB值用于日志记录
+                                    double freeSwapGB = Math.round(freeSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
+                                    logger.debug("获取到交换分区可用容量: {} GB", freeSwapGB);
+                                } catch (NumberFormatException e) {
+                                    logger.warn("解析交换分区可用容量失败: {}", e.getMessage());
+                                }
+                            }
+                        }
                     } catch (NumberFormatException e) {
                         logger.warn("解析交换分区总容量失败: {}", e.getMessage());
                     }
-                }
+                } else {
+                    // 未找到交换分区信息，可能是未启用
+                    logger.warn("未找到交换分区信息，可能未启用交换空间");
+                    osInfo.setTotalSwapBytes(0L);
+                    osInfo.setTotalSwap(0L);
+                    osInfo.setAvailableSwapBytes(0L);
+                    osInfo.setAvailableSwap(0L);
 
-                // 解析交换分区可用容量
-                Pattern freeSwapPattern = Pattern.compile("SwapFree:\\s+(\\d+)\\s+kB");
-                Matcher freeSwapMatcher = freeSwapPattern.matcher(swapInfoOutput);
-                if (freeSwapMatcher.find()) {
-                    try {
-                        long freeSwapKB = Long.parseLong(freeSwapMatcher.group(1).trim());
-                        // 计算字节数
-                        long freeSwapBytes = freeSwapKB * 1024;
-                        // 保存原始字节数
-                        osInfo.setAvailableSwapBytes(freeSwapBytes);
-                        // 使用接受Long类型的setter方法
-                        osInfo.setAvailableSwap(freeSwapBytes);
-
-                        // 计算GB值用于日志记录
-                        double freeSwapGB = Math.round(freeSwapKB / 1024.0 / 1024.0 * 10) / 10.0;
-                        logger.debug("获取到交换分区可用容量: {} GB", freeSwapGB);
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析交换分区可用容量失败: {}", e.getMessage());
+                    // 更新错误信息
+                    String currentError = osInfo.getErrorMessage();
+                    if (StringUtils.isBlank(currentError)) {
+                        osInfo.setErrorMessage("未找到交换分区信息");
+                    } else {
+                        osInfo.setErrorMessage(currentError + "; 未找到交换分区信息");
                     }
                 }
+            } else {
+                // 命令执行失败或无输出
+                logger.warn("获取交换分区信息命令无返回结果");
+                osInfo.setTotalSwapBytes(0L);
+                osInfo.setTotalSwap(0L);
+                osInfo.setAvailableSwapBytes(0L);
+                osInfo.setAvailableSwap(0L);
             }
 
             // 更新硬件收集状态

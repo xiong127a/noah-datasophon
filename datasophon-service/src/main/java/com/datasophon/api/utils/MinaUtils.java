@@ -145,6 +145,12 @@ public class MinaUtils {
             LOG.error("SSH会话为空，无法执行命令: {}", command);
             return null;
         }
+
+        // 检测并处理Windows命令
+        if (command.trim().startsWith("cmd ")) {
+            return execWindowsCmdWithResult(session, command);
+        }
+
         session.resetAuthTimeout();
         LOG.info("exe cmd: {}", command);
         // 命令返回的结果
@@ -209,6 +215,334 @@ public class MinaUtils {
                 LOG.error("关闭命令通道异常", e);
             }
         }
+    }
+
+    /**
+     * 针对Windows系统的命令执行，解决中文编码问题
+     * 
+     * @param session SSH会话
+     * @param command 要执行的命令
+     * @return 解码后的命令执行结果
+     */
+    public static String execWindowsCmdWithResult(ClientSession session, String command) {
+        if (session == null) {
+            LOG.error("SSH会话为空，无法执行Windows命令: {}", command);
+            return null;
+        }
+
+        session.resetAuthTimeout();
+        LOG.info("执行Windows命令: {}", command);
+
+        // 先执行代码页设置为UTF-8，解决中文乱码问题
+        try {
+            // 设置控制台代码页为UTF-8
+            ChannelExec chcpChannel = session.createExecChannel("chcp 65001");
+            chcpChannel.setOut(new ByteArrayOutputStream());
+            chcpChannel.open();
+            chcpChannel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(5000));
+            chcpChannel.close();
+            LOG.info("已设置Windows控制台代码页为UTF-8 (65001)");
+        } catch (Exception e) {
+            LOG.warn("设置Windows代码页失败: {}, 继续尝试执行命令", e.getMessage());
+        }
+
+        // 获取Windows系统的代码页
+        String codepage = getWindowsCodePage(session);
+        LOG.info("Windows系统代码页: {}", codepage);
+
+        // 尝试使用PowerShell并强制UTF-8输出
+        if (!command.contains("powershell") && !command.contains("wmic")) {
+            // 对于简单命令，尝试用PowerShell包装以获得更好的编码处理
+            if (command.startsWith("cmd /c")) {
+                command = command.replace("cmd /c", "powershell -command");
+            } else {
+                command = "powershell -command \"" + command.replace("\"", "\\\"") + "\"";
+            }
+            // 强制PowerShell输出UTF-8
+            command = command + " | Out-String -Width 4096";
+            LOG.info("转换为PowerShell命令: {}", command);
+        }
+
+        // 执行原始命令
+        ChannelExec ce = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        try {
+            ce = session.createExecChannel(command);
+            ce.setOut(out);
+            ce.setErr(err);
+            ce.open();
+
+            // 等待命令执行完成
+            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
+                    TimeUnit.SECONDS.toMillis(100000));
+
+            if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                LOG.error("Windows命令执行超时: {}", command);
+                return "ERROR: Command timed out";
+            }
+
+            int exitStatus = ce.getExitStatus();
+            LOG.info("Windows命令执行结果状态: {}", exitStatus);
+
+            // 获取输出并进行编码转换
+            String outResult = convertWindowsOutput(out.toByteArray(), codepage);
+            String errResult = convertWindowsOutput(err.toByteArray(), codepage);
+
+            // 如果出错了，但这是预期中的错误（比如命令不存在），提供友好的替代值
+            if (exitStatus != 0) {
+                // 如果是命令不存在的错误，根据不同命令提供合理的默认值
+                if (command.contains("hostname -f") || command.contains("hostname -s")) {
+                    // 获取短主机名失败时，直接通过hostname获取
+                    LOG.warn("Windows不支持hostname -f或-s参数，尝试直接执行hostname");
+                    return execWindowsCmdWithResult(session, "powershell -command \"hostname\"");
+                } else if (command.contains("uname")) {
+                    // Windows没有uname命令
+                    LOG.warn("Windows不支持uname命令，尝试获取系统信息");
+                    if (command.contains("uname -a")) {
+                        return "Windows"; // 简单返回Windows标识
+                    } else if (command.contains("uname -m") || command.contains("uname -p")) {
+                        // 尝试获取CPU架构
+                        return execWindowsCmdWithResult(session, "powershell -command \"$env:PROCESSOR_ARCHITECTURE\"");
+                    }
+                } else if (command.contains("cat /etc")) {
+                    // Windows没有cat和/etc目录
+                    LOG.warn("Windows不支持cat /etc相关命令");
+                    if (command.contains("/etc/hosts")) {
+                        // 尝试直接读取hosts文件
+                        return execWindowsCmdWithResult(session,
+                                "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
+                    } else if (command.contains("/etc/resolv.conf")) {
+                        // DNS信息通过其他方式获取
+                        LOG.warn("Windows无法读取/etc/resolv.conf，尝试使用PowerShell获取DNS信息");
+                        String dnsCmd = "powershell -command \"Get-DnsClientServerAddress | Select-Object ServerAddresses | Format-List\"";
+                        String ipconfig = execWindowsCmdWithResult(session, dnsCmd);
+                        // 简单提取DNS部分（实际应用中可能需要更复杂的解析）
+                        return ipconfig != null ? ipconfig : "8.8.8.8";
+                    }
+                    // 其他/etc文件，返回空值
+                    return "";
+                } else if (command.contains("lspci")) {
+                    // Windows没有lspci命令
+                    LOG.warn("Windows不支持lspci命令，尝试使用其他方式获取GPU信息");
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"Get-WmiObject Win32_VideoController | Select-Object Name\"");
+                } else if (errResult.contains("不是内部或外部命令") ||
+                        errResult.contains("不可识别的命令") ||
+                        errResult.contains("command not found")) {
+                    // 通用命令不存在处理
+                    LOG.warn("Windows命令不存在: {}, 错误: {}", command, errResult);
+                    return "命令不支持";
+                }
+
+                LOG.error("Windows命令执行失败: {} - 错误信息: {}", command, errResult);
+                // 确保错误信息不包含乱码
+                if (errResult.trim().isEmpty()) {
+                    return "执行错误: 未知错误";
+                }
+                return "执行错误: " + errResult;
+            }
+
+            // 检查输出是否为空
+            if (outResult == null || outResult.trim().isEmpty()) {
+                // 如果标准输出为空，尝试使用错误输出
+                if (errResult != null && !errResult.trim().isEmpty()) {
+                    LOG.warn("Windows命令标准输出为空，使用错误输出: {}", errResult);
+                    return errResult;
+                }
+                LOG.warn("Windows命令无输出");
+                return "";
+            }
+
+            LOG.info("Windows命令执行结果: {}", outResult);
+            return outResult;
+        } catch (IOException e) {
+            LOG.error("执行Windows命令异常: {} - {}", command, e.getMessage());
+            return "执行异常: " + e.getMessage();
+        } finally {
+            try {
+                if (ce != null) {
+                    ce.close();
+                }
+            } catch (IOException e) {
+                LOG.error("关闭Windows命令通道异常", e);
+            }
+        }
+    }
+
+    /**
+     * 获取Windows系统的代码页
+     * 
+     * @param session SSH会话
+     * @return 代码页编号，如果获取失败则返回默认值
+     */
+    private static String getWindowsCodePage(ClientSession session) {
+        try {
+            // 使用PowerShell获取当前代码页，更可靠
+            ChannelExec ce = session.createExecChannel("powershell -command \"[Console]::OutputEncoding.CodePage\"");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ce.setOut(out);
+            ce.open();
+
+            // 等待命令执行完成
+            ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(10000));
+            ce.close();
+
+            String result = out.toString().trim();
+            LOG.info("Windows代码页信息: {}", result);
+
+            // 如果能获取到代码页数字
+            if (result.matches("\\d+")) {
+                return result;
+            }
+
+            // 尝试使用chcp命令作为备选方案
+            ce = session.createExecChannel("cmd /c chcp");
+            out = new ByteArrayOutputStream();
+            ce.setOut(out);
+            ce.open();
+            ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(10000));
+            ce.close();
+
+            result = out.toString();
+            if (result.contains("活动代码页:") || result.contains("Active code page:")) {
+                String[] parts = result.split("[:,：]");
+                if (parts.length >= 2) {
+                    return parts[1].trim();
+                }
+            }
+
+            // 如果无法解析，返回默认代码页（UTF-8）
+            return "65001";
+        } catch (Exception e) {
+            LOG.warn("获取Windows代码页失败: {}", e.getMessage());
+            // 默认返回UTF-8代码页
+            return "65001";
+        }
+    }
+
+    /**
+     * 根据代码页转换Windows命令输出的编码
+     * 
+     * @param bytes    原始输出字节
+     * @param codepage Windows代码页
+     * @return 转换后的字符串
+     */
+    private static String convertWindowsOutput(byte[] bytes, String codepage) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+
+        try {
+            String encoding;
+            // 先尝试使用UTF-8解码
+            try {
+                String utf8Result = new String(bytes, "UTF-8");
+                // 如果解码后没有明显的乱码字符，直接返回
+                if (!utf8Result.contains("")) {
+                    return utf8Result;
+                }
+            } catch (Exception e) {
+                // UTF-8解码失败，继续尝试其他编码
+            }
+
+            // 根据代码页选择正确的编码
+            switch (codepage) {
+                case "936": // 简体中文GBK
+                    encoding = "GBK";
+                    break;
+                case "950": // 繁体中文Big5
+                    encoding = "Big5";
+                    break;
+                case "437": // 美国英语
+                case "850": // 多语言拉丁语-1
+                    encoding = "Cp" + codepage;
+                    break;
+                case "65001": // UTF-8
+                    encoding = "UTF-8";
+                    break;
+                default:
+                    // 尝试使用代码页作为编码名称
+                    encoding = "Cp" + codepage;
+            }
+
+            // 使用指定编码解码字节
+            String result = new String(bytes, encoding);
+
+            // 检查结果是否包含替换字符()，如果有，尝试其他编码
+            if (result.contains("")) {
+                LOG.warn("使用编码 {} 解码存在问题，尝试其他编码", encoding);
+
+                // 尝试按优先级尝试常见编码
+                String[] fallbackEncodings = { "GBK", "UTF-8", "Cp1252", "Cp850", "ISO-8859-1" };
+                for (String fallbackEncoding : fallbackEncodings) {
+                    if (!fallbackEncoding.equals(encoding)) {
+                        try {
+                            String fallbackResult = new String(bytes, fallbackEncoding);
+                            if (!fallbackResult.contains("")) {
+                                LOG.info("使用备选编码 {} 成功解码", fallbackEncoding);
+                                return fallbackResult;
+                            }
+                        } catch (Exception e) {
+                            // 忽略此编码的错误，继续尝试
+                        }
+                    }
+                }
+            }
+
+            return result;
+        } catch (Exception e) {
+            LOG.warn("转换Windows输出编码失败: {}，尝试使用系统默认编码解码", e.getMessage());
+            // 出错时使用系统默认编码
+            return new String(bytes);
+        }
+    }
+
+    /**
+     * 从ipconfig输出中提取DNS服务器信息
+     * 
+     * @param ipconfig ipconfig /all的输出结果
+     * @return DNS服务器列表，每行一个
+     */
+    private static String extractDNSFromIpconfig(String ipconfig) {
+        if (ipconfig == null || ipconfig.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder dns = new StringBuilder();
+        String[] lines = ipconfig.split("[\r\n]+");
+        boolean inDnsSection = false;
+
+        for (String line : lines) {
+            // 检测是否包含DNS服务器相关文本
+            if (line.contains("DNS Server") || line.contains("DNS 服务器")) {
+                inDnsSection = true;
+                // 尝试提取同一行中的IP地址
+                int colonIndex = line.indexOf(':');
+                if (colonIndex > 0 && colonIndex < line.length() - 1) {
+                    String ipPart = line.substring(colonIndex + 1).trim();
+                    if (ipPart.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                        dns.append(ipPart).append("\n");
+                    }
+                }
+            }
+            // 如果在DNS部分，提取缩进的IP地址行
+            else if (inDnsSection && line.trim().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                dns.append(line.trim()).append("\n");
+            }
+            // 如果遇到新的章节（包含冒号但不是IP地址），结束DNS部分
+            else if (inDnsSection && line.contains(":") && !line.contains("DNS")) {
+                inDnsSection = false;
+            }
+        }
+
+        // 如果没有找到DNS，返回谷歌公共DNS作为备用
+        if (dns.length() == 0) {
+            return "8.8.8.8\n";
+        }
+
+        return dns.toString();
     }
 
     public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
@@ -1128,5 +1462,82 @@ public class MinaUtils {
             LOG.error("获取远程主机名时发生异常: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 针对Windows系统的硬件信息收集，处理编码问题并返回格式化结果
+     * 
+     * @param session     SSH会话
+     * @param commandType 命令类型：可以是"disk"、"memory"、"gpu"、"cpu"、"swap"
+     * @return 命令执行结果，已经过编码处理和格式化
+     */
+    public static String collectWindowsHardwareInfo(ClientSession session, String commandType) {
+        if (session == null) {
+            LOG.error("SSH会话为空，无法收集Windows硬件信息");
+            return null;
+        }
+
+        session.resetAuthTimeout();
+        String command = "";
+
+        // 根据不同类型选择合适的命令 - 统一使用PowerShell以获得更好的编码处理
+        switch (commandType.toLowerCase()) {
+            case "disk":
+                // 使用PowerShell获取磁盘信息，强制UTF-8输出
+                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, Size, FreeSpace | Format-Table -AutoSize | Out-String -Width 4096\"";
+                break;
+            case "memory":
+                // 使用PowerShell获取内存信息，强制UTF-8输出
+                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $os = Get-WmiObject -Class Win32_OperatingSystem; Write-Output ('TotalVisibleMemorySize=' + $os.TotalVisibleMemorySize); Write-Output ('FreePhysicalMemory=' + $os.FreePhysicalMemory)\"";
+                break;
+            case "gpu":
+                // 获取GPU信息，强制UTF-8输出
+                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion | Format-List | Out-String -Width 4096\"";
+                break;
+            case "cpu":
+                // 获取CPU详细信息，强制UTF-8输出
+                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Format-List | Out-String -Width 4096\"";
+                break;
+            case "swap":
+                // 获取交换空间信息，强制UTF-8输出
+                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject -Class Win32_PageFileUsage | Select-Object AllocatedBaseSize, CurrentUsage, PeakUsage | Format-List | Out-String -Width 4096\"";
+                break;
+            default:
+                LOG.error("未知的硬件信息类型: {}", commandType);
+                return "ERROR: 未知的硬件信息类型";
+        }
+
+        LOG.info("执行Windows硬件信息收集命令: {} ({})", commandType, command);
+
+        // 使用改进的execWindowsCmdWithResult方法执行命令
+        String result = execWindowsCmdWithResult(session, command);
+
+        // 对结果进行验证
+        if (result == null || result.isEmpty() || result.startsWith("ERROR:") || result.startsWith("执行错误:")) {
+            LOG.warn("Windows {} 信息收集失败，尝试使用备选命令", commandType);
+
+            // 使用备选命令
+            switch (commandType.toLowerCase()) {
+                case "disk":
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | Format-Table -AutoSize | Out-String\"");
+                case "memory":
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory | Format-List | Out-String\"");
+                case "gpu":
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_VideoController | Select-Object Name | Format-List | Out-String\"");
+                case "cpu":
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | Format-List | Out-String\"");
+                case "swap":
+                    return execWindowsCmdWithResult(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_PageFileUsage | Select-Object AllocatedBaseSize, CurrentUsage | Format-List | Out-String\"");
+                default:
+                    break;
+            }
+        }
+
+        return result;
     }
 }

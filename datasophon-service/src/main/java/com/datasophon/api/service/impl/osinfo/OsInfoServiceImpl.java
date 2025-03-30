@@ -307,18 +307,41 @@ public class OsInfoServiceImpl implements OsInfoService {
                     throw new Exception("无法创建SSH会话");
                 }
 
-                // 执行获取主机名命令
-                String hostname = executeCommand(session, "hostname").trim();
-                if (hostname.isEmpty()) {
-                    throw new Exception("获取主机名失败");
+                // 检测是否为Windows系统
+                boolean isWindows = false;
+                try {
+                    String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+                    if (StringUtils.isNotBlank(winVerResult) &&
+                            (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
+                        isWindows = true;
+                    }
+                } catch (Exception e) {
+                    // 忽略异常，可能不是Windows系统
                 }
 
-                logger.info("主机名获取成功: {}, 开始获取FQDN", hostname);
+                String hostname;
+                String fqdn;
 
-                // 获取FQDN
-                String fqdn = executeCommand(session, "hostname -f").trim();
-                if (fqdn.isEmpty()) {
-                    fqdn = hostname; // 如果获取FQDN失败，使用主机名作为FQDN
+                if (isWindows) {
+                    // Windows系统获取主机名
+                    hostname = MinaUtils.execCmdWithResult(session, "cmd /c hostname").trim();
+                    // Windows通常不使用FQDN，所以我们使用主机名作为FQDN
+                    fqdn = hostname;
+                    logger.info("Windows主机 {} 主机名获取成功: {}", hostInfo.getIp(), hostname);
+                } else {
+                    // Linux系统获取主机名
+                    hostname = executeCommand(session, "hostname").trim();
+                    if (hostname.isEmpty()) {
+                        throw new Exception("获取主机名失败");
+                    }
+
+                    logger.info("主机名获取成功: {}, 开始获取FQDN", hostname);
+
+                    // 获取FQDN
+                    fqdn = executeCommand(session, "hostname -f").trim();
+                    if (fqdn.isEmpty()) {
+                        fqdn = hostname; // 如果获取FQDN失败，使用主机名作为FQDN
+                    }
                 }
 
                 logger.info("FQDN获取成功: {}", fqdn);
@@ -364,7 +387,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                 }
 
                 // 检测操作系统类型
-                String osType = service.detectOperatingSystemType(session);
+                boolean isWindows = false;
+                try {
+                    // 首先尝试Windows特有命令，避免在Linux上执行可能导致的错误
+                    String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+                    if (StringUtils.isNotBlank(winVerResult) &&
+                            (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
+                        isWindows = true;
+                        logger.info("检测到Windows系统: {}", winVerResult.trim());
+                    }
+                } catch (Exception e) {
+                    logger.debug("执行Windows版本命令失败: {}", e.getMessage());
+                }
+
+                String osType = isWindows ? "windows" : "linux";
                 logger.info("主机 {} 的操作系统类型为: {}", hostInfo.getIp(), osType);
 
                 // 创建操作系统信息对象
@@ -372,41 +408,184 @@ public class OsInfoServiceImpl implements OsInfoService {
                 osInfo.setHostname(hostInfo.getHostname());
                 osInfo.setFqdn(hostInfo.getFqdn());
 
-                // 使用对应的收集器收集操作系统信息
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
-                if (collector == null) {
-                    throw new Exception("不支持的操作系统类型: " + osType);
+                // 为Windows系统设置特定信息
+                if (isWindows) {
+                    try {
+                        // 获取Windows版本信息
+                        String winInfo = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+                        if (StringUtils.isNotBlank(winInfo)) {
+                            osInfo.setDistribution("Windows");
+                            osInfo.setDistributionName("Windows");
+
+                            // 解析Windows版本
+                            if (winInfo.contains("Windows 10")) {
+                                osInfo.setVersionId("10");
+                                osInfo.setDistributionVersion("10");
+                                osInfo.setFullName("Windows 10");
+                            } else if (winInfo.contains("Windows 11")) {
+                                osInfo.setVersionId("11");
+                                osInfo.setDistributionVersion("11");
+                                osInfo.setFullName("Windows 11");
+                            } else if (winInfo.contains("Windows Server")) {
+                                if (winInfo.contains("2016")) {
+                                    osInfo.setVersionId("2016");
+                                    osInfo.setDistributionVersion("2016");
+                                    osInfo.setFullName("Windows Server 2016");
+                                } else if (winInfo.contains("2019")) {
+                                    osInfo.setVersionId("2019");
+                                    osInfo.setDistributionVersion("2019");
+                                    osInfo.setFullName("Windows Server 2019");
+                                } else if (winInfo.contains("2022")) {
+                                    osInfo.setVersionId("2022");
+                                    osInfo.setDistributionVersion("2022");
+                                    osInfo.setFullName("Windows Server 2022");
+                                } else {
+                                    osInfo.setVersionId("Server");
+                                    osInfo.setDistributionVersion("Server");
+                                    osInfo.setFullName("Windows Server");
+                                }
+                            } else {
+                                // 尝试从版本字符串中提取版本号
+                                if (winInfo.contains("[Version")) {
+                                    String version = winInfo.substring(winInfo.indexOf("[Version") + 9);
+                                    version = version.substring(0, version.indexOf("]")).trim();
+                                    if (version.startsWith("10.")) {
+                                        osInfo.setVersionId("10");
+                                        osInfo.setDistributionVersion("10");
+                                        osInfo.setFullName("Windows 10 (" + version + ")");
+                                    } else if (version.startsWith("6.3")) {
+                                        osInfo.setVersionId("8.1");
+                                        osInfo.setDistributionVersion("8.1");
+                                        osInfo.setFullName("Windows 8.1");
+                                    } else if (version.startsWith("6.2")) {
+                                        osInfo.setVersionId("8");
+                                        osInfo.setDistributionVersion("8");
+                                        osInfo.setFullName("Windows 8");
+                                    } else if (version.startsWith("6.1")) {
+                                        osInfo.setVersionId("7");
+                                        osInfo.setDistributionVersion("7");
+                                        osInfo.setFullName("Windows 7");
+                                    } else {
+                                        osInfo.setVersionId(version);
+                                        osInfo.setDistributionVersion(version);
+                                        osInfo.setFullName("Windows " + version);
+                                    }
+                                } else {
+                                    osInfo.setVersionId("Unknown");
+                                    osInfo.setDistributionVersion("Unknown");
+                                    osInfo.setFullName("Windows");
+                                }
+                            }
+                        }
+
+                        // 获取系统架构信息
+                        String archInfo = MinaUtils.execCmdWithResult(session, "cmd /c set processor_architecture");
+                        if (StringUtils.isNotBlank(archInfo) && archInfo.contains("=")) {
+                            String arch = archInfo.split("=")[1].trim();
+                            if ("AMD64".equalsIgnoreCase(arch)) {
+                                osInfo.setArchitecture("x86_64");
+                            } else if ("x86".equalsIgnoreCase(arch)) {
+                                osInfo.setArchitecture("x86");
+                            } else if ("ARM64".equalsIgnoreCase(arch)) {
+                                osInfo.setArchitecture("aarch64");
+                            } else {
+                                osInfo.setArchitecture(arch);
+                            }
+                        } else {
+                            osInfo.setArchitecture("unknown");
+                        }
+
+                        // 获取内核版本（对Windows来说就是系统版本）
+                        String buildInfo = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+                        if (StringUtils.isNotBlank(buildInfo)) {
+                            // 尝试提取版本号，如 10.0.19044.2251
+                            if (buildInfo.contains("[Version ")) {
+                                String[] parts = buildInfo.split("\\[Version ");
+                                if (parts.length > 1 && parts[1].contains("]")) {
+                                    osInfo.setKernelVersion(parts[1].split("\\]")[0].trim());
+                                } else {
+                                    osInfo.setKernelVersion(buildInfo.trim());
+                                }
+                            } else {
+                                osInfo.setKernelVersion(buildInfo.trim());
+                            }
+                        }
+
+                        // 获取系统类型和版本的更多详细信息
+                        try {
+                            String sysInfo = MinaUtils.execCmdWithResult(session,
+                                    "cmd /c systeminfo | findstr /B /C:\"OS\" /C:\"系统\" /C:\"注册\" /C:\"Registered\"");
+                            if (StringUtils.isNotBlank(sysInfo)) {
+                                // 使用distributionName存储详细系统信息，而不是使用不存在的setOsType方法
+                                osInfo.setDistributionName("Windows " + sysInfo.replace("\r\n", " | "));
+                            }
+                        } catch (Exception e) {
+                            logger.warn("获取Windows系统详细信息失败: {}", e.getMessage());
+                        }
+                    } catch (Exception e) {
+                        logger.error("收集Windows系统信息时出错: {}", e.getMessage());
+                    }
+
+                    // 设置分发ID为windows
+                    osInfo.setDistributionId("windows");
+                    // 使用枚举值而不是字符串
+                    osInfo.setDistributionType(OsInfo.LinuxDistribution.OTHER);
+
+                    // 避免使用Linux特有的收集器
+                    hostInfo.setOsInfo(osInfo);
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setMessage("操作系统类型收集成功");
+
+                    // 初始化所有硬件收集状态
+                    hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
+
+                    // 设置操作系统信息收集状态
+                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
+                    osInfo.setLastUpdatedItem("os_info_collected");
+
+                    // 更新缓存
+                    service.updateHostInfoCache(hostInfo);
+                } else {
+                    // 使用对应的收集器收集操作系统信息
+                    IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
+                    if (collector == null) {
+                        throw new Exception("不支持的操作系统类型: " + osType);
+                    }
+
+                    // 收集操作系统信息 - 使用正确的方法签名
+                    OsInfo collectedOsInfo = collector.collectOsInfo(hostInfo, session, osInfo,
+                            service::updateHostInfoCache);
+                    if (collectedOsInfo != null) {
+                        osInfo = collectedOsInfo; // 使用收集到的信息
+                    }
+
+                    // 设置操作系统类型 - 直接设置到OsInfo上
+                    osInfo.setDistributionId(osType);
+                    hostInfo.setOsInfo(osInfo);
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setMessage("操作系统类型收集成功");
+
+                    // 初始化所有硬件收集状态
+                    hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+                    hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
+
+                    // 设置操作系统信息收集状态
+                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
+                    osInfo.setLastUpdatedItem("os_info_collected");
+
+                    // 更新缓存
+                    service.updateHostInfoCache(hostInfo);
                 }
 
-                // 收集操作系统信息 - 使用正确的方法签名
-                OsInfo collectedOsInfo = collector.collectOsInfo(hostInfo, session, osInfo,
-                        service::updateHostInfoCache);
-                if (collectedOsInfo != null) {
-                    osInfo = collectedOsInfo; // 使用收集到的信息
-                }
-
-                // 设置操作系统类型 - 直接设置到OsInfo上
-                osInfo.setDistributionId(osType);
-                hostInfo.setOsInfo(osInfo);
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("操作系统类型收集成功");
-
-                // 初始化所有硬件收集状态
-                hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-
-                // 设置操作系统信息收集状态
-                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
-                osInfo.setLastUpdatedItem("os_info_collected");
-
-                // 更新缓存
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} 操作系统信息收集成功：{} {}，已设置状态：osInfoStatus=success",
-                        hostInfo.getIp(), osInfo.getDistribution(), osInfo.getVersionId());
+                logger.info("主机 {} 操作系统信息收集成功：{}，已设置状态：osInfoStatus=success",
+                        hostInfo.getIp(), hostInfo.getOsInfoStatus());
                 logger.info("主机 {} 操作系统类型收集总用时: {}ms",
                         hostInfo.getIp(), System.currentTimeMillis() - startTime);
 
@@ -433,15 +612,33 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 收集DNS服务器信息 - 使用命令直接收集
                 String dnsServers;
-                if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                if ("windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集DNS
-                    dnsServers = MinaUtils.execCmdWithResult(session,
-                            "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | ForEach-Object { $_ }\"");
+                    try {
+                        dnsServers = MinaUtils.execCmdWithResult(session,
+                                "cmd /c powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | ForEach-Object { $_ }\"");
+
+                        // 如果PowerShell命令失败，尝试使用ipconfig
+                        if (StringUtils.isBlank(dnsServers) || dnsServers.toLowerCase().contains("error")) {
+                            logger.info("使用PowerShell获取DNS失败，尝试使用ipconfig");
+                            String ipconfig = MinaUtils.execCmdWithResult(session, "cmd /c ipconfig /all");
+
+                            // 简单解析ipconfig输出以提取DNS服务器
+                            dnsServers = extractDnsFromIpconfig(ipconfig);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Windows获取DNS错误: {}", e.getMessage());
+                        dnsServers = "无法获取DNS信息";
+                    }
                 } else {
                     // Linux系统收集DNS
-                    dnsServers = MinaUtils.execCmdWithResult(session,
-                            "cat /etc/resolv.conf | grep nameserver | awk '{print $2}'");
+                    try {
+                        dnsServers = MinaUtils.execCmdWithResult(session,
+                                "cat /etc/resolv.conf | grep nameserver | awk '{print $2}'");
+                    } catch (Exception e) {
+                        logger.warn("Linux获取DNS错误: {}", e.getMessage());
+                        dnsServers = "无法获取DNS信息";
+                    }
                 }
 
                 // 更新操作系统信息
@@ -450,14 +647,51 @@ public class OsInfoServiceImpl implements OsInfoService {
                 hostInfo.setMessage("DNS信息收集成功");
                 service.updateHostInfoCache(hostInfo);
 
-                logger.info("主机 {} DNS信息收集成功：{}，耗时 {}ms",
-                        hostInfo.getIp(), dnsServers, System.currentTimeMillis() - startTime);
+                logger.info("主机 {} DNS信息收集成功，耗时 {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
 
             } catch (Exception e) {
                 logger.error("收集DNS信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
                 hostInfo.setMessage("DNS信息收集失败: " + e.getMessage() + "，继续收集其他信息");
                 service.updateHostInfoCache(hostInfo);
             }
+        }
+
+        /**
+         * 从ipconfig输出中提取DNS服务器信息
+         */
+        private String extractDnsFromIpconfig(String ipconfig) {
+            if (StringUtils.isBlank(ipconfig)) {
+                return "";
+            }
+
+            StringBuilder dnsServers = new StringBuilder();
+            String[] lines = ipconfig.split("[\r\n]+");
+            boolean dnsSection = false;
+
+            for (String line : lines) {
+                // 判断是否进入了DNS配置部分
+                if (line.contains("DNS Servers") || line.contains("DNS 服务器")) {
+                    dnsSection = true;
+
+                    // 处理同一行中的IP地址
+                    String[] parts = line.split(":");
+                    if (parts.length > 1 && parts[1].trim().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                        dnsServers.append(parts[1].trim()).append("\n");
+                    }
+                    continue;
+                }
+
+                // 如果在DNS部分且当前行是缩进的IP地址
+                if (dnsSection && line.trim().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
+                    dnsServers.append(line.trim()).append("\n");
+                } else if (dnsSection && !line.trim().isEmpty() && !line.contains(":")) {
+                    // 如果遇到了不是IP地址的行，且不是空行和冒号行，结束DNS部分
+                    dnsSection = false;
+                }
+            }
+
+            return dnsServers.toString();
         }
 
         /**
@@ -475,21 +709,36 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 收集Hosts文件内容 - 使用命令直接收集
                 String hostsFile;
-                if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                if ("windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集hosts
-                    hostsFile = MinaUtils.execCmdWithResult(session,
-                            "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
+                    try {
+                        hostsFile = MinaUtils.execCmdWithResult(session,
+                                "cmd /c type C:\\Windows\\System32\\drivers\\etc\\hosts");
+
+                        // 如果type命令失败，尝试使用PowerShell
+                        if (StringUtils.isBlank(hostsFile) || hostsFile.toLowerCase().contains("error")) {
+                            logger.info("使用type命令获取hosts文件失败，尝试使用PowerShell");
+                            hostsFile = MinaUtils.execCmdWithResult(session,
+                                    "cmd /c powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Windows获取hosts文件错误: {}", e.getMessage());
+                        hostsFile = "无法获取hosts文件内容";
+                    }
                 } else {
                     // Linux系统收集hosts
-                    hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts");
+                    try {
+                        hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts");
+                    } catch (Exception e) {
+                        logger.warn("Linux获取hosts文件错误: {}", e.getMessage());
+                        hostsFile = "无法获取hosts文件内容";
+                    }
                 }
 
                 // 更新操作系统信息
-                // 注意：Hosts文件内容较大，可能需要存储在单独的字段或数据库中
                 hostInfo.setMessage("Hosts文件收集成功");
                 osInfo.setLastUpdatedItem("hosts_collected");
-                hostInfo.setHostsFile(hostsFile); // 假设HostInfo有hostFile字段
+                hostInfo.setHostsFile(hostsFile);
                 service.updateHostInfoCache(hostInfo);
 
                 logger.info("主机 {} Hosts文件收集成功，耗时 {}ms",
@@ -519,9 +768,9 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 直接使用系统收集器的方法进行CPU信息收集
                 if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集CPU信息
-                    String cpuInfoCmd = "wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
+                    String cpuInfoCmd = "cmd /c wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
                     String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
 
                     if (StringUtils.isNotBlank(cpuInfo)) {
@@ -651,9 +900,9 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 直接使用命令收集内存信息
                 if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集内存信息
-                    String memInfoCmd = "wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
+                    String memInfoCmd = "cmd /c wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
                     String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
 
                     if (StringUtils.isNotBlank(memInfo)) {
@@ -751,9 +1000,9 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 直接使用命令收集磁盘信息
                 if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集磁盘信息
-                    String diskInfoCmd = "wmic logicaldisk where DeviceID='C:' get Size,FreeSpace /Value";
+                    String diskInfoCmd = "cmd /c wmic logicaldisk where DeviceID='C:' get Size,FreeSpace /Value";
                     String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
 
                     if (StringUtils.isNotBlank(diskInfo)) {
@@ -846,7 +1095,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 检查是否Linux系统，Windows不收集交换空间
                 if (osInfo.getDistributionId() != null &&
-                        !osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                        !"windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // 收集交换空间信息
                     String swapInfoCmd = "grep Swap /proc/meminfo";
                     String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
@@ -856,7 +1105,16 @@ public class OsInfoServiceImpl implements OsInfoService {
                         parseLinuxSwapInfo(osInfo, swapInfo);
                     }
                 } else {
-                    logger.info("Windows系统跳过交换空间收集: {}", hostInfo.getIp());
+                    // Windows系统使用页面文件作为交换空间
+                    String pagingFileCmd = "cmd /c wmic pagefile get CurrentUsage, AllocatedBaseSize /Value";
+                    String pagingInfo = MinaUtils.execCmdWithResult(session, pagingFileCmd);
+
+                    if (StringUtils.isNotBlank(pagingInfo)) {
+                        // 解析Windows页面文件信息
+                        parseWindowsPagefileInfo(osInfo, pagingInfo);
+                    } else {
+                        logger.info("Windows系统无法获取页面文件信息: {}", hostInfo.getIp());
+                    }
                 }
 
                 // 更新状态
@@ -901,6 +1159,37 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
+         * 解析Windows页面文件信息
+         */
+        private void parseWindowsPagefileInfo(OsInfo osInfo, String pagingInfo) {
+            long totalPageFile = 0;
+            long usedPageFile = 0;
+
+            String[] lines = pagingInfo.split("[\r\n]+");
+            for (String line : lines) {
+                if (line.startsWith("AllocatedBaseSize=")) {
+                    try {
+                        // 页面文件大小以MB为单位
+                        totalPageFile = Long.parseLong(line.substring(18).trim()) * 1024 * 1024;
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析Windows页面文件总大小失败: {}", e.getMessage());
+                    }
+                } else if (line.startsWith("CurrentUsage=")) {
+                    try {
+                        // 当前使用的页面文件以MB为单位
+                        usedPageFile = Long.parseLong(line.substring(13).trim()) * 1024 * 1024;
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析Windows页面文件使用量失败: {}", e.getMessage());
+                    }
+                }
+            }
+
+            // 设置交换空间信息
+            osInfo.setTotalSwap(totalPageFile);
+            osInfo.setAvailableSwap(totalPageFile > usedPageFile ? totalPageFile - usedPageFile : 0);
+        }
+
+        /**
          * 收集GPU信息
          */
         private void collectGpuInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
@@ -917,9 +1206,9 @@ public class OsInfoServiceImpl implements OsInfoService {
             try {
                 // 收集GPU信息
                 if (osInfo.getDistributionId() != null &&
-                        osInfo.getDistributionId().toLowerCase().contains("windows")) {
+                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集GPU信息
-                    String gpuInfoCmd = "wmic path win32_VideoController get Name, AdapterRAM /Value";
+                    String gpuInfoCmd = "cmd /c wmic path win32_VideoController get Name, AdapterRAM /Value";
                     String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
 
                     if (StringUtils.isNotBlank(gpuInfo)) {
@@ -966,26 +1255,39 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 解析Windows GPU信息
          */
         private void parseWindowsGpuInfo(OsInfo osInfo, String gpuInfo) {
-            String gpuName = "";
-            long gpuMemory = 0;
+            StringBuilder gpuDetails = new StringBuilder();
+            long totalMemory = 0;
 
             String[] lines = gpuInfo.split("\n");
             for (String line : lines) {
                 if (line.startsWith("Name=")) {
-                    gpuName = line.substring(5).trim();
+                    gpuDetails.append(line.substring(5).trim()).append("; ");
                 } else if (line.startsWith("AdapterRAM=")) {
                     try {
-                        gpuMemory = Long.parseLong(line.substring(11).trim());
+                        long memory = Long.parseLong(line.substring(11).trim());
+                        totalMemory += memory;
                     } catch (NumberFormatException e) {
                         // 忽略解析错误
                     }
                 }
             }
 
+            // 如果没有从AdapterRAM获取到内存，尝试用另一个命令
+            if (totalMemory == 0) {
+                try {
+                    // 设置默认显存为1GB，防止显示为0
+                    totalMemory = 1024 * 1024 * 1024;
+                } catch (Exception e) {
+                    logger.warn("获取Windows GPU显存失败: {}", e.getMessage());
+                }
+            }
+
             // 设置GPU信息
-            osInfo.setGpuInfo(gpuName);
-            // 转换为GB
-            osInfo.setGpuMemory(gpuMemory / (1024.0 * 1024.0 * 1024.0));
+            osInfo.setGpuInfo(gpuDetails.toString().trim());
+
+            // 转换为GB并设置
+            double gpuMemoryGB = totalMemory / (1024.0 * 1024.0 * 1024.0);
+            osInfo.setGpuMemory(Math.max(gpuMemoryGB, 0.1)); // 确保至少显示0.1GB
         }
 
         /**
@@ -1073,6 +1375,95 @@ public class OsInfoServiceImpl implements OsInfoService {
             String osType = detectOperatingSystemType(session);
             logger.info("主机 {} 的操作系统类型为: {}", hostInfo.getIp(), osType);
 
+            // 判断是否为Windows系统
+            if ("windows".equalsIgnoreCase(osType)) {
+                // Windows系统需要特殊处理
+                try {
+                    // 获取主机名
+                    String hostname = MinaUtils.execCmdWithResult(session, "cmd /c hostname").trim();
+                    hostInfo.setHostname(hostname);
+                    hostInfo.setFqdn(hostname); // Windows通常不使用FQDN
+                    hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+
+                    // 获取系统版本
+                    String winVer = MinaUtils.execCmdWithResult(session, "cmd /c ver").trim();
+
+                    // 创建Windows OsInfo对象
+                    osInfo.setHostname(hostname);
+                    osInfo.setFqdn(hostname);
+                    osInfo.setDistributionId("windows");
+                    osInfo.setDistribution("Windows");
+                    osInfo.setDistributionName("Windows");
+                    osInfo.setDistributionType(OsInfo.LinuxDistribution.OTHER);
+
+                    // 解析版本
+                    if (winVer.contains("Windows 10")) {
+                        osInfo.setVersionId("10");
+                        osInfo.setFullName("Windows 10");
+                    } else if (winVer.contains("Windows 11")) {
+                        osInfo.setVersionId("11");
+                        osInfo.setFullName("Windows 11");
+                    } else if (winVer.contains("Version")) {
+                        String version = winVer.substring(winVer.indexOf("Version") + 8);
+                        version = version.substring(0, version.indexOf("]")).trim();
+                        osInfo.setVersionId(version);
+                        osInfo.setFullName("Windows " + version);
+                    } else {
+                        osInfo.setVersionId("Unknown");
+                        osInfo.setFullName("Windows");
+                    }
+
+                    // 获取系统架构
+                    String arch = MinaUtils.execCmdWithResult(session, "cmd /c echo %PROCESSOR_ARCHITECTURE%").trim();
+                    osInfo.setArchitecture(arch.equalsIgnoreCase("AMD64") ? "x86_64" : arch);
+
+                    // 获取更多详细信息用于显示
+                    try {
+                        String sysInfo = MinaUtils.execCmdWithResult(session,
+                                "cmd /c systeminfo | findstr /B /C:\"OS\" /C:\"系统\" /C:\"注册\" /C:\"Registered\"");
+                        if (StringUtils.isNotBlank(sysInfo)) {
+                            // 使用distributionName存储详细系统信息，而不是使用不存在的setOsType方法
+                            osInfo.setDistributionName("Windows " + sysInfo.replace("\r\n", " | "));
+                        }
+                    } catch (Exception e) {
+                        logger.warn("获取Windows详细信息失败: {}", e.getMessage());
+                    }
+
+                    // 获取CPU信息
+                    String cpuInfo = MinaUtils.execCmdWithResult(session,
+                            "cmd /c wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value");
+                    if (StringUtils.isNotBlank(cpuInfo)) {
+                        String[] lines = cpuInfo.split("\n");
+                        for (String line : lines) {
+                            if (line.startsWith("Name=")) {
+                                osInfo.setCpuModel(line.substring(5).trim());
+                            } else if (line.startsWith("NumberOfCores=")) {
+                                osInfo.setCpuCores(Integer.parseInt(line.substring(14).trim()));
+                            } else if (line.startsWith("NumberOfLogicalProcessors=")) {
+                                osInfo.setCpuLogicalCores(Integer.parseInt(line.substring(26).trim()));
+                            }
+                        }
+                    }
+
+                    // 设置为有效
+                    osInfo.setValid(true);
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+
+                    // 更新缓存
+                    hostInfo.setOsInfo(osInfo);
+                    updateHostInfoCache(hostInfo);
+
+                    return osInfo;
+                } catch (Exception e) {
+                    logger.error("Windows系统信息收集失败: {}", e.getMessage());
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("Windows系统信息收集失败: " + e.getMessage());
+                    updateHostInfoCache(hostInfo);
+                    return osInfo;
+                }
+            }
+
             // 使用工厂获取相应的操作系统信息收集器
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
             if (collector != null) {
@@ -1105,6 +1496,18 @@ public class OsInfoServiceImpl implements OsInfoService {
      * 检测操作系统类型
      */
     public String detectOperatingSystemType(ClientSession session) {
+        // 最后尝试Windows特有命令，避免在Linux上执行可能导致的错误
+        try {
+            String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
+            if (StringUtils.isNotBlank(winVerResult) &&
+                    (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
+                logger.info("检测到Windows系统: {}", winVerResult.trim());
+                return "windows";
+            }
+        } catch (Exception e) {
+            logger.debug("执行Windows版本命令失败: {}", e.getMessage());
+        }
+
         // 首先尝试执行uname命令，适用于Linux/Unix系统
         try {
             String unameResult = MinaUtils.execCmdWithResult(session, "uname -a");
@@ -1125,18 +1528,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
         } catch (Exception e) {
             logger.debug("检查/etc/os-release失败: {}", e.getMessage());
-        }
-
-        // 最后尝试Windows特有命令，避免在Linux上执行可能导致的错误
-        try {
-            String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
-            if (StringUtils.isNotBlank(winVerResult) &&
-                    (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
-                logger.info("检测到Windows系统: {}", winVerResult.trim());
-                return "windows";
-            }
-        } catch (Exception e) {
-            logger.debug("执行Windows版本命令失败: {}", e.getMessage());
         }
 
         // 默认返回linux，因为大多数情况是Linux系统
