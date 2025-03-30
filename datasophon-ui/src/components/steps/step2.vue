@@ -895,7 +895,7 @@ export default {
                                   ]),
                                   h('a-progress', {
                                     props: {
-                                      percent: (100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1),
+                                      percent: Number((100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1)),
                                       showInfo: false,
                                       strokeColor: {
                                         '0%': '#108ee9',
@@ -983,7 +983,7 @@ export default {
                                   ]),
                                   h('a-progress', {
                                     props: {
-                                      percent: (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1),
+                                      percent: Number((100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1)),
                                       showInfo: false,
                                       strokeColor: (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 90) ? '#ff4d4f' : 
                                                   (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 70) ? '#faad14' : '#52c41a',
@@ -1821,647 +1821,114 @@ export default {
     },
     // 展开行渲染函数
     expandedRowRender(record) {
-      const h = this.$createElement;
-      const checkItems = this.checkItemsMap[record.ip] || [];
-      
-      // 判断主机是否处于检查中状态
-      const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
-      
-      const columns = [
-        {
-          title: '检查项',
-          dataIndex: 'itemName',
-          key: 'itemName',
-          width: '25%',
-          customRender: (text) => {
-            const h = this.$createElement;
-            return h('div', {
-              style: {
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1d1d1f'
-              }
-            }, [text]);
-          }
-        },
-        {
-          title: '状态',
-          dataIndex: 'status',
-          key: 'status',
-          width: '15%',
-          customRender: (text) => {
-            const h = this.$createElement;
-            // 使用字符串类型的状态映射
-            const statusMap = {
-              'WAITING': { text: '待检查', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'clock-circle' },
-              'SUCCESS': { text: '通过', color: '#34C759', bgColor: 'rgba(52, 199, 89, 0.1)', icon: 'check-circle' },
-              'FAILED': { text: '未通过', color: '#FF3B30', bgColor: 'rgba(255, 59, 48, 0.1)', icon: 'close-circle' },
-              'CHECKING': { text: '检查中', color: '#007AFF', bgColor: 'rgba(0, 122, 255, 0.1)', icon: 'loading' },
-              'SKIPPED': { text: '已跳过', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'warning' },
-              'TERMINATING': { text: '终止中', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'stop', spin: true },
-              'FIXING': { text: '修复中', color: '#5856D6', bgColor: 'rgba(88, 86, 214, 0.1)', icon: 'tool', spin: true }
-            };
-
-            const status = statusMap[text] || { text: '未知', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'question-circle' };
-
-            return h('div', { 
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                backgroundColor: status.bgColor,
-                fontSize: '13px',
-                fontWeight: '500',
-                color: status.color,
-                transition: 'all 0.2s ease'
-              }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon,
-                  spin: status.spin || status.icon === 'loading'
-                },
-                style: { 
-                  marginRight: '6px',
-                  fontSize: '14px'
-                }
-              }),
-              status.text
-            ]);
-          }
-        },
-        {
-          title: '检查结果',
-          dataIndex: 'message',
-          key: 'message',
-          width: '20%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            
-            // 检查文本是否存在
-            if (!text) return h('span', {}, ['-']);
-            
-            // 不再限制文本长度，所有检查项都显示悬浮提示
-            const displayText = text;
-            
-            // 根据状态设置颜色
-            const statusColor = row.status === 'SUCCESS' ? '#34C759' : 
-                             row.status === 'FAILED' ? '#FF3B30' :
-                             row.status === 'SKIPPED' ? '#8E8E93' :
-                             row.status === 'CHECKING' ? '#007AFF' : 
-                             row.status === 'FIXING' ? '#5856D6' : '#1d1d1f';
-            
-            const statusIcon = row.status === 'SUCCESS' ? 'check-circle' :
-                               row.status === 'FAILED' ? 'close-circle' :
-                               row.status === 'SKIPPED' ? 'warning' :
-                               row.status === 'CHECKING' ? 'loading' :
-                               row.status === 'FIXING' ? 'tool' : 'info-circle';
-            
-            const statusSpin = row.status === 'CHECKING' || row.status === 'FIXING';
-            const statusTheme = row.status !== 'CHECKING' && row.status !== 'FIXING' ? 'filled' : undefined;
-            
-            // 创建一个更符合苹果设计风格的tooltip内容
-            const tooltipContent = h('div', { 
-                  class: 'check-result-tooltip',
-                  style: {
-                    maxWidth: '1200px',
-                padding: '0',
-                borderRadius: '16px',
-                background: '#ffffff',
-                color: '#1d1d1f',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    wordBreak: 'break-word',
-                whiteSpace: 'pre-wrap',
-                fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
-                overflow: 'hidden',
-                border: 'none',
-                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05)'
-                  }
-                }, [
-                  // 添加标题行
-                  h('div', {
-                    style: {
-                  fontWeight: '500',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                  backgroundColor: statusColor,
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }
-              }, [
-                h('div', {
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center'
-                    }
-                  }, [
-                    h('a-icon', {
-                      props: {
-                      type: statusIcon,
-                      theme: statusTheme,
-                      spin: statusSpin
-                      },
-                      style: {
-                        marginRight: '8px',
-                      fontSize: '16px'
-                      }
-                    }),
-                    '检查结果详情'
-                ])
-                  ]),
-                  // 添加检查结果内容
-                  h('div', {
-                    domProps: {
-                      innerHTML: text
-                },
-                style: {
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  padding: '16px',
-                  maxHeight: '70vh',
-                  overflowY: 'auto'
-                }
-              })
-            ]);
-            
-            // 使用tooltip组件但覆盖默认样式
-            return h('a-tooltip', {
-              props: {
-                title: tooltipContent,
-                placement: 'top',
-                mouseEnterDelay: 0.3,
-                overlayClassName: 'apple-style-tooltip',
-                autoAdjustOverflow: true,
-                arrowPointAtCenter: true,
-                color: '#ffffff',
-                getPopupContainer: () => document.body
-              },
-              class: 'custom-tooltip'
-            }, [
-              h('span', {
-                style: {
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-block',
-                  maxWidth: '100%',
-                  color: statusColor,
-                  transition: 'all 0.3s',
-                  fontSize: '14px',
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                  backgroundColor: `${statusColor}15`, // 15是透明度，相当于rgba的0.1
-                  border: `1px solid ${statusColor}30` // 30是透明度，相当于rgba的0.2
-                },
-                class: 'check-result-text'
-              }, [
-                // 状态图标
-                h('a-icon', {
-                  props: {
-                    type: statusIcon,
-                    theme: statusTheme,
-                    spin: statusSpin
-                  },
-                  style: {
-                    marginRight: '4px',
-                    fontSize: '12px'
-                  }
-                }),
-                // 在这里使用一个辅助函数去除HTML标签，只显示纯文本
-                h('span', {}, [
-                  displayText.length > 20 ? 
-                    this.stripHtml(displayText).substr(0, 20) + '...' : 
-                    this.stripHtml(displayText)
-                ])
-              ])
-            ]);
-          }
-        },
-        {
-          title: '操作',
-          key: 'action',
-          width: '25%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING';
-            const isFailed = row.status === 'FAILED';
-            
-            return h('div', { 
-              class: 'action-buttons',
-              style: {
-                display: 'flex',
-                gap: '8px'
-              }
-            }, [
-              // 终止按钮 - 检查中时显示
-              isChecking ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                  color: '#FF3B30',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                on: {
-                  click: () => this.stopCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'close' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "终止"
-              ]) : null,
-              
-              // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                  color: '#007AFF',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: row.status === 'CHECKING' || row.status === 'FIXING' || 
-                          !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: row.status === 'CHECKING' || row.status === 'FIXING' || 
-                          !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: row.status === 'CHECKING' || row.status === 'FIXING' || 
-                           !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
-                },
-                on: {
-                  click: () => this.retryCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'redo' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "重试"
-              ]) : null,
-              
-              // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(88, 86, 214, 0.1)',
-                  color: '#5856D6',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: isHostChecking || row.status === 'FIXING'
-                },
-                on: {
-                  click: () => this.fixCheckItem(record.ip, row)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'tool' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "修复"
-              ]) : null,
-              
-              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(142, 142, 147, 0.1)',
-                  color: '#8E8E93',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: isHostChecking ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: isHostChecking ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: isHostChecking
-                },
-                on: {
-                  click: () => this.skipCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'forward' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "跳过"
-              ]) : null
-            ].filter(Boolean));
-          }
-        },
-        {
-          title: '日志',
-          key: 'log',
-          width: '15%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            return h('button', {
-              style: {
-                border: 'none',
-                backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                color: '#007AFF',
-                padding: '6px 12px',
-                borderRadius: '12px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                opacity: row.status === 'WAITING' ? '0.5' : '1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              },
-              attrs: {
-                disabled: row.status === 'WAITING'
-              },
-              on: {
-                click: () => this.viewItemLog(record.ip, row.id, row.itemName)
-              }
-            }, [
-              h('a-icon', {
-                props: { type: 'file-text' },
-                style: { marginRight: '4px', fontSize: '12px' }
-              }),
-              "查看日志"
-            ]);
-          }
-        }
-      ];
-
-      // 创建header-summary部分
-      const headerSummary = h('div', { 
-        class: 'header-summary',
-        style: {
-          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
-          fontSize: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }
-      }, [
-        h('span', {
-          style: {
-            fontWeight: '600',
-            color: '#1d1d1f'
-          }
-        }, [`共 ${checkItems.length} 项检查`]),
-        
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(52, 199, 89, 0.1)',
-            color: '#34C759',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', { 
-            props: { type: 'check-circle' }, 
-            style: { marginRight: '6px' } 
-          }),
-          `${checkItems.filter(item => item.status === 'SUCCESS').length} 项通过`
-        ]),
-        
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 59, 48, 0.1)',
-            color: '#FF3B30',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', { 
-            props: { type: 'close-circle' }, 
-            style: { marginRight: '6px' } 
-          }),
-          `${checkItems.filter(item => item.status === 'FAILED').length} 项失败`
-        ]),
-        
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 149, 0, 0.1)',
-            color: '#FF9500',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', { 
-            props: { type: 'clock-circle' }, 
-            style: { marginRight: '6px' } 
-          }),
-          `${checkItems.filter(item => item.status === 'WAITING').length} 项待检查`
-        ]),
-        
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(0, 122, 255, 0.1)',
-            color: '#007AFF',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', { 
-            props: { 
-              type: 'loading',
-              spin: true
-            }, 
-            style: { marginRight: '6px' } 
-          }),
-          `${checkItems.filter(item => item.status === 'CHECKING').length} 项检查中`
-        ]),
-        
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(142, 142, 147, 0.1)',
-            color: '#8E8E93',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', { 
-            props: { type: 'warning' }, 
-            style: { marginRight: '6px' } 
-          }),
-          `${checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过`
-        ])
-      ]);
-
-      // 创建header-actions部分
-      const headerActions = h('div', { 
-        class: 'header-actions',
-        style: {
-          display: 'flex',
-          gap: '12px'
-        }
-      }, [
-        h('button', {
-          style: {
-            backgroundColor: '#007AFF',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: !this.hasRetryableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasRetryableSelectedItems(record.ip) ? '0.6' : '1',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center'
-          },
-          attrs: {
-            disabled: !this.hasRetryableSelectedItems(record.ip)
-          },
-          on: {
-            click: () => this.retrySelectedItems(record.ip)
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'redo' },
-            style: { marginRight: '6px' }
-          }),
-          '重试选中项'
-        ]),
-        
-        h('button', {
-          style: {
-            backgroundColor: '#5856D6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: !this.hasFixableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasFixableSelectedItems(record.ip) ? '0.6' : '1',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center'
-          },
-          attrs: {
-            disabled: !this.hasFixableSelectedItems(record.ip)
-          },
-          on: {
-            click: () => this.fixSelectedItems(record.ip)
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'tool' },
-            style: { marginRight: '6px' }
-          }),
-          '修复选中项'
-        ])
-      ]);
-
-      // 创建表格容器，添加苹果风格的样式
-      return h('div', { 
-        class: 'check-items-container',
-        style: {
-          padding: '24px',
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-          margin: '0px',
-          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'
-        }
-      }, [
-        h('div', { 
-          class: 'check-items-header',
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            gap: '16px'
-          }
-        }, [
-          headerSummary,
-          headerActions
-        ]),
-        
-        // 添加分隔线
-        h('div', {
-          style: {
-            height: '1px',
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            margin: '0 0 20px 0'
-          }
-        }),
-        
-        h('a-table', {
-          props: {
-            columns: columns,
-            dataSource: checkItems,
-            pagination: false,
-            size: 'middle',
-            rowKey: 'id',
-            rowSelection: {
-              selectedRowKeys: this.selectedCheckItems[record.ip] || [],
-              onChange: (selectedRowKeys) => this.onCheckItemSelect(record.ip, selectedRowKeys)
+      const host = record.host
+      return h('div', { class: 'expand-content' }, [
+        h('div', { class: 'expand-content-header' }, [
+          h('span', { class: 'expand-content-title' }, [
+            h('a-icon', { props: { type: 'desktop' }, style: { marginRight: '8px' } }),
+            `主机 ${host}`
+          ]),
+          h('a-tag', {
+            props: {
+              color: this.hostOsInfo[host] && this.hostOsInfo[host].osVersion === 'CentOS 7' ? '#F15A29' : '#47B27B'
             }
-          },
-          class: 'apple-style-table',
-          style: {
-            borderRadius: '12px',
-            overflow: 'hidden'
-          }
-        })
-      ]);
+          }, [
+            this.hostOsInfo[host] ? this.hostOsInfo[host].osVersion : '获取中...'
+          ])
+        ]),
+        h('div', { class: 'expand-content-body' }, [
+          h('a-row', { props: { gutter: 16 } }, [
+            h('a-col', { props: { span: 12 } }, [
+              h('a-card', { class: 'expand-card', props: { bordered: false } }, [
+                h('template', { slot: 'title' }, [
+                  h('div', { style: { display: 'flex', alignItems: 'center', fontWeight: 500 } }, [
+                    h('a-tooltip', {
+                      props: {
+                        placement: 'right',
+                        overlayClassName: 'hostname-detail-tooltip',
+                        mouseEnterDelay: 0.3,
+                        destroyTooltipOnHide: true
+                      }
+                    }, [
+                      h('div', {
+                        style: { 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          cursor: 'pointer' 
+                        }
+                      }, [
+                        h('a-icon', { 
+                          props: { type: 'info-circle' }, 
+                          style: { marginRight: '8px', color: '#007AFF' } 
+                        }),
+                        '主机名'
+                      ]),
+                      h('div', { slot: 'title' }, [
+                        // 主机名详情卡片
+                        h('div', {}, [
+                          h('div', { class: 'hostname-detail-title' }, [
+                            h('div', { class: 'section-icon hostname-icon' }, [
+                              h('a-icon', { props: { type: 'desktop' } })
+                            ]),
+                            '主机信息'
+                          ]),
+                          
+                          h('div', { class: 'hostname-detail-content' }, [
+                            h('div', { class: 'hostname-detail-item' }, [
+                              h('div', { class: 'hostname-detail-label' }, ['主机名']),
+                              h('div', { class: 'hostname-detail-value' }, [host])
+                            ])
+                          ]),
+                          
+                          h('div', { class: 'hostname-detail-title' }, [
+                            h('div', { class: 'section-icon network-icon' }, [
+                              h('a-icon', { props: { type: 'global' } })
+                            ]),
+                            '网络配置'
+                          ]),
+                          
+                          h('div', { class: 'hostname-detail-content' }, [
+                            h('div', { class: 'hostname-detail-item' }, [
+                              h('div', { class: 'hostname-detail-label' }, ['DNS 服务器']),
+                              h('div', { class: 'hostname-detail-value dns-servers' }, [
+                                this.renderDnsServers(this.hostOsInfo[host] ? this.hostOsInfo[host].dnsServers : [])
+                              ])
+                            ])
+                          ]),
+                          
+                          h('div', { class: 'hostname-detail-title' }, [
+                            h('div', { class: 'section-icon hosts-icon' }, [
+                              h('a-icon', { props: { type: 'file-text' } })
+                            ]),
+                            'Hosts 文件'
+                          ]),
+                          
+                          h('div', { class: 'hostname-detail-content' }, [
+                            h('div', { class: 'hostname-detail-item' }, [
+                              h('div', { class: 'hostname-detail-label' }, ['Hosts 文件内容']),
+                              h('div', { class: 'hostname-detail-hosts-file' }, [
+                                this.renderHostsFile(this.hostOsInfo[host] ? this.hostOsInfo[host].hostsFile : '')
+                              ])
+                            ])
+                          ])
+                        ])
+                      ])
+                    ])
+                  ])
+                ]),
+                h('a-statistic', {
+                  props: {
+                    title: '主机名',
+                    value: host,
+                    valueStyle: { fontWeight: 'bold', color: '#1D1D1F' }
+                  }
+                })
+              ])
+            ])
+            // ... existing code ...
+          ])
+        ])
+      ])
     },
 
     // 选择检查项
@@ -3224,6 +2691,156 @@ export default {
         class: 'hosts-file-preview-modal'
       });
     },
+    
+    formatHostsContent(content) {
+      if (!content) return [];
+      return content.split('\n');
+    },
+    
+    splitIPAndHostname(line) {
+      if (!line || line.trim() === '') return [''];
+      return line.trim().split(/\s+/);
+    },
+
+    // 添加renderHostsFile方法，用于将hosts文件内容转换为带有语法高亮的HTML
+    renderHostsFile(content) {
+      if (!content) return '';
+      
+      const lines = this.formatHostsContent(content);
+      let result = '';
+      
+      lines.forEach((line, index) => {
+        let lineClass = 'hosts-line';
+        let formattedLine = '';
+        
+        if (line.startsWith('#')) {
+          // 注释行
+          lineClass += ' comment';
+          formattedLine = this.escapeHtml(line);
+        } else if (line.trim() !== '') {
+          // IP地址和主机名行
+          lineClass += ' ip-entry';
+          const parts = this.splitIPAndHostname(line);
+          
+          parts.forEach((part, partIndex) => {
+            if (partIndex > 0) {
+              // 主机名部分
+              formattedLine += '<span class="hostname-part">' + this.escapeHtml(part) + '</span>';
+            } else {
+              // IP地址部分
+              formattedLine += this.escapeHtml(part);
+            }
+            
+            if (partIndex < parts.length - 1) {
+              formattedLine += ' ';
+            }
+          });
+        } else {
+          // 空行
+          formattedLine = '';
+        }
+        
+        result += `<span class="${lineClass}">${formattedLine}</span>\n`;
+      });
+      
+      return result;
+    },
+
+    // 添加formatDNSServers方法，用于格式化DNS服务器列表
+    formatDNSServers(dnsList) {
+      if (!dnsList || !dnsList.length) return '<div class="dns-empty">未配置DNS服务器</div>';
+      
+      let result = '';
+      
+      dnsList.forEach((dns, index) => {
+        result += `<div class="dns-server-entry">
+          <span class="dns-icon">${index+1}</span>
+          <span class="dns-ip">${this.escapeHtml(dns)}</span>
+        </div>`;
+      });
+      
+      return result;
+    },
+
+    // 添加escapeHtml方法到methods
+    escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    },
+
+    // 渲染DNS服务器列表
+    renderDnsServers (dnsServers) {
+      if (!dnsServers || dnsServers.length === 0) {
+        return h('div', { class: 'dns-empty' }, ['没有配置DNS服务器']);
+      }
+      
+      return dnsServers.map((dns, index) => {
+        return h('div', { 
+          class: 'dns-server-entry',
+          key: `dns-${index}`
+        }, [
+          h('div', { class: 'dns-icon' }, [`#${index+1}`]),
+          h('div', { class: 'dns-ip' }, [dns])
+        ]);
+      });
+    },
+    
+    // 渲染hosts文件内容，带有语法高亮
+    renderHostsFile (hostsContent) {
+      if (!hostsContent) {
+        return '未能获取hosts文件内容';
+      }
+      
+      // 对hosts文件进行HTML转义，防止XSS攻击
+      const escapedContent = this.escapeHtml(hostsContent);
+      
+      // 将hosts文件内容按行分割
+      const lines = escapedContent.split('\n');
+      const result = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        let lineClass = 'hosts-line';
+        let lineContent = line;
+        
+        // 处理注释行
+        if (line.trim().startsWith('#')) {
+          lineClass += ' comment';
+        } 
+        // 处理IP行
+        else if (/^\s*\d+\.\d+\.\d+\.\d+/.test(line)) {
+          lineClass += ' ip-entry';
+          // 将主机名部分用span包裹以便应用样式
+          lineContent = line.replace(/(\s+\S+)(?=\s|$)/g, '<span class="hostname-part">$1</span>');
+        }
+        
+        result.push(h('div', { 
+          class: lineClass,
+          key: `line-${i}`,
+          domProps: {
+            innerHTML: lineContent
+          } 
+        }));
+      }
+      
+      return result;
+    },
+    
+    // HTML转义函数，防止XSS攻击
+    escapeHtml (unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    },
   },
   mounted() {
     // 重置初始状态
@@ -3324,6 +2941,18 @@ export default {
     // 清理window对象上的方法
     window.copyToClipboard = undefined;
   },
+  filters: {
+    // HTML转义函数，用于防止XSS攻击
+    escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  },
 };
 </script>
 
@@ -3344,6 +2973,56 @@ export default {
 @apple-black: #1D1D1F;
 @apple-white: #FFFFFF;
 
+// 系统主题变量
+@primary-color: #2872e0;
+@primary-1: #f0f8ff;
+@primary-2: #d1eaff;
+@primary-3: #a8d4ff;
+@primary-4: #7db7fa;
+@primary-5: #5194ed;
+@primary-6: #2872e0;
+@primary-7: #1854ba;
+@primary-8: #0c3994;
+@primary-9: #03236e;
+@primary-10: #011447;
+@info-color: #2872e0;
+@success-color: #52c41a;
+@warning-color: #faad14;
+@error-color: #f5222f;
+@alert-info-bg-color: #f0f8ff;
+@alert-info-border-color: #a8d4ff;
+@alert-success-bg-color: #f6ffed;
+@alert-success-border-color: #b7eb8f;
+@alert-warning-bg-color: #fffbe6;
+@alert-warning-border-color: #ffe58f;
+@alert-error-bg-color: #fff1f0;
+@alert-error-border-color: #ffa19e;
+@processing-color: #2872e0;
+@menu-dark-submenu-bg: #030810;
+@layout-header-background: #071326;
+@layout-trigger-background: #0b1f3c;
+@btn-danger-bg: #ff4d52;
+@btn-danger-border: #ff4d52;
+@layout-body-background: #f0f2f5;
+@body-background: #fff;
+@component-background: #fff;
+@heading-color: rgba(0, 0, 0, 0.85);
+@text-color: rgba(0, 0, 0, 0.65);
+@text-color-inverse: #fff;
+@text-color-secondary: rgba(0, 0, 0, 0.45);
+@shadow-color: rgba(0, 0, 0, 0.15);
+@border-color-split: #f0f0f0;
+@background-color-light: #fafafa;
+@background-color-base: #f5f5f5;
+@table-selected-row-bg: #fafafa;
+@table-expanded-row-bg: #fbfbfb;
+@checkbox-check-color: #fff;
+@disabled-color: rgba(0, 0, 0, 0.25);
+@menu-dark-color: rgba(254, 254, 254, 0.65);
+@menu-dark-highlight-color: #fefefe;
+@menu-dark-arrow-color: #fefefe;
+@btn-primary-color: #fff;
+
 // Apple风格混合函数
 .apple-font() {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -3363,23 +3042,23 @@ export default {
       font-size: 14px;
       font-weight: 500;
       border-radius: 16px;
-  display: flex;
-  align-items: center;
+      display: flex;
+      align-items: center;
       justify-content: center;
       
       &.primary {
         background: @apple-blue;
         border: none;
         color: white;
-      
-      &:hover {
+        
+        &:hover {
           background: darken(@apple-blue, 5%);
           transform: translateY(-1px);
           box-shadow: 0 2px 6px rgba(0, 113, 227, 0.3);
-      }
-      
-      &:active {
-        transform: translateY(0);
+        }
+        
+        &:active {
+          transform: translateY(0);
         }
       }
       
@@ -3387,15 +3066,15 @@ export default {
         background: fade(@apple-red, 10%);
         border: none;
         color: @apple-red;
-      
-      &:hover {
+        
+        &:hover {
           background: fade(@apple-red, 15%);
           transform: translateY(-1px);
           box-shadow: 0 2px 6px rgba(255, 69, 58, 0.2);
-      }
-      
-      &:active {
-        transform: translateY(0);
+        }
+        
+        &:active {
+          transform: translateY(0);
         }
       }
     }
@@ -3429,10 +3108,10 @@ export default {
   .os-tooltip {
     max-width: none !important;
   }
-  
+
   // 操作系统详情弹出框样式
   .os-detail-popup {
-  padding: 0;
+    padding: 0;
     min-width: 320px;
     max-width: 420px;
     border-radius: 16px;
@@ -3463,145 +3142,145 @@ export default {
       border: 2px solid transparent;
       background-clip: content-box;
     }
-    }
-    
-    // 头部区域
-    .os-detail-header {
+  }
+  
+  // 头部区域
+  .os-detail-header {
     padding: 20px;
     display: flex;
-      align-items: center;
+    align-items: center;
     background: linear-gradient(135deg, #F5F5F7, #E5E5EA);
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    
+    .os-detail-icon-container {
+      margin-right: 20px;
       
-      .os-detail-icon-container {
-        margin-right: 20px;
-        
-        img {
+      img {
         width: 48px;
         height: 48px;
-          padding: 6px;
-          border-radius: 12px;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 6px;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         background-color: white;
-        }
-      }
-      
-      .os-detail-title-container {
-      color: #1D1D1F;
-        
-        .os-detail-title {
-          font-size: 1.3rem;
-          font-weight: 600;
-          margin: 0 0 4px 0;
-        }
-        
-        .os-detail-subtitle {
-          font-size: 0.9rem;
-        color: #86868B;
-          margin-bottom: 2px;
-        }
       }
     }
+    
+    .os-detail-title-container {
+      color: #1D1D1F;
+      
+      .os-detail-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+      }
+      
+      .os-detail-subtitle {
+        font-size: 0.9rem;
+        color: #86868B;
+        margin-bottom: 2px;
+      }
+    }
+  }
   
   // 内容区域
   .os-detail-content {
     padding: 16px 20px;
   }
-    
-    // 卡片样式
-    .os-detail-card {
+  
+  // 卡片样式
+  .os-detail-card {
     margin-bottom: 16px;
     border-radius: 12px;
-      background-color: #ffffff;
+    background-color: #ffffff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.06);
     overflow: hidden;
-      
-      .os-detail-card-header {
+    
+    .os-detail-card-header {
       display: flex;
       align-items: center;
-        padding: 12px 16px;
+      padding: 12px 16px;
       background-color: #F5F5F7;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       font-weight: 600;
       font-size: 14px;
       color: #1D1D1F;
     }
-      }
-      
+  }
+  
   // 信息行样式
-      .os-detail-info-row {
+  .os-detail-info-row {
     display: flex;
     padding: 12px 16px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-        
-        &:last-child {
-          border-bottom: none;
-        }
-        
-        .os-detail-info-icon-container {
-          margin-right: 16px;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .os-detail-info-icon-container {
+      margin-right: 16px;
       display: flex;
       align-items: center;
-          
-          .os-detail-info-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-    display: flex;
-            align-items: center;
-            justify-content: center;
-            
-            i {
-              font-size: 20px;
-            }
-            
-            &.cpu {
-          background-color: rgba(0, 122, 255, 0.1);
-          color: #007AFF;
-            }
-            
-            &.memory {
-          background-color: rgba(255, 149, 0, 0.1);
-          color: #FF9500;
-            }
-            
-            &.storage {
-          background-color: rgba(52, 199, 89, 0.1);
-          color: #34C759;
-            }
-            
-            &.swap {
-          background-color: rgba(175, 82, 222, 0.1);
-          color: #AF52DE;
-            }
-            
-            &.gpu {
-          background-color: rgba(255, 59, 48, 0.1);
-          color: #FF3B30;
-            }
-          }
+      
+      .os-detail-info-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        i {
+          font-size: 20px;
         }
         
-        .os-detail-info-content {
-          flex: 1;
-          
-          .os-detail-info-label {
+        &.cpu {
+          background-color: rgba(0, 122, 255, 0.1);
+          color: #007AFF;
+        }
+        
+        &.memory {
+          background-color: rgba(255, 149, 0, 0.1);
+          color: #FF9500;
+        }
+        
+        &.storage {
+          background-color: rgba(52, 199, 89, 0.1);
+          color: #34C759;
+        }
+        
+        &.swap {
+          background-color: rgba(175, 82, 222, 0.1);
+          color: #AF52DE;
+        }
+        
+        &.gpu {
+          background-color: rgba(255, 59, 48, 0.1);
+          color: #FF3B30;
+        }
+      }
+    }
+    
+    .os-detail-info-content {
+      flex: 1;
+      
+      .os-detail-info-label {
         display: flex;
         align-items: center;
         font-size: 14px;
         color: #86868B;
-            margin-bottom: 6px;
-          }
-          
-          .os-detail-info-value {
+        margin-bottom: 6px;
+      }
+      
+      .os-detail-info-value {
         font-size: 14px;
         color: #1D1D1F;
         word-break: break-word;
         
         &.loading {
-              display: flex;
-      align-items: center;
+          display: flex;
+          align-items: center;
           color: #007AFF;
           
           .loading-animation {
@@ -3646,15 +3325,15 @@ export default {
     }
     
     .info-row {
-          display: flex;
+      display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 10px 0;
       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-          
-          &:last-child {
-            border-bottom: none;
-          }
+      
+      &:last-child {
+        border-bottom: none;
+      }
       
       .info-label {
         color: #86868B;
@@ -3702,31 +3381,13 @@ export default {
         }
         
         .progress-text {
-      display: flex;
-      justify-content: space-between;
+          display: flex;
+          justify-content: space-between;
           font-size: 12px;
           color: #86868B;
           margin-top: 4px;
         }
       }
-    }
-  }
-  
-  // 动画相关
-  @keyframes osFadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
     }
   }
   
@@ -3811,8 +3472,8 @@ export default {
         background: @apple-red;
         border: none;
         color: white;
-      
-      &:hover {
+        
+        &:hover {
           background: darken(@apple-red, 5%);
         }
       }
@@ -3821,8 +3482,8 @@ export default {
         background: @apple-gray-light;
         border: none;
         color: @apple-black;
-      
-      &:hover {
+        
+        &:hover {
           background: darken(@apple-gray-light, 5%);
         }
       }
@@ -3830,7 +3491,411 @@ export default {
   }
 }
 
-// 其他全局动画
+// 主机名悬浮卡片样式
+.hostname-tooltip {
+  max-width: none !important;
+  
+  .ant-tooltip-inner {
+    background-color: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+    box-shadow: none !important;
+  }
+  
+  .ant-tooltip-arrow {
+    display: none !important;
+  }
+}
+
+// 添加CSS变量定义，在<style lang="less" scoped>中的最开始添加
+:root {
+  /* 苹果风格的设计变量 */
+  --card-radius: 12px;
+  --card-radius-small: 8px;
+  --transition-curve: cubic-bezier(0.28, 0.62, 0.35, 1);
+  
+  /* 浅色模式 */
+  --bg-color: #F5F5F7;
+  --card-bg: #FFFFFF;
+  --text-primary: #1D1D1F;
+  --text-secondary: #86868B;
+  --accent-color: #007AFF;
+  --border-color: rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.12);
+  
+  /* 状态颜色 */
+  --success-color: #34C759;
+  --warning-color: #FF9500;
+  --error-color: #FF3B30;
+  --info-color: #007AFF;
+}
+
+// 全面重新设计主机名悬浮卡片
+.hostname-detail-tooltip {
+  width: 420px;
+  padding: 0;
+  border-radius: @apple-card-radius;
+  background-color: @apple-card-bg;
+  box-shadow: @apple-card-shadow;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  animation: fadeIn 0.3s @apple-transition-curve;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1001 !important; // 确保悬浮卡片在最上层
+  opacity: 1 !important; // 确保不透明
+  visibility: visible !important; // 确保可见
+  
+  /* 增加3D转换效果 */
+  transform-origin: center center;
+  perspective: 1000px;
+  
+  &:hover {
+    box-shadow: @apple-card-shadow-hover;
+    transform: translateY(-2px) scale(1.01);
+  }
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* 毛玻璃效果标题栏 */
+.hostname-detail-title {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-weight: 600;
+  font-size: 15px;
+  color: @apple-text-primary;
+  border-bottom: 1px solid @apple-border-color;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: all 0.3s @apple-transition-curve;
+  
+  .section-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: @apple-card-radius-small;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s @apple-transition-curve;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+    
+    &.hostname-icon {
+      background: linear-gradient(135deg, #34C759, #30B350);
+      color: white;
+    }
+    
+    &.network-icon {
+      background: linear-gradient(135deg, #007AFF, #0063D1);
+      color: white;
+    }
+    
+    &.hosts-icon {
+      background: linear-gradient(135deg, #FF9500, #E68600);
+      color: white;
+    }
+    
+    .anticon {
+      font-size: 18px;
+    }
+  }
+}
+
+.hostname-detail-content {
+  padding: 16px 20px;
+  background-color: @apple-card-bg;
+  border-bottom: 1px solid @apple-border-color;
+}
+
+.hostname-detail-label {
+  font-size: 13px;
+  color: @apple-text-secondary;
+  margin-bottom: 6px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* 美化DNS服务器显示，更贴近苹果风格 */
+.hostname-detail-value {
+  &.dns-servers {
+    color: @apple-text-primary;
+    white-space: pre-line;
+    font-family: 'SF Mono', Menlo, Monaco, monospace;
+    background-color: @apple-bg-color;
+    padding: 16px;
+    border-radius: @apple-card-radius-small;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 8px 0;
+    
+    .dns-empty {
+      color: @apple-text-secondary;
+      text-align: center;
+      padding: 12px;
+      font-style: italic;
+      background-color: rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      &::before {
+        content: "!";
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        background-color: rgba(0, 0, 0, 0.08);
+        border-radius: 50%;
+        margin-right: 8px;
+        font-style: normal;
+        font-weight: 600;
+        color: @apple-text-secondary;
+      }
+    }
+    
+    .dns-server-entry {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px 12px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s @apple-transition-curve;
+      
+      &:hover {
+        transform: translateX(4px);
+        background-color: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+      
+      .dns-icon {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #007AFF, #0063D1);
+        margin-right: 12px;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
+      }
+      
+      .dns-ip {
+        font-weight: 500;
+        color: @apple-accent-color;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+      }
+    }
+  }
+}
+
+/* 美化hosts文件显示效果，更贴近苹果风格，淡化注释 */
+.hostname-detail-hosts-file {
+  margin: 8px 0;
+  padding: 20px;
+  background-color: @apple-bg-color;
+  border-radius: @apple-card-radius-small;
+  font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: @apple-text-primary;
+  overflow-x: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+  counter-reset: line;
+  position: relative;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  
+  /* 添加代码编辑器风格的行号和背景 */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3.5em;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    z-index: 1;
+  }
+  
+  .hosts-line {
+    display: block;
+    position: relative;
+    padding-left: 4.5em;
+    transition: background-color 0.2s @apple-transition-curve;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+    
+    &::before {
+      counter-increment: line;
+      content: counter(line);
+      position: absolute;
+      left: 0;
+      width: 3.5em;
+      text-align: right;
+      color: @apple-text-secondary;
+      font-size: 12px;
+      padding-right: 1.5em;
+      z-index: 2;
+    }
+    
+    &.comment {
+      color: #C7C7CC; // 更淡的灰色，符合苹果设计风格，淡化注释
+      font-style: italic;
+    }
+    
+    &.ip-entry {
+      color: @apple-accent-color; // 苹果蓝色
+      
+      .hostname-part {
+        color: @apple-warning-color; // 苹果橙色
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+/* 添加卡片出现的动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 主机名卡片内的项目样式 */
+.hostname-detail-item {
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* 在展开详情区域的卡片样式 */
+.detail-card.hostname-card {
+  border-radius: @apple-card-radius;
+  background-color: @apple-card-bg;
+  box-shadow: @apple-card-shadow;
+  overflow: hidden;
+  transition: all 0.3s @apple-transition-curve;
+  
+  &:hover {
+    box-shadow: @apple-card-shadow-hover;
+    transform: translateY(-2px);
+  }
+  
+  .card-header {
+    padding: 16px;
+    background: linear-gradient(135deg, #F5F5F7, #E5E5EA);
+    border-bottom: 1px solid @apple-border-color;
+    
+    .card-title {
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      color: @apple-text-primary;
+      
+      .anticon {
+        margin-right: 8px;
+      }
+    }
+  }
+  
+  .card-content {
+    padding: 16px;
+    
+    .content-item {
+      display: flex;
+      flex-direction: column;
+      
+      .item-label {
+        font-size: 13px;
+        color: @apple-text-secondary;
+        margin-bottom: 4px;
+      }
+      
+      .item-value {
+        font-size: 15px;
+        color: @apple-text-primary;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// 动画相关
+@keyframes osFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -3839,57 +3904,6 @@ export default {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-// 主机名相关样式
-.hostname-detail-loading {
-  padding: 0;
-  min-width: 320px;
-  max-width: 420px;
-  min-height: 200px;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
-  background-color: #ffffff;
-  animation: osFadeIn 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-}
-
-.hostname-detail-loading-header {
-  height: 100px;
-  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
-.hostname-detail-loading-content {
-  padding: 16px;
-  flex: 1;
-}
-
-.hostname-detail-loading-line {
-  height: 12px;
-  margin-bottom: 12px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  border-radius: 4px;
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.hostname-detail-loading-line.short {
-  width: 70%;
-}
-
-.hostname-detail-loading-line.medium {
-  width: 85%;
-}
-
-.hostname-detail-loading-text {
-  font-size: 14px;
-  color: #007AFF;
-  text-align: center;
-  margin-top: 12px;
-  font-weight: 500;
 }
 
 @keyframes pulse {
@@ -3901,13 +3915,32 @@ export default {
   to { background-position: -100% 0; }
 }
 
-.form-row {
-    display: flex;
-      justify-content: center;
-  margin-top: 2em;
+// 添加苹果风格的设计变量
+@apple-card-radius: 12px;
+@apple-card-radius-small: 8px;
+@apple-transition-curve: cubic-bezier(0.28, 0.62, 0.35, 1);
+@apple-bg-color: #F5F5F7;
+@apple-card-bg: #FFFFFF;
+@apple-text-primary: #1D1D1F;
+@apple-text-secondary: #86868B;
+@apple-accent-color: #007AFF;
+@apple-border-color: rgba(0, 0, 0, 0.05);
+@apple-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.05);
+@apple-card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.12);
+@apple-success-color: #34C759;
+@apple-warning-color: #FF9500;
+@apple-error-color: #FF3B30;
+@apple-info-color: #007AFF;
 
-  .form-control {
-    margin-right: 1em;
+// 添加淡入动画
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>
