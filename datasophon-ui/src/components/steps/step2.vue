@@ -28,7 +28,7 @@
     <div class="hero-section">
       <h1 class="hero-title">主机环境校验</h1>
       <p class="hero-subtitle">验证主机环境配置，确保系统顺利部署</p>
-      
+
       <div class="queue-status-area">
         <queue-status-indicator :queue-status="queueStatus" />
       </div>
@@ -39,41 +39,41 @@
       <div class="table-operations" style="margin-bottom: 16px; display: flex; justify-content: flex-end; align-items: center;">
         <div class="operation-group">
           <!-- 开始检查/重试/终止检查三合一按钮 -->
-          <a-button 
-            class="apple-button"
-            :class="isCheckingActive ? 'apple-danger-button' : 'apple-primary-button'"
-            @click="handleCheckAction"
+          <a-button
+              class="apple-button"
+              :class="isCheckingActive ? 'apple-danger-button' : 'apple-primary-button'"
+              @click="handleCheckAction"
           >
             <a-icon :type="isCheckingActive ? 'stop' : (hasStartedCheck ? 'redo' : 'play-circle')" />
             <span>{{ isCheckingActive ? '终止检查' : (hasStartedCheck ? '重试检查' : '开始检查') }}</span>
           </a-button>
         </div>
       </div>
-      <a-table 
-        @change="tableChange" 
-        :columns="columns" 
-        :loading="loading" 
-        :dataSource="dataSource" 
-        :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" 
-        rowKey="ip" 
-        :pagination="pagination"
-        expandable
-        :expandedRowRender="expandedRowRender"
-        :expandIcon="customExpandIcon"
-        :class="'host-check-table'"
+      <a-table
+          @change="tableChange"
+          :columns="columns"
+          :loading="loading"
+          :dataSource="dataSource"
+          :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}"
+          rowKey="ip"
+          :pagination="pagination"
+          expandable
+          :expandedRowRender="expandedRowRender"
+          :expandIcon="customExpandIcon"
+          :class="'host-check-table'"
       >
       </a-table>
     </div>
 
     <!-- 日志查看弹窗 -->
     <a-modal
-      v-model="logVisible"
-      :title="logModalTitle"
-      width="80%"
-      :footer="null"
-      @cancel="closeLogModal"
-      class="log-modal apple-modal"
-      :bodyStyle="{ padding: '0' }"
+        v-model="logVisible"
+        :title="logModalTitle"
+        width="80%"
+        :footer="null"
+        @cancel="closeLogModal"
+        class="log-modal apple-modal"
+        :bodyStyle="{ padding: '0' }"
     >
       <div class="log-container">
         <div class="log-header">
@@ -111,7 +111,7 @@
               </a-dropdown>
             </div>
           </div>
-          
+
           <!-- 筛选控制区域 -->
           <div class="header-section filter-area">
             <!-- 日志类型选择 -->
@@ -123,24 +123,24 @@
                 <a-radio-button value="fix">修复日志</a-radio-button>
               </a-radio-group>
             </div>
-            
+
             <!-- 添加日志筛选组件 -->
-            <log-filter 
-              ref="logFilter"
-              v-if="checkItem && checkItem.clusterId && showLogFilterOptions" 
-              :clusterId="checkItem.clusterId" 
-              :ip="checkItem.ip" 
-              :itemId="checkItem.id"
-              v-model="logContent"
-              hide-reset-button
-              @filter-change="handleFilterChange"
+            <log-filter
+                ref="logFilter"
+                v-if="checkItem && checkItem.clusterId && showLogFilterOptions"
+                :clusterId="checkItem.clusterId"
+                :ip="checkItem.ip"
+                :itemId="checkItem.id"
+                v-model="logContent"
+                hide-reset-button
+                @filter-change="handleFilterChange"
             ></log-filter>
           </div>
-          
+
           <!-- 合并的筛选状态显示区域 -->
           <div class="combined-filter-status">
             <div class="filter-description">
-              当前显示: 
+              当前显示:
               <span class="highlight">{{ currentLogType === 'all' ? '全部' : (currentLogType === 'check' ? '检查' : '修复') }}</span> 类型，
               <span v-if="checkItem && $refs.logFilter">
                 <template v-if="$refs.logFilter.filterType === 'exact'">
@@ -170,15 +170,15 @@
 
     <!-- 确认弹窗 -->
     <a-modal
-      v-model="fixConfirmVisible"
-      :title="fixConfirmTitle"
-      :confirmLoading="fixConfirmLoading"
-      @ok="handleFixConfirm"
-      @cancel="handleFixCancel"
-      okText="确认修复"
-      cancelText="取消"
-      okType="danger"
-      class="fix-confirm-modal apple-modal"
+        v-model="fixConfirmVisible"
+        :title="fixConfirmTitle"
+        :confirmLoading="fixConfirmLoading"
+        @ok="handleFixConfirm"
+        @cancel="handleFixCancel"
+        okText="确认修复"
+        cancelText="取消"
+        okType="danger"
+        class="fix-confirm-modal apple-modal"
     >
       <div class="fix-confirm-content">
         <div v-html="fixConfirmContent"></div>
@@ -242,21 +242,21 @@ export default {
           customRender: (text, row, index) => {
             const h = this.$createElement;
             const displayIndex = parseInt(
-              this.pagination.current === 1
-                ? index + 1
-                : index + 1 + this.pagination.pageSize * (this.pagination.current - 1)
+                this.pagination.current === 1
+                    ? index + 1
+                    : index + 1 + this.pagination.pageSize * (this.pagination.current - 1)
             );
             return h('span', {}, [displayIndex]);
           },
         },
-        { 
-          title: "主机名", 
-          key: "hostname", 
+        {
+          title: "主机名",
+          key: "hostname",
           dataIndex: "hostname",
           width: 180,
           customRender: (text, row) => {
             const h = this.$createElement;
-            
+
             // 优先检查SSH连接状态
             if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
               return h('div', {
@@ -273,7 +273,7 @@ export default {
                 'SSH连接失败'
               ]);
             }
-            
+
             // 修改判断顺序，优先检查状态
             // 1. 首先检查hostnameStatus状态（最高优先级）
             if (this.checkStatus(row.hostnameStatus, 'loading')) {
@@ -281,7 +281,7 @@ export default {
               const loadingTooltipContent = h('div', { class: 'hostname-detail-loading' }, [
                 // 添加顶部加载动画区域
                 h('div', { class: 'hostname-detail-loading-header' }),
-                
+
                 // 中间内容区域加载动画
                 h('div', { class: 'hostname-detail-loading-content' }, [
                   h('div', { class: 'hostname-detail-loading-line short' }),
@@ -290,13 +290,13 @@ export default {
                   h('div', { class: 'hostname-detail-loading-line short' }),
                   h('div', { class: 'hostname-detail-loading-line medium' })
                 ]),
-                
+
                 // 底部加载文字
                 h('div', { class: 'hostname-detail-loading-text' }, [
-                  '正在获取主机信息...'
+                  '正在优雅地获取主机信息...'
                 ])
               ]);
-              
+
               // 苹果风格的加载状态显示，与操作系统一致
               return h('a-tooltip', {
                 props: {
@@ -307,11 +307,11 @@ export default {
                 }
               }, [
                 // 加载中浮窗内容
-                h('span', { 
+                h('span', {
                   slot: 'title',
                   class: 'hostname-detail-tooltip-container'
                 }, [loadingTooltipContent]),
-                
+
                 // 显示的加载内容
                 h('div', {
                   class: 'os-info-loading',
@@ -330,18 +330,18 @@ export default {
                   // 添加加载中文字
                   h('span', {
                     style: {
-                      fontSize: '13px', 
+                      fontSize: '13px',
                       color: '#8E8E93',
                       fontWeight: '500',
                       position: 'relative',
                       zIndex: 2,
                       whiteSpace: 'nowrap'
                     }
-                  }, ['正在获取主机名...'])
+                  }, ['正在优雅地获取主机名...'])
                 ])
               ]);
             }
-            
+
             // 2. 其次检查是否有错误状态
             if (this.checkStatus(row.hostnameStatus, 'error')) {
               return h('div', {
@@ -358,7 +358,7 @@ export default {
                 '主机名获取失败'
               ]);
             }
-            
+
             // 3. 检查成功状态
             if (this.checkStatus(row.hostnameStatus, 'success')) {
               // 主机名收集成功但hostname为null的情况
@@ -374,7 +374,7 @@ export default {
                 ]);
               }
             }
-            
+
             // 4. 最后检查主机名是否为null（最低优先级）
             if (row.hostname === null) {
               return h('div', {
@@ -384,10 +384,10 @@ export default {
                   color: '#8E8E93'
                 }
               }, [
-                h('span', {}, ['正在获取主机名...'])
+                h('span', {}, ['暂无主机名'])
               ]);
             }
-            
+
             // 4. 最后是正常显示主机名
             // 正常显示主机名，添加悬浮卡片
             const tooltipContent = h('div', { class: 'hostname-detail-tooltip' }, [
@@ -429,7 +429,7 @@ export default {
                   ])
                 ])
               ]),
-              
+
               // DNS服务器信息部分
               h('div', { class: 'hostname-detail-section' }, [
                 h('div', { class: 'hostname-detail-title' }, [
@@ -461,7 +461,7 @@ export default {
                   ])
                 ])
               ]),
-              
+
               // hosts文件信息部分
               h('div', { class: 'hostname-detail-section' }, [
                 h('div', { class: 'hostname-detail-title' }, [
@@ -489,13 +489,13 @@ export default {
                   ])
                 ]),
                 h('div', { class: 'hostname-detail-content' }, [
-                  row.hostsFile ? 
-                    h('pre', { class: 'hostname-detail-hosts-file' }, [row.hostsFile]) : 
-                    h('div', { class: 'hostname-detail-empty' }, ['暂无hosts文件内容'])
+                  row.hostsFile ?
+                      h('pre', { class: 'hostname-detail-hosts-file' }, [row.hostsFile]) :
+                      h('div', { class: 'hostname-detail-empty' }, ['暂无hosts文件内容'])
                 ])
               ])
             ]);
-            
+
             return h('a-tooltip', {
               props: {
                 placement: 'right',
@@ -506,7 +506,7 @@ export default {
             }, [
               // 悬浮显示的内容
               h('span', { slot: 'title' }, [tooltipContent]),
-              
+
               // 显示的主机名（可点击）
               h('span', {
                 class: 'hostname-display',
@@ -528,7 +528,7 @@ export default {
                     'stroke-linecap': 'round',
                     'stroke-linejoin': 'round'
                   },
-                  style: { 
+                  style: {
                     marginLeft: '6px',
                     color: '#8E8E93',
                     opacity: 0.8
@@ -542,19 +542,19 @@ export default {
             ]);
           }
         },
-        { 
-          title: "主机IP", 
-          key: "ip", 
+        {
+          title: "主机IP",
+          key: "ip",
           dataIndex: "ip",
           width: 130,
           customRender: (text) => {
             const h = this.$createElement;
-            return h('span', { 
-              style: { 
+            return h('span', {
+              style: {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
-              } 
+              }
             }, [text]);
           }
         },
@@ -565,12 +565,12 @@ export default {
           width: "10%",  // 减小操作系统列宽度，从15%改为10%
           customRender: (text, row) => {
             const h = this.$createElement;
-            
+
             // 检查osInfoStatus状态，显示加载动画
             // 当osInfoStatus为loading或osInfo为null时都显示加载动画
-            if (this.checkStatus(row.osInfoStatus, 'loading') || 
-                row.osInfo === null || row.osInfoStatus === null || 
-                this.checkStatus(row.osStatus, 'loading') || 
+            if (this.checkStatus(row.osInfoStatus, 'loading') ||
+                row.osInfo === null || row.osInfoStatus === null ||
+                this.checkStatus(row.osStatus, 'loading') ||
                 this.checkStatus(row.osStatus, 'pending')) {
               // 如果SSH连接失败，则显示错误状态而不是加载状态
               if (this.checkStatus(row.sshConnectStatus, 'error') || row.hasSSHError === true) {
@@ -599,7 +599,7 @@ export default {
                   h('div', { class: 'os-detail-loading-line short' }),
                   h('div', { class: 'os-detail-loading-line medium' })
                 ]),
-                h('div', { 
+                h('div', {
                   class: 'os-detail-loading-text',
                   style: {
                     fontSize: '14px',
@@ -608,9 +608,9 @@ export default {
                     marginTop: '12px',
                     fontWeight: '500'
                   }
-                }, ['正在获取操作系统信息...'])
+                }, ['正在优雅地检索操作系统信息...'])
               ]);
-              
+
               // 苹果风格的骨架屏加载动画
               return h('a-tooltip', {
                 props: {
@@ -621,11 +621,11 @@ export default {
                 }
               }, [
                 // 加载中浮窗内容
-                h('span', { 
+                h('span', {
                   slot: 'title',
                   class: 'os-detail-tooltip'
                 }, [loadingTooltipContent]),
-                
+
                 // 显示的加载内容
                 h('div', {
                   class: 'os-info-loading',
@@ -644,7 +644,7 @@ export default {
                   // 添加加载中文字
                   h('span', {
                     style: {
-                      fontSize: '12px', 
+                      fontSize: '12px',
                       color: '#8E8E93',
                       fontWeight: '500',
                       position: 'relative',
@@ -655,9 +655,9 @@ export default {
                 ])
               ]);
             }
-            
+
             // 添加处理操作系统信息显示错误的情况
-            if (this.checkStatus(row.osInfoStatus, 'error') || 
+            if (this.checkStatus(row.osInfoStatus, 'error') ||
                 this.checkStatus(row.osStatus, 'error')) {
               return h('div', {
                 style: {
@@ -673,12 +673,12 @@ export default {
                 '操作系统信息获取失败'
               ]);
             }
-            
+
             // 使用osInfo中的数据
             const hasOsInfo = row.osInfo && row.osInfo.valid;
             const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
-            
+
             // 获取操作系统对应的图标路径
             const getOsIconPath = (osType) => {
               const osLower = (osType || '').toLowerCase();
@@ -698,7 +698,7 @@ export default {
                 return require('@/assets/os-logos/linux-tux.svg');
               }
             };
-            
+
             // 获取操作系统对应的颜色
             const getOsColor = (osType) => {
               const osLower = (osType || '').toLowerCase();
@@ -718,10 +718,10 @@ export default {
                 return '#87d068';
               }
             };
-            
+
             const iconPath = getOsIconPath(osType);
             const color = getOsColor(osType);
-            
+
             // 创建详细的操作系统信息弹出框（添加硬件信息部分）
             const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
               // 标题区域
@@ -747,7 +747,7 @@ export default {
                   h('div', { class: 'os-detail-subtitle' }, [row.osInfo.architecture ? `${row.osInfo.architecture} 架构` : ''])
                 ])
               ]),
-              
+
               // 内容区域包装元素
               h('div', { class: 'os-detail-content' }, [
                 // 硬件信息卡片
@@ -756,19 +756,19 @@ export default {
                     h('i', { class: 'anticon anticon-desktop', style: { marginRight: '8px', color: '#007AFF' }}),
                     h('span', {}, ['硬件信息'])
                   ]),
-                  
+
                   // CPU信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { 
+                      h('div', {
                         class: 'os-detail-info-icon cpu',
                         style: {
-                          backgroundColor: this.checkStatus(row.cpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
-                                          this.checkStatus(row.cpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
-                                          'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.cpuStatus, 'success') ? '#34C759' : 
-                                this.checkStatus(row.cpuStatus, 'error') ? '#FF3B30' : 
-                                '#007AFF'
+                          backgroundColor: this.checkStatus(row.cpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' :
+                              this.checkStatus(row.cpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' :
+                                  'rgba(0, 122, 255, 0.1)',
+                          color: this.checkStatus(row.cpuStatus, 'success') ? '#34C759' :
+                              this.checkStatus(row.cpuStatus, 'error') ? '#FF3B30' :
+                                  '#007AFF'
                         }
                       }, [
                         h('i', { class: 'anticon anticon-api' })
@@ -778,66 +778,55 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['处理器']),
                         // 添加状态图标
-                        this.checkStatus(row.cpuStatus, 'success') ? 
-                          h('a-icon', { 
-                            props: { type: 'check-circle' }, 
-                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
-                          }) :
-                          this.checkStatus(row.cpuStatus, 'error') ?
-                            h('a-icon', { 
-                              props: { type: 'close-circle' }, 
-                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                        this.checkStatus(row.cpuStatus, 'success') ?
+                            h('a-icon', {
+                              props: { type: 'check-circle' },
+                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
                             }) :
-                            this.checkStatus(row.cpuStatus, 'loading') ?
-                              h('a-icon', { 
-                                props: { type: 'loading' }, 
-                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : null
+                            this.checkStatus(row.cpuStatus, 'error') ?
+                                h('a-icon', {
+                                  props: { type: 'close-circle' },
+                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
+                                }) :
+                                this.checkStatus(row.cpuStatus, 'loading') ?
+                                    h('a-icon', {
+                                      props: { type: 'loading' },
+                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
+                                    }) : null
                       ]),
-                      row.cpuStatus === 'loading' ? 
-                        h('div', { class: 'os-detail-info-value loading' }, [
-                          h('div', { class: 'loading-animation' }),
-                          h('span', {}, ['正在收集CPU信息...'])
-                        ]) :
-                        row.cpuStatus === 'error' ?
-                          h('div', { class: 'os-detail-info-value error' }, [
-                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                            '获取CPU信息失败'
+                      row.cpuStatus === 'loading' ?
+                          h('div', { class: 'os-detail-info-value loading' }, [
+                            h('div', { class: 'loading-animation' }),
+                            h('span', {}, ['正在收集CPU信息...'])
                           ]) :
-                          row.cpuStatus === 'pending' ?
-                            h('div', { class: 'os-detail-info-value waiting' }, [
-                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                              '等待收集CPU信息'
-                            ]) :
-                          h('div', { class: 'os-detail-info-value' }, [
-                            // 改为显示更多CPU详情，包括型号、数量、核心数和线程数
-                            row.osInfo && row.osInfo.cpuModel ? 
-                              h('div', {}, [
-                                h('div', { style: { fontWeight: '500' } }, [row.osInfo.cpuModel]),
-                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
-                                  h('span', {}, [
-                                    `${row.osInfo.cpuCount || 1} 个处理器 × ${row.osInfo.cpuCores || 1} 核心/处理器 × ${row.osInfo.cpuThreadsPerCore || 1} 线程/核心 = ${row.osInfo.cpuLogicalCores || 1} 逻辑核心`
-                                  ]),
-                                  row.osInfo.cpuFrequency && row.osInfo.cpuFrequency > 0 ? 
-                                    h('span', { style: { marginLeft: '4px' } }, [`(${row.osInfo.cpuFrequency.toFixed(1)} GHz)`]) : null
-                                ])
-                              ]) : '未知'
-                      ])
+                          row.cpuStatus === 'error' ?
+                              h('div', { class: 'os-detail-info-value error' }, [
+                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                                '获取CPU信息失败'
+                              ]) :
+                              row.cpuStatus === 'pending' ?
+                                  h('div', { class: 'os-detail-info-value waiting' }, [
+                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                                    '等待收集CPU信息'
+                                  ]) :
+                                  h('div', { class: 'os-detail-info-value' }, [
+                                    row.osInfo && row.osInfo.cpuModel ? row.osInfo.cpuModel : '未知'
+                                  ])
                     ])
                   ]),
-                  
+
                   // 内存信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { 
+                      h('div', {
                         class: 'os-detail-info-icon memory',
                         style: {
-                          backgroundColor: this.checkStatus(row.memoryStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
-                                          this.checkStatus(row.memoryStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
-                                          'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.memoryStatus, 'success') ? '#34C759' : 
-                                this.checkStatus(row.memoryStatus, 'error') ? '#FF3B30' : 
-                                '#007AFF'
+                          backgroundColor: this.checkStatus(row.memoryStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' :
+                              this.checkStatus(row.memoryStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' :
+                                  'rgba(0, 122, 255, 0.1)',
+                          color: this.checkStatus(row.memoryStatus, 'success') ? '#34C759' :
+                              this.checkStatus(row.memoryStatus, 'error') ? '#FF3B30' :
+                                  '#007AFF'
                         }
                       }, [
                         h('i', { class: 'anticon anticon-database' })
@@ -847,81 +836,55 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['内存']),
                         // 添加状态图标
-                        this.checkStatus(row.memoryStatus, 'success') ? 
-                          h('a-icon', { 
-                            props: { type: 'check-circle' }, 
-                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
-                          }) :
-                          this.checkStatus(row.memoryStatus, 'error') ?
-                            h('a-icon', { 
-                              props: { type: 'close-circle' }, 
-                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                        this.checkStatus(row.memoryStatus, 'success') ?
+                            h('a-icon', {
+                              props: { type: 'check-circle' },
+                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
                             }) :
-                            this.checkStatus(row.memoryStatus, 'loading') ?
-                              h('a-icon', { 
-                                props: { type: 'loading' }, 
-                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : null
+                            this.checkStatus(row.memoryStatus, 'error') ?
+                                h('a-icon', {
+                                  props: { type: 'close-circle' },
+                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
+                                }) :
+                                this.checkStatus(row.memoryStatus, 'loading') ?
+                                    h('a-icon', {
+                                      props: { type: 'loading' },
+                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
+                                    }) : null
                       ]),
-                      row.memoryStatus === 'loading' ? 
-                        h('div', { class: 'os-detail-info-value loading' }, [
-                          h('div', { class: 'loading-animation' }),
-                          h('span', {}, ['正在收集内存信息...'])
-                        ]) :
-                        this.checkStatus(row.memoryStatus, 'error') ?
-                          h('div', { class: 'os-detail-info-value error' }, [
-                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                            '获取内存信息失败'
+                      this.checkStatus(row.memoryStatus, 'loading') ?
+                          h('div', { class: 'os-detail-info-value loading' }, [
+                            h('div', { class: 'loading-animation' }),
+                            h('span', {}, ['正在收集内存信息...'])
                           ]) :
-                          this.checkStatus(row.memoryStatus, 'pending') ?
-                            h('div', { class: 'os-detail-info-value waiting' }, [
-                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                              '等待收集内存信息'
-                            ]) :
-                          h('div', { class: 'os-detail-info-value' }, [
-                            // 改为显示更详细的内存信息
-                            row.osInfo && row.osInfo.totalMemory ? 
-                              h('div', {}, [
-                                h('div', { style: { fontWeight: '500' } }, [
-                                  `总内存: ${row.osInfo.totalMemory} GB`
-                                ]),
-                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
-                                  `已用: ${(row.osInfo.totalMemory - row.osInfo.availableMemory).toFixed(1)} GB，可用: ${row.osInfo.availableMemory} GB`
-                                ]),
-                                h('div', { style: { marginTop: '6px' } }, [
-                                  h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '2px' } }, [
-                                    h('span', {}, [`使用率: ${(100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1)}%`]),
-                                    h('span', {}, [`${(row.osInfo.totalMemory - row.osInfo.availableMemory).toFixed(1)}/${row.osInfo.totalMemory} GB`])
-                                  ]),
-                                  h('a-progress', {
-                                    props: {
-                                      percent: Number((100 * (1 - row.osInfo.availableMemory / row.osInfo.totalMemory)).toFixed(1)),
-                                      showInfo: false,
-                                      strokeColor: {
-                                        '0%': '#108ee9',
-                                        '100%': '#87d068',
-                                      },
-                                      strokeWidth: 6
-                                    }
-                                  })
-                                ])
-                              ]) : '未知'
-                      ])
+                          this.checkStatus(row.memoryStatus, 'error') ?
+                              h('div', { class: 'os-detail-info-value error' }, [
+                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                                '获取内存信息失败'
+                              ]) :
+                              this.checkStatus(row.memoryStatus, 'pending') ?
+                                  h('div', { class: 'os-detail-info-value waiting' }, [
+                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                                    '等待收集内存信息'
+                                  ]) :
+                                  h('div', { class: 'os-detail-info-value' }, [
+                                    row.osInfo && row.osInfo.totalMemory ? `${row.osInfo.totalMemory} GB` : '未知'
+                                  ])
                     ])
                   ]),
-                  
+
                   // 磁盘信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { 
-                        class: 'os-detail-info-icon storage',
+                      h('div', {
+                        class: 'os-detail-info-icon disk',
                         style: {
-                          backgroundColor: this.checkStatus(row.diskStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
-                                          this.checkStatus(row.diskStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
-                                          'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.diskStatus, 'success') ? '#34C759' : 
-                                this.checkStatus(row.diskStatus, 'error') ? '#FF3B30' : 
-                                '#007AFF'
+                          backgroundColor: row.diskStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
+                              row.diskStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
+                                  'rgba(0, 122, 255, 0.1)',
+                          color: row.diskStatus === 'success' ? '#34C759' :
+                              row.diskStatus === 'error' ? '#FF3B30' :
+                                  '#007AFF'
                         }
                       }, [
                         h('i', { class: 'anticon anticon-hdd' })
@@ -931,83 +894,62 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['磁盘']),
                         // 添加状态图标
-                        this.checkStatus(row.diskStatus, 'success') ? 
-                          h('a-icon', { 
-                            props: { type: 'check-circle' }, 
-                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
-                          }) :
-                          this.checkStatus(row.diskStatus, 'error') ?
-                            h('a-icon', { 
-                              props: { type: 'close-circle' }, 
-                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                        row.diskStatus === 'success' ?
+                            h('a-icon', {
+                              props: { type: 'check-circle' },
+                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
                             }) :
-                            this.checkStatus(row.diskStatus, 'loading') ?
-                              h('a-icon', { 
-                                props: { type: 'loading' }, 
-                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : null
+                            row.diskStatus === 'error' ?
+                                h('a-icon', {
+                                  props: { type: 'close-circle' },
+                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
+                                }) :
+                                row.diskStatus === 'loading' ?
+                                    h('a-icon', {
+                                      props: { type: 'loading' },
+                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
+                                    }) :
+                                    row.diskStatus === 'pending' ?
+                                        h('a-icon', {
+                                          props: { type: 'clock-circle' },
+                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
+                                        }) : null
                       ]),
-                      row.diskStatus === 'loading' ? 
-                        h('div', { class: 'os-detail-info-value loading' }, [
-                          h('div', { class: 'loading-animation' }),
-                          h('span', {}, ['正在收集磁盘信息...'])
-                        ]) :
-                        row.diskStatus === 'error' ?
-                          h('div', { class: 'os-detail-info-value error' }, [
-                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                            '获取磁盘信息失败'
+                      row.diskStatus === 'loading' ?
+                          h('div', { class: 'os-detail-info-value loading' }, [
+                            h('div', { class: 'loading-animation' }),
+                            h('span', {}, ['正在收集磁盘信息...'])
                           ]) :
-                          row.diskStatus === 'pending' ?
-                            h('div', { class: 'os-detail-info-value waiting' }, [
-                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                              '等待收集磁盘信息'
-                            ]) :
-                          h('div', { class: 'os-detail-info-value' }, [
-                            // 改为显示更详细的磁盘信息
-                            row.osInfo && row.osInfo.totalDisk ? 
-                              h('div', {}, [
-                                h('div', { style: { fontWeight: '500' } }, [
-                                  `总空间: ${row.osInfo.totalDisk} GB`
-                                ]),
-                                h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
-                                  `已用: ${(row.osInfo.totalDisk - row.osInfo.availableDisk).toFixed(1)} GB，可用: ${row.osInfo.availableDisk} GB`
-                                ]),
-                                h('div', { style: { marginTop: '6px' } }, [
-                                  h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '2px' } }, [
-                                    h('span', {}, [
-                                      `使用率: ${(100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1)}%`
-                                    ]),
-                                    h('span', {}, [
-                                      `${(row.osInfo.totalDisk - row.osInfo.availableDisk).toFixed(1)}/${row.osInfo.totalDisk} GB`
-                                    ])
-                                  ]),
-                                  h('a-progress', {
-                                    props: {
-                                      percent: Number((100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk)).toFixed(1)),
-                                      showInfo: false,
-                                      strokeColor: (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 90) ? '#ff4d4f' : 
-                                                  (100 * (1 - row.osInfo.availableDisk / row.osInfo.totalDisk) > 70) ? '#faad14' : '#52c41a',
-                                      strokeWidth: 6
-                                    }
-                                  })
-                                ])
-                              ]) : '未知'
-                      ])
+                          row.diskStatus === 'error' ?
+                              h('div', { class: 'os-detail-info-value error' }, [
+                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                                '获取磁盘信息失败'
+                              ]) :
+                              row.diskStatus === 'pending' ?
+                                  h('div', { class: 'os-detail-info-value waiting' }, [
+                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                                    '等待收集磁盘信息'
+                                  ]) :
+                                  h('div', { class: 'os-detail-info-value' }, [
+                                    row.osInfo && row.osInfo.diskTotal ?
+                                        `总空间: ${row.osInfo.diskTotal}` :
+                                        '未知'
+                                  ])
                     ])
                   ]),
-                  
+
                   // 交换空间信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { 
+                      h('div', {
                         class: 'os-detail-info-icon swap',
                         style: {
-                          backgroundColor: this.checkStatus(row.swapStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
-                                          this.checkStatus(row.swapStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
-                                          'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.swapStatus, 'success') ? '#34C759' : 
-                                this.checkStatus(row.swapStatus, 'error') ? '#FF3B30' : 
-                                '#007AFF'
+                          backgroundColor: row.swapStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
+                              row.swapStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
+                                  'rgba(0, 122, 255, 0.1)',
+                          color: row.swapStatus === 'success' ? '#34C759' :
+                              row.swapStatus === 'error' ? '#FF3B30' :
+                                  '#007AFF'
                         }
                       }, [
                         h('i', { class: 'anticon anticon-swap' })
@@ -1017,128 +959,118 @@ export default {
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['交换空间']),
                         // 添加状态图标
-                        this.checkStatus(row.swapStatus, 'success') ? 
-                          h('a-icon', { 
-                            props: { type: 'check-circle' }, 
-                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
-                          }) :
-                          this.checkStatus(row.swapStatus, 'error') ?
-                            h('a-icon', { 
-                              props: { type: 'close-circle' }, 
-                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                        row.swapStatus === 'success' ?
+                            h('a-icon', {
+                              props: { type: 'check-circle' },
+                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
                             }) :
-                            row.swapStatus === 'loading' ?
-                              h('a-icon', { 
-                                props: { type: 'loading' }, 
-                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : 
-                            row.swapStatus === 'pending' ?
-                              h('a-icon', { 
-                                props: { type: 'clock-circle' }, 
-                                style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' } 
-                              }) : null
+                            row.swapStatus === 'error' ?
+                                h('a-icon', {
+                                  props: { type: 'close-circle' },
+                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
+                                }) :
+                                row.swapStatus === 'loading' ?
+                                    h('a-icon', {
+                                      props: { type: 'loading' },
+                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
+                                    }) :
+                                    row.swapStatus === 'pending' ?
+                                        h('a-icon', {
+                                          props: { type: 'clock-circle' },
+                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
+                                        }) : null
                       ]),
-                      row.swapStatus === 'loading' ? 
-                        h('div', { class: 'os-detail-info-value loading' }, [
-                          h('div', { class: 'loading-animation' }),
-                          h('span', {}, ['正在收集交换空间信息...'])
-                        ]) :
-                        row.swapStatus === 'error' ?
-                          h('div', { class: 'os-detail-info-value error' }, [
-                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                            '获取交换空间信息失败'
+                      row.swapStatus === 'loading' ?
+                          h('div', { class: 'os-detail-info-value loading' }, [
+                            h('div', { class: 'loading-animation' }),
+                            h('span', {}, ['正在收集交换空间信息...'])
                           ]) :
-                          row.swapStatus === 'pending' ?
-                            h('div', { class: 'os-detail-info-value waiting' }, [
-                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                              '等待收集交换空间信息'
-                            ]) :
-                          h('div', { class: 'os-detail-info-value' }, [
-                            row.osInfo && row.osInfo.totalSwap !== undefined ? 
-                              row.osInfo.totalSwap === 0 ? 
-                                '未开启交换空间' : 
-                                `交换空间: ${row.osInfo.totalSwap}GB` : 
-                              '未知'
-                          ])
+                          row.swapStatus === 'error' ?
+                              h('div', { class: 'os-detail-info-value error' }, [
+                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                                '获取交换空间信息失败'
+                              ]) :
+                              row.swapStatus === 'pending' ?
+                                  h('div', { class: 'os-detail-info-value waiting' }, [
+                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                                    '等待收集交换空间信息'
+                                  ]) :
+                                  h('div', { class: 'os-detail-info-value' }, [
+                                    row.osInfo && row.osInfo.swapTotal ?
+                                        `交换空间: ${row.osInfo.swapTotal}` :
+                                        '未知'
+                                  ])
                     ])
                   ]),
-                  
+
                   // GPU信息
                   h('div', { class: 'os-detail-info-row' }, [
                     h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', { 
+                      h('div', {
                         class: 'os-detail-info-icon gpu',
                         style: {
-                          backgroundColor: this.checkStatus(row.gpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' : 
-                                          this.checkStatus(row.gpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' : 
-                                          'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.gpuStatus, 'success') ? '#34C759' : 
-                                this.checkStatus(row.gpuStatus, 'error') ? '#FF3B30' : 
-                                '#007AFF'
+                          backgroundColor: row.gpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
+                              row.gpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
+                                  'rgba(0, 122, 255, 0.1)',
+                          color: row.gpuStatus === 'success' ? '#34C759' :
+                              row.gpuStatus === 'error' ? '#FF3B30' :
+                                  '#007AFF'
                         }
                       }, [
-                        h('i', { class: 'anticon anticon-radar-chart' })
+                        h('i', { class: 'anticon anticon-appstore' })
                       ])
                     ]),
                     h('div', { class: 'os-detail-info-content' }, [
                       h('div', { class: 'os-detail-info-label' }, [
                         h('span', {}, ['GPU']),
                         // 添加状态图标
-                        this.checkStatus(row.gpuStatus, 'success') ? 
-                          h('a-icon', { 
-                            props: { type: 'check-circle' }, 
-                            style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' } 
-                          }) :
-                          this.checkStatus(row.gpuStatus, 'error') ?
-                            h('a-icon', { 
-                              props: { type: 'close-circle' }, 
-                              style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' } 
+                        row.gpuStatus === 'success' ?
+                            h('a-icon', {
+                              props: { type: 'check-circle' },
+                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
                             }) :
-                            this.checkStatus(row.gpuStatus, 'loading') ?
-                              h('a-icon', { 
-                                props: { type: 'loading' }, 
-                                style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' } 
-                              }) : null
+                            row.gpuStatus === 'error' ?
+                                h('a-icon', {
+                                  props: { type: 'close-circle' },
+                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
+                                }) :
+                                row.gpuStatus === 'loading' ?
+                                    h('a-icon', {
+                                      props: { type: 'loading' },
+                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
+                                    }) :
+                                    row.gpuStatus === 'pending' ?
+                                        h('a-icon', {
+                                          props: { type: 'clock-circle' },
+                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
+                                        }) : null
                       ]),
-                      row.gpuStatus === 'loading' ? 
-                        h('div', { class: 'os-detail-info-value loading' }, [
-                          h('div', { class: 'loading-animation' }),
-                          h('span', {}, ['正在收集GPU信息...'])
-                        ]) :
-                        row.gpuStatus === 'error' ?
-                          h('div', { class: 'os-detail-info-value error' }, [
-                            h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                            '获取GPU信息失败'
+                      row.gpuStatus === 'loading' ?
+                          h('div', { class: 'os-detail-info-value loading' }, [
+                            h('div', { class: 'loading-animation' }),
+                            h('span', {}, ['正在收集GPU信息...'])
                           ]) :
-                          row.gpuStatus === 'pending' ?
-                            h('div', { class: 'os-detail-info-value waiting' }, [
-                              h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                              '等待收集GPU信息'
-                            ]) :
-                          h('div', { class: 'os-detail-info-value' }, [
-                          // 改为显示更详细的GPU信息
-                          row.osInfo ? 
-                            h('div', {}, [
-                              (row.osInfo.gpuInfo && !row.osInfo.gpuInfo.startsWith('ERROR:') && row.osInfo.gpuInfo !== '未检测到GPU设备') ? 
-                                h('div', {}, [
-                                  h('div', { style: { fontWeight: '500' } }, [
-                                    row.osInfo.gpuInfo
-                                  ]),
-                                  h('div', { style: { fontSize: '12px', color: '#666', marginTop: '4px' } }, [
-                                    row.osInfo.gpuMemory && row.osInfo.gpuMemory > 0 ? 
-                                      `显存: ${row.osInfo.gpuMemory.toFixed(1)} GB` : 
-                                      '显存信息未获取到'
+                          row.gpuStatus === 'error' ?
+                              h('div', { class: 'os-detail-info-value error' }, [
+                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
+                                '获取GPU信息失败'
+                              ]) :
+                              row.gpuStatus === 'pending' ?
+                                  h('div', { class: 'os-detail-info-value waiting' }, [
+                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
+                                    '等待收集GPU信息'
+                                  ]) :
+                                  h('div', { class: 'os-detail-info-value' }, [
+                                    row.osInfo && row.osInfo.gpuModel ?
+                                        row.osInfo.gpuModel :
+                                        '未检测到GPU设备'
                                   ])
-                                ]) : 
-                                h('div', { style: { color: '#666' } }, ['未检测到GPU设备或无法获取GPU信息'])
-                            ]) : '未知'
-                          ])
                     ])
                   ])
                 ])
               ])
             ]) : null;
-            
+
             // 返回操作系统信息显示
             if (hasOsInfo) {
               return h('a-tooltip', {
@@ -1150,11 +1082,11 @@ export default {
                 }
               }, [
                 // 悬浮显示的详细内容
-                h('span', { 
+                h('span', {
                   slot: 'title',
                   class: 'os-detail-tooltip'
                 }, [osDetailContent]),
-                
+
                 // 显示的操作系统信息
                 h('div', {
                   style: {
@@ -1168,23 +1100,23 @@ export default {
                       width: '24px',
                       height: '24px',
                       marginRight: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center'
-                  }
-                }, [
-                  h('img', {
-                    attrs: {
-                      src: iconPath,
+                    }
+                  }, [
+                    h('img', {
+                      attrs: {
+                        src: iconPath,
                         alt: osType
-                    },
-                    style: { 
+                      },
+                      style: {
                         width: '20px',
                         height: '20px'
                       }
                     })
                   ]),
-                  
+
                   // 操作系统名称和版本
                   h('div', {
                     style: {
@@ -1207,11 +1139,11 @@ export default {
                         lineHeight: '1.3'
                       }
                     }, [osVersion]) : null
+                  ])
                 ])
-              ])
-            ]);
-          }
-            
+              ]);
+            }
+
             // 当没有有效的osInfo时，显示简单的信息
             return h('div', {
               style: {
@@ -1235,7 +1167,7 @@ export default {
           width: "90px", // 添加固定宽度
           customRender: (text, row, index) => {
             const h = this.$createElement;
-            return h('div', { 
+            return h('div', {
               style: {
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1327,21 +1259,21 @@ export default {
               TERMINATING: { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
               MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
             };
-            
+
             // 检查主机是否有检查项
             const checkItems = row.checkItems || [];
-            
+
             // 优先级处理：检查中 > 待检查 > 失败 > 跳过 > 成功
-            
+
             // 1. 先检查是否有正在检查中的项目
             const currentItem = checkItems.find(item => item.status === 'CHECKING');
             if (currentItem) {
               const status = statusMap[currentItem.status];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
                 style: { display: 'flex', alignItems: 'center', color: status.color }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -1353,16 +1285,16 @@ export default {
                 h('span', {}, [currentItem.itemName])
               ]);
             }
-            
+
             // 2. 其次检查是否有待检查的项目
             const waitingItem = checkItems.find(item => item.status === 'WAITING');
             if (waitingItem) {
               const status = statusMap[waitingItem.status];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
                 style: { display: 'flex', alignItems: 'center', color: status.color }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -1374,17 +1306,17 @@ export default {
                 h('span', {}, [waitingItem.itemName])
               ]);
             }
-            
+
             // 3. 查找失败的项目，并显示最后一个失败项
             const failedItems = checkItems.filter(item => item.status === 'FAILED');
             if (failedItems.length > 0) {
               const lastFailedItem = failedItems[failedItems.length - 1];
               const status = statusMap[lastFailedItem.status];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
                 style: { display: 'flex', alignItems: 'center', color: status.color }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -1396,17 +1328,17 @@ export default {
                 h('span', {}, [lastFailedItem.itemName])
               ]);
             }
-            
+
             // 4. 查找跳过的项目，显示最后一个跳过项
             const skippedItems = checkItems.filter(item => item.status === 'SKIPPED');
             if (skippedItems.length > 0) {
               const lastSkippedItem = skippedItems[skippedItems.length - 1];
               const status = statusMap[lastSkippedItem.status];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
                 style: { display: 'flex', alignItems: 'center', color: status.color }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -1418,17 +1350,17 @@ export default {
                 h('span', {}, [lastSkippedItem.itemName])
               ]);
             }
-            
+
             // 5. 最后查找成功的项目，显示最后一个成功项
             const successItems = checkItems.filter(item => item.status === 'SUCCESS');
             if (successItems.length > 0) {
               const lastSuccessItem = successItems[successItems.length - 1];
               const status = statusMap[lastSuccessItem.status];
-              return h('span', { 
+              return h('span', {
                 class: 'flex-container',
                 style: { display: 'flex', alignItems: 'center', color: status.color }
               }, [
-                h('a-icon', { 
+                h('a-icon', {
                   props: {
                     type: status.icon,
                     theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
@@ -1440,7 +1372,7 @@ export default {
                 h('span', {}, [lastSuccessItem.itemName])
               ]);
             }
-            
+
             // 如果没有任何检查项，则显示占位符
             return h('span', {}, ['-']);
           },
@@ -1453,7 +1385,7 @@ export default {
             const h = this.$createElement;
             const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
             const isWaiting = row.status === 'WAITING' || row.statusStr === 'WAITING';
-            
+
             return h('div', { class: 'action-buttons apple-actions' }, [
               // 终止按钮 - 检查中时显示
               isChecking ? h('a-button', {
@@ -1466,7 +1398,7 @@ export default {
                   click: () => this.stopCheck(row)
                 }
               }, ["终止"]) : null,
-              
+
               // 重试按钮 - 非检查中且非等待检查时显示
               !isChecking ? h('a-button', {
                 attrs: {
@@ -1503,7 +1435,7 @@ export default {
       if (!this.dataSource || this.dataSource.length === 0) {
         return false;
       }
-      
+
       return this.dataSource.some(host => {
         const checkItems = this.checkItemsMap[host.ip] || [];
         return checkItems.some(item => item.status === 'CHECKING');
@@ -1520,16 +1452,16 @@ export default {
      */
     checkStatus(status, targetStatus) {
       if (!status) return false
-      
+
       // 处理大小写兼容
       const statusLower = status.toLowerCase()
       const targetLower = targetStatus.toLowerCase()
-      
+
       // 特殊处理loading状态，collecting也视为loading
       if (targetLower === 'loading') {
         return statusLower === 'loading' || statusLower === 'collecting'
       }
-      
+
       return statusLower === targetLower
     },
 
@@ -1544,7 +1476,7 @@ export default {
         console.log('上一次请求还在进行中，跳过本次请求');
         return;
       }
-      
+
       if (!flag) this.loading = true;
       const params = {
         pageSize: this.pagination.pageSize,
@@ -1554,106 +1486,106 @@ export default {
         // 将hosts参数的值作为ips参数的值
         ips: this.steps1Data.hosts
       };
-      
-      
+
+
       this.isRequesting = true;
-      
+
       this.$axiosPost(global.API.analysisHostList, params)
-        .then((res) => {
-          if (res.code === 200) {
-            // 处理主机状态
-            if (res.data && res.data.length > 0) {
-              res.data.forEach(host => {
-                // 计算主机状态
-                host.status = this.calculateHostStatus(host);
-                
-                // 将返回的checkItems数据保存到checkItemsMap中
-                if (host.checkItems) {
-                  this.$set(this.checkItemsMap, host.ip, host.checkItems);
-                }
-                
-                // 检查SSH连接状态
-                if (host.checkItems && host.checkItems.length > 0) {
-                  // 查找SSH相关的检查项，如果有且状态为FAILED，则标记SSH连接失败
-                  const sshCheckItems = host.checkItems.filter(item => 
-                    item.itemCode === 'SSH_CONNECTION' || 
-                    item.itemName.includes('SSH') || 
-                    item.itemCode === 'PASSWORD_FREE');
-                    
-                  if (sshCheckItems.length > 0 && sshCheckItems.some(item => item.status === 'FAILED')) {
+          .then((res) => {
+            if (res.code === 200) {
+              // 处理主机状态
+              if (res.data && res.data.length > 0) {
+                res.data.forEach(host => {
+                  // 计算主机状态
+                  host.status = this.calculateHostStatus(host);
+
+                  // 将返回的checkItems数据保存到checkItemsMap中
+                  if (host.checkItems) {
+                    this.$set(this.checkItemsMap, host.ip, host.checkItems);
+                  }
+
+                  // 检查SSH连接状态
+                  if (host.checkItems && host.checkItems.length > 0) {
+                    // 查找SSH相关的检查项，如果有且状态为FAILED，则标记SSH连接失败
+                    const sshCheckItems = host.checkItems.filter(item =>
+                        item.itemCode === 'SSH_CONNECTION' ||
+                        item.itemName.includes('SSH') ||
+                        item.itemCode === 'PASSWORD_FREE');
+
+                    if (sshCheckItems.length > 0 && sshCheckItems.some(item => item.status === 'FAILED')) {
+                      host.hasSSHError = true;
+                      host.sshConnectStatus = 'error';
+                    }
+                  }
+
+                  // 如果osInfoStatus为error，也标记SSH可能有问题
+                  if (host.osInfoStatus === 'error') {
                     host.hasSSHError = true;
                     host.sshConnectStatus = 'error';
                   }
-                }
-                
-                // 如果osInfoStatus为error，也标记SSH可能有问题
-                if (host.osInfoStatus === 'error') {
-                  host.hasSSHError = true;
-                  host.sshConnectStatus = 'error';
-                }
-                
-                // 如果sshStatus字段存在并且状态为error，也标记SSH连接失败
-                if (host.sshStatus === 'error' || host.sshStatus === 'ERROR' || 
-                    host.sshConnectStatus === 'error' || host.sshConnectStatus === 'ERROR') {
-                  host.hasSSHError = true;
-                  host.sshConnectStatus = 'error';
-                  // 如果正在获取OS信息，则将状态改为error而非loading
-                  if (host.osInfoStatus === 'loading') {
-                    host.osInfoStatus = 'error';
+
+                  // 如果sshStatus字段存在并且状态为error，也标记SSH连接失败
+                  if (host.sshStatus === 'error' || host.sshStatus === 'ERROR' ||
+                      host.sshConnectStatus === 'error' || host.sshConnectStatus === 'ERROR') {
+                    host.hasSSHError = true;
+                    host.sshConnectStatus = 'error';
+                    // 如果正在获取OS信息，则将状态改为error而非loading
+                    if (host.osInfoStatus === 'loading') {
+                      host.osInfoStatus = 'error';
+                    }
+                  }
+                });
+
+                // 检查是否有主机正在进行检查
+                this.updateCheckingStatus(res.data);
+
+                // 检查是否有主机已完成检查，用于判断是否已开始过检查
+                if (res.data && res.data.length > 0) {
+                  const hasCompletedChecks = res.data.some(host => {
+                    // 只要有一个主机的检查项不是WAITING状态，说明已经开始过检查
+                    const checkItems = host.checkItems || [];
+                    return checkItems.length > 0 &&
+                        checkItems.some(item => item.status !== 'WAITING');
+                  });
+
+                  if (hasCompletedChecks) {
+                    this.hasStartedCheck = true;
                   }
                 }
-              });
-              
-              // 检查是否有主机正在进行检查
-              this.updateCheckingStatus(res.data);
-              
-              // 检查是否有主机已完成检查，用于判断是否已开始过检查
-              if (res.data && res.data.length > 0) {
-                const hasCompletedChecks = res.data.some(host => {
-                  // 只要有一个主机的检查项不是WAITING状态，说明已经开始过检查
-                  const checkItems = host.checkItems || [];
-                  return checkItems.length > 0 && 
-                         checkItems.some(item => item.status !== 'WAITING');
-                });
-                
-                if (hasCompletedChecks) {
-                  this.hasStartedCheck = true;
-                }
+              }
+
+              this.dataSource = res.data;
+              this.pagination.total = res.total;
+
+              // 保存队列状态信息
+              if (res.queueStatus) {
+                this.queueStatus = res.queueStatus;
+              }
+
+              if (this.depType=='K8S'){
+                let data = JSON.parse(JSON.stringify(res.data))
+                data && data.forEach(e => {
+                  if (e.checkResult.code=='10001'){
+                    e['CheckResult'] = e.checkResult
+                    delete e.checkResult
+                    let arr=[]
+                    arr[0] = e
+                    this.saveK8sHostApi(arr)
+                  }
+                })
               }
             }
-            
-            this.dataSource = res.data;
-            this.pagination.total = res.total;
-            
-            // 保存队列状态信息
-            if (res.queueStatus) {
-              this.queueStatus = res.queueStatus;
-            }
-
-            if (this.depType=='K8S'){
-              let data = JSON.parse(JSON.stringify(res.data))
-              data && data.forEach(e => {
-                if (e.checkResult.code=='10001'){
-                  e['CheckResult'] = e.checkResult
-                  delete e.checkResult
-                  let arr=[]
-                  arr[0] = e
-                  this.saveK8sHostApi(arr)
-                } 
-              })
-            }
-          }
-        })
-        .catch((error) => {
-          console.error('请求失败:', error);
-        })
-        .finally(() => {
-          // 无论成功还是失败，都要重置状态
-          this.loading = false;
-          this.isRequesting = false;
-        });
+          })
+          .catch((error) => {
+            console.error('请求失败:', error);
+          })
+          .finally(() => {
+            // 无论成功还是失败，都要重置状态
+            this.loading = false;
+            this.isRequesting = false;
+          });
     },
-    
+
     /**
      * 启动批量检查主机
      * 提取主机名列表，调用后端接口开始检查
@@ -1664,12 +1596,12 @@ export default {
         const params = {
           clusterId: this.clusterId
         };
-        
+
         const res = await this.$axiosPost(global.API.startHostCheck, params);
         if (res.code === 200) {
           this.$message.success('已开始主机检查');
           this.isCheckingActive = true;
-          
+
           // 立即刷新一次，不等待自动刷新
           this.getEnvironmentList(false);
         } else {
@@ -1680,7 +1612,7 @@ export default {
         this.$message.error('开始主机检查出错');
       }
     },
-    
+
     /**
      * 终止批量检查主机
      */
@@ -1690,11 +1622,11 @@ export default {
         const params = {
           clusterId: this.clusterId
         };
-        
+
         const res = await this.$axiosPost(global.API.stopHostCheck, params);
         if (res.code === 200) {
           this.$message.success(res.msg || '已终止主机检查');
-          
+
           // 立即刷新一次，不等待自动刷新
           this.getEnvironmentList(false);
         } else {
@@ -1705,7 +1637,7 @@ export default {
         this.$message.error('终止主机检查出错');
       }
     },
-    
+
     /**
      * 提取主机名列表，调用后端接口开始检查
      */
@@ -1713,24 +1645,24 @@ export default {
       if (!hosts || hosts.length === 0) {
         return;
       }
-      
+
       // 提取需要检查的主机IP列表（而不是主机名）
       // 只对未受管或状态为WAITING的主机进行检查
       const ipsToCheck = hosts
-        .filter(host => !host.managed || host.status === 'WAITING')
-        .map(host => host.ip);
-      
+          .filter(host => !host.managed || host.status === 'WAITING')
+          .map(host => host.ip);
+
       if (ipsToCheck.length === 0) {
         console.log('没有需要检查的主机');
         return;
       }
-      
+
       // 调用批量检查API
       try {
         const res = await this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, ipsToCheck);
         if (res.code === 200) {
           console.log('成功启动主机检查:', res.msg);
-          
+
           // 立即刷新一次，不等待5秒后的自动刷新
           this.getEnvironmentList(false);
         } else {
@@ -1740,48 +1672,48 @@ export default {
         console.error('调用批量检查API失败:', err);
       }
     },
-    
+
     // 计算主机的整体状态
     calculateHostStatus(host) {
       // 如果主机已经有状态则返回
       if (host.statusStr || host.status) return host.statusStr || host.status;
-      
+
       // 没有检查项则返回空状态
       const checkItems = host.checkItems || [];
       if (checkItems.length === 0) return null;
-      
+
       // 如果有检查中的项，则状态为"检查中"
       if (checkItems.some(item => item.status === 'CHECKING')) {
         return 'CHECKING';
       }
-      
+
       // 如果有等待检查的项，则状态为"等待检查"
       if (checkItems.some(item => item.status === 'WAITING')) {
         return 'WAITING';
       }
-      
+
       // 如果有失败的项，则状态为"未通过"
       if (checkItems.some(item => item.status === 'FAILED')) {
         return 'FAILED';
       }
-      
+
       // 如果所有项都是"跳过"，则状态为"已跳过"
       if (checkItems.every(item => item.status === 'SKIPPED')) {
         return 'SKIPPED';
       }
-      
+
       // 如果有的是跳过有的是成功，则状态为"部分通过"
-      if (checkItems.some(item => item.status === 'SKIPPED') && 
+      if (checkItems.some(item => item.status === 'SKIPPED') &&
           checkItems.some(item => item.status === 'SUCCESS')) {
         return 'MIXED';
       }
-      
+
       // 默认情况：所有项都通过
       return 'SUCCESS';
     },
     saveK8sHostApi (params){
       this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
-       });
+      });
     },
     //表格选择
     onSelectChange(selectedRowKeys) {
@@ -1821,114 +1753,647 @@ export default {
     },
     // 展开行渲染函数
     expandedRowRender(record) {
-      const host = record.host
-      return h('div', { class: 'expand-content' }, [
-        h('div', { class: 'expand-content-header' }, [
-          h('span', { class: 'expand-content-title' }, [
-            h('a-icon', { props: { type: 'desktop' }, style: { marginRight: '8px' } }),
-            `主机 ${host}`
-          ]),
-          h('a-tag', {
-            props: {
-              color: this.hostOsInfo[host] && this.hostOsInfo[host].osVersion === 'CentOS 7' ? '#F15A29' : '#47B27B'
-            }
-          }, [
-            this.hostOsInfo[host] ? this.hostOsInfo[host].osVersion : '获取中...'
-          ])
-        ]),
-        h('div', { class: 'expand-content-body' }, [
-          h('a-row', { props: { gutter: 16 } }, [
-            h('a-col', { props: { span: 12 } }, [
-              h('a-card', { class: 'expand-card', props: { bordered: false } }, [
-                h('template', { slot: 'title' }, [
-                  h('div', { style: { display: 'flex', alignItems: 'center', fontWeight: 500 } }, [
-                    h('a-tooltip', {
-                      props: {
-                        placement: 'right',
-                        overlayClassName: 'hostname-detail-tooltip',
-                        mouseEnterDelay: 0.3,
-                        destroyTooltipOnHide: true
-                      }
-                    }, [
-                      h('div', {
-                        style: { 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          cursor: 'pointer' 
-                        }
-                      }, [
-                        h('a-icon', { 
-                          props: { type: 'info-circle' }, 
-                          style: { marginRight: '8px', color: '#007AFF' } 
-                        }),
-                        '主机名'
-                      ]),
-                      h('div', { slot: 'title' }, [
-                        // 主机名详情卡片
-                        h('div', {}, [
-                          h('div', { class: 'hostname-detail-title' }, [
-                            h('div', { class: 'section-icon hostname-icon' }, [
-                              h('a-icon', { props: { type: 'desktop' } })
-                            ]),
-                            '主机信息'
-                          ]),
-                          
-                          h('div', { class: 'hostname-detail-content' }, [
-                            h('div', { class: 'hostname-detail-item' }, [
-                              h('div', { class: 'hostname-detail-label' }, ['主机名']),
-                              h('div', { class: 'hostname-detail-value' }, [host])
-                            ])
-                          ]),
-                          
-                          h('div', { class: 'hostname-detail-title' }, [
-                            h('div', { class: 'section-icon network-icon' }, [
-                              h('a-icon', { props: { type: 'global' } })
-                            ]),
-                            '网络配置'
-                          ]),
-                          
-                          h('div', { class: 'hostname-detail-content' }, [
-                            h('div', { class: 'hostname-detail-item' }, [
-                              h('div', { class: 'hostname-detail-label' }, ['DNS 服务器']),
-                              h('div', { class: 'hostname-detail-value dns-servers' }, [
-                                this.renderDnsServers(this.hostOsInfo[host] ? this.hostOsInfo[host].dnsServers : [])
-                              ])
-                            ])
-                          ]),
-                          
-                          h('div', { class: 'hostname-detail-title' }, [
-                            h('div', { class: 'section-icon hosts-icon' }, [
-                              h('a-icon', { props: { type: 'file-text' } })
-                            ]),
-                            'Hosts 文件'
-                          ]),
-                          
-                          h('div', { class: 'hostname-detail-content' }, [
-                            h('div', { class: 'hostname-detail-item' }, [
-                              h('div', { class: 'hostname-detail-label' }, ['Hosts 文件内容']),
-                              h('div', { class: 'hostname-detail-hosts-file' }, [
-                                this.renderHostsFile(this.hostOsInfo[host] ? this.hostOsInfo[host].hostsFile : '')
-                              ])
-                            ])
-                          ])
-                        ])
-                      ])
-                    ])
-                  ])
-                ]),
-                h('a-statistic', {
-                  props: {
-                    title: '主机名',
-                    value: host,
-                    valueStyle: { fontWeight: 'bold', color: '#1D1D1F' }
+      const h = this.$createElement;
+      const checkItems = this.checkItemsMap[record.ip] || [];
+
+      // 判断主机是否处于检查中状态
+      const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
+
+      const columns = [
+        {
+          title: '检查项',
+          dataIndex: 'itemName',
+          key: 'itemName',
+          width: '25%',
+          customRender: (text) => {
+            const h = this.$createElement;
+            return h('div', {
+              style: {
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#1d1d1f'
+              }
+            }, [text]);
+          }
+        },
+        {
+          title: '状态',
+          dataIndex: 'status',
+          key: 'status',
+          width: '15%',
+          customRender: (text) => {
+            const h = this.$createElement;
+            // 使用字符串类型的状态映射
+            const statusMap = {
+              'WAITING': { text: '待检查', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'clock-circle' },
+              'SUCCESS': { text: '通过', color: '#34C759', bgColor: 'rgba(52, 199, 89, 0.1)', icon: 'check-circle' },
+              'FAILED': { text: '未通过', color: '#FF3B30', bgColor: 'rgba(255, 59, 48, 0.1)', icon: 'close-circle' },
+              'CHECKING': { text: '检查中', color: '#007AFF', bgColor: 'rgba(0, 122, 255, 0.1)', icon: 'loading' },
+              'SKIPPED': { text: '已跳过', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'warning' },
+              'TERMINATING': { text: '终止中', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'stop', spin: true },
+              'FIXING': { text: '修复中', color: '#5856D6', bgColor: 'rgba(88, 86, 214, 0.1)', icon: 'tool', spin: true }
+            };
+
+            const status = statusMap[text] || { text: '未知', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'question-circle' };
+
+            return h('div', {
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                backgroundColor: status.bgColor,
+                fontSize: '13px',
+                fontWeight: '500',
+                color: status.color,
+                transition: 'all 0.2s ease'
+              }
+            }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  spin: status.spin || status.icon === 'loading'
+                },
+                style: {
+                  marginRight: '6px',
+                  fontSize: '14px'
+                }
+              }),
+              status.text
+            ]);
+          }
+        },
+        {
+          title: '检查结果',
+          dataIndex: 'message',
+          key: 'message',
+          width: '20%',
+          customRender: (text, row) => {
+            const h = this.$createElement;
+
+            // 检查文本是否存在
+            if (!text) return h('span', {}, ['-']);
+
+            // 不再限制文本长度，所有检查项都显示悬浮提示
+            const displayText = text;
+
+            // 根据状态设置颜色
+            const statusColor = row.status === 'SUCCESS' ? '#34C759' :
+                row.status === 'FAILED' ? '#FF3B30' :
+                    row.status === 'SKIPPED' ? '#8E8E93' :
+                        row.status === 'CHECKING' ? '#007AFF' :
+                            row.status === 'FIXING' ? '#5856D6' : '#1d1d1f';
+
+            const statusIcon = row.status === 'SUCCESS' ? 'check-circle' :
+                row.status === 'FAILED' ? 'close-circle' :
+                    row.status === 'SKIPPED' ? 'warning' :
+                        row.status === 'CHECKING' ? 'loading' :
+                            row.status === 'FIXING' ? 'tool' : 'info-circle';
+
+            const statusSpin = row.status === 'CHECKING' || row.status === 'FIXING';
+            const statusTheme = row.status !== 'CHECKING' && row.status !== 'FIXING' ? 'filled' : undefined;
+
+            // 创建一个更符合苹果设计风格的tooltip内容
+            const tooltipContent = h('div', {
+              class: 'check-result-tooltip',
+              style: {
+                maxWidth: '1200px',
+                padding: '0',
+                borderRadius: '16px',
+                background: '#ffffff',
+                color: '#1d1d1f',
+                fontSize: '14px',
+                lineHeight: '1.6',
+                wordBreak: 'break-word',
+                whiteSpace: 'pre-wrap',
+                fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
+                overflow: 'hidden',
+                border: 'none',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05)'
+              }
+            }, [
+              // 添加标题行
+              h('div', {
+                style: {
+                  fontWeight: '500',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+                  backgroundColor: statusColor,
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }
+              }, [
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center'
                   }
-                })
+                }, [
+                  h('a-icon', {
+                    props: {
+                      type: statusIcon,
+                      theme: statusTheme,
+                      spin: statusSpin
+                    },
+                    style: {
+                      marginRight: '8px',
+                      fontSize: '16px'
+                    }
+                  }),
+                  '检查结果详情'
+                ])
+              ]),
+              // 添加检查结果内容
+              h('div', {
+                domProps: {
+                  innerHTML: text
+                },
+                style: {
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  padding: '16px',
+                  maxHeight: '70vh',
+                  overflowY: 'auto'
+                }
+              })
+            ]);
+
+            // 使用tooltip组件但覆盖默认样式
+            return h('a-tooltip', {
+              props: {
+                title: tooltipContent,
+                placement: 'top',
+                mouseEnterDelay: 0.3,
+                overlayClassName: 'apple-style-tooltip',
+                autoAdjustOverflow: true,
+                arrowPointAtCenter: true,
+                color: '#ffffff',
+                getPopupContainer: () => document.body
+              },
+              class: 'custom-tooltip'
+            }, [
+              h('span', {
+                style: {
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block',
+                  maxWidth: '100%',
+                  color: statusColor,
+                  transition: 'all 0.3s',
+                  fontSize: '14px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  backgroundColor: `${statusColor}15`, // 15是透明度，相当于rgba的0.1
+                  border: `1px solid ${statusColor}30` // 30是透明度，相当于rgba的0.2
+                },
+                class: 'check-result-text'
+              }, [
+                // 状态图标
+                h('a-icon', {
+                  props: {
+                    type: statusIcon,
+                    theme: statusTheme,
+                    spin: statusSpin
+                  },
+                  style: {
+                    marginRight: '4px',
+                    fontSize: '12px'
+                  }
+                }),
+                // 在这里使用一个辅助函数去除HTML标签，只显示纯文本
+                h('span', {}, [
+                  displayText.length > 20 ?
+                      this.stripHtml(displayText).substr(0, 20) + '...' :
+                      this.stripHtml(displayText)
+                ])
               ])
-            ])
-            // ... existing code ...
-          ])
+            ]);
+          }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: '25%',
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            const isChecking = row.status === 'CHECKING';
+            const isFailed = row.status === 'FAILED';
+
+            return h('div', {
+              class: 'action-buttons',
+              style: {
+                display: 'flex',
+                gap: '8px'
+              }
+            }, [
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                  color: '#FF3B30',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                on: {
+                  click: () => this.stopCheckItem(record.ip, row.id)
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'close' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "终止"
+              ]) : null,
+
+              // 重试按钮 - 非检查中时显示，检查中则禁用
+              !isChecking ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                  color: '#007AFF',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                  !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                  !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                attrs: {
+                  disabled: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                      !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
+                },
+                on: {
+                  click: () => this.retryCheckItem(record.ip, row.id)
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'redo' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "重试"
+              ]) : null,
+
+              // 修复按钮 - 失败时可用，主机整体检查中时禁用
+              isFailed ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(88, 86, 214, 0.1)',
+                  color: '#5856D6',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                attrs: {
+                  disabled: isHostChecking || row.status === 'FIXING'
+                },
+                on: {
+                  click: () => this.fixCheckItem(record.ip, row)
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'tool' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "修复"
+              ]) : null,
+
+              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
+              isFailed ? h('button', {
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(142, 142, 147, 0.1)',
+                  color: '#8E8E93',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isHostChecking ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isHostChecking ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                attrs: {
+                  disabled: isHostChecking
+                },
+                on: {
+                  click: () => this.skipCheckItem(record.ip, row.id)
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'forward' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "跳过"
+              ]) : null
+            ].filter(Boolean));
+          }
+        },
+        {
+          title: '日志',
+          key: 'log',
+          width: '15%',
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            return h('button', {
+              style: {
+                border: 'none',
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                color: '#007AFF',
+                padding: '6px 12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                opacity: row.status === 'WAITING' ? '0.5' : '1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              },
+              attrs: {
+                disabled: row.status === 'WAITING'
+              },
+              on: {
+                click: () => this.viewItemLog(record.ip, row.id, row.itemName)
+              }
+            }, [
+              h('a-icon', {
+                props: { type: 'file-text' },
+                style: { marginRight: '4px', fontSize: '12px' }
+              }),
+              "查看日志"
+            ]);
+          }
+        }
+      ];
+
+      // 创建header-summary部分
+      const headerSummary = h('div', {
+        class: 'header-summary',
+        style: {
+          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }
+      }, [
+        h('span', {
+          style: {
+            fontWeight: '600',
+            color: '#1d1d1f'
+          }
+        }, [`共 ${checkItems.length} 项检查`]),
+
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(52, 199, 89, 0.1)',
+            color: '#34C759',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'check-circle' },
+            style: { marginRight: '6px' }
+          }),
+          `${checkItems.filter(item => item.status === 'SUCCESS').length} 项通过`
+        ]),
+
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 59, 48, 0.1)',
+            color: '#FF3B30',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'close-circle' },
+            style: { marginRight: '6px' }
+          }),
+          `${checkItems.filter(item => item.status === 'FAILED').length} 项失败`
+        ]),
+
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 149, 0, 0.1)',
+            color: '#FF9500',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'clock-circle' },
+            style: { marginRight: '6px' }
+          }),
+          `${checkItems.filter(item => item.status === 'WAITING').length} 项待检查`
+        ]),
+
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+            color: '#007AFF',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
+          h('a-icon', {
+            props: {
+              type: 'loading',
+              spin: true
+            },
+            style: { marginRight: '6px' }
+          }),
+          `${checkItems.filter(item => item.status === 'CHECKING').length} 项检查中`
+        ]),
+
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            padding: '4px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(142, 142, 147, 0.1)',
+            color: '#8E8E93',
+            fontSize: '14px',
+            fontWeight: '500'
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'warning' },
+            style: { marginRight: '6px' }
+          }),
+          `${checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过`
         ])
-      ])
+      ]);
+
+      // 创建header-actions部分
+      const headerActions = h('div', {
+        class: 'header-actions',
+        style: {
+          display: 'flex',
+          gap: '12px'
+        }
+      }, [
+        h('button', {
+          style: {
+            backgroundColor: '#007AFF',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: !this.hasRetryableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasRetryableSelectedItems(record.ip) ? '0.6' : '1',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center'
+          },
+          attrs: {
+            disabled: !this.hasRetryableSelectedItems(record.ip)
+          },
+          on: {
+            click: () => this.retrySelectedItems(record.ip)
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'redo' },
+            style: { marginRight: '6px' }
+          }),
+          '重试选中项'
+        ]),
+
+        h('button', {
+          style: {
+            backgroundColor: '#5856D6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '8px 16px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: !this.hasFixableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
+            opacity: !this.hasFixableSelectedItems(record.ip) ? '0.6' : '1',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center'
+          },
+          attrs: {
+            disabled: !this.hasFixableSelectedItems(record.ip)
+          },
+          on: {
+            click: () => this.fixSelectedItems(record.ip)
+          }
+        }, [
+          h('a-icon', {
+            props: { type: 'tool' },
+            style: { marginRight: '6px' }
+          }),
+          '修复选中项'
+        ])
+      ]);
+
+      // 创建表格容器，添加苹果风格的样式
+      return h('div', {
+        class: 'check-items-container',
+        style: {
+          padding: '24px',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+          margin: '0px',
+          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'
+        }
+      }, [
+        h('div', {
+          class: 'check-items-header',
+          style: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }
+        }, [
+          headerSummary,
+          headerActions
+        ]),
+
+        // 添加分隔线
+        h('div', {
+          style: {
+            height: '1px',
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            margin: '0 0 20px 0'
+          }
+        }),
+
+        h('a-table', {
+          props: {
+            columns: columns,
+            dataSource: checkItems,
+            pagination: false,
+            size: 'middle',
+            rowKey: 'id',
+            rowSelection: {
+              selectedRowKeys: this.selectedCheckItems[record.ip] || [],
+              onChange: (selectedRowKeys) => this.onCheckItemSelect(record.ip, selectedRowKeys)
+            }
+          },
+          class: 'apple-style-table',
+          style: {
+            borderRadius: '12px',
+            overflow: 'hidden'
+          }
+        })
+      ]);
     },
 
     // 选择检查项
@@ -1950,7 +2415,7 @@ export default {
           ip,
           itemNames: selectedItems
         });
-        
+
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
           // 立即刷新一次，不等待5秒后的自动刷新
@@ -1968,13 +2433,13 @@ export default {
     async skipCheckItem(ip, itemId) {
       // 查找对应的主机信息
       const host = this.dataSource.find(h => h.ip === ip);
-      
+
       // 检查主机是否处于检查中状态
       if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
         this.$message.warning('主机当前正在检查中，请稍后再尝试跳过');
         return;
       }
-      
+
       try {
         const res = await this.$axiosPost(global.API.skipCheckItem, {
           clusterId: this.clusterId,
@@ -1983,7 +2448,7 @@ export default {
         });
         if (res.code === 200) {
           this.$message.success('已跳过该检查项');
-          
+
           // 更新检查项状态
           const items = this.checkItemsMap[ip];
           if (items) {
@@ -1991,10 +2456,10 @@ export default {
             if (targetItem) {
               targetItem.status = 'SKIPPED';
               targetItem.message = '已手动跳过此检查项';
-              
+
               // 使用...items创建新数组，确保Vue能检测到变化
               this.$set(this.checkItemsMap, ip, [...items]);
-              
+
               // 延迟1秒后刷新列表获取服务器最新状态
               setTimeout(() => {
                 this.refreshHostList();
@@ -2025,18 +2490,18 @@ export default {
     // 使用自定义a-modal组件实现确认弹窗
     async fixCheckItem(ip, item) {
       if (item.status !== 'FAILED') return;
-      
+
       // 查找对应的主机信息
       const host = this.dataSource.find(h => h.ip === ip);
-      
+
       // 删除以下检查，允许在主机检查过程中也能点击修复按钮
-      /* 
+      /*
       if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
         this.$message.warning('主机当前正在检查中，请稍后再尝试修复');
         return;
       }
       */
-      
+
       try {
         // 获取确认信息
         const res = await this.$axiosGet(global.API.getCheckItemConfirmInfo, {
@@ -2044,21 +2509,21 @@ export default {
           ip: ip,
           itemId: item.id
         });
-        
+
         console.log('获取确认信息结果:', res); // 添加调试日志
-        
+
         if (res.code === 200) {
           const needConfirm = res.needConfirm;
           const confirmMessage = res.confirmMessage;
           const itemName = res.itemName || item.itemName;
-          
+
           if (needConfirm) {
             // 设置弹窗数据
             this.fixConfirmTitle = '确认修复 - ' + itemName;
             this.fixConfirmContent = confirmMessage;
             this.fixConfirmIp = ip;
             this.fixConfirmItem = item;
-            
+
             // 显示弹窗
             this.fixConfirmVisible = true;
           } else {
@@ -2078,7 +2543,7 @@ export default {
     // 处理确认修复对话框的确认按钮
     handleFixConfirm() {
       this.fixConfirmLoading = true;
-      
+
       // 执行修复
       this.doFixCheckItem(this.fixConfirmIp, this.fixConfirmItem, true).then(() => {
         this.fixConfirmVisible = false;
@@ -2096,10 +2561,10 @@ export default {
     // 执行实际的修复操作
     async doFixCheckItem(ip, item, skipConfirm) {
       console.log('执行修复操作:', ip, item.id, skipConfirm); // 添加调试日志
-      
+
       // Set loading state
       this.$set(item, 'fixing', true);
-      
+
       try {
         // Call fix API
         const res = await this.$axiosPost(global.API.fixCheckItem, {
@@ -2108,7 +2573,7 @@ export default {
           itemId: item.id,
           skipConfirm: skipConfirm
         });
-        
+
         if (res.code === 200) {
           this.$message.success('修复操作已提交');
           // Refresh check item status after a delay
@@ -2116,7 +2581,7 @@ export default {
             this.getHostCheckItems(ip);
           }, 1000);
         }
-        
+
         // 清理状态
         this.$set(item, 'fixing', false);
         return res;
@@ -2151,7 +2616,7 @@ export default {
     async retryCheckItem(ip, itemId) {
       // 查找对应的主机信息
       const host = this.dataSource.find(h => h.ip === ip);
-      
+
       // 删除以下检查，允许在主机检查过程中也能点击重试按钮
       /*
       if (host && (host.status === 'CHECKING' || host.statusStr === 'CHECKING')) {
@@ -2159,17 +2624,17 @@ export default {
         return;
       }
       */
-      
+
       try {
         const res = await this.$axiosPost(global.API.retryCheckItems, {
           clusterId: this.clusterId,
           ip: ip,
           itemNames: [itemId]  // 只重试选中的单个检查项
         });
-        
+
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
-          
+
           // 立即刷新一次，不等待5秒后的自动刷新
           this.getEnvironmentList(false);
         } else {
@@ -2193,8 +2658,8 @@ export default {
         }
       }, [
         h('div', { class: 'expand-icon-inner' }, [
-        h('a-icon', {
-          props: {
+          h('a-icon', {
+            props: {
               type: 'right'
             },
             style: {
@@ -2230,7 +2695,7 @@ export default {
           ip: ip,
           itemIds: selectedItems.join(',')
         });
-        
+
         if (res.code === 200) {
           this.$message.success('修复指令已发送');
           // 清空选择
@@ -2250,16 +2715,16 @@ export default {
     hasRetryableSelectedItems(ip) {
       const selectedItems = this.selectedCheckItems[ip] || [];
       const items = this.checkItemsMap[ip] || [];
-      
+
       if (selectedItems.length === 0) {
         return false;
       }
-      
+
       return selectedItems.some(itemId => {
         const item = items.find(i => i.id === itemId);
         // 允许重试所有非CHECKING和非TERMINATING状态的检查项
         return item && item.status !== 'CHECKING' && item.status !== 'TERMINATING'
-          && (item.status === 'FAILED' || item.status === 'SUCCESS' || item.status === 'SKIPPED');
+            && (item.status === 'FAILED' || item.status === 'SUCCESS' || item.status === 'SKIPPED');
       });
     },
 
@@ -2276,7 +2741,7 @@ export default {
         // 立即将该主机所有正在检查的项状态更新为"终止中"
         const items = this.checkItemsMap[row.ip] || [];
         let hasUpdated = false;
-        
+
         if (items && items.length > 0) {
           items.forEach(item => {
             if (item.status === 'CHECKING') {
@@ -2285,7 +2750,7 @@ export default {
               hasUpdated = true;
             }
           });
-          
+
           if (hasUpdated) {
             // 更新本地缓存，确保UI立即显示变化
             this.$set(this.checkItemsMap, row.ip, [...items]);
@@ -2293,13 +2758,13 @@ export default {
         }
 
         // 调用后端API
-        this.$axiosPost(global.API.stopHostCheck, { 
+        this.$axiosPost(global.API.stopHostCheck, {
           clusterId: this.clusterId,
           ip: row.ip
         }).then(res => {
           if (res && res.code === 200) {
             this.$message.success('已终止主机检查');
-            
+
             // 延迟1秒后刷新列表，获取最新状态
             setTimeout(() => {
               this.refreshHostList();
@@ -2319,12 +2784,12 @@ export default {
         this.refreshHostList();
       }
     },
-    
+
     /**
      * 重试主机检查
      */
     retryCheck(row) {
-      this.$axiosPost(global.API.rehostCheck, { 
+      this.$axiosPost(global.API.rehostCheck, {
         clusterId: this.clusterId,
         ips: row.ip
       }).then(res => {
@@ -2336,7 +2801,7 @@ export default {
         }
       });
     },
-    
+
     /**
      * 刷新主机列表
      */
@@ -2345,7 +2810,7 @@ export default {
       this.getEnvironmentList();
     },
 
-    /** 
+    /**
      * 检查所有主机
      */
     checkAllHosts() {
@@ -2367,7 +2832,7 @@ export default {
       this.currentLogIp = ip;
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
-      
+
       // 设置当前检查项信息，用于日志筛选组件
       this.checkItem = {
         clusterId: this.clusterId,
@@ -2375,15 +2840,15 @@ export default {
         id: itemId,
         itemName: itemName
       };
-      
+
       // 打开日志弹窗并加载日志
       this.logModalTitle = `日志 - 主机: ${ip}, 检查项: ${itemName}`;
       this.logVisible = true;
       this.logContent = '';
-      
+
       // 设置初始日志类型为全部日志
       this.currentLogType = 'all';
-      
+
       // 初始停止之前可能存在的自动刷新定时器
       this.stopAutoRefresh();
 
@@ -2400,30 +2865,30 @@ export default {
         this.fetchItemLog();
       });
     },
-    
+
     // 获取检查项日志
     async fetchItemLog() {
       if (!this.currentLogIp || !this.currentLogItemId) {
         return;
       }
-      
+
       this.logLoading = true;
-      
+
       try {
         // 统一使用一个API进行所有筛选
         const apiUrl = '/ddh/host/check/getLog';
-        
+
         // 获取级别筛选参数
         let logLevel = 'INFO'; // 默认显示INFO级别
         let filterMode = 'min'; // 默认显示INFO及以上级别
-        
+
         if (this.$refs.logFilter) {
           filterMode = this.$refs.logFilter.filterType;
           logLevel = this.$refs.logFilter.selectedLevel;
         }
-          
+
         // 准备请求参数
-        const params = { 
+        const params = {
           clusterId: this.clusterId,
           ip: this.currentLogIp,
           itemId: this.currentLogItemId,
@@ -2431,10 +2896,10 @@ export default {
           logLevel: logLevel,
           filterMode: filterMode
         };
-        
+
         console.log('API请求:', apiUrl, params);
         const res = await this.$axiosPost(apiUrl, params);
-        
+
         if (res.code === 200) {
           this.logContent = res.data || '暂无日志数据';
         } else {
@@ -2455,22 +2920,22 @@ export default {
         this.logLoading = false;
       }
     },
-    
+
     // 手动刷新日志
     refreshLog() {
       this.fetchItemLog();
     },
-    
+
     // 处理自动刷新间隔变化
     handleAutoRefreshChange(e) {
       const value = parseInt(e.key);
-      
+
       // 停止之前的自动刷新
       this.stopAutoRefresh();
-      
+
       // 设置新的自动刷新间隔
       this.autoRefreshInterval = value;
-      
+
       // 如果选择了自动刷新，启动定时器
       if (value > 0) {
         this.$message.success(`已开启自动刷新(${value}秒)`);
@@ -2479,7 +2944,7 @@ export default {
         this.$message.info('已关闭自动刷新');
       }
     },
-    
+
     // 启动自动刷新
     startAutoRefresh() {
       if (this.autoRefreshInterval > 0) {
@@ -2488,7 +2953,7 @@ export default {
         }, this.autoRefreshInterval * 1000);
       }
     },
-    
+
     // 停止自动刷新
     stopAutoRefresh() {
       if (this.refreshTimer) {
@@ -2496,7 +2961,7 @@ export default {
         this.refreshTimer = null;
       }
     },
-    
+
     // 重置日志筛选，显示INFO级以上的全部类型日志
     resetLogFilter() {
       this.currentLogType = 'all';
@@ -2519,7 +2984,7 @@ export default {
         // 立即将检查项状态更新为"终止中"，提供用户视觉反馈
         const items = this.checkItemsMap[ip] || [];
         const targetItem = items.find(item => item.id === itemId);
-        
+
         if (targetItem && targetItem.status === 'CHECKING') {
           targetItem.status = 'TERMINATING';
           targetItem.message = '正在终止检查...';
@@ -2528,15 +2993,15 @@ export default {
         }
 
         // 调用后端API
-        const res = await this.$axiosPost(global.API.stopCheckItem, { 
+        const res = await this.$axiosPost(global.API.stopCheckItem, {
           clusterId: this.clusterId,
           ip: ip,
           itemId: itemId
         });
-        
+
         if (res && res.code === 200) {
           this.$message.success('已终止检查项');
-          
+
           // 延迟1秒后刷新列表，获取最新状态
           setTimeout(() => {
             this.refreshHostList();
@@ -2566,7 +3031,7 @@ export default {
     handleLogTypeChange() {
       // 当日志类型变化时，重新获取日志
       this.fetchItemLog();
-      
+
       // 随着系统扩展，如果添加了新的日志类型，在这里不需要特殊处理
       // 只需要:
       // 1. 在上面的日志类型选择器中添加新的a-radio-button
@@ -2579,7 +3044,7 @@ export default {
       // 直接刷新日志以应用新的筛选条件
       this.fetchItemLog();
     },
-    
+
     // 去除HTML标签的辅助函数
     stripHtml(html) {
       if (!html) return '';
@@ -2591,7 +3056,7 @@ export default {
     // 找到渲染检查项状态的方法或函数，添加对FIXING状态的处理
     getStatusText(status) {
       if (!status) return '未知';
-      
+
       const statusMap = {
         'SUCCESS': '成功',
         'FAILED': '失败',
@@ -2599,14 +3064,14 @@ export default {
         'FIXING': '修复中', // 添加对FIXING状态的处理
         'WAITING': '等待检查'
       };
-      
+
       return statusMap[status] || '未知';
     },
 
     // 找到设置状态样式的方法，添加FIXING状态的样式
     getStatusStyle(status) {
       if (!status) return '';
-      
+
       const styleMap = {
         'SUCCESS': 'success-status',
         'FAILED': 'failed-status',
@@ -2614,7 +3079,7 @@ export default {
         'FIXING': 'fixing-status', // 添加FIXING状态的样式
         'WAITING': 'waiting-status'
       };
-      
+
       return styleMap[status] || '';
     },
 
@@ -2627,19 +3092,19 @@ export default {
         this.isCheckingActive = false;
         return;
       }
-      
+
       // 判断是否有主机正在检查
       const hasCheckingHost = hostList.some(host => {
         // 检查主机状态
         if (host.status === 'CHECKING' || host.statusStr === 'CHECKING') {
           return true;
         }
-        
+
         // 检查所有检查项状态
         const checkItems = host.checkItems || [];
         return checkItems.some(item => item.status === 'CHECKING');
       });
-      
+
       this.isCheckingActive = hasCheckingHost;
     },
 
@@ -2691,164 +3156,14 @@ export default {
         class: 'hosts-file-preview-modal'
       });
     },
-    
-    formatHostsContent(content) {
-      if (!content) return [];
-      return content.split('\n');
-    },
-    
-    splitIPAndHostname(line) {
-      if (!line || line.trim() === '') return [''];
-      return line.trim().split(/\s+/);
-    },
-
-    // 添加renderHostsFile方法，用于将hosts文件内容转换为带有语法高亮的HTML
-    renderHostsFile(content) {
-      if (!content) return '';
-      
-      const lines = this.formatHostsContent(content);
-      let result = '';
-      
-      lines.forEach((line, index) => {
-        let lineClass = 'hosts-line';
-        let formattedLine = '';
-        
-        if (line.startsWith('#')) {
-          // 注释行
-          lineClass += ' comment';
-          formattedLine = this.escapeHtml(line);
-        } else if (line.trim() !== '') {
-          // IP地址和主机名行
-          lineClass += ' ip-entry';
-          const parts = this.splitIPAndHostname(line);
-          
-          parts.forEach((part, partIndex) => {
-            if (partIndex > 0) {
-              // 主机名部分
-              formattedLine += '<span class="hostname-part">' + this.escapeHtml(part) + '</span>';
-            } else {
-              // IP地址部分
-              formattedLine += this.escapeHtml(part);
-            }
-            
-            if (partIndex < parts.length - 1) {
-              formattedLine += ' ';
-            }
-          });
-        } else {
-          // 空行
-          formattedLine = '';
-        }
-        
-        result += `<span class="${lineClass}">${formattedLine}</span>\n`;
-      });
-      
-      return result;
-    },
-
-    // 添加formatDNSServers方法，用于格式化DNS服务器列表
-    formatDNSServers(dnsList) {
-      if (!dnsList || !dnsList.length) return '<div class="dns-empty">未配置DNS服务器</div>';
-      
-      let result = '';
-      
-      dnsList.forEach((dns, index) => {
-        result += `<div class="dns-server-entry">
-          <span class="dns-icon">${index+1}</span>
-          <span class="dns-ip">${this.escapeHtml(dns)}</span>
-        </div>`;
-      });
-      
-      return result;
-    },
-
-    // 添加escapeHtml方法到methods
-    escapeHtml(unsafe) {
-      if (!unsafe) return '';
-      return unsafe
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    },
-
-    // 渲染DNS服务器列表
-    renderDnsServers (dnsServers) {
-      if (!dnsServers || dnsServers.length === 0) {
-        return h('div', { class: 'dns-empty' }, ['没有配置DNS服务器']);
-      }
-      
-      return dnsServers.map((dns, index) => {
-        return h('div', { 
-          class: 'dns-server-entry',
-          key: `dns-${index}`
-        }, [
-          h('div', { class: 'dns-icon' }, [`#${index+1}`]),
-          h('div', { class: 'dns-ip' }, [dns])
-        ]);
-      });
-    },
-    
-    // 渲染hosts文件内容，带有语法高亮
-    renderHostsFile (hostsContent) {
-      if (!hostsContent) {
-        return '未能获取hosts文件内容';
-      }
-      
-      // 对hosts文件进行HTML转义，防止XSS攻击
-      const escapedContent = this.escapeHtml(hostsContent);
-      
-      // 将hosts文件内容按行分割
-      const lines = escapedContent.split('\n');
-      const result = [];
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        let lineClass = 'hosts-line';
-        let lineContent = line;
-        
-        // 处理注释行
-        if (line.trim().startsWith('#')) {
-          lineClass += ' comment';
-        } 
-        // 处理IP行
-        else if (/^\s*\d+\.\d+\.\d+\.\d+/.test(line)) {
-          lineClass += ' ip-entry';
-          // 将主机名部分用span包裹以便应用样式
-          lineContent = line.replace(/(\s+\S+)(?=\s|$)/g, '<span class="hostname-part">$1</span>');
-        }
-        
-        result.push(h('div', { 
-          class: lineClass,
-          key: `line-${i}`,
-          domProps: {
-            innerHTML: lineContent
-          } 
-        }));
-      }
-      
-      return result;
-    },
-    
-    // HTML转义函数，防止XSS攻击
-    escapeHtml (unsafe) {
-      if (!unsafe) return '';
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    },
   },
   mounted() {
     // 重置初始状态
     this.hasStartedCheck = false;
-    
+
     // 直接开始轮询
     this.pollingSearch();
-    
+
     // 注册新的统一日志API
     if (!global.API.getLog) {
       global.API.getLog = '/ddh/host/check/getLog';
@@ -2860,7 +3175,7 @@ export default {
       var toast;
       var toastContent = '';
       var toastStyle = '';
-      
+
       // 直接实现复制功能，不依赖navigator.clipboard
       try {
         // 创建一个隐藏的textarea元素
@@ -2871,20 +3186,20 @@ export default {
         textarea.style.top = '-100vh';
         textarea.style.left = '-100vw';
         textarea.style.opacity = '0';
-        
+
         // 添加到DOM
         document.body.appendChild(textarea);
-        
+
         // 选择文本
         textarea.select();
         textarea.setSelectionRange(0, 99999); // 兼容移动设备
-        
+
         // 执行复制
         var successful = document.execCommand('copy');
-        
+
         // 移除元素
         document.body.removeChild(textarea);
-        
+
         // 显示苹果风格的提示
         if (successful) {
           // 成功提示内容
@@ -2895,28 +3210,28 @@ export default {
           toastContent = '<div style="display: flex; align-items: center;"><svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="margin-right: 8px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"></path></svg><span>复制失败</span></div>';
           toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 59, 48, 0.9); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
         }
-        
-        } catch (err) {
+
+      } catch (err) {
         console.error('复制失败:', err);
-        
+
         // 错误提示内容
         toastContent = '<div style="display: flex; align-items: center;"><svg viewBox="0 0 24 24" fill="none" width="20" height="20" style="margin-right: 8px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"></path></svg><span>复制失败</span></div>';
         toastStyle = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 59, 48, 0.9); color: white; padding: 10px 16px; border-radius: 8px; font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 9999; opacity: 0; transition: opacity 0.2s ease-in-out;';
       }
-      
+
       // 创建并显示toast提示
       toast = document.createElement('div');
       toast.innerHTML = toastContent;
       toast.style.cssText = toastStyle;
-      
+
       // 添加到DOM
       document.body.appendChild(toast);
-      
+
       // 显示动画
       setTimeout(function() {
         toast.style.opacity = '1';
       }, 10);
-      
+
       // 自动消失
       setTimeout(function() {
         toast.style.opacity = '0';
@@ -2934,108 +3249,368 @@ export default {
       clearInterval(this.timer);
       this.timer = null;
     }
-    
+
     // 清理日志刷新定时器
     this.stopAutoRefresh();
 
     // 清理window对象上的方法
     window.copyToClipboard = undefined;
   },
-  filters: {
-    // HTML转义函数，用于防止XSS攻击
-    escapeHtml(unsafe) {
-      if (!unsafe) return '';
-      return unsafe
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-  },
 };
 </script>
 
 <style lang="less" scoped>
-@import '../../assets/less/theme.less';
+// 苹果设计系统颜色
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #30d158;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
 
-// Apple风格变量定义
-@apple-blue: #007AFF;
-@apple-blue-hover: #0062CC;
-@apple-red: #FF3B30;
-@apple-red-hover: #D82D22;
-@apple-green: #34C759;
-@apple-orange: #FF9500;
-@apple-purple: #AF52DE;
-@apple-gray-light: #F2F2F7;
-@apple-gray: #AEAEB2;
-@apple-gray-dark: #8E8E93;
-@apple-black: #1D1D1F;
-@apple-white: #FFFFFF;
-
-// 系统主题变量
-@primary-color: #2872e0;
-@primary-1: #f0f8ff;
-@primary-2: #d1eaff;
-@primary-3: #a8d4ff;
-@primary-4: #7db7fa;
-@primary-5: #5194ed;
-@primary-6: #2872e0;
-@primary-7: #1854ba;
-@primary-8: #0c3994;
-@primary-9: #03236e;
-@primary-10: #011447;
-@info-color: #2872e0;
-@success-color: #52c41a;
-@warning-color: #faad14;
-@error-color: #f5222f;
-@alert-info-bg-color: #f0f8ff;
-@alert-info-border-color: #a8d4ff;
-@alert-success-bg-color: #f6ffed;
-@alert-success-border-color: #b7eb8f;
-@alert-warning-bg-color: #fffbe6;
-@alert-warning-border-color: #ffe58f;
-@alert-error-bg-color: #fff1f0;
-@alert-error-border-color: #ffa19e;
-@processing-color: #2872e0;
-@menu-dark-submenu-bg: #030810;
-@layout-header-background: #071326;
-@layout-trigger-background: #0b1f3c;
-@btn-danger-bg: #ff4d52;
-@btn-danger-border: #ff4d52;
-@layout-body-background: #f0f2f5;
-@body-background: #fff;
-@component-background: #fff;
-@heading-color: rgba(0, 0, 0, 0.85);
-@text-color: rgba(0, 0, 0, 0.65);
-@text-color-inverse: #fff;
-@text-color-secondary: rgba(0, 0, 0, 0.45);
-@shadow-color: rgba(0, 0, 0, 0.15);
-@border-color-split: #f0f0f0;
-@background-color-light: #fafafa;
-@background-color-base: #f5f5f5;
-@table-selected-row-bg: #fafafa;
-@table-expanded-row-bg: #fbfbfb;
-@checkbox-check-color: #fff;
-@disabled-color: rgba(0, 0, 0, 0.25);
-@menu-dark-color: rgba(254, 254, 254, 0.65);
-@menu-dark-highlight-color: #fefefe;
-@menu-dark-arrow-color: #fefefe;
-@btn-primary-color: #fff;
-
-// Apple风格混合函数
+// 苹果设计系统字体
 .apple-font() {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.steps-container {
+.steps2 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+
+  .hero-section {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    position: relative;
+
+    .hero-title {
+      .apple-font();
+      font-size: 2.5rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.2rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0 auto 1.5rem;
+      max-width: 600px;
+    }
+
+    .queue-status-area {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+  }
+
+  .hosts-table-container {
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1400px;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    animation-fill-mode: both;
+    animation-delay: 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+    // 表格通用设置
+    /deep/ .ant-table {
+      .apple-font();
+
+      .ant-table-thead > tr > th {
+        background-color: @apple-gray-light;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: @apple-black;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        white-space: nowrap; // 防止列标题换行
+        text-align: center; // 表头文字居中
+      }
+
+      .ant-table-tbody > tr > td {
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        transition: background-color 0.3s;
+      }
+
+      .ant-table-tbody > tr:hover:not(.ant-table-expanded-row):not(.ant-table-row-selected) > td {
+        background-color: fadeout(@apple-gray-light, 50%);
+      }
+
+      .ant-table-tbody > tr.ant-table-expanded-row > td,
+      .ant-table-tbody > tr.ant-table-expanded-row:hover > td {
+        background-color: @apple-gray-light;
+        padding: 0;
+      }
+
+      // 设置扩展行内部的样式
+      .ant-table-expanded-row {
+        .check-items-container {
+          padding: 1.5rem 2rem 1.5rem 3rem;
+
+          .check-items-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+
+            .header-summary {
+              .apple-font();
+              font-size: 1.1rem;
+              font-weight: 500;
+              color: @apple-black;
+
+              .status-icon {
+                margin-right: 8px;
+              }
+
+              .success-count {
+                color: @apple-green;
+                margin: 0 4px;
+              }
+
+              .failed-count {
+                color: @apple-red;
+                margin: 0 4px;
+              }
+            }
+
+            .header-actions {
+              display: flex;
+              gap: 10px;
+
+              .apple-button {
+                height: 34px;
+                padding: 0 16px;
+                font-size: 14px;
+                font-weight: 500;
+                border-radius: 17px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+                &.primary {
+                  background: @apple-blue;
+                  border: none;
+                  color: white;
+
+                  &:hover {
+                    background: @apple-blue-hover;
+                  }
+                }
+
+                &.secondary {
+                  background: @apple-gray-light;
+                  border: none;
+                  color: @apple-black;
+
+                  &:hover {
+                    background: darken(@apple-gray-light, 5%);
+                  }
+                }
+
+                &.danger {
+                  background: fade(@apple-red, 10%);
+                  border: none;
+                  color: @apple-red;
+
+                  &:hover {
+                    background: fade(@apple-red, 15%);
+                  }
+                }
+              }
+            }
+          }
+
+          // 子表格样式
+          .ant-table {
+            border-radius: 12px;
+            overflow: hidden;
+
+            .ant-table-thead > tr > th {
+              background-color: rgba(0,0,0,0.02);
+              font-weight: 500;
+              font-size: 0.9rem;
+              color: @apple-black;
+              padding: 12px 16px;
+            }
+
+            .ant-table-tbody > tr > td {
+              padding: 12px 16px;
+              font-size: 0.9rem;
+            }
+
+            // 优化内嵌表格的选择框样式
+            .ant-checkbox-wrapper {
+              .ant-checkbox-inner {
+                border-radius: 4px;
+                border-color: @apple-gray;
+
+                &:after {
+                  border-color: white;
+                }
+              }
+
+              .ant-checkbox-checked .ant-checkbox-inner {
+                background-color: @apple-blue;
+                border-color: @apple-blue;
+              }
+            }
+
+            // 状态标签样式
+            .status-tag {
+              display: inline-flex;
+              align-items: center;
+              padding: 4px 12px;
+              border-radius: 12px;
+              font-size: 0.85rem;
+              font-weight: 500;
+
+              .status-icon {
+                margin-right: 6px;
+              }
+
+              &.success {
+                background-color: fade(@apple-green, 10%);
+                color: @apple-green;
+              }
+
+              &.failed {
+                background-color: fade(@apple-red, 10%);
+                color: @apple-red;
+              }
+
+              &.waiting {
+                background-color: fade(@apple-yellow, 10%);
+                color: darken(@apple-yellow, 15%);
+              }
+
+              &.checking {
+                background-color: fade(@apple-blue, 10%);
+                color: @apple-blue;
+              }
+
+              &.skipped {
+                background-color: fade(@apple-gray, 10%);
+                color: @apple-gray;
+              }
+            }
+
+            // 操作按钮样式
+            .action-button {
+              height: 28px;
+              padding: 0 12px;
+              font-size: 0.85rem;
+              font-weight: 500;
+              border-radius: 14px;
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              margin-right: 8px;
+
+              &.view {
+                background: fade(@apple-blue, 10%);
+                border: none;
+                color: @apple-blue;
+
+                &:hover {
+                  background: fade(@apple-blue, 15%);
+                }
+              }
+
+              &.fix {
+                background: fade(@apple-red, 10%);
+                border: none;
+                color: @apple-red;
+
+                &:hover {
+                  background: fade(@apple-red, 15%);
+                }
+              }
+
+              &.retry {
+                background: fade(@apple-orange, 10%);
+                border: none;
+                color: @apple-orange;
+
+                &:hover {
+                  background: fade(@apple-orange, 15%);
+                }
+              }
+
+              &.skip {
+                background: fade(@apple-gray, 10%);
+                border: none;
+                color: @apple-gray;
+
+                &:hover {
+                  background: fade(@apple-gray, 15%);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 自定义展开图标样式
+  /deep/ .apple-expand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background-color: @apple-gray-light;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: darken(@apple-gray-light, 3%);
+    }
+
+    .expand-icon-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .anticon {
+        color: @apple-black;
+        transform: rotate(0);
+      }
+    }
+
+    &.expanded {
+      background-color: @apple-blue;
+
+      .anticon {
+        color: white;
+        transform: rotate(90deg);
+      }
+    }
+  }
+
   // 主机列表操作按钮样式
   .apple-actions {
     display: flex;
     gap: 8px;
-    
+
     .apple-button {
       height: 32px;
       padding: 0 16px;
@@ -3045,51 +3620,51 @@ export default {
       display: flex;
       align-items: center;
       justify-content: center;
-      
+
       &.primary {
         background: @apple-blue;
         border: none;
         color: white;
-        
+
         &:hover {
           background: darken(@apple-blue, 5%);
           transform: translateY(-1px);
           box-shadow: 0 2px 6px rgba(0, 113, 227, 0.3);
         }
-        
+
         &:active {
           transform: translateY(0);
         }
       }
-      
+
       &.danger {
         background: fade(@apple-red, 10%);
         border: none;
         color: @apple-red;
-        
+
         &:hover {
           background: fade(@apple-red, 15%);
           transform: translateY(-1px);
           box-shadow: 0 2px 6px rgba(255, 69, 58, 0.2);
         }
-        
+
         &:active {
           transform: translateY(0);
         }
       }
     }
   }
-  
+
   // 操作系统信息样式
   .os-info {
     .os-type {
       font-size: 0.95rem;
       color: @apple-black;
-      
+
       .anticon {
         font-size: 16px;
       }
-      
+
       .os-logo {
         width: 20px;
         height: 20px;
@@ -3097,16 +3672,11 @@ export default {
         vertical-align: middle;
         transition: transform 0.3s ease;
       }
-      
+
       &:hover .os-logo {
         transform: scale(1.1);
       }
     }
-  }
-  
-  // 基础样式
-  .os-tooltip {
-    max-width: none !important;
   }
 
   // 操作系统详情弹出框样式
@@ -3121,304 +3691,252 @@ export default {
     animation: osFadeIn 0.3s ease-in-out;
     max-height: 80vh;
     overflow-y: auto;
-    
+
+    // 滚动条样式
     &::-webkit-scrollbar {
       width: 8px;
     }
-    
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
-    
+
     &::-webkit-scrollbar-thumb {
       background-color: rgba(0, 0, 0, 0.1);
       border-radius: 8px;
       border: 2px solid transparent;
       background-clip: content-box;
     }
-    
+
     &::-webkit-scrollbar-thumb:hover {
       background-color: rgba(0, 0, 0, 0.2);
       border: 2px solid transparent;
       background-clip: content-box;
     }
-  }
-  
-  // 头部区域
-  .os-detail-header {
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    background: linear-gradient(135deg, #F5F5F7, #E5E5EA);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    
-    .os-detail-icon-container {
-      margin-right: 20px;
-      
-      img {
-        width: 48px;
-        height: 48px;
-        padding: 6px;
-        border-radius: 12px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        background-color: white;
+
+    // 头部区域
+    .os-detail-header {
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      background: linear-gradient(135deg, #0066CC, #007AFF);
+
+      .os-detail-icon-container {
+        margin-right: 20px;
+
+        img {
+          background-color: #ffffff;
+          padding: 6px;
+          border-radius: 12px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      .os-detail-title-container {
+        color: #ffffff;
+
+        .os-detail-title {
+          font-size: 1.3rem;
+          font-weight: 600;
+          margin: 0 0 4px 0;
+        }
+
+        .os-detail-subtitle {
+          font-size: 0.9rem;
+          opacity: 0.9;
+          margin-bottom: 2px;
+        }
       }
     }
-    
-    .os-detail-title-container {
-      color: #1D1D1F;
-      
-      .os-detail-title {
-        font-size: 1.3rem;
+
+    // 卡片样式
+    .os-detail-card {
+      margin: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      background-color: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+
+      &:last-child {
+        margin-bottom: 16px;
+      }
+
+      .os-detail-card-header {
+        padding: 12px 16px;
+        font-size: 0.95rem;
         font-weight: 600;
-        margin: 0 0 4px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background-color: rgba(0, 0, 0, 0.02);
       }
-      
-      .os-detail-subtitle {
-        font-size: 0.9rem;
-        color: #86868B;
-        margin-bottom: 2px;
-      }
-    }
-  }
-  
-  // 内容区域
-  .os-detail-content {
-    padding: 16px 20px;
-  }
-  
-  // 卡片样式
-  .os-detail-card {
-    margin-bottom: 16px;
-    border-radius: 12px;
-    background-color: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-    
-    .os-detail-card-header {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
-      background-color: #F5F5F7;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      font-weight: 600;
-      font-size: 14px;
-      color: #1D1D1F;
-    }
-  }
-  
-  // 信息行样式
-  .os-detail-info-row {
-    display: flex;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
-    .os-detail-info-icon-container {
-      margin-right: 16px;
-      display: flex;
-      align-items: center;
-      
-      .os-detail-info-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
+
+      // 信息行
+      .os-detail-info-row {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        
-        i {
-          font-size: 20px;
+        padding: 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+        &:last-child {
+          border-bottom: none;
         }
-        
-        &.cpu {
-          background-color: rgba(0, 122, 255, 0.1);
-          color: #007AFF;
-        }
-        
-        &.memory {
-          background-color: rgba(255, 149, 0, 0.1);
-          color: #FF9500;
-        }
-        
-        &.storage {
-          background-color: rgba(52, 199, 89, 0.1);
-          color: #34C759;
-        }
-        
-        &.swap {
-          background-color: rgba(175, 82, 222, 0.1);
-          color: #AF52DE;
-        }
-        
-        &.gpu {
-          background-color: rgba(255, 59, 48, 0.1);
-          color: #FF3B30;
-        }
-      }
-    }
-    
-    .os-detail-info-content {
-      flex: 1;
-      
-      .os-detail-info-label {
-        display: flex;
-        align-items: center;
-        font-size: 14px;
-        color: #86868B;
-        margin-bottom: 6px;
-      }
-      
-      .os-detail-info-value {
-        font-size: 14px;
-        color: #1D1D1F;
-        word-break: break-word;
-        
-        &.loading {
-          display: flex;
-          align-items: center;
-          color: #007AFF;
-          
-          .loading-animation {
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(0, 122, 255, 0.3);
-            border-top: 2px solid #007AFF;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: spin 1s linear infinite;
+
+        .os-detail-info-icon-container {
+          margin-right: 16px;
+
+          .os-detail-info-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            i {
+              font-size: 20px;
+              color: #ffffff;
+            }
+
+            &.cpu {
+              background: linear-gradient(135deg, #FF2D55, #FF375F);
+            }
+
+            &.memory {
+              background: linear-gradient(135deg, #007AFF, #0A84FF);
+            }
+
+            &.storage {
+              background: linear-gradient(135deg, #5856D6, #5E5CE6);
+            }
+
+            &.swap {
+              background: linear-gradient(135deg, #34C759, #30D158);
+            }
+
+            &.gpu {
+              background: linear-gradient(135deg, #FF9500, #FF9F0A);
+            }
           }
         }
-        
-        &.error {
-          color: #FF3B30;
+
+        .os-detail-info-content {
+          flex: 1;
+
+          .os-detail-info-label {
+            font-size: 0.8rem;
+            color: #8E8E93;
+            margin-bottom: 6px;
+          }
+
+          .os-detail-info-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 6px;
+
+            &.with-progress {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+
+              span {
+                margin-right: 10px;
+              }
+            }
+          }
+
+          .os-detail-progress-container {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+
+            .os-detail-progress-bar {
+              height: 100%;
+              border-radius: 3px;
+              transition: width 0.3s ease;
+            }
+          }
+
+          .os-detail-info-subvalue {
+            font-size: 0.8rem;
+            color: #8E8E93;
+          }
         }
-        
-        &.waiting {
-          color: #FAAD14;
+      }
+
+      // 表格样式
+      .os-detail-table {
+        .os-detail-table-row {
+          display: flex;
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+          }
+
+          .os-detail-table-cell {
+            &.label {
+              width: 110px;
+              color: #8E8E93;
+              font-size: 0.9rem;
+            }
+
+            &.value {
+              flex: 1;
+              font-weight: 500;
+              color: #1d1d1f;
+              font-size: 0.9rem;
+            }
+          }
         }
       }
     }
-  }
-  
-  // 信息区样式
-  .info-section {
-    margin-bottom: 20px;
-    
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1D1D1F;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      
-      .icon {
-        margin-right: 6px;
-        color: #007AFF;
-        font-size: 16px;
-      }
-    }
-    
-    .info-row {
+
+    // 底部区域
+    .os-detail-footer {
+      padding: 12px 16px;
+      background-color: rgba(0, 0, 0, 0.02);
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      
-      &:last-child {
-        border-bottom: none;
-      }
-      
-      .info-label {
-        color: #86868B;
-        font-size: 13px;
-        flex: 0 0 40%;
-      }
-      
-      .info-value {
-        color: #1D1D1F;
-        font-size: 13px;
+      font-size: 0.8rem;
+      color: #8E8E93;
+    }
+
+    // 无信息提示
+    .os-detail-no-info {
+      padding: 32px;
+      text-align: center;
+
+      .os-detail-no-info-text {
+        font-size: 1rem;
         font-weight: 500;
-        text-align: right;
-        word-break: break-word;
-        flex: 0 0 60%;
+        margin-bottom: 8px;
+        color: #1d1d1f;
       }
-      
-      .progress-container {
-        width: 100%;
-        margin-top: 6px;
-        
-        .progress-bar {
-          height: 6px;
-          width: 100%;
-          background-color: #F5F5F7;
-          border-radius: 3px;
-          overflow: hidden;
-          
-          .progress-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s ease;
-            
-            &.normal {
-              background-color: #34C759;
-            }
-            
-            &.warning {
-              background-color: #FF9500;
-            }
-            
-            &.danger {
-              background-color: #FF3B30;
-            }
-          }
-        }
-        
-        .progress-text {
-          display: flex;
-          justify-content: space-between;
-          font-size: 12px;
-          color: #86868B;
-          margin-top: 4px;
-        }
+
+      .os-detail-no-info-subtext {
+        font-size: 0.85rem;
+        color: #8E8E93;
       }
     }
   }
-  
-  // 加载相关样式
-  .os-detail-info-value.loading {
-    display: flex;
-    align-items: center;
-    color: #8E8E93;
-  }
-  
-  .loading-text {
-    font-size: 14px;
-    color: #8E8E93;
-  }
-  
-  .loading-text-simple {
-    font-size: 14px;
-    color: #8E8E93;
-    font-style: italic;
-  }
-  
-  // GPU信息样式
-  .gpu-memory-info {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #8e8e93;
-    line-height: 1.2;
-    display: inline-block;
-    padding: 2px 6px;
-    background-color: #f2f2f7;
-    border-radius: 4px;
+
+  @keyframes osFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
@@ -3429,12 +3947,12 @@ export default {
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   }
-  
+
   .ant-modal-header {
     padding: 20px 24px;
     background: @apple-white;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    
+
     .ant-modal-title {
       .apple-font();
       font-size: 1.2rem;
@@ -3442,15 +3960,15 @@ export default {
       color: @apple-black;
     }
   }
-  
+
   .ant-modal-body {
     padding: 24px;
   }
-  
+
   .ant-modal-footer {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     padding: 16px 24px;
-    
+
     .ant-btn {
       height: 36px;
       padding: 0 18px;
@@ -3458,31 +3976,31 @@ export default {
       font-weight: 500;
       border-radius: 18px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      
+
       &.ant-btn-primary {
         background: @apple-blue;
         border: none;
-        
+
         &:hover {
           background: @apple-blue-hover;
         }
       }
-      
+
       &.ant-btn-dangerous {
         background: @apple-red;
         border: none;
         color: white;
-        
+
         &:hover {
           background: darken(@apple-red, 5%);
         }
       }
-      
+
       &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
         background: @apple-gray-light;
         border: none;
         color: @apple-black;
-        
+
         &:hover {
           background: darken(@apple-gray-light, 5%);
         }
@@ -3491,419 +4009,435 @@ export default {
   }
 }
 
-// 主机名悬浮卡片样式
-.hostname-tooltip {
-  max-width: none !important;
-  
-  .ant-tooltip-inner {
-    background-color: transparent !important;
-    padding: 0 !important;
-    color: inherit !important;
-    box-shadow: none !important;
-  }
-  
-  .ant-tooltip-arrow {
-    display: none !important;
-  }
-}
-
-// 添加CSS变量定义，在<style lang="less" scoped>中的最开始添加
-:root {
-  /* 苹果风格的设计变量 */
-  --card-radius: 12px;
-  --card-radius-small: 8px;
-  --transition-curve: cubic-bezier(0.28, 0.62, 0.35, 1);
-  
-  /* 浅色模式 */
-  --bg-color: #F5F5F7;
-  --card-bg: #FFFFFF;
-  --text-primary: #1D1D1F;
-  --text-secondary: #86868B;
-  --accent-color: #007AFF;
-  --border-color: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.05);
-  --card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.12);
-  
-  /* 状态颜色 */
-  --success-color: #34C759;
-  --warning-color: #FF9500;
-  --error-color: #FF3B30;
-  --info-color: #007AFF;
-}
-
-// 全面重新设计主机名悬浮卡片
-.hostname-detail-tooltip {
-  width: 420px;
-  padding: 0;
-  border-radius: @apple-card-radius;
-  background-color: @apple-card-bg;
-  box-shadow: @apple-card-shadow;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
-  animation: fadeIn 0.3s @apple-transition-curve;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: relative;
-  z-index: 1001 !important; // 确保悬浮卡片在最上层
-  opacity: 1 !important; // 确保不透明
-  visibility: visible !important; // 确保可见
-  
-  /* 增加3D转换效果 */
-  transform-origin: center center;
-  perspective: 1000px;
-  
-  &:hover {
-    box-shadow: @apple-card-shadow-hover;
-    transform: translateY(-2px) scale(1.01);
-  }
-  
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 20px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-}
-
-/* 毛玻璃效果标题栏 */
-.hostname-detail-title {
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-weight: 600;
-  font-size: 15px;
-  color: @apple-text-primary;
-  border-bottom: 1px solid @apple-border-color;
-  display: flex;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  transition: all 0.3s @apple-transition-curve;
-  
-  .section-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: @apple-card-radius-small;
-    margin-right: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s @apple-transition-curve;
-    
-    &:hover {
-      transform: scale(1.05);
-    }
-    
-    &.hostname-icon {
-      background: linear-gradient(135deg, #34C759, #30B350);
-      color: white;
-    }
-    
-    &.network-icon {
-      background: linear-gradient(135deg, #007AFF, #0063D1);
-      color: white;
-    }
-    
-    &.hosts-icon {
-      background: linear-gradient(135deg, #FF9500, #E68600);
-      color: white;
-    }
-    
-    .anticon {
-      font-size: 18px;
-    }
-  }
-}
-
-.hostname-detail-content {
-  padding: 16px 20px;
-  background-color: @apple-card-bg;
-  border-bottom: 1px solid @apple-border-color;
-}
-
-.hostname-detail-label {
-  font-size: 13px;
-  color: @apple-text-secondary;
-  margin-bottom: 6px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
-/* 美化DNS服务器显示，更贴近苹果风格 */
-.hostname-detail-value {
-  &.dns-servers {
-    color: @apple-text-primary;
-    white-space: pre-line;
-    font-family: 'SF Mono', Menlo, Monaco, monospace;
-    background-color: @apple-bg-color;
-    padding: 16px;
-    border-radius: @apple-card-radius-small;
-    font-size: 13px;
-    line-height: 1.5;
-    margin: 8px 0;
-    
-    .dns-empty {
-      color: @apple-text-secondary;
-      text-align: center;
-      padding: 12px;
-      font-style: italic;
-      background-color: rgba(255, 255, 255, 0.6);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      &::before {
-        content: "!";
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 18px;
-        height: 18px;
-        background-color: rgba(0, 0, 0, 0.08);
-        border-radius: 50%;
-        margin-right: 8px;
-        font-style: normal;
-        font-weight: 600;
-        color: @apple-text-secondary;
-      }
-    }
-    
-    .dns-server-entry {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 10px 12px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      transition: all 0.2s @apple-transition-curve;
-      
-      &:hover {
-        transform: translateX(4px);
-        background-color: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-      }
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-      
-      .dns-icon {
-        width: 22px;
-        height: 22px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #007AFF, #0063D1);
-        margin-right: 12px;
-        color: white;
-        font-size: 11px;
-        font-weight: 600;
-        box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
-      }
-      
-      .dns-ip {
-        font-weight: 500;
-        color: @apple-accent-color;
-        font-size: 14px;
-        letter-spacing: 0.3px;
-      }
-    }
-  }
-}
-
-/* 美化hosts文件显示效果，更贴近苹果风格，淡化注释 */
-.hostname-detail-hosts-file {
-  margin: 8px 0;
-  padding: 20px;
-  background-color: @apple-bg-color;
-  border-radius: @apple-card-radius-small;
-  font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  color: @apple-text-primary;
-  overflow-x: auto;
-  max-height: 240px;
-  white-space: pre-wrap;
-  counter-reset: line;
-  position: relative;
-  
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-  }
-  
-  /* 添加代码编辑器风格的行号和背景 */
-  &::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 3.5em;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.02);
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
-    z-index: 1;
-  }
-  
-  .hosts-line {
-    display: block;
-    position: relative;
-    padding-left: 4.5em;
-    transition: background-color 0.2s @apple-transition-curve;
-    
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.03);
-    }
-    
-    &::before {
-      counter-increment: line;
-      content: counter(line);
-      position: absolute;
-      left: 0;
-      width: 3.5em;
-      text-align: right;
-      color: @apple-text-secondary;
-      font-size: 12px;
-      padding-right: 1.5em;
-      z-index: 2;
-    }
-    
-    &.comment {
-      color: #C7C7CC; // 更淡的灰色，符合苹果设计风格，淡化注释
-      font-style: italic;
-    }
-    
-    &.ip-entry {
-      color: @apple-accent-color; // 苹果蓝色
-      
-      .hostname-part {
-        color: @apple-warning-color; // 苹果橙色
-        font-weight: 500;
-      }
-    }
-  }
-}
-
-/* 添加卡片出现的动画效果 */
+// 动画
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
-}
-
-/* 主机名卡片内的项目样式 */
-.hostname-detail-item {
-  margin-bottom: 12px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-/* 在展开详情区域的卡片样式 */
-.detail-card.hostname-card {
-  border-radius: @apple-card-radius;
-  background-color: @apple-card-bg;
-  box-shadow: @apple-card-shadow;
-  overflow: hidden;
-  transition: all 0.3s @apple-transition-curve;
-  
-  &:hover {
-    box-shadow: @apple-card-shadow-hover;
-    transform: translateY(-2px);
-  }
-  
-  .card-header {
-    padding: 16px;
-    background: linear-gradient(135deg, #F5F5F7, #E5E5EA);
-    border-bottom: 1px solid @apple-border-color;
-    
-    .card-title {
-      display: flex;
-      align-items: center;
-      font-weight: 600;
-      color: @apple-text-primary;
-      
-      .anticon {
-        margin-right: 8px;
-      }
-    }
-  }
-  
-  .card-content {
-    padding: 16px;
-    
-    .content-item {
-      display: flex;
-      flex-direction: column;
-      
-      .item-label {
-        font-size: 13px;
-        color: @apple-text-secondary;
-        margin-bottom: 4px;
-      }
-      
-      .item-value {
-        font-size: 15px;
-        color: @apple-text-primary;
-        font-weight: 500;
-      }
-    }
-  }
-}
-
-// 动画相关
-@keyframes osFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 日志模态框内容样式
+.log-modal {
+  .log-container {
+    display: flex;
+    flex-direction: column;
+    height: 70vh;
+
+    .log-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      background-color: @apple-gray-light;
+
+      .header-section {
+        margin-bottom: 12px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .refresh-options {
+        display: flex;
+        gap: 10px;
+
+        .refresh-btn, .auto-refresh-btn {
+          height: 36px;
+          padding: 0 16px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+
+          .anticon {
+            margin-right: 6px;
+          }
+        }
+      }
+
+      .filter-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        margin-top: 16px;
+
+        .log-type-selector {
+          display: flex;
+          align-items: center;
+
+          .filter-title {
+            margin-right: 8px;
+            font-weight: 500;
+            color: @apple-black;
+          }
+        }
+      }
+
+      .combined-filter-status {
+        margin-top: 16px;
+        padding: 10px 16px;
+        background-color: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
+
+        .filter-description {
+          font-size: 0.9rem;
+          color: @apple-gray;
+
+          .highlight {
+            color: @apple-black;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+
+    .log-content {
+      flex: 1;
+      overflow: auto;
+      padding: 20px 24px;
+      background-color: #f8f8fa;
+      border-radius: 0 0 12px 12px;
+      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+
+      pre {
+        margin: 0;
+        color: #333;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+
+        ::selection {
+          background: rgba(0, 113, 227, 0.2);
+        }
+
+        // 设置不同日志级别的颜色
+        :deep(.log-info) {
+          color: #1c1c1e;
+        }
+
+        :deep(.log-warn) {
+          color: #9f6000;
+        }
+
+        :deep(.log-error) {
+          color: #d40000;
+        }
+
+        :deep(.log-debug) {
+          color: #6a737d;
+        }
+
+        :deep(.log-trace) {
+          color: #5c2699;
+        }
+
+        :deep(.log-timestamp) {
+          color: #0071e3;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+// 确认弹窗内容样式
+.fix-confirm-content {
+  padding: 20px;
+  background-color: rgba(255, 69, 58, 0.05);
+  border-radius: 10px;
+  border-left: 4px solid @apple-red;
+  margin: 0;
+
+  p {
+    margin: 0 0 10px;
+    line-height: 1.6;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.loading-container {
+  position: relative;
+  min-height: 100px;
+}
+
+.custom-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: @apple-gray;
+  font-size: 14px;
+}
+
+// 添加Apple风格表格的CSS样式到样式部分
+.apple-style-table {
+  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /deep/ .ant-table-thead > tr > th {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: #1d1d1f;
+    font-weight: 600;
+    padding: 16px;
+    transition: background 0.2s ease;
+  }
+
+  /deep/ .ant-table-tbody > tr > td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    transition: background 0.2s ease;
+  }
+
+  /deep/ .ant-table-tbody > tr:hover > td {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  /deep/ .ant-table-row-selected > td {
+    background-color: rgba(0, 122, 255, 0.05) !important;
+  }
+
+  /deep/ .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: #007AFF;
+    border-color: #007AFF;
+  }
+
+  /deep/ .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+  /deep/ .ant-checkbox:hover .ant-checkbox-inner {
+    border-color: #007AFF;
+  }
+}
+
+.check-items-container {
+  animation: fadeInAndSlideUp 0.5s ease forwards;
+}
+
+@keyframes fadeInAndSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.check-result-tooltip {
+  max-height: 80vh;
+  overflow-y: hidden;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  border: none !important;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+/* 强制覆盖样式 */
+/deep/ .ant-tooltip.apple-style-tooltip {
+  .ant-tooltip-content,
+  .ant-tooltip-arrow,
+  .ant-tooltip-inner {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .ant-tooltip-arrow::before {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+// 修复按钮样式
+.action-buttons button {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-buttons button:hover {
+  filter: brightness(1.05);
+}
+
+.action-buttons button:active {
+  filter: brightness(0.95);
+  transform: translateY(1px);
+}
+
+.hostname-skeleton {
+  width: 120px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.os-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.os-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(500%); }
+}
+
+/* 修改操作系统详情弹出框加载动画 */
+.os-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.os-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.os-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.os-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-line.short {
+  width: 70%;
+}
+
+.os-detail-loading-line.medium {
+  width: 85%;
+}
+
+.hostname-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.hostname-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.hostname-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-line.short {
+  width: 70%;
+}
+
+.hostname-detail-loading-line.medium {
+  width: 85%;
+}
+
+.hostname-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
 }
 
 @keyframes pulse {
@@ -3912,35 +4446,1375 @@ export default {
 }
 
 @keyframes shimmer {
-  to { background-position: -100% 0; }
+  to {
+    background-position: -100% 0;
+  }
 }
 
-// 添加苹果风格的设计变量
-@apple-card-radius: 12px;
-@apple-card-radius-small: 8px;
-@apple-transition-curve: cubic-bezier(0.28, 0.62, 0.35, 1);
-@apple-bg-color: #F5F5F7;
-@apple-card-bg: #FFFFFF;
-@apple-text-primary: #1D1D1F;
-@apple-text-secondary: #86868B;
-@apple-accent-color: #007AFF;
-@apple-border-color: rgba(0, 0, 0, 0.05);
-@apple-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.05);
-@apple-card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.12);
-@apple-success-color: #34C759;
-@apple-warning-color: #FF9500;
-@apple-error-color: #FF3B30;
-@apple-info-color: #007AFF;
+/* 为操作系统详情弹出框添加动画 */
+@keyframes osFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-// 添加淡入动画
-@keyframes fadeIn {
+.steps-container {
+  // 添加硬件信息收集状态的动画和样式
+  .os-detail-info-value.loading {
+    display: flex;
+    align-items: center;
+    color: #8E8E93;
+  }
+
+  .loading-animation {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 122, 255, 0.1);
+    border-top-color: rgba(0, 122, 255, 0.8);
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading-text {
+    font-size: 14px;
+    color: #8E8E93;
+  }
+
+  .loading-text-simple {
+    font-size: 14px;
+    color: #8E8E93;
+    font-style: italic;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  // OS信息加载动画
+  .os-info-loading {
+    position: relative;
+    overflow: hidden;
+
+    &:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%);
+      animation: shimmer 1.5s infinite;
+    }
+  }
+
+  @keyframes shimmer {
+    to {
+      left: 100%;
+    }
+  }
+
+  @keyframes osFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.gpu-memory-info {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8e8e93;
+  line-height: 1.2;
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f2f2f7;
+  border-radius: 4px;
+}
+
+.table-operations {
+  .operation-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    .apple-batch-button {
+      height: 40px;
+      padding: 0 20px;
+      border: none;
+      background: linear-gradient(180deg, #0A84FF 0%, #0066CC 100%);
+      border-radius: 20px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+
+      .anticon {
+        font-size: 14px;
+        margin-right: 6px;
+      }
+
+      &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        background: linear-gradient(180deg, #0091FF 0%, #0077ED 100%);
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+        background: linear-gradient(180deg, #0077ED 0%, #0066CC 100%);
+        box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+      }
+
+      &:disabled {
+        background: linear-gradient(180deg, #E5E5EA 0%, #D1D1D6 100%);
+        color: #8E8E93;
+        box-shadow: none;
+        cursor: not-allowed;
+
+        .anticon {
+          opacity: 0.5;
+        }
+      }
+    }
+  }
+}
+
+// 添加苹果风格按钮样式
+.apple-button {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  .anticon {
+    margin-right: 6px;
+    font-size: 16px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    background-color: #f5f5f7;
+    color: rgba(0, 0, 0, 0.25);
+    border-color: #d9d9d9;
+    box-shadow: none;
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
+}
+
+.apple-primary-button {
+  background: linear-gradient(135deg, #0a84ff, #0066ff);
+  border: none;
+  color: white;
+
+  &:hover {
+    background: linear-gradient(135deg, #1d90ff, #0070ff);
+  }
+
+  &:active {
+    background: linear-gradient(135deg, #0070e0, #0060e0);
+  }
+}
+
+.apple-danger-button {
+  background: linear-gradient(135deg, #ff453a, #ff3b30);
+  border: none;
+  color: white;
+
+  &:hover {
+    background: linear-gradient(135deg, #ff5147, #ff4b40);
+  }
+
+  &:active {
+    background: linear-gradient(135deg, #e03a30, #d0362c);
+  }
+}
+
+.apple-batch-button {
+  background: #f5f5f7;
+  border: 1px solid #e0e0e5;
+  color: #1d1d1f;
+
+  &:hover {
+    background: #f8f8fa;
+    border-color: #d9d9df;
+  }
+
+  &:active {
+    background: #eaeaed;
+    border-color: #d0d0d5;
+  }
+}
+
+// 表格操作区域样式
+.table-operations {
+  padding: 8px 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  z-index: 1;
+
+  .operation-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.hosts-file-tooltip {
+  max-height: 400px;
+  max-width: 600px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  background-color: #f8f8f8;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hosts-detail-loading {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hosts-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.hosts-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.hosts-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.hosts-detail-loading-line.short {
+  width: 70%;
+}
+
+.hosts-detail-loading-line.medium {
+  width: 85%;
+}
+
+.hosts-detail-loading-line.long {
+  width: 100%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.hosts-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.hosts-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.hosts-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  to { transform: translateX(500%); }
+}
+
+.hosts-file-tooltip {
+  max-width: 650px;
+
+  pre {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// 文件图标容器悬停效果
+.file-icon-container {
+  &:hover {
+    .anticon {
+      color: #0A84FF;
+    }
+  }
+}
+
+// 添加hostname tooltip的样式
+.hostname-detail-tooltip {
+  min-width: 400px;
+  max-width: 500px;
+  padding: 16px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.hostname-detail-section {
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 8px;
+}
+
+.hostname-detail-subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1D1D1F;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-block {
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-content {
+  padding: 0 0 0 8px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.hostname-detail-label {
+  width: 80px;
+  color: #8E8E93;
+  flex-shrink: 0;
+}
+
+.hostname-detail-value {
+  color: #1D1D1F;
+  flex: 1;
+  word-break: break-all;
+}
+
+.hostname-detail-empty {
+  color: #8E8E93;
+  font-style: italic;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.hostname-detail-loading {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.hostname-detail-error {
+  color: #FF3B30;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.dns-servers {
+  font-family: monospace;
+  background-color: #F5F5F7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hostname-detail-hosts-content {
+  width: 100%;
+  font-size: 12px;
+}
+
+.host-check-table {
+  // 调整多选框和展开按钮列的宽度
+  /deep/ .ant-table-selection-column {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 8px !important;
+    padding-right: 0 !important;
+  }
+
+  /deep/ .ant-table-row-expand-icon-cell {
+    width: 30px !important;
+    min-width: 30px !important;
+    padding-left: 0 !important;
+    padding-right: 8px !important;
+  }
+
+  // 确保所有列的内容不换行
+  /deep/ .ant-table-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.log-modal-status-label {
+  font-size: 13px;
+  color: #666;
+  margin-right: 6px;
+}
+
+/* 主机名和相关DNS/hosts悬浮框样式 */
+.hostname-detail-tooltip {
+  padding: 16px;
+  min-width: 360px;
+  max-width: 520px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.hostname-detail-section {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.hostname-detail-content {
+  margin-bottom: 12px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.hostname-detail-label {
+  font-weight: 500;
+  color: #8e8e93;
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.hostname-detail-value {
+  flex: 1;
+  color: #1d1d1f;
+}
+
+.hostname-detail-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.hostname-detail-block {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-empty {
+  padding: 12px;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+  color: #8e8e93;
+  font-style: italic;
+  text-align: center;
+}
+
+.hostname-detail-loading {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(0, 122, 255, 0.05);
+  border-radius: 8px;
+  color: #007aff;
+}
+
+.hostname-detail-error {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: rgba(255, 59, 48, 0.05);
+  border-radius: 8px;
+  color: #ff3b30;
+}
+
+.loading-animation {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 122, 255, 0.3);
+  border-top-color: #007aff;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 13px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 操作系统和硬件信息悬浮框样式 */
+.os-detail-popup {
+  padding: 20px;
+  width: 460px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.os-detail-header {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.os-detail-icon-container {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.os-detail-title-container {
+  flex: 1;
+}
+
+.os-detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 8px 0;
+}
+
+.os-detail-subtitle {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0 0 4px 0;
+}
+
+.os-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.os-detail-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.os-detail-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.os-detail-info-icon-container {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.os-detail-info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.cpu {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.memory {
+  background-color: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+}
+
+.os-detail-info-icon.disk {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+}
+
+.os-detail-info-icon.swap {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.os-detail-info-icon.gpu {
+  background-color: rgba(175, 82, 222, 0.1);
+  color: #af52de;
+}
+
+.os-detail-info-content {
+  flex: 1;
+}
+
+.os-detail-info-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value.loading {
+  display: flex;
+  align-items: center;
+  color: #007aff;
+  font-size: 13px;
+}
+
+.os-detail-info-value.error {
+  color: #ff3b30;
+}
+
+.os-info {
+  .os-type {
+    font-size: 0.95rem;
+    color: @apple-black;
+
+    .anticon {
+      font-size: 16px;
+    }
+
+    .os-logo {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      vertical-align: middle;
+      transition: transform 0.3s ease;
+    }
+
+    &:hover .os-logo {
+      transform: scale(1.1);
+    }
+  }
+}
+
+.os-info-loading {
+  position: relative;
+  height: 24px;
+  width: 90%;
+  border-radius: 4px;
+  background-color: rgba(240, 240, 240, 0.8);
+  overflow: hidden;
+}
+
+.os-info-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: shine 1.5s infinite;
+}
+
+@keyframes shine {
+  to { transform: translateX(500%); }
+}
+
+.os-detail-popup {
+  padding: 0;
+  min-width: 320px;
+  max-width: 420px;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: osFadeIn 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.os-detail-loading-header {
+  height: 100px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.os-detail-loading-content {
+  padding: 16px;
+  flex: 1;
+}
+
+.os-detail-loading-line {
+  height: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-line.short {
+  width: 70%;
+}
+
+.os-detail-loading-line.medium {
+  width: 85%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.os-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.os-detail-header {
+  display: flex;
+  margin-bottom: 24px;
+}
+
+.os-detail-icon-container {
+  width: 64px;
+  height: 64px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.os-detail-title-container {
+  flex: 1;
+}
+
+.os-detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 8px 0;
+}
+
+.os-detail-subtitle {
+  font-size: 14px;
+  color: #6e6e73;
+  margin: 0 0 4px 0;
+}
+
+.os-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.os-detail-card {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.os-detail-card-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-row {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.os-detail-info-icon-container {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.os-detail-info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.cpu {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.os-detail-info-icon.memory {
+  background-color: rgba(88, 86, 214, 0.1);
+  color: #5856d6;
+}
+
+.os-detail-info-icon.disk {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
+}
+
+.os-detail-info-icon.swap {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: #34c759;
+}
+
+.os-detail-info-icon.gpu {
+  background-color: rgba(175, 82, 222, 0.1);
+  color: #af52de;
+}
+
+.os-detail-info-content {
+  flex: 1;
+}
+
+.os-detail-info-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value {
+  font-size: 13px;
+  color: #6e6e73;
+  display: flex;
+  align-items: center;
+}
+
+.os-detail-info-value.loading {
+  display: flex;
+  align-items: center;
+  color: #007aff;
+  font-size: 13px;
+}
+
+.os-detail-info-value.error {
+  color: #ff3b30;
+}
+
+.os-detail-info-value.with-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.os-detail-progress-container {
+  flex: 1;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.os-detail-progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.os-detail-info-subvalue {
+  font-size: 0.8rem;
+  color: #8E8E93;
+}
+
+// 添加CSS样式到组件样式部分
+.hostname-detail-waiting,
+.os-detail-info-value.waiting {
+  display: flex;
+  align-items: center;
+  color: #FAAD14;
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.os-detail-waiting {
+  padding: 16px;
+  width: 300px;
+  text-align: center;
+}
+
+.os-detail-waiting-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+}
+
+// 更新样式部分
+.hostname-tooltip {
+  .ant-tooltip-inner {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .ant-tooltip-arrow {
+    border-right-color: #ffffff !important;
+    display: block !important;
+
+    &::before {
+      background-color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+.hostname-detail-tooltip {
+  min-width: 400px;
+  max-width: 500px;
+  padding: 20px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  animation: tooltipContentFadeIn 0.2s ease-out;
+  will-change: transform, opacity;
+}
+
+.hostname-detail-section {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-content {
+  padding: 0 0 0 8px;
+}
+
+.hostname-detail-item {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.hostname-detail-label {
+  width: 80px;
+  color: #8E8E93;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.hostname-detail-value {
+  color: #1D1D1F;
+  flex: 1;
+  word-break: break-all;
+
+  &.dns-servers {
+    font-family: "SF Mono", "Menlo", monospace;
+    background-color: rgba(0, 122, 255, 0.08);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #007AFF;
+  }
+}
+
+.hostname-detail-hosts-file {
+  max-height: 200px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: "SF Mono", "Menlo", monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  margin: 0;
+  border-left: 3px solid #FF9500;
+  color: #1D1D1F;
+  width: 100%;
+}
+
+.hostname-detail-empty {
+  color: #8E8E93;
+  font-style: italic;
+  font-size: 13px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.hostname-display {
+  &:hover {
+    color: #0A84FF;
+    text-decoration: underline;
+
+    svg {
+      color: #0A84FF;
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes tooltipContentFadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(5px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.hostname-detail-loading {
+  min-width: 400px;
+  max-width: 500px;
+  min-height: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: hostname-fade-in 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-loading-header {
+  height: 60px;
+  background: linear-gradient(135deg, #f5f5f7, #e5e5ea);
+  animation: hostname-pulse 1.5s infinite ease-in-out;
+}
+
+.hostname-detail-loading-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.hostname-detail-loading-skeleton {
+  margin-bottom: 16px;
+}
+
+.hostname-detail-loading-title {
+  height: 18px;
+  width: 120px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hostname-detail-loading-item {
+  display: flex;
+  align-items: center;
+}
+
+.hostname-detail-loading-label {
+  width: 70px;
+  height: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-value {
+  height: 12px;
+  flex: 1;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 4px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-value.short {
+  width: 40%;
+}
+
+.hostname-detail-loading-value.medium {
+  width: 70%;
+}
+
+.hostname-detail-loading-file {
+  height: 80px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 8px;
+  background-size: 200% 100%;
+  animation: hostname-shimmer 1.5s infinite;
+}
+
+.hostname-detail-loading-footer {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #f5f5f7;
+}
+
+.hostname-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+
+  span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin: 0 2px;
+    background-color: #007AFF;
+    border-radius: 50%;
+    animation: hostname-loading-bounce 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+  }
+}
+
+.hostname-detail-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  font-weight: 500;
+}
+
+.hostname-display-loading {
+  position: relative;
+
+  .hostname-loading-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #007AFF;
+    animation: hostname-pulse 1.5s infinite ease-in-out;
+  }
+}
+
+// 等待状态样式
+.hostname-detail-pending {
+  min-width: 300px;
+  max-width: 400px;
+  min-height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  animation: hostname-fade-in 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.hostname-detail-pending-content {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hostname-detail-pending-icon {
+  margin-bottom: 16px;
+  animation: hostname-pending-pulse 2s infinite ease-in-out;
+}
+
+.hostname-detail-pending-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #FAAD14;
+  margin-bottom: 8px;
+}
+
+.hostname-detail-pending-subtitle {
+  font-size: 13px;
+  color: #8E8E93;
+}
+
+.hostname-detail-tooltip-container {
+  padding: 0;
+}
+
+@keyframes hostname-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes hostname-pending-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes hostname-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes hostname-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hostname-loading-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
   }
 }
 </style>
