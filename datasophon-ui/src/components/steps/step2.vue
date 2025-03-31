@@ -17,6 +17,7 @@
  *
  */
 
+/* eslint-disable vue/no-unused-components */
 
  * @describe: step2-主机环境校验 
  * @Date: 2022-06-13 16:35:02
@@ -25,6 +26,9 @@
 -->
 <template>
   <div class="steps2 steps">
+    <!-- 添加OsFloatingCard组件的使用 -->
+    <os-floating-card v-if="false"></os-floating-card>
+    
     <div class="hero-section">
       <h1 class="hero-title">主机环境校验</h1>
       <p class="hero-subtitle">验证主机环境配置，确保系统顺利部署</p>
@@ -190,6 +194,8 @@
 <script>
 import LogFilter from '../log/LogFilter.vue';
 import QueueStatusIndicator from '@/components/QueueStatusIndicator'
+// 导入操作系统浮窗组件
+import OsFloatingCard from '@/components/os-card/OsFloatingCard.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -199,7 +205,8 @@ export default {
   },
   components: {
     LogFilter,
-    QueueStatusIndicator
+    QueueStatusIndicator,
+    OsFloatingCard
   },
   data() {
     return {
@@ -566,9 +573,8 @@ export default {
           customRender: (text, row) => {
             const h = this.$createElement;
 
-            // 检查osInfoStatus状态，显示加载动画
-            // 当osInfoStatus为loading或osInfo为null时都显示加载动画
-            if (this.checkStatus(row.osInfoStatus, 'loading') ||
+            // 如果SSH连接失败或未初始化或正在加载，则显示加载中状态
+            if (row.sshConnectStatus === null || 
                 row.osInfo === null || row.osInfoStatus === null ||
                 this.checkStatus(row.osStatus, 'loading') ||
                 this.checkStatus(row.osStatus, 'pending')) {
@@ -589,28 +595,6 @@ export default {
                 ]);
               }
 
-              // 创建加载中的操作系统信息浮窗
-              const loadingTooltipContent = h('div', { class: 'os-detail-loading' }, [
-                h('div', { class: 'os-detail-loading-header' }),
-                h('div', { class: 'os-detail-loading-content' }, [
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' }),
-                  h('div', { class: 'os-detail-loading-line' }),
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' })
-                ]),
-                h('div', {
-                  class: 'os-detail-loading-text',
-                  style: {
-                    fontSize: '14px',
-                    textAlign: 'center',
-                    color: '#007AFF',
-                    marginTop: '12px',
-                    fontWeight: '500'
-                  }
-                }, ['正在优雅地检索操作系统信息...'])
-              ]);
-
               // 苹果风格的骨架屏加载动画
               return h('a-tooltip', {
                 props: {
@@ -624,7 +608,28 @@ export default {
                 h('span', {
                   slot: 'title',
                   class: 'os-detail-tooltip'
-                }, [loadingTooltipContent]),
+                }, [
+                  h('div', { class: 'os-detail-loading' }, [
+                    h('div', { class: 'os-detail-loading-header' }),
+                    h('div', { class: 'os-detail-loading-content' }, [
+                      h('div', { class: 'os-detail-loading-line short' }),
+                      h('div', { class: 'os-detail-loading-line medium' }),
+                      h('div', { class: 'os-detail-loading-line' }),
+                      h('div', { class: 'os-detail-loading-line short' }),
+                      h('div', { class: 'os-detail-loading-line medium' })
+                    ]),
+                    h('div', {
+                      class: 'os-detail-loading-text',
+                      style: {
+                        fontSize: '14px',
+                        textAlign: 'center',
+                        color: '#007AFF',
+                        marginTop: '12px',
+                        fontWeight: '500'
+                      }
+                    }, ['正在优雅地检索操作系统信息...'])
+                  ])
+                ]),
 
                 // 显示的加载内容
                 h('div', {
@@ -680,396 +685,31 @@ export default {
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
 
             // 获取操作系统对应的图标路径
-            const getOsIconPath = (osType) => {
-              const osLower = (osType || '').toLowerCase();
-              if (osLower.includes('centos')) {
-                return require('@/assets/os-logos/centos.svg');
-              } else if (osLower.includes('ubuntu')) {
-                return require('@/assets/os-logos/ubuntu.svg');
-              } else if (osLower.includes('debian')) {
-                return require('@/assets/os-logos/debian.svg');
-              } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
-                return require('@/assets/os-logos/redhat.svg');
-              } else if (osLower.includes('windows')) {
-                return require('@/assets/os-logos/windows.svg');
-              } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
-                return require('@/assets/os-logos/kylin.svg');
-              } else {
-                return require('@/assets/os-logos/linux-tux.svg');
+            function getOsIconPath(osType) {
+              try {
+                const osLower = (osType || '').toLowerCase();
+                if (osLower.includes('centos')) {
+                  return require('@/assets/img/os-logos/centos.svg');
+                } else if (osLower.includes('ubuntu')) {
+                  return require('@/assets/img/os-logos/ubuntu.svg');
+                } else if (osLower.includes('debian')) {
+                  return require('@/assets/img/os-logos/debian.svg');
+                } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
+                  return require('@/assets/img/os-logos/redhat.svg');
+                } else if (osLower.includes('windows')) {
+                  return require('@/assets/img/os-logos/windows.svg');
+                } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
+                  return require('@/assets/img/os-logos/kylin.svg');
+                } else {
+                  return require('@/assets/img/os-logos/linux-tux.svg');
+                }
+              } catch (error) {
+                // 如果找不到图标文件，返回内置的数据URI
+                return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI2YwZjBmMCIvPjxwYXRoIGQ9Ik0yMy41IDE0QzIzLjUgMTIuMzQzMSAyNC44NDMxIDExIDI2LjUgMTFDMjguMTU2OSAxMSAyOS41IDEyLjM0MzEgMjkuNSAxNFYxNy42NzY4QzMwLjQ5MzcgMTguMTA3MiAzMS4zNjc0IDE4Ljc4NTUgMzIgMTkuNjMyVjE0QzMyIDExLjIzODYgMjkuNzYxNCA5IDI3IDlDMjQuMjM4NiA5IDIyIDExLjIzODYgMjIgMTRWMTkuNjM0QzIyLjYzMzEgMTguNzg2MSAyMy41MDc0IDE4LjEwNzEgMjQuNSAxNy42NzZWMTRIMjMuNVoiIGZpbGw9IiM1MjUyNTIiLz48cGF0aCBkPSJNMzEuOTk5OCAyOC45OUMzMi4wMDE4IDI5LjYzODkgMzEuODA3MSAzMC4yNzMzIDMxLjQ0MjkgMzAuODAyQzMxLjA3ODYgMzEuMzMwNyAzMC41NjAyIDMxLjczMDUgMjkuOTU5OCAzMS45NVYzNC43MkMzMi45MDc1IDM0LjEyMTMgMzUuMTAyIDMxLjM5NjYgMzUgMjguMjlDMzQuODk3OSAyNS4xODM0IDMyLjU1OTYgMjIuNjM5MiAyOS41IDIyLjI1VjE5LjI4QzI5LjUgMTkuMjggMzggMjEuMjggMzggMjlDMzggMzYuNzIgMjkuNTUgMzggMjkuNTUgMzhIMTkuMDNDMTkuMDMgMzggMTAuNTIgMzcuMjkgMTAuMDIgMjcuNzhDOS42OCAxOS43OSAxOS41IDE4LjI3IDE5LjUgMTguMjdWMjEuMjdDMTkuNSAyMS4yNyAxMy4wMDk4IDIyLjYxIDE0LjAyIDE5QzE1LjUgMTQgMjQuOTk5OCAxNCAyNC45OTk4IDE0QzI0Ljk5OTggMTQgMjYuOTk5OCAxNCAyOS4wMDA3IDE0Ljk5QzI5LjAwMDcgMTQuOTkgMjguOTUxNCAxNi42OTMxIDI4LjAyMDcgMTcuODJDMjUuNjgwNyAxOC40OSAyMyAyMC41MSAyMyAyNC41QzIzIDI5LjE1IDI3LjAwMDIgMzAuMTcgMjcuMDAwMiAzMS4yNVYzNC42NkMyMi42NDczIDM0LjMzMDMgMTkuMTk5MSAzMC42NjAzIDE5LjAxOTggMjYuMDZDMTkuMDE5OCAyNS44NiAxOS4wMTk4IDI1LjY2IDE5LjAxOTggMjUuNDZDMTkuMDE5OCAyMy42OTQ1IDE5LjYzOTQgMjEuOTkxMiAyMC43Mzk3IDIwLjY4MTdDMjEuODQwMSAxOS4zNzIyIDIzLjM0NDIgMTguNTUxNiAyNC45OTk4IDE4LjQyVjIyLjE5QzIzLjI4MTQgMjIuNDA1NiAyMS44NTA1IDIzLjU0MTMgMjEuMzcwOSAyNS4xN0MyMi4yMTc3IDI3LjY0MjcgMjQuNzY1OCAyOS4xMjI0IDI3LjI3MDcgMjguNThDMjcuNzk5OSAyOC40NiAyOC4zMTYyIDI4LjI5MTQgMjguODE4MyAyOC4wOEMyOS4wNTQ5IDI3Ljk4ODYgMjkuMzE2MyAyNy45OTk3IDI5LjU0OCAyOC4xMTFDMjkuNzc5NyAyOC4yMjIzIDI5Ljk2MDIgMjguNDI1MiAzMC4wNCAyOC42OEMzMC4yMSAyOS4xNTcgMzAuMzI0NCAyOS42NTMzIDMwLjM4MTcgMzAuMTU3M0MzMC41MDUzIDI5LjY3MjggMzAuNTA4NSAyOS4xNTgxIDMwLjM5MDkgMjguNjcyQzMwLjM5MDkgMjguNjcyIDMxLjk5OTggMjguOTkgMzEuOTk5OCAyOC45OVoiIGZpbGw9IiM1MjUyNTIiLz48L3N2Zz4=';
               }
-            };
-
-            // 获取操作系统对应的颜色
-            const getOsColor = (osType) => {
-              const osLower = (osType || '').toLowerCase();
-              if (osLower.includes('centos')) {
-                return '#932279';
-              } else if (osLower.includes('ubuntu')) {
-                return '#E95420';
-              } else if (osLower.includes('debian')) {
-                return '#D70A53';
-              } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
-                return '#EE0000';
-              } else if (osLower.includes('windows')) {
-                return '#0078D6';
-              } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
-                return '#0066B3';
-              } else {
-                return '#87d068';
-              }
-            };
+            }
 
             const iconPath = getOsIconPath(osType);
-            const color = getOsColor(osType);
-
-            // 创建详细的操作系统信息弹出框（添加硬件信息部分）
-            const osDetailContent = hasOsInfo ? h('div', { class: 'os-detail-popup' }, [
-              // 标题区域
-              h('div', { class: 'os-detail-header' }, [
-                h('div', { class: 'os-detail-icon-container' }, [
-                  h('img', {
-                    attrs: {
-                      src: iconPath,
-                      alt: osType,
-                      width: '64',
-                      height: '64'
-                    },
-                    class: 'os-img-no-filter',
-                    style: {
-                      filter: 'none !important',
-                      borderRadius: '12px'
-                    }
-                  })
-                ]),
-                h('div', { class: 'os-detail-title-container' }, [
-                  h('h3', { class: 'os-detail-title' }, [row.osInfo.fullName || `${row.osInfo.distribution} ${row.osInfo.versionId}`]),
-                  h('div', { class: 'os-detail-subtitle' }, [row.osInfo.kernelVersion ? `内核版本 ${row.osInfo.kernelVersion}` : '']),
-                  h('div', { class: 'os-detail-subtitle' }, [row.osInfo.architecture ? `${row.osInfo.architecture} 架构` : ''])
-                ])
-              ]),
-
-              // 内容区域包装元素
-              h('div', { class: 'os-detail-content' }, [
-                // 硬件信息卡片
-                h('div', { class: 'os-detail-card' }, [
-                  h('div', { class: 'os-detail-card-header' }, [
-                    h('i', { class: 'anticon anticon-desktop', style: { marginRight: '8px', color: '#007AFF' }}),
-                    h('span', {}, ['硬件信息'])
-                  ]),
-
-                  // CPU信息
-                  h('div', { class: 'os-detail-info-row' }, [
-                    h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', {
-                        class: 'os-detail-info-icon cpu',
-                        style: {
-                          backgroundColor: this.checkStatus(row.cpuStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' :
-                              this.checkStatus(row.cpuStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' :
-                                  'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.cpuStatus, 'success') ? '#34C759' :
-                              this.checkStatus(row.cpuStatus, 'error') ? '#FF3B30' :
-                                  '#007AFF'
-                        }
-                      }, [
-                        h('i', { class: 'anticon anticon-api' })
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, [
-                        h('span', {}, ['处理器']),
-                        // 添加状态图标
-                        this.checkStatus(row.cpuStatus, 'success') ?
-                            h('a-icon', {
-                              props: { type: 'check-circle' },
-                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
-                            }) :
-                            this.checkStatus(row.cpuStatus, 'error') ?
-                                h('a-icon', {
-                                  props: { type: 'close-circle' },
-                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
-                                }) :
-                                this.checkStatus(row.cpuStatus, 'loading') ?
-                                    h('a-icon', {
-                                      props: { type: 'loading' },
-                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
-                                    }) : null
-                      ]),
-                      row.cpuStatus === 'loading' ?
-                          h('div', { class: 'os-detail-info-value loading' }, [
-                            h('div', { class: 'loading-animation' }),
-                            h('span', {}, ['正在收集CPU信息...'])
-                          ]) :
-                          row.cpuStatus === 'error' ?
-                              h('div', { class: 'os-detail-info-value error' }, [
-                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                                '获取CPU信息失败'
-                              ]) :
-                              row.cpuStatus === 'pending' ?
-                                  h('div', { class: 'os-detail-info-value waiting' }, [
-                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                                    '等待收集CPU信息'
-                                  ]) :
-                                  h('div', { class: 'os-detail-info-value' }, [
-                                    row.osInfo && row.osInfo.cpuModel ? row.osInfo.cpuModel : '未知'
-                                  ])
-                    ])
-                  ]),
-
-                  // 内存信息
-                  h('div', { class: 'os-detail-info-row' }, [
-                    h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', {
-                        class: 'os-detail-info-icon memory',
-                        style: {
-                          backgroundColor: this.checkStatus(row.memoryStatus, 'success') ? 'rgba(52, 199, 89, 0.1)' :
-                              this.checkStatus(row.memoryStatus, 'error') ? 'rgba(255, 59, 48, 0.1)' :
-                                  'rgba(0, 122, 255, 0.1)',
-                          color: this.checkStatus(row.memoryStatus, 'success') ? '#34C759' :
-                              this.checkStatus(row.memoryStatus, 'error') ? '#FF3B30' :
-                                  '#007AFF'
-                        }
-                      }, [
-                        h('i', { class: 'anticon anticon-database' })
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, [
-                        h('span', {}, ['内存']),
-                        // 添加状态图标
-                        this.checkStatus(row.memoryStatus, 'success') ?
-                            h('a-icon', {
-                              props: { type: 'check-circle' },
-                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
-                            }) :
-                            this.checkStatus(row.memoryStatus, 'error') ?
-                                h('a-icon', {
-                                  props: { type: 'close-circle' },
-                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
-                                }) :
-                                this.checkStatus(row.memoryStatus, 'loading') ?
-                                    h('a-icon', {
-                                      props: { type: 'loading' },
-                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
-                                    }) : null
-                      ]),
-                      this.checkStatus(row.memoryStatus, 'loading') ?
-                          h('div', { class: 'os-detail-info-value loading' }, [
-                            h('div', { class: 'loading-animation' }),
-                            h('span', {}, ['正在收集内存信息...'])
-                          ]) :
-                          this.checkStatus(row.memoryStatus, 'error') ?
-                              h('div', { class: 'os-detail-info-value error' }, [
-                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                                '获取内存信息失败'
-                              ]) :
-                              this.checkStatus(row.memoryStatus, 'pending') ?
-                                  h('div', { class: 'os-detail-info-value waiting' }, [
-                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                                    '等待收集内存信息'
-                                  ]) :
-                                  h('div', { class: 'os-detail-info-value' }, [
-                                    row.osInfo && row.osInfo.totalMemory ? `${row.osInfo.totalMemory} GB` : '未知'
-                                  ])
-                    ])
-                  ]),
-
-                  // 磁盘信息
-                  h('div', { class: 'os-detail-info-row' }, [
-                    h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', {
-                        class: 'os-detail-info-icon disk',
-                        style: {
-                          backgroundColor: row.diskStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
-                              row.diskStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
-                                  'rgba(0, 122, 255, 0.1)',
-                          color: row.diskStatus === 'success' ? '#34C759' :
-                              row.diskStatus === 'error' ? '#FF3B30' :
-                                  '#007AFF'
-                        }
-                      }, [
-                        h('i', { class: 'anticon anticon-hdd' })
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, [
-                        h('span', {}, ['磁盘']),
-                        // 添加状态图标
-                        row.diskStatus === 'success' ?
-                            h('a-icon', {
-                              props: { type: 'check-circle' },
-                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
-                            }) :
-                            row.diskStatus === 'error' ?
-                                h('a-icon', {
-                                  props: { type: 'close-circle' },
-                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
-                                }) :
-                                row.diskStatus === 'loading' ?
-                                    h('a-icon', {
-                                      props: { type: 'loading' },
-                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
-                                    }) :
-                                    row.diskStatus === 'pending' ?
-                                        h('a-icon', {
-                                          props: { type: 'clock-circle' },
-                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
-                                        }) : null
-                      ]),
-                      row.diskStatus === 'loading' ?
-                          h('div', { class: 'os-detail-info-value loading' }, [
-                            h('div', { class: 'loading-animation' }),
-                            h('span', {}, ['正在收集磁盘信息...'])
-                          ]) :
-                          row.diskStatus === 'error' ?
-                              h('div', { class: 'os-detail-info-value error' }, [
-                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                                '获取磁盘信息失败'
-                              ]) :
-                              row.diskStatus === 'pending' ?
-                                  h('div', { class: 'os-detail-info-value waiting' }, [
-                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                                    '等待收集磁盘信息'
-                                  ]) :
-                                  h('div', { class: 'os-detail-info-value' }, [
-                                    row.osInfo && row.osInfo.diskTotal ?
-                                        `总空间: ${row.osInfo.diskTotal}` :
-                                        '未知'
-                                  ])
-                    ])
-                  ]),
-
-                  // 交换空间信息
-                  h('div', { class: 'os-detail-info-row' }, [
-                    h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', {
-                        class: 'os-detail-info-icon swap',
-                        style: {
-                          backgroundColor: row.swapStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
-                              row.swapStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
-                                  'rgba(0, 122, 255, 0.1)',
-                          color: row.swapStatus === 'success' ? '#34C759' :
-                              row.swapStatus === 'error' ? '#FF3B30' :
-                                  '#007AFF'
-                        }
-                      }, [
-                        h('i', { class: 'anticon anticon-swap' })
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, [
-                        h('span', {}, ['交换空间']),
-                        // 添加状态图标
-                        row.swapStatus === 'success' ?
-                            h('a-icon', {
-                              props: { type: 'check-circle' },
-                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
-                            }) :
-                            row.swapStatus === 'error' ?
-                                h('a-icon', {
-                                  props: { type: 'close-circle' },
-                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
-                                }) :
-                                row.swapStatus === 'loading' ?
-                                    h('a-icon', {
-                                      props: { type: 'loading' },
-                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
-                                    }) :
-                                    row.swapStatus === 'pending' ?
-                                        h('a-icon', {
-                                          props: { type: 'clock-circle' },
-                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
-                                        }) : null
-                      ]),
-                      row.swapStatus === 'loading' ?
-                          h('div', { class: 'os-detail-info-value loading' }, [
-                            h('div', { class: 'loading-animation' }),
-                            h('span', {}, ['正在收集交换空间信息...'])
-                          ]) :
-                          row.swapStatus === 'error' ?
-                              h('div', { class: 'os-detail-info-value error' }, [
-                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                                '获取交换空间信息失败'
-                              ]) :
-                              row.swapStatus === 'pending' ?
-                                  h('div', { class: 'os-detail-info-value waiting' }, [
-                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                                    '等待收集交换空间信息'
-                                  ]) :
-                                  h('div', { class: 'os-detail-info-value' }, [
-                                    row.osInfo && row.osInfo.swapTotal ?
-                                        `交换空间: ${row.osInfo.swapTotal}` :
-                                        '未知'
-                                  ])
-                    ])
-                  ]),
-
-                  // GPU信息
-                  h('div', { class: 'os-detail-info-row' }, [
-                    h('div', { class: 'os-detail-info-icon-container' }, [
-                      h('div', {
-                        class: 'os-detail-info-icon gpu',
-                        style: {
-                          backgroundColor: row.gpuStatus === 'success' ? 'rgba(52, 199, 89, 0.1)' :
-                              row.gpuStatus === 'error' ? 'rgba(255, 59, 48, 0.1)' :
-                                  'rgba(0, 122, 255, 0.1)',
-                          color: row.gpuStatus === 'success' ? '#34C759' :
-                              row.gpuStatus === 'error' ? '#FF3B30' :
-                                  '#007AFF'
-                        }
-                      }, [
-                        h('i', { class: 'anticon anticon-appstore' })
-                      ])
-                    ]),
-                    h('div', { class: 'os-detail-info-content' }, [
-                      h('div', { class: 'os-detail-info-label' }, [
-                        h('span', {}, ['GPU']),
-                        // 添加状态图标
-                        row.gpuStatus === 'success' ?
-                            h('a-icon', {
-                              props: { type: 'check-circle' },
-                              style: { marginLeft: '6px', color: '#34C759', fontSize: '12px' }
-                            }) :
-                            row.gpuStatus === 'error' ?
-                                h('a-icon', {
-                                  props: { type: 'close-circle' },
-                                  style: { marginLeft: '6px', color: '#FF3B30', fontSize: '12px' }
-                                }) :
-                                row.gpuStatus === 'loading' ?
-                                    h('a-icon', {
-                                      props: { type: 'loading' },
-                                      style: { marginLeft: '6px', color: '#007AFF', fontSize: '12px' }
-                                    }) :
-                                    row.gpuStatus === 'pending' ?
-                                        h('a-icon', {
-                                          props: { type: 'clock-circle' },
-                                          style: { marginLeft: '6px', color: '#FAAD14', fontSize: '12px' }
-                                        }) : null
-                      ]),
-                      row.gpuStatus === 'loading' ?
-                          h('div', { class: 'os-detail-info-value loading' }, [
-                            h('div', { class: 'loading-animation' }),
-                            h('span', {}, ['正在收集GPU信息...'])
-                          ]) :
-                          row.gpuStatus === 'error' ?
-                              h('div', { class: 'os-detail-info-value error' }, [
-                                h('a-icon', { props: { type: 'warning' }, style: { marginRight: '6px' } }),
-                                '获取GPU信息失败'
-                              ]) :
-                              row.gpuStatus === 'pending' ?
-                                  h('div', { class: 'os-detail-info-value waiting' }, [
-                                    h('a-icon', { props: { type: 'clock-circle' }, style: { marginRight: '6px', color: '#FAAD14' } }),
-                                    '等待收集GPU信息'
-                                  ]) :
-                                  h('div', { class: 'os-detail-info-value' }, [
-                                    row.osInfo && row.osInfo.gpuModel ?
-                                        row.osInfo.gpuModel :
-                                        '未检测到GPU设备'
-                                  ])
-                    ])
-                  ])
-                ])
-              ])
-            ]) : null;
 
             // 返回操作系统信息显示
             if (hasOsInfo) {
@@ -1081,11 +721,22 @@ export default {
                   getPopupContainer: () => document.body
                 }
               }, [
-                // 悬浮显示的详细内容
+                // 使用新的操作系统浮窗组件
                 h('span', {
                   slot: 'title',
                   class: 'os-detail-tooltip'
-                }, [osDetailContent]),
+                }, [
+                  h(OsFloatingCard, {
+                    props: {
+                      osInfo: row.osInfo,
+                      cpuStatus: row.cpuStatus || 'pending',
+                      memoryStatus: row.memoryStatus || 'pending',
+                      diskStatus: row.diskStatus || 'pending',
+                      swapStatus: row.swapStatus || 'pending',
+                      gpuStatus: row.gpuStatus || 'pending'
+                    }
+                  })
+                ]),
 
                 // 显示的操作系统信息
                 h('div', {
@@ -5815,6 +5466,83 @@ export default {
   }
   40% {
     transform: scale(1);
+  }
+}
+
+/* 操作系统信息加载中样式 */
+.os-detail-loading {
+  width: 100%;
+  padding: 20px;
+}
+
+.os-detail-loading-header {
+  height: 60px;
+  background-color: #f5f5f7;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.os-detail-loading-line {
+  height: 24px;
+  background-color: #f5f5f7;
+  border-radius: 6px;
+  width: 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.os-detail-loading-line.short {
+  width: 60%;
+}
+
+.os-detail-loading-line.medium {
+  width: 80%;
+}
+
+.os-detail-loading-text {
+  margin-top: 16px;
+  text-align: center;
+  color: #007AFF;
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
+// 操作系统信息加载样式
+.os-info-loading {
+  .loading-animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,0));
+    background-size: 200% 100%;
+    animation: loading-wave 1.5s infinite;
+  }
+
+  @keyframes loading-wave {
+    0% {
+      background-position: -100% 0;
+    }
+    100% {
+      background-position: 100% 0;
+    }
   }
 }
 </style>
