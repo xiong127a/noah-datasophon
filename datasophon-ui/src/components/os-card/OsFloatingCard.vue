@@ -267,6 +267,78 @@
               </div>
             </div>
           </div>
+
+          <!-- 交换空间信息 -->
+          <div class="hardware-item">
+            <div class="hardware-icon swap" :class="{ 'loading': swapStatus === 'loading', 'error': swapStatus === 'error' }">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+                <path d="M7 8h10" />
+                <path d="M7 12h10" />
+                <path d="M7 16h10" />
+                <path d="M17 8l-3 8" />
+                <path d="M10 16l-3-8" />
+              </svg>
+            </div>
+            <div class="hardware-content">
+              <div class="hardware-header">
+                <span class="hardware-title">交换空间</span>
+                <div class="hardware-status">
+                  <a-icon v-if="checkStatus(swapStatus, 'success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkStatus(swapStatus, 'error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkStatus(swapStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-else type="clock-circle" class="status-icon pending" />
+                </div>
+              </div>
+              <div class="hardware-info" v-if="swapStatus === 'loading'">
+                <div class="loading-indicator">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="loading-text">正在收集交换空间信息...</span>
+              </div>
+              <div class="hardware-info error" v-else-if="swapStatus === 'error'">
+                获取交换空间信息失败
+              </div>
+              <div class="hardware-info pending" v-else-if="swapStatus === 'pending'">
+                等待收集交换空间信息
+              </div>
+              <div class="hardware-info" v-else>
+                <template v-if="osInfo && osInfo.totalSwap !== undefined">
+                  <template v-if="osInfo.totalSwap === 0">
+                    <div class="info-primary warning">
+                      <a-icon type="warning" style="margin-right: 4px; color: #FF9500;" />
+                      未开启交换空间
+                    </div>
+                    <div class="info-secondary">建议开启交换空间以提高系统稳定性</div>
+                  </template>
+                  <template v-else>
+                    <div class="info-primary">
+                      {{ osInfo.totalSwap }} GB 交换空间
+                    </div>
+                    <div class="info-secondary">
+                      已用 {{ (osInfo.totalSwap - osInfo.availableSwap).toFixed(1) }} GB，可用 {{ osInfo.availableSwap }} GB
+                    </div>
+                    <div class="usage-bar-container">
+                      <div class="usage-bar-header">
+                        <span>使用率 {{ (100 * (1 - osInfo.availableSwap / osInfo.totalSwap)).toFixed(1) }}%</span>
+                        <span>{{ (osInfo.totalSwap - osInfo.availableSwap).toFixed(1) }}/{{ osInfo.totalSwap }} GB</span>
+                      </div>
+                      <div class="usage-bar">
+                        <div 
+                          class="usage-bar-fill"
+                          :style="{
+                            width: `${(100 * (1 - osInfo.availableSwap / osInfo.totalSwap)).toFixed(1)}%`,
+                            backgroundColor: getUsageColor(100 * (1 - osInfo.availableSwap / osInfo.totalSwap))
+                          }"
+                        ></div>
+                      </div>
+                    </div>
+                  </template>
+                </template>
+                <div class="info-empty" v-else>未知</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -581,6 +653,10 @@ export default {
     background: linear-gradient(135deg, #FF375F, #FF2D55);
   }
 
+  &.swap {
+    background: linear-gradient(135deg, #BF5AF2, #A04AD9);  // 紫色渐变
+  }
+
   &.loading {
     animation: pulse 1.5s infinite;
     svg {
@@ -651,6 +727,12 @@ export default {
     font-size: 13px;
     color: #86868B;
     font-style: italic;
+  }
+
+  .warning {
+    display: flex;
+    align-items: center;
+    color: #FF9500;
   }
 }
 
