@@ -6,6 +6,7 @@ import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS7Fir
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS8FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOSFirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.UbuntuFirewallChecker;
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,34 +20,48 @@ public class FirewallCheckerFactory {
     private static final Logger log = LoggerFactory.getLogger(FirewallCheckerFactory.class);
 
     /**
-     * 创建防火墙检查器
+     * 根据操作系统类型获取对应的防火墙检查器
      * 
      * @param osInfo 操作系统信息
-     * @return 对应系统类型的防火墙检查器
+     * @return 对应的防火墙检查器，如果没有匹配的检查器则返回GenericFirewallChecker
      */
-    public static FirewallCheckerStrategy createFirewallChecker(OsInfo osInfo) {
+    public static FirewallCheckerStrategy getChecker(OsInfo osInfo) {
         if (osInfo == null) {
-            log.warn("操作系统信息为空，使用通用防火墙检查器");
             return new GenericFirewallChecker();
         }
 
-        OsInfo.LinuxDistribution distribution = osInfo.getDistributionType();
-        String osVersion = osInfo.getVersionId();
+        // 获取操作系统发行版类型
+        LinuxDistribution distribution = osInfo.getDistributionType();
 
-        log.info("为操作系统 {} {} 创建防火墙检查器", distribution, osVersion);
-
-        // 根据操作系统类型创建对应的检查器
-        switch (distribution) {
-            case CENTOS:
-                return createCentOSFirewallChecker(osVersion);
-            case UBUNTU:
-                return createUbuntuFirewallChecker(osVersion);
-            case KYLIN:
-                return createKylinFirewallChecker(osVersion);
-            default:
-                log.info("未找到适配的防火墙检查器，使用通用检查器");
-                return new GenericFirewallChecker();
+        // 使用switch语句根据操作系统类型选择对应的检查器
+        if (distribution != null) {
+            switch (distribution) {
+                case CENTOS:
+                case REDHAT:
+                    return createCentOSFirewallChecker(osInfo.getVersionId());
+                case UBUNTU:
+                case DEBIAN:
+                    return createUbuntuFirewallChecker(osInfo.getVersionId());
+                case KYLIN:
+                    return createKylinFirewallChecker(osInfo.getVersionId());
+                default:
+                    log.info("未找到适配的防火墙检查器，使用通用检查器");
+                    return new GenericFirewallChecker();
+            }
         }
+
+        log.info("未找到适配的防火墙检查器，使用通用检查器");
+        return new GenericFirewallChecker();
+    }
+
+    /**
+     * 为兼容性提供的方法，调用getChecker
+     * 
+     * @param osInfo 操作系统信息
+     * @return 对应的防火墙检查器
+     */
+    public static FirewallCheckerStrategy createFirewallChecker(OsInfo osInfo) {
+        return getChecker(osInfo);
     }
 
     /**

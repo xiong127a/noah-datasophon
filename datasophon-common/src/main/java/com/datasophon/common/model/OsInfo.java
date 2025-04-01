@@ -1,384 +1,191 @@
 package com.datasophon.common.model;
 
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.datasophon.common.model.hardware.CpuInfo;
+import com.datasophon.common.model.hardware.DiskInfo;
+import com.datasophon.common.model.hardware.GpuInfo;
+import com.datasophon.common.model.hardware.MemoryInfo;
+import com.datasophon.common.model.hardware.NetworkInfo;
+import com.datasophon.common.model.hardware.SwapInfo;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.ToString;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 操作系统信息类
- * 存储主机操作系统相关信息
+ * 存储主机操作系统和硬件信息
  */
 @Data
 @NoArgsConstructor
-@ToString
+@AllArgsConstructor
+@Builder
+@ToString(exclude = { "networkInterfaces", "diskInfos" })
 public class OsInfo implements Serializable {
-
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主机名
-     */
-    private String hostname = "";
+    private Integer id;
 
     /**
-     * 完全限定域名(FQDN)
+     * 操作系统类型(Windows/Linux等)
      */
-    private String fqdn = "";
+    private String osType;
 
     /**
-     * 发行版ID，如 centos、ubuntu
+     * 操作系统发行版本(CentOS/Ubuntu等)
      */
-    private String distributionId = "";
+    private String distribution;
 
     /**
-     * 发行版名称，如CentOS、Ubuntu
+     * 操作系统版本
      */
-    private String distribution = "";
-
-    /**
-     * 发行版名称的别名，与distribution相同
-     */
-    private String distributionName = "";
-
-    /**
-     * 版本号，如 7、8、20.04
-     */
-    private String versionId = "";
-
-    /**
-     * 版本号的别名，与versionId相同
-     */
-    private String distributionVersion = "";
-
-    /**
-     * 操作系统全名
-     */
-    private String fullName = "";
+    private String version;
 
     /**
      * 内核版本
      */
-    private String kernelVersion = "";
+    private String kernelVersion;
 
     /**
-     * 系统架构（如 x86_64, arm64, aarch64 等）
+     * 主机名
      */
-    private String architecture = "";
+    private String hostname;
 
     /**
-     * DNS服务器信息
+     * 主机完全限定域名(FQDN)
      */
-    private String dnsServers = "";
+    private String fqdn;
 
     /**
-     * CPU信息（如型号、核心数）
+     * DNS服务器列表
      */
-    private String cpuInfo = "";
+    private List<String> dnsServers;
 
     /**
-     * CPU型号
+     * hosts文件内容
      */
-    private String cpuModel = "";
+    private String hostsFile;
 
     /**
-     * CPU频率（GHz）
+     * CPU信息
      */
-    private Double cpuFrequency = 0.0;
+    private CpuInfo cpuInfo;
 
     /**
-     * CPU核心数
+     * 内存信息
      */
-    private Integer cpuCores = 0;
+    private MemoryInfo memoryInfo;
 
     /**
-     * CPU核心数的别名，与cpuCores相同
+     * 磁盘信息
      */
-    private Integer cpuCoreNum = 0;
+    private DiskInfo diskInfo;
 
     /**
-     * CPU物理数量
+     * 交换空间信息
      */
-    private Integer cpuCount = 1;
+    private SwapInfo swapInfo;
 
     /**
-     * 每颗CPU的核心数
+     * GPU信息
      */
-    private Integer cpuCoresPerProcessor = 0;
+    private GpuInfo gpuInfo;
 
     /**
-     * 每核心的线程数
+     * 网络接口信息
      */
-    private Integer cpuThreadsPerCore = 2;
+    private NetworkInfo networkInfo;
 
     /**
-     * CPU逻辑处理器总数
+     * 操作系统位数(32/64)
      */
-    private Integer cpuLogicalCores = 0;
+    private String architecture;
 
     /**
-     * 内存总量（GB）
+     * 操作系统信息收集状态
      */
-    private Double totalMemory = 0.0;
+    private OsInfoStatusEnum osInfoStatus;
 
     /**
-     * 内存总量（字节）
+     * 主机名收集状态
      */
-    private Long totalMem = 0L;
+    private OsInfoStatusEnum hostnameStatus;
 
     /**
-     * 可用内存（GB）
+     * 操作系统信息收集状态
      */
-    private Double availableMemory = 0.0;
+    private OsInfoStatusEnum osStatus;
 
     /**
-     * 可用内存（字节）
+     * DNS服务器信息收集状态
      */
-    private Long availableMem = 0L;
+    private OsInfoStatusEnum dnsStatus;
 
     /**
-     * 交换空间总量（GB）
+     * hosts文件收集状态
      */
-    private Double totalSwap = 0.0;
+    private OsInfoStatusEnum hostsFileStatus;
 
     /**
-     * 交换空间总量（字节）
-     */
-    private Long totalSwapBytes = 0L;
-
-    /**
-     * 可用交换空间（GB）
-     */
-    private Double availableSwap = 0.0;
-
-    /**
-     * 可用交换空间（字节）
-     */
-    private Long availableSwapBytes = 0L;
-
-    /**
-     * 磁盘总容量（GB）
-     */
-    private Double totalDisk = 0.0;
-
-    /**
-     * 磁盘总容量（字节）
-     */
-    private Long totalDiskBytes = 0L;
-
-    /**
-     * 可用磁盘容量（GB）
-     */
-    private Double availableDisk = 0.0;
-
-    /**
-     * 可用磁盘容量（字节）
-     */
-    private Long availableDiskBytes = 0L;
-
-    /**
-     * 显卡信息
-     */
-    private String gpuInfo = "";
-
-    /**
-     * 显卡显存大小（GB）
-     */
-    private Double gpuMemory = 0.0;
-
-    /**
-     * 信息是否有效
-     */
-    private boolean valid = false;
-
-    /**
-     * 错误信息
-     */
-    private String errorMessage = "";
-
-    /**
-     * 1分钟负载
-     */
-    private Double load1Min;
-
-    /**
-     * 5分钟负载
-     */
-    private Double load5Min;
-
-    /**
-     * 15分钟负载
-     */
-    private Double load15Min;
-
-    /**
-     * 硬件信息收集状态
-     * - COLLECTING：收集中
-     * - SUCCESS：收集完成
-     * - ERROR：收集出错
-     */
-    private OsInfoStatusEnum hardwareCollectionStatus;
-
-    /**
-     * 最后更新的硬件项
-     * 记录最近更新的硬件信息项，便于前端知道哪些信息已经收集完成
-     */
-    private String lastUpdatedItem;
-
-    /**
-     * 操作系统主版本号（不带小数点），如"7"、"20"
-     */
-    private String majorVersion;
-
-    /**
-     * 显示名称（用于界面展示）
-     */
-    private String displayName;
-
-    /**
-     * CPU信息状态：success, error, collecting
+     * CPU信息收集状态
      */
     private OsInfoStatusEnum cpuStatus;
 
     /**
-     * 内存信息状态：success, error, collecting
+     * 内存信息收集状态
      */
     private OsInfoStatusEnum memoryStatus;
 
     /**
-     * 磁盘信息状态：success, error, collecting
+     * 磁盘信息收集状态
      */
     private OsInfoStatusEnum diskStatus;
 
     /**
-     * Linux发行版枚举
-     * 包含常见的Linux发行版及其标识
+     * 交换空间信息收集状态
      */
-    public enum LinuxDistribution {
+    private OsInfoStatusEnum swapStatus;
 
-        /**
-         * CentOS发行版
-         */
-        CENTOS("centos"),
+    /**
+     * GPU信息收集状态
+     */
+    private OsInfoStatusEnum gpuStatus;
 
-        /**
-         * RedHat Enterprise Linux发行版
-         */
-        REDHAT("rhel", "redhat"),
+    /**
+     * 网络信息收集状态
+     */
+    private OsInfoStatusEnum networkStatus;
 
-        /**
-         * Ubuntu发行版
-         */
-        UBUNTU("ubuntu"),
+    /**
+     * 错误信息
+     */
+    private String errorMessage;
 
-        /**
-         * Kylin发行版（国产麒麟）
-         */
-        KYLIN("kylin"),
+    /**
+     * 版本ID
+     */
+    private String versionId;
 
-        /**
-         * Debian发行版
-         */
-        DEBIAN("debian"),
+    /**
+     * 操作系统全名
+     */
+    private String fullName;
 
-        /**
-         * OpenSUSE发行版
-         */
-        OPENSUSE("opensuse"),
+    /**
+     * 显示名称（用于UI显示）
+     */
+    private String displayName;
 
-        /**
-         * SUSE Enterprise Linux发行版
-         */
-        SUSE("suse"),
-
-        /**
-         * 其他发行版
-         */
-        OTHER("unknown"),
-
-        /**
-         * Fedora发行版
-         */
-        FEDORA("fedora"),
-
-        /**
-         * OpenEuler发行版
-         */
-        OPENEULER("openeuler");
-
-        /**
-         * 发行版标识符列表，一个发行版可能有多个标识符
-         */
-        private final String[] identifiers;
-
-        /**
-         * 构造函数
-         *
-         * @param identifiers 发行版标识符列表
-         */
-        LinuxDistribution(String... identifiers) {
-            this.identifiers = identifiers;
-        }
-
-        /**
-         * 获取发行版标识符列表
-         *
-         * @return 标识符列表
-         */
-        public String[] getIdentifiers() {
-            return identifiers;
-        }
-
-        /**
-         * 检查传入的标识符是否匹配当前发行版
-         *
-         * @param id 要检查的标识符
-         * @return 如果匹配返回true，否则返回false
-         */
-        public boolean match(String id) {
-            if (id == null || id.isEmpty()) {
-                return false;
-            }
-
-            id = id.toLowerCase();
-            for (String identifier : identifiers) {
-                if (id.contains(identifier)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * 根据标识符获取对应的发行版枚举
-         *
-         * @param id 发行版标识符
-         * @return 匹配的发行版枚举，如果没有匹配项则返回OTHER
-         */
-        public static LinuxDistribution fromId(String id) {
-            if (id == null || id.isEmpty()) {
-                return OTHER;
-            }
-
-            id = id.toLowerCase();
-            for (LinuxDistribution distro : values()) {
-                if (distro.match(id)) {
-                    return distro;
-                }
-            }
-
-            return OTHER;
-        }
-
-        @Override
-        public String toString() {
-            return this.identifiers[0];
-        }
-    }
+    /**
+     * 主版本号
+     */
+    private String majorVersion;
 
     /**
      * Linux发行版类型
@@ -386,126 +193,262 @@ public class OsInfo implements Serializable {
     private LinuxDistribution distributionType = LinuxDistribution.OTHER;
 
     /**
-     * 获取操作系统主版本号
-     * 如7.9返回7
+     * 信息是否有效
      */
-    public String getMajorVersion() {
-        if (majorVersion != null && !majorVersion.isEmpty()) {
-            return majorVersion;
-        }
+    private boolean valid = false;
 
-        String version = versionId;
-        if (distributionVersion != null && !distributionVersion.isEmpty()) {
-            version = distributionVersion;
-        }
+    /**
+     * 最后更新项
+     */
+    private String lastUpdatedItem;
 
-        if (version == null || version.isEmpty()) {
-            return "";
-        }
+    /**
+     * Linux发行版ID（用于兼容旧版API）
+     */
+    private String distributionId;
 
-        if (version.contains(".")) {
-            return version.split("\\.")[0];
-        }
+    /**
+     * Linux发行版名称（用于兼容旧版API）
+     */
+    private String distributionName;
 
-        return version;
+    /**
+     * 设置硬件收集状态
+     */
+    public void setHardwareCollectionStatus(OsInfoStatusEnum status) {
+        // 更新所有硬件组件的状态
+        if (cpuInfo != null)
+            cpuInfo.setStatus(status);
+        if (memoryInfo != null)
+            memoryInfo.setStatus(status);
+        if (diskInfo != null)
+            diskInfo.setStatus(status);
+        if (swapInfo != null)
+            swapInfo.setStatus(status);
+        if (gpuInfo != null)
+            gpuInfo.setStatus(status);
+        if (networkInfo != null)
+            networkInfo.setStatus(status);
     }
 
     /**
-     * 设置操作系统主版本号
+     * 设置GPU状态
      */
-    public void setMajorVersion(String majorVersion) {
-        this.majorVersion = majorVersion;
+    public void setGpuStatus(OsInfoStatusEnum status) {
+        this.gpuStatus = status;
+        if (gpuInfo == null) {
+            gpuInfo = new GpuInfo();
+        }
+        gpuInfo.setStatus(status);
     }
 
     /**
-     * 获取展示用的系统名称
+     * 设置网络状态
      */
-    public String getDisplayName() {
-        if (displayName != null && !displayName.isEmpty()) {
-            return displayName;
+    public void setNetworkStatus(OsInfoStatusEnum status) {
+        this.networkStatus = status;
+        if (networkInfo == null) {
+            networkInfo = new NetworkInfo();
+        }
+        networkInfo.setStatus(status);
+    }
+
+    /**
+     * 获取分发类型
+     */
+    public LinuxDistribution getDistributionType() {
+        if (distributionType == null) {
+            distributionType = LinuxDistribution.OTHER;
+        }
+        return distributionType;
+    }
+
+    /**
+     * 设置分发类型
+     * 同时更新相关发行版信息
+     */
+    public void setDistributionType(LinuxDistribution distributionType) {
+        this.distributionType = distributionType;
+        // 根据分发类型设置显示名称
+        if (distributionType != null) {
+            this.distribution = distributionType.getName();
+            this.displayName = distributionType.getDisplayName();
+        }
+    }
+
+    /**
+     * 更新分发类型
+     * 根据已设置的分发ID自动判断更新分发类型
+     */
+    public void updateDistributionType() {
+        // 检查分发ID是否设置
+        if (this.distribution == null || this.distribution.isEmpty()) {
+            this.distributionType = LinuxDistribution.OTHER;
+            return;
         }
 
-        if (fullName != null && !fullName.isEmpty()) {
-            return fullName;
-        }
-
-        // 尝试使用distributionName
-        if (distributionName != null && !distributionName.isEmpty()) {
-            if (distributionVersion != null && !distributionVersion.isEmpty()) {
-                return distributionName + " " + distributionVersion;
+        // 根据分发ID匹配相应分发类型
+        for (LinuxDistribution distro : LinuxDistribution.values()) {
+            if (distro.matches(this.distribution)) {
+                this.distributionType = distro;
+                this.displayName = distro.getDisplayName();
+                return;
             }
-            return distributionName;
         }
 
-        // 兼容原有字段
-        if (distribution != null && !distribution.isEmpty() && versionId != null && !versionId.isEmpty()) {
-            return distribution + " " + versionId;
-        }
-
-        if (distributionId != null && !distributionId.isEmpty()) {
-            if (versionId != null && !versionId.isEmpty()) {
-                return distributionId + " " + versionId;
-            }
-            if (distributionVersion != null && !distributionVersion.isEmpty()) {
-                return distributionId + " " + distributionVersion;
-            }
-            return distributionId;
-        }
-
-        return "未知操作系统";
+        // 未匹配到已知分发类型
+        this.distributionType = LinuxDistribution.OTHER;
     }
 
     /**
-     * 设置展示名称
+     * 检查是否为特定分发类型
      */
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
+    public boolean isDistribution(LinuxDistribution distro) {
+        return this.distributionType == distro;
     }
 
     /**
-     * 将新的字节值字段同步到原有GB字段
-     * 设置字节值后自动同步到GB
+     * 强制更新分发类型
+     * 根据已设置的分发ID自动判断更新分发类型
      */
-    public void setTotalMem(Long totalMem) {
-        this.totalMem = totalMem;
-        if (totalMem != null) {
-            this.totalMemory = Math.round(totalMem / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
+    public void forceUpdateDistribution() {
+        if (this.distribution == null || this.distribution.isEmpty()) {
+            this.distributionType = LinuxDistribution.OTHER;
+            return;
         }
+
+        String distId = this.distribution.toLowerCase();
+
+        if (distId.contains("centos")) {
+            if (this.version != null && this.version.startsWith("7")) {
+                this.distributionType = LinuxDistribution.CENTOS7;
+            } else if (this.version != null && this.version.startsWith("8")) {
+                this.distributionType = LinuxDistribution.CENTOS8;
+            } else {
+                this.distributionType = LinuxDistribution.CENTOS;
+            }
+        } else if (distId.contains("redhat") || distId.contains("rhel")) {
+            this.distributionType = LinuxDistribution.REDHAT;
+        } else if (distId.contains("ubuntu")) {
+            if (this.version != null && this.version.startsWith("22")) {
+                this.distributionType = LinuxDistribution.UBUNTU22;
+            } else if (this.version != null && this.version.startsWith("24")) {
+                this.distributionType = LinuxDistribution.UBUNTU24;
+            } else {
+                this.distributionType = LinuxDistribution.UBUNTU;
+            }
+        } else if (distId.contains("debian")) {
+            this.distributionType = LinuxDistribution.DEBIAN;
+        } else if (distId.contains("kylin")) {
+            if (this.version != null && this.version.startsWith("4")) {
+                this.distributionType = LinuxDistribution.KYLIN_V4;
+            } else if (this.version != null && this.version.startsWith("10")) {
+                this.distributionType = LinuxDistribution.KYLIN_V10;
+            } else {
+                this.distributionType = LinuxDistribution.KYLIN;
+            }
+        } else if (distId.contains("uos") || distId.contains("deepin")) {
+            this.distributionType = LinuxDistribution.UOS;
+        } else {
+            this.distributionType = LinuxDistribution.OTHER;
+        }
+
+        this.displayName = this.distributionType.getDisplayName();
     }
 
-    public void setAvailableMem(Long availableMem) {
-        this.availableMem = availableMem;
-        if (availableMem != null) {
-            this.availableMemory = Math.round(availableMem / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
+    /**
+     * 检查版本是否匹配指定字符串
+     */
+    public boolean isVersion(String versionToCheck) {
+        if (this.version == null || versionToCheck == null) {
+            return false;
         }
+        return this.version.startsWith(versionToCheck);
     }
 
-    public void setTotalSwap(Long totalSwap) {
-        this.totalSwapBytes = totalSwap;
-        if (totalSwap != null) {
-            this.totalSwap = Math.round(totalSwap / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
-        }
+    /**
+     * 判断信息是否有效
+     */
+    public boolean isValid() {
+        return valid;
     }
 
-    public void setAvailableSwap(Long availableSwap) {
-        this.availableSwapBytes = availableSwap;
-        if (availableSwap != null) {
-            this.availableSwap = Math.round(availableSwap / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
-        }
+    /**
+     * 设置信息是否有效
+     */
+    public void setValid(boolean valid) {
+        this.valid = valid;
     }
 
-    public void setTotalDisk(Long totalDisk) {
-        this.totalDiskBytes = totalDisk;
-        if (totalDisk != null) {
-            this.totalDisk = Math.round(totalDisk / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
-        }
+    // 下面是常用的简便版本检查方法
+
+    /**
+     * 检查是否为CentOS 7
+     */
+    public boolean isCentOS7() {
+        return isDistribution(LinuxDistribution.CENTOS7) ||
+                (isDistribution(LinuxDistribution.CENTOS) && isVersion("7"));
     }
 
-    public void setAvailableDisk(Long availableDisk) {
-        this.availableDiskBytes = availableDisk;
-        if (availableDisk != null) {
-            this.availableDisk = Math.round(availableDisk / (1024.0 * 1024.0 * 1024.0) * 10) / 10.0;
-        }
+    /**
+     * 检查是否为CentOS 8
+     */
+    public boolean isCentOS8() {
+        return isDistribution(LinuxDistribution.CENTOS8) ||
+                (isDistribution(LinuxDistribution.CENTOS) && isVersion("8"));
+    }
+
+    /**
+     * 检查是否为Ubuntu 22.04
+     */
+    public boolean isUbuntu22() {
+        return isDistribution(LinuxDistribution.UBUNTU22) ||
+                (isDistribution(LinuxDistribution.UBUNTU) && isVersion("22"));
+    }
+
+    /**
+     * 检查是否为Ubuntu 24.04
+     */
+    public boolean isUbuntu24() {
+        return isDistribution(LinuxDistribution.UBUNTU24) ||
+                (isDistribution(LinuxDistribution.UBUNTU) && isVersion("24"));
+    }
+
+    /**
+     * 检查是否为麒麟V4
+     */
+    public boolean isKylinV4() {
+        return isDistribution(LinuxDistribution.KYLIN_V4) ||
+                (isDistribution(LinuxDistribution.KYLIN) && isVersion("4"));
+    }
+
+    /**
+     * 检查是否为麒麟V10
+     */
+    public boolean isKylinV10() {
+        return isDistribution(LinuxDistribution.KYLIN_V10) ||
+                (isDistribution(LinuxDistribution.KYLIN) && isVersion("10"));
+    }
+
+    /**
+     * 获取发行版ID
+     */
+    public String getDistributionId() {
+        return StringUtils.isNotBlank(distributionId) ? distributionId : distribution;
+    }
+
+    /**
+     * 设置发行版ID
+     */
+    public void setDistributionId(String distributionId) {
+        this.distributionId = distributionId;
+    }
+
+    /**
+     * 获取发行版名称
+     */
+    public String getDistributionName() {
+        return StringUtils.isNotBlank(distributionName) ? distributionName : distribution;
     }
 
     /**
@@ -513,250 +456,5 @@ public class OsInfo implements Serializable {
      */
     public void setDistributionName(String distributionName) {
         this.distributionName = distributionName;
-        this.distribution = distributionName;
-        if (distributionName != null) {
-            this.distributionType = LinuxDistribution.fromId(distributionName);
-        }
-    }
-
-    public void setDistributionVersion(String distributionVersion) {
-        this.distributionVersion = distributionVersion;
-        this.versionId = distributionVersion;
-    }
-
-    public void setCpuModel(String cpuModel) {
-        this.cpuModel = cpuModel;
-        this.cpuInfo = cpuModel;
-    }
-
-    public void setCpuCoreNum(Integer cpuCoreNum) {
-        this.cpuCoreNum = cpuCoreNum;
-        this.cpuCores = cpuCoreNum;
-    }
-
-    /**
-     * 设置硬件收集状态（向后兼容）
-     */
-    public void setHardwareCollectionStatus(String hardwareCollectionStatus) {
-        this.hardwareCollectionStatus = OsInfoStatusEnum.getByCode(hardwareCollectionStatus);
-    }
-
-    /**
-     * 设置硬件收集状态（使用枚举）
-     */
-    public void setHardwareCollectionStatus(OsInfoStatusEnum hardwareCollectionStatus) {
-        this.hardwareCollectionStatus = hardwareCollectionStatus;
-    }
-
-    /**
-     * 设置CPU信息状态
-     */
-    public void setCpuStatus(OsInfoStatusEnum status) {
-        this.cpuStatus = status;
-    }
-
-    /**
-     * 设置内存信息状态
-     */
-    public void setMemoryStatus(OsInfoStatusEnum status) {
-        this.memoryStatus = status;
-    }
-
-    /**
-     * 设置磁盘信息状态
-     */
-    public void setDiskStatus(OsInfoStatusEnum status) {
-        this.diskStatus = status;
-    }
-
-    /**
-     * 判断操作系统是否匹配指定的发行版
-     * 
-     * @param distro 要检查的发行版类型
-     * @return 如果匹配返回true，否则返回false
-     */
-    public boolean isDistribution(LinuxDistribution distro) {
-        return distro == this.distributionType;
-    }
-
-    /**
-     * 检查版本号是否匹配指定的版本
-     * 
-     * @param versionToCheck 要检查的版本号
-     * @return 如果匹配返回true，否则返回false
-     */
-    public boolean isVersion(String versionToCheck) {
-        if (versionId == null || versionToCheck == null) {
-            return false;
-        }
-
-        // 精确匹配
-        if (versionId.equals(versionToCheck)) {
-            return true;
-        }
-
-        // 前缀匹配，如 "7" 匹配 "7.9"
-        return versionId.startsWith(versionToCheck + ".") || versionToCheck.startsWith(versionId + ".");
-    }
-
-    /**
-     * 检查是否是CentOS 7.x版本
-     * 
-     * @return 如果是CentOS 7.x版本返回true，否则返回false
-     */
-    public boolean isCentOS7() {
-        return isDistribution(LinuxDistribution.CENTOS) && isVersion("7");
-    }
-
-    /**
-     * 检查是否是CentOS 8.x版本
-     * 
-     * @return 如果是CentOS 8.x版本返回true，否则返回false
-     */
-    public boolean isCentOS8() {
-        return isDistribution(LinuxDistribution.CENTOS) && isVersion("8");
-    }
-
-    /**
-     * 检查是否是Ubuntu 22.04版本
-     * 
-     * @return 如果是Ubuntu 22.04版本返回true，否则返回false
-     */
-    public boolean isUbuntu22() {
-        return isDistribution(LinuxDistribution.UBUNTU) && isVersion("22.04");
-    }
-
-    /**
-     * 检查是否是Ubuntu 24.04版本
-     * 
-     * @return 如果是Ubuntu 24.04版本返回true，否则返回false
-     */
-    public boolean isUbuntu24() {
-        return isDistribution(LinuxDistribution.UBUNTU) && isVersion("24.04");
-    }
-
-    /**
-     * 检查是否是Kylin V4版本
-     * 
-     * @return 如果是Kylin V4版本返回true，否则返回false
-     */
-    public boolean isKylinV4() {
-        return isDistribution(LinuxDistribution.KYLIN) && isVersion("4");
-    }
-
-    /**
-     * 检查是否是Kylin V10版本
-     * 
-     * @return 如果是Kylin V10版本返回true，否则返回false
-     */
-    public boolean isKylinV10() {
-        return isDistribution(LinuxDistribution.KYLIN) && isVersion("10");
-    }
-
-    /**
-     * 判断当前系统是否使用systemd作为初始化系统
-     * 
-     * @return 如果使用systemd返回true，否则返回false
-     */
-    public boolean usesSystemd() {
-        // 大部分现代发行版都使用systemd，除了旧版本
-        if (isDistribution(LinuxDistribution.CENTOS) || isDistribution(LinuxDistribution.REDHAT)) {
-            // CentOS/RHEL 7及以上版本使用systemd
-            try {
-                int majorVersion = Integer.parseInt(versionId.split("\\.")[0]);
-                return majorVersion >= 7;
-            } catch (Exception e) {
-                // 解析出错，默认可能使用systemd
-                return true;
-            }
-        } else if (isDistribution(LinuxDistribution.UBUNTU)) {
-            // Ubuntu 16.04及以上版本使用systemd
-            try {
-                float version = Float.parseFloat(versionId);
-                return version >= 16.04;
-            } catch (Exception e) {
-                // 解析出错，默认可能使用systemd
-                return true;
-            }
-        } else if (isDistribution(LinuxDistribution.DEBIAN)) {
-            // Debian 8及以上版本使用systemd
-            try {
-                int version = Integer.parseInt(versionId);
-                return version >= 8;
-            } catch (Exception e) {
-                // 解析出错，默认可能使用systemd
-                return true;
-            }
-        } else if (isDistribution(LinuxDistribution.KYLIN)) {
-            // 麒麟V4及以上版本使用systemd
-            try {
-                int version = Integer.parseInt(versionId);
-                return version >= 4;
-            } catch (Exception e) {
-                // 解析出错，默认可能使用systemd
-                return true;
-            }
-        }
-
-        // 默认假设使用systemd
-        return true;
-    }
-
-    /**
-     * 根据distributionId强制更新distributionType枚举值
-     * 解决某些情况下distributionId和distributionType不一致的问题
-     */
-    public void forceUpdateDistribution() {
-        if (this.distributionId == null || this.distributionId.isEmpty()) {
-            return;
-        }
-
-        // 将ID转为小写以便更好地进行比较
-        String lowerDistroId = this.distributionId.toLowerCase().trim();
-
-        // 根据分发ID判断Linux发行版类型
-        if (lowerDistroId.contains("centos")) {
-            this.distributionType = LinuxDistribution.CENTOS;
-        } else if (lowerDistroId.contains("rhel") || lowerDistroId.contains("redhat")
-                || lowerDistroId.contains("red hat")) {
-            this.distributionType = LinuxDistribution.REDHAT;
-        } else if (lowerDistroId.contains("ubuntu")) {
-            this.distributionType = LinuxDistribution.UBUNTU;
-        } else if (lowerDistroId.contains("debian")) {
-            this.distributionType = LinuxDistribution.DEBIAN;
-        } else if (lowerDistroId.contains("fedora")) {
-            this.distributionType = LinuxDistribution.FEDORA;
-        } else if (lowerDistroId.contains("suse") || lowerDistroId.contains("sles")) {
-            this.distributionType = LinuxDistribution.SUSE;
-        } else if (lowerDistroId.contains("kylin")) {
-            this.distributionType = LinuxDistribution.KYLIN;
-        } else if (lowerDistroId.contains("openeuler")) {
-            this.distributionType = LinuxDistribution.OPENEULER;
-        } else {
-            this.distributionType = LinuxDistribution.OTHER;
-        }
-
-        // 更新distribution字符串以保持一致性
-        if (this.distributionType != LinuxDistribution.OTHER) {
-            this.distribution = this.distributionType.toString();
-        }
-    }
-
-    /**
-     * 获取Linux发行版类型枚举
-     */
-    public LinuxDistribution getDistributionType() {
-        return distributionType;
-    }
-
-    /**
-     * 设置Linux发行版类型枚举
-     */
-    public void setDistributionType(LinuxDistribution distributionType) {
-        this.distributionType = distributionType;
-        // 更新distribution字符串以保持一致性
-        if (distributionType != null && distributionType != LinuxDistribution.OTHER) {
-            this.distribution = distributionType.toString();
-        }
     }
 }

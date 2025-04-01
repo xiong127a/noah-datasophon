@@ -49,6 +49,8 @@ import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
+import com.datasophon.common.model.hardware.GpuInfo;
+import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
@@ -164,8 +166,24 @@ public class InstallServiceImpl implements InstallService {
                 }
 
                 // 确保操作系统信息可用于前端
-                if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDistribution() == null) {
-                    hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+                if (hostInfo.getOsInfo() != null) {
+                    if (hostInfo.getOsInfo().getDistribution() == null) {
+                        hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+                    }
+
+                    // 确保网络信息不为null
+                    if (hostInfo.getOsInfo().getNetworkInfo() == null) {
+                        hostInfo.getOsInfo().setNetworkInfo(new NetworkInfo());
+                    }
+
+                    // 确保GPU信息不为null
+                    if (hostInfo.getOsInfo().getGpuInfo() == null) {
+                        GpuInfo gpuInfo = new GpuInfo();
+                        gpuInfo.setInfo("未检测到GPU设备");
+                        gpuInfo.setTotalMemory(0.0);
+                        gpuInfo.setUsedMemory(0.0);
+                        hostInfo.getOsInfo().setGpuInfo(gpuInfo);
+                    }
                 }
 
                 // 确保SSH连接状态信息可用于前端

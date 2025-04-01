@@ -5,6 +5,7 @@ import com.datasophon.api.service.checker.checkers.selinux.generic.GenericSELinu
 import com.datasophon.api.service.checker.checkers.selinux.os.centos.CentOSSELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.os.kylin.KylinSELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.os.ubuntu.UbuntuSELinuxChecker;
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,39 +19,56 @@ public class SELinuxCheckerFactory {
     private static final Logger logger = LoggerFactory.getLogger(SELinuxCheckerFactory.class);
 
     /**
-     * 获取适用于指定操作系统的SELinux检查器
+     * 根据操作系统类型创建SELinux检查器
      * 
      * @param osInfo 操作系统信息
-     * @return 适用于该操作系统的SELinux检查器策略
+     * @return 对应的SELinux检查器
      */
-    public static SELinuxCheckerStrategy getChecker(OsInfo osInfo) {
+    public static SELinuxCheckerStrategy createSELinuxChecker(OsInfo osInfo) {
         if (osInfo == null) {
             logger.warn("操作系统信息为空，使用通用SELinux检查器");
             return new GenericSELinuxChecker();
         }
 
-        OsInfo.LinuxDistribution distribution = osInfo.getDistributionType();
-        String distributionName = distribution.toString();
+        LinuxDistribution distribution = osInfo.getDistributionType();
         String osVersion = osInfo.getVersionId();
 
-        logger.info("为操作系统 {} {} 创建SELinux检查器", distributionName, osVersion);
+        logger.info("为操作系统 {} {} 创建SELinux检查器", distribution, osVersion);
 
-        // 根据操作系统类型创建对应的检查器
-        switch (distribution) {
-            case CENTOS:
-            case REDHAT:
-                logger.info("创建CentOS/RHEL SELinux检查器");
-                return new CentOSSELinuxChecker();
-            case KYLIN:
-                logger.info("创建麒麟系统SELinux检查器");
-                return new KylinSELinuxChecker();
-            case UBUNTU:
-            case DEBIAN:
-                logger.info("创建Ubuntu/Debian SELinux检查器");
-                return new UbuntuSELinuxChecker();
-            default:
-                logger.info("未找到适配的SELinux检查器，使用通用检查器");
-                return new GenericSELinuxChecker();
+        // 使用switch语句根据操作系统类型创建对应的检查器
+        if (distribution != null) {
+            switch (distribution) {
+                case CENTOS:
+                case REDHAT:
+                    // CentOS使用CentOS专用检查器
+                    return new CentOSSELinuxChecker();
+                case KYLIN:
+                    // Kylin使用Kylin专用检查器
+                    return new KylinSELinuxChecker();
+                case UBUNTU:
+                case DEBIAN:
+                    // Ubuntu使用Ubuntu专用检查器
+                    return new UbuntuSELinuxChecker();
+                default:
+                    // 其他操作系统使用通用检查器
+                    logger.info("未找到适配的SELinux检查器，使用通用检查器");
+                    return new GenericSELinuxChecker();
+            }
         }
+
+        // 操作系统类型为空，使用通用检查器
+        logger.info("操作系统类型未识别，使用通用SELinux检查器");
+        return new GenericSELinuxChecker();
+    }
+
+    /**
+     * 获取SELinux检查器（别名方法）
+     * 与createSELinuxChecker功能相同，提供给使用getChecker名称的代码调用
+     * 
+     * @param osInfo 操作系统信息
+     * @return 对应的SELinux检查器
+     */
+    public static SELinuxCheckerStrategy getChecker(OsInfo osInfo) {
+        return createSELinuxChecker(osInfo);
     }
 }

@@ -473,12 +473,30 @@ public class HostInfo implements Serializable {
         this.swapStatus = status;
     }
 
+    /**
+     * 获取GPU状态
+     */
     public OsInfoStatusEnum getGpuStatus() {
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null) {
+            // 使用osInfo对象中的getGpuStatus方法
+            return osInfo.getGpuStatus();
+        }
+        // 如果osInfo为空，回退到本地字段
         return gpuStatus;
     }
 
+    /**
+     * 设置GPU状态
+     */
     public void setGpuStatus(OsInfoStatusEnum status) {
+        // 设置本地字段
         this.gpuStatus = status;
+
+        // 如果osInfo存在，也设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setGpuStatus(status);
+        }
     }
 
     public OsInfoStatusEnum getOsInfoStatus() {
@@ -495,5 +513,24 @@ public class HostInfo implements Serializable {
 
     public void setSshConnectStatus(OsInfoStatusEnum status) {
         this.sshConnectStatus = status;
+    }
+
+    /**
+     * 获取网卡状态
+     */
+    public OsInfoStatusEnum getNetworkStatus() {
+        if (osInfo != null) {
+            return osInfo.getNetworkStatus();
+        }
+        return null;
+    }
+
+    /**
+     * 设置网卡状态
+     */
+    public void setNetworkStatus(OsInfoStatusEnum status) {
+        if (osInfo != null) {
+            osInfo.setNetworkStatus(status);
+        }
     }
 }

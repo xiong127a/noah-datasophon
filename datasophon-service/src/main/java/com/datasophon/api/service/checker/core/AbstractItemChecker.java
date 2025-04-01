@@ -2,18 +2,21 @@ package com.datasophon.api.service.checker.core;
 
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
-import com.datasophon.common.model.OsInfo;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
+import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
+import com.datasophon.common.model.OsInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
@@ -32,7 +35,8 @@ public abstract class AbstractItemChecker implements ItemChecker {
     // 主机操作系统信息缓存，用于避免重复检测
     private static final Map<String, OsInfo> hostOsInfoCache = new ConcurrentHashMap<>();
 
-    // 支持的Linux发行版类型枚举
+    @Autowired
+    protected OsInfoService osInfoService;
 
     protected ClientSession session;
     // 当前检查项的日志缓存键
@@ -115,7 +119,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 osInfo.setDistributionType(determineDistribution(distroId));
 
                 // 确保操作系统类型与ID保持一致
-                if (osInfo.getDistributionType() == OsInfo.LinuxDistribution.OTHER && !distroId.isEmpty()) {
+                if (osInfo.getDistributionType() == LinuxDistribution.OTHER && !distroId.isEmpty()) {
                     logger.warn("操作系统类型识别异常，distroId='{}' 但 distribution={}，尝试强制更新",
                             distroId, osInfo.getDistributionType());
                     osInfo.forceUpdateDistribution();
@@ -134,10 +138,10 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     osInfo.setFullName(release);
 
                     if (release.toLowerCase().contains("centos")) {
-                        osInfo.setDistributionType(OsInfo.LinuxDistribution.CENTOS);
+                        osInfo.setDistributionType(LinuxDistribution.CENTOS);
                         osInfo.setDistributionId("centos");
                     } else if (release.toLowerCase().contains("red hat")) {
-                        osInfo.setDistributionType(OsInfo.LinuxDistribution.REDHAT);
+                        osInfo.setDistributionType(LinuxDistribution.REDHAT);
                         osInfo.setDistributionId("rhel");
                     }
 
@@ -167,11 +171,11 @@ public abstract class AbstractItemChecker implements ItemChecker {
                         CommandResult unameResult = execCommand(session, "uname -a");
                         if (unameResult.isSuccess()) {
                             osInfo.setFullName(unameResult.getOutput().trim());
-                            osInfo.setDistributionType(OsInfo.LinuxDistribution.OTHER);
+                            osInfo.setDistributionType(LinuxDistribution.OTHER);
                             cacheLog.info("无法确定具体Linux发行版，uname输出: %s", unameResult.getOutput().trim());
                         } else {
                             cacheLog.warn("无法确定操作系统类型和版本");
-                            osInfo.setDistributionType(OsInfo.LinuxDistribution.OTHER);
+                            osInfo.setDistributionType(LinuxDistribution.OTHER);
                         }
                     }
                 }
@@ -187,14 +191,14 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } catch (Exception e) {
             logger.error("获取操作系统信息时发生错误: {}", e.getMessage(), e);
             cacheLog.error("获取操作系统信息失败: %s", e.getMessage());
-            osInfo.setDistributionType(OsInfo.LinuxDistribution.OTHER);
+            osInfo.setDistributionType(LinuxDistribution.OTHER);
         }
 
         // 设置有效性并缓存结果
         osInfo.setValid(true);
 
         // 最后一次确保操作系统类型与ID保持一致
-        if (osInfo.getDistributionType() == OsInfo.LinuxDistribution.OTHER &&
+        if (osInfo.getDistributionType() == LinuxDistribution.OTHER &&
                 osInfo.getDistributionId() != null && !osInfo.getDistributionId().isEmpty()) {
             logger.warn("缓存前检测到操作系统类型可能不一致: distributionId='{}' 但 distribution={}",
                     osInfo.getDistributionId(), osInfo.getDistributionType());
@@ -279,31 +283,31 @@ public abstract class AbstractItemChecker implements ItemChecker {
     /**
      * 根据发行版ID确定Linux发行版类型
      */
-    private OsInfo.LinuxDistribution determineDistribution(String distroId) {
+    private LinuxDistribution determineDistribution(String distroId) {
         if (distroId == null) {
-            return OsInfo.LinuxDistribution.OTHER;
+            return LinuxDistribution.OTHER;
         }
 
         distroId = distroId.toLowerCase();
 
         if (distroId.contains("centos")) {
-            return OsInfo.LinuxDistribution.CENTOS;
+            return LinuxDistribution.CENTOS;
         } else if (distroId.contains("rhel") || distroId.contains("redhat") || distroId.contains("red hat")) {
-            return OsInfo.LinuxDistribution.REDHAT;
+            return LinuxDistribution.REDHAT;
         } else if (distroId.contains("ubuntu")) {
-            return OsInfo.LinuxDistribution.UBUNTU;
+            return LinuxDistribution.UBUNTU;
         } else if (distroId.contains("debian")) {
-            return OsInfo.LinuxDistribution.DEBIAN;
+            return LinuxDistribution.DEBIAN;
         } else if (distroId.contains("fedora")) {
-            return OsInfo.LinuxDistribution.FEDORA;
+            return LinuxDistribution.FEDORA;
         } else if (distroId.contains("suse") || distroId.contains("sles")) {
-            return OsInfo.LinuxDistribution.SUSE;
+            return LinuxDistribution.SUSE;
         } else if (distroId.contains("kylin")) {
-            return OsInfo.LinuxDistribution.KYLIN;
+            return LinuxDistribution.KYLIN;
         } else if (distroId.contains("openeuler")) {
-            return OsInfo.LinuxDistribution.OPENEULER;
+            return LinuxDistribution.OPENEULER;
         } else {
-            return OsInfo.LinuxDistribution.OTHER;
+            return LinuxDistribution.OTHER;
         }
     }
 
@@ -1302,5 +1306,35 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
         // 设置检查项消息
         setCheckItemMessage(hostInfo, checkItem, html.toString());
+    }
+
+    /**
+     * 获取操作系统信息
+     */
+    protected boolean collectOsInfo(HostInfo hostInfo, ClientSession clientSession) {
+        try {
+            if (clientSession == null) {
+                logger.error("SSH会话为空，无法收集操作系统信息");
+                // 设置失败消息
+                hostInfo.setMessage("SSH会话为空，无法收集操作系统信息");
+                return false;
+            }
+
+            logger.info("开始收集主机 {} 的操作系统信息", hostInfo.getIp());
+
+            // 由于HostInfo已经包含了SSH会话信息，可以直接调用异步方法，让OsInfoService自己处理会话管理
+            // 将数据设置到HostInfo对象，并通过异步过程更新缓存
+            osInfoService.getHostOsInfoAsync(hostInfo);
+
+            // 设置成功消息
+            logger.info("主机 {} 操作系统信息收集请求已提交", hostInfo.getIp());
+            return true;
+        } catch (Exception e) {
+            logger.error("提交操作系统信息收集请求时出错: {}", e.getMessage(), e);
+
+            // 设置失败消息
+            hostInfo.setMessage("提交操作系统信息收集请求失败: " + e.getMessage());
+            return false;
+        }
     }
 }

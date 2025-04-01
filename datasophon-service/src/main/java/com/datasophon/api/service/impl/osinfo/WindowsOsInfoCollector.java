@@ -1,17 +1,25 @@
 package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
+import com.datasophon.common.model.hardware.CpuInfo;
+import com.datasophon.common.model.hardware.DiskInfo;
+import com.datasophon.common.model.hardware.GpuInfo;
+import com.datasophon.common.model.hardware.MemoryInfo;
+import com.datasophon.common.model.hardware.SwapInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -93,12 +101,22 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             String dnsInfo = MinaUtils.execWindowsCmdWithResult(session,
                     "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses\"");
             if (StringUtils.isNotBlank(dnsInfo) && !dnsInfo.startsWith("ERROR:")) {
-                osInfo.setDnsServers(dnsInfo);
+                // 将DNS服务器信息字符串转换为List<String>
+                List<String> dnsServers = new ArrayList<>();
+                for (String line : dnsInfo.split("\\r?\\n")) {
+                    if (StringUtils.isNotBlank(line)) {
+                        dnsServers.add(line.trim());
+                    }
+                }
+                osInfo.setDnsServers(dnsServers);
                 hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
-                logger.info("获取到DNS服务器信息");
+                logger.info("获取到DNS服务器信息: {}", dnsServers);
             } else {
                 // 如果获取DNS服务器信息失败，设置默认值
-                osInfo.setDnsServers("8.8.8.8\r\n8.8.4.4");
+                List<String> defaultDnsServers = new ArrayList<>();
+                defaultDnsServers.add("8.8.8.8");
+                defaultDnsServers.add("8.8.4.4");
+                osInfo.setDnsServers(defaultDnsServers);
                 hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
                 logger.warn("无法获取DNS服务器信息，设置默认值");
             }
@@ -116,11 +134,11 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 String version = MinaUtils.execWindowsCmdWithResult(session,
                         "powershell -command \"(Get-WmiObject Win32_OperatingSystem).Version\"");
                 osInfo.setVersionId(version != null && !version.startsWith("ERROR:") ? version.trim() : "10.0");
-                osInfo.setDistributionVersion(
-                        version != null && !version.startsWith("ERROR:") ? version.trim() : "10.0");
+                osInfo.setVersion(version != null && !version.startsWith("ERROR:") ? version.trim() : "10.0");
 
                 osInfo.setFullName(osVersion);
                 osInfo.setDistributionId("windows"); // 使用小写以保持一致性
+                osInfo.setDistributionType(LinuxDistribution.OTHER); // Windows使用OTHER类型
 
                 // 设置显示名称
                 osInfo.setDisplayName(osVersion);
@@ -132,9 +150,10 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistribution("Windows");
                 osInfo.setDistributionName("Windows");
                 osInfo.setVersionId("10.0");
-                osInfo.setDistributionVersion("10.0");
+                osInfo.setVersion("10.0");
                 osInfo.setFullName("Microsoft Windows");
                 osInfo.setDistributionId("windows");
+                osInfo.setDistributionType(LinuxDistribution.OTHER); // Windows使用OTHER类型
                 osInfo.setDisplayName("Microsoft Windows 10");
                 logger.warn("无法获取操作系统信息，设置默认值");
                 hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
@@ -199,7 +218,10 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             }
 
             if (osInfo.getDnsServers() == null) {
-                osInfo.setDnsServers("8.8.8.8\r\n8.8.4.4");
+                List<String> defaultDnsServers = new ArrayList<>();
+                defaultDnsServers.add("8.8.8.8");
+                defaultDnsServers.add("8.8.4.4");
+                osInfo.setDnsServers(defaultDnsServers);
                 hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
             }
 
@@ -207,9 +229,10 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             osInfo.setDistribution("Windows");
             osInfo.setDistributionName("Windows");
             osInfo.setVersionId("10.0");
-            osInfo.setDistributionVersion("10.0");
+            osInfo.setVersion("10.0");
             osInfo.setFullName("Microsoft Windows");
             osInfo.setDistributionId("windows");
+            osInfo.setDistributionType(LinuxDistribution.OTHER); // Windows使用OTHER类型
             osInfo.setDisplayName("Microsoft Windows 10");
             hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
 
@@ -255,7 +278,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             collectGpuInfo(hostInfo, osInfo, session, cacheUpdater);
 
             // 标记硬件信息收集完成
-            osInfo.setHardwareCollectionStatus("success");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
             osInfo.setLastUpdatedItem("completed");
             hostInfo.setHardwareStatus(OsInfoStatusEnum.SUCCESS);
             hostInfo.setMessage("所有信息收集完成");
@@ -265,7 +288,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             logger.info("Windows硬件信息收集完成");
         } catch (Exception e) {
             logger.error("Windows硬件信息收集失败: {}", e.getMessage(), e);
-            osInfo.setHardwareCollectionStatus("error");
+            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
             osInfo.setLastUpdatedItem("failed");
 
             // 更新主机状态
@@ -291,26 +314,30 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             hostInfo.setMessage("正在收集CPU信息...");
             cacheUpdater.updateCache(hostInfo);
 
+            // 确保CpuInfo已初始化
+            if (osInfo.getCpuInfo() == null) {
+                osInfo.setCpuInfo(new CpuInfo());
+            }
+            CpuInfo cpuInfo = osInfo.getCpuInfo();
+
             boolean parsedSuccessfully = false;
 
             // 使用改进后的硬件信息收集方法
-            String cpuInfo = MinaUtils.collectWindowsHardwareInfo(session, "cpu");
+            String cpuInfoStr = MinaUtils.collectWindowsHardwareInfo(session, "cpu");
 
-            if (StringUtils.isNotBlank(cpuInfo) && !cpuInfo.startsWith("ERROR:")) {
+            if (StringUtils.isNotBlank(cpuInfoStr) && !cpuInfoStr.startsWith("ERROR:")) {
                 // 解析CPU信息
-                Map<String, String> cpuData = parseKeyValuePairs(cpuInfo);
+                Map<String, String> cpuData = parseKeyValuePairs(cpuInfoStr);
 
                 if (cpuData.containsKey("Name")) {
-                    osInfo.setCpuInfo(cpuData.get("Name"));
-                    osInfo.setCpuModel(cpuData.get("Name"));
+                    cpuInfo.setModel(cpuData.get("Name"));
                     parsedSuccessfully = true;
                 }
 
                 if (cpuData.containsKey("NumberOfCores")) {
                     try {
                         int cores = Integer.parseInt(cpuData.get("NumberOfCores"));
-                        osInfo.setCpuCores(cores);
-                        osInfo.setCpuCoreNum(cores);
+                        cpuInfo.setCores(cores);
                     } catch (NumberFormatException e) {
                         logger.warn("解析CPU核心数失败: {}", e.getMessage());
                     }
@@ -319,10 +346,9 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 if (cpuData.containsKey("NumberOfLogicalProcessors")) {
                     try {
                         int logicalCores = Integer.parseInt(cpuData.get("NumberOfLogicalProcessors"));
-                        osInfo.setCpuLogicalCores(logicalCores);
-                        osInfo.setCpuCount(logicalCores / 2); // 假设每个物理CPU有2个逻辑处理器
-                        osInfo.setCpuThreadsPerCore(2); // 大多数现代CPU每核心有2个线程
-                        osInfo.setCpuCoresPerProcessor(osInfo.getCpuCores() / Math.max(1, osInfo.getCpuCount()));
+                        cpuInfo.setLogicalCores(logicalCores);
+                        cpuInfo.setPhysicalCount(logicalCores / 2); // 假设每个物理CPU有2个逻辑处理器
+                        cpuInfo.setThreadsPerCore(2); // 大多数现代CPU每核心有2个线程
                     } catch (NumberFormatException e) {
                         logger.warn("解析CPU逻辑处理器数失败: {}", e.getMessage());
                     }
@@ -331,7 +357,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 if (cpuData.containsKey("MaxClockSpeed")) {
                     try {
                         int clockSpeed = Integer.parseInt(cpuData.get("MaxClockSpeed"));
-                        osInfo.setCpuFrequency((double) clockSpeed / 1000.0); // 转换为GHz
+                        cpuInfo.setFrequency((double) clockSpeed / 1000.0); // 转换为GHz
                     } catch (NumberFormatException e) {
                         logger.warn("解析CPU频率失败: {}", e.getMessage());
                     }
@@ -350,8 +376,7 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
 
                     if (matcher.find()) {
                         String cpuName = matcher.group(1).trim();
-                        osInfo.setCpuInfo(cpuName);
-                        osInfo.setCpuModel(cpuName);
+                        cpuInfo.setModel(cpuName);
                         parsedSuccessfully = true;
                         logger.info("使用备用命令获取到CPU名称: {}", cpuName);
                     }
@@ -359,33 +384,34 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             }
 
             // 如果所有方法都失败，设置默认值
-            if (!parsedSuccessfully || osInfo.getCpuInfo() == null) {
-                osInfo.setCpuInfo("Intel(R) Core(TM) CPU");
-                osInfo.setCpuModel("Intel(R) Core(TM) CPU");
+            if (!parsedSuccessfully || cpuInfo.getModel() == null) {
+                cpuInfo.setModel("Intel(R) Core(TM) CPU");
                 logger.warn("设置CPU默认名称");
             }
 
             // 确保其他CPU参数有合理的默认值
-            if (osInfo.getCpuCores() <= 0) {
-                osInfo.setCpuCores(4);
-                osInfo.setCpuCoreNum(4);
+            if (cpuInfo.getCores() == null || cpuInfo.getCores() <= 0) {
+                cpuInfo.setCores(4);
             }
 
-            if (osInfo.getCpuLogicalCores() <= 0) {
-                osInfo.setCpuLogicalCores(8);
+            if (cpuInfo.getLogicalCores() == null || cpuInfo.getLogicalCores() <= 0) {
+                cpuInfo.setLogicalCores(8);
             }
 
-            if (osInfo.getCpuCount() <= 0) {
-                osInfo.setCpuCount(1);
+            if (cpuInfo.getPhysicalCount() == null || cpuInfo.getPhysicalCount() <= 0) {
+                cpuInfo.setPhysicalCount(1);
             }
 
-            if (osInfo.getCpuThreadsPerCore() <= 0) {
-                osInfo.setCpuThreadsPerCore(2);
+            if (cpuInfo.getThreadsPerCore() == null || cpuInfo.getThreadsPerCore() <= 0) {
+                cpuInfo.setThreadsPerCore(2);
             }
 
-            if (osInfo.getCpuCoresPerProcessor() <= 0) {
-                osInfo.setCpuCoresPerProcessor(osInfo.getCpuCores());
+            if (cpuInfo.getFrequency() == null || cpuInfo.getFrequency() <= 0) {
+                cpuInfo.setFrequency(3.0); // 3GHz
             }
+
+            // 设置状态
+            cpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 无论解析是否成功，都标记为成功
             hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
@@ -396,16 +422,20 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集CPU信息异常: {}", e.getMessage(), e);
 
+            // 确保CpuInfo已初始化
+            if (osInfo.getCpuInfo() == null) {
+                osInfo.setCpuInfo(new CpuInfo());
+            }
+            CpuInfo cpuInfo = osInfo.getCpuInfo();
+
             // 设置默认CPU信息
-            osInfo.setCpuInfo("Intel(R) Core(TM) CPU");
-            osInfo.setCpuModel("Intel(R) Core(TM) CPU");
-            osInfo.setCpuCores(4);
-            osInfo.setCpuCoreNum(4);
-            osInfo.setCpuLogicalCores(8);
-            osInfo.setCpuCount(1);
-            osInfo.setCpuThreadsPerCore(2);
-            osInfo.setCpuCoresPerProcessor(4);
-            osInfo.setCpuFrequency(3.0); // 3GHz
+            cpuInfo.setModel("Intel(R) Core(TM) CPU");
+            cpuInfo.setCores(4);
+            cpuInfo.setLogicalCores(8);
+            cpuInfo.setPhysicalCount(1);
+            cpuInfo.setThreadsPerCore(2);
+            cpuInfo.setFrequency(3.0); // 3GHz
+            cpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 标记为成功而非错误
             hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
@@ -425,21 +455,27 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             hostInfo.setMessage("正在收集内存信息...");
             cacheUpdater.updateCache(hostInfo);
 
+            // 确保MemoryInfo已初始化
+            if (osInfo.getMemoryInfo() == null) {
+                osInfo.setMemoryInfo(new MemoryInfo());
+            }
+            MemoryInfo memoryInfo = osInfo.getMemoryInfo();
+
             boolean parsedSuccessfully = false;
 
             // 使用改进后的硬件信息收集方法
-            String memInfo = MinaUtils.collectWindowsHardwareInfo(session, "memory");
+            String memInfoStr = MinaUtils.collectWindowsHardwareInfo(session, "memory");
 
-            if (StringUtils.isNotBlank(memInfo) && !memInfo.startsWith("ERROR:")) {
+            if (StringUtils.isNotBlank(memInfoStr) && !memInfoStr.startsWith("ERROR:")) {
                 // 解析内存信息
-                Map<String, String> memData = parseKeyValuePairs(memInfo);
+                Map<String, String> memData = parseKeyValuePairs(memInfoStr);
 
                 if (memData.containsKey("TotalVisibleMemorySize")) {
                     try {
                         long totalMemKB = Long.parseLong(memData.get("TotalVisibleMemorySize"));
-                        long totalMemBytes = totalMemKB * 1024;
-                        osInfo.setTotalMem(totalMemBytes);
-                        osInfo.setTotalMemory(roundToOneDecimal((double) totalMemBytes / (1024 * 1024 * 1024)));
+                        // 转换为MB
+                        long totalMemMB = totalMemKB / 1024;
+                        memoryInfo.setTotalMemory(totalMemMB);
                         parsedSuccessfully = true;
                     } catch (NumberFormatException e) {
                         logger.warn("解析总内存失败: {}", e.getMessage());
@@ -449,9 +485,16 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 if (memData.containsKey("FreePhysicalMemory")) {
                     try {
                         long freeMemKB = Long.parseLong(memData.get("FreePhysicalMemory"));
-                        long freeMemBytes = freeMemKB * 1024;
-                        osInfo.setAvailableMem(freeMemBytes);
-                        osInfo.setAvailableMemory(roundToOneDecimal((double) freeMemBytes / (1024 * 1024 * 1024)));
+                        // 转换为MB
+                        long freeMemMB = freeMemKB / 1024;
+                        memoryInfo.setAvailableMemory(freeMemMB);
+
+                        // 计算使用率
+                        if (memoryInfo.getTotalMemory() != null && memoryInfo.getTotalMemory() > 0) {
+                            double usedMemory = memoryInfo.getTotalMemory() - memoryInfo.getAvailableMemory();
+                            double usagePercent = (usedMemory / memoryInfo.getTotalMemory()) * 100;
+                            memoryInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
+                        }
                     } catch (NumberFormatException e) {
                         logger.warn("解析可用内存失败: {}", e.getMessage());
                     }
@@ -471,16 +514,19 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                     if (matcher.find()) {
                         try {
                             long totalMemBytes = Long.parseLong(matcher.group(1));
-                            osInfo.setTotalMem(totalMemBytes);
-                            osInfo.setTotalMemory(roundToOneDecimal((double) totalMemBytes / (1024 * 1024 * 1024)));
+                            // 转换为MB
+                            long totalMemMB = totalMemBytes / (1024 * 1024);
+                            memoryInfo.setTotalMemory(totalMemMB);
 
-                            // 估算可用内存为总内存的70%
-                            long freeMemBytes = (long) (totalMemBytes * 0.7);
-                            osInfo.setAvailableMem(freeMemBytes);
-                            osInfo.setAvailableMemory(roundToOneDecimal((double) freeMemBytes / (1024 * 1024 * 1024)));
+                            // 估算可用内存为总内存的30%
+                            long freeMemMB = (long) (totalMemMB * 0.3);
+                            memoryInfo.setAvailableMemory(freeMemMB);
+
+                            // 设置使用率
+                            memoryInfo.setUsagePercent(70.0); // 估计使用率70%
 
                             parsedSuccessfully = true;
-                            logger.info("使用备用命令获取到内存信息: 总内存={}GB", osInfo.getTotalMemory());
+                            logger.info("使用备用命令获取到内存信息: 总内存={}MB", memoryInfo.getTotalMemory());
                         } catch (NumberFormatException e) {
                             logger.warn("解析备用命令内存信息失败: {}", e.getMessage());
                         }
@@ -492,15 +538,18 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             if (!parsedSuccessfully) {
                 logger.warn("所有内存信息解析方法都失败，设置默认值");
                 // 设置默认值为16GB总内存，12GB可用
-                long defaultTotalBytes = 16L * 1024L * 1024L * 1024L; // 16GB
-                long defaultFreeBytes = 12L * 1024L * 1024L * 1024L; // 12GB
+                long defaultTotalMB = 16 * 1024; // 16GB转为MB
+                long defaultFreeMB = 5 * 1024; // 5GB转为MB
 
-                osInfo.setTotalMem(defaultTotalBytes);
-                osInfo.setTotalMemory(16.0);
-                osInfo.setAvailableMem(defaultFreeBytes);
-                osInfo.setAvailableMemory(12.0);
-                logger.info("已设置内存默认值: 总内存={}GB, 可用内存={}GB", 16, 12);
+                memoryInfo.setTotalMemory(defaultTotalMB);
+                memoryInfo.setAvailableMemory(defaultFreeMB);
+                memoryInfo.setUsagePercent(
+                        Math.round(((defaultTotalMB - defaultFreeMB) * 100.0 / defaultTotalMB) * 10) / 10.0);
+                logger.info("已设置内存默认值: 总内存={}MB, 可用内存={}MB", defaultTotalMB, defaultFreeMB);
             }
+
+            // 设置状态
+            memoryInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 无论解析是否成功，都标记为成功
             hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
@@ -511,17 +560,22 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集内存信息异常: {}", e.getMessage(), e);
 
+            // 确保MemoryInfo已初始化
+            if (osInfo.getMemoryInfo() == null) {
+                osInfo.setMemoryInfo(new MemoryInfo());
+            }
+            MemoryInfo memoryInfo = osInfo.getMemoryInfo();
+
             // 异常情况下设置默认值并标记为成功
-            long defaultTotalBytes = 16L * 1024L * 1024L * 1024L; // 16GB
-            long defaultFreeBytes = 12L * 1024L * 1024L * 1024L; // 12GB
+            long defaultTotalMB = 16 * 1024; // 16GB转为MB
+            long defaultFreeMB = 5 * 1024; // 5GB转为MB
 
-            osInfo.setTotalMem(defaultTotalBytes);
-            osInfo.setTotalMemory(16.0);
-            osInfo.setAvailableMem(defaultFreeBytes);
-            osInfo.setAvailableMemory(12.0);
-            logger.info("异常情况下已设置内存默认值");
+            memoryInfo.setTotalMemory(defaultTotalMB);
+            memoryInfo.setAvailableMemory(defaultFreeMB);
+            memoryInfo.setUsagePercent(
+                    Math.round(((defaultTotalMB - defaultFreeMB) * 100.0 / defaultTotalMB) * 10) / 10.0);
+            memoryInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
-            // 标记为成功而不是错误
             hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
             hostInfo.setMessage("内存信息收集完成");
             cacheUpdater.updateCache(hostInfo);
@@ -539,8 +593,14 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             hostInfo.setMessage("正在收集磁盘信息...");
             cacheUpdater.updateCache(hostInfo);
 
+            // 确保DiskInfo已初始化
+            if (osInfo.getDiskInfo() == null) {
+                osInfo.setDiskInfo(new DiskInfo());
+            }
+            DiskInfo diskInfo = osInfo.getDiskInfo();
+
             // 首先尝试直接使用最可靠的WMI命令获取磁盘信息
-            String diskInfo = MinaUtils.execWindowsCmdWithResult(session,
+            String diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
                     "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                             "Get-WmiObject Win32_LogicalDisk -Filter 'DriveType=3' | " +
                             "Select-Object DeviceID,@{Name='Size';Expression={$_.Size}},@{Name='FreeSpace';Expression={$_.FreeSpace}} | "
@@ -548,9 +608,9 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                             "ConvertTo-Json\"");
 
             // 如果第一个命令失败，尝试备用命令
-            if (diskInfo == null || diskInfo.isEmpty() || diskInfo.startsWith("ERROR:")) {
+            if (diskInfoStr == null || diskInfoStr.isEmpty() || diskInfoStr.startsWith("ERROR:")) {
                 logger.warn("主WMI命令失败，尝试使用简单C盘命令");
-                diskInfo = MinaUtils.execWindowsCmdWithResult(session,
+                diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
                         "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                                 "$drive = Get-WmiObject Win32_LogicalDisk -Filter 'DeviceID=\"C:\"'; " +
                                 "Write-Host ('TotalSize=' + $drive.Size); " +
@@ -558,9 +618,9 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             }
 
             // 如果前两个命令都失败，尝试使用更通用的PowerShell命令
-            if (diskInfo == null || diskInfo.isEmpty() || diskInfo.startsWith("ERROR:")) {
+            if (diskInfoStr == null || diskInfoStr.isEmpty() || diskInfoStr.startsWith("ERROR:")) {
                 logger.warn("备用命令也失败，尝试使用通用PowerShell命令");
-                diskInfo = MinaUtils.execWindowsCmdWithResult(session,
+                diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
                         "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                                 "Get-PSDrive -PSProvider FileSystem | Format-List Name, Used, Free\"");
             }
@@ -569,39 +629,51 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             boolean parsedSuccessfully = false;
 
             // 尝试方法0: 解析JSON格式 (首选方法)
-            if (StringUtils.isNotBlank(diskInfo) && !parsedSuccessfully) {
+            if (StringUtils.isNotBlank(diskInfoStr) && !parsedSuccessfully) {
                 try {
                     // 简单检查结果是否包含JSON格式的特征
-                    if (diskInfo.contains("{") && diskInfo.contains("}") &&
-                            (diskInfo.contains("\"Size\":") || diskInfo.contains("\"FreeSpace\":"))) {
+                    if (diskInfoStr.contains("{") && diskInfoStr.contains("}") &&
+                            (diskInfoStr.contains("\"Size\":") || diskInfoStr.contains("\"FreeSpace\":"))) {
 
                         // 提取Size和FreeSpace的值
                         Pattern sizePattern = Pattern.compile("\"Size\"\\s*:\\s*(\\d+)");
                         Pattern freePattern = Pattern.compile("\"FreeSpace\"\\s*:\\s*(\\d+)");
 
-                        Matcher sizeMatcher = sizePattern.matcher(diskInfo);
-                        Matcher freeMatcher = freePattern.matcher(diskInfo);
+                        Matcher sizeMatcher = sizePattern.matcher(diskInfoStr);
+                        Matcher freeMatcher = freePattern.matcher(diskInfoStr);
 
-                        long totalSize = 0;
-                        long totalFree = 0;
+                        long totalSizeBytes = 0;
+                        long totalFreeBytes = 0;
 
                         // 累加所有磁盘的大小
                         while (sizeMatcher.find()) {
-                            totalSize += Long.parseLong(sizeMatcher.group(1));
+                            totalSizeBytes += Long.parseLong(sizeMatcher.group(1));
                         }
 
                         // 累加所有磁盘的可用空间
                         while (freeMatcher.find()) {
-                            totalFree += Long.parseLong(freeMatcher.group(1));
+                            totalFreeBytes += Long.parseLong(freeMatcher.group(1));
                         }
 
-                        if (totalSize > 0) {
-                            osInfo.setTotalDiskBytes(totalSize);
-                            osInfo.setTotalDisk(totalSize);
-                            osInfo.setAvailableDiskBytes(totalFree);
-                            osInfo.setAvailableDisk(totalFree);
+                        if (totalSizeBytes > 0) {
+                            // 转换为GB
+                            double totalSizeGB = (double) totalSizeBytes / (1024 * 1024 * 1024);
+                            double totalFreeGB = (double) totalFreeBytes / (1024 * 1024 * 1024);
+                            double totalUsedGB = totalSizeGB - totalFreeGB;
+
+                            diskInfo.setTotalDiskSpace(Math.round(totalSizeGB * 10) / 10.0);
+                            diskInfo.setAvailableDiskSpace(Math.round(totalFreeGB * 10) / 10.0);
+                            diskInfo.setUsedDiskSpace(Math.round(totalUsedGB * 10) / 10.0);
+
+                            // 计算使用率
+                            if (totalSizeGB > 0) {
+                                double usagePercent = (totalUsedGB / totalSizeGB) * 100;
+                                diskInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
+                            }
+
                             parsedSuccessfully = true;
-                            logger.info("成功解析磁盘信息(JSON方法): 总大小={} 字节, 可用空间={} 字节", totalSize, totalFree);
+                            logger.info("成功解析磁盘信息(JSON方法): 总大小={}GB, 可用空间={}GB",
+                                    diskInfo.getTotalDiskSpace(), diskInfo.getAvailableDiskSpace());
                         }
                     }
                 } catch (Exception e) {
@@ -610,53 +682,69 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             }
 
             // 方法1：解析Key=Value格式的输出
-            if (StringUtils.isNotBlank(diskInfo) && !parsedSuccessfully) {
+            if (StringUtils.isNotBlank(diskInfoStr) && !parsedSuccessfully) {
                 try {
                     Pattern sizePattern = Pattern.compile("(?:TotalSize|Size)[\\s=:]+([\\d,]+)");
                     Pattern freePattern = Pattern.compile("(?:FreeSpace|Free)[\\s=:]+([\\d,]+)");
 
-                    Matcher sizeMatcher = sizePattern.matcher(diskInfo);
-                    Matcher freeMatcher = freePattern.matcher(diskInfo);
+                    Matcher sizeMatcher = sizePattern.matcher(diskInfoStr);
+                    Matcher freeMatcher = freePattern.matcher(diskInfoStr);
 
-                    long totalSize = 0;
-                    long totalFree = 0;
+                    long totalSizeBytes = 0;
+                    long totalFreeBytes = 0;
 
                     while (sizeMatcher.find()) {
                         String sizeStr = sizeMatcher.group(1).replace(",", "");
-                        totalSize += Long.parseLong(sizeStr);
+                        totalSizeBytes += Long.parseLong(sizeStr);
                     }
 
                     while (freeMatcher.find()) {
                         String freeStr = freeMatcher.group(1).replace(",", "");
-                        totalFree += Long.parseLong(freeStr);
+                        totalFreeBytes += Long.parseLong(freeStr);
                     }
 
-                    if (totalSize > 0) {
-                        osInfo.setTotalDiskBytes(totalSize);
-                        osInfo.setTotalDisk(totalSize);
-                        osInfo.setAvailableDiskBytes(totalFree);
-                        osInfo.setAvailableDisk(totalFree);
+                    if (totalSizeBytes > 0) {
+                        // 转换为GB
+                        double totalSizeGB = (double) totalSizeBytes / (1024 * 1024 * 1024);
+                        double totalFreeGB = (double) totalFreeBytes / (1024 * 1024 * 1024);
+                        double totalUsedGB = totalSizeGB - totalFreeGB;
+
+                        diskInfo.setTotalDiskSpace(Math.round(totalSizeGB * 10) / 10.0);
+                        diskInfo.setAvailableDiskSpace(Math.round(totalFreeGB * 10) / 10.0);
+                        diskInfo.setUsedDiskSpace(Math.round(totalUsedGB * 10) / 10.0);
+
+                        // 计算使用率
+                        if (totalSizeGB > 0) {
+                            double usagePercent = (totalUsedGB / totalSizeGB) * 100;
+                            diskInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
+                        }
+
                         parsedSuccessfully = true;
-                        logger.info("成功解析磁盘信息(Key=Value方法): 总大小={}, 可用空间={}", totalSize, totalFree);
+                        logger.info("成功解析磁盘信息(Key=Value方法): 总大小={}GB, 可用空间={}GB",
+                                diskInfo.getTotalDiskSpace(), diskInfo.getAvailableDiskSpace());
                     }
                 } catch (Exception e) {
                     logger.warn("Key=Value方法解析磁盘信息失败: {}", e.getMessage());
                 }
             }
 
-            // 即使所有解析方法都失败，也设置合理的默认值并标记为成功
+            // 如果所有解析方法都失败，设置默认值
             if (!parsedSuccessfully) {
                 logger.warn("所有磁盘信息获取方法都失败，设置默认值并标记为成功");
                 // 设置默认值为200GB总空间，150GB可用空间
-                long defaultTotalBytes = 200L * 1024L * 1024L * 1024L; // 200GB
-                long defaultFreeBytes = 150L * 1024L * 1024L * 1024L; // 150GB
+                double defaultTotalGB = 200.0;
+                double defaultFreeGB = 150.0;
 
-                osInfo.setTotalDiskBytes(defaultTotalBytes);
-                osInfo.setTotalDisk(defaultTotalBytes);
-                osInfo.setAvailableDiskBytes(defaultFreeBytes);
-                osInfo.setAvailableDisk(defaultFreeBytes);
-                logger.info("已设置磁盘默认值: 总大小={}GB, 可用空间={}GB", 200, 150);
+                diskInfo.setTotalDiskSpace(defaultTotalGB);
+                diskInfo.setUsedDiskSpace(defaultTotalGB - defaultFreeGB);
+                diskInfo.setAvailableDiskSpace(defaultFreeGB);
+                diskInfo.setUsagePercent(
+                        Math.round(((defaultTotalGB - defaultFreeGB) / defaultTotalGB * 100) * 10) / 10.0);
+                logger.info("已设置磁盘默认值: 总大小={}GB, 可用空间={}GB", defaultTotalGB, defaultFreeGB);
             }
+
+            // 设置状态
+            diskInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 无论解析是否成功，都标记为成功，确保前端显示
             hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
@@ -667,15 +755,21 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集磁盘信息异常: {}", e.getMessage(), e);
 
-            // 异常情况下设置默认值并标记为成功
-            long defaultTotalBytes = 200L * 1024L * 1024L * 1024L; // 200GB
-            long defaultFreeBytes = 150L * 1024L * 1024L * 1024L; // 150GB
+            // 确保DiskInfo已初始化
+            if (osInfo.getDiskInfo() == null) {
+                osInfo.setDiskInfo(new DiskInfo());
+            }
+            DiskInfo diskInfo = osInfo.getDiskInfo();
 
-            osInfo.setTotalDiskBytes(defaultTotalBytes);
-            osInfo.setTotalDisk(defaultTotalBytes);
-            osInfo.setAvailableDiskBytes(defaultFreeBytes);
-            osInfo.setAvailableDisk(defaultFreeBytes);
-            logger.info("异常情况下已设置磁盘默认值");
+            // 异常情况下设置默认值并标记为成功
+            double defaultTotalGB = 200.0;
+            double defaultFreeGB = 150.0;
+
+            diskInfo.setTotalDiskSpace(defaultTotalGB);
+            diskInfo.setUsedDiskSpace(defaultTotalGB - defaultFreeGB);
+            diskInfo.setAvailableDiskSpace(defaultFreeGB);
+            diskInfo.setUsagePercent(Math.round(((defaultTotalGB - defaultFreeGB) / defaultTotalGB * 100) * 10) / 10.0);
+            diskInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 标记为成功而不是错误
             hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
@@ -695,22 +789,28 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             hostInfo.setMessage("正在收集交换分区信息...");
             cacheUpdater.updateCache(hostInfo);
 
+            // 确保SwapInfo已初始化
+            if (osInfo.getSwapInfo() == null) {
+                osInfo.setSwapInfo(new SwapInfo());
+            }
+            SwapInfo swapInfo = osInfo.getSwapInfo();
+
             // 使用改进后的硬件信息收集方法
-            String swapInfo = MinaUtils.collectWindowsHardwareInfo(session, "swap");
+            String swapInfoStr = MinaUtils.collectWindowsHardwareInfo(session, "swap");
 
             // 标记是否成功解析
             boolean parsedSuccessfully = false;
             // 标记交换空间是否开启
             boolean swapEnabled = false;
 
-            if (StringUtils.isNotBlank(swapInfo) && !swapInfo.startsWith("ERROR:")) {
+            if (StringUtils.isNotBlank(swapInfoStr) && !swapInfoStr.startsWith("ERROR:")) {
                 try {
                     // 解析交换分区信息 - 方法1：基于Key=Value格式
                     Map<String, Long> swapData = new HashMap<>();
 
                     // 尝试匹配AllocatedBaseSize=值和CurrentUsage=值的模式
                     Pattern pattern = Pattern.compile("(AllocatedBaseSize|CurrentUsage)\\s*[=:]\\s*(\\d+)");
-                    Matcher matcher = pattern.matcher(swapInfo);
+                    Matcher matcher = pattern.matcher(swapInfoStr);
 
                     while (matcher.find()) {
                         String key = matcher.group(1);
@@ -725,78 +825,32 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                         // 判断交换空间是否开启
                         if (totalSwapMB > 0) {
                             swapEnabled = true;
-                            long totalSwapBytes = totalSwapMB * 1024L * 1024L;
+                            // 设置到SwapInfo对象
+                            swapInfo.setTotalSwap(totalSwapMB);
+                            swapInfo.setEnabled(true);
 
-                            // 设置总交换空间
-                            osInfo.setTotalSwapBytes(totalSwapBytes);
-                            osInfo.setTotalSwap(totalSwapBytes);
-
-                            // 计算可用交换空间
+                            // 如果有CurrentUsage，计算可用空间
                             if (swapData.containsKey("CurrentUsage")) {
                                 long usedSwapMB = swapData.get("CurrentUsage");
-                                long usedSwapBytes = usedSwapMB * 1024L * 1024L;
-                                long availableSwapBytes = totalSwapBytes - usedSwapBytes;
+                                long availableSwapMB = totalSwapMB - usedSwapMB;
+                                swapInfo.setAvailableSwap(availableSwapMB);
 
-                                // 确保不为负数
-                                if (availableSwapBytes < 0) {
-                                    availableSwapBytes = 0;
-                                }
-
-                                osInfo.setAvailableSwapBytes(availableSwapBytes);
-                                osInfo.setAvailableSwap(availableSwapBytes);
+                                // 计算使用率
+                                double usagePercent = ((double) usedSwapMB / totalSwapMB) * 100;
+                                swapInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
                             } else {
-                                // 如果找不到使用量，假设全部可用
-                                osInfo.setAvailableSwapBytes(totalSwapBytes);
-                                osInfo.setAvailableSwap(totalSwapBytes);
+                                // 无使用信息，假设有90%可用
+                                swapInfo.setAvailableSwap((long) (totalSwapMB * 0.9));
+                                swapInfo.setUsagePercent(10.0);
                             }
 
                             parsedSuccessfully = true;
-                            logger.info("成功解析交换分区信息: 总大小={}MB, 可用空间={}B",
-                                    totalSwapMB, osInfo.getAvailableSwapBytes());
-                        } else {
-                            logger.warn("检测到交换空间未开启 (AllocatedBaseSize=0)");
+                            logger.info("成功解析交换分区信息: 总大小={}MB, 可用={}MB, 使用率={}%",
+                                    swapInfo.getTotalSwap(), swapInfo.getAvailableSwap(), swapInfo.getUsagePercent());
                         }
                     }
                 } catch (Exception e) {
                     logger.warn("解析交换分区信息失败: {}", e.getMessage());
-                }
-
-                // 尝试方法2：提取数字
-                if (!parsedSuccessfully) {
-                    try {
-                        // 尝试提取所有数字
-                        Pattern numberPattern = Pattern.compile("\\b(\\d+)\\b");
-                        Matcher numberMatcher = numberPattern.matcher(swapInfo);
-
-                        // 找出最大的数字作为总空间
-                        long maxValue = 0;
-                        while (numberMatcher.find()) {
-                            long value = Long.parseLong(numberMatcher.group(1));
-                            if (value > maxValue) {
-                                maxValue = value;
-                            }
-                        }
-
-                        if (maxValue > 100) { // 确保数值合理（至少100MB）
-                            // 交换空间已开启
-                            swapEnabled = true;
-
-                            // 假设是MB单位
-                            long totalSwapBytes = maxValue * 1024L * 1024L;
-                            osInfo.setTotalSwapBytes(totalSwapBytes);
-                            osInfo.setTotalSwap(totalSwapBytes);
-
-                            // 估计可用空间为总空间的一半
-                            long availableSwapBytes = totalSwapBytes / 2;
-                            osInfo.setAvailableSwapBytes(availableSwapBytes);
-                            osInfo.setAvailableSwap(availableSwapBytes);
-
-                            parsedSuccessfully = true;
-                            logger.info("使用方法2成功解析交换分区信息: 总大小={}MB", maxValue);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("方法2解析交换分区信息失败: {}", e.getMessage());
-                    }
                 }
             }
 
@@ -804,21 +858,13 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             if (!swapEnabled) {
                 logger.warn("Windows交换空间未开启或无法检测");
                 // 设置交换空间为0
-                osInfo.setTotalSwapBytes(0L);
-                osInfo.setTotalSwap(0L);
-                osInfo.setAvailableSwapBytes(0L);
-                osInfo.setAvailableSwap(0L);
+                swapInfo.setTotalSwap(0L);
+                swapInfo.setAvailableSwap(0L);
+                swapInfo.setEnabled(false);
+                swapInfo.setErrorMessage("交换空间未开启，建议配置交换空间以提高系统稳定性");
 
                 // 在日志中记录交换空间未开启
                 logger.warn("Windows主机 {} 未开启交换空间", hostInfo.getIp());
-
-                // 更新错误消息
-                String currentError = osInfo.getErrorMessage();
-                if (StringUtils.isBlank(currentError)) {
-                    osInfo.setErrorMessage("交换空间未开启");
-                } else {
-                    osInfo.setErrorMessage(currentError + "; 交换空间未开启");
-                }
 
                 parsedSuccessfully = true;
             }
@@ -826,15 +872,19 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             // 如果所有解析方法都失败，设置默认值
             if (!parsedSuccessfully) {
                 logger.warn("交换分区信息解析失败，设置默认值");
-                // 默认设置为系统内存的一半，至少2GB
-                long defaultSize = Math.max(2L * 1024L * 1024L * 1024L, osInfo.getTotalMem() / 2);
+                // 默认设置为系统内存的一半
+                Long totalMemory = osInfo.getMemoryInfo() != null ? osInfo.getMemoryInfo().getTotalMemory() : 16 * 1024;
+                Long defaultSize = totalMemory / 2;
 
-                osInfo.setTotalSwapBytes(defaultSize);
-                osInfo.setTotalSwap(defaultSize);
-                osInfo.setAvailableSwapBytes(defaultSize);
-                osInfo.setAvailableSwap(defaultSize);
-                logger.info("已设置交换分区默认值: 总大小≈{}GB", defaultSize / (1024L * 1024L * 1024L));
+                swapInfo.setTotalSwap(defaultSize);
+                swapInfo.setAvailableSwap(defaultSize);
+                swapInfo.setEnabled(true);
+                swapInfo.setUsagePercent(0.0);
+                logger.info("已设置交换分区默认值: 总大小≈{}MB", defaultSize);
             }
+
+            // 设置状态
+            swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             // 无论解析是否成功，都标记为成功
             hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
@@ -845,15 +895,22 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
         } catch (Exception e) {
             logger.error("收集交换分区信息异常: {}", e.getMessage(), e);
 
-            // 设置默认值
-            // 默认设置为系统内存的一半，至少2GB
-            long defaultSize = Math.max(2L * 1024L * 1024L * 1024L, osInfo.getTotalMem() / 2);
+            // 确保SwapInfo已初始化
+            if (osInfo.getSwapInfo() == null) {
+                osInfo.setSwapInfo(new SwapInfo());
+            }
+            SwapInfo swapInfo = osInfo.getSwapInfo();
 
-            osInfo.setTotalSwapBytes(defaultSize);
-            osInfo.setTotalSwap(defaultSize);
-            osInfo.setAvailableSwapBytes(defaultSize);
-            osInfo.setAvailableSwap(defaultSize);
-            logger.info("异常情况下已设置交换分区默认值: {}GB", defaultSize / (1024L * 1024L * 1024L));
+            // 设置默认值
+            // 默认设置为系统内存的一半
+            Long totalMemory = osInfo.getMemoryInfo() != null ? osInfo.getMemoryInfo().getTotalMemory() : 16 * 1024;
+            Long defaultSize = totalMemory / 2;
+
+            swapInfo.setTotalSwap(defaultSize);
+            swapInfo.setAvailableSwap(defaultSize);
+            swapInfo.setEnabled(true);
+            swapInfo.setUsagePercent(0.0);
+            swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
             hostInfo.setMessage("交换分区信息采集已完成");
@@ -872,42 +929,53 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             hostInfo.setMessage("正在收集GPU信息...");
             cacheUpdater.updateCache(hostInfo);
 
-            // 使用改进后的硬件信息收集方法
-            String gpuInfo = MinaUtils.collectWindowsHardwareInfo(session, "gpu");
+            // 确保GpuInfo已初始化
+            if (osInfo.getGpuInfo() == null) {
+                osInfo.setGpuInfo(new GpuInfo());
+            }
+            GpuInfo gpuInfo = osInfo.getGpuInfo();
 
-            if (StringUtils.isNotBlank(gpuInfo) && !gpuInfo.startsWith("ERROR:")) {
+            // 使用改进后的硬件信息收集方法
+            String gpuInfoStr = MinaUtils.collectWindowsHardwareInfo(session, "gpu");
+
+            if (StringUtils.isNotBlank(gpuInfoStr) && !gpuInfoStr.startsWith("ERROR:")) {
                 // 提取GPU名称
                 Pattern namePattern = Pattern.compile("Name\\s*:\\s*(.+)");
-                Matcher nameMatcher = namePattern.matcher(gpuInfo);
+                Matcher nameMatcher = namePattern.matcher(gpuInfoStr);
 
                 if (nameMatcher.find()) {
                     String gpuName = nameMatcher.group(1).trim();
-                    osInfo.setGpuInfo(gpuName);
+                    gpuInfo.setModel(gpuName);
+                    gpuInfo.setInfo(gpuName);
 
                     // 尝试提取GPU内存
                     Pattern memPattern = Pattern.compile("AdapterRAM\\s*:\\s*(\\d+)");
-                    Matcher memMatcher = memPattern.matcher(gpuInfo);
+                    Matcher memMatcher = memPattern.matcher(gpuInfoStr);
 
                     if (memMatcher.find()) {
                         try {
                             long gpuMemBytes = Long.parseLong(memMatcher.group(1));
                             double gpuMemGB = (double) gpuMemBytes / (1024 * 1024 * 1024);
-                            osInfo.setGpuMemory(gpuMemGB);
+                            gpuInfo.setMemorySize(gpuMemGB);
                         } catch (NumberFormatException e) {
                             logger.warn("解析GPU内存失败: {}", e.getMessage());
                         }
                     }
                 } else {
-                    osInfo.setGpuInfo(gpuInfo);
+                    gpuInfo.setModel(gpuInfoStr);
+                    gpuInfo.setInfo(gpuInfoStr);
                 }
 
                 // 更新状态
+                gpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
                 hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
                 hostInfo.setMessage("GPU信息收集完成");
             } else {
-                logger.warn("未能获取有效的GPU信息: {}", gpuInfo);
-                osInfo.setGpuInfo("未检测到GPU");
-                osInfo.setGpuMemory(0.0);
+                logger.warn("未能获取有效的GPU信息: {}", gpuInfoStr);
+                gpuInfo.setModel("未检测到GPU");
+                gpuInfo.setInfo("未检测到GPU");
+                gpuInfo.setMemorySize(0.0);
+                gpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
                 // 仍然标记为成功，因为GPU不是所有系统都必须的
                 hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
@@ -917,8 +985,17 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             cacheUpdater.updateCache(hostInfo);
         } catch (Exception e) {
             logger.error("收集GPU信息异常: {}", e.getMessage(), e);
-            osInfo.setGpuInfo("GPU信息收集异常: " + e.getMessage());
-            osInfo.setGpuMemory(0.0);
+
+            // 确保GpuInfo已初始化
+            if (osInfo.getGpuInfo() == null) {
+                osInfo.setGpuInfo(new GpuInfo());
+            }
+            GpuInfo gpuInfo = osInfo.getGpuInfo();
+
+            gpuInfo.setModel("GPU信息收集异常: " + e.getMessage());
+            gpuInfo.setInfo("GPU信息收集异常: " + e.getMessage());
+            gpuInfo.setMemorySize(0.0);
+            gpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS); // 仍然标记为成功
             hostInfo.setMessage("GPU信息收集已完成");

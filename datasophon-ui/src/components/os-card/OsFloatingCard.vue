@@ -11,15 +11,15 @@
           <div class="os-detail-icon-wrapper">
             <div class="os-detail-icon-container">
               <img
-                :src="getOsIconPath(osInfo.distribution)"
-                :alt="osInfo.distribution"
+                :src="getOsIconPath(osInfo)"
+                :alt="getOsDisplayName(osInfo)"
                 class="os-detail-icon"
               />
             </div>
           </div>
           <div class="os-detail-info">
             <div class="os-detail-name">
-              <span class="os-name">{{ osInfo.fullName || osInfo.distribution }}</span>
+              <span class="os-name">{{ getOsDisplayName(osInfo) }}</span>
               <span class="os-version" v-if="osInfo.versionId">{{ osInfo.versionId }}</span>
             </div>
             <div class="os-detail-meta">
@@ -84,12 +84,13 @@
                 等待收集CPU信息
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.cpuModel">
-                  <div class="info-primary">{{ osInfo.cpuModel }}</div>
+                <template v-if="osInfo && osInfo.cpuInfo">
+                  <div class="info-primary">{{ osInfo.cpuInfo.model || '未知CPU' }}</div>
                   <div class="info-secondary">
-                    {{ osInfo.cpuCount || 1 }} × {{ osInfo.cpuCores || 1 }} 核心 × {{ osInfo.cpuThreadsPerCore || 1 }} 线程
-                    <span v-if="osInfo.cpuFrequency && osInfo.cpuFrequency > 0" class="chip-frequency">
-                      {{ osInfo.cpuFrequency.toFixed(1) }} GHz
+                    {{ osInfo.cpuInfo.physicalCount || 1 }} × {{ osInfo.cpuInfo.cores || 1 }} 核心
+                    <span v-if="osInfo.cpuInfo.logicalCores"> × {{ calculateThreadsPerCore() }} 线程</span>
+                    <span v-if="osInfo.cpuInfo.frequency && osInfo.cpuInfo.frequency > 0" class="chip-frequency">
+                      {{ osInfo.cpuInfo.frequency.toFixed(1) }} GHz
                     </span>
                   </div>
                 </template>
@@ -132,24 +133,24 @@
                 等待收集内存信息
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.totalMemory">
+                <template v-if="osInfo && osInfo.memoryInfo && osInfo.memoryInfo.totalMemory">
                   <div class="info-primary">
-                    {{ osInfo.totalMemory }} GB 内存
+                    {{ osInfo.memoryInfo.totalMemory }} GB 内存
                   </div>
                   <div class="info-secondary">
-                    已用 {{ (osInfo.totalMemory - osInfo.availableMemory).toFixed(1) }} GB，可用 {{ osInfo.availableMemory }} GB
+                    已用 {{ calculateUsedMemory().toFixed(1) }} GB，可用 {{ osInfo.memoryInfo.availableMemory || 0 }} GB
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
-                      <span>使用率 {{ (100 * (1 - osInfo.availableMemory / osInfo.totalMemory)).toFixed(1) }}%</span>
-                      <span>{{ (osInfo.totalMemory - osInfo.availableMemory).toFixed(1) }}/{{ osInfo.totalMemory }} GB</span>
+                      <span>使用率 {{ calculateMemoryUsagePercent() }}%</span>
+                      <span>{{ calculateUsedMemory().toFixed(1) }}/{{ osInfo.memoryInfo.totalMemory }} GB</span>
                     </div>
                     <div class="usage-bar">
                       <div 
                         class="usage-bar-fill"
                         :style="{
-                          width: `${(100 * (1 - osInfo.availableMemory / osInfo.totalMemory)).toFixed(1)}%`,
-                          backgroundColor: getUsageColor(100 * (1 - osInfo.availableMemory / osInfo.totalMemory))
+                          width: `${calculateMemoryUsagePercent()}%`,
+                          backgroundColor: getUsageColor(parseFloat(calculateMemoryUsagePercent()))
                         }"
                       ></div>
                     </div>
@@ -195,24 +196,24 @@
                 等待收集磁盘信息
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.totalDisk">
+                <template v-if="osInfo && osInfo.diskInfo && osInfo.diskInfo.totalDiskSpace">
                   <div class="info-primary">
-                    {{ osInfo.totalDisk }} GB 存储空间
+                    {{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB 存储空间
                   </div>
                   <div class="info-secondary">
-                    已用 {{ (osInfo.totalDisk - osInfo.availableDisk).toFixed(1) }} GB，可用 {{ osInfo.availableDisk }} GB
+                    已用 {{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }} GB，可用 {{ (osInfo.diskInfo.availableDiskSpace || 0).toFixed(1) }} GB
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
-                      <span>使用率 {{ (100 * (1 - osInfo.availableDisk / osInfo.totalDisk)).toFixed(1) }}%</span>
-                      <span>{{ (osInfo.totalDisk - osInfo.availableDisk).toFixed(1) }}/{{ osInfo.totalDisk }} GB</span>
+                      <span>使用率 {{ calculateDiskUsagePercent() }}%</span>
+                      <span>{{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }}/{{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB</span>
                     </div>
                     <div class="usage-bar">
                       <div 
                         class="usage-bar-fill"
                         :style="{
-                          width: `${(100 * (1 - osInfo.availableDisk / osInfo.totalDisk)).toFixed(1)}%`,
-                          backgroundColor: getUsageColor(100 * (1 - osInfo.availableDisk / osInfo.totalDisk))
+                          width: `${calculateDiskUsagePercent()}%`,
+                          backgroundColor: getUsageColor(parseFloat(calculateDiskUsagePercent()))
                         }"
                       ></div>
                     </div>
@@ -257,10 +258,10 @@
                 等待收集GPU信息
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.gpuInfo && !osInfo.gpuInfo.startsWith('ERROR:') && osInfo.gpuInfo !== '未检测到GPU设备'">
-                  <div class="info-primary">{{ osInfo.gpuInfo }}</div>
-                  <div class="info-secondary" v-if="osInfo.gpuMemory && osInfo.gpuMemory > 0">
-                    {{ osInfo.gpuMemory.toFixed(1) }} GB 显存
+                <template v-if="hasValidGpuInfo">
+                  <div class="info-primary">{{ getGpuDisplayInfo() }}</div>
+                  <div class="info-secondary" v-if="hasGpuMemory">
+                    {{ getGpuMemorySize() }} GB 显存
                   </div>
                 </template>
                 <div class="info-empty" v-else>未检测到GPU设备</div>
@@ -303,39 +304,33 @@
                 等待收集交换空间信息
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.totalSwap !== undefined">
-                  <template v-if="osInfo.totalSwap === 0">
-                    <div class="info-primary warning">
-                      <a-icon type="warning" style="margin-right: 4px; color: #FF9500;" />
-                      未开启交换空间
+                <template v-if="hasSwapEnabled">
+                  <div class="info-primary">
+                    {{ getSwapTotal() }} GB 交换空间
+                  </div>
+                  <div class="info-secondary">
+                    已用 {{ getSwapUsed().toFixed(1) }} GB，可用 {{ getSwapAvailable() }} GB
+                  </div>
+                  <div 
+                    class="usage-bar-container" 
+                    v-if="hasValidSwapSize"
+                  >
+                    <div class="usage-bar-header">
+                      <span>使用率 {{ calculateSwapUsagePercent() }}%</span>
+                      <span>{{ getSwapUsed().toFixed(1) }}/{{ getSwapTotal() }} GB</span>
                     </div>
-                    <div class="info-secondary">建议开启交换空间以提高系统稳定性</div>
-                  </template>
-                  <template v-else>
-                    <div class="info-primary">
-                      {{ osInfo.totalSwap }} GB 交换空间
+                    <div class="usage-bar">
+                      <div 
+                        class="usage-bar-fill"
+                        :style="{
+                          width: `${calculateSwapUsagePercent()}%`,
+                          backgroundColor: getUsageColor(parseFloat(calculateSwapUsagePercent()))
+                        }"
+                      ></div>
                     </div>
-                    <div class="info-secondary">
-                      已用 {{ (osInfo.totalSwap - osInfo.availableSwap).toFixed(1) }} GB，可用 {{ osInfo.availableSwap }} GB
-                    </div>
-                    <div class="usage-bar-container">
-                      <div class="usage-bar-header">
-                        <span>使用率 {{ (100 * (1 - osInfo.availableSwap / osInfo.totalSwap)).toFixed(1) }}%</span>
-                        <span>{{ (osInfo.totalSwap - osInfo.availableSwap).toFixed(1) }}/{{ osInfo.totalSwap }} GB</span>
-                      </div>
-                      <div class="usage-bar">
-                        <div 
-                          class="usage-bar-fill"
-                          :style="{
-                            width: `${(100 * (1 - osInfo.availableSwap / osInfo.totalSwap)).toFixed(1)}%`,
-                            backgroundColor: getUsageColor(100 * (1 - osInfo.availableSwap / osInfo.totalSwap))
-                          }"
-                        ></div>
-                      </div>
-                    </div>
-                  </template>
+                  </div>
                 </template>
-                <div class="info-empty" v-else>未知</div>
+                <div class="info-empty" v-else>未配置交换空间</div>
               </div>
             </div>
           </div>
@@ -374,6 +369,32 @@ export default {
       default: 'pending'
     }
   },
+  computed: {
+    // GPU相关计算属性
+    hasValidGpuInfo() {
+      return this.osInfo && 
+             this.osInfo.gpuInfo && 
+             ((this.osInfo.gpuInfo.info && this.osInfo.gpuInfo.info !== '未检测到GPU设备') || 
+              this.osInfo.gpuInfo.model);
+    },
+    hasGpuMemory() {
+      return this.osInfo && 
+             this.osInfo.gpuInfo && 
+             this.osInfo.gpuInfo.memorySize && 
+             this.osInfo.gpuInfo.memorySize > 0;
+    },
+    // 交换空间相关计算属性
+    hasSwapEnabled() {
+      return this.osInfo && 
+             this.osInfo.swapInfo && 
+             this.osInfo.swapInfo.enabled;
+    },
+    hasValidSwapSize() {
+      return this.hasSwapEnabled && 
+             this.osInfo.swapInfo.totalSwap && 
+             this.osInfo.swapInfo.totalSwap > 0;
+    }
+  },
   methods: {
     checkStatus(status, target) {
       if (target === 'success') {
@@ -392,18 +413,24 @@ export default {
     },
     getOsIconPath(osType) {
       try {
-        const osLower = (osType || '').toLowerCase();
-        if (osLower.includes('centos')) {
+        if (!osType) return require('@/assets/img/os-logos/linux-tux.svg');
+        
+        // 根据osInfo.distributionType或distributionId判断操作系统类型
+        const distType = (osType.distributionType || '').toLowerCase();
+        const distId = (osType.distributionId || '').toLowerCase();
+        const distName = (osType.distribution || '').toLowerCase();
+        
+        if (distType === 'centos' || distId === 'centos' || distName.includes('centos')) {
           return require('@/assets/img/os-logos/centos.svg');
-        } else if (osLower.includes('ubuntu')) {
+        } else if (distType === 'ubuntu' || distId === 'ubuntu' || distName.includes('ubuntu')) {
           return require('@/assets/img/os-logos/ubuntu.svg');
-        } else if (osLower.includes('debian')) {
+        } else if (distType === 'debian' || distId === 'debian' || distName.includes('debian')) {
           return require('@/assets/img/os-logos/debian.svg');
-        } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
+        } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
           return require('@/assets/img/os-logos/redhat.svg');
-        } else if (osLower.includes('windows')) {
+        } else if (distType === 'windows' || distId === 'windows' || distName.includes('windows')) {
           return require('@/assets/img/os-logos/windows.svg');
-        } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
+        } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
           return require('@/assets/img/os-logos/kylin.svg');
         } else {
           return require('@/assets/img/os-logos/linux-tux.svg');
@@ -413,10 +440,120 @@ export default {
         return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI2YwZjBmMCIvPjxwYXRoIGQ9Ik0yMy41IDE0QzIzLjUgMTIuMzQzMSAyNC44NDMxIDExIDI2LjUgMTFDMjguMTU2OSAxMSAyOS41IDEyLjM0MzEgMjkuNSAxNFYxNy42NzY4QzMwLjQ5MzcgMTguMTA3MiAzMS4zNjc0IDE4Ljc4NTUgMzIgMTkuNjMyVjE0QzMyIDExLjIzODYgMjkuNzYxNCA5IDI3IDlDMjQuMjM4NiA5IDIyIDExLjIzODYgMjIgMTRWMTkuNjM0QzIyLjYzMzEgMTguNzg2MSAyMy41MDc0IDE4LjEwNzEgMjQuNSAxNy42NzZWMTRIMjMuNVoiIGZpbGw9IiM1MjUyNTIiLz48cGF0aCBkPSJNMzEuOTk5OCAyOC45OUMzMi4wMDE4IDI5LjYzODkgMzEuODA3MSAzMC4yNzMzIDMxLjQ0MjkgMzAuODAyQzMxLjA3ODYgMzEuMzMwNyAzMC41NjAyIDMxLjczMDUgMjkuOTU5OCAzMS45NVYzNC43MkMzMi45MDc1IDM0LjEyMTMgMzUuMTAyIDMxLjM5NjYgMzUgMjguMjlDMzQuODk3OSAyNS4xODM0IDMyLjU1OTYgMjIuNjM5MiAyOS41IDIyLjI1VjE5LjI4QzI5LjUgMTkuMjggMzggMjEuMjggMzggMjlDMzggMzYuNzIgMjkuNTUgMzggMjkuNTUgMzhIMTkuMDNDMTkuMDMgMzggMTAuNTIgMzcuMjkgMTAuMDIgMjcuNzhDOS42OCAxOS43OSAxOS41IDE4LjI3IDE5LjUgMTguMjdWMjEuMjdDMTkuNSAyMS4yNyAxMy4wMDk4IDIyLjYxIDE0LjAyIDE5QzE1LjUgMTQgMjQuOTk5OCAxNCAyNC45OTk4IDE0QzI0Ljk5OTggMTQgMjYuOTk5OCAxNCAyOS4wMDA3IDE0Ljk5QzI5LjAwMDcgMTQuOTkgMjguOTUxNCAxNi42OTMxIDI4LjAyMDcgMTcuODJDMjUuNjgwNyAxOC40OSAyMyAyMC41MSAyMyAyNC41QzIzIDI5LjE1IDI3LjAwMDIgMzAuMTcgMjcuMDAwMiAzMS4yNVYzNC42NkMyMi42NDczIDM0LjMzMDMgMTkuMTk5MSAzMC42NjAzIDE5LjAxOTggMjYuMDZDMTkuMDE5OCAyNS44NiAxOS4wMTk4IDI1LjY2IDE5LjAxOTggMjUuNDZDMTkuMDE5OCAyMy42OTQ1IDE5LjYzOTQgMjEuOTkxMiAyMC43Mzk3IDIwLjY4MTdDMjEuODQwMSAxOS4zNzIyIDIzLjM0NDIgMTguNTUxNiAyNC45OTk4IDE4LjQyVjIyLjE5QzIzLjI4MTQgMjIuNDA1NiAyMS44NTA1IDIzLjU0MTMgMjEuMzcwOSAyNS4xN0MyMi4yMTc3IDI3LjY0MjcgMjQuNzY1OCAyOS4xMjI0IDI3LjI3MDcgMjguNThDMjcuNzk5OSAyOC40NiAyOC4zMTYyIDI4LjI5MTQgMjguODE4MyAyOC4wOEMyOS4wNTQ5IDI3Ljk4ODYgMjkuMzE2MyAyNy45OTk3IDI5LjU0OCAyOC4xMTFDMjkuNzc5NyAyOC4yMjIzIDI5Ljk2MDIgMjguNDI1MiAzMC4wNCAyOC42OEMzMC4yMSAyOS4xNTcgMzAuMzI0NCAyOS42NTMzIDMwLjM4MTcgMzAuMTU3M0MzMC41MDUzIDI5LjY3MjggMzAuNTA4NSAyOS4xNTgxIDMwLjM5MDkgMjguNjcyQzMwLjM5MDkgMjguNjcyIDMxLjk5OTggMjguOTkgMzEuOTk5OCAyOC45OVoiIGZpbGw9IiM1MjUyNTIiLz48L3N2Zz4=';
       }
     },
+    getOsDisplayName(osInfo) {
+      if (!osInfo) return '未知操作系统';
+      
+      // 优先使用distributionName，其次使用displayName，最后fallback到distribution字段
+      return osInfo.distributionName || osInfo.displayName || osInfo.distribution || '未知操作系统';
+    },
     getUsageColor(percentage) {
       if (percentage > 90) return '#FF3B30';  // 危险
       if (percentage > 70) return '#FF9500';  // 警告
       return '#34C759';  // 正常
+    },
+    calculateThreadsPerCore() {
+      if (!this.osInfo || !this.osInfo.cpuInfo) return 1;
+      
+      const cpuInfo = this.osInfo.cpuInfo;
+      const cores = cpuInfo.cores || 1;
+      const physicalCount = cpuInfo.physicalCount || 1;
+      const logicalCores = cpuInfo.logicalCores || cores * physicalCount;
+      
+      // 避免除零错误
+      const totalCores = cores * physicalCount;
+      if (totalCores <= 0) return 1;
+      
+      return Math.max(1, Math.round(logicalCores / totalCores));
+    },
+    calculateUsedMemory() {
+      if (!this.osInfo || !this.osInfo.memoryInfo) return 0;
+      
+      const memInfo = this.osInfo.memoryInfo;
+      const total = memInfo.totalMemory || 0;
+      const available = memInfo.availableMemory || 0;
+      
+      return Math.max(0, total - available);
+    },
+    calculateMemoryUsagePercent() {
+      if (!this.osInfo || !this.osInfo.memoryInfo) return "0.0";
+      
+      const memInfo = this.osInfo.memoryInfo;
+      
+      // 优先使用后端计算的使用率
+      if (memInfo.usagePercent != null) {
+        return memInfo.usagePercent.toFixed(1);
+      }
+      
+      const total = memInfo.totalMemory || 0;
+      // 避免除零错误
+      if (total <= 0) return "0.0";
+      
+      const available = memInfo.availableMemory || 0;
+      const usagePercent = 100 * (1 - available / total);
+      
+      return usagePercent.toFixed(1);
+    },
+    calculateDiskUsagePercent() {
+      if (!this.osInfo || !this.osInfo.diskInfo) return "0.0";
+      
+      const diskInfo = this.osInfo.diskInfo;
+      
+      // 优先使用后端计算的使用率
+      if (diskInfo.usagePercent != null) {
+        return diskInfo.usagePercent.toFixed(1);
+      }
+      
+      const total = diskInfo.totalDiskSpace || 0;
+      // 避免除零错误
+      if (total <= 0) return "0.0";
+      
+      const used = diskInfo.usedDiskSpace || 0;
+      const usagePercent = 100 * used / total;
+      
+      return usagePercent.toFixed(1);
+    },
+    // GPU相关方法
+    getGpuDisplayInfo() {
+      if (!this.osInfo || !this.osInfo.gpuInfo) return "未知GPU";
+      return this.osInfo.gpuInfo.model || this.osInfo.gpuInfo.info || "未知GPU";
+    },
+    getGpuMemorySize() {
+      if (!this.hasGpuMemory) return 0;
+      return this.osInfo.gpuInfo.memorySize.toFixed(1);
+    },
+    // 交换空间相关方法
+    getSwapTotal() {
+      if (!this.hasSwapEnabled) return 0;
+      return this.osInfo.swapInfo.totalSwap || 0;
+    },
+    getSwapAvailable() {
+      if (!this.hasSwapEnabled) return 0;
+      return this.osInfo.swapInfo.availableSwap || 0;
+    },
+    getSwapUsed() {
+      if (!this.hasSwapEnabled) return 0;
+      const total = this.osInfo.swapInfo.totalSwap || 0;
+      const available = this.osInfo.swapInfo.availableSwap || 0;
+      return Math.max(0, total - available);
+    },
+    calculateSwapUsagePercent() {
+      if (!this.hasSwapEnabled) return "0.0";
+      
+      const swapInfo = this.osInfo.swapInfo;
+      
+      // 优先使用后端计算的使用率
+      if (swapInfo.usagePercent != null) {
+        return swapInfo.usagePercent.toFixed(1);
+      }
+      
+      const total = swapInfo.totalSwap || 0;
+      // 避免除零错误
+      if (total <= 0) return "0.0";
+      
+      const available = swapInfo.availableSwap || 0;
+      const usagePercent = 100 * (1 - available / total);
+      
+      return usagePercent.toFixed(1);
     }
   }
 };

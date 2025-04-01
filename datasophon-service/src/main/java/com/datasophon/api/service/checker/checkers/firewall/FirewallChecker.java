@@ -74,7 +74,7 @@ public class FirewallChecker extends AbstractItemChecker {
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
-            FirewallCheckerStrategy strategy = FirewallCheckerFactory.createFirewallChecker(osInfo);
+            FirewallCheckerStrategy strategy = FirewallCheckerFactory.getChecker(osInfo);
 
             // 执行检查
             CheckItem result = strategy.check(hostInfo, checkItem, cacheLog);
@@ -230,7 +230,7 @@ public class FirewallChecker extends AbstractItemChecker {
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
-            FirewallCheckerStrategy strategy = FirewallCheckerFactory.createFirewallChecker(osInfo);
+            FirewallCheckerStrategy strategy = FirewallCheckerFactory.getChecker(osInfo);
 
             // 执行修复
             boolean result = false;

@@ -14,6 +14,7 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import com.datasophon.common.enums.LinuxDistribution;
 
 import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
@@ -65,7 +66,7 @@ public class DiskChecker extends AbstractItemChecker {
             hostInfo.setExternalSession(session);
             // 获取操作系统信息
             OsInfo osInfo = getOsInfo(hostInfo);
-            if (osInfo == null || osInfo.getDistributionType() == OsInfo.LinuxDistribution.OTHER) {
+            if (osInfo == null || osInfo.getDistributionType() == LinuxDistribution.OTHER) {
                 String errorMsg = "无法获取操作系统信息";
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
@@ -225,7 +226,7 @@ public class DiskChecker extends AbstractItemChecker {
 
             // 获取操作系统信息
             OsInfo osInfo = getOsInfo(hostInfo);
-            if (osInfo == null || osInfo.getDistributionType() == OsInfo.LinuxDistribution.OTHER) {
+            if (osInfo == null || osInfo.getDistributionType() == LinuxDistribution.OTHER) {
                 String errorMsg = "无法获取操作系统信息";
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);

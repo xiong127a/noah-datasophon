@@ -680,25 +680,36 @@ export default {
             }
 
             // 使用osInfo中的数据
-            const hasOsInfo = row.osInfo && row.osInfo.valid;
-            const osType = hasOsInfo ? row.osInfo.distribution : (text || row.osType || '-');
+            const hasOsInfo = row.osInfo && row.osInfo.distribution;
+            
+            // 优先使用distributionName，其次使用displayName，最后fallback到distribution字段
+            const osDisplayName = hasOsInfo 
+              ? (row.osInfo.distributionName || row.osInfo.displayName || row.osInfo.distribution)
+              : (text || row.osType || '-');
+              
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
 
             // 获取操作系统对应的图标路径
-            function getOsIconPath(osType) {
+            function getOsIconPath(osInfo) {
               try {
-                const osLower = (osType || '').toLowerCase();
-                if (osLower.includes('centos')) {
+                if (!osInfo) return require('@/assets/img/os-logos/linux-tux.svg');
+                
+                // 根据osInfo.distributionType或distributionId判断操作系统类型
+                const distType = (osInfo.distributionType || '').toLowerCase();
+                const distId = (osInfo.distributionId || '').toLowerCase();
+                const distName = (osInfo.distributionName || '').toLowerCase();
+                
+                if (distType === 'centos' || distId === 'centos' || distName.includes('centos')) {
                   return require('@/assets/img/os-logos/centos.svg');
-                } else if (osLower.includes('ubuntu')) {
+                } else if (distType === 'ubuntu' || distId === 'ubuntu' || distName.includes('ubuntu')) {
                   return require('@/assets/img/os-logos/ubuntu.svg');
-                } else if (osLower.includes('debian')) {
+                } else if (distType === 'debian' || distId === 'debian' || distName.includes('debian')) {
                   return require('@/assets/img/os-logos/debian.svg');
-                } else if (osLower.includes('redhat') || osLower.includes('red hat')) {
+                } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('red hat')) {
                   return require('@/assets/img/os-logos/redhat.svg');
-                } else if (osLower.includes('windows')) {
+                } else if (distType === 'windows' || distId === 'windows' || distName.includes('windows')) {
                   return require('@/assets/img/os-logos/windows.svg');
-                } else if (osLower.includes('kylin') || osLower.includes('麒麟')) {
+                } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
                   return require('@/assets/img/os-logos/kylin.svg');
                 } else {
                   return require('@/assets/img/os-logos/linux-tux.svg');
@@ -709,7 +720,7 @@ export default {
               }
             }
 
-            const iconPath = getOsIconPath(osType);
+            const iconPath = getOsIconPath(hasOsInfo ? row.osInfo : null);
 
             // 返回操作系统信息显示
             if (hasOsInfo) {
@@ -759,7 +770,7 @@ export default {
                     h('img', {
                       attrs: {
                         src: iconPath,
-                        alt: osType
+                        alt: osDisplayName
                       },
                       style: {
                         width: '20px',
@@ -782,7 +793,7 @@ export default {
                         fontSize: '13px',
                         lineHeight: '1.3'
                       }
-                    }, [osType]),
+                    }, [osDisplayName]),
                     osVersion ? h('span', {
                       style: {
                         color: '#8E8E93',
