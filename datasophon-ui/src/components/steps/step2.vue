@@ -191,31 +191,70 @@
 
     <!-- 添加主机名编辑对话框 -->
     <a-modal
-      title="编辑主机名"
       :visible="hostnameEditVisible"
       :confirm-loading="editLoading"
-      @ok="submitHostnameEdit"
       @cancel="cancelHostnameEdit"
+      :footer="null"
+      :maskClosable="false"
+      width="420px"
+      class="apple-style-modal hostname-edit-modal"
+      :destroyOnClose="true"
     >
-      <a-form-model>
-        <a-form-model-item label="主机IP">
-          <span>{{ currentEditHost ? currentEditHost.ip : '' }}</span>
-        </a-form-model-item>
-        <a-form-model-item label="当前主机名">
-          <span>{{ currentEditHost ? (currentEditHost.hostname || '未设置') : '' }}</span>
-        </a-form-model-item>
-        <a-form-model-item label="新主机名">
-          <a-input
+      <div class="apple-modal-header">
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="1.5" width="20" height="20">
+            <path d="M12 15V12m0-3h.01M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="modal-title">修改主机名</div>
+        <div class="modal-close" @click="cancelHostnameEdit">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="apple-modal-content">
+        <div class="host-info-section">
+          <div class="info-row">
+            <div class="info-label">主机IP</div>
+            <div class="info-value">{{ currentEditHost ? currentEditHost.ip : '' }}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">当前主机名</div>
+            <div class="info-value current-hostname">{{ currentEditHost ? (currentEditHost.hostname || '未设置') : '' }}</div>
+          </div>
+        </div>
+        
+        <div class="input-section">
+          <div class="input-label">新主机名</div>
+          <input
+            class="apple-input"
             v-model="newHostname"
             placeholder="请输入新的主机名"
-            :maxLength="64"
+            maxlength="64"
+            ref="hostnameInput"
           />
-          <div class="form-help-text">
-            <a-icon type="info-circle" />
+          <div class="input-description">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="1.5" width="16" height="16">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
             <span>修改主机名将通过SSH连接服务器并实际修改系统配置</span>
           </div>
-        </a-form-model-item>
-      </a-form-model>
+        </div>
+        
+        <div class="apple-modal-actions">
+          <button class="apple-button secondary" @click="cancelHostnameEdit">
+            取消
+          </button>
+          <button class="apple-button primary" @click="submitHostnameEdit" :disabled="!newHostname">
+            <span v-if="!editLoading">保存</span>
+            <span v-else class="button-loader"></span>
+          </button>
+        </div>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -2639,6 +2678,14 @@ export default {
       this.currentEditHost = record;
       this.newHostname = record.hostname || '';
       this.hostnameEditVisible = true;
+      
+      // 在下一个DOM更新循环后，聚焦输入框
+      this.$nextTick(() => {
+        if (this.$refs.hostnameInput) {
+          this.$refs.hostnameInput.focus();
+          this.$refs.hostnameInput.select();
+        }
+      });
     },
     
     // 提交主机名修改
@@ -5498,6 +5545,407 @@ export default {
     background-color: transparent !important;
     padding: 0 !important;
     max-width: 420px !important;
+  }
+}
+
+.apple-style-modal {
+  .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+
+  .ant-modal-header {
+    padding: 20px 24px;
+    background: @apple-white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    .ant-modal-title {
+      .apple-font();
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: @apple-black;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 24px;
+  }
+
+  .ant-modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px 24px;
+
+    .ant-btn {
+      height: 36px;
+      padding: 0 18px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+
+        &:hover {
+          background: @apple-blue-hover;
+        }
+      }
+
+      &.ant-btn-dangerous {
+        background: @apple-red;
+        border: none;
+        color: white;
+
+        &:hover {
+          background: darken(@apple-red, 5%);
+        }
+      }
+
+      &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+        background: @apple-gray-light;
+        border: none;
+        color: @apple-black;
+
+        &:hover {
+          background: darken(@apple-gray-light, 5%);
+        }
+      }
+    }
+  }
+}
+
+.apple-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: @apple-white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: @apple-gray-light;
+  margin-right: 16px;
+}
+
+.modal-title {
+  .apple-font();
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: @apple-black;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: @apple-gray-light;
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: darken(@apple-gray-light, 5%);
+  }
+}
+
+.apple-modal-content {
+  padding: 24px;
+}
+
+.host-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.info-label {
+  .apple-font();
+  font-size: 14px;
+  font-weight: 500;
+  color: @apple-black;
+}
+
+.info-value {
+  .apple-font();
+  font-size: 14px;
+  color: @apple-black;
+}
+
+.current-hostname {
+  color: @apple-gray;
+}
+
+.input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-label {
+  .apple-font();
+  font-size: 14px;
+  font-weight: 500;
+  color: @apple-black;
+}
+
+.apple-input {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  border: 1px solid @apple-gray;
+  border-radius: 8px;
+  font-size: 14px;
+  color: @apple-black;
+  transition: border-color 0.3s;
+
+  &:focus {
+    border-color: @apple-blue;
+  }
+}
+
+.input-description {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apple-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.apple-button.secondary {
+  background-color: @apple-gray-light;
+  border: 1px solid @apple-gray;
+  color: @apple-black;
+
+  &:hover {
+    background-color: darken(@apple-gray-light, 5%);
+    border-color: darken(@apple-gray, 10%);
+  }
+}
+
+.apple-button.primary {
+  background-color: @apple-blue;
+  border: none;
+  color: white;
+
+  &:hover {
+    background-color: darken(@apple-blue, 5%);
+  }
+}
+
+.button-loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.hostname-edit-modal {
+  .apple-modal-header {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background-color: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .modal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(0, 122, 255, 0.1);
+    margin-right: 12px;
+  }
+  
+  .modal-title {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
+  
+  .modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #8e8e93;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  .apple-modal-content {
+    padding: 20px;
+    background-color: #ffffff;
+  }
+  
+  .host-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .info-row {
+    display: flex;
+    align-items: center;
+  }
+  
+  .info-label {
+    width: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #8e8e93;
+  }
+  
+  .info-value {
+    flex: 1;
+    font-size: 14px;
+    color: #1d1d1f;
+  }
+  
+  .current-hostname {
+    font-weight: 500;
+  }
+  
+  .input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  
+  .input-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+  }
+  
+  .apple-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1d1d1f;
+    transition: all 0.2s;
+    
+    &:focus {
+      outline: none;
+      border-color: #007aff;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    }
+    
+    &::placeholder {
+      color: #8e8e93;
+    }
+  }
+  
+  .input-description {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #8e8e93;
+    margin-top: 4px;
+  }
+  
+  .apple-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  
+  .apple-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    
+    &.secondary {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #1d1d1f;
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+    
+    &.primary {
+      background-color: #007aff;
+      color: #ffffff;
+      
+      &:hover {
+        background-color: #0069d9;
+      }
+      
+      &:disabled {
+        background-color: rgba(0, 122, 255, 0.5);
+        cursor: not-allowed;
+      }
+    }
+  }
+  
+  .button-loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 0.75s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 }
 </style>
