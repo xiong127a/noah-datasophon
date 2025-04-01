@@ -172,20 +172,66 @@
       </div>
     </a-modal>
 
-    <!-- 确认弹窗 -->
+    <!-- 修复确认弹窗 - 苹果设计风格 -->
     <a-modal
         v-model="fixConfirmVisible"
-        :title="fixConfirmTitle"
-        :confirmLoading="fixConfirmLoading"
-        @ok="handleFixConfirm"
-        @cancel="handleFixCancel"
-        okText="确认修复"
-        cancelText="取消"
-        okType="danger"
-        class="fix-confirm-modal apple-modal"
+        :footer="null"
+        :maskClosable="false"
+        width="460px"
+        :destroyOnClose="true"
+        :closable="false"
+        class="fix-confirm-modal apple-card-modal"
     >
-      <div class="fix-confirm-content">
-        <div v-html="fixConfirmContent"></div>
+      <!-- 弹窗内容 -->
+      <div class="apple-card-container">
+        <!-- 顶部标题区域 -->
+        <div class="apple-card-header">
+          <div class="apple-card-icon-wrapper">
+            <div class="apple-card-icon-container warning">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="#FFFFFF" fill="none" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+          </div>
+          <div class="apple-card-info">
+            <div class="apple-card-title">
+              <span class="card-title">{{ fixConfirmTitle }}</span>
+            </div>
+          </div>
+          <div class="apple-card-close" @click="handleFixCancel">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+        </div>
+        
+        <!-- 内容区域 -->
+        <div class="apple-card-content">
+          <div class="apple-card-section">
+            <div class="warning-message">
+              <div class="message-content" v-html="fixConfirmContent"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 底部按钮区域 -->
+        <div class="apple-card-footer">
+          <button class="apple-card-button secondary" @click="handleFixCancel">
+            取消
+          </button>
+          <button 
+            class="apple-card-button danger" 
+            @click="handleFixConfirm"
+            :disabled="fixConfirmLoading"
+          >
+            <span v-if="!fixConfirmLoading">确认修复</span>
+            <span v-else class="apple-loader"></span>
+          </button>
+        </div>
       </div>
     </a-modal>
 
@@ -5947,5 +5993,469 @@ export default {
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+}
+
+.apple-style-modal.fix-confirm-modal {
+  .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+
+  .ant-modal-header {
+    padding: 20px 24px;
+    background: @apple-white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    .ant-modal-title {
+      .apple-font();
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: @apple-black;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 24px;
+  }
+
+  .ant-modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px 24px;
+
+    .ant-btn {
+      height: 36px;
+      padding: 0 18px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+
+        &:hover {
+          background: @apple-blue-hover;
+        }
+      }
+
+      &.ant-btn-dangerous {
+        background: @apple-red;
+        border: none;
+        color: white;
+
+        &:hover {
+          background: darken(@apple-red, 5%);
+        }
+      }
+
+      &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+        background: @apple-gray-light;
+        border: none;
+        color: @apple-black;
+
+        &:hover {
+          background: darken(@apple-gray-light, 5%);
+        }
+      }
+    }
+  }
+}
+
+.apple-modal-header.warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: @apple-white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.modal-icon.warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: @apple-orange;
+  margin-right: 16px;
+}
+
+.modal-title {
+  .apple-font();
+  font-size: 1.2rem;
+}
+
+.fix-confirm-modal {
+  .modal-icon.warning {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(255, 149, 0, 0.1);
+    margin-right: 12px;
+    
+    svg {
+      stroke: #FF9500;
+    }
+  }
+  
+  .confirm-message-section {
+    padding: 16px;
+    margin-bottom: 16px;
+    background-color: rgba(255, 149, 0, 0.05);
+    border-radius: 8px;
+    border-left: 4px solid #FF9500;
+  }
+  
+  .confirm-message {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1D1D1F;
+    
+    p {
+      margin-bottom: 8px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+  
+  .apple-button.danger {
+    background-color: #FF3B30;
+    color: #ffffff;
+    
+    &:hover {
+      background-color: #E02D23;
+    }
+    
+    &:disabled {
+      background-color: rgba(255, 59, 48, 0.5);
+      cursor: not-allowed;
+    }
+  }
+}
+
+.fix-confirm-modal.apple-card-modal {
+  .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+
+  .ant-modal-header {
+    padding: 20px 24px;
+    background: @apple-white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    .ant-modal-title {
+      .apple-font();
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: @apple-black;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 24px;
+  }
+
+  .ant-modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 16px 24px;
+
+    .ant-btn {
+      height: 36px;
+      padding: 0 18px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &.ant-btn-primary {
+        background: @apple-blue;
+        border: none;
+
+        &:hover {
+          background: @apple-blue-hover;
+        }
+      }
+
+      &.ant-btn-dangerous {
+        background: @apple-red;
+        border: none;
+        color: white;
+
+        &:hover {
+          background: darken(@apple-red, 5%);
+        }
+      }
+
+      &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+        background: @apple-gray-light;
+        border: none;
+        color: @apple-black;
+
+        &:hover {
+          background: darken(@apple-gray-light, 5%);
+        }
+      }
+    }
+  }
+}
+
+.apple-card-container {
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin: 0px;
+  font-family: "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.apple-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.apple-card-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 149, 0, 0.1);
+  margin-right: 16px;
+}
+
+.apple-card-icon-container.warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: @apple-orange;
+}
+
+.apple-card-info {
+  flex: 1;
+}
+
+.apple-card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: @apple-black;
+}
+
+.apple-card-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+}
+
+.apple-card-content {
+  margin-bottom: 24px;
+}
+
+.apple-card-section {
+  margin-bottom: 16px;
+}
+
+.warning-message {
+  background-color: rgba(255, 149, 0, 0.05);
+  border-left: 4px solid #FF9500;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1D1D1F;
+  
+  .message-content {
+    p {
+      margin-bottom: 8px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+    
+    ul {
+      margin-top: 8px;
+      margin-bottom: 8px;
+      padding-left: 20px;
+      
+      li {
+        margin-bottom: 4px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
+.apple-card-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 18px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.secondary {
+    background-color: rgba(142, 142, 147, 0.12);
+    color: #1D1D1F;
+
+    &:hover {
+      background-color: rgba(142, 142, 147, 0.2);
+    }
+  }
+
+  &.danger {
+    background-color: #FF3B30;
+    color: white;
+
+    &:hover {
+      background-color: #E02D23;
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.apple-loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.apple-card-modal {
+  .ant-modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+  
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+.apple-card-container {
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  margin: 0px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.apple-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.apple-card-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 149, 0, 0.1);
+  margin-right: 16px;
+}
+
+.apple-card-icon-container.warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #FF9500;
+}
+
+.apple-card-info {
+  flex: 1;
+}
+
+.apple-card-title {
+  display: flex;
+  flex-direction: column;
+  
+  .card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
+}
+
+.apple-card-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background-color 0.3s;
+  color: #8e8e93;
+  
+  &:hover {
+    background-color: rgba(0, a0, 0, 0.1);
+  }
+}
+
+.apple-card-content {
+  margin-bottom: 24px;
+}
+
+.apple-card-section {
+  margin-bottom: 16px;
+}
+
+.apple-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
 }
 </style>
