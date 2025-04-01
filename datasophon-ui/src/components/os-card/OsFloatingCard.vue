@@ -443,8 +443,8 @@ export default {
     getOsDisplayName(osInfo) {
       if (!osInfo) return '未知操作系统';
       
-      // 优先使用distributionName，其次使用displayName，最后fallback到distribution字段
-      return osInfo.distributionName || osInfo.displayName || osInfo.distribution || '未知操作系统';
+      // 悬浮卡片中优先使用distributionName
+      return osInfo.distributionName || osInfo.distribution || '未知操作系统';
     },
     getUsageColor(percentage) {
       if (percentage > 90) return '#FF3B30';  // 危险

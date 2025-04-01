@@ -6,17 +6,13 @@ import com.alibaba.fastjson.JSONObject;
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.OsInfoLegacy;
-import com.datasophon.common.enums.LinuxDistribution;
-import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.CpuInfo;
-import com.datasophon.common.model.hardware.MemoryInfo;
-import com.datasophon.common.model.hardware.DiskInfo;
-import com.datasophon.common.model.hardware.SwapInfo;
-import com.datasophon.common.model.hardware.GpuInfo;
+import com.datasophon.common.model.hardware.NetworkInfo;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -227,106 +223,59 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 为单台主机收集所有信息
-         * 按顺序收集：主机名 -> OS类型 -> DNS -> Hosts文件 -> CPU -> 内存 -> 磁盘 -> 交换空间 -> GPU
+         * 按顺序收集：主机名 -> OS类型 -> 硬件信息
          */
         private void collectAllInfoForHost(HostInfo hostInfo) {
-            // 1. 收集主机名
-            collectHostName(hostInfo);
+            try {
+                logger.info("开始收集主机信息: {}", hostInfo.getIp());
+                long startTime = System.currentTimeMillis();
 
-            // 如果主机名收集失败，跳过后续步骤
-            if (hostInfo.getHostnameStatus() != OsInfoStatusEnum.SUCCESS) {
-                logger.warn("主机 {} 主机名收集失败，跳过后续信息收集", hostInfo.getIp());
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("主机名收集失败，无法继续");
+                // 设置状态为正在收集
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.COLLECTING);
                 service.updateHostInfoCache(hostInfo);
-                return;
-            }
 
-            // 2. 收集操作系统类型
-            collectOsType(hostInfo);
+                // 1. 收集主机名
+                collectHostName(hostInfo);
 
-            // 即使操作系统类型收集失败，也继续后续步骤
-            // 注意：此时hostInfo.setOsInfoStatus可能是ERROR或SUCCESS
-            // 但collectOsType方法已经保证了基本信息的设置
-            logger.info("主机 {} 操作系统类型收集状态: {}, 继续收集其他信息",
-                    hostInfo.getIp(), hostInfo.getOsInfoStatus());
-
-            // 获取会话和操作系统对象
-            ClientSession session = service.getOrCreateSession(hostInfo);
-            OsInfo osInfo = hostInfo.getOsInfo();
-
-            // 如果会话为空，无法继续
-            if (session == null) {
-                logger.error("主机 {} 无法创建SSH会话，无法继续收集", hostInfo.getIp());
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("无法创建SSH会话，无法继续");
-                service.updateHostInfoCache(hostInfo);
-                return;
-            }
-
-            // 如果osInfo为空，创建默认的osInfo对象
-            if (osInfo == null) {
-                osInfo = new OsInfo();
-                osInfo.setHostname(hostInfo.getHostname());
-                osInfo.setFqdn(hostInfo.getFqdn());
-                osInfo.setDistributionId("linux"); // 默认假设为Linux
-                osInfo.setDistribution("Unknown Linux");
-                osInfo.setDistributionName("Unknown Linux");
-                osInfo.setDistributionType(LinuxDistribution.OTHER);
-                hostInfo.setOsInfo(osInfo);
-            }
-
-            // 使用缓存的osType字段
-            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "linux"; // 默认为linux
-            IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osType);
-
-            // 如果无法获取合适的收集器，使用默认的Linux收集器
-            if (collector == null) {
-                logger.warn("主机 {} 无法找到对应的信息收集器，使用默认Linux收集器", hostInfo.getIp());
-                collector = service.osInfoCollectorFactory.getCollector("linux");
-
-                // 如果仍然无法获取收集器，这是严重错误，无法继续
-                if (collector == null) {
-                    logger.error("主机 {} 无法创建默认收集器，无法继续收集", hostInfo.getIp());
+                // 如果主机名收集失败，跳过后续步骤
+                if (hostInfo.getHostnameStatus() != OsInfoStatusEnum.SUCCESS) {
+                    logger.warn("主机 {} 主机名收集失败，跳过后续信息收集", hostInfo.getIp());
                     hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setMessage("系统错误：无法创建信息收集器");
+                    hostInfo.setMessage("主机名收集失败，无法继续");
                     service.updateHostInfoCache(hostInfo);
                     return;
                 }
+
+                // 2. 收集操作系统类型（Linux或Windows）并收集相关信息
+                collectOsType(hostInfo);
+
+                // 操作系统信息收集由collectOsType方法完成，包括：
+                // - 识别操作系统类型（Linux或Windows）
+                // - 调用collectLinuxInfo或collectWindowsInfo收集详细信息
+                // - 这些方法内部会使用IOsInfoCollector收集所有必要的硬件和系统信息
+
+                // 完成收集
+                hostInfo.setMessage("主机信息收集完成");
+                service.updateHostInfoCache(hostInfo);
+
+                // 记录完成时间
+                logger.info("主机 {} 信息收集完成，总耗时 {}ms",
+                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
+
+            } catch (Exception e) {
+                logger.error("收集主机 {} 信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("主机信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            } finally {
+                // 减少正在处理的主机计数
+                processingHostCount.decrementAndGet();
+                // 完成一台主机，增加计数
+                completedHostCount.incrementAndGet();
+                // 如果有其他主机等待处理，继续处理
+                startProcessingIfNeeded();
             }
-
-            // 3. 收集DNS信息
-            collectDnsInfo(hostInfo, osInfo, session, collector);
-
-            // 4. 收集Hosts文件
-            collectHostsFile(hostInfo, osInfo, session, collector);
-
-            // 5. 收集CPU信息
-            collectCpuInfo(hostInfo, osInfo, session, collector);
-
-            // 6. 收集内存信息
-            collectMemoryInfo(hostInfo, osInfo, session, collector);
-
-            // 7. 收集磁盘信息
-            collectDiskInfo(hostInfo, osInfo, session, collector);
-
-            // 8. 收集交换空间信息
-            collectSwapInfo(hostInfo, osInfo, session, collector);
-
-            // 9. 收集GPU信息
-            collectGpuInfo(hostInfo, osInfo, session, collector);
-
-            // 10. 收集网络接口信息
-            collectNetworkInfo(hostInfo, osInfo, session, collector);
-
-            // 全部完成，设置最终状态
-            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
-            osInfo.setLastUpdatedItem("completed");
-            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-            hostInfo.setMessage("所有信息收集完成");
-            service.updateHostInfoCache(hostInfo);
-
-            logger.info("主机 {} 全部信息收集完成", hostInfo.getIp());
         }
 
         /**
@@ -411,1318 +360,486 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         /**
          * 收集操作系统类型
+         * 识别主机运行的操作系统类型（Linux或Windows）
          */
         private void collectOsType(HostInfo hostInfo) {
-            logger.info("开始收集操作系统类型: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集操作系统类型...");
-            service.updateHostInfoCache(hostInfo);
-
+            ClientSession session = null;
             try {
-                // 获取SSH会话
-                ClientSession session = service.getOrCreateSession(hostInfo);
+                logger.info("识别主机 {} 的操作系统类型", hostInfo.getIp());
+                OsInfo osInfo = new OsInfo();
+                session = connectToHost(hostInfo);
 
                 if (session == null) {
-                    throw new Exception("无法创建SSH会话");
+                    logger.error("无法连接到主机 {}", hostInfo.getIp());
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("无法连接到主机");
+                    service.updateHostInfoCache(hostInfo);
+                    return;
                 }
 
-                // 检测操作系统类型
-                boolean isWindows = false;
-                try {
-                    // 首先尝试Windows特有命令，避免在Linux上执行可能导致的错误
-                    String winVerResult = MinaUtils.execCmdWithResult(session, "cmd /c ver");
-                    if (StringUtils.isNotBlank(winVerResult) &&
-                            (winVerResult.contains("Microsoft Windows") || winVerResult.contains("Windows"))) {
-                        isWindows = true;
-                        logger.info("检测到Windows系统: {}", winVerResult.trim());
-                    }
-                } catch (Exception e) {
-                    logger.debug("执行Windows版本命令失败: {}", e.getMessage());
-                }
+                // 优先使用uname命令识别Linux系统
+                String unameResult = MinaUtils.execCmdWithResult(session, "uname -s 2>/dev/null");
+                boolean isLinux = StringUtils.isNotBlank(unameResult) && unameResult.toLowerCase().contains("linux");
 
-                String osType = isWindows ? "windows" : "linux";
-                logger.info("主机 {} 的操作系统类型为: {}", hostInfo.getIp(), osType);
+                // 如果不是Linux系统，尝试识别Windows系统
+                if (!isLinux) {
+                    String winVerResult = MinaUtils.execWindowsCmdWithResult(session, "ver");
+                    boolean isWindows = StringUtils.isNotBlank(winVerResult) &&
+                            (winVerResult.toLowerCase().contains("windows") ||
+                                    winVerResult.toLowerCase().contains("microsoft"));
 
-                // 创建操作系统信息对象
-                OsInfo osInfo = new OsInfo();
-                osInfo.setHostname(hostInfo.getHostname());
-                osInfo.setFqdn(hostInfo.getFqdn());
+                    if (isWindows) {
+                        // 确认是Windows系统
+                        logger.info("检测到Windows操作系统: {}", hostInfo.getIp());
 
-                // 为Windows系统设置特定信息
-                if (isWindows) {
-                    try {
-                        // 获取Windows版本信息
-                        String winInfo = MinaUtils.execCmdWithResult(session, "cmd /c ver");
-                        if (StringUtils.isNotBlank(winInfo)) {
-                            osInfo.setDistribution("Windows");
-                            osInfo.setDistributionName("Windows");
+                        // 设置基本Windows系统信息
+                        osInfo.setOsType("windows");
+                        osInfo.setDistributionId("windows");
+                        osInfo.setDistribution("Windows");
+                        osInfo.setDistributionName("Windows");
 
-                            // 解析Windows版本
-                            if (winInfo.contains("Windows 10")) {
-                                osInfo.setVersionId("10");
-                                osInfo.setVersion("10");
-                                osInfo.setFullName("Windows 10");
-                            } else if (winInfo.contains("Windows 11")) {
-                                osInfo.setVersionId("11");
-                                osInfo.setVersion("11");
-                                osInfo.setFullName("Windows 11");
-                            } else if (winInfo.contains("Windows Server")) {
-                                if (winInfo.contains("2016")) {
-                                    osInfo.setVersionId("2016");
-                                    osInfo.setVersion("2016");
-                                    osInfo.setFullName("Windows Server 2016");
-                                } else if (winInfo.contains("2019")) {
-                                    osInfo.setVersionId("2019");
-                                    osInfo.setVersion("2019");
-                                    osInfo.setFullName("Windows Server 2019");
-                                } else if (winInfo.contains("2022")) {
-                                    osInfo.setVersionId("2022");
-                                    osInfo.setVersion("2022");
-                                    osInfo.setFullName("Windows Server 2022");
-                                } else {
-                                    osInfo.setVersionId("Server");
-                                    osInfo.setVersion("Server");
-                                    osInfo.setFullName("Windows Server");
-                                }
+                        // 解析Windows版本
+                        if (winVerResult.contains("10.0")) {
+                            osInfo.setVersion("10");
+                            osInfo.setVersionId("10");
+                            osInfo.setDisplayName("Windows 10");
+                        } else if (winVerResult.contains("Server")) {
+                            if (winVerResult.contains("2019")) {
+                                osInfo.setVersion("Server 2019");
+                                osInfo.setVersionId("2019");
+                                osInfo.setDisplayName("Windows Server 2019");
+                            } else if (winVerResult.contains("2022")) {
+                                osInfo.setVersion("Server 2022");
+                                osInfo.setVersionId("2022");
+                                osInfo.setDisplayName("Windows Server 2022");
                             } else {
-                                // 尝试从版本字符串中提取版本号
-                                if (winInfo.contains("[Version")) {
-                                    String version = winInfo.substring(winInfo.indexOf("[Version") + 9);
-                                    version = version.substring(0, version.indexOf("]")).trim();
-                                    if (version.startsWith("10.")) {
-                                        osInfo.setVersionId("10");
-                                        osInfo.setVersion("10");
-                                        osInfo.setFullName("Windows 10 (" + version + ")");
-                                    } else if (version.startsWith("6.3")) {
-                                        osInfo.setVersionId("8.1");
-                                        osInfo.setVersion("8.1");
-                                        osInfo.setFullName("Windows 8.1");
-                                    } else if (version.startsWith("6.2")) {
-                                        osInfo.setVersionId("8");
-                                        osInfo.setVersion("8");
-                                        osInfo.setFullName("Windows 8");
-                                    } else if (version.startsWith("6.1")) {
-                                        osInfo.setVersionId("7");
-                                        osInfo.setVersion("7");
-                                        osInfo.setFullName("Windows 7");
-                                    } else {
-                                        osInfo.setVersionId(version);
-                                        osInfo.setVersion(version);
-                                        osInfo.setFullName("Windows " + version);
-                                    }
-                                } else {
-                                    osInfo.setVersionId("Unknown");
-                                    osInfo.setVersion("Unknown");
-                                    osInfo.setFullName("Windows");
-                                }
-                            }
-                        }
-
-                        // 获取系统架构信息
-                        String archInfo = MinaUtils.execCmdWithResult(session, "cmd /c set processor_architecture");
-                        if (StringUtils.isNotBlank(archInfo) && archInfo.contains("=")) {
-                            String arch = archInfo.split("=")[1].trim();
-                            if ("AMD64".equalsIgnoreCase(arch)) {
-                                osInfo.setArchitecture("x86_64");
-                            } else if ("x86".equalsIgnoreCase(arch)) {
-                                osInfo.setArchitecture("x86");
-                            } else if ("ARM64".equalsIgnoreCase(arch)) {
-                                osInfo.setArchitecture("aarch64");
-                            } else {
-                                osInfo.setArchitecture(arch);
+                                osInfo.setVersion("Server");
+                                osInfo.setVersionId("Server");
+                                osInfo.setDisplayName("Windows Server");
                             }
                         } else {
-                            osInfo.setArchitecture("unknown");
+                            // 其他Windows版本
+                            osInfo.setVersion("Unknown");
+                            osInfo.setVersionId("Unknown");
+                            osInfo.setDisplayName("Windows");
                         }
 
-                        // 获取内核版本（对Windows来说就是系统版本）
-                        String buildInfo = MinaUtils.execCmdWithResult(session, "cmd /c ver");
-                        if (StringUtils.isNotBlank(buildInfo)) {
-                            // 尝试提取版本号，如 10.0.19044.2251
-                            if (buildInfo.contains("[Version ")) {
-                                String[] parts = buildInfo.split("\\[Version ");
-                                if (parts.length > 1 && parts[1].contains("]")) {
-                                    osInfo.setKernelVersion(parts[1].split("\\]")[0].trim());
-                                } else {
-                                    osInfo.setKernelVersion(buildInfo.trim());
-                                }
-                            } else {
-                                osInfo.setKernelVersion(buildInfo.trim());
-                            }
-                        }
+                        // 添加到主机信息并收集详细信息
+                        hostInfo.setOsInfo(osInfo);
+                        collectWindowsInfo(hostInfo, session, osInfo);
+                    } else {
+                        // 无法确定系统类型，默认作为Linux处理
+                        logger.warn("无法确定系统类型，尝试作为Linux系统处理: {}", hostInfo.getIp());
+                        osInfo.setOsType("linux");
+                        osInfo.setDistribution("Unknown Linux");
+                        osInfo.setDistributionId("linux");
+                        osInfo.setDistributionName("Unknown Linux");
+                        osInfo.setDisplayName("Unknown Linux");
+                        osInfo.setDistributionType(LinuxDistribution.OTHER);
 
-                        // 获取系统类型和版本的更多详细信息
-                        try {
-                            String sysInfo = MinaUtils.execCmdWithResult(session,
-                                    "cmd /c systeminfo | findstr /B /C:\"OS\" /C:\"系统\" /C:\"注册\" /C:\"Registered\"");
-                            if (StringUtils.isNotBlank(sysInfo)) {
-                                // 使用distributionName存储详细系统信息，而不是使用不存在的setOsType方法
-                                osInfo.setDistributionName("Windows " + sysInfo.replace("\r\n", " | "));
-                            }
-                        } catch (Exception e) {
-                            logger.warn("获取Windows系统详细信息失败: {}", e.getMessage());
-                        }
-                    } catch (Exception e) {
-                        logger.error("收集Windows系统信息时出错: {}", e.getMessage());
+                        hostInfo.setOsInfo(osInfo);
+                        collectLinuxInfo(hostInfo, session, osInfo);
                     }
-
-                    // 设置分发ID为windows
-                    osInfo.setDistributionId("windows");
-                    // 使用枚举值而不是字符串
-                    osInfo.setDistributionType(LinuxDistribution.OTHER);
-
-                    // 避免使用Linux特有的收集器
-                    hostInfo.setOsInfo(osInfo);
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                    hostInfo.setMessage("操作系统类型收集成功");
-
-                    // 初始化所有硬件收集状态
-                    hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-
-                    // 设置操作系统信息收集状态
-                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
-                    osInfo.setLastUpdatedItem("os_info_collected");
-
-                    // 更新缓存
-                    service.updateHostInfoCache(hostInfo);
                 } else {
-                    // Linux系统设置默认信息
-                    osInfo.setDistributionId("linux");
+                    // 确认是Linux系统
+                    logger.info("检测到Linux操作系统: {}", hostInfo.getIp());
+
+                    // 设置基本Linux系统信息
+                    osInfo.setOsType("linux");
                     osInfo.setDistribution("Linux");
-                    osInfo.setDistributionName("Linux");
-                    osInfo.setDistributionType(LinuxDistribution.OTHER);
+                    osInfo.setDistributionId("linux");
 
-                    // 尝试获取Linux详细信息
-                    try {
-                        // 获取Linux发行版信息
-                        String osReleaseCmd = "cat /etc/os-release 2>/dev/null || cat /etc/system-release 2>/dev/null";
-                        String osReleaseInfo = MinaUtils.execCmdWithResult(session, osReleaseCmd);
-
-                        if (StringUtils.isNotBlank(osReleaseInfo)) {
-                            Pattern namePattern = Pattern.compile("NAME=[\"']?([^\"'\\n]+)[\"']?");
-                            Pattern versionPattern = Pattern.compile("VERSION_ID=[\"']?([^\"'\\n]+)[\"']?");
-                            Pattern idPattern = Pattern.compile("ID=[\"']?([^\"'\\n]+)[\"']?");
-
-                            Matcher nameMatcher = namePattern.matcher(osReleaseInfo);
-                            Matcher versionMatcher = versionPattern.matcher(osReleaseInfo);
-                            Matcher idMatcher = idPattern.matcher(osReleaseInfo);
-
-                            if (nameMatcher.find()) {
-                                osInfo.setDistribution(nameMatcher.group(1).trim());
-                                osInfo.setDistributionName(nameMatcher.group(1).trim());
-                            }
-
-                            if (versionMatcher.find()) {
-                                osInfo.setVersionId(versionMatcher.group(1).trim());
-                                osInfo.setVersion(versionMatcher.group(1).trim());
-                            }
-
-                            if (idMatcher.find()) {
-                                String distroId = idMatcher.group(1).trim().toLowerCase();
-                                osInfo.setDistributionId(distroId);
-
-                                // 设置发行版类型
-                                if (distroId.contains("centos")) {
-                                    osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                                } else if (distroId.contains("redhat") || distroId.contains("rhel")) {
-                                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                                } else if (distroId.contains("ubuntu")) {
-                                    osInfo.setDistributionType(LinuxDistribution.UBUNTU);
-                                } else if (distroId.contains("debian")) {
-                                    osInfo.setDistributionType(LinuxDistribution.DEBIAN);
-                                } else if (distroId.contains("kylin") || distroId.contains("neokylin")) {
-                                    osInfo.setDistributionType(LinuxDistribution.KYLIN);
-                                } else {
-                                    osInfo.setDistributionType(LinuxDistribution.OTHER);
-                                }
-                            }
-                        } else {
-                            // 尝试其他方法，例如/etc/redhat-release
-                            String redhatReleaseCmd = "cat /etc/redhat-release 2>/dev/null";
-                            String redhatReleaseInfo = MinaUtils.execCmdWithResult(session, redhatReleaseCmd);
-
-                            if (StringUtils.isNotBlank(redhatReleaseInfo)) {
-                                if (redhatReleaseInfo.toLowerCase().contains("centos")) {
-                                    osInfo.setDistribution("CentOS");
-                                    osInfo.setDistributionName("CentOS");
-                                    osInfo.setDistributionId("centos");
-                                    osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                                } else if (redhatReleaseInfo.toLowerCase().contains("red hat")) {
-                                    osInfo.setDistribution("Red Hat Enterprise Linux");
-                                    osInfo.setDistributionName("Red Hat Enterprise Linux");
-                                    osInfo.setDistributionId("rhel");
-                                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                                }
-
-                                // 尝试提取版本
-                                Pattern versionPattern = Pattern.compile("(\\d+(\\.\\d+)?)");
-                                Matcher matcher = versionPattern.matcher(redhatReleaseInfo);
-                                if (matcher.find()) {
-                                    osInfo.setVersionId(matcher.group(1));
-                                    osInfo.setVersion(matcher.group(1));
-                                }
-                            }
-                        }
-
-                        // 获取内核版本
-                        String kernelCmd = "uname -r";
-                        String kernelInfo = MinaUtils.execCmdWithResult(session, kernelCmd);
-                        if (StringUtils.isNotBlank(kernelInfo)) {
-                            osInfo.setKernelVersion(kernelInfo.trim());
-                        }
-
-                        // 获取系统架构
-                        String archCmd = "uname -m";
-                        String archInfo = MinaUtils.execCmdWithResult(session, archCmd);
-                        if (StringUtils.isNotBlank(archInfo)) {
-                            osInfo.setArchitecture(archInfo.trim());
-                        }
-                    } catch (Exception e) {
-                        logger.warn("获取Linux详细信息失败，使用默认值: {}", e.getMessage());
+                    // 获取内核版本
+                    String kernelVersion = MinaUtils.execCmdWithResult(session, "uname -r");
+                    if (StringUtils.isNotBlank(kernelVersion)) {
+                        osInfo.setKernelVersion(kernelVersion.trim());
                     }
 
-                    // 即使Linux发行版详细信息收集失败，仍设置基本信息并继续
+                    hostInfo.setOsInfo(osInfo);
+                    collectLinuxInfo(hostInfo, session, osInfo);
+                }
+            } catch (Exception e) {
+                logger.error("收集操作系统类型时出错: {}", e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("收集操作系统信息失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 连接到主机
+         */
+        private ClientSession connectToHost(HostInfo hostInfo) {
+            try {
+                logger.info("连接到主机: {}", hostInfo.getIp());
+                // 委托给服务类方法创建连接
+                return service.getOrCreateSession(hostInfo);
+            } catch (Exception e) {
+                logger.error("连接到主机 {} 失败: {}", hostInfo.getIp(), e.getMessage(), e);
+                return null;
+            }
+        }
+
+        /**
+         * 收集Linux操作系统信息
+         * 使用Linux系统信息收集器获取系统和硬件信息
+         */
+        private void collectLinuxInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+            try {
+                logger.info("开始收集Linux系统详细信息: {}", hostInfo.getIp());
+
+                // 预先检查常见的Linux发行版文件
+                preCheckLinuxDistribution(session, osInfo);
+
+                // 获取适用于Linux的收集器
+                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
+                if (collector != null) {
+                    // 收集操作系统基本信息
+                    osInfo = collector.collectOsInfo(hostInfo, session, osInfo,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+                    hostInfo.setOsInfo(osInfo);
+                    service.updateHostInfoCache(hostInfo);
+
+                    // 收集硬件信息
+                    collector.collectHardwareInfo(osInfo, session,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+
+                    // 更新状态
                     hostInfo.setOsInfo(osInfo);
                     hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                    hostInfo.setMessage("操作系统类型收集成功");
+                    hostInfo.setMessage("Linux系统信息收集完成");
+                    service.updateHostInfoCache(hostInfo);
 
-                    // 初始化所有硬件收集状态
-                    hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-                    hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-
-                    // 设置操作系统信息收集状态
-                    osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
-                    osInfo.setLastUpdatedItem("os_info_collected");
-
-                    // 更新缓存
+                    logger.info("Linux系统信息收集成功: {}", hostInfo.getIp());
+                } else {
+                    logger.error("找不到Linux系统信息收集器");
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("找不到Linux系统信息收集器");
                     service.updateHostInfoCache(hostInfo);
                 }
-
-                logger.info("主机 {} 操作系统信息收集成功：{}，已设置状态：osInfoStatus=success",
-                        hostInfo.getIp(), hostInfo.getOsInfoStatus());
-                logger.info("主机 {} 操作系统类型收集总用时: {}ms",
-                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
-
             } catch (Exception e) {
-                logger.error("收集操作系统类型时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-
-                // 创建默认的操作系统信息对象
-                OsInfo osInfo = new OsInfo();
-                osInfo.setHostname(hostInfo.getHostname());
-                osInfo.setFqdn(hostInfo.getFqdn());
-                osInfo.setDistributionId("linux"); // 默认假设为Linux
-                osInfo.setDistribution("Unknown Linux");
-                osInfo.setDistributionName("Unknown Linux");
-                osInfo.setDistributionType(LinuxDistribution.OTHER);
-                osInfo.setVersionId("unknown");
-                osInfo.setVersion("unknown");
-
-                // 设置主机信息
-                hostInfo.setOsInfo(osInfo);
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS); // 更改为SUCCESS让流程继续
-                hostInfo.setMessage("操作系统类型收集基本成功，但详细信息可能不完整");
-
-                // 初始化所有硬件收集状态
-                hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-                hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-
-                // 设置操作系统信息收集状态
-                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
-                osInfo.setLastUpdatedItem("os_info_collected_partially");
-
+                logger.error("收集Linux系统信息时出错: {}", e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("收集Linux系统信息失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 收集DNS信息
+         * 收集Windows操作系统信息
+         * 使用Windows系统信息收集器获取系统和硬件信息
          */
-        private void collectDnsInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集DNS信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            hostInfo.setMessage("正在收集DNS信息...");
-            service.updateHostInfoCache(hostInfo);
-
+        private void collectWindowsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
             try {
-                // 收集DNS服务器信息 - 使用命令直接收集
-                String dnsServers;
-                if ("windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集DNS
-                    try {
-                        dnsServers = MinaUtils.execCmdWithResult(session,
-                                "cmd /c powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | ForEach-Object { $_ }\"");
+                logger.info("开始收集Windows系统详细信息: {}", hostInfo.getIp());
 
-                        // 如果PowerShell命令失败，尝试使用ipconfig
-                        if (StringUtils.isBlank(dnsServers) || dnsServers.toLowerCase().contains("error")) {
-                            logger.info("使用PowerShell获取DNS失败，尝试使用ipconfig");
-                            String ipconfig = MinaUtils.execCmdWithResult(session, "cmd /c ipconfig /all");
+                // 获取适用于Windows的收集器
+                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("windows");
+                if (collector != null) {
+                    // 收集操作系统基本信息
+                    osInfo = collector.collectOsInfo(hostInfo, session, osInfo,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+                    hostInfo.setOsInfo(osInfo);
+                    service.updateHostInfoCache(hostInfo);
 
-                            // 简单解析ipconfig输出以提取DNS服务器
-                            dnsServers = extractDnsFromIpconfig(ipconfig);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("Windows获取DNS错误: {}", e.getMessage());
-                        dnsServers = "无法获取DNS信息";
-                    }
+                    // 收集硬件信息
+                    collector.collectHardwareInfo(osInfo, session,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+
+                    // 更新状态
+                    hostInfo.setOsInfo(osInfo);
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setMessage("Windows系统信息收集完成");
+                    service.updateHostInfoCache(hostInfo);
+
+                    logger.info("Windows系统信息收集成功: {}", hostInfo.getIp());
                 } else {
-                    // Linux系统收集DNS
-                    try {
-                        dnsServers = MinaUtils.execCmdWithResult(session,
-                                "cat /etc/resolv.conf | grep nameserver | awk '{print $2}'");
-                    } catch (Exception e) {
-                        logger.warn("Linux获取DNS错误: {}", e.getMessage());
-                        dnsServers = "无法获取DNS信息";
-                    }
-                }
-
-                // 修复setDnsServers方法的参数类型问题
-                if (StringUtils.isNotBlank(dnsServers)) {
-                    // 更新操作系统信息
-                    List<String> dnsServerList = new ArrayList<>();
-                    for (String server : dnsServers.split("\\n")) {
-                        if (StringUtils.isNotBlank(server)) {
-                            dnsServerList.add(server.trim());
-                        }
-                    }
-                    osInfo.setDnsServers(dnsServerList);
-                    osInfo.setLastUpdatedItem("dns_collected");
-                    hostInfo.setMessage("DNS信息收集成功");
+                    logger.error("找不到Windows系统信息收集器");
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("找不到Windows系统信息收集器");
                     service.updateHostInfoCache(hostInfo);
                 }
-
-                logger.info("主机 {} DNS信息收集成功，耗时 {}ms",
-                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
-
             } catch (Exception e) {
-                logger.error("收集DNS信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                hostInfo.setMessage("DNS信息收集失败: " + e.getMessage() + "，继续收集其他信息");
+                logger.error("收集Windows系统信息时出错: {}", e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("收集Windows系统信息失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
             }
         }
 
         /**
-         * 从ipconfig输出中提取DNS服务器信息
+         * 预检查Linux发行版类型
          */
-        private String extractDnsFromIpconfig(String ipconfig) {
-            if (StringUtils.isBlank(ipconfig)) {
-                return "";
-            }
+        private void preCheckLinuxDistribution(ClientSession session, OsInfo osInfo) {
+            try {
+                // 检查Ubuntu系统
+                checkUbuntu(session, osInfo);
 
-            StringBuilder dnsServers = new StringBuilder();
-            String[] lines = ipconfig.split("[\r\n]+");
-            boolean dnsSection = false;
-
-            for (String line : lines) {
-                // 判断是否进入了DNS配置部分
-                if (line.contains("DNS Servers") || line.contains("DNS 服务器")) {
-                    dnsSection = true;
-
-                    // 处理同一行中的IP地址
-                    String[] parts = line.split(":");
-                    if (parts.length > 1 && parts[1].trim().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
-                        dnsServers.append(parts[1].trim()).append("\n");
-                    }
-                    continue;
+                // 如果不是Ubuntu，检查Debian系统
+                if (osInfo.getDistributionId() == null || !osInfo.getDistributionId().equals("ubuntu")) {
+                    checkDebian(session, osInfo);
                 }
 
-                // 如果在DNS部分且当前行是缩进的IP地址
-                if (dnsSection && line.trim().matches("\\d+\\.\\d+\\.\\d+\\.\\d+")) {
-                    dnsServers.append(line.trim()).append("\n");
-                } else if (dnsSection && !line.trim().isEmpty() && !line.contains(":")) {
-                    // 如果遇到了不是IP地址的行，且不是空行和冒号行，结束DNS部分
-                    dnsSection = false;
+                // 如果既不是Ubuntu也不是Debian，检查CentOS/RHEL系统
+                if (osInfo.getDistributionId() == null ||
+                        (!osInfo.getDistributionId().equals("ubuntu")
+                                && !osInfo.getDistributionId().equals("debian"))) {
+                    checkCentOS(session, osInfo);
                 }
-            }
 
-            return dnsServers.toString();
+                // 如果仍未识别，使用/etc/os-release
+                if (osInfo.getDistributionId() == null) {
+                    checkOsRelease(session, osInfo);
+                }
+            } catch (Exception e) {
+                logger.warn("预检查Linux发行版时出错: {}", e.getMessage());
+            }
         }
 
         /**
-         * 收集Hosts文件
+         * 检查Ubuntu系统
          */
-        private void collectHostsFile(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集Hosts文件: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            hostInfo.setMessage("正在收集Hosts文件...");
-            service.updateHostInfoCache(hostInfo);
-
+        private void checkUbuntu(ClientSession session, OsInfo osInfo) {
             try {
-                // 收集Hosts文件内容 - 使用命令直接收集
-                String hostsFile;
-                if ("windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集hosts
-                    try {
-                        hostsFile = MinaUtils.execCmdWithResult(session,
-                                "cmd /c type C:\\Windows\\System32\\drivers\\etc\\hosts");
+                // 检查lsb-release文件 (Ubuntu)
+                String lsbRelease = MinaUtils.execCmdWithResult(session, "cat /etc/lsb-release 2>/dev/null");
+                if (StringUtils.isNotBlank(lsbRelease) && lsbRelease.toLowerCase().contains("ubuntu")) {
+                    logger.info("检测到Ubuntu系统配置文件");
 
-                        // 如果type命令失败，尝试使用PowerShell
-                        if (StringUtils.isBlank(hostsFile) || hostsFile.toLowerCase().contains("error")) {
-                            logger.info("使用type命令获取hosts文件失败，尝试使用PowerShell");
-                            hostsFile = MinaUtils.execCmdWithResult(session,
-                                    "cmd /c powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
+                    // 提取版本
+                    Pattern versionPattern = Pattern.compile("DISTRIB_RELEASE=([0-9.]+)");
+                    Matcher versionMatcher = versionPattern.matcher(lsbRelease);
+                    if (versionMatcher.find()) {
+                        String version = versionMatcher.group(1);
+
+                        // 设置详细信息
+                        osInfo.setDistribution("Ubuntu");
+                        osInfo.setDistributionId("ubuntu");
+                        osInfo.setDistributionType(LinuxDistribution.UBUNTU);
+                        osInfo.setVersion(version);
+                        osInfo.setVersionId(version);
+
+                        // 设置特定版本标志
+                        if (version.startsWith("22.")) {
+                            osInfo.setUbuntu22(true);
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 22.04 LTS");
+                            // 为列表显示设置简单名称
+                            osInfo.setDisplayName("Ubuntu");
+                        } else if (version.startsWith("24.")) {
+                            osInfo.setUbuntu24(true);
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                            // 为列表显示设置简单名称
+                            osInfo.setDisplayName("Ubuntu");
+                        } else {
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu " + version);
+                            // 为列表显示设置简单名称
+                            osInfo.setDisplayName("Ubuntu");
                         }
-                    } catch (Exception e) {
-                        logger.warn("Windows获取hosts文件错误: {}", e.getMessage());
-                        hostsFile = "无法获取hosts文件内容";
-                    }
-                } else {
-                    // Linux系统收集hosts
-                    try {
-                        hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts");
-                    } catch (Exception e) {
-                        logger.warn("Linux获取hosts文件错误: {}", e.getMessage());
-                        hostsFile = "无法获取hosts文件内容";
+
+                        logger.info("通过lsb-release识别为Ubuntu系统，版本: {}", version);
                     }
                 }
-
-                // 更新操作系统信息
-                hostInfo.setMessage("Hosts文件收集成功");
-                osInfo.setLastUpdatedItem("hosts_collected");
-                hostInfo.setHostsFile(hostsFile);
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} Hosts文件收集成功，耗时 {}ms",
-                        hostInfo.getIp(), System.currentTimeMillis() - startTime);
-
             } catch (Exception e) {
-                logger.error("收集Hosts文件时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                hostInfo.setMessage("Hosts文件收集失败: " + e.getMessage() + "，继续收集其他信息");
-                service.updateHostInfoCache(hostInfo);
+                logger.warn("检查Ubuntu系统时出错: {}", e.getMessage());
             }
         }
 
         /**
-         * 收集CPU信息
+         * 检查Debian系统
          */
-        private void collectCpuInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集CPU信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            osInfo.setLastUpdatedItem("collecting_cpu");
-            hostInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集CPU信息...");
-            service.updateHostInfoCache(hostInfo);
-
+        private void checkDebian(ClientSession session, OsInfo osInfo) {
             try {
-                // 直接使用系统收集器的方法进行CPU信息收集
-                if (osInfo.getDistributionId() != null &&
-                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集CPU信息
-                    String cpuInfoCmd = "cmd /c wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors /Value";
-                    String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
+                // 检查debian_version文件
+                String debianVersion = MinaUtils.execCmdWithResult(session, "cat /etc/debian_version 2>/dev/null");
+                if (StringUtils.isNotBlank(debianVersion)) {
+                    debianVersion = debianVersion.trim();
 
-                    if (StringUtils.isNotBlank(cpuInfo)) {
-                        // 解析Windows CPU信息
-                        parseWindowsCpuInfo(osInfo, cpuInfo);
-                    }
-                } else {
-                    // Linux系统收集CPU信息
-                    String cpuInfoCmd = "cat /proc/cpuinfo";
-                    String cpuInfo = MinaUtils.execCmdWithResult(session, cpuInfoCmd);
+                    // 设置详细信息
+                    osInfo.setDistribution("Debian");
+                    osInfo.setDistributionId("debian");
+                    osInfo.setVersion(debianVersion);
+                    osInfo.setVersionId(debianVersion);
+                    osInfo.setDistributionType(LinuxDistribution.DEBIAN);
 
-                    if (StringUtils.isNotBlank(cpuInfo)) {
-                        // 解析Linux CPU信息
-                        parseLinuxCpuInfo(osInfo, cpuInfo);
-                    }
-                }
+                    // 匹配主要版本
+                    String majorVersion = debianVersion.split("\\.")[0];
 
-                // 更新状态
-                hostInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("CPU信息收集成功");
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} CPU信息收集成功：{}，{}核，耗时 {}ms",
-                        hostInfo.getIp(),
-                        osInfo.getCpuInfo() != null ? osInfo.getCpuInfo().getModel() : "Unknown",
-                        osInfo.getCpuInfo() != null ? osInfo.getCpuInfo().getCores() : 0,
-                        System.currentTimeMillis() - startTime);
-
-            } catch (Exception e) {
-                logger.error("收集CPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                osInfo.setLastUpdatedItem("CPU收集失败");
-                hostInfo.setCpuStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("CPU信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            }
-        }
-
-        /**
-         * 解析Linux CPU信息
-         */
-        private void parseLinuxCpuInfo(OsInfo osInfo, String cpuInfo) {
-            // 确保CpuInfo对象存在
-            if (osInfo.getCpuInfo() == null) {
-                osInfo.setCpuInfo(new CpuInfo());
-            }
-            CpuInfo cpuInfoObj = osInfo.getCpuInfo();
-
-            // 解析物理CPU数量
-            int physicalId = -1;
-            int cpuCount = 0;
-
-            // 解析CPU型号
-            String model = "";
-
-            // 解析核心数
-            int cores = 0;
-
-            String[] lines = cpuInfo.split("\n");
-            for (String line : lines) {
-                if (line.contains("physical id")) {
-                    int id = Integer.parseInt(line.split(":")[1].trim());
-                    if (id > physicalId) {
-                        physicalId = id;
-                        cpuCount = physicalId + 1;
-                    }
-                } else if (line.contains("model name") && model.isEmpty()) {
-                    model = line.split(":")[1].trim();
-                } else if (line.contains("cpu cores") && cores == 0) {
-                    cores = Integer.parseInt(line.split(":")[1].trim());
-                }
-            }
-
-            if (cpuCount == 0)
-                cpuCount = 1; // 至少有一个CPU
-            if (cores == 0) {
-                // 尝试计算逻辑处理器数量
-                int processors = 0;
-                for (String line : lines) {
-                    if (line.contains("processor")) {
-                        processors++;
-                    }
-                }
-                cores = processors > 0 ? processors / cpuCount : 1;
-            }
-
-            // 设置CPU信息
-            cpuInfoObj.setModel(model);
-            cpuInfoObj.setCores(cores);
-            cpuInfoObj.setPhysicalCount(cpuCount);
-            cpuInfoObj.setLogicalCores(cores * cpuCount);
-        }
-
-        /**
-         * 解析Windows CPU信息
-         */
-        private void parseWindowsCpuInfo(OsInfo osInfo, String cpuInfo) {
-            // 确保CpuInfo对象存在
-            if (osInfo.getCpuInfo() == null) {
-                osInfo.setCpuInfo(new CpuInfo());
-            }
-            CpuInfo cpuInfoObj = osInfo.getCpuInfo();
-
-            String model = "";
-            int cores = 0;
-            int logicalProcessors = 0;
-
-            String[] lines = cpuInfo.split("\n");
-            for (String line : lines) {
-                if (line.startsWith("Name=")) {
-                    model = line.substring(5).trim();
-                } else if (line.startsWith("NumberOfCores=")) {
-                    cores = Integer.parseInt(line.substring(14).trim());
-                } else if (line.startsWith("NumberOfLogicalProcessors=")) {
-                    logicalProcessors = Integer.parseInt(line.substring(26).trim());
-                }
-            }
-
-            // 设置CPU信息
-            cpuInfoObj.setModel(model);
-            cpuInfoObj.setCores(cores);
-            cpuInfoObj.setLogicalCores(logicalProcessors);
-            cpuInfoObj.setPhysicalCount(cores > 0 ? logicalProcessors / cores : 1);
-        }
-
-        /**
-         * 收集内存信息
-         */
-        private void collectMemoryInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集内存信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            osInfo.setLastUpdatedItem("collecting_memory");
-            hostInfo.setMemoryStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集内存信息...");
-            service.updateHostInfoCache(hostInfo);
-
-            try {
-                // 直接使用命令收集内存信息
-                if (osInfo.getDistributionId() != null &&
-                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集内存信息
-                    String memInfoCmd = "cmd /c wmic OS get TotalVisibleMemorySize, FreePhysicalMemory /Value";
-                    String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
-
-                    if (StringUtils.isNotBlank(memInfo)) {
-                        // 解析Windows内存信息
-                        parseWindowsMemoryInfo(osInfo, memInfo);
-                    }
-                } else {
-                    // Linux系统收集内存信息
-                    String memInfoCmd = "cat /proc/meminfo";
-                    String memInfo = MinaUtils.execCmdWithResult(session, memInfoCmd);
-
-                    if (StringUtils.isNotBlank(memInfo)) {
-                        // 解析Linux内存信息
-                        parseLinuxMemoryInfo(osInfo, memInfo);
-                    }
-                }
-
-                // 更新状态
-                hostInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("内存信息收集成功");
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} 内存信息收集成功：总内存 {}GB，可用内存 {}GB，耗时 {}ms",
-                        hostInfo.getIp(),
-                        osInfo.getMemoryInfo() != null
-                                ? String.format("%.2f", osInfo.getMemoryInfo().getTotalMemory() / 1024.0)
-                                : "0",
-                        osInfo.getMemoryInfo() != null
-                                ? String.format("%.2f", osInfo.getMemoryInfo().getAvailableMemory() / 1024.0)
-                                : "0",
-                        System.currentTimeMillis() - startTime);
-
-            } catch (Exception e) {
-                logger.error("收集内存信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                osInfo.setLastUpdatedItem("内存收集失败");
-                hostInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("内存信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            }
-        }
-
-        /**
-         * 解析Linux内存信息
-         */
-        private void parseLinuxMemoryInfo(OsInfo osInfo, String memInfo) {
-            // 确保MemoryInfo对象存在
-            if (osInfo.getMemoryInfo() == null) {
-                osInfo.setMemoryInfo(new MemoryInfo());
-            }
-            MemoryInfo memoryInfo = osInfo.getMemoryInfo();
-
-            long totalMem = 0;
-            long availableMem = 0;
-
-            String[] lines = memInfo.split("\n");
-            for (String line : lines) {
-                if (line.startsWith("MemTotal:")) {
-                    // MemTotal以KB为单位
-                    totalMem = Long.parseLong(line.replaceAll("[^0-9]", "")) / 1024; // 转换为MB
-                } else if (line.startsWith("MemAvailable:") || line.startsWith("MemFree:") && availableMem == 0) {
-                    // 首选MemAvailable，其次使用MemFree，转换为MB
-                    availableMem = Long.parseLong(line.replaceAll("[^0-9]", "")) / 1024;
-                }
-            }
-
-            // 设置内存信息
-            memoryInfo.setTotalMemory(totalMem);
-            memoryInfo.setAvailableMemory(availableMem);
-
-            // 计算使用率
-            if (totalMem > 0) {
-                double usedMemory = totalMem - availableMem;
-                double usagePercent = (usedMemory / totalMem) * 100;
-                memoryInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-            }
-        }
-
-        /**
-         * 解析Windows内存信息
-         */
-        private void parseWindowsMemoryInfo(OsInfo osInfo, String memInfo) {
-            // 确保MemoryInfo对象存在
-            if (osInfo.getMemoryInfo() == null) {
-                osInfo.setMemoryInfo(new MemoryInfo());
-            }
-            MemoryInfo memoryInfo = osInfo.getMemoryInfo();
-
-            long totalMem = 0;
-            long availableMem = 0;
-
-            String[] lines = memInfo.split("\n");
-            for (String line : lines) {
-                if (line.startsWith("TotalVisibleMemorySize=")) {
-                    // Windows中为KB单位，转换为MB
-                    totalMem = Long.parseLong(line.substring(23).trim()) / 1024;
-                } else if (line.startsWith("FreePhysicalMemory=")) {
-                    availableMem = Long.parseLong(line.substring(19).trim()) / 1024;
-                }
-            }
-
-            // 设置内存信息
-            memoryInfo.setTotalMemory(totalMem);
-            memoryInfo.setAvailableMemory(availableMem);
-
-            // 计算使用率
-            if (totalMem > 0) {
-                double usedMemory = totalMem - availableMem;
-                double usagePercent = (usedMemory / totalMem) * 100;
-                memoryInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-            }
-        }
-
-        /**
-         * 收集磁盘信息
-         */
-        private void collectDiskInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集磁盘信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            osInfo.setLastUpdatedItem("collecting_disk");
-            hostInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集磁盘信息...");
-            service.updateHostInfoCache(hostInfo);
-
-            try {
-                // 直接使用命令收集磁盘信息
-                if (osInfo.getDistributionId() != null &&
-                        "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集磁盘信息
-                    String diskInfoCmd = "cmd /c wmic logicaldisk where DeviceID='C:' get Size,FreeSpace /Value";
-                    String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
-
-                    if (StringUtils.isNotBlank(diskInfo)) {
-                        // 解析Windows磁盘信息
-                        parseWindowsDiskInfo(osInfo, diskInfo);
-                    }
-                } else {
-                    // Linux系统收集磁盘信息
-                    String diskInfoCmd = "df -P -k /";
-                    String diskInfo = MinaUtils.execCmdWithResult(session, diskInfoCmd);
-
-                    if (StringUtils.isNotBlank(diskInfo)) {
-                        // 解析Linux磁盘信息
-                        parseLinuxDiskInfo(osInfo, diskInfo);
-                    }
-                }
-
-                // 更新状态
-                hostInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("磁盘信息收集成功");
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} 磁盘信息收集成功：总磁盘 {}GB，可用磁盘 {}GB，耗时 {}ms",
-                        hostInfo.getIp(),
-                        osInfo.getDiskInfo() != null ? String.format("%.2f", osInfo.getDiskInfo().getTotalDiskSpace())
-                                : "0",
-                        osInfo.getDiskInfo() != null
-                                ? String.format("%.2f", osInfo.getDiskInfo().getAvailableDiskSpace())
-                                : "0",
-                        System.currentTimeMillis() - startTime);
-
-            } catch (Exception e) {
-                logger.error("收集磁盘信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                osInfo.setLastUpdatedItem("磁盘收集失败");
-                hostInfo.setDiskStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            }
-        }
-
-        /**
-         * 解析Linux磁盘信息
-         */
-        private void parseLinuxDiskInfo(OsInfo osInfo, String diskInfo) {
-            // 确保DiskInfo对象存在
-            if (osInfo.getDiskInfo() == null) {
-                osInfo.setDiskInfo(new DiskInfo());
-            }
-            DiskInfo diskInfoObj = osInfo.getDiskInfo();
-
-            String[] lines = diskInfo.split("\n");
-            if (lines.length >= 2) {
-                String[] parts = lines[1].trim().split("\\s+");
-                if (parts.length >= 4) {
-                    // df -k输出的单位是KB
-                    double totalGB = Double.parseDouble(parts[1].trim()) / (1024 * 1024); // 转换为GB
-                    double usedGB = Double.parseDouble(parts[2].trim()) / (1024 * 1024); // 转换为GB
-                    double availGB = Double.parseDouble(parts[3].trim()) / (1024 * 1024); // 转换为GB
-
-                    // 设置磁盘信息
-                    diskInfoObj.setTotalDiskSpace(totalGB);
-                    diskInfoObj.setUsedDiskSpace(usedGB);
-                    diskInfoObj.setAvailableDiskSpace(availGB);
-
-                    // 计算使用率
-                    if (totalGB > 0) {
-                        double usagePercent = (usedGB / totalGB) * 100;
-                        diskInfoObj.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-                    }
-                }
-            }
-        }
-
-        /**
-         * 解析Windows磁盘信息
-         */
-        private void parseWindowsDiskInfo(OsInfo osInfo, String diskInfo) {
-            // 确保DiskInfo对象存在
-            if (osInfo.getDiskInfo() == null) {
-                osInfo.setDiskInfo(new DiskInfo());
-            }
-            DiskInfo diskInfoObj = osInfo.getDiskInfo();
-
-            double totalSize = 0;
-            double freeSpace = 0;
-
-            String[] lines = diskInfo.split("[\r\n]+");
-            for (String line : lines) {
-                if (line.startsWith("Size=")) {
-                    totalSize = Double.parseDouble(line.substring(5).trim()) / (1024 * 1024 * 1024); // 转换为GB
-                } else if (line.startsWith("FreeSpace=")) {
-                    freeSpace = Double.parseDouble(line.substring(10).trim()) / (1024 * 1024 * 1024); // 转换为GB
-                }
-            }
-
-            // 设置磁盘信息
-            diskInfoObj.setTotalDiskSpace(totalSize);
-            diskInfoObj.setAvailableDiskSpace(freeSpace);
-            diskInfoObj.setUsedDiskSpace(totalSize - freeSpace);
-
-            // 计算使用率
-            if (totalSize > 0) {
-                double usagePercent = ((totalSize - freeSpace) / totalSize) * 100;
-                diskInfoObj.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-            }
-        }
-
-        /**
-         * 收集交换空间信息
-         */
-        private void collectSwapInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集交换空间信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            osInfo.setLastUpdatedItem("collecting_swap");
-            hostInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集交换空间信息...");
-            service.updateHostInfoCache(hostInfo);
-
-            try {
-                // 检查是否Linux系统，Windows不收集交换空间
-                if (osInfo.getDistributionId() != null &&
-                        !"windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // 收集交换空间信息
-                    String swapInfoCmd = "grep Swap /proc/meminfo";
-                    String swapInfo = MinaUtils.execCmdWithResult(session, swapInfoCmd);
-
-                    if (StringUtils.isNotBlank(swapInfo)) {
-                        // 解析Linux交换空间信息
-                        parseLinuxSwapInfo(osInfo, swapInfo);
-                    }
-                } else {
-                    // Windows系统使用页面文件作为交换空间
-                    String pagingFileCmd = "cmd /c wmic pagefile get CurrentUsage, AllocatedBaseSize /Value";
-                    String pagingInfo = MinaUtils.execCmdWithResult(session, pagingFileCmd);
-
-                    if (StringUtils.isNotBlank(pagingInfo)) {
-                        // 解析Windows页面文件信息
-                        parseWindowsPagefileInfo(osInfo, pagingInfo);
+                    // 基于版本号设置名称
+                    if (majorVersion.equals("12")) {
+                        osInfo.setDistributionName("Debian GNU/Linux 12 (bookworm)");
+                        osInfo.setDisplayName("Debian 12 (Bookworm)");
+                    } else if (majorVersion.equals("11")) {
+                        osInfo.setDistributionName("Debian GNU/Linux 11 (bullseye)");
+                        osInfo.setDisplayName("Debian 11 (Bullseye)");
+                    } else if (majorVersion.equals("10")) {
+                        osInfo.setDistributionName("Debian GNU/Linux 10 (buster)");
+                        osInfo.setDisplayName("Debian 10 (Buster)");
                     } else {
-                        logger.info("Windows系统无法获取页面文件信息: {}", hostInfo.getIp());
+                        osInfo.setDistributionName("Debian GNU/Linux " + debianVersion);
+                        osInfo.setDisplayName("Debian " + debianVersion);
                     }
+
+                    logger.info("通过debian_version识别为Debian系统，版本: {}", debianVersion);
                 }
-
-                // 更新状态
-                hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("交换空间信息收集成功");
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("主机 {} 交换空间信息收集成功：总交换空间 {}GB，可用交换空间 {}GB，耗时 {}ms",
-                        hostInfo.getIp(),
-                        osInfo.getSwapInfo() != null
-                                ? String.format("%.2f", osInfo.getSwapInfo().getTotalSwap() / 1024.0)
-                                : "0",
-                        osInfo.getSwapInfo() != null
-                                ? String.format("%.2f", osInfo.getSwapInfo().getAvailableSwap() / 1024.0)
-                                : "0",
-                        System.currentTimeMillis() - startTime);
-
             } catch (Exception e) {
-                logger.error("收集交换空间信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                osInfo.setLastUpdatedItem("交换空间收集失败");
-                hostInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
+                logger.warn("检查Debian系统时出错: {}", e.getMessage());
             }
         }
 
         /**
-         * 解析Linux交换空间信息
+         * 检查CentOS系统
          */
-        private void parseLinuxSwapInfo(OsInfo osInfo, String swapInfo) {
-            // 确保SwapInfo对象存在
-            if (osInfo.getSwapInfo() == null) {
-                osInfo.setSwapInfo(new SwapInfo());
-            }
-            SwapInfo swapInfoObj = osInfo.getSwapInfo();
-
-            long swapTotal = 0;
-            long swapFree = 0;
-
-            String[] lines = swapInfo.split("\n");
-            for (String line : lines) {
-                if (line.startsWith("SwapTotal:")) {
-                    // SwapTotal以KB为单位，转换为MB
-                    swapTotal = Long.parseLong(line.replaceAll("[^0-9]", "")) / 1024;
-                } else if (line.startsWith("SwapFree:")) {
-                    // SwapFree以KB为单位，转换为MB
-                    swapFree = Long.parseLong(line.replaceAll("[^0-9]", "")) / 1024;
-                }
-            }
-
-            // 设置交换空间信息
-            swapInfoObj.setTotalSwap(swapTotal);
-            swapInfoObj.setAvailableSwap(swapFree);
-
-            // 检查交换空间是否启用
-            swapInfoObj.setEnabled(swapTotal > 0);
-
-            // 计算使用率
-            if (swapTotal > 0) {
-                long usedSwap = swapTotal - swapFree;
-                double usagePercent = ((double) usedSwap / swapTotal) * 100;
-                swapInfoObj.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-            }
-        }
-
-        /**
-         * 解析Windows页面文件信息
-         */
-        private void parseWindowsPagefileInfo(OsInfo osInfo, String pagingInfo) {
-            // 确保SwapInfo对象存在
-            if (osInfo.getSwapInfo() == null) {
-                osInfo.setSwapInfo(new SwapInfo());
-            }
-            SwapInfo swapInfoObj = osInfo.getSwapInfo();
-
-            long totalPageFile = 0;
-            long usedPageFile = 0;
-
-            String[] lines = pagingInfo.split("[\r\n]+");
-            for (String line : lines) {
-                if (line.startsWith("AllocatedBaseSize=")) {
-                    try {
-                        // 页面文件大小以MB为单位
-                        totalPageFile = Long.parseLong(line.substring(18).trim());
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析Windows页面文件总大小失败: {}", e.getMessage());
-                    }
-                } else if (line.startsWith("CurrentUsage=")) {
-                    try {
-                        // 当前使用的页面文件以MB为单位
-                        usedPageFile = Long.parseLong(line.substring(13).trim());
-                    } catch (NumberFormatException e) {
-                        logger.warn("解析Windows页面文件使用量失败: {}", e.getMessage());
-                    }
-                }
-            }
-
-            // 设置交换空间信息
-            swapInfoObj.setTotalSwap(totalPageFile);
-            swapInfoObj.setAvailableSwap(totalPageFile > usedPageFile ? totalPageFile - usedPageFile : 0);
-            swapInfoObj.setEnabled(totalPageFile > 0);
-
-            // 计算使用率
-            if (totalPageFile > 0) {
-                double usagePercent = ((double) usedPageFile / totalPageFile) * 100;
-                swapInfoObj.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
-            }
-        }
-
-        /**
-         * 收集GPU信息
-         */
-        private void collectGpuInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            logger.info("开始收集GPU信息: {}", hostInfo.getIp());
-            long startTime = System.currentTimeMillis();
-
-            // 设置状态为正在收集
-            osInfo.setLastUpdatedItem("collecting_gpu");
-            hostInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
-            hostInfo.setMessage("正在收集GPU信息...");
-            service.updateHostInfoCache(hostInfo);
-
+        private void checkCentOS(ClientSession session, OsInfo osInfo) {
             try {
-                if (osInfo.getDistributionId() != null && "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
-                    // Windows系统收集GPU信息
-                    String gpuInfoCmd = "powershell -command \"Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion | ConvertTo-Json\"";
-                    String gpuInfo = MinaUtils.execCmdWithResult(session, gpuInfoCmd);
+                // 检查CentOS/RHEL系统
+                String redhatRelease = MinaUtils.execCmdWithResult(session, "cat /etc/redhat-release 2>/dev/null");
+                if (StringUtils.isNotBlank(redhatRelease)) {
+                    String release = redhatRelease.toLowerCase();
+                    String versionId = null;
 
-                    if (StringUtils.isNotBlank(gpuInfo)) {
-                        // 解析Windows GPU信息
-                        parseWindowsGpuInfo(osInfo, gpuInfo);
-
-                        // 如果是NVIDIA GPU，尝试获取显存使用情况
-                        if (osInfo.getGpuInfo() != null && osInfo.getGpuInfo().getModel() != null &&
-                                osInfo.getGpuInfo().getModel().toLowerCase().contains("nvidia")) {
-                            try {
-                                // 尝试使用nvidia-smi获取显存使用情况
-                                String nvidiaSmiCmd = "nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader,nounits";
-                                String nvidiaSmiResult = MinaUtils.execCmdWithResult(session, nvidiaSmiCmd);
-
-                                if (StringUtils.isNotBlank(nvidiaSmiResult)) {
-                                    parseNvidiaGpuMemory(osInfo, nvidiaSmiResult);
-                                }
-                            } catch (Exception e) {
-                                logger.warn("获取NVIDIA显存使用情况失败: {}", e.getMessage());
-                            }
-                        }
+                    // 提取版本号
+                    Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
+                    Matcher versionMatcher = versionPattern.matcher(redhatRelease);
+                    if (versionMatcher.find()) {
+                        versionId = versionMatcher.group(1);
                     }
-                } else {
-                    // Linux系统收集GPU信息
-                    // 先尝试nvidia-smi命令获取NVIDIA GPU信息
-                    try {
-                        String nvidiaSmiCmd = "nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv,noheader";
-                        String nvidiaSmiResult = MinaUtils.execCmdWithResult(session, nvidiaSmiCmd);
 
-                        if (StringUtils.isNotBlank(nvidiaSmiResult) && !nvidiaSmiResult.contains("not found")) {
-                            parseLinuxNvidiaGpuInfo(osInfo, nvidiaSmiResult);
-                        } else {
-                            // 尝试使用lspci命令获取GPU信息
-                            String lspciCmd = "lspci | grep -i vga";
-                            String lspciResult = MinaUtils.execCmdWithResult(session, lspciCmd);
+                    if (release.contains("centos")) {
+                        osInfo.setDistribution("CentOS");
+                        osInfo.setDistributionId("centos");
+                        osInfo.setDistributionName("CentOS Linux");
+                        osInfo.setDistributionType(LinuxDistribution.CENTOS);
 
-                            if (StringUtils.isNotBlank(lspciResult)) {
-                                parseLinuxGpuInfo(osInfo, lspciResult);
+                        if (versionId != null) {
+                            osInfo.setVersionId(versionId);
+                            osInfo.setVersion(versionId);
 
-                                // 如果是NVIDIA GPU，尝试设置显存（虽然lspci显示了NVIDIA但nvidia-smi失败的情况）
-                                if (osInfo.getGpuInfo() != null
-                                        && osInfo.getGpuInfo().getInfo() != null
-                                        && osInfo.getGpuInfo().getInfo().toLowerCase().contains("nvidia")) {
-                                    // 创建和设置GPU对象
-                                    GpuInfo gpuInfo = new GpuInfo();
-                                    gpuInfo.setModel("未检测到GPU设备");
-                                    gpuInfo.setInfo("未检测到GPU设备");
-                                    gpuInfo.setMemorySize(0.0);
-                                    osInfo.setGpuInfo(gpuInfo);
-                                }
+                            // 设置特定版本标记
+                            if (versionId.startsWith("7")) {
+                                osInfo.setCentOS7(true);
+                                osInfo.setDisplayName("CentOS Linux 7");
+                            } else if (versionId.startsWith("8")) {
+                                osInfo.setCentOS8(true);
+                                osInfo.setDisplayName("CentOS Linux 8");
                             } else {
-                                // 创建和设置GPU对象
-                                GpuInfo gpuInfo = new GpuInfo();
-                                gpuInfo.setModel("未检测到GPU设备");
-                                gpuInfo.setInfo("未检测到GPU设备");
-                                gpuInfo.setMemorySize(0.0);
-                                osInfo.setGpuInfo(gpuInfo);
+                                osInfo.setDisplayName("CentOS Linux " + versionId);
                             }
+
+                            logger.info("通过redhat-release识别为CentOS系统，版本: {}", versionId);
                         }
-                    } catch (Exception e) {
-                        // 如果nvidia-smi命令失败，尝试使用lspci命令
-                        try {
-                            String lspciCmd = "lspci | grep -i vga";
-                            String lspciResult = MinaUtils.execCmdWithResult(session, lspciCmd);
+                    } else if (release.contains("red hat") || release.contains("redhat")) {
+                        osInfo.setDistribution("RedHat");
+                        osInfo.setDistributionId("rhel");
+                        osInfo.setDistributionName("Red Hat Enterprise Linux");
+                        osInfo.setDistributionType(LinuxDistribution.REDHAT);
 
-                            if (StringUtils.isNotBlank(lspciResult)) {
-                                parseLinuxGpuInfo(osInfo, lspciResult);
-                            } else {
-                                // 创建和设置GPU对象
-                                GpuInfo gpuInfo = new GpuInfo();
-                                gpuInfo.setModel("未检测到GPU设备");
-                                gpuInfo.setInfo("未检测到GPU设备");
-                                gpuInfo.setMemorySize(0.0);
-                                osInfo.setGpuInfo(gpuInfo);
-                            }
-                        } catch (Exception ex) {
-                            logger.error("获取Linux GPU信息失败", ex);
-                            // 创建和设置GPU对象
-                            GpuInfo gpuInfo = new GpuInfo();
-                            gpuInfo.setModel("获取GPU信息失败: " + ex.getMessage());
-                            gpuInfo.setInfo("获取GPU信息失败: " + ex.getMessage());
-                            gpuInfo.setMemorySize(0.0);
-                            osInfo.setGpuInfo(gpuInfo);
-                        }
-                    }
-                }
+                        if (versionId != null) {
+                            osInfo.setVersionId(versionId);
+                            osInfo.setVersion(versionId);
+                            osInfo.setDisplayName("Red Hat Enterprise Linux " + versionId);
 
-                // 更新状态
-                hostInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("GPU信息收集成功");
-                service.updateHostInfoCache(hostInfo);
-
-                logger.info("GPU信息收集完成: {}, 用时: {}ms, GPU型号: {}",
-                        hostInfo.getIp(), (System.currentTimeMillis() - startTime),
-                        osInfo.getGpuInfo() != null && osInfo.getGpuInfo().getModel() != null
-                                ? osInfo.getGpuInfo().getModel()
-                                : "未知");
-            } catch (Exception e) {
-                logger.error("收集GPU信息失败: {}", hostInfo.getIp(), e);
-                hostInfo.setGpuStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-
-                // 创建和设置GPU对象
-                GpuInfo gpuInfo = new GpuInfo();
-                gpuInfo.setModel("收集GPU信息失败: " + e.getMessage());
-                gpuInfo.setInfo("收集GPU信息失败: " + e.getMessage());
-                gpuInfo.setMemorySize(0.0);
-                osInfo.setGpuInfo(gpuInfo);
-            }
-        }
-
-        /**
-         * 解析NVIDIA GPU显存信息
-         */
-        private void parseNvidiaGpuMemory(OsInfo osInfo, String nvidiaSmiResult) {
-            try {
-                // 确保GpuInfo对象存在
-                if (osInfo.getGpuInfo() == null) {
-                    osInfo.setGpuInfo(new GpuInfo());
-                }
-                GpuInfo gpuInfo = osInfo.getGpuInfo();
-
-                String[] parts = nvidiaSmiResult.trim().split(",\\s*");
-                if (parts.length >= 2) {
-                    // 转换为GB
-                    Double totalMemory = Double.parseDouble(parts[0].trim()) / 1024.0;
-                    Double usedMemory = Double.parseDouble(parts[1].trim()) / 1024.0;
-
-                    gpuInfo.setMemorySize(Math.round(totalMemory * 10.0) / 10.0);
-
-                    logger.info("解析NVIDIA GPU显存信息成功: 总显存={}GB",
-                            gpuInfo.getMemorySize());
-                }
-            } catch (Exception e) {
-                logger.error("解析NVIDIA GPU显存信息失败", e);
-            }
-        }
-
-        /**
-         * 解析Linux NVIDIA GPU信息
-         */
-        private void parseLinuxNvidiaGpuInfo(OsInfo osInfo, String nvidiaSmiResult) {
-            try {
-                // 确保GpuInfo对象存在
-                if (osInfo.getGpuInfo() == null) {
-                    osInfo.setGpuInfo(new GpuInfo());
-                }
-                GpuInfo gpuInfo = osInfo.getGpuInfo();
-
-                String[] lines = nvidiaSmiResult.trim().split("\\n");
-                if (lines.length > 0) {
-                    String[] parts = lines[0].split(",\\s*");
-                    if (parts.length >= 3) {
-                        // 设置GPU型号
-                        gpuInfo.setModel(parts[0].trim());
-                        gpuInfo.setInfo(parts[0].trim());
-
-                        // 设置显存信息（从MiB转换为GB）
-                        try {
-                            double totalMemory = Double.parseDouble(parts[1].trim().replace("MiB", "").trim()) / 1024.0;
-                            gpuInfo.setMemorySize(Math.round(totalMemory * 10.0) / 10.0);
-                        } catch (NumberFormatException e) {
-                            logger.warn("解析NVIDIA显存大小失败: {}", e.getMessage());
+                            logger.info("通过redhat-release识别为RHEL系统，版本: {}", versionId);
                         }
                     }
                 }
             } catch (Exception e) {
-                logger.error("解析Linux NVIDIA GPU信息失败", e);
+                logger.warn("检查CentOS/RHEL系统时出错: {}", e.getMessage());
             }
         }
 
-        private void parseLinuxGpuInfo(OsInfo osInfo, String gpuInfo) {
-            // 确保GpuInfo对象存在
-            if (osInfo.getGpuInfo() == null) {
-                osInfo.setGpuInfo(new GpuInfo());
-            }
-            GpuInfo gpuInfoObj = osInfo.getGpuInfo();
-
-            // 通过正则表达式提取GPU型号
-            Pattern pattern = Pattern.compile("VGA.*\\[([^\\]]+)\\]");
-            Matcher matcher = pattern.matcher(gpuInfo);
-            if (matcher.find()) {
-                String gpuModel = matcher.group(1).trim();
-                gpuInfoObj.setModel(gpuModel);
-                gpuInfoObj.setInfo(gpuModel);
-
-                // 根据型号判断是否是集成显卡，设置默认显存大小
-                if (gpuModel.toLowerCase().contains("intel")) {
-                    gpuInfoObj.setMemorySize(1.0); // 假设Intel集成显卡有1GB显存
-                } else if (gpuModel.toLowerCase().contains("nvidia")) {
-                    gpuInfoObj.setMemorySize(4.0); // 假设NVIDIA显卡有4GB显存
-                } else if (gpuModel.toLowerCase().contains("amd") || gpuModel.toLowerCase().contains("radeon")) {
-                    gpuInfoObj.setMemorySize(2.0); // 假设AMD显卡有2GB显存
-                } else {
-                    gpuInfoObj.setMemorySize(0.0);
-                }
-            } else {
-                gpuInfoObj.setModel("未识别的显卡");
-                gpuInfoObj.setInfo("未识别的显卡");
-                gpuInfoObj.setMemorySize(0.0);
-            }
-        }
-
-        private void parseWindowsGpuInfo(OsInfo osInfo, String gpuInfo) {
+        /**
+         * 检查/etc/os-release文件
+         */
+        private void checkOsRelease(ClientSession session, OsInfo osInfo) {
             try {
-                // 确保GpuInfo对象存在
-                if (osInfo.getGpuInfo() == null) {
-                    osInfo.setGpuInfo(new GpuInfo());
-                }
-                GpuInfo gpuInfoObj = osInfo.getGpuInfo();
+                String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
+                if (StringUtils.isNotBlank(osRelease)) {
+                    // 提取ID (发行版ID)
+                    Pattern idPattern = Pattern.compile("^ID=\"?(.*?)\"?$", Pattern.MULTILINE);
+                    Matcher idMatcher = idPattern.matcher(osRelease);
+                    if (idMatcher.find()) {
+                        String distributionId = idMatcher.group(1).trim().toLowerCase();
+                        osInfo.setDistributionId(distributionId);
 
-                JSONArray gpus = JSON.parseArray(gpuInfo);
-                if (gpus != null && !gpus.isEmpty()) {
-                    JSONObject gpu = gpus.getJSONObject(0);
-                    String name = gpu.getString("Name");
-                    Long adapterRam = gpu.getLong("AdapterRAM");
+                        // 根据ID设置distribution和distributionType
+                        LinuxDistribution distType = LinuxDistribution.fromId(distributionId);
+                        osInfo.setDistributionType(distType);
 
-                    if (StringUtils.isNotBlank(name)) {
-                        gpuInfoObj.setModel(name);
-                        gpuInfoObj.setInfo(name);
-
-                        // 计算显存大小（字节转GB）
-                        if (adapterRam != null && adapterRam > 0) {
-                            double gpuMemoryGB = adapterRam / (1024.0 * 1024.0 * 1024.0);
-                            gpuInfoObj.setMemorySize(Math.round(gpuMemoryGB * 10.0) / 10.0);
-                        } else {
-                            gpuInfoObj.setMemorySize(0.0);
+                        // 设置distribution
+                        switch (distType) {
+                            case CENTOS:
+                            case CENTOS7:
+                            case CENTOS8:
+                                osInfo.setDistribution("CentOS");
+                                break;
+                            case UBUNTU:
+                            case UBUNTU22:
+                            case UBUNTU24:
+                                osInfo.setDistribution("Ubuntu");
+                                break;
+                            case DEBIAN:
+                                osInfo.setDistribution("Debian");
+                                break;
+                            case REDHAT:
+                                osInfo.setDistribution("RedHat");
+                                break;
+                            case KYLIN:
+                            case KYLIN_V4:
+                            case KYLIN_V10:
+                                osInfo.setDistribution("Kylin");
+                                break;
+                            default:
+                                osInfo.setDistribution(StringUtils.capitalize(distributionId));
                         }
                     } else {
-                        gpuInfoObj.setModel("未检测到GPU设备");
-                        gpuInfoObj.setInfo("未检测到GPU设备");
-                        gpuInfoObj.setMemorySize(0.0);
+                        osInfo.setDistributionId("unknown");
+                        osInfo.setDistribution("Other");
+                        osInfo.setDistributionType(LinuxDistribution.OTHER);
                     }
-                } else {
-                    gpuInfoObj.setModel("未检测到GPU设备");
-                    gpuInfoObj.setInfo("未检测到GPU设备");
-                    gpuInfoObj.setMemorySize(0.0);
+
+                    // 提取NAME (发行版名称)
+                    Pattern namePattern = Pattern.compile("^NAME=\"?(.*?)\"?$", Pattern.MULTILINE);
+                    Matcher nameMatcher = namePattern.matcher(osRelease);
+                    if (nameMatcher.find()) {
+                        String distributionName = nameMatcher.group(1).trim();
+                        osInfo.setDistributionName(distributionName);
+                    } else if (StringUtils.isNotBlank(osInfo.getDistributionId())) {
+                        osInfo.setDistributionName(StringUtils.capitalize(osInfo.getDistributionId()));
+                    } else {
+                        osInfo.setDistributionName("Unknown Linux");
+                    }
+
+                    // 提取VERSION_ID (版本号)
+                    Pattern versionIdPattern = Pattern.compile("^VERSION_ID=\"?(.*?)\"?$", Pattern.MULTILINE);
+                    Matcher versionIdMatcher = versionIdPattern.matcher(osRelease);
+                    if (versionIdMatcher.find()) {
+                        String versionId = versionIdMatcher.group(1).trim();
+                        osInfo.setVersionId(versionId);
+                        osInfo.setVersion(versionId);
+                    }
+
+                    // 提取PRETTY_NAME (完整名称)
+                    Pattern prettyNamePattern = Pattern.compile("^PRETTY_NAME=\"?(.*?)\"?$", Pattern.MULTILINE);
+                    Matcher prettyNameMatcher = prettyNamePattern.matcher(osRelease);
+                    if (prettyNameMatcher.find()) {
+                        String prettyName = prettyNameMatcher.group(1).trim();
+                        osInfo.setFullName(prettyName);
+                        // 如果还没有设置显示名称，使用prettyName
+                        if (StringUtils.isBlank(osInfo.getDisplayName())) {
+                            osInfo.setDisplayName(prettyName);
+                        }
+                    }
+
+                    logger.info("通过os-release识别为{}系统，版本: {}",
+                            osInfo.getDistribution(), osInfo.getVersionId());
                 }
             } catch (Exception e) {
-                logger.error("解析Windows GPU信息失败", e);
-                GpuInfo gpuInfoObj = new GpuInfo();
-                gpuInfoObj.setModel("获取GPU信息失败: " + e.getMessage());
-                gpuInfoObj.setInfo("获取GPU信息失败: " + e.getMessage());
-                gpuInfoObj.setMemorySize(0.0);
-                osInfo.setGpuInfo(gpuInfoObj);
+                logger.warn("检查/etc/os-release时出错: {}", e.getMessage());
             }
         }
 
@@ -2270,6 +1387,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                 service.updateHostInfoCache(hostInfo);
             }
         }
+
     }
 
     @Override
@@ -2400,7 +1518,8 @@ public class OsInfoServiceImpl implements OsInfoService {
                     }
 
                     // 获取系统架构
-                    String arch = MinaUtils.execCmdWithResult(session, "cmd /c echo %PROCESSOR_ARCHITECTURE%").trim();
+                    String arch = MinaUtils.execCmdWithResult(session,
+                            "cmd /c echo %PROCESSOR_ARCHITECTURE%").trim();
                     osInfo.setArchitecture(arch.equalsIgnoreCase("AMD64") ? "x86_64" : arch);
 
                     // 获取更多详细信息用于显示

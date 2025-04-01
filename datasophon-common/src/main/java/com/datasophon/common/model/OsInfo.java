@@ -213,6 +213,36 @@ public class OsInfo implements Serializable {
     private String distributionName;
 
     /**
+     * 是否为CentOS 7版本
+     */
+    private boolean centOS7;
+
+    /**
+     * 是否为CentOS 8版本
+     */
+    private boolean centOS8;
+
+    /**
+     * 是否为Ubuntu 22.04版本
+     */
+    private boolean ubuntu22;
+
+    /**
+     * 是否为Ubuntu 24.04版本
+     */
+    private boolean ubuntu24;
+
+    /**
+     * 是否为Kylin V10版本
+     */
+    private boolean kylinV10;
+
+    /**
+     * 是否为Kylin V4版本
+     */
+    private boolean kylinV4;
+
+    /**
      * 设置硬件收集状态
      */
     public void setHardwareCollectionStatus(OsInfoStatusEnum status) {
@@ -380,54 +410,88 @@ public class OsInfo implements Serializable {
         this.valid = valid;
     }
 
-    // 下面是常用的简便版本检查方法
-
     /**
      * 检查是否为CentOS 7
      */
     public boolean isCentOS7() {
-        return isDistribution(LinuxDistribution.CENTOS7) ||
-                (isDistribution(LinuxDistribution.CENTOS) && isVersion("7"));
+        return centOS7;
+    }
+
+    /**
+     * 设置是否为CentOS 7
+     */
+    public void setCentOS7(boolean centOS7) {
+        this.centOS7 = centOS7;
     }
 
     /**
      * 检查是否为CentOS 8
      */
     public boolean isCentOS8() {
-        return isDistribution(LinuxDistribution.CENTOS8) ||
-                (isDistribution(LinuxDistribution.CENTOS) && isVersion("8"));
+        return centOS8;
+    }
+
+    /**
+     * 设置是否为CentOS 8
+     */
+    public void setCentOS8(boolean centOS8) {
+        this.centOS8 = centOS8;
     }
 
     /**
      * 检查是否为Ubuntu 22.04
      */
     public boolean isUbuntu22() {
-        return isDistribution(LinuxDistribution.UBUNTU22) ||
-                (isDistribution(LinuxDistribution.UBUNTU) && isVersion("22"));
+        return ubuntu22;
+    }
+
+    /**
+     * 设置是否为Ubuntu 22.04
+     */
+    public void setUbuntu22(boolean ubuntu22) {
+        this.ubuntu22 = ubuntu22;
     }
 
     /**
      * 检查是否为Ubuntu 24.04
      */
     public boolean isUbuntu24() {
-        return isDistribution(LinuxDistribution.UBUNTU24) ||
-                (isDistribution(LinuxDistribution.UBUNTU) && isVersion("24"));
+        return ubuntu24;
     }
 
     /**
-     * 检查是否为麒麟V4
+     * 设置是否为Ubuntu 24.04
      */
-    public boolean isKylinV4() {
-        return isDistribution(LinuxDistribution.KYLIN_V4) ||
-                (isDistribution(LinuxDistribution.KYLIN) && isVersion("4"));
+    public void setUbuntu24(boolean ubuntu24) {
+        this.ubuntu24 = ubuntu24;
     }
 
     /**
-     * 检查是否为麒麟V10
+     * 检查是否为Kylin V10
      */
     public boolean isKylinV10() {
-        return isDistribution(LinuxDistribution.KYLIN_V10) ||
-                (isDistribution(LinuxDistribution.KYLIN) && isVersion("10"));
+        return kylinV10;
+    }
+
+    /**
+     * 设置是否为Kylin V10
+     */
+    public void setKylinV10(boolean kylinV10) {
+        this.kylinV10 = kylinV10;
+    }
+
+    /**
+     * 检查是否为Kylin V4
+     */
+    public boolean isKylinV4() {
+        return kylinV4;
+    }
+
+    /**
+     * 设置是否为Kylin V4
+     */
+    public void setKylinV4(boolean kylinV4) {
+        this.kylinV4 = kylinV4;
     }
 
     /**

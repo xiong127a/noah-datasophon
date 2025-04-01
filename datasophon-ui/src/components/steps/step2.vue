@@ -682,9 +682,9 @@ export default {
             // 使用osInfo中的数据
             const hasOsInfo = row.osInfo && row.osInfo.distribution;
             
-            // 优先使用distributionName，其次使用displayName，最后fallback到distribution字段
+            // 只使用displayName字段，不使用distributionName和distribution
             const osDisplayName = hasOsInfo 
-              ? (row.osInfo.distributionName || row.osInfo.displayName || row.osInfo.distribution)
+              ? (row.osInfo.displayName || row.osInfo.distribution || '-')
               : (text || row.osType || '-');
               
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
