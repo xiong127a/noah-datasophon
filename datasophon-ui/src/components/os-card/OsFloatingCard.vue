@@ -51,7 +51,7 @@
 
           <!-- CPU信息 -->
           <div class="hardware-item">
-            <div class="hardware-icon cpu" :class="{ 'loading': cpuStatus === 'loading', 'error': cpuStatus === 'error' }">
+            <div class="hardware-icon cpu" :class="{ 'loading': getCpuStatus() === 'loading', 'error': getCpuStatus() === 'error' }">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <rect x="4" y="4" width="16" height="16" rx="2" />
                 <rect x="9" y="9" width="6" height="6" />
@@ -65,22 +65,22 @@
               <div class="hardware-header">
                 <span class="hardware-title">处理器</span>
                 <div class="hardware-status">
-                  <a-icon v-if="checkStatus(cpuStatus, 'success')" type="check-circle" class="status-icon success" />
-                  <a-icon v-else-if="checkStatus(cpuStatus, 'error')" type="close-circle" class="status-icon error" />
-                  <a-icon v-else-if="checkStatus(cpuStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-if="checkCpuStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkCpuStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkCpuStatus('loading')" type="loading" class="status-icon loading" spin />
                   <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
-              <div class="hardware-info" v-if="cpuStatus === 'loading'">
+              <div class="hardware-info" v-if="getCpuStatus() === 'loading'">
                 <div class="loading-indicator">
                   <span></span><span></span><span></span>
                 </div>
                 <span class="loading-text">正在收集CPU信息...</span>
               </div>
-              <div class="hardware-info error" v-else-if="cpuStatus === 'error'">
+              <div class="hardware-info error" v-else-if="getCpuStatus() === 'error'">
                 获取CPU信息失败
               </div>
-              <div class="hardware-info pending" v-else-if="cpuStatus === 'pending'">
+              <div class="hardware-info pending" v-else-if="getCpuStatus() === 'pending'">
                 等待收集CPU信息
               </div>
               <div class="hardware-info" v-else>
@@ -101,7 +101,7 @@
 
           <!-- 内存信息 -->
           <div class="hardware-item">
-            <div class="hardware-icon memory" :class="{ 'loading': memoryStatus === 'loading', 'error': memoryStatus === 'error' }">
+            <div class="hardware-icon memory" :class="{ 'loading': getMemoryStatus() === 'loading', 'error': getMemoryStatus() === 'error' }">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <path d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />
                 <path d="M8 6v12" />
@@ -114,22 +114,22 @@
               <div class="hardware-header">
                 <span class="hardware-title">内存</span>
                 <div class="hardware-status">
-                  <a-icon v-if="checkStatus(memoryStatus, 'success')" type="check-circle" class="status-icon success" />
-                  <a-icon v-else-if="checkStatus(memoryStatus, 'error')" type="close-circle" class="status-icon error" />
-                  <a-icon v-else-if="checkStatus(memoryStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-if="checkMemoryStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkMemoryStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkMemoryStatus('loading')" type="loading" class="status-icon loading" spin />
                   <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
-              <div class="hardware-info" v-if="memoryStatus === 'loading'">
+              <div class="hardware-info" v-if="getMemoryStatus() === 'loading'">
                 <div class="loading-indicator">
                   <span></span><span></span><span></span>
                 </div>
                 <span class="loading-text">正在收集内存信息...</span>
               </div>
-              <div class="hardware-info error" v-else-if="memoryStatus === 'error'">
+              <div class="hardware-info error" v-else-if="getMemoryStatus() === 'error'">
                 获取内存信息失败
               </div>
-              <div class="hardware-info pending" v-else-if="memoryStatus === 'pending'">
+              <div class="hardware-info pending" v-else-if="getMemoryStatus() === 'pending'">
                 等待收集内存信息
               </div>
               <div class="hardware-info" v-else>
@@ -163,7 +163,7 @@
 
           <!-- 磁盘信息 -->
           <div class="hardware-item">
-            <div class="hardware-icon disk" :class="{ 'loading': diskStatus === 'loading', 'error': diskStatus === 'error' }">
+            <div class="hardware-icon disk" :class="{ 'loading': getDiskStatus() === 'loading', 'error': getDiskStatus() === 'error' }">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <circle cx="12" cy="12" r="9" />
                 <circle cx="12" cy="12" r="3" />
@@ -177,22 +177,22 @@
               <div class="hardware-header">
                 <span class="hardware-title">磁盘</span>
                 <div class="hardware-status">
-                  <a-icon v-if="checkStatus(diskStatus, 'success')" type="check-circle" class="status-icon success" />
-                  <a-icon v-else-if="checkStatus(diskStatus, 'error')" type="close-circle" class="status-icon error" />
-                  <a-icon v-else-if="checkStatus(diskStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-if="checkDiskStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkDiskStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkDiskStatus('loading')" type="loading" class="status-icon loading" spin />
                   <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
-              <div class="hardware-info" v-if="diskStatus === 'loading'">
+              <div class="hardware-info" v-if="getDiskStatus() === 'loading'">
                 <div class="loading-indicator">
                   <span></span><span></span><span></span>
                 </div>
                 <span class="loading-text">正在收集磁盘信息...</span>
               </div>
-              <div class="hardware-info error" v-else-if="diskStatus === 'error'">
+              <div class="hardware-info error" v-else-if="getDiskStatus() === 'error'">
                 获取磁盘信息失败
               </div>
-              <div class="hardware-info pending" v-else-if="diskStatus === 'pending'">
+              <div class="hardware-info pending" v-else-if="getDiskStatus() === 'pending'">
                 等待收集磁盘信息
               </div>
               <div class="hardware-info" v-else>
@@ -226,7 +226,7 @@
 
           <!-- GPU信息 -->
           <div class="hardware-item">
-            <div class="hardware-icon gpu" :class="{ 'loading': gpuStatus === 'loading', 'error': gpuStatus === 'error' }">
+            <div class="hardware-icon gpu" :class="{ 'loading': getGpuStatus() === 'loading', 'error': getGpuStatus() === 'error' }">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="M6 8h4v8H6z" />
@@ -239,22 +239,22 @@
               <div class="hardware-header">
                 <span class="hardware-title">图形处理器</span>
                 <div class="hardware-status">
-                  <a-icon v-if="checkStatus(gpuStatus, 'success')" type="check-circle" class="status-icon success" />
-                  <a-icon v-else-if="checkStatus(gpuStatus, 'error')" type="close-circle" class="status-icon error" />
-                  <a-icon v-else-if="checkStatus(gpuStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-if="checkGpuStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkGpuStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkGpuStatus('loading')" type="loading" class="status-icon loading" spin />
                   <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
-              <div class="hardware-info" v-if="gpuStatus === 'loading'">
+              <div class="hardware-info" v-if="getGpuStatus() === 'loading'">
                 <div class="loading-indicator">
                   <span></span><span></span><span></span>
                 </div>
                 <span class="loading-text">正在收集GPU信息...</span>
               </div>
-              <div class="hardware-info error" v-else-if="gpuStatus === 'error'">
+              <div class="hardware-info error" v-else-if="getGpuStatus() === 'error'">
                 获取GPU信息失败
               </div>
-              <div class="hardware-info pending" v-else-if="gpuStatus === 'pending'">
+              <div class="hardware-info pending" v-else-if="getGpuStatus() === 'pending'">
                 等待收集GPU信息
               </div>
               <div class="hardware-info" v-else>
@@ -271,7 +271,7 @@
 
           <!-- 交换空间信息 -->
           <div class="hardware-item">
-            <div class="hardware-icon swap" :class="{ 'loading': swapStatus === 'loading', 'error': swapStatus === 'error' }">
+            <div class="hardware-icon swap" :class="{ 'loading': getSwapStatus() === 'loading', 'error': getSwapStatus() === 'error' }">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
                 <path d="M7 8h10" />
@@ -285,22 +285,22 @@
               <div class="hardware-header">
                 <span class="hardware-title">交换空间</span>
                 <div class="hardware-status">
-                  <a-icon v-if="checkStatus(swapStatus, 'success')" type="check-circle" class="status-icon success" />
-                  <a-icon v-else-if="checkStatus(swapStatus, 'error')" type="close-circle" class="status-icon error" />
-                  <a-icon v-else-if="checkStatus(swapStatus, 'loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-if="checkSwapStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkSwapStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkSwapStatus('loading')" type="loading" class="status-icon loading" spin />
                   <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
-              <div class="hardware-info" v-if="swapStatus === 'loading'">
+              <div class="hardware-info" v-if="getSwapStatus() === 'loading'">
                 <div class="loading-indicator">
                   <span></span><span></span><span></span>
                 </div>
                 <span class="loading-text">正在收集交换空间信息...</span>
               </div>
-              <div class="hardware-info error" v-else-if="swapStatus === 'error'">
+              <div class="hardware-info error" v-else-if="getSwapStatus() === 'error'">
                 获取交换空间信息失败
               </div>
-              <div class="hardware-info pending" v-else-if="swapStatus === 'pending'">
+              <div class="hardware-info pending" v-else-if="getSwapStatus() === 'pending'">
                 等待收集交换空间信息
               </div>
               <div class="hardware-info" v-else>
@@ -396,6 +396,28 @@ export default {
     }
   },
   methods: {
+    // 获取CPU状态
+    getCpuStatus() {
+      // 首先尝试从osInfo.cpuStatus获取
+      if (this.osInfo && this.osInfo.cpuStatus) {
+        return this.osInfo.cpuStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有cpuStatus，则尝试从osInfo.cpuInfo.status获取
+      if (this.osInfo && this.osInfo.cpuInfo && this.osInfo.cpuInfo.status) {
+        return this.osInfo.cpuInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则使用props中的cpuStatus
+      return this.cpuStatus ? this.cpuStatus.toLowerCase() : 'pending';
+    },
+    
+    // 检查CPU状态是否等于指定状态
+    checkCpuStatus(status) {
+      return this.getCpuStatus() === status.toLowerCase();
+    },
+    
+    // 原有的checkStatus方法保持不变，以兼容其他硬件项
     checkStatus(status, target) {
       if (target === 'success') {
         return status === 'success';
@@ -573,6 +595,89 @@ export default {
       const usagePercent = 100 * (1 - available / total);
       
       return usagePercent.toFixed(1);
+    },
+    // 获取内存状态
+    getMemoryStatus() {
+      // 首先尝试从osInfo.memoryStatus获取
+      if (this.osInfo && this.osInfo.memoryStatus) {
+        return this.osInfo.memoryStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有memoryStatus，则尝试从osInfo.memoryInfo.status获取
+      if (this.osInfo && this.osInfo.memoryInfo && this.osInfo.memoryInfo.status) {
+        return this.osInfo.memoryInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则使用props中的memoryStatus
+      return this.memoryStatus ? this.memoryStatus.toLowerCase() : 'pending';
+    },
+    
+    // 检查内存状态是否等于指定状态
+    checkMemoryStatus(status) {
+      return this.getMemoryStatus() === status.toLowerCase();
+    },
+    
+    // 获取磁盘状态
+    getDiskStatus() {
+      // 首先尝试从osInfo.diskStatus获取
+      if (this.osInfo && this.osInfo.diskStatus) {
+        return this.osInfo.diskStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有diskStatus，则尝试从osInfo.diskInfo.status获取
+      if (this.osInfo && this.osInfo.diskInfo && this.osInfo.diskInfo.status) {
+        return this.osInfo.diskInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则使用props中的diskStatus
+      return this.diskStatus ? this.diskStatus.toLowerCase() : 'pending';
+    },
+    
+    // 检查磁盘状态是否等于指定状态
+    checkDiskStatus(status) {
+      return this.getDiskStatus() === status.toLowerCase();
+    },
+    
+    // 获取GPU状态
+    getGpuStatus() {
+      // 首先尝试从osInfo.gpuStatus获取
+      if (this.osInfo && this.osInfo.gpuStatus) {
+        return this.osInfo.gpuStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有gpuStatus，则尝试从osInfo.gpuInfo.status获取
+      if (this.osInfo && this.osInfo.gpuInfo && this.osInfo.gpuInfo.status) {
+        return this.osInfo.gpuInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则使用props中的gpuStatus
+      return this.gpuStatus ? this.gpuStatus.toLowerCase() : 'pending';
+    },
+    
+    // 检查GPU状态是否等于指定状态
+    checkGpuStatus(status) {
+      return this.getGpuStatus() === status.toLowerCase();
+    },
+    
+    // 获取交换空间状态
+    getSwapStatus() {
+      // 首先尝试从osInfo.swapStatus获取
+      if (this.osInfo && this.osInfo.swapStatus) {
+        return this.osInfo.swapStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有swapStatus，则尝试从osInfo.swapInfo.status获取
+      if (this.osInfo && this.osInfo.swapInfo && this.osInfo.swapInfo.status) {
+        return this.osInfo.swapInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则使用props中的swapStatus
+      return this.swapStatus ? this.swapStatus.toLowerCase() : 'pending';
+    },
+    
+    // 检查交换空间状态是否等于指定状态
+    checkSwapStatus(status) {
+      return this.getSwapStatus() === status.toLowerCase();
     }
   }
 };
