@@ -306,10 +306,10 @@
               <div class="hardware-info" v-else>
                 <template v-if="hasSwapEnabled">
                   <div class="info-primary">
-                    {{ getSwapTotal() }} GB 交换空间
+                    {{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }} 交换空间
                   </div>
                   <div class="info-secondary">
-                    已用 {{ getSwapUsed().toFixed(1) }} GB，可用 {{ getSwapAvailable() }} GB
+                    已用 {{ osInfo.swapInfo.usedSwapFormatted }} {{ osInfo.swapInfo.usedSwapUnit }}，可用 {{ osInfo.swapInfo.availableSwapFormatted }} {{ osInfo.swapInfo.availableSwapUnit }}
                   </div>
                   <div 
                     class="usage-bar-container" 
@@ -317,7 +317,7 @@
                   >
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateSwapUsagePercent() }}%</span>
-                      <span>{{ getSwapUsed().toFixed(1) }}/{{ getSwapTotal() }} GB</span>
+                      <span>{{ osInfo.swapInfo.usedSwapFormatted }}/{{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }}</span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -628,17 +628,15 @@ export default {
     // 交换空间相关方法
     getSwapTotal() {
       if (!this.hasSwapEnabled) return 0;
-      return this.osInfo.swapInfo.totalSwap || 0;
+      return parseFloat(this.osInfo.swapInfo.totalSwapFormatted || 0);
     },
     getSwapAvailable() {
       if (!this.hasSwapEnabled) return 0;
-      return this.osInfo.swapInfo.availableSwap || 0;
+      return parseFloat(this.osInfo.swapInfo.availableSwapFormatted || 0);
     },
     getSwapUsed() {
       if (!this.hasSwapEnabled) return 0;
-      const total = this.osInfo.swapInfo.totalSwap || 0;
-      const available = this.osInfo.swapInfo.availableSwap || 0;
-      return Math.max(0, total - available);
+      return parseFloat(this.osInfo.swapInfo.usedSwapFormatted || 0);
     },
     calculateSwapUsagePercent() {
       if (!this.hasSwapEnabled) return "0.0";

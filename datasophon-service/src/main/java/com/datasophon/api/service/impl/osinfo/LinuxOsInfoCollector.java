@@ -1493,6 +1493,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             swapInfo.setAvailableSwap(0L);
                             swapInfo.setEnabled(false);
                             swapInfo.setErrorMessage("交换空间未开启，建议配置交换分区以提高系统稳定性");
+
+                            // 设置格式化值为0
+                            swapInfo.setTotalSwapFormatted("0.0");
+                            swapInfo.setTotalSwapUnit("GB");
+                            swapInfo.setAvailableSwapFormatted("0.0");
+                            swapInfo.setAvailableSwapUnit("GB");
+                            swapInfo.setUsedSwapFormatted("0.0");
+                            swapInfo.setUsedSwapUnit("GB");
                         } else {
                             // 交换空间已开启
                             // 转换为MB并保存
@@ -1515,6 +1523,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                     double usagePercent = ((double) usedSwapMB / totalSwapMB) * 100;
                                     swapInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
 
+                                    // 设置格式化后的值和单位
+                                    swapInfo.setTotalSwapFormatted(String.format("%.1f", totalSwapMB / 1024.0));
+                                    swapInfo.setTotalSwapUnit("GB");
+                                    swapInfo.setAvailableSwapFormatted(String.format("%.1f", freeSwapMB / 1024.0));
+                                    swapInfo.setAvailableSwapUnit("GB");
+                                    swapInfo.setUsedSwapFormatted(String.format("%.1f", usedSwapMB / 1024.0));
+                                    swapInfo.setUsedSwapUnit("GB");
+
                                     logger.debug("获取到交换空间: 总容量={}MB, 可用容量={}MB, 已用={}MB, 使用率={}%",
                                             totalSwapMB, freeSwapMB, usedSwapMB, swapInfo.getUsagePercent());
                                 } catch (NumberFormatException e) {
@@ -1532,6 +1548,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     swapInfo.setAvailableSwap(0L);
                     swapInfo.setEnabled(false);
                     swapInfo.setErrorMessage("未找到交换分区信息，建议配置交换分区以提高系统稳定性");
+
+                    // 设置格式化值为0
+                    swapInfo.setTotalSwapFormatted("0.0");
+                    swapInfo.setTotalSwapUnit("GB");
+                    swapInfo.setAvailableSwapFormatted("0.0");
+                    swapInfo.setAvailableSwapUnit("GB");
+                    swapInfo.setUsedSwapFormatted("0.0");
+                    swapInfo.setUsedSwapUnit("GB");
                 }
             } else {
                 // 命令执行失败或无输出
@@ -1540,6 +1564,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 swapInfo.setAvailableSwap(0L);
                 swapInfo.setEnabled(false);
                 swapInfo.setErrorMessage("无法获取交换分区信息");
+
+                // 设置格式化值为0
+                swapInfo.setTotalSwapFormatted("0.0");
+                swapInfo.setTotalSwapUnit("GB");
+                swapInfo.setAvailableSwapFormatted("0.0");
+                swapInfo.setAvailableSwapUnit("GB");
+                swapInfo.setUsedSwapFormatted("0.0");
+                swapInfo.setUsedSwapUnit("GB");
             }
 
             // 更新硬件收集状态

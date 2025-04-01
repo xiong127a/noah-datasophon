@@ -838,10 +838,28 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                                 // 计算使用率
                                 double usagePercent = ((double) usedSwapMB / totalSwapMB) * 100;
                                 swapInfo.setUsagePercent(Math.round(usagePercent * 10) / 10.0);
+
+                                // 设置格式化后的值和单位
+                                swapInfo.setTotalSwapFormatted(String.format("%.1f", totalSwapMB / 1024.0));
+                                swapInfo.setTotalSwapUnit("GB");
+                                swapInfo.setAvailableSwapFormatted(String.format("%.1f", availableSwapMB / 1024.0));
+                                swapInfo.setAvailableSwapUnit("GB");
+                                swapInfo.setUsedSwapFormatted(String.format("%.1f", usedSwapMB / 1024.0));
+                                swapInfo.setUsedSwapUnit("GB");
                             } else {
                                 // 无使用信息，假设有90%可用
-                                swapInfo.setAvailableSwap((long) (totalSwapMB * 0.9));
+                                long availableSwapMB = (long) (totalSwapMB * 0.9);
+                                long usedSwapMB = totalSwapMB - availableSwapMB;
+                                swapInfo.setAvailableSwap(availableSwapMB);
                                 swapInfo.setUsagePercent(10.0);
+
+                                // 设置格式化后的值和单位
+                                swapInfo.setTotalSwapFormatted(String.format("%.1f", totalSwapMB / 1024.0));
+                                swapInfo.setTotalSwapUnit("GB");
+                                swapInfo.setAvailableSwapFormatted(String.format("%.1f", availableSwapMB / 1024.0));
+                                swapInfo.setAvailableSwapUnit("GB");
+                                swapInfo.setUsedSwapFormatted(String.format("%.1f", usedSwapMB / 1024.0));
+                                swapInfo.setUsedSwapUnit("GB");
                             }
 
                             parsedSuccessfully = true;
@@ -863,6 +881,14 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 swapInfo.setEnabled(false);
                 swapInfo.setErrorMessage("交换空间未开启，建议配置交换空间以提高系统稳定性");
 
+                // 设置格式化后的值和单位
+                swapInfo.setTotalSwapFormatted("0.0");
+                swapInfo.setTotalSwapUnit("GB");
+                swapInfo.setAvailableSwapFormatted("0.0");
+                swapInfo.setAvailableSwapUnit("GB");
+                swapInfo.setUsedSwapFormatted("0.0");
+                swapInfo.setUsedSwapUnit("GB");
+
                 // 在日志中记录交换空间未开启
                 logger.warn("Windows主机 {} 未开启交换空间", hostInfo.getIp());
 
@@ -880,6 +906,15 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 swapInfo.setAvailableSwap(defaultSize);
                 swapInfo.setEnabled(true);
                 swapInfo.setUsagePercent(0.0);
+
+                // 设置格式化后的值和单位
+                swapInfo.setTotalSwapFormatted(String.format("%.1f", defaultSize / 1024.0));
+                swapInfo.setTotalSwapUnit("GB");
+                swapInfo.setAvailableSwapFormatted(String.format("%.1f", defaultSize / 1024.0));
+                swapInfo.setAvailableSwapUnit("GB");
+                swapInfo.setUsedSwapFormatted("0.0");
+                swapInfo.setUsedSwapUnit("GB");
+
                 logger.info("已设置交换分区默认值: 总大小≈{}MB", defaultSize);
             }
 
@@ -910,6 +945,15 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             swapInfo.setAvailableSwap(defaultSize);
             swapInfo.setEnabled(true);
             swapInfo.setUsagePercent(0.0);
+
+            // 设置格式化后的值和单位
+            swapInfo.setTotalSwapFormatted(String.format("%.1f", defaultSize / 1024.0));
+            swapInfo.setTotalSwapUnit("GB");
+            swapInfo.setAvailableSwapFormatted(String.format("%.1f", defaultSize / 1024.0));
+            swapInfo.setAvailableSwapUnit("GB");
+            swapInfo.setUsedSwapFormatted("0.0");
+            swapInfo.setUsedSwapUnit("GB");
+
             swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
 
             hostInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);

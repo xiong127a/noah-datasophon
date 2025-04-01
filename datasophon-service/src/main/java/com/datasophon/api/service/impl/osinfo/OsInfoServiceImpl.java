@@ -13,6 +13,7 @@ import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.OsInfoLegacy;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
+import com.datasophon.common.model.hardware.SwapInfo;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -1530,6 +1531,134 @@ public class OsInfoServiceImpl implements OsInfoService {
                 osInfo.setNetworkStatus(OsInfoStatusEnum.ERROR);
                 hostInfo.setMessage("网络接口信息收集失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        private void collectSwapInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
+                IOsInfoCollector collector) {
+            if (osInfo == null) {
+                return;
+            }
+
+            try {
+                logger.info("开始为主机 [{}] 收集交换空间信息", hostInfo.getIp());
+                long startTime = System.currentTimeMillis();
+
+                // 设置状态为加载中
+                osInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
+
+                if (session == null || !session.isOpen()) {
+                    logger.error("主机 [{}] 的SSH会话未建立或已关闭", hostInfo.getIp());
+                    osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                    return;
+                }
+
+                // 创建交换空间信息对象
+                SwapInfo swapInfo = new SwapInfo();
+                swapInfo.setEnabled(false); // 默认未启用
+
+                if (osInfo.getDistributionId() != null && "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
+                    // Windows系统收集交换空间信息
+                    collectWindowsSwapInfo(session, swapInfo);
+                } else {
+                    // Linux系统收集交换空间信息
+                    collectLinuxSwapInfo(session, swapInfo);
+                }
+
+                // 设置交换空间信息
+                osInfo.setSwapInfo(swapInfo);
+
+                // 更新状态
+                osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("交换空间信息收集成功");
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("交换空间信息收集完成: {}, 用时: {}ms", hostInfo.getIp(), (System.currentTimeMillis() - startTime));
+            } catch (Exception e) {
+                logger.error("收集交换空间信息失败: {}", hostInfo.getIp(), e);
+                osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 收集Windows系统交换空间信息
+         */
+        private void collectWindowsSwapInfo(ClientSession session, SwapInfo swapInfo) {
+            try {
+                // 获取页面文件信息
+                String pageFileCmd = "powershell -command \"Get-WmiObject Win32_PageFileSetting | Select-Object InitialSize,MaximumSize | ConvertTo-Json\"";
+                String pageFileInfo = MinaUtils.execCmdWithResult(session, pageFileCmd);
+
+                if (StringUtils.isNotBlank(pageFileInfo)) {
+                    JSONArray pageFiles = JSON.parseArray(pageFileInfo);
+                    if (pageFiles != null && !pageFiles.isEmpty()) {
+                        // 计算总大小（MB）
+                        long totalSize = 0;
+                        for (int i = 0; i < pageFiles.size(); i++) {
+                            JSONObject pageFile = pageFiles.getJSONObject(i);
+                            totalSize += pageFile.getLongValue("MaximumSize");
+                        }
+
+                        // 设置交换空间信息
+                        swapInfo.setEnabled(true);
+                        swapInfo.setTotalSwap(totalSize * 1024 * 1024); // 转换为字节
+                        swapInfo.setAvailableSwap(totalSize * 1024 * 1024); // Windows下无法获取可用空间
+
+                        // 设置格式化后的值和单位
+                        swapInfo.setTotalSwapFormatted(String.format("%.1f", totalSize / 1024.0));
+                        swapInfo.setTotalSwapUnit("GB");
+                        swapInfo.setAvailableSwapFormatted(String.format("%.1f", totalSize / 1024.0));
+                        swapInfo.setAvailableSwapUnit("GB");
+                        swapInfo.setUsedSwapFormatted("0.0");
+                        swapInfo.setUsedSwapUnit("GB");
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("收集Windows交换空间信息失败", e);
+                throw e;
+            }
+        }
+
+        /**
+         * 收集Linux系统交换空间信息
+         */
+        private void collectLinuxSwapInfo(ClientSession session, SwapInfo swapInfo) {
+            try {
+                // 获取交换空间信息
+                String swapInfoCmd = "free -b | grep Swap";
+                String swapInfoStr = MinaUtils.execCmdWithResult(session, swapInfoCmd);
+
+                if (StringUtils.isNotBlank(swapInfoStr)) {
+                    // 解析交换空间信息
+                    String[] parts = swapInfoStr.split("\\s+");
+                    if (parts.length >= 4) {
+                        long total = Long.parseLong(parts[1]);
+                        long used = Long.parseLong(parts[2]);
+                        long free = Long.parseLong(parts[3]);
+
+                        // 设置交换空间信息
+                        swapInfo.setEnabled(true);
+                        swapInfo.setTotalSwap(total);
+                        swapInfo.setAvailableSwap(free);
+
+                        // 计算使用率
+                        double usagePercent = total > 0 ? (100.0 * used / total) : 0;
+                        swapInfo.setUsagePercent(usagePercent);
+
+                        // 设置格式化后的值和单位
+                        swapInfo.setTotalSwapFormatted(String.format("%.1f", total / (1024.0 * 1024 * 1024)));
+                        swapInfo.setTotalSwapUnit("GB");
+                        swapInfo.setAvailableSwapFormatted(String.format("%.1f", free / (1024.0 * 1024 * 1024)));
+                        swapInfo.setAvailableSwapUnit("GB");
+                        swapInfo.setUsedSwapFormatted(String.format("%.1f", used / (1024.0 * 1024 * 1024)));
+                        swapInfo.setUsedSwapUnit("GB");
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("收集Linux交换空间信息失败", e);
+                throw e;
             }
         }
 
