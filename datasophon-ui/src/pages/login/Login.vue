@@ -9,7 +9,7 @@
       </div>
       <div class="login">
         <div class="login-title">账号登录</div>
-        <div class="project-name">Noah大数据基础平台</div>
+        <div class="project-name"></div>
         <a-form @submit="onSubmit" :form="form">
           <a-alert type="error" :closable="true" v-show="error" :message="error" showIcon style="margin-bottom: 24px;" />
           <a-form-item>
@@ -29,12 +29,12 @@
       <!-- <div class="company-logo">
         <img src="@/assets/login-img/company.png">
       </div> -->
-      <div class="product_logo">
+      <!-- <div class="product_logo">
         <img src="@/assets/login-img/product.png">
-      </div>
+      </div> -->
       <div class="right">
         <div class="submitform">
-          <img src="@/assets/login-img/formbg.png" class="form_img">
+          <!-- <img src="@/assets/login-img/formbg.png" class="form_img"> -->
           <a-form @submit="onSubmit" :form="form" class="form-cont">
             <a-alert type="error" :closable="true" v-show="error" :message="error" showIcon
               style="margin-bottom: 24px;" />

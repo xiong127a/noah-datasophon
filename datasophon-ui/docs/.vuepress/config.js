@@ -19,12 +19,12 @@
  */
 
 module.exports = {
-  title: 'Noah大数据基础平台',
-  description: 'Noah大数据基础平台',
+  title: '',
+  description: '',
   base: '/vue-antd-admin-docs/',
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [],//[['link', { rel: 'icon', href: '/favicon.ico' }]],
   themeConfig: {
-    logo: '/logo.png',
+    logo: '', //'/logo.png',
     repo: 'iczer/vue-antd-admin',
     docsDir: 'docs',
     editLinks: true,

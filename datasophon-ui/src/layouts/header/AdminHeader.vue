@@ -2,12 +2,12 @@
   <a-layout-header :class="[headerTheme, 'admin-header']">
     <div :class="['admin-header-wide', layout, pageWidth]">
       <div v-if="isMobile || layout === 'head'" :class="['logo', isMobile ? null : 'pc', headerTheme]">
-        <img width="32" src="@/assets/img/logo.png" />
+        <!-- <img width="32" src="@/assets/img/logo.png" /> -->
         <h1 v-if="!isMobile">{{systemName}}</h1>
       </div>
       <div :class="['logo', theme]">
         <div class="flex-container">
-          <img src="@/assets/img/logo.png" alt />
+          <!-- <img src="@/assets/img/logo.png" alt /> -->
           <h1>{{systemName}}</h1>
         </div>
       </div>
