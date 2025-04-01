@@ -334,6 +334,69 @@
               </div>
             </div>
           </div>
+
+          <!-- 网络信息 -->
+          <div class="hardware-item">
+            <div class="hardware-icon network" :class="{ 'loading': getNetworkStatus() === 'loading', 'error': getNetworkStatus() === 'error' }">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                <circle cx="12" cy="20" r="1" />
+              </svg>
+            </div>
+            <div class="hardware-content">
+              <div class="hardware-header">
+                <span class="hardware-title">网络</span>
+                <div class="hardware-status">
+                  <a-icon v-if="checkNetworkStatus('success')" type="check-circle" class="status-icon success" />
+                  <a-icon v-else-if="checkNetworkStatus('error')" type="close-circle" class="status-icon error" />
+                  <a-icon v-else-if="checkNetworkStatus('loading')" type="loading" class="status-icon loading" spin />
+                  <a-icon v-else type="clock-circle" class="status-icon pending" />
+                </div>
+              </div>
+              <div class="hardware-info" v-if="getNetworkStatus() === 'loading'">
+                <div class="loading-indicator">
+                  <span></span><span></span><span></span>
+                </div>
+                <span class="loading-text">正在收集网络信息...</span>
+              </div>
+              <div class="hardware-info error" v-else-if="getNetworkStatus() === 'error'">
+                获取网络信息失败
+              </div>
+              <div class="hardware-info pending" v-else-if="getNetworkStatus() === 'pending'">
+                等待收集网络信息
+              </div>
+              <div class="hardware-info" v-else>
+                <template v-if="osInfo && osInfo.networkInfo && osInfo.networkInfo.interfaces && osInfo.networkInfo.interfaces.length > 0">
+                  <div class="info-primary">
+                    {{ osInfo.networkInfo.interfaces.length }} 个网络接口
+                  </div>
+                  <div class="info-secondary">
+                    <div v-for="(iface, index) in osInfo.networkInfo.interfaces" :key="index" class="network-interface">
+                      <div class="interface-name">
+                        {{ iface.name }}
+                        <span class="interface-status" :class="{ 'up': iface.enabled }">
+                          {{ iface.enabled ? '已连接' : '未连接' }}
+                        </span>
+                      </div>
+                      <div class="interface-details">
+                        <span v-if="iface.ipv4Address" class="ip-address">{{ iface.ipv4Address }}</span>
+                        <span v-if="iface.macAddress" class="mac-address">{{ iface.macAddress }}</span>
+                        <span v-if="iface.speed" class="speed">{{ formatSpeed(iface.speed) }}</span>
+                        <span v-if="iface.model" class="model">{{ iface.model }}</span>
+                      </div>
+                      <div class="interface-stats" v-if="iface.bytesSent || iface.bytesReceived">
+                        <span class="tx">发送: {{ formatBytes(iface.bytesSent) }}</span>
+                        <span class="rx">接收: {{ formatBytes(iface.bytesReceived) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div class="info-empty" v-else>未知</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -678,6 +741,33 @@ export default {
     // 检查交换空间状态是否等于指定状态
     checkSwapStatus(status) {
       return this.getSwapStatus() === status.toLowerCase();
+    },
+    // 添加网络状态相关方法
+    getNetworkStatus() {
+      return this.osInfo?.networkStatus?.toLowerCase() || 'pending';
+    },
+    
+    checkNetworkStatus(status) {
+      return this.getNetworkStatus() === status.toLowerCase();
+    },
+    
+    formatSpeed(speed) {
+      if (!speed || speed <= 0) return '';
+      if (speed >= 1000) {
+        return `${(speed/1000).toFixed(1)} Gbps`;
+      }
+      return `${speed} Mbps`;
+    },
+    formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = bytes;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+      }
+      return `${size.toFixed(2)} ${units[unitIndex]}`;
     }
   }
 };
@@ -918,6 +1008,10 @@ export default {
     background: linear-gradient(135deg, #BF5AF2, #A04AD9);  // 紫色渐变
   }
 
+  &.network {
+    background: linear-gradient(135deg, #32ADE6, #0A84FF);
+  }
+
   &.loading {
     animation: pulse 1.5s infinite;
     svg {
@@ -1070,6 +1164,80 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.network-interface {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.interface-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  margin-bottom: 4px;
+  
+  .interface-status {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: rgba(142, 142, 147, 0.1);
+    color: #8E8E93;
+    
+    &.up {
+      background-color: rgba(52, 199, 89, 0.1);
+      color: #34C759;
+    }
+  }
+}
+
+.interface-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #8E8E93;
+  margin: 4px 0;
+  
+  .ip-address {
+    color: #007AFF;
+    font-family: monospace;
+  }
+  
+  .mac-address {
+    font-family: monospace;
+  }
+  
+  .speed {
+    color: #5856D6;
+  }
+
+  .model {
+    color: #FF9500;
+  }
+}
+
+.interface-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #8E8E93;
+  margin-top: 4px;
+
+  .tx {
+    color: #34C759;
+  }
+
+  .rx {
+    color: #FF3B30;
   }
 }
 </style> 

@@ -23,12 +23,13 @@ public class OsInfoLegacy {
 
         private String name; // 网卡名称
         private boolean up; // 是否启用
-        private String model; // 网卡型号
-        private Long speed; // 网卡速率(bps)
+        private String status; // 网卡状态描述
+        private String mac; // MAC地址
         private String ipv4; // IPv4地址
         private String ipv6; // IPv6地址
         private String netmask; // 子网掩码
-        private String mac; // MAC地址
+        private String model; // 网卡型号
+        private Long speed; // 网卡速率(bps)
         private NetworkStats stats; // 网卡统计信息
 
         @Data
@@ -42,6 +43,7 @@ public class OsInfoLegacy {
 
     /**
      * 将新版网卡信息转换为旧版格式
+     * 
      * @param newInterfaces 新格式网卡列表
      * @return 旧格式网卡列表
      */
@@ -74,10 +76,12 @@ public class OsInfoLegacy {
 
     /**
      * 将旧版网卡信息转换为新版格式
+     * 
      * @param oldInterfaces 旧格式网卡列表
      * @return 新格式网卡列表
      */
-    public static List<NetworkInfo.NetworkInterface> convertToNewNetworkInterfaces(List<NetworkInterface> oldInterfaces) {
+    public static List<NetworkInfo.NetworkInterface> convertToNewNetworkInterfaces(
+            List<NetworkInterface> oldInterfaces) {
         if (oldInterfaces == null) {
             return null;
         }
@@ -103,4 +107,4 @@ public class OsInfoLegacy {
         }
         return newInterfaces;
     }
-} 
+}

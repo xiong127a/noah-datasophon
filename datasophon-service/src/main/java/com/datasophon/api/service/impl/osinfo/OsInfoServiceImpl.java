@@ -249,6 +249,14 @@ public class OsInfoServiceImpl implements OsInfoService {
                 // 2. 收集操作系统类型（Linux或Windows）并收集相关信息
                 collectOsType(hostInfo);
 
+                // 3. 收集网卡信息
+                if (hostInfo.getOsInfo() != null) {
+                    ClientSession session = connectToHost(hostInfo);
+                    if (session != null) {
+                        collectNetworkInfo(hostInfo, hostInfo.getOsInfo(), session, null);
+                    }
+                }
+
                 // 操作系统信息收集由collectOsType方法完成，包括：
                 // - 识别操作系统类型（Linux或Windows）
                 // - 调用collectLinuxInfo或collectWindowsInfo收集详细信息
@@ -1040,103 +1048,15 @@ public class OsInfoServiceImpl implements OsInfoService {
                     return;
                 }
 
-                // 创建网卡列表 - 使用OsInfoLegacy.NetworkInterface
+                // 创建网卡列表
                 List<OsInfoLegacy.NetworkInterface> legacyNetworkInterfaces = new ArrayList<>();
 
                 if (osInfo.getDistributionId() != null && "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集网卡信息
-                    // 获取网卡基本信息（包括名称、状态、IP地址）
-                    String nicListCmd = "powershell -command \"Get-NetAdapter | Select-Object Name,InterfaceDescription,Status,MacAddress,LinkSpeed | ConvertTo-Json\"";
-                    String nicList = MinaUtils.execCmdWithResult(session, nicListCmd);
-
-                    // 获取IP地址信息
-                    String ipConfigCmd = "powershell -command \"Get-NetIPAddress | Select-Object InterfaceAlias,IPAddress,PrefixLength,AddressFamily | ConvertTo-Json\"";
-                    String ipConfig = MinaUtils.execCmdWithResult(session, ipConfigCmd);
-
-                    if (StringUtils.isNotBlank(nicList) && StringUtils.isNotBlank(ipConfig)) {
-                        // 解析Windows网卡信息
-                        parseWindowsNetworkInfoNew(legacyNetworkInterfaces, nicList, ipConfig);
-                    }
+                    collectWindowsNetworkInfo(session, legacyNetworkInterfaces);
                 } else {
                     // Linux系统收集网卡信息
-                    // 获取网卡列表
-                    String ifconfigCmd = "ip -o addr show | grep -v 'lo\\|docker\\|veth\\|br-' | awk '{print $2}' | sort | uniq";
-                    String nicList = MinaUtils.execCmdWithResult(session, ifconfigCmd);
-
-                    if (StringUtils.isNotBlank(nicList)) {
-                        String[] nics = nicList.split("\\n");
-                        for (String nic : nics) {
-                            nic = nic.trim();
-                            if (StringUtils.isBlank(nic)) {
-                                continue;
-                            }
-
-                            // 创建网卡对象 - 使用OsInfoLegacy.NetworkInterface
-                            OsInfoLegacy.NetworkInterface netInterface = new OsInfoLegacy.NetworkInterface();
-                            netInterface.setName(nic);
-
-                            // 获取网卡状态
-                            String statusCmd = "cat /sys/class/net/" + nic + "/operstate 2>/dev/null || echo 'unknown'";
-                            String status = MinaUtils.execCmdWithResult(session, statusCmd).trim();
-                            netInterface.setUp("up".equalsIgnoreCase(status));
-
-                            // 获取MAC地址
-                            String macCmd = "cat /sys/class/net/" + nic + "/address 2>/dev/null || echo ''";
-                            String mac = MinaUtils.execCmdWithResult(session, macCmd).trim();
-                            netInterface.setMac(mac);
-
-                            // 获取IP地址信息
-                            String ipCmd = "ip addr show " + nic + " | grep 'inet ' | awk '{print $2}'";
-                            String ipInfo = MinaUtils.execCmdWithResult(session, ipCmd).trim();
-                            if (StringUtils.isNotBlank(ipInfo)) {
-                                String[] ipParts = ipInfo.split("/");
-                                if (ipParts.length >= 2) {
-                                    netInterface.setIpv4(ipParts[0]);
-                                    // 计算子网掩码
-                                    int cidr = Integer.parseInt(ipParts[1]);
-                                    netInterface.setNetmask(cidrToNetmask(cidr));
-                                }
-                            }
-
-                            // 获取IPv6地址
-                            String ipv6Cmd = "ip addr show " + nic
-                                    + " | grep 'inet6 ' | grep -v 'fe80' | awk '{print $2}' | head -1";
-                            String ipv6Info = MinaUtils.execCmdWithResult(session, ipv6Cmd).trim();
-                            if (StringUtils.isNotBlank(ipv6Info)) {
-                                String[] ipv6Parts = ipv6Info.split("/");
-                                if (ipv6Parts.length > 0) {
-                                    netInterface.setIpv6(ipv6Parts[0]);
-                                }
-                            }
-
-                            // 获取网卡型号
-                            String modelCmd = "ethtool -i " + nic
-                                    + " 2>/dev/null | grep 'driver\\|version\\|bus-info' || echo ''";
-                            String modelInfo = MinaUtils.execCmdWithResult(session, modelCmd);
-                            String model = parseLinuxNicModel(modelInfo, nic);
-                            netInterface.setModel(model);
-
-                            // 获取网卡速率
-                            String speedCmd = "ethtool " + nic + " 2>/dev/null | grep 'Speed:' || echo ''";
-                            String speedInfo = MinaUtils.execCmdWithResult(session, speedCmd).trim();
-                            Long speed = parseLinuxNicSpeed(speedInfo);
-                            netInterface.setSpeed(speed);
-
-                            // 获取网卡流量统计
-                            String txCmd = "cat /sys/class/net/" + nic + "/statistics/tx_bytes 2>/dev/null || echo '0'";
-                            String rxCmd = "cat /sys/class/net/" + nic + "/statistics/rx_bytes 2>/dev/null || echo '0'";
-                            String txBytes = MinaUtils.execCmdWithResult(session, txCmd).trim();
-                            String rxBytes = MinaUtils.execCmdWithResult(session, rxCmd).trim();
-
-                            OsInfoLegacy.NetworkInterface.NetworkStats stats = new OsInfoLegacy.NetworkInterface.NetworkStats();
-                            stats.setTxBytes(StringUtils.isNumeric(txBytes) ? Long.parseLong(txBytes) : 0);
-                            stats.setRxBytes(StringUtils.isNumeric(rxBytes) ? Long.parseLong(rxBytes) : 0);
-                            netInterface.setStats(stats);
-
-                            // 添加到网卡列表
-                            legacyNetworkInterfaces.add(netInterface);
-                        }
-                    }
+                    collectLinuxNetworkInfo(session, legacyNetworkInterfaces);
                 }
 
                 // 将旧版格式转换为新版格式并存储
@@ -1150,9 +1070,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 设置新版接口列表
                 osInfo.getNetworkInfo().setInterfaces(newNetworkInterfaces);
-
-                // 旧版API不再支持直接设置接口列表
-                // 移除: osInfo.setNetworkInterfaces(newNetworkInterfaces);
 
                 // 更新状态
                 osInfo.setNetworkStatus(OsInfoStatusEnum.SUCCESS);
@@ -1170,9 +1087,139 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 解析Windows网卡信息（新版方法）
+         * 收集Windows系统网卡信息
          */
-        private void parseWindowsNetworkInfoNew(List<OsInfoLegacy.NetworkInterface> networkInterfaces,
+        private void collectWindowsNetworkInfo(ClientSession session,
+                List<OsInfoLegacy.NetworkInterface> networkInterfaces) {
+            try {
+                // 获取网卡基本信息（包括名称、状态、IP地址）
+                String nicListCmd = "powershell -command \"Get-NetAdapter | Select-Object Name,InterfaceDescription,Status,MacAddress,LinkSpeed,MediaType | ConvertTo-Json\"";
+                String nicList = MinaUtils.execCmdWithResult(session, nicListCmd);
+
+                // 获取IP地址信息
+                String ipConfigCmd = "powershell -command \"Get-NetIPAddress | Select-Object InterfaceAlias,IPAddress,PrefixLength,AddressFamily | ConvertTo-Json\"";
+                String ipConfig = MinaUtils.execCmdWithResult(session, ipConfigCmd);
+
+                if (StringUtils.isNotBlank(nicList) && StringUtils.isNotBlank(ipConfig)) {
+                    parseWindowsNetworkInfo(networkInterfaces, nicList, ipConfig);
+                }
+            } catch (Exception e) {
+                logger.error("收集Windows网卡信息失败", e);
+                throw e;
+            }
+        }
+
+        /**
+         * 收集Linux系统网卡信息
+         */
+        private void collectLinuxNetworkInfo(ClientSession session,
+                List<OsInfoLegacy.NetworkInterface> networkInterfaces) {
+            try {
+                // 获取网卡列表（排除虚拟网卡和回环接口）
+                String ifconfigCmd = "ip -o addr show | grep -v 'lo\\|docker\\|veth\\|br-\\|tun\\|tap' | awk '{print $2}' | sort | uniq";
+                String nicList = MinaUtils.execCmdWithResult(session, ifconfigCmd);
+
+                if (StringUtils.isNotBlank(nicList)) {
+                    String[] nics = nicList.split("\\n");
+                    for (String nic : nics) {
+                        nic = nic.trim();
+                        if (StringUtils.isBlank(nic)) {
+                            continue;
+                        }
+
+                        // 创建网卡对象
+                        OsInfoLegacy.NetworkInterface netInterface = new OsInfoLegacy.NetworkInterface();
+                        netInterface.setName(nic);
+
+                        // 获取网卡状态
+                        String statusCmd = "cat /sys/class/net/" + nic + "/operstate 2>/dev/null || echo 'unknown'";
+                        String status = MinaUtils.execCmdWithResult(session, statusCmd).trim();
+                        // 更准确的状态判断
+                        boolean isUp = "up".equalsIgnoreCase(status);
+                        netInterface.setUp(isUp);
+
+                        // 获取网卡是否启用
+                        String adminStatusCmd = "cat /sys/class/net/" + nic + "/flags 2>/dev/null || echo '0'";
+                        String adminStatus = MinaUtils.execCmdWithResult(session, adminStatusCmd).trim();
+                        // 检查网卡是否被禁用
+                        boolean isDisabled = "0".equals(adminStatus) || "down".equalsIgnoreCase(status);
+
+                        // 设置网卡状态描述
+                        if (isDisabled) {
+                            netInterface.setStatus("已禁用");
+                        } else if (!isUp) {
+                            netInterface.setStatus("未连接");
+                        } else {
+                            netInterface.setStatus("已连接");
+                        }
+
+                        // 获取MAC地址
+                        String macCmd = "cat /sys/class/net/" + nic + "/address 2>/dev/null || echo ''";
+                        String mac = MinaUtils.execCmdWithResult(session, macCmd).trim();
+                        netInterface.setMac(mac);
+
+                        // 获取IP地址信息
+                        String ipCmd = "ip addr show " + nic + " | grep 'inet ' | awk '{print $2}'";
+                        String ipInfo = MinaUtils.execCmdWithResult(session, ipCmd).trim();
+                        if (StringUtils.isNotBlank(ipInfo)) {
+                            String[] ipParts = ipInfo.split("/");
+                            if (ipParts.length >= 2) {
+                                netInterface.setIpv4(ipParts[0]);
+                                // 计算子网掩码
+                                int cidr = Integer.parseInt(ipParts[1]);
+                                netInterface.setNetmask(cidrToNetmask(cidr));
+                            }
+                        }
+
+                        // 获取IPv6地址
+                        String ipv6Cmd = "ip addr show " + nic
+                                + " | grep 'inet6 ' | grep -v 'fe80' | awk '{print $2}' | head -1";
+                        String ipv6Info = MinaUtils.execCmdWithResult(session, ipv6Cmd).trim();
+                        if (StringUtils.isNotBlank(ipv6Info)) {
+                            String[] ipv6Parts = ipv6Info.split("/");
+                            if (ipv6Parts.length > 0) {
+                                netInterface.setIpv6(ipv6Parts[0]);
+                            }
+                        }
+
+                        // 获取网卡型号和驱动信息
+                        String modelCmd = "ethtool -i " + nic
+                                + " 2>/dev/null | grep 'driver\\|version\\|bus-info' || echo ''";
+                        String modelInfo = MinaUtils.execCmdWithResult(session, modelCmd);
+                        String model = parseLinuxNicModel(modelInfo, nic);
+                        netInterface.setModel(model);
+
+                        // 获取网卡速率
+                        String speedCmd = "ethtool " + nic + " 2>/dev/null | grep 'Speed:' || echo ''";
+                        String speedInfo = MinaUtils.execCmdWithResult(session, speedCmd).trim();
+                        Long speed = parseLinuxNicSpeed(speedInfo);
+                        netInterface.setSpeed(speed);
+
+                        // 获取网卡流量统计
+                        String txCmd = "cat /sys/class/net/" + nic + "/statistics/tx_bytes 2>/dev/null || echo '0'";
+                        String rxCmd = "cat /sys/class/net/" + nic + "/statistics/rx_bytes 2>/dev/null || echo '0'";
+                        String txBytes = MinaUtils.execCmdWithResult(session, txCmd).trim();
+                        String rxBytes = MinaUtils.execCmdWithResult(session, rxCmd).trim();
+
+                        OsInfoLegacy.NetworkInterface.NetworkStats stats = new OsInfoLegacy.NetworkInterface.NetworkStats();
+                        stats.setTxBytes(StringUtils.isNumeric(txBytes) ? Long.parseLong(txBytes) : 0);
+                        stats.setRxBytes(StringUtils.isNumeric(rxBytes) ? Long.parseLong(rxBytes) : 0);
+                        netInterface.setStats(stats);
+
+                        // 添加到网卡列表
+                        networkInterfaces.add(netInterface);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("收集Linux网卡信息失败", e);
+                throw e;
+            }
+        }
+
+        /**
+         * 解析Windows网卡信息
+         */
+        private void parseWindowsNetworkInfo(List<OsInfoLegacy.NetworkInterface> networkInterfaces,
                 String nicList, String ipConfig) {
             try {
                 // 解析网卡基本信息
@@ -1186,6 +1233,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     String status = nic.getString("Status");
                     String mac = nic.getString("MacAddress");
                     String linkSpeed = nic.getString("LinkSpeed");
+                    String mediaType = nic.getString("MediaType");
 
                     // 跳过没有名称的网卡
                     if (StringUtils.isBlank(name)) {
@@ -1195,7 +1243,20 @@ public class OsInfoServiceImpl implements OsInfoService {
                     // 创建网卡对象
                     OsInfoLegacy.NetworkInterface netInterface = new OsInfoLegacy.NetworkInterface();
                     netInterface.setName(name);
-                    netInterface.setUp("Up".equalsIgnoreCase(status));
+                    // Windows系统网卡状态判断
+                    boolean isUp = "Up".equalsIgnoreCase(status);
+                    netInterface.setUp(isUp);
+
+                    // 设置网卡状态描述
+                    if ("Disconnected".equalsIgnoreCase(status)) {
+                        netInterface.setStatus("已断开");
+                    } else if ("Down".equalsIgnoreCase(status)) {
+                        netInterface.setStatus("已禁用");
+                    } else if (isUp) {
+                        netInterface.setStatus("已连接");
+                    } else {
+                        netInterface.setStatus("未连接");
+                    }
                     netInterface.setModel(description);
                     netInterface.setMac(mac);
                     netInterface.setSpeed(parseWindowsNicSpeed(linkSpeed));
@@ -1240,6 +1301,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                 }
             } catch (Exception e) {
                 logger.error("解析Windows网卡信息失败", e);
+                throw e;
             }
         }
 
@@ -1433,103 +1495,15 @@ public class OsInfoServiceImpl implements OsInfoService {
                     return;
                 }
 
-                // 创建网卡列表 - 使用OsInfoLegacy.NetworkInterface
+                // 创建网卡列表
                 List<OsInfoLegacy.NetworkInterface> legacyNetworkInterfaces = new ArrayList<>();
 
                 if (osInfo.getDistributionId() != null && "windows".equalsIgnoreCase(osInfo.getDistributionId())) {
                     // Windows系统收集网卡信息
-                    // 获取网卡基本信息（包括名称、状态、IP地址）
-                    String nicListCmd = "powershell -command \"Get-NetAdapter | Select-Object Name,InterfaceDescription,Status,MacAddress,LinkSpeed | ConvertTo-Json\"";
-                    String nicList = MinaUtils.execCmdWithResult(session, nicListCmd);
-
-                    // 获取IP地址信息
-                    String ipConfigCmd = "powershell -command \"Get-NetIPAddress | Select-Object InterfaceAlias,IPAddress,PrefixLength,AddressFamily | ConvertTo-Json\"";
-                    String ipConfig = MinaUtils.execCmdWithResult(session, ipConfigCmd);
-
-                    if (StringUtils.isNotBlank(nicList) && StringUtils.isNotBlank(ipConfig)) {
-                        // 解析Windows网卡信息
-                        parseWindowsNetworkInfoNew(legacyNetworkInterfaces, nicList, ipConfig);
-                    }
+                    collectWindowsNetworkInfo(session, legacyNetworkInterfaces);
                 } else {
                     // Linux系统收集网卡信息
-                    // 获取网卡列表
-                    String ifconfigCmd = "ip -o addr show | grep -v 'lo\\|docker\\|veth\\|br-' | awk '{print $2}' | sort | uniq";
-                    String nicList = MinaUtils.execCmdWithResult(session, ifconfigCmd);
-
-                    if (StringUtils.isNotBlank(nicList)) {
-                        String[] nics = nicList.split("\\n");
-                        for (String nic : nics) {
-                            nic = nic.trim();
-                            if (StringUtils.isBlank(nic)) {
-                                continue;
-                            }
-
-                            // 创建网卡对象 - 使用OsInfoLegacy.NetworkInterface
-                            OsInfoLegacy.NetworkInterface netInterface = new OsInfoLegacy.NetworkInterface();
-                            netInterface.setName(nic);
-
-                            // 获取网卡状态
-                            String statusCmd = "cat /sys/class/net/" + nic + "/operstate 2>/dev/null || echo 'unknown'";
-                            String status = MinaUtils.execCmdWithResult(session, statusCmd).trim();
-                            netInterface.setUp("up".equalsIgnoreCase(status));
-
-                            // 获取MAC地址
-                            String macCmd = "cat /sys/class/net/" + nic + "/address 2>/dev/null || echo ''";
-                            String mac = MinaUtils.execCmdWithResult(session, macCmd).trim();
-                            netInterface.setMac(mac);
-
-                            // 获取IP地址信息
-                            String ipCmd = "ip addr show " + nic + " | grep 'inet ' | awk '{print $2}'";
-                            String ipInfo = MinaUtils.execCmdWithResult(session, ipCmd).trim();
-                            if (StringUtils.isNotBlank(ipInfo)) {
-                                String[] ipParts = ipInfo.split("/");
-                                if (ipParts.length >= 2) {
-                                    netInterface.setIpv4(ipParts[0]);
-                                    // 计算子网掩码
-                                    int cidr = Integer.parseInt(ipParts[1]);
-                                    netInterface.setNetmask(cidrToNetmask(cidr));
-                                }
-                            }
-
-                            // 获取IPv6地址
-                            String ipv6Cmd = "ip addr show " + nic
-                                    + " | grep 'inet6 ' | grep -v 'fe80' | awk '{print $2}' | head -1";
-                            String ipv6Info = MinaUtils.execCmdWithResult(session, ipv6Cmd).trim();
-                            if (StringUtils.isNotBlank(ipv6Info)) {
-                                String[] ipv6Parts = ipv6Info.split("/");
-                                if (ipv6Parts.length > 0) {
-                                    netInterface.setIpv6(ipv6Parts[0]);
-                                }
-                            }
-
-                            // 获取网卡型号
-                            String modelCmd = "ethtool -i " + nic
-                                    + " 2>/dev/null | grep 'driver\\|version\\|bus-info' || echo ''";
-                            String modelInfo = MinaUtils.execCmdWithResult(session, modelCmd);
-                            String model = parseLinuxNicModel(modelInfo, nic);
-                            netInterface.setModel(model);
-
-                            // 获取网卡速率
-                            String speedCmd = "ethtool " + nic + " 2>/dev/null | grep 'Speed:' || echo ''";
-                            String speedInfo = MinaUtils.execCmdWithResult(session, speedCmd).trim();
-                            Long speed = parseLinuxNicSpeed(speedInfo);
-                            netInterface.setSpeed(speed);
-
-                            // 获取网卡流量统计
-                            String txCmd = "cat /sys/class/net/" + nic + "/statistics/tx_bytes 2>/dev/null || echo '0'";
-                            String rxCmd = "cat /sys/class/net/" + nic + "/statistics/rx_bytes 2>/dev/null || echo '0'";
-                            String txBytes = MinaUtils.execCmdWithResult(session, txCmd).trim();
-                            String rxBytes = MinaUtils.execCmdWithResult(session, rxCmd).trim();
-
-                            OsInfoLegacy.NetworkInterface.NetworkStats stats = new OsInfoLegacy.NetworkInterface.NetworkStats();
-                            stats.setTxBytes(StringUtils.isNumeric(txBytes) ? Long.parseLong(txBytes) : 0);
-                            stats.setRxBytes(StringUtils.isNumeric(rxBytes) ? Long.parseLong(rxBytes) : 0);
-                            netInterface.setStats(stats);
-
-                            // 添加到网卡列表
-                            legacyNetworkInterfaces.add(netInterface);
-                        }
-                    }
+                    collectLinuxNetworkInfo(session, legacyNetworkInterfaces);
                 }
 
                 // 将旧版格式转换为新版格式并存储
@@ -1543,9 +1517,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 设置新版接口列表
                 osInfo.getNetworkInfo().setInterfaces(newNetworkInterfaces);
-
-                // 旧版API不再使用
-                // osInfo.setNetworkInterfaces(newNetworkInterfaces);
 
                 // 更新状态
                 osInfo.setNetworkStatus(OsInfoStatusEnum.SUCCESS);
