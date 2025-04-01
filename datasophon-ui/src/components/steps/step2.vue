@@ -188,6 +188,35 @@
         <div v-html="fixConfirmContent"></div>
       </div>
     </a-modal>
+
+    <!-- 添加主机名编辑对话框 -->
+    <a-modal
+      title="编辑主机名"
+      :visible="hostnameEditVisible"
+      :confirm-loading="editLoading"
+      @ok="submitHostnameEdit"
+      @cancel="cancelHostnameEdit"
+    >
+      <a-form-model>
+        <a-form-model-item label="主机IP">
+          <span>{{ currentEditHost ? currentEditHost.ip : '' }}</span>
+        </a-form-model-item>
+        <a-form-model-item label="当前主机名">
+          <span>{{ currentEditHost ? (currentEditHost.hostname || '未设置') : '' }}</span>
+        </a-form-model-item>
+        <a-form-model-item label="新主机名">
+          <a-input
+            v-model="newHostname"
+            placeholder="请输入新的主机名"
+            :maxLength="64"
+          />
+          <div class="form-help-text">
+            <a-icon type="info-circle" />
+            <span>修改主机名将通过SSH连接服务器并实际修改系统配置</span>
+          </div>
+        </a-form-model-item>
+      </a-form-model>
+    </a-modal>
   </div>
 </template>
 
@@ -264,52 +293,12 @@ export default {
           title: "主机名",
           key: "hostname",
           dataIndex: "hostname",
-          width: 180,
-          customRender: (text, row) => {
+          width: 200,
+          customRender: (text, record) => {
             const h = this.$createElement;
-
-            // 优先检查SSH连接状态
-            if (row.sshConnectStatus === 'error' || row.hasSSHError === true) {
-              return h('div', {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#FF3B30'
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'warning' },
-                  style: { marginRight: '6px' }
-                }),
-                'SSH连接失败'
-              ]);
-            }
-
-            // 修改判断顺序，优先检查状态
-            // 1. 首先检查hostnameStatus状态（最高优先级）
-            if (this.checkStatus(row.hostnameStatus, 'loading')) {
-              // 创建加载中的主机名信息浮窗 - 苹果风格设计
-              const loadingTooltipContent = h('div', { class: 'hostname-detail-loading' }, [
-                // 添加顶部加载动画区域
-                h('div', { class: 'hostname-detail-loading-header' }),
-
-                // 中间内容区域加载动画
-                h('div', { class: 'hostname-detail-loading-content' }, [
-                  h('div', { class: 'hostname-detail-loading-line short' }),
-                  h('div', { class: 'hostname-detail-loading-line medium' }),
-                  h('div', { class: 'hostname-detail-loading-line' }),
-                  h('div', { class: 'hostname-detail-loading-line short' }),
-                  h('div', { class: 'hostname-detail-loading-line medium' })
-                ]),
-
-                // 底部加载文字
-                h('div', { class: 'hostname-detail-loading-text' }, [
-                  '正在优雅地获取主机信息...'
-                ])
-              ]);
-
-              // 苹果风格的加载状态显示，与操作系统一致
-              return h('a-tooltip', {
+            return h('div', { class: 'hostname-column' }, [
+              // 添加主机名悬浮卡片
+              h('a-tooltip', {
                 props: {
                   placement: 'right',
                   arrowPointAtCenter: true,
@@ -317,140 +306,37 @@ export default {
                   getPopupContainer: () => document.body
                 }
               }, [
-                // 加载中浮窗内容
+                // 使用主机名浮窗组件
                 h('span', {
                   slot: 'title',
-                  class: 'hostname-detail-tooltip-container'
-                }, [loadingTooltipContent]),
-
-                // 显示的加载内容
-                h('div', {
-                  class: 'os-info-loading',
-                  style: {
-                    position: 'relative',
-                    height: '24px',
-                    width: '100%',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }
+                  class: 'hostname-detail-tooltip'
                 }, [
-                  // 添加加载中文字
-                  h('span', {
-                    style: {
-                      fontSize: '13px',
-                      color: '#8E8E93',
-                      fontWeight: '500',
-                      position: 'relative',
-                      zIndex: 2,
-                      whiteSpace: 'nowrap'
+                  h(HostnameFloatingCard, {
+                    props: {
+                      hostInfo: record
                     }
-                  }, ['正在优雅地获取主机名...'])
-                ])
-              ]);
-            }
-
-            // 2. 其次检查是否有错误状态
-            if (this.checkStatus(row.hostnameStatus, 'error')) {
-              return h('div', {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#FF3B30'
-                }
-              }, [
+                  })
+                ]),
+                
+                // 显示的主机名文本
+                h('span', {
+                  class: 'hostname-text', 
+                  title: record.fqdn || record.hostname || '未知主机名' 
+                }, [record.hostname || '未知主机名']),
+              ]),
+              
+              // 编辑图标
+              h('a-tooltip', { props: { title: '编辑主机名' } }, [
                 h('a-icon', {
-                  props: { type: 'warning' },
-                  style: { marginRight: '6px' }
-                }),
-                '主机名获取失败'
-              ]);
-            }
-
-            // 3. 检查成功状态
-            if (this.checkStatus(row.hostnameStatus, 'success')) {
-              // 主机名收集成功但hostname为null的情况
-              if (row.hostname === null) {
-                return h('div', {
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: '#8E8E93'
+                  class: 'hostname-edit-icon',
+                  props: { type: 'edit' },
+                  on: {
+                    click: (e) => {
+                      e.stopPropagation();
+                      this.editHostname(record);
+                    }
                   }
-                }, [
-                  h('span', {}, ['主机名为空'])
-                ]);
-              }
-            }
-
-            // 4. 最后检查主机名是否为null（最低优先级）
-            if (row.hostname === null) {
-              return h('div', {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#8E8E93'
-                }
-              }, [
-                h('span', {}, ['暂无主机名'])
-              ]);
-            }
-
-            // 4. 最后是正常显示主机名
-            // 正常显示主机名，添加悬浮卡片
-            const tooltipContent = h('div', { class: 'hostname-detail-tooltip' }, [
-              h(HostnameFloatingCard, {
-                props: {
-                  hostInfo: row
-                }
-              })
-            ]);
-
-            return h('a-tooltip', {
-              props: {
-                placement: 'right',
-                arrowPointAtCenter: true,
-                overlayClassName: 'hostname-tooltip',
-                getPopupContainer: () => document.body
-              }
-            }, [
-              // 悬浮显示的内容
-              h('span', { slot: 'title' }, [tooltipContent]),
-
-              // 显示的主机名（可点击）
-              h('span', {
-                class: 'hostname-display',
-                style: {
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center'
-                }
-              }, [
-                row.hostname,
-                h('svg', {
-                  attrs: {
-                    viewBox: '0 0 24 24',
-                    width: '14',
-                    height: '14',
-                    fill: 'none',
-                    stroke: 'currentColor',
-                    'stroke-width': '2',
-                    'stroke-linecap': 'round',
-                    'stroke-linejoin': 'round'
-                  },
-                  style: {
-                    marginLeft: '6px',
-                    color: '#8E8E93',
-                    opacity: 0.8
-                  }
-                }, [
-                  h('circle', { attrs: { cx: '12', cy: '12', r: '10' } }),
-                  h('line', { attrs: { x1: '12', y1: '16', x2: '12', y2: '12' } }),
-                  h('line', { attrs: { x1: '12', y1: '8', x2: '12.01', y2: '8' } })
-                ])
+                })
               ])
             ]);
           }
@@ -1014,6 +900,10 @@ export default {
       refreshTimer: null,
       currentLogType: 'all',
       forceUseTypedApi: false,
+      hostnameEditVisible: false,
+      currentEditHost: null,
+      newHostname: '',
+      editLoading: false,
     };
   },
   computed: {
@@ -2742,6 +2632,51 @@ export default {
         okType: 'default',
         class: 'hosts-file-preview-modal'
       });
+    },
+
+    // 打开编辑主机名对话框
+    editHostname(record) {
+      this.currentEditHost = record;
+      this.newHostname = record.hostname || '';
+      this.hostnameEditVisible = true;
+    },
+    
+    // 提交主机名修改
+    submitHostnameEdit() {
+      if (!this.newHostname) {
+        this.$message.error('主机名不能为空');
+        return;
+      }
+      
+      this.editLoading = true;
+      
+      // 调用后端接口修改主机名
+      this.$http.post('/host/updateHostname', {
+        clusterId: this.currentEditHost.clusterId,
+        ip: this.currentEditHost.ip,
+        hostname: this.newHostname
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('主机名修改成功');
+          // 更新本地数据
+          this.currentEditHost.hostname = this.newHostname;
+          // 关闭对话框
+          this.hostnameEditVisible = false;
+        } else {
+          this.$message.error(res.msg || '主机名修改失败');
+        }
+      }).catch(err => {
+        this.$message.error('主机名修改失败: ' + (err.message || err));
+      }).finally(() => {
+        this.editLoading = false;
+      });
+    },
+    
+    // 取消编辑
+    cancelHostnameEdit() {
+      this.hostnameEditVisible = false;
+      this.currentEditHost = null;
+      this.newHostname = '';
     },
   },
   mounted() {
@@ -5489,5 +5424,80 @@ export default {
 
 .hostname-tooltip {
   max-width: none !important;
+}
+
+.hostname-column {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 10px;
+  
+  .hostname-text {
+    flex: 1;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #1D1D1F;
+    font-weight: 500;
+  }
+  
+  .hostname-edit-icon {
+    visibility: hidden;
+    color: #007AFF;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 8px;
+    
+    &:hover {
+      color: #0050A0;
+    }
+  }
+  
+  &:hover {
+    .hostname-edit-icon {
+      visibility: visible;
+    }
+  }
+}
+
+.form-help-text {
+  color: #888;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  
+  .anticon {
+    margin-right: 4px;
+    font-size: 14px;
+  }
+}
+
+.hostname-tooltip {
+  padding: 0 !important;
+  
+  .hostname-detail-tooltip {
+    display: block;
+    padding: 0;
+    margin: 0;
+  
+    .ant-tooltip-arrow {
+      display: none;
+    }
+  }
+  
+  .ant-tooltip-content {
+    border-radius: 16px !important;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  .ant-tooltip-inner {
+    background-color: transparent !important;
+    padding: 0 !important;
+    max-width: 420px !important;
+  }
 }
 </style>

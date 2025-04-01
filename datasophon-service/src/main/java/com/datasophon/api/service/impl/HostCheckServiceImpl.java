@@ -1709,9 +1709,8 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Map<String, String> getLogTypes() {
         Map<String, String> types = new LinkedHashMap<>();
-        types.put("all", "全部日志");
-        types.put("check", "检查日志");
-        types.put("fix", "修复日志");
+        types.put("CHECK", "检查日志");
+        types.put("FIX", "修复日志");
         return types;
     }
 
@@ -1954,6 +1953,172 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
             // 更新缓存
             updateHostInfoCache(clusterId, hostInfo);
+        }
+    }
+
+    @Override
+    public Result updateHostname(Integer clusterId, String ip, String hostname) {
+        logger.info("开始更新主机名: clusterId={}, ip={}, hostname={}", clusterId, ip, hostname);
+
+        // 获取主机信息和SSH连接
+        try {
+            // 获取存储在缓存中的主机信息
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (hostMap == null || !hostMap.containsKey(ip)) {
+                return Result.error("主机不存在");
+            }
+
+            HostInfo hostInfo = hostMap.get(ip);
+            // 记录更新前的信息用于诊断
+            String oldHostname = hostInfo.getHostname();
+            logger.info("更新前主机名: {}", oldHostname);
+
+            // 建立SSH连接
+            ClientSession session = null;
+            try {
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
+                if (session == null) {
+                    return Result.error("无法连接到主机");
+                }
+
+                // 构建更新主机名的命令
+                String command;
+                if (hostInfo.getOsInfo().getDistribution().toLowerCase().contains("centos") ||
+                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("redhat") ||
+                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("kylin")) {
+                    // CentOS/Red Hat/Kylin系统
+                    command = "sudo hostnamectl set-hostname " + hostname;
+                } else if (hostInfo.getOsInfo().getDistribution().toLowerCase().contains("ubuntu") ||
+                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("debian")) {
+                    // Ubuntu/Debian系统
+                    command = "sudo hostnamectl set-hostname " + hostname;
+                } else {
+                    // 其他Linux系统
+                    command = "sudo hostname " + hostname + " && " +
+                            "sudo echo '" + hostname + "' | sudo tee /etc/hostname";
+                }
+
+                // 执行命令
+                String result = MinaUtils.execCmdWithResult(session, command);
+                logger.info("执行命令结果: {}", result);
+
+                // 更新主机信息 - 确保所有可能的主机名字段都被更新
+                hostInfo.setHostname(hostname);
+
+                // 由于HostInfo类可能有多个字段表示主机名，确保所有字段都被更新
+                // 这里根据实际情况添加其他可能的字段
+                try {
+                    // 如果有其他字段表示主机名，也要更新
+                    // 例如：hostInfo.setName(hostname);
+                    // 或者 hostInfo.setServerName(hostname);
+                    // 具体取决于HostInfo类的实现
+                } catch (Exception e) {
+                    logger.warn("尝试更新主机名的其他字段时出错: {}", e.getMessage());
+                }
+
+                // 将主机名设置为map的key（如果使用主机名作为key）
+                if (hostMap.containsKey(oldHostname) && !oldHostname.equals(ip)) {
+                    // 如果map使用主机名作为key，则需要移除旧的条目并添加新的
+                    hostMap.remove(oldHostname);
+                    hostMap.put(hostname, hostInfo);
+                    logger.info("已更新hostMap的key: {} -> {}", oldHostname, hostname);
+                } else {
+                    // 否则直接更新现有条目
+                    hostMap.put(ip, hostInfo);
+                    logger.info("已更新hostMap，使用IP作为key: {}", ip);
+                }
+
+                // 更新主机信息缓存
+                CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
+                logger.info("已更新主机信息缓存");
+
+                // 验证更新是否成功
+                Map<String, HostInfo> updatedMap = (Map<String, HostInfo>) CacheUtils
+                        .get(clusterId + Constants.HOST_MAP);
+                HostInfo updatedInfo = updatedMap.get(ip);
+                logger.info("验证缓存中的主机名: {}", updatedInfo.getHostname());
+
+                // 返回更详细的成功信息，包括更新前后的主机名
+                return Result.success("主机名已成功更新: " + oldHostname + " -> " + hostname);
+            } finally {
+                if (session != null && session.isOpen()) {
+                    MinaUtils.closeConnection(session);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("更新主机名时发生错误", e);
+            return Result.error("更新主机名失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result updateHostsFile(Integer clusterId, String ip, String hostsFileContent) {
+        logger.info("开始更新hosts文件: clusterId={}, ip={}", clusterId, ip);
+
+        // 校验hosts文件内容
+        if (StrUtil.isBlank(hostsFileContent)) {
+            return Result.error("hosts文件内容不能为空");
+        }
+
+        // 获取主机信息和SSH连接
+        try {
+            // 获取存储在缓存中的主机信息
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (hostMap == null || !hostMap.containsKey(ip)) {
+                return Result.error("主机不存在");
+            }
+
+            HostInfo hostInfo = hostMap.get(ip);
+
+            // 建立SSH连接
+            ClientSession session = null;
+            try {
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
+                if (session == null) {
+                    return Result.error("无法连接到主机");
+                }
+
+                // 创建备份目录
+                String backupDir = "/opt/datasophon/backup/hosts";
+                String createBackupDirCmd = "sudo mkdir -p " + backupDir + " && sudo chmod 755 " + backupDir;
+                MinaUtils.execCmdWithResult(session, createBackupDirCmd);
+
+                // 生成备份文件名（包含时间戳）
+                String timestamp = MinaUtils.execCmdWithResult(session, "date +%Y%m%d_%H%M%S").trim();
+                String hostname = hostInfo.getHostname();
+                String backupFileName = String.format("%s/hosts_%s_%s.bak", backupDir, hostname, timestamp);
+
+                // 备份当前hosts文件
+                String backupCmd = "sudo cp /etc/hosts " + backupFileName + " && sudo chmod 644 " + backupFileName;
+                MinaUtils.execCmdWithResult(session, backupCmd);
+                logger.info("已备份hosts文件到: {}", backupFileName);
+
+                // 创建临时文件
+                String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+                String createTempCommand = "echo '" + hostsFileContent.replace("'", "'\\''") + "' > " + tempFile;
+                MinaUtils.execCmdWithResult(session, createTempCommand);
+
+                // 使用sudo将临时文件复制到/etc/hosts
+                String updateCommand = "sudo cp " + tempFile + " /etc/hosts && sudo chmod 644 /etc/hosts && rm "
+                        + tempFile;
+                String result = MinaUtils.execCmdWithResult(session, updateCommand);
+                logger.info("执行命令结果: {}", result);
+
+                // 更新主机信息中的hosts文件内容
+                hostInfo.setHostsFile(hostsFileContent);
+
+                // 更新主机信息缓存
+                updateHostInfoCache(clusterId, hostInfo);
+
+                return Result.success("hosts文件已成功更新，备份文件: " + backupFileName);
+            } finally {
+                if (session != null && session.isOpen()) {
+                    MinaUtils.closeConnection(session);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("更新hosts文件时发生错误", e);
+            return Result.error("更新hosts文件失败: " + e.getMessage());
         }
     }
 }

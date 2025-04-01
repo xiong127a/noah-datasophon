@@ -222,4 +222,24 @@ public interface HostCheckService {
          * @return 操作结果
          */
         Result startHostCheck(Integer clusterId);
+
+        /**
+         * 更新主机名
+         * 
+         * @param clusterId 集群ID
+         * @param ip        主机IP
+         * @param hostname  新主机名
+         * @return 操作结果
+         */
+        Result updateHostname(Integer clusterId, String ip, String hostname);
+
+        /**
+         * 更新hosts文件内容
+         * 
+         * @param clusterId        集群ID
+         * @param ip               主机IP
+         * @param hostsFileContent hosts文件新内容
+         * @return 操作结果
+         */
+        Result updateHostsFile(Integer clusterId, String ip, String hostsFileContent);
 }

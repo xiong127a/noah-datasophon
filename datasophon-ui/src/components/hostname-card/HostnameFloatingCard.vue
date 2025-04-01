@@ -116,6 +116,18 @@
             </span>
             <div class="hosts-file-info">
               <div class="file-badge">/etc/hosts</div>
+              <div class="file-actions">
+                <a-tooltip title="编辑Hosts文件">
+                  <a-button type="link" class="action-button" @click="editHostsFile">
+                    <a-icon type="edit" />
+                  </a-button>
+                </a-tooltip>
+                <a-tooltip title="复制Hosts文件内容">
+                  <a-button type="link" class="action-button" @click="copyHostsFile">
+                    <a-icon type="copy" />
+                  </a-button>
+                </a-tooltip>
+              </div>
             </div>
           </div>
           <div class="hosts-file-container">
@@ -274,7 +286,10 @@ export default {
       matchCount: null,
       matchIndex: 0,
       matches: [],
-      hostsLines: []
+      hostsLines: [],
+      editHostsVisible: false,
+      hostsFileContent: '',
+      hostsEditLoading: false,
     };
   },
   methods: {
@@ -542,6 +557,78 @@ export default {
       // 假设第一个是主要DNS服务器
       return dnsServers[0] === dns;
     },
+    
+    // 打开编辑hosts文件对话框
+    editHostsFile() {
+      this.hostsFileContent = this.hostInfo.hostsFile || '';
+      this.editHostsVisible = true;
+    },
+    
+    // 提交hosts文件修改
+    submitHostsEdit() {
+      if (!this.hostsFileContent) {
+        this.$message.warning('Hosts文件内容不能为空');
+        return;
+      }
+      
+      this.hostsEditLoading = true;
+      
+      // 调用后端接口修改hosts文件
+      this.$http.post('/host/updateHostsFile', {
+        clusterId: this.hostInfo.clusterId,
+        ip: this.hostInfo.ip,
+        hostsFileContent: this.hostsFileContent
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success('Hosts文件修改成功');
+          // 更新本地数据
+          this.hostInfo.hostsFile = this.hostsFileContent;
+          // 关闭对话框
+          this.editHostsVisible = false;
+        } else {
+          this.$message.error(res.msg || 'Hosts文件修改失败');
+        }
+      }).catch(err => {
+        this.$message.error('Hosts文件修改失败: ' + (err.message || err));
+      }).finally(() => {
+        this.hostsEditLoading = false;
+      });
+    },
+    
+    // 取消编辑
+    cancelHostsEdit() {
+      this.editHostsVisible = false;
+      this.hostsFileContent = '';
+    },
+    
+    // 复制hosts文件内容
+    copyHostsFile() {
+      if (!this.hostInfo.hostsFile) {
+        this.$message.warning('没有可复制的Hosts文件内容');
+        return;
+      }
+      
+      // 创建临时文本区域元素
+      const textarea = document.createElement('textarea');
+      textarea.value = this.hostInfo.hostsFile;
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        // 执行复制命令
+        const successful = document.execCommand('copy');
+        if (successful) {
+          this.$message.success('Hosts文件内容已复制到剪贴板');
+        } else {
+          this.$message.error('复制失败，请手动复制');
+        }
+      } catch (err) {
+        this.$message.error('复制失败: ' + err);
+      } finally {
+        // 移除临时元素
+        document.body.removeChild(textarea);
+      }
+    },
   }
 }
 </script>
@@ -769,6 +856,24 @@ export default {
   border-radius: 4px;
   background-color: #f5f5f7;
   color: #8e8e93;
+  margin-right: 8px;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-button {
+  padding: 0 4px;
+  height: 24px;
+  line-height: 24px;
+  color: #8e8e93;
+  transition: color 0.3s ease;
+  
+  &:hover {
+    color: #007aff;
+  }
 }
 
 .info-item {
@@ -1133,4 +1238,45 @@ export default {
 .ide-titlebar {
   display: none;
 }
-</style> 
+
+.form-help-text {
+  color: #888;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+  
+  .anticon {
+    margin-right: 4px;
+    font-size: 14px;
+  }
+}
+</style>
+
+<!-- 添加Hosts文件编辑对话框 -->
+<a-modal
+  title="编辑Hosts文件"
+  :visible="editHostsVisible"
+  :confirm-loading="hostsEditLoading"
+  width="700px"
+  @ok="submitHostsEdit"
+  @cancel="cancelHostsEdit"
+>
+  <a-form-model>
+    <a-form-model-item label="Hosts文件路径">
+      <span>/etc/hosts</span>
+    </a-form-model-item>
+    <a-form-model-item>
+      <a-textarea
+        v-model="hostsFileContent"
+        placeholder="请输入hosts文件内容"
+        :rows="15"
+        :style="{ fontFamily: 'monospace' }"
+      />
+      <div class="form-help-text">
+        <a-icon type="info-circle" />
+        <span>修改hosts文件将通过SSH连接服务器并实际修改系统配置</span>
+      </div>
+    </a-form-model-item>
+  </a-form-model>
+</a-modal>

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -172,7 +173,6 @@ public class HostCheckController {
      * 开始主机检查
      *
      * @param clusterId 集群ID
-     * @param ips       主机IP列表，逗号分隔
      * @return 开始检查结果
      */
     @PostMapping("/startHostCheck")
@@ -453,4 +453,37 @@ public class HostCheckController {
             return Result.error("更新间隔失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 更新主机名
+     *
+     * @param clusterId 集群ID
+     * @param ip        主机IP
+     * @param hostname  新主机名
+     * @return 操作结果
+     */
+    @PostMapping("/updateHostname")
+    @UserPermission
+    public Result updateHostname(@RequestParam Integer clusterId,
+            @RequestParam String ip,
+            @RequestParam String hostname) {
+        return hostCheckService.updateHostname(clusterId, ip, hostname);
+    }
+
+    /**
+     * 更新hosts文件内容
+     *
+     * @param clusterId        集群ID
+     * @param ip               主机IP
+     * @param hostsFileContent hosts文件新内容
+     * @return 操作结果
+     */
+    @PostMapping("/updateHostsFile")
+    @UserPermission
+    public Result updateHostsFile(@RequestParam Integer clusterId,
+            @RequestParam String ip,
+            @RequestParam String hostsFileContent) {
+        return hostCheckService.updateHostsFile(clusterId, ip, hostsFileContent);
+    }
+
 }
