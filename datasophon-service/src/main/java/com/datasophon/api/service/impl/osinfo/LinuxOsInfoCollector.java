@@ -368,37 +368,62 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     osInfo.setUbuntu22(true);
                     // 为悬浮卡片设置详细版本信息
                     osInfo.setDistributionName("Ubuntu 22.04 LTS");
+                    // 设置完整名称用于悬浮卡片
+                    osInfo.setFullName("Ubuntu 22.04 LTS (Jammy Jellyfish)");
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 } else if (version.startsWith("24")) {
                     osInfo.setUbuntu24(true);
-                    // 为悬浮卡片设置详细版本信息
-                    osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                    // 判断具体的24版本
+                    if (version.contains("24.04")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                    } else if (version.contains("24.10")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 24.10");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 24.10 (Oracular Oriole)");
+                    } else {
+                        // 默认24版本处理
+                        osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                        osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                    }
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 } else if (version.startsWith("20")) {
                     // 为悬浮卡片设置详细版本信息
                     osInfo.setDistributionName("Ubuntu 20.04 LTS");
+                    // 设置完整名称用于悬浮卡片
+                    osInfo.setFullName("Ubuntu 20.04 LTS (Focal Fossa)");
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 } else if (version.startsWith("18")) {
                     // 为悬浮卡片设置详细版本信息
                     osInfo.setDistributionName("Ubuntu 18.04 LTS");
+                    // 设置完整名称用于悬浮卡片
+                    osInfo.setFullName("Ubuntu 18.04 LTS (Bionic Beaver)");
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 } else if (version.startsWith("16")) {
                     // 为悬浮卡片设置详细版本信息
                     osInfo.setDistributionName("Ubuntu 16.04 LTS");
+                    // 设置完整名称用于悬浮卡片
+                    osInfo.setFullName("Ubuntu 16.04 LTS (Xenial Xerus)");
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 } else {
                     // 为悬浮卡片设置详细版本信息
                     osInfo.setDistributionName("Ubuntu " + version);
+                    // 设置完整名称用于悬浮卡片
+                    osInfo.setFullName("Ubuntu " + version);
                     // 为列表显示设置简单名称
                     osInfo.setDisplayName("Ubuntu");
                 }
             } else {
                 osInfo.setDistributionName("Ubuntu");
+                osInfo.setFullName("Ubuntu");
                 osInfo.setDisplayName("Ubuntu");
             }
         }
@@ -428,6 +453,72 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDisplayName("Debian GNU/Linux");
             }
         }
+
+        // 处理Kylin系统
+        else if ("kylin".equalsIgnoreCase(distId)) {
+            logger.info("识别到麒麟系统，ID: kylin");
+
+            // 设置发行版名称
+            osInfo.setDistribution("Kylin");
+            osInfo.setDistributionType(LinuxDistribution.KYLIN);
+
+            // 设置简洁的显示名称
+            osInfo.setDisplayName("中标麒麟");
+
+            String versionId = osInfo.getVersionId();
+            if (versionId != null) {
+                logger.info("麒麟系统版本: {}", versionId);
+
+                // 处理V10版本
+                if (versionId.equals("V10") || versionId.equals("10")) {
+                    osInfo.setKylinV10(true);
+                    osInfo.setDistributionName("中标麒麟 V10");
+
+                    // 获取PRETTY_NAME设置完整名称
+                    if (StringUtils.isNotBlank(osInfo.getFullName())) {
+                        // 已设置fullName，保持不变
+                    } else {
+                        osInfo.setFullName("Kylin Linux Advanced Server V10 (Halberd)");
+                    }
+                }
+                // 处理V4版本
+                else if (versionId.equals("V4") || versionId.equals("4")) {
+                    osInfo.setKylinV4(true);
+                    osInfo.setDistributionName("中标麒麟 V4");
+
+                    // 获取PRETTY_NAME设置完整名称
+                    if (StringUtils.isNotBlank(osInfo.getFullName())) {
+                        // 已设置fullName，保持不变
+                    } else {
+                        osInfo.setFullName("中标麒麟操作系统 V4");
+                    }
+                }
+                // 其他版本
+                else {
+                    osInfo.setDistributionName("中标麒麟 " + versionId);
+
+                    // 获取PRETTY_NAME设置完整名称
+                    if (StringUtils.isNotBlank(osInfo.getFullName())) {
+                        // 已设置fullName，保持不变
+                    } else {
+                        osInfo.setFullName("中标麒麟操作系统 " + versionId);
+                    }
+                }
+            } else {
+                // 没有版本信息
+                osInfo.setDistributionName("中标麒麟");
+
+                // 获取PRETTY_NAME设置完整名称
+                if (StringUtils.isNotBlank(osInfo.getFullName())) {
+                    // 已设置fullName，保持不变
+                } else {
+                    osInfo.setFullName("中标麒麟操作系统");
+                }
+            }
+            logger.info("设置麒麟系统信息：distribution={}, displayName={}, distributionName={}, fullName={}",
+                    osInfo.getDistribution(), osInfo.getDisplayName(), osInfo.getDistributionName(),
+                    osInfo.getFullName());
+        }
     }
 
     /**
@@ -437,7 +528,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         logger.info("尝试其他方式获取Linux发行版信息");
 
         try {
-            // 优先检查Ubuntu特定文件
+            // 优先检查麒麟系统内核特征
+            boolean kylinDetected = checkKylinKernel(osInfo, session);
+            if (kylinDetected) {
+                logger.info("通过内核版本成功识别为麒麟系统");
+                return; // 麒麟系统信息已获取，直接返回
+            }
+
+            // 检查Ubuntu特定文件
             boolean ubuntuDetected = checkUbuntuFile(osInfo, session);
             if (ubuntuDetected) {
                 logger.info("成功识别为Ubuntu系统");
@@ -465,149 +563,87 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     }
 
     /**
-     * 检查Ubuntu系统
+     * 通过内核版本识别麒麟系统
      */
-    private boolean checkUbuntuFile(OsInfo osInfo, ClientSession session) {
+    private boolean checkKylinKernel(OsInfo osInfo, ClientSession session) {
         try {
-            // 检查lsb-release文件
-            String lsbRelease = MinaUtils.execCmdWithResult(session, "cat /etc/lsb-release 2>/dev/null");
-            if (StringUtils.isNotBlank(lsbRelease) && lsbRelease.toLowerCase().contains("ubuntu")) {
-                logger.info("发现lsb-release文件，确认为Ubuntu系统");
+            // 获取内核版本
+            String kernelVersion = MinaUtils.execCmdWithResult(session, "uname -r");
+            if (StringUtils.isNotBlank(kernelVersion)) {
+                kernelVersion = kernelVersion.trim();
+                logger.info("获取到内核版本: {}", kernelVersion);
 
-                // 提取DISTRIB_ID
-                Pattern idPattern = Pattern.compile("^DISTRIB_ID=(.*?)$", Pattern.MULTILINE);
-                Matcher idMatcher = idPattern.matcher(lsbRelease);
-                if (idMatcher.find()) {
-                    String distribId = idMatcher.group(1).trim().replace("\"", "").toLowerCase();
-                    osInfo.setDistributionId(distribId);
-                } else {
-                    // 如果没有找到DISTRIB_ID，手动设置
-                    osInfo.setDistributionId("ubuntu");
-                }
+                // 检查内核版本是否包含麒麟系统特征
+                boolean isKylin = kernelVersion.contains("ky10") ||
+                        kernelVersion.contains("ky4") ||
+                        kernelVersion.contains("kylin") ||
+                        kernelVersion.contains(".ky.") ||
+                        kernelVersion.matches(".*\\.ky\\d+\\..*");
 
-                // 设置发行版名称
-                osInfo.setDistribution("Ubuntu");
-                osInfo.setDistributionType(LinuxDistribution.UBUNTU);
+                if (isKylin) {
+                    logger.info("通过内核版本特征识别为麒麟系统: {}", kernelVersion);
 
-                // 提取DISTRIB_RELEASE (版本号)
-                Pattern releasePattern = Pattern.compile("^DISTRIB_RELEASE=(.*?)$", Pattern.MULTILINE);
-                Matcher releaseMatcher = releasePattern.matcher(lsbRelease);
-                if (releaseMatcher.find()) {
-                    String version = releaseMatcher.group(1).trim().replace("\"", "");
-                    osInfo.setVersionId(version);
-                    osInfo.setVersion(version);
+                    // 设置基本信息
+                    osInfo.setDistributionId("kylin");
+                    osInfo.setDistribution("Kylin");
+                    osInfo.setDistributionType(LinuxDistribution.KYLIN);
+                    osInfo.setKernelVersion(kernelVersion);
 
-                    // 设置Ubuntu特定版本标志
-                    if (version.startsWith("22")) {
-                        osInfo.setUbuntu22(true);
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 22.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("24")) {
-                        osInfo.setUbuntu24(true);
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 24.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("20")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 20.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("18")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 18.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("16")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 16.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("中标麒麟");
+
+                    // 尝试判断麒麟版本
+                    if (kernelVersion.contains("ky10")) {
+                        logger.info("识别到麒麟V10特征");
+                        osInfo.setVersionId("V10");
+                        osInfo.setVersion("V10");
+                        osInfo.setKylinV10(true);
+                        osInfo.setDistributionName("中标麒麟 V10");
+                        osInfo.setFullName("Kylin Linux Advanced Server V10 (Halberd)");
+                    } else if (kernelVersion.contains("ky4")) {
+                        logger.info("识别到麒麟V4特征");
+                        osInfo.setVersionId("V4");
+                        osInfo.setVersion("V4");
+                        osInfo.setKylinV4(true);
+                        osInfo.setDistributionName("中标麒麟 V4");
+                        osInfo.setFullName("中标麒麟操作系统 V4");
                     } else {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu " + version);
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
+                        // 尝试用正则表达式提取版本号
+                        Pattern kyPattern = Pattern.compile("\\.ky(\\d+)\\.");
+                        Matcher kyMatcher = kyPattern.matcher(kernelVersion);
+                        if (kyMatcher.find()) {
+                            String versionNumber = kyMatcher.group(1);
+                            logger.info("通过正则表达式识别到麒麟V{}特征", versionNumber);
+                            osInfo.setVersionId("V" + versionNumber);
+                            osInfo.setVersion("V" + versionNumber);
+
+                            if ("10".equals(versionNumber)) {
+                                osInfo.setKylinV10(true);
+                            } else if ("4".equals(versionNumber)) {
+                                osInfo.setKylinV4(true);
+                            }
+
+                            osInfo.setDistributionName("中标麒麟 V" + versionNumber);
+                            osInfo.setFullName("中标麒麟操作系统 V" + versionNumber);
+                        } else {
+                            // 版本未知，使用默认值
+                            logger.info("无法确定麒麟具体版本，使用默认值");
+                            osInfo.setDistributionName("中标麒麟");
+                            osInfo.setFullName("中标麒麟操作系统");
+                        }
                     }
+
+                    // 尝试读取麒麟特定文件获取更多信息
+                    tryReadKylinSpecificFiles(osInfo, session);
+
+                    logger.info("麒麟系统识别完成: distribution={}, displayName={}, distributionName={}, fullName={}",
+                            osInfo.getDistribution(), osInfo.getDisplayName(), osInfo.getDistributionName(),
+                            osInfo.getFullName());
+                    return true;
                 } else {
-                    // 如果没有版本信息，设置默认值
-                    osInfo.setVersionId("unknown");
-                    osInfo.setVersion("unknown");
-                    osInfo.setDistributionName("Ubuntu");
-                    osInfo.setDisplayName("Ubuntu");
+                    logger.debug("内核版本不包含麒麟特征: {}", kernelVersion);
                 }
-
-                // 提取DISTRIB_DESCRIPTION (完整名称)
-                Pattern descPattern = Pattern.compile("^DISTRIB_DESCRIPTION=\"?(.*?)\"?$", Pattern.MULTILINE);
-                Matcher descMatcher = descPattern.matcher(lsbRelease);
-                if (descMatcher.find()) {
-                    String description = descMatcher.group(1).trim();
-                    osInfo.setFullName(description);
-                }
-
-                return true;
             }
-
-            // 如果lsb-release不存在或不包含Ubuntu，尝试其他方法
-            String osReleaseId = MinaUtils.execCmdWithResult(session, "grep -i ubuntu /etc/os-release 2>/dev/null");
-            if (StringUtils.isNotBlank(osReleaseId) && osReleaseId.toLowerCase().contains("ubuntu")) {
-                logger.info("通过/etc/os-release确认为Ubuntu系统");
-                osInfo.setDistributionId("ubuntu");
-                osInfo.setDistribution("Ubuntu");
-                osInfo.setDistributionType(LinuxDistribution.UBUNTU);
-
-                // 尝试获取版本号
-                String versionCmd = "grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
-                String version = MinaUtils.execCmdWithResult(session, versionCmd);
-                if (StringUtils.isNotBlank(version)) {
-                    version = version.trim();
-                    osInfo.setVersionId(version);
-                    osInfo.setVersion(version);
-
-                    // 设置版本标志和显示名称
-                    if (version.startsWith("22")) {
-                        osInfo.setUbuntu22(true);
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 22.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("24")) {
-                        osInfo.setUbuntu24(true);
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 24.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("20")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 20.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("18")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 18.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else if (version.startsWith("16")) {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu 16.04 LTS");
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    } else {
-                        // 为悬浮卡片设置详细版本信息
-                        osInfo.setDistributionName("Ubuntu " + version);
-                        // 为列表显示设置简单名称
-                        osInfo.setDisplayName("Ubuntu");
-                    }
-                } else {
-                    osInfo.setDistributionName("Ubuntu");
-                    osInfo.setDisplayName("Ubuntu");
-                }
-
-                return true;
-            }
-
             return false;
         } catch (Exception e) {
             logger.warn("检查Ubuntu系统时出错: {}", e.getMessage());
@@ -632,26 +668,24 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setVersionId(debianVersion);
                 osInfo.setVersion(debianVersion);
 
-                // 设置显示名称
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Debian");
+
+                // 设置详细名称
                 if (debianVersion.startsWith("12")) {
-                    osInfo.setDistributionName("Debian GNU/Linux 12 (bookworm)");
-                    osInfo.setDisplayName("Debian GNU/Linux 12 (bookworm)");
+                    osInfo.setDistributionName("Debian 12 (Bookworm)");
                     osInfo.setFullName("Debian GNU/Linux 12 (bookworm)");
                 } else if (debianVersion.startsWith("11")) {
-                    osInfo.setDistributionName("Debian GNU/Linux 11 (bullseye)");
-                    osInfo.setDisplayName("Debian GNU/Linux 11 (bullseye)");
+                    osInfo.setDistributionName("Debian 11 (Bullseye)");
                     osInfo.setFullName("Debian GNU/Linux 11 (bullseye)");
                 } else if (debianVersion.startsWith("10")) {
-                    osInfo.setDistributionName("Debian GNU/Linux 10 (buster)");
-                    osInfo.setDisplayName("Debian GNU/Linux 10 (buster)");
+                    osInfo.setDistributionName("Debian 10 (Buster)");
                     osInfo.setFullName("Debian GNU/Linux 10 (buster)");
                 } else if (debianVersion.startsWith("9")) {
-                    osInfo.setDistributionName("Debian GNU/Linux 9 (stretch)");
-                    osInfo.setDisplayName("Debian GNU/Linux 9 (stretch)");
+                    osInfo.setDistributionName("Debian 9 (Stretch)");
                     osInfo.setFullName("Debian GNU/Linux 9 (stretch)");
                 } else {
-                    osInfo.setDistributionName("Debian GNU/Linux " + debianVersion);
-                    osInfo.setDisplayName("Debian GNU/Linux " + debianVersion);
+                    osInfo.setDistributionName("Debian " + debianVersion);
                     osInfo.setFullName("Debian GNU/Linux " + debianVersion);
                 }
 
@@ -666,6 +700,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistribution("Debian");
                 osInfo.setDistributionType(LinuxDistribution.DEBIAN);
 
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Debian");
+
                 // 尝试获取版本号
                 String versionCmd = "grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
                 String version = MinaUtils.execCmdWithResult(session, versionCmd);
@@ -674,23 +711,19 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     osInfo.setVersionId(version);
                     osInfo.setVersion(version);
 
-                    // 根据版本设置显示名称
+                    // 根据版本设置详细名称
                     if (version.equals("12") || version.startsWith("12.")) {
-                        osInfo.setDistributionName("Debian GNU/Linux 12 (bookworm)");
-                        osInfo.setDisplayName("Debian GNU/Linux 12 (bookworm)");
+                        osInfo.setDistributionName("Debian 12 (Bookworm)");
                         osInfo.setFullName("Debian GNU/Linux 12 (bookworm)");
                     } else if (version.equals("11") || version.startsWith("11.")) {
-                        osInfo.setDistributionName("Debian GNU/Linux 11 (bullseye)");
-                        osInfo.setDisplayName("Debian GNU/Linux 11 (bullseye)");
+                        osInfo.setDistributionName("Debian 11 (Bullseye)");
                         osInfo.setFullName("Debian GNU/Linux 11 (bullseye)");
                     } else {
-                        osInfo.setDistributionName("Debian GNU/Linux " + version);
-                        osInfo.setDisplayName("Debian GNU/Linux " + version);
+                        osInfo.setDistributionName("Debian " + version);
                         osInfo.setFullName("Debian GNU/Linux " + version);
                     }
                 } else {
                     osInfo.setDistributionName("Debian GNU/Linux");
-                    osInfo.setDisplayName("Debian GNU/Linux");
                     osInfo.setFullName("Debian GNU/Linux");
                 }
 
@@ -727,40 +760,61 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     osInfo.setDistributionId("centos");
                     osInfo.setDistribution("CentOS");
                     osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                    osInfo.setDistributionName("CentOS Linux");
                     osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("CentOS");
 
                     if (versionId != null) {
                         osInfo.setVersionId(versionId);
                         osInfo.setVersion(versionId);
 
-                        // 设置特定版本标记
+                        // 设置特定版本标记和distributionName
                         if (versionId.startsWith("7")) {
                             osInfo.setCentOS7(true);
-                            osInfo.setDisplayName("CentOS Linux 7");
+                            osInfo.setDistributionName("CentOS Linux 7");
                         } else if (versionId.startsWith("8")) {
                             osInfo.setCentOS8(true);
-                            osInfo.setDisplayName("CentOS Linux 8");
+                            osInfo.setDistributionName("CentOS Linux 8");
                         } else {
-                            osInfo.setDisplayName("CentOS Linux " + versionId);
+                            osInfo.setDistributionName("CentOS Linux " + versionId);
                         }
                     } else {
-                        osInfo.setDisplayName("CentOS Linux");
+                        osInfo.setDistributionName("CentOS Linux");
+                    }
+                } else if (redhatRelease.toLowerCase().contains("fedora")) {
+                    // 处理Fedora系统
+                    osInfo.setDistributionId("fedora");
+                    osInfo.setDistribution("Fedora");
+                    osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
+                    osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("Fedora");
+
+                    if (versionId != null) {
+                        osInfo.setVersionId(versionId);
+                        osInfo.setVersion(versionId);
+                        osInfo.setDistributionName("Fedora " + versionId);
+                    } else {
+                        osInfo.setDistributionName("Fedora");
                     }
                 } else if (redhatRelease.toLowerCase().contains("red hat")
                         || redhatRelease.toLowerCase().contains("redhat")) {
                     osInfo.setDistributionId("rhel");
                     osInfo.setDistribution("RedHat");
                     osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                    osInfo.setDistributionName("Red Hat Enterprise Linux");
                     osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("Red Hat");
 
                     if (versionId != null) {
                         osInfo.setVersionId(versionId);
                         osInfo.setVersion(versionId);
-                        osInfo.setDisplayName("Red Hat Enterprise Linux " + versionId);
+                        osInfo.setDistributionName("Red Hat Enterprise Linux " + versionId);
                     } else {
-                        osInfo.setDisplayName("Red Hat Enterprise Linux");
+                        osInfo.setDistributionName("Red Hat Enterprise Linux");
                     }
                 } else {
                     // 其他基于RedHat的发行版
@@ -769,12 +823,39 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     osInfo.setDistributionType(LinuxDistribution.REDHAT);
                     osInfo.setDistributionName(redhatRelease);
                     osInfo.setFullName(redhatRelease);
-                    osInfo.setDisplayName(redhatRelease);
+                    osInfo.setDisplayName("RedHat Based");
+                }
 
-                    if (versionId != null) {
-                        osInfo.setVersionId(versionId);
-                        osInfo.setVersion(versionId);
-                    }
+                return true;
+            }
+
+            // 检查是否存在Fedora系统
+            String fedoraRelease = MinaUtils.execCmdWithResult(session, "cat /etc/fedora-release 2>/dev/null");
+            if (StringUtils.isNotBlank(fedoraRelease)) {
+                logger.info("发现fedora-release文件，确认为Fedora系统");
+                fedoraRelease = fedoraRelease.trim();
+
+                // 提取版本号
+                String versionId = null;
+                Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
+                Matcher versionMatcher = versionPattern.matcher(fedoraRelease);
+                if (versionMatcher.find()) {
+                    versionId = versionMatcher.group(1);
+                }
+
+                // 设置Fedora系统信息
+                osInfo.setDistributionId("fedora");
+                osInfo.setDistribution("Fedora");
+                osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
+                osInfo.setFullName(fedoraRelease);
+                osInfo.setDisplayName("Fedora");
+
+                if (versionId != null) {
+                    osInfo.setVersionId(versionId);
+                    osInfo.setVersion(versionId);
+                    osInfo.setDistributionName("Fedora " + versionId);
+                } else {
+                    osInfo.setDistributionName("Fedora");
                 }
 
                 return true;
@@ -830,6 +911,12 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setKylinV10(true);
             }
         }
+        // 设置Fedora版本标志 (虽然当前没有特定版本标志，但保留扩展性)
+        else if (distId.equals("fedora")) {
+            // 目前没有为Fedora设置特定的版本标志
+            // 如果未来需要添加Fedora特定版本的标志，可以在这里扩展
+            logger.info("检测到Fedora系统，版本: {}", version);
+        }
     }
 
     /**
@@ -844,12 +931,45 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         String distType = osInfo.getDistribution();
         if (distType == null) {
             osInfo.setDisplayName("未知Linux发行版");
+            osInfo.setDistributionName("未知Linux发行版");
+            osInfo.setFullName("未知Linux发行版");
             return;
         }
 
         switch (distType) {
             case "CentOS":
-                osInfo.setDisplayName("CentOS Linux");
+                // 设置简洁的显示名称，与Ubuntu保持一致风格
+                osInfo.setDisplayName("CentOS");
+
+                String centosVersion = osInfo.getVersionId();
+                if (StringUtils.isNotBlank(centosVersion)) {
+                    // 为悬浮卡片设置详细版本信息
+                    if (centosVersion.startsWith("7")) {
+                        osInfo.setDistributionName("CentOS Linux 7");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("CentOS Linux release 7." + centosVersion.substring(2));
+                        }
+                    } else if (centosVersion.startsWith("8")) {
+                        osInfo.setDistributionName("CentOS Linux 8");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("CentOS Linux release 8." + centosVersion.substring(2));
+                        }
+                    } else {
+                        osInfo.setDistributionName("CentOS Linux " + centosVersion);
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("CentOS Linux release " + centosVersion);
+                        }
+                    }
+                } else {
+                    osInfo.setDistributionName("CentOS Linux");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("CentOS Linux");
+                    }
+                }
                 break;
             case "Ubuntu":
                 // 设置列表显示用的简单名称
@@ -873,40 +993,137 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 }
                 break;
             case "Debian":
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Debian");
+
                 String debVersion = osInfo.getVersionId();
                 if (StringUtils.isNotBlank(debVersion)) {
                     if (debVersion.startsWith("12")) {
-                        osInfo.setDisplayName("Debian GNU/Linux 12 (bookworm)");
+                        osInfo.setDistributionName("Debian 12 (Bookworm)");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("Debian GNU/Linux 12 (bookworm)");
+                        }
                     } else if (debVersion.startsWith("11")) {
-                        osInfo.setDisplayName("Debian GNU/Linux 11 (bullseye)");
+                        osInfo.setDistributionName("Debian 11 (Bullseye)");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("Debian GNU/Linux 11 (bullseye)");
+                        }
+                    } else if (debVersion.startsWith("10")) {
+                        osInfo.setDistributionName("Debian 10 (Buster)");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("Debian GNU/Linux 10 (buster)");
+                        }
+                    } else if (debVersion.startsWith("9")) {
+                        osInfo.setDistributionName("Debian 9 (Stretch)");
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("Debian GNU/Linux 9 (stretch)");
+                        }
                     } else {
-                        osInfo.setDisplayName("Debian GNU/Linux " + debVersion);
+                        osInfo.setDistributionName("Debian " + debVersion);
+                        // 设置完整名称如果尚未设置
+                        if (StringUtils.isBlank(osInfo.getFullName())) {
+                            osInfo.setFullName("Debian GNU/Linux " + debVersion);
+                        }
                     }
                 } else {
-                    osInfo.setDisplayName("Debian GNU/Linux");
+                    osInfo.setDistributionName("Debian GNU/Linux");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Debian GNU/Linux");
+                    }
                 }
                 break;
             case "RedHat":
-                osInfo.setDisplayName("Red Hat Enterprise Linux");
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Red Hat");
+
+                String rhVersion = osInfo.getVersionId();
+                if (StringUtils.isNotBlank(rhVersion)) {
+                    osInfo.setDistributionName("Red Hat Enterprise Linux " + rhVersion);
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Red Hat Enterprise Linux release " + rhVersion);
+                    }
+                } else {
+                    osInfo.setDistributionName("Red Hat Enterprise Linux");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Red Hat Enterprise Linux");
+                    }
+                }
+                break;
+            case "Fedora":
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Fedora");
+
+                String fedoraVersion = osInfo.getVersionId();
+                if (StringUtils.isNotBlank(fedoraVersion)) {
+                    osInfo.setDistributionName("Fedora " + fedoraVersion);
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Fedora release " + fedoraVersion);
+                    }
+                } else {
+                    osInfo.setDistributionName("Fedora");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Fedora Linux");
+                    }
+                }
                 break;
             case "Kylin":
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("中标麒麟");
+
                 String kylinVersion = osInfo.getVersionId();
                 if ("V10".equals(kylinVersion) || "10".equals(kylinVersion)) {
-                    osInfo.setDisplayName("中标麒麟");
+                    osInfo.setDistributionName("中标麒麟 V10");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("中标麒麟操作系统 V10");
+                    }
                 } else if ("V4".equals(kylinVersion) || "4".equals(kylinVersion)) {
-                    osInfo.setDisplayName("中标麒麟");
+                    osInfo.setDistributionName("中标麒麟 V4");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("中标麒麟操作系统 V4");
+                    }
+                } else if (StringUtils.isNotBlank(kylinVersion)) {
+                    osInfo.setDistributionName("中标麒麟 " + kylinVersion);
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("中标麒麟操作系统 " + kylinVersion);
+                    }
                 } else {
-                    osInfo.setDisplayName("中标麒麟");
+                    osInfo.setDistributionName("中标麒麟");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("中标麒麟操作系统");
+                    }
                 }
                 break;
             default:
-                // 对于其他发行版，使用发行版名称
+                // 对于其他发行版
                 if (StringUtils.isNotBlank(osInfo.getFullName())) {
-                    osInfo.setDisplayName(osInfo.getFullName());
-                } else if (StringUtils.isNotBlank(osInfo.getDistributionName())) {
-                    osInfo.setDisplayName(osInfo.getDistributionName());
-                } else {
+                    // 如果已有fullName，则用简化版本作为displayName
                     osInfo.setDisplayName(distType);
+                    // 确保distributionName也被设置
+                    if (StringUtils.isBlank(osInfo.getDistributionName())) {
+                        osInfo.setDistributionName(osInfo.getFullName());
+                    }
+                } else if (StringUtils.isNotBlank(osInfo.getDistributionName())) {
+                    // 如果已有distributionName，则用简化版本作为displayName，复制给fullName
+                    osInfo.setDisplayName(distType);
+                    osInfo.setFullName(osInfo.getDistributionName());
+                } else {
+                    // 全都没有，则使用发行版名称
+                    osInfo.setDisplayName(distType);
+                    osInfo.setDistributionName(distType);
+                    osInfo.setFullName(distType);
                 }
         }
     }
@@ -1430,6 +1647,292 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.getGpuInfo().setErrorMessage("收集GPU信息失败: " + e.getMessage());
             }
             throw e; // 向上抛出异常，由调用者处理
+        }
+    }
+
+    /**
+     * 尝试读取麒麟系统特定文件获取更多信息
+     */
+    private void tryReadKylinSpecificFiles(OsInfo osInfo, ClientSession session) {
+        try {
+            // 尝试读取/etc/neokylin-release文件
+            String neokylinRelease = MinaUtils.execCmdWithResult(session, "cat /etc/neokylin-release 2>/dev/null");
+            if (StringUtils.isNotBlank(neokylinRelease)) {
+                logger.info("读取到/etc/neokylin-release: {}", neokylinRelease.trim());
+                osInfo.setFullName(neokylinRelease.trim());
+                return;
+            }
+
+            // 尝试读取/etc/kylin-release文件
+            String kylinRelease = MinaUtils.execCmdWithResult(session, "cat /etc/kylin-release 2>/dev/null");
+            if (StringUtils.isNotBlank(kylinRelease)) {
+                logger.info("读取到/etc/kylin-release: {}", kylinRelease.trim());
+                osInfo.setFullName(kylinRelease.trim());
+                return;
+            }
+
+            // 尝试读取/etc/uos-release文件 (统信UOS文件)
+            String uosRelease = MinaUtils.execCmdWithResult(session, "cat /etc/uos-release 2>/dev/null");
+            if (StringUtils.isNotBlank(uosRelease)) {
+                logger.info("读取到/etc/uos-release: {}", uosRelease.trim());
+                osInfo.setFullName(uosRelease.trim());
+                return;
+            }
+
+            // 尝试从os-release中获取信息
+            String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
+            if (StringUtils.isNotBlank(osRelease)) {
+                logger.info("尝试从os-release中获取麒麟系统信息");
+
+                // 提取PRETTY_NAME (完整名称)
+                Pattern prettyNamePattern = Pattern.compile("^PRETTY_NAME=\"?(.*?)\"?$", Pattern.MULTILINE);
+                Matcher prettyNameMatcher = prettyNamePattern.matcher(osRelease);
+                if (prettyNameMatcher.find()) {
+                    String prettyName = prettyNameMatcher.group(1).trim();
+                    osInfo.setFullName(prettyName);
+                    logger.info("从os-release获取到麒麟系统完整名称: {}", prettyName);
+                }
+
+                // 提取VERSION_ID (版本号)
+                Pattern versionIdPattern = Pattern.compile("^VERSION_ID=\"?(.*?)\"?$", Pattern.MULTILINE);
+                Matcher versionIdMatcher = versionIdPattern.matcher(osRelease);
+                if (versionIdMatcher.find()) {
+                    String versionId = versionIdMatcher.group(1).trim();
+                    osInfo.setVersionId(versionId);
+                    osInfo.setVersion(versionId);
+                    logger.info("从os-release获取到麒麟系统版本ID: {}", versionId);
+
+                    // 设置版本特定标记
+                    if ("V10".equals(versionId) || "10".equals(versionId)) {
+                        osInfo.setKylinV10(true);
+                        osInfo.setDistributionName("中标麒麟 V10");
+                    } else if ("V4".equals(versionId) || "4".equals(versionId)) {
+                        osInfo.setKylinV4(true);
+                        osInfo.setDistributionName("中标麒麟 V4");
+                    } else {
+                        osInfo.setDistributionName("中标麒麟 " + versionId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("读取麒麟系统特定文件时出错: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 检查Ubuntu系统
+     */
+    private boolean checkUbuntuFile(OsInfo osInfo, ClientSession session) {
+        try {
+            // 检查lsb-release文件
+            String lsbRelease = MinaUtils.execCmdWithResult(session, "cat /etc/lsb-release 2>/dev/null");
+            if (StringUtils.isNotBlank(lsbRelease) && lsbRelease.toLowerCase().contains("ubuntu")) {
+                logger.info("发现lsb-release文件，确认为Ubuntu系统");
+
+                // 提取DISTRIB_ID
+                Pattern idPattern = Pattern.compile("^DISTRIB_ID=(.*?)$", Pattern.MULTILINE);
+                Matcher idMatcher = idPattern.matcher(lsbRelease);
+                if (idMatcher.find()) {
+                    String distribId = idMatcher.group(1).trim().replace("\"", "").toLowerCase();
+                    osInfo.setDistributionId(distribId);
+                } else {
+                    // 如果没有找到DISTRIB_ID，手动设置
+                    osInfo.setDistributionId("ubuntu");
+                }
+
+                // 设置发行版名称
+                osInfo.setDistribution("Ubuntu");
+                osInfo.setDistributionType(LinuxDistribution.UBUNTU);
+
+                // 提取DISTRIB_RELEASE (版本号)
+                Pattern releasePattern = Pattern.compile("^DISTRIB_RELEASE=(.*?)$", Pattern.MULTILINE);
+                Matcher releaseMatcher = releasePattern.matcher(lsbRelease);
+                if (releaseMatcher.find()) {
+                    String version = releaseMatcher.group(1).trim().replace("\"", "");
+                    osInfo.setVersionId(version);
+                    osInfo.setVersion(version);
+
+                    // 设置Ubuntu特定版本标志
+                    if (version.startsWith("22")) {
+                        osInfo.setUbuntu22(true);
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 22.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 22.04 LTS (Jammy Jellyfish)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("24")) {
+                        osInfo.setUbuntu24(true);
+                        // 判断具体的24版本
+                        if (version.contains("24.04")) {
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                            // 设置完整名称用于悬浮卡片
+                            osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                        } else if (version.contains("24.10")) {
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 24.10");
+                            // 设置完整名称用于悬浮卡片
+                            osInfo.setFullName("Ubuntu 24.10 (Oracular Oriole)");
+                        } else {
+                            // 默认24版本处理
+                            osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                            osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                        }
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("20")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 20.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 20.04 LTS (Focal Fossa)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("18")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 18.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 18.04 LTS (Bionic Beaver)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("16")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 16.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 16.04 LTS (Xenial Xerus)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu " + version);
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu " + version);
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    }
+                } else {
+                    // 如果没有版本信息，设置默认值
+                    osInfo.setVersionId("unknown");
+                    osInfo.setVersion("unknown");
+                    osInfo.setDistributionName("Ubuntu");
+                    osInfo.setFullName("Ubuntu");
+                    osInfo.setDisplayName("Ubuntu");
+                }
+
+                // 提取DISTRIB_DESCRIPTION (完整名称)
+                Pattern descPattern = Pattern.compile("^DISTRIB_DESCRIPTION=\"?(.*?)\"?$", Pattern.MULTILINE);
+                Matcher descMatcher = descPattern.matcher(lsbRelease);
+                if (descMatcher.find()) {
+                    String description = descMatcher.group(1).trim();
+                    // 只有在当前fullName不包含代号时才使用DISTRIB_DESCRIPTION
+                    if (StringUtils.isBlank(osInfo.getFullName()) ||
+                            !osInfo.getFullName().contains("(") && description.contains("(")) {
+                        osInfo.setFullName(description);
+                    }
+                }
+
+                return true;
+            }
+
+            // 如果lsb-release不存在或不包含Ubuntu，尝试其他方法
+            String osReleaseId = MinaUtils.execCmdWithResult(session, "grep -i ubuntu /etc/os-release 2>/dev/null");
+            if (StringUtils.isNotBlank(osReleaseId) && osReleaseId.toLowerCase().contains("ubuntu")) {
+                logger.info("通过/etc/os-release确认为Ubuntu系统");
+                osInfo.setDistributionId("ubuntu");
+                osInfo.setDistribution("Ubuntu");
+                osInfo.setDistributionType(LinuxDistribution.UBUNTU);
+
+                // 尝试获取版本号
+                String versionCmd = "grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
+                String version = MinaUtils.execCmdWithResult(session, versionCmd);
+                if (StringUtils.isNotBlank(version)) {
+                    version = version.trim();
+                    osInfo.setVersionId(version);
+                    osInfo.setVersion(version);
+
+                    // 设置版本标志和显示名称
+                    if (version.startsWith("22")) {
+                        osInfo.setUbuntu22(true);
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 22.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 22.04 LTS (Jammy Jellyfish)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("24")) {
+                        osInfo.setUbuntu24(true);
+                        // 判断具体的24版本
+                        if (version.contains("24.04")) {
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                            // 设置完整名称用于悬浮卡片
+                            osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                        } else if (version.contains("24.10")) {
+                            // 为悬浮卡片设置详细版本信息
+                            osInfo.setDistributionName("Ubuntu 24.10");
+                            // 设置完整名称用于悬浮卡片
+                            osInfo.setFullName("Ubuntu 24.10 (Oracular Oriole)");
+                        } else {
+                            // 默认24版本处理
+                            osInfo.setDistributionName("Ubuntu 24.04 LTS");
+                            osInfo.setFullName("Ubuntu 24.04 LTS (Noble Numbat)");
+                        }
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("20")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 20.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 20.04 LTS (Focal Fossa)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("18")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 18.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 18.04 LTS (Bionic Beaver)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else if (version.startsWith("16")) {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu 16.04 LTS");
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu 16.04 LTS (Xenial Xerus)");
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    } else {
+                        // 为悬浮卡片设置详细版本信息
+                        osInfo.setDistributionName("Ubuntu " + version);
+                        // 设置完整名称用于悬浮卡片
+                        osInfo.setFullName("Ubuntu " + version);
+                        // 为列表显示设置简单名称
+                        osInfo.setDisplayName("Ubuntu");
+                    }
+                } else {
+                    osInfo.setDistributionName("Ubuntu");
+                    osInfo.setFullName("Ubuntu");
+                    osInfo.setDisplayName("Ubuntu");
+                }
+
+                // 尝试从os-release获取PRETTY_NAME
+                String prettyCmd = "grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
+                String prettyName = MinaUtils.execCmdWithResult(session, prettyCmd);
+                if (StringUtils.isNotBlank(prettyName)) {
+                    prettyName = prettyName.trim();
+                    // 只有在当前fullName不包含代号时才使用PRETTY_NAME
+                    if (StringUtils.isBlank(osInfo.getFullName()) ||
+                            !osInfo.getFullName().contains("(") && prettyName.contains("(")) {
+                        osInfo.setFullName(prettyName);
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        } catch (Exception e) {
+            logger.warn("检查Ubuntu系统时出错: {}", e.getMessage());
+            return false;
         }
     }
 }
