@@ -29,7 +29,25 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico"> -->
+    <!-- 2025-04-01: 移除标签页logo图标
+    修改前：
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    
+    修改后：
+    1. 删除原来的favicon引用
+    2. 添加多个空的favicon链接，覆盖所有可能的favicon设置
+    3. 使用base64编码的空图片，确保浏览器显示空白图标
+    
+    修改范围：从 <link rel="icon"> 开始，到 <title> 标签之前结束
+    -->
+    <link rel="icon" href="data:image/x-icon;base64,AA">
+    <link rel="shortcut icon" href="data:image/x-icon;base64,AA">
+    <link rel="apple-touch-icon" href="data:image/x-icon;base64,AA">
+    <link rel="apple-touch-icon-precomposed" href="data:image/x-icon;base64,AA">
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AA">
+    <link rel="icon" type="image/png" href="data:image/x-icon;base64,AA">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvc3ZnPg==">
+    <!-- 修改结束 -->
     <title><%= process.env.VUE_APP_NAME %></title>
     <!-- require cdn assets css -->
     <% for (var i in htmlWebpackPlugin.options.cdn && htmlWebpackPlugin.options.cdn.css) { %>
