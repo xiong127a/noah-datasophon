@@ -196,6 +196,8 @@ import LogFilter from '../log/LogFilter.vue';
 import QueueStatusIndicator from '@/components/QueueStatusIndicator'
 // 导入操作系统浮窗组件
 import OsFloatingCard from '@/components/os-card/OsFloatingCard.vue';
+// 导入HostnameFloatingCard组件
+import HostnameFloatingCard from '@/components/hostname-card/HostnameFloatingCard.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -206,7 +208,9 @@ export default {
   components: {
     LogFilter,
     QueueStatusIndicator,
-    OsFloatingCard
+    OsFloatingCard,
+    /* eslint-disable-next-line vue/no-unused-components */
+    HostnameFloatingCard
   },
   data() {
     return {
@@ -398,109 +402,11 @@ export default {
             // 4. 最后是正常显示主机名
             // 正常显示主机名，添加悬浮卡片
             const tooltipContent = h('div', { class: 'hostname-detail-tooltip' }, [
-              // 主机名信息部分
-              h('div', { class: 'hostname-detail-section' }, [
-                h('div', { class: 'hostname-detail-title' }, [
-                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
-                    h('svg', {
-                      attrs: {
-                        viewBox: '0 0 24 24',
-                        width: '16',
-                        height: '16',
-                        fill: 'none',
-                        stroke: '#007AFF',
-                        'stroke-width': '2',
-                        'stroke-linecap': 'round',
-                        'stroke-linejoin': 'round'
-                      },
-                      style: { marginRight: '8px' }
-                    }, [
-                      h('path', { attrs: { d: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' } }),
-                      h('polyline', { attrs: { points: '9 22 9 12 15 12 15 22' } })
-                    ]),
-                    '主机基本信息'
-                  ])
-                ]),
-                h('div', { class: 'hostname-detail-content' }, [
-                  h('div', { class: 'hostname-detail-item' }, [
-                    h('span', { class: 'hostname-detail-label' }, ['主机名:']),
-                    h('span', { class: 'hostname-detail-value' }, [row.hostname || '-'])
-                  ]),
-                  h('div', { class: 'hostname-detail-item' }, [
-                    h('span', { class: 'hostname-detail-label' }, ['完整域名:']),
-                    h('span', { class: 'hostname-detail-value' }, [row.fqdn || '-'])
-                  ]),
-                  h('div', { class: 'hostname-detail-item' }, [
-                    h('span', { class: 'hostname-detail-label' }, ['IP地址:']),
-                    h('span', { class: 'hostname-detail-value' }, [row.ip || '-'])
-                  ])
-                ])
-              ]),
-
-              // DNS服务器信息部分
-              h('div', { class: 'hostname-detail-section' }, [
-                h('div', { class: 'hostname-detail-title' }, [
-                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
-                    h('svg', {
-                      attrs: {
-                        viewBox: '0 0 24 24',
-                        width: '16',
-                        height: '16',
-                        fill: 'none',
-                        stroke: '#5AC8FA',
-                        'stroke-width': '2',
-                        'stroke-linecap': 'round',
-                        'stroke-linejoin': 'round'
-                      },
-                      style: { marginRight: '8px' }
-                    }, [
-                      h('path', { attrs: { d: 'M22 12h-4l-3 9L9 3l-3 9H2' } })
-                    ]),
-                    '网络配置信息'
-                  ])
-                ]),
-                h('div', { class: 'hostname-detail-content' }, [
-                  h('div', { class: 'hostname-detail-item' }, [
-                    h('span', { class: 'hostname-detail-label' }, ['DNS服务器:']),
-                    h('span', { class: 'hostname-detail-value dns-servers' }, [
-                      row.osInfo && row.osInfo.dnsServers ? row.osInfo.dnsServers : '未配置DNS'
-                    ])
-                  ])
-                ])
-              ]),
-
-              // hosts文件信息部分
-              h('div', { class: 'hostname-detail-section' }, [
-                h('div', { class: 'hostname-detail-title' }, [
-                  h('span', { style: { display: 'flex', alignItems: 'center' } }, [
-                    h('svg', {
-                      attrs: {
-                        viewBox: '0 0 24 24',
-                        width: '16',
-                        height: '16',
-                        fill: 'none',
-                        stroke: '#FF9500',
-                        'stroke-width': '2',
-                        'stroke-linecap': 'round',
-                        'stroke-linejoin': 'round'
-                      },
-                      style: { marginRight: '8px' }
-                    }, [
-                      h('path', { attrs: { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' } }),
-                      h('polyline', { attrs: { points: '14 2 14 8 20 8' } }),
-                      h('line', { attrs: { x1: '16', y1: '13', x2: '8', y2: '13' } }),
-                      h('line', { attrs: { x1: '16', y1: '17', x2: '8', y2: '17' } }),
-                      h('polyline', { attrs: { points: '10 9 9 9 8 9' } })
-                    ]),
-                    'Hosts文件内容'
-                  ])
-                ]),
-                h('div', { class: 'hostname-detail-content' }, [
-                  row.hostsFile ?
-                      h('pre', { class: 'hostname-detail-hosts-file' }, [row.hostsFile]) :
-                      h('div', { class: 'hostname-detail-empty' }, ['暂无hosts文件内容'])
-                ])
-              ])
+              h(HostnameFloatingCard, {
+                props: {
+                  hostInfo: row
+                }
+              })
             ]);
 
             return h('a-tooltip', {
@@ -5574,5 +5480,14 @@ export default {
       background-position: 100% 0;
     }
   }
+}
+
+// 主机名悬浮卡片样式
+.hostname-detail-tooltip {
+  padding: 0;
+}
+
+.hostname-tooltip {
+  max-width: none !important;
 }
 </style>
