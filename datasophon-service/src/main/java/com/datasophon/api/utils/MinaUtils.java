@@ -110,10 +110,17 @@ public class MinaUtils {
 
     /** 关闭远程会话 */
     public static void closeConnection(ClientSession session) {
+        if (session == null) {
+            return;
+        }
+
         try {
-            session.close();
+            if (session.isOpen()) {
+                session.close();
+            }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            // 记录异常但不抛出，避免影响调用方
+            LOG.warn("关闭SSH会话时发生异常: {}", e.getMessage());
         }
     }
 

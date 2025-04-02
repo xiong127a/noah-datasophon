@@ -317,7 +317,9 @@ export default {
                     h('div', { class: 'ssh-error-content' }, [
                       h('div', { class: 'ssh-error-message' }, [
                         record.sshErrorMsg || record.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
-                      ])
+                      ]),
+                      // 解析结构化错误信息
+                      this.parseSSHErrorMessage(record.sshErrorMsg || record.errorMessage)
                     ])
                   ]) :
                   // 正常情况下显示常规主机信息卡片
@@ -430,7 +432,9 @@ export default {
                     h('div', { class: 'ssh-error-title' }, ['SSH连接失败']),
                     h('div', { class: 'ssh-error-message' }, [
                       row.sshErrorMsg || row.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
-                    ])
+                    ]),
+                    // 解析结构化错误信息
+                    this.parseSSHErrorMessage(row.sshErrorMsg || row.errorMessage)
                   ])
                 ]),
                 h('div', {
@@ -2557,6 +2561,29 @@ export default {
       this.hostnameEditVisible = false;
       this.currentEditHost = null;
       this.newHostname = '';
+    },
+
+    // 解析SSH错误消息，提取错误代码和解决方案
+    parseSSHErrorMessage(message) {
+      if (!message) return null;
+      const h = this.$createElement;
+      
+      // 检查是否包含错误代码，格式如 [SSH_AUTH_ERROR]
+      const codeMatch = message.match(/\[(SSH_[A-Z_]+)\]/);
+      const errorCode = codeMatch ? codeMatch[1] : null;
+      
+      // 检查是否包含解决方案，格式如 - 请检查SSH用户名和密码是否正确
+      const solutionMatch = message.match(/- (.*?)(\(|$)/);
+      const solution = solutionMatch ? solutionMatch[1].trim() : null;
+      
+      // 如果没有解析到结构化信息，返回null
+      if (!errorCode && !solution) return null;
+      
+      // 创建结构化展示组件
+      return h('div', { class: 'ssh-error-parsed' }, [
+        errorCode ? h('div', { class: 'ssh-error-code' }, [errorCode]) : null,
+        solution ? h('div', { class: 'ssh-error-solution' }, [solution]) : null
+      ]);
     },
   },
   mounted() {
@@ -5912,53 +5939,10 @@ export default {
 .ssh-error-card {
   padding: 16px;
   background-color: rgba(255, 59, 48, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 59, 48, 0.2);
-}
-
-.ssh-error-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.ssh-error-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: rgba(255, 59, 48, 0.2);
-  margin-right: 8px;
-}
-
-.ssh-error-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #FF3B30;
-}
-
-.ssh-error-content {
-  font-size: 12px;
-  color: #1D1D1F;
-}
-
-.ssh-error-message {
-  font-size: 12px;
-  color: #FF3B30;
-}
-
-.hostname-text.error {
-  color: #FF3B30;
-}
-
-.ssh-error-card {
-  padding: 16px;
-  background-color: rgba(255, 59, 48, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 59, 48, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.1);
+  max-width: 400px;
 }
 
 .ssh-error-header {
@@ -5971,36 +5955,74 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background-color: rgba(255, 59, 48, 0.2);
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 .ssh-error-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #FF3B30;
 }
 
 .ssh-error-content {
-  font-size: 12px;
+  font-size: 13px;
   color: #1D1D1F;
 }
 
 .ssh-error-message {
-  font-size: 12px;
-  color: #FF3B30;
+  font-size: 13px;
+  color: #1D1D1F;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .ssh-error-details {
-  padding: 12px;
+  padding: 16px;
   background: #FFF5F5;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #FFCCCC;
+  box-shadow: 0 2px 6px rgba(255, 59, 48, 0.1);
 }
 
+/* 解析和展示结构化SSH错误信息 */
+.ssh-error-parsed {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.ssh-error-code {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #FF3B30;
+  background-color: rgba(255, 59, 48, 0.1);
+  border-radius: 4px;
+  margin: 4px 0;
+  font-family: 'SF Mono', monospace;
+}
+
+.ssh-error-solution {
+  font-size: 13px;
+  color: #1D1D1F;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  position: relative;
+}
+
+.ssh-error-solution:before {
+  content: "💡";
+  margin-right: 6px;
+}
+
+/* 主机名加载动画 */
 .hostname-loading-container {
   display: flex;
   align-items: center;
@@ -6124,6 +6146,11 @@ export default {
   color: #007AFF;
   font-weight: 500;
   white-space: nowrap;
+}
+
+/* 确保主机名错误状态样式存在 */
+.hostname-text.error {
+  color: #FF3B30;
 }
 </style>
 

@@ -284,7 +284,7 @@ public class InstallServiceImpl implements InstallService {
 
         // 如果需要，触发所有主机的操作系统信息收集
         if (startOsInfoCollection) {
-            logger.info("开始异步触发所有主机的操作系统信息收集");
+            logger.info("开始异步触发所有主机的SSH验证和操作系统信息收集");
             // 创建一个新线程进行主机信息收集，保证主接口立即返回
             Thread thread = new Thread(() -> {
                 try {
@@ -293,22 +293,37 @@ public class InstallServiceImpl implements InstallService {
                     sortedHosts.sort(Comparator.comparing(HostInfo::getIp));
 
                     for (HostInfo hostInfo : sortedHosts) {
-                        // 设置初始状态
-                        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-
+                        // 首先异步执行SSH连接验证
                         try {
-                            // 在线程内进行异步验证SSH连接并收集信息
-                            osInfoService.getHostOsInfoAsync(hostInfo);
+                            boolean sshSuccess = validateSshConnection(hostInfo);
 
+                            // 如果SSH连接失败，设置相关错误状态并跳过后续操作
+                            if (!sshSuccess) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setErrorMessage("SSH连接失败，无法获取主机信息");
+                                hostInfo.setOsErrorMsg("由于SSH连接失败，无法获取操作系统信息");
+                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setMessage("SSH连接失败：" + hostInfo.getSshErrorMsg());
+                                continue;
+                            }
+
+                            // SSH连接成功，开始收集操作系统信息
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+                            hostInfo.setMessage("正在收集主机信息...");
+
+                            // 异步收集OS信息
+                            osInfoService.getHostOsInfoAsync(hostInfo);
                             logger.info("已触发主机[{}]的信息异步收集", hostInfo.getIp());
                         } catch (Exception e) {
                             logger.error("触发主机[{}]信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
                             // 设置错误状态和详细信息
                             hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
                             hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshErrorMsg("SSH连接异常: " + e.getMessage());
+                            hostInfo.setSshErrorMsg("SSH连接异常: " + formatSshErrorMessage(e));
                             hostInfo.setErrorMessage("连接主机时发生异常");
                             hostInfo.setOsErrorMsg("由于连接异常，无法获取操作系统信息");
+                            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setMessage("SSH连接失败：" + formatSshErrorMessage(e));
                         }
                     }
 
@@ -317,12 +332,75 @@ public class InstallServiceImpl implements InstallService {
                     logger.error("主机信息收集线程异常: {}", e.getMessage(), e);
                 }
             });
-            thread.setName("Host-OS-Info-Collection-Thread");
+            thread.setName("Host-SSH-Validation-Thread");
             thread.setDaemon(true);
             thread.start();
         }
 
         return hostMap;
+    }
+
+    /**
+     * 格式化SSH错误消息，使其更用户友好
+     */
+    private String formatSshErrorMessage(Exception e) {
+        String errorMsg = e.getMessage();
+        if (errorMsg == null) {
+            errorMsg = e.getClass().getSimpleName();
+        }
+
+        // 根据异常类型和错误消息设置友好的错误提示
+        String friendlyMessage;
+        String errorCode;
+        String solution;
+
+        if (errorMsg.contains("Auth fail") || errorMsg.contains("authentication failed")) {
+            friendlyMessage = "用户名或密码错误";
+            errorCode = "SSH_AUTH_ERROR";
+            solution = "请检查SSH用户名和密码是否正确";
+        } else if (errorMsg.contains("Connection refused")) {
+            friendlyMessage = "SSH服务未启动或端口未开放";
+            errorCode = "SSH_CONNECTION_REFUSED";
+            solution = "请确认SSH服务已启动，端口(默认22)已开放，并检查防火墙设置";
+        } else if (errorMsg.contains("connect timed out")) {
+            friendlyMessage = "连接超时，网络不通或防火墙阻止";
+            errorCode = "SSH_TIMEOUT";
+            solution = "请检查网络连接和防火墙设置，确保主机可访问";
+        } else if (errorMsg.contains("UnknownHostException")) {
+            friendlyMessage = "无法解析主机名";
+            errorCode = "SSH_UNKNOWN_HOST";
+            solution = "请检查DNS配置或hosts文件，确保主机名可解析";
+        } else if (errorMsg.contains("No route to host")) {
+            friendlyMessage = "无法访问主机";
+            errorCode = "SSH_NO_ROUTE";
+            solution = "请检查网络连接，确保主机已启动且网络可达";
+        } else if (errorMsg.contains("Too many authentication failures")) {
+            friendlyMessage = "认证失败次数过多";
+            errorCode = "SSH_TOO_MANY_AUTH_FAILURES";
+            solution = "请等待一段时间后重试，或尝试使用密钥认证";
+        } else if (errorMsg.contains("Permission denied")) {
+            friendlyMessage = "权限被拒绝";
+            errorCode = "SSH_PERMISSION_DENIED";
+            solution = "请检查用户权限或尝试使用sudo权限的用户";
+        } else if (errorMsg.contains("Host key verification failed")) {
+            friendlyMessage = "主机密钥验证失败";
+            errorCode = "SSH_HOST_KEY_VERIFICATION_FAILED";
+            solution = "主机密钥已更改，请更新known_hosts文件";
+        } else {
+            friendlyMessage = errorMsg;
+            errorCode = "SSH_UNKNOWN_ERROR";
+            solution = "请检查SSH服务配置和网络连接";
+        }
+
+        // 返回完整原始错误信息，便于调试
+        String originalError = errorMsg;
+
+        // 构建结构化的错误信息
+        return String.format("%s [%s] - %s (原始错误: %s)",
+                friendlyMessage,
+                errorCode,
+                solution,
+                originalError);
     }
 
     /**
@@ -348,42 +426,36 @@ public class InstallServiceImpl implements InstallService {
                     // 命令执行失败
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
+                    hostInfo.setMessage("SSH连接成功但无法执行命令，请检查用户权限");
                     return false;
                 }
             } else {
                 // 连接创建失败
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                 hostInfo.setSshErrorMsg("无法创建SSH连接，请检查IP地址、端口和防火墙设置");
+                hostInfo.setMessage("无法创建SSH连接，请检查IP地址、端口和防火墙设置");
                 return false;
             }
         } catch (Exception e) {
             // 处理不同类型的异常，设置更友好的错误信息
             hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
 
-            String errorMsg = e.getMessage();
-            if (errorMsg == null) {
-                errorMsg = e.getClass().getSimpleName();
-            }
+            String formattedErrorMsg = formatSshErrorMessage(e);
+            hostInfo.setSshErrorMsg(formattedErrorMsg);
+            hostInfo.setMessage("SSH连接失败：" + formattedErrorMsg);
 
-            // 根据异常类型和错误消息设置友好的错误提示
-            if (errorMsg.contains("Auth fail") || errorMsg.contains("authentication failed")) {
-                hostInfo.setSshErrorMsg("SSH认证失败：用户名或密码错误");
-            } else if (errorMsg.contains("Connection refused")) {
-                hostInfo.setSshErrorMsg("SSH连接被拒绝：SSH服务未启动或端口未开放");
-            } else if (errorMsg.contains("connect timed out")) {
-                hostInfo.setSshErrorMsg("SSH连接超时：网络不通或防火墙阻止");
-            } else if (errorMsg.contains("UnknownHostException")) {
-                hostInfo.setSshErrorMsg("无法解析主机名：请检查DNS配置或hosts文件");
-            } else if (errorMsg.contains("No route to host")) {
-                hostInfo.setSshErrorMsg("无法访问主机：网络不通或主机未启动");
-            } else {
-                hostInfo.setSshErrorMsg("SSH连接错误：" + errorMsg);
-            }
-
-            logger.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), errorMsg, e);
+            logger.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), formattedErrorMsg, e);
             return false;
         } finally {
-            MinaUtils.closeConnection(session);
+            // 安全关闭会话，避免关闭异常影响验证结果
+            if (session != null) {
+                try {
+                    MinaUtils.closeConnection(session);
+                } catch (Exception e) {
+                    // 仅记录关闭连接时的异常，不影响验证结果
+                    logger.warn("关闭主机[{}]的SSH连接时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                }
+            }
         }
     }
 
@@ -417,6 +489,10 @@ public class InstallServiceImpl implements InstallService {
         for (HostInfo hostInfo : tempMap.values()) {
             // 获取主机检查项列表
             hostInfo.setCheckItems(checkItems);
+
+            // 初始化SSH连接状态为loading，而不是同步验证
+            hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
+
             // 使用IP作为键
             hostInfoMap.put(hostInfo.getIp(), hostInfo);
         }
