@@ -239,8 +239,31 @@ public class InstallServiceImpl implements InstallService {
 
         // 确保SSH连接状态信息可用于前端
         if (hostInfo.getSshConnectStatus() == null) {
-            // 如果osInfoStatus是error，则认为SSH连接失败
-            if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
+            // 检查是否有主机名或系统信息（如果有任何一个，说明SSH连接是成功的）
+            boolean hasSshSuccess = false;
+
+            // 如果已经获取到主机名（非空且不等于IP），则SSH连接成功
+            if (StringUtils.isNotBlank(hostInfo.getHostname()) &&
+                    !hostInfo.getHostname().equals(hostInfo.getIp())) {
+                hasSshSuccess = true;
+            }
+
+            // 如果已经获取到操作系统信息，则SSH连接成功
+            if (hostInfo.getOsInfo() != null &&
+                    hostInfo.getOsInfo().isValid() &&
+                    OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
+                hasSshSuccess = true;
+            }
+
+            if (hasSshSuccess) {
+                // 如果有任何成功的SSH交互，则SSH连接是成功的
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                // 清除可能存在的错误信息
+                if (StringUtils.isNotBlank(hostInfo.getSshErrorMsg())) {
+                    hostInfo.setSshErrorMsg("");
+                }
+            } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
+                // 只有在没有成功的SSH交互且操作系统信息获取失败时，才可能是SSH连接失败
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
 
                 // 设置SSH错误信息（如果尚未设置）
@@ -250,6 +273,30 @@ public class InstallServiceImpl implements InstallService {
             } else {
                 // 默认设为LOADING，让前端显示加载中
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
+            }
+        } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getSshConnectStatus())) {
+            // 即使状态被设置为ERROR，但如果有主机名或系统信息，仍应该纠正为SUCCESS
+            boolean hasSshSuccess = false;
+
+            // 如果已经获取到主机名（非空且不等于IP），则SSH连接成功
+            if (StringUtils.isNotBlank(hostInfo.getHostname()) &&
+                    !hostInfo.getHostname().equals(hostInfo.getIp())) {
+                hasSshSuccess = true;
+            }
+
+            // 如果已经获取到操作系统信息，则SSH连接成功
+            if (hostInfo.getOsInfo() != null &&
+                    hostInfo.getOsInfo().isValid() &&
+                    OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
+                hasSshSuccess = true;
+            }
+
+            if (hasSshSuccess) {
+                // 纠正错误的SSH连接状态
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                // 清除错误信息
+                hostInfo.setSshErrorMsg("");
+                logger.info("主机[{}]的SSH连接状态被纠正为SUCCESS，因为已成功获取主机信息", hostInfo.getIp());
             }
         }
     }

@@ -97,6 +97,28 @@
               </div>
             </div>
           </div>
+          <!-- DNS服务器加载中 -->
+          <div class="info-item" v-else-if="isLoading('dns')">
+            <div class="info-icon dns">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
+            <div class="info-content">
+              <div class="info-header">
+                <span class="info-title">DNS服务器</span>
+              </div>
+              <div class="info-data">
+                <div class="dns-servers-loading">
+                  <div class="loading-shimmer">
+                    <div class="loading-line short"></div>
+                    <div class="loading-line medium"></div>
+                    <div class="loading-line long"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="info-item no-dns" v-else>
             <div class="info-icon dns">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
@@ -138,6 +160,11 @@
             <div class="hosts-file-info">
               <div class="file-badge">/etc/hosts</div>
               <div class="file-actions">
+                <a-tooltip title="测试编辑">
+                  <a-button type="link" class="action-button" @click="showBackupEditDialog">
+                    <a-icon type="bug" />
+                  </a-button>
+                </a-tooltip>
                 <a-tooltip title="编辑Hosts文件">
                   <a-button type="link" class="action-button" @click="editHostsFile">
                     <a-icon type="edit" />
@@ -266,6 +293,70 @@
           </div>
         </div>
         
+        <!-- Hosts文件加载中 -->
+        <div class="hostname-detail-section" v-else-if="isLoading('hosts')">
+          <div class="section-header">
+            <span class="section-title">
+              <div class="section-icon hosts-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              Hosts文件内容
+            </span>
+          </div>
+          <div class="hosts-file-container loading">
+            <div class="modern-ide">
+              <!-- IDE工具栏 - 固定部分 -->
+              <div class="ide-toolbar">
+                <div class="ide-breadcrumb">
+                  <div class="breadcrumb-item root">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>/</span>
+                  </div>
+                  <div class="breadcrumb-item">
+                    <span>etc</span>
+                  </div>
+                  <div class="breadcrumb-separator">/</div>
+                  <div class="breadcrumb-item active">
+                    <span>hosts</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 加载动画 -->
+              <div class="hosts-file-loading">
+                <div class="hosts-file-loading-lines">
+                  <div class="loading-line short"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line long"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line short"></div>
+                  <div class="loading-line very-long"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line short"></div>
+                </div>
+              </div>
+              
+              <!-- 底部状态栏 - 固定部分 -->
+              <div class="ide-statusbar">
+                <div class="statusbar-left">
+                  <div class="status-item">
+                    <span>加载中...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <!-- 如果没有hosts文件 -->
         <div class="hostname-detail-section" v-else>
           <div class="section-header">
@@ -314,6 +405,20 @@ export default {
     };
   },
   methods: {
+    // 检查是否处于加载状态
+    isLoading(type) {
+      if (type === 'dns') {
+        // 检查DNS服务器是否在加载中
+        return this.hostInfo.dnsStatus === 'loading' || 
+              this.checkStatus(this.hostInfo.dnsStatus, 'loading') ||
+              (this.hostInfo.osInfo && this.hostInfo.osInfo.networkInfoStatus === 'loading');
+      } else if (type === 'hosts') {
+        // 检查hosts文件是否在加载中
+        return this.hostInfo.hostsFileStatus === 'loading' || 
+              this.checkStatus(this.hostInfo.hostsFileStatus, 'loading');
+      }
+      return false;
+    },
     // 检查状态方法
     checkStatus(status, expectedStatus) {
       if (!status) return expectedStatus === 'pending';
@@ -581,11 +686,73 @@ export default {
     
     // 打开编辑hosts文件对话框
     editHostsFile() {
+      console.log('编辑按钮被点击，当前hosts文件内容：', this.hostInfo.hostsFile);
       this.hostsFileContent = this.hostInfo.hostsFile || '';
+      
+      // 直接显示编辑对话框，不需要确认
       this.editHostsVisible = true;
+      console.log('编辑对话框应该显示，editHostsVisible =', this.editHostsVisible);
+      
+      // 添加更多调试信息
+      console.log('hostInfo对象：', JSON.stringify({
+        clusterId: this.hostInfo.clusterId,
+        ip: this.hostInfo.ip,
+        hostname: this.hostInfo.hostname
+      }));
+      
+      // 延时检查对话框状态
+      setTimeout(() => {
+        console.log('延时检查:editHostsVisible =', this.editHostsVisible);
+        // 尝试强制更新组件
+        this.$forceUpdate();
+        console.log('已强制更新组件');
+      }, 100);
     },
     
-    // 提交hosts文件修改
+    // 备用编辑对话框实现
+    showBackupEditDialog() {
+      // 使用Ant Design的Modal显示一个临时的编辑框
+      const h = this.$createElement;
+      
+      // 创建textarea元素
+      const textarea = h('a-textarea', {
+        props: {
+          value: this.hostsFileContent,
+          placeholder: '请输入hosts文件内容',
+          rows: 15,
+          autoSize: { minRows: 10, maxRows: 20 }
+        },
+        style: {
+          fontFamily: 'monospace',
+          width: '100%'
+        },
+        on: {
+          input: (e) => {
+            this.hostsFileContent = e.target.value;
+          }
+        }
+      });
+      
+      // 创建表单
+      const form = h('div', [
+        h('div', { style: { marginBottom: '10px' } }, '文件路径: /etc/hosts'),
+        textarea
+      ]);
+      
+      // 显示Modal
+      this.$info({
+        title: '编辑Hosts文件',
+        content: form,
+        width: 700,
+        okText: '保存',
+        onOk: () => {
+          // 执行保存操作
+          this.submitHostsEdit();
+        }
+      });
+    },
+    
+    // 提交编辑
     submitHostsEdit() {
       if (!this.hostsFileContent) {
         this.$message.warning('Hosts文件内容不能为空');
@@ -594,32 +761,44 @@ export default {
       
       this.hostsEditLoading = true;
       
-      // 调用后端接口修改hosts文件
-      this.$http.post('/host/updateHostsFile', {
+      // 使用this.$axiosPost替代this.$http.post
+      this.$axiosPost('/host/updateHostsFile', {
         clusterId: this.hostInfo.clusterId,
         ip: this.hostInfo.ip,
         hostsFileContent: this.hostsFileContent
-      }).then(res => {
-        if (res.code === 200) {
-          this.$message.success('Hosts文件修改成功');
-          // 更新本地数据
-          this.hostInfo.hostsFile = this.hostsFileContent;
-          // 关闭对话框
-          this.editHostsVisible = false;
-        } else {
-          this.$message.error(res.msg || 'Hosts文件修改失败');
-        }
-      }).catch(err => {
-        this.$message.error('Hosts文件修改失败: ' + (err.message || err));
-      }).finally(() => {
-        this.hostsEditLoading = false;
-      });
+      })
+        .then(res => {
+          if (res.code === 200) {
+            this.$message.success('Hosts文件修改成功');
+            // 更新本地数据
+            this.hostInfo.hostsFile = this.hostsFileContent;
+            // 关闭对话框
+            this.editHostsVisible = false;
+          } else {
+            this.$message.error(res.msg || 'Hosts文件修改失败');
+          }
+        })
+        .catch(err => {
+          console.error('修改hosts文件出错:', err);
+          this.$message.error('Hosts文件修改失败: ' + (err.message || err));
+        })
+        .finally(() => {
+          this.hostsEditLoading = false;
+        });
     },
     
     // 取消编辑
     cancelHostsEdit() {
+      console.log('取消编辑按钮被点击');
       this.editHostsVisible = false;
       this.hostsFileContent = '';
+      console.log('对话框应该关闭，editHostsVisible =', this.editHostsVisible);
+    },
+    
+    // 测试按钮点击事件
+    testClick() {
+      console.log('测试按钮被点击');
+      alert('测试按钮被点击，对话框状态：' + (this.editHostsVisible ? '可见' : '隐藏'));
     },
     
     // 复制hosts文件内容
@@ -1362,6 +1541,98 @@ export default {
     background-position: 80px 0;
   }
 }
+
+/* 强制覆盖Modal样式确保可见 */
+/deep/ .ant-modal, /deep/ .ant-modal-mask, /deep/ .ant-modal-wrap {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 1000 !important;
+}
+
+/deep/ .ant-modal-wrap {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  overflow: auto !important;
+}
+
+/deep/ .ant-modal {
+  position: relative !important;
+  margin: 100px auto !important;
+  width: auto !important;
+  max-width: 700px !important;
+}
+
+.hostlist-tooltip .info-data {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* 加载动画样式 */
+.dns-servers-loading {
+  width: 100%;
+  padding: 8px 0;
+}
+
+.loading-shimmer {
+  width: 100%;
+  animation: shimmer 1.5s infinite linear;
+  background: linear-gradient(to right, rgba(0,122,255,0.06) 4%, rgba(0,122,255,0.12) 25%, rgba(0,122,255,0.06) 36%);
+  background-size: 1000px 100%;
+}
+
+.loading-line {
+  height: 15px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: rgba(0,122,255,0.1);
+}
+
+.loading-line.short {
+  width: 30%;
+}
+
+.loading-line.medium {
+  width: 60%;
+}
+
+.loading-line.long {
+  width: 85%;
+}
+
+.loading-line.very-long {
+  width: 95%;
+}
+
+.hosts-file-loading {
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.hosts-file-loading-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.hosts-file-container.loading {
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: #f8f9fa;
+}
 </style>
 
 <!-- 添加Hosts文件编辑对话框 -->
@@ -1372,6 +1643,10 @@ export default {
   width="700px"
   @ok="submitHostsEdit"
   @cancel="cancelHostsEdit"
+  :maskClosable="false"
+  :keyboard="false"
+  :destroyOnClose="false"
+  forceRender
 >
   <a-form-model>
     <a-form-model-item label="Hosts文件路径">
@@ -1383,11 +1658,23 @@ export default {
         placeholder="请输入hosts文件内容"
         :rows="15"
         :style="{ fontFamily: 'monospace' }"
+        :disabled="hostsEditLoading"
       />
       <div class="form-help-text">
         <a-icon type="info-circle" />
         <span>修改hosts文件将通过SSH连接服务器并实际修改系统配置</span>
       </div>
     </a-form-model-item>
+    <!-- 添加测试按钮 -->
+    <a-form-model-item>
+      <a-button type="primary" @click="testClick">测试按钮</a-button>
+      <span style="margin-left: 8px;">当前对话框状态: {{ editHostsVisible ? '可见' : '隐藏' }}</span>
+    </a-form-model-item>
   </a-form-model>
+  <template slot="footer">
+    <a-button key="back" @click="cancelHostsEdit">取消</a-button>
+    <a-button key="submit" type="primary" :loading="hostsEditLoading" @click="submitHostsEdit">
+      更新Hosts文件
+    </a-button>
+  </template>
 </a-modal>

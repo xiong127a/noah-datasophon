@@ -1695,7 +1695,11 @@ public class OsInfoServiceImpl implements OsInfoService {
                 logger.warn("无法创建SSH会话，主机IP: {}", hostInfo.getIp());
                 // 设置SSH连接失败状态
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                // 只有在没有主机名的情况下才设置SSH连接状态为ERROR
+                if (StringUtils.isBlank(hostInfo.getHostname()) ||
+                        hostInfo.getHostname().equals(hostInfo.getIp())) {
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                }
                 // 设置更详细的错误信息
                 osInfo.setValid(false);
                 osInfo.setErrorMessage("无法创建SSH连接，请检查SSH配置");
@@ -1868,9 +1872,15 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
         } catch (Exception e) {
             logger.error("获取主机操作系统信息时出错: {}", e.getMessage(), e);
-            // 设置SSH连接错误状态
+            // 设置操作系统信息错误状态
             hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+
+            // 只有在没有主机名的情况下才设置SSH连接状态为ERROR
+            if (StringUtils.isBlank(hostInfo.getHostname()) ||
+                    hostInfo.getHostname().equals(hostInfo.getIp())) {
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+            }
+
             // 设置更详细的错误信息
             osInfo.setValid(false);
             osInfo.setErrorMessage("SSH连接异常: " + e.getMessage());

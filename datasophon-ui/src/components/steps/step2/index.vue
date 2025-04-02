@@ -316,7 +316,7 @@ export default {
                     ]),
                     h('div', { class: 'ssh-error-content' }, [
                       h('div', { class: 'ssh-error-message' }, [
-                        record.sshErrorMsg || record.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
+                        record.sshErrorMsg || record.errorMessage
                       ]),
                       // 解析结构化错误信息
                       this.parseSSHErrorMessage(record.sshErrorMsg || record.errorMessage)
@@ -431,7 +431,7 @@ export default {
                   h('div', { class: 'ssh-error-details' }, [
                     h('div', { class: 'ssh-error-title' }, ['SSH连接失败']),
                     h('div', { class: 'ssh-error-message' }, [
-                      row.sshErrorMsg || row.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
+                      row.sshErrorMsg || row.errorMessage
                     ]),
                     // 解析结构化错误信息
                     this.parseSSHErrorMessage(row.sshErrorMsg || row.errorMessage)
@@ -945,17 +945,39 @@ export default {
               }, ["终止"]) : null,
 
               // 重试按钮 - 非检查中且非等待检查时显示
-              !isChecking ? h('a-button', {
-                attrs: {
+              !isChecking ? h('button', {
+                props: {
                   type: 'link',
                   size: 'small',
-                  disabled: isWaiting // 等待检查时禁用
                 },
-                class: 'apple-button primary',
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                  color: '#007AFF',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isWaiting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isWaiting ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                attrs: {
+                  disabled: isWaiting // 等待检查时禁用，但不会显示禁用标识
+                },
                 on: {
                   click: () => this.retryEnvironment(row)
                 }
-              }, ["重试"]) : null
+              }, [
+                h('a-icon', {
+                  props: { type: 'redo' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "重试"
+              ]) : null
             ].filter(Boolean));
           },
         }
