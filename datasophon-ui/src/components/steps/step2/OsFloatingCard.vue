@@ -19,21 +19,43 @@
           </div>
           <div class="os-detail-info">
             <div class="os-detail-name">
-              <span class="os-name">{{ getOsDisplayName(osInfo) }}</span>
-              <span class="os-version" v-if="osInfo.versionId">{{ osInfo.versionId }}</span>
+              <!-- 操作系统名称加载动画 -->
+              <div v-if="!osInfo || !osInfo.distribution" class="os-name-loading">
+                <div class="os-loader-container">
+                  <div class="os-loader-spinner">
+                    <div class="spinner-inner"></div>
+                  </div>
+                  <span class="os-loading-text">加载操作系统信息</span>
+                </div>
+              </div>
+              <!-- 操作系统名称已加载 -->
+              <template v-else>
+                <span class="os-name">{{ getOsDisplayName(osInfo) }}</span>
+                <!-- 操作系统版本加载动画 -->
+                <span v-if="osInfo.versionId" class="os-version">{{ osInfo.versionId }}</span>
+                <div v-else class="os-version-loading">
+                  <div class="version-loading-bar"></div>
+                </div>
+              </template>
             </div>
             <div class="os-detail-meta">
-              <div class="os-meta-item" v-if="osInfo.architecture">
+              <!-- 架构信息 -->
+              <div class="os-meta-item">
                 <span class="meta-label">架构</span>
-                <span class="meta-value">{{ osInfo.architecture }}</span>
+                <span v-if="osInfo && osInfo.architecture" class="meta-value">{{ osInfo.architecture }}</span>
+                <div v-else class="meta-loading-pulse"></div>
               </div>
-              <div class="os-meta-item" v-if="osInfo.kernelVersion">
+              <!-- 内核版本 -->
+              <div class="os-meta-item">
                 <span class="meta-label">内核版本</span>
-                <span class="meta-value">{{ osInfo.kernelVersion }}</span>
+                <span v-if="osInfo && osInfo.kernelVersion" class="meta-value">{{ osInfo.kernelVersion }}</span>
+                <div v-else class="meta-loading-pulse"></div>
               </div>
-              <div class="os-meta-item" v-if="osInfo.hostname">
+              <!-- 主机名 -->
+              <div class="os-meta-item">
                 <span class="meta-label">主机名</span>
-                <span class="meta-value">{{ osInfo.hostname }}</span>
+                <span v-if="osInfo && osInfo.hostname" class="meta-value">{{ osInfo.hostname }}</span>
+                <div v-else class="meta-loading-pulse"></div>
               </div>
             </div>
           </div>
@@ -72,10 +94,10 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getCpuStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading">
+                  <div class="apple-loading-line line1"></div>
+                  <div class="apple-loading-line line2"></div>
                 </div>
-                <span class="loading-text">正在收集CPU信息...</span>
               </div>
               <div class="hardware-info error" v-else-if="getCpuStatus() === 'error'">
                 获取CPU信息失败
@@ -121,10 +143,11 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getMemoryStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading memory-loading">
+                  <div class="apple-loading-progress">
+                    <div class="apple-loading-progress-bar"></div>
+                  </div>
                 </div>
-                <span class="loading-text">正在收集内存信息...</span>
               </div>
               <div class="hardware-info error" v-else-if="getMemoryStatus() === 'error'">
                 获取内存信息失败
@@ -184,10 +207,12 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getDiskStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading disk-loading">
+                  <div class="apple-loading-circle">
+                    <div class="apple-loading-circle-inner"></div>
+                  </div>
+                  <div class="apple-loading-line line3"></div>
                 </div>
-                <span class="loading-text">正在收集磁盘信息...</span>
               </div>
               <div class="hardware-info error" v-else-if="getDiskStatus() === 'error'">
                 获取磁盘信息失败
@@ -246,10 +271,14 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getGpuStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading gpu-loading">
+                  <div class="apple-loading-grid">
+                    <div class="apple-loading-cell"></div>
+                    <div class="apple-loading-cell"></div>
+                    <div class="apple-loading-cell"></div>
+                    <div class="apple-loading-cell"></div>
+                  </div>
                 </div>
-                <span class="loading-text">正在收集GPU信息...</span>
               </div>
               <div class="hardware-info error" v-else-if="getGpuStatus() === 'error'">
                 获取GPU信息失败
@@ -1237,5 +1266,216 @@ export default {
   .rx {
     color: #FF3B30;
   }
+}
+
+/* 操作系统名称加载动画 */
+.os-name-loading {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.os-loader-container {
+  display: flex;
+  align-items: center;
+}
+
+.os-loader-spinner {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  position: relative;
+}
+
+.spinner-inner {
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(0, 122, 255, 0.2);
+  border-top-color: #007AFF;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+.os-loading-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #007AFF;
+}
+
+/* 操作系统版本加载动画 */
+.os-version-loading {
+  display: inline-block;
+  margin-left: 8px;
+  height: 18px;
+  width: 50px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.version-loading-bar {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(0, 122, 255, 0.1), rgba(0, 122, 255, 0.2), rgba(0, 122, 255, 0.1));
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 元数据加载动画 */
+.meta-loading-pulse {
+  width: 60px;
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #f2f2f7, #e5e5ea, #f2f2f7);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 动画关键帧 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -60px 0;
+  }
+  100% {
+    background-position: 60px 0;
+  }
+}
+
+/* Apple风格硬件信息加载动画 */
+.apple-hardware-loading {
+  padding: 8px 0;
+  width: 100%;
+}
+
+.apple-loading-line {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #f2f2f7, #e5e5ea, #f2f2f7);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  margin-bottom: 8px;
+}
+
+.apple-loading-line.line1 {
+  width: 85%;
+}
+
+.apple-loading-line.line2 {
+  width: 65%;
+}
+
+.apple-loading-line.line3 {
+  width: 75%;
+  margin-top: 8px;
+}
+
+/* 内存加载进度条动画 */
+.memory-loading .apple-loading-progress {
+  width: 100%;
+  height: 36px;
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(0, 122, 255, 0.05);
+  border-radius: 6px;
+}
+
+.apple-loading-progress-bar {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(0, 122, 255, 0.0), 
+    rgba(0, 122, 255, 0.1), 
+    rgba(0, 122, 255, 0.2),
+    rgba(0, 122, 255, 0.1),
+    rgba(0, 122, 255, 0.0)
+  );
+  animation: progressBar 1.5s ease-in-out infinite;
+}
+
+/* 磁盘加载圆形动画 */
+.disk-loading .apple-loading-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(0, 122, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.apple-loading-circle-inner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 122, 255, 0.2);
+  border-top-color: #007AFF;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+/* GPU加载网格动画 */
+.gpu-loading .apple-loading-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap: 6px;
+  width: 80px;
+  margin-bottom: 8px;
+}
+
+.apple-loading-cell {
+  height: 20px;
+  border-radius: 4px;
+  background-color: rgba(0, 122, 255, 0.1);
+  animation: pulse 1.5s infinite alternate;
+}
+
+.apple-loading-cell:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.apple-loading-cell:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.apple-loading-cell:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.apple-loading-cell:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+/* 动画关键帧 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes progressBar {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; }
+  100% { opacity: 0.8; }
 }
 </style> 

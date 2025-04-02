@@ -26,14 +26,35 @@
           </div>
           <div class="hostname-detail-info">
             <div class="hostname-detail-name">
-              <span class="hostname-name">{{ hostInfo.hostname || "未知主机" }}</span>
-              <span class="hostname-ip">{{ hostInfo.ip }}</span>
+              <!-- 主机名显示区域 -->
+              <div class="hostname-name-wrapper">
+                <!-- 如果主机名存在则显示 -->
+                <span v-if="hostInfo.hostname" class="hostname-name">{{ hostInfo.hostname }}</span>
+                <!-- 如果主机名不存在，显示加载动画 -->
+                <div v-else class="hostname-loading-container">
+                  <div class="hostname-loading-dots">
+                    <span class="hostname-loading-dot"></span>
+                    <span class="hostname-loading-dot"></span>
+                    <span class="hostname-loading-dot"></span>
+                  </div>
+                  <span class="hostname-loading-text">获取主机名</span>
+                </div>
+                <span class="hostname-ip">{{ hostInfo.ip }}</span>
+              </div>
             </div>
             <div class="hostname-detail-meta">
-              <div class="hostname-meta-item" v-if="hostInfo.fqdn">
+              <!-- FQDN字段 - 独立加载动画 -->
+              <div class="hostname-meta-item">
                 <span class="meta-label">FQDN</span>
-                <span class="meta-value">{{ hostInfo.fqdn }}</span>
+                <!-- 如果FQDN存在则显示 -->
+                <span v-if="hostInfo.fqdn" class="meta-value">{{ hostInfo.fqdn }}</span>
+                <!-- 如果FQDN不存在，显示加载动画 -->
+                <div v-else class="fqdn-loading-container">
+                  <div class="fqdn-loading-pulse"></div>
+                  <span class="fqdn-loading-text">加载中...</span>
+                </div>
               </div>
+              <!-- 集群信息 -->
               <div class="hostname-meta-item" v-if="hostInfo.cluster">
                 <span class="meta-label">集群</span>
                 <span class="meta-value">{{ hostInfo.cluster }}</span>
@@ -767,6 +788,11 @@ export default {
   margin-bottom: 8px;
 }
 
+.hostname-name-wrapper {
+  display: flex;
+  align-items: center;
+}
+
 .hostname-name {
   font-size: 20px;
   font-weight: 600;
@@ -1249,6 +1275,91 @@ export default {
   .anticon {
     margin-right: 4px;
     font-size: 14px;
+  }
+}
+
+/* 主机名加载动画样式 */
+.hostname-loading-container {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+.hostname-loading-dots {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.hostname-loading-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #007AFF;
+  margin: 0 2px;
+  opacity: 0.2;
+  animation: pulse 1.4s infinite ease-in-out;
+}
+
+.hostname-loading-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.hostname-loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.hostname-loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.hostname-loading-text {
+  font-size: 14px;
+  color: #007AFF;
+  font-weight: 500;
+}
+
+/* FQDN加载动画 */
+.fqdn-loading-container {
+  display: flex;
+  align-items: center;
+  height: 16px;
+}
+
+.fqdn-loading-pulse {
+  width: 80px;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.fqdn-loading-text {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-left: 8px;
+}
+
+/* 动画关键帧 */
+@keyframes pulse {
+  0%, 80%, 100% { 
+    transform: scale(0.6);
+    opacity: 0.2;
+  }
+  40% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -80px 0;
+  }
+  100% {
+    background-position: 80px 0;
   }
 }
 </style>

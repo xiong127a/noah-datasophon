@@ -664,14 +664,48 @@ public class MinaUtils {
             session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
             session.addPasswordIdentity(sshPassword);
             if (session.auth().verify().isFailure()) {
-                LOG.info("密码验证失败");
+                String errorMsg = "用户名或密码验证失败";
+                LOG.error("{}: {}", sshIp, errorMsg);
+                // 设置具体的错误信息
+                hostInfo.setSshErrorMsg(errorMsg);
+                hostInfo.setErrorMessage("SSH连接失败: " + errorMsg);
                 return null;
             }
         } catch (IOException e) {
-            LOG.error("密码连接失败: " + e.getMessage());
+            String errorMsg = "密码连接失败: " + e.getMessage();
+            LOG.error("{}: {}", sshIp, errorMsg, e);
+            // 设置具体的错误信息
+            hostInfo.setSshErrorMsg(errorMsg);
+            hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
+            // 保存异常类型信息
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("Auth fail") || e.getMessage().contains("authentication failed")) {
+                    hostInfo.setSshErrorMsg("用户名或密码错误: " + e.getMessage());
+                } else if (e.getMessage().contains("Connection refused")) {
+                    hostInfo.setSshErrorMsg("SSH服务未启动或端口未开放: " + e.getMessage());
+                } else if (e.getMessage().contains("connect timed out")) {
+                    hostInfo.setSshErrorMsg("连接超时，网络不通或防火墙阻止: " + e.getMessage());
+                } else if (e.getMessage().contains("UnknownHostException")) {
+                    hostInfo.setSshErrorMsg("无法解析主机名: " + e.getMessage());
+                } else if (e.getMessage().contains("No route to host")) {
+                    hostInfo.setSshErrorMsg("无法访问主机: " + e.getMessage());
+                }
+            }
             return null;
         } catch (Exception e) {
-            LOG.error("连接异常: " + e.getMessage());
+            String errorMsg = "连接异常: " + e.getMessage();
+            LOG.error("{}: {}", sshIp, errorMsg, e);
+            // 设置具体的错误信息
+            hostInfo.setSshErrorMsg(errorMsg);
+            hostInfo.setErrorMessage("SSH连接失败: " + e.getMessage());
+            // 保存完整的异常堆栈信息
+            if (e.getStackTrace() != null && e.getStackTrace().length > 0) {
+                StringBuilder stackInfo = new StringBuilder();
+                for (int i = 0; i < Math.min(3, e.getStackTrace().length); i++) {
+                    stackInfo.append(e.getStackTrace()[i].toString()).append("\n");
+                }
+                hostInfo.setOsErrorMsg("连接异常堆栈: " + stackInfo.toString());
+            }
             return null;
         }
         LOG.info(sshIp + " 密码连接成功");

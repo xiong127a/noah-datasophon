@@ -194,7 +194,7 @@ public class InstallServiceImpl implements InstallService {
 
     /**
      * 处理主机信息，确保各项信息可用于前端展示
-     * 
+     *
      * @param hostInfo 主机信息对象
      */
     private void processHostInfo(HostInfo hostInfo) {
@@ -405,15 +405,37 @@ public class InstallServiceImpl implements InstallService {
 
     /**
      * 验证SSH连接
-     * 
+     *
      * @param hostInfo 主机信息
      * @return 连接是否成功
      */
     private boolean validateSshConnection(HostInfo hostInfo) {
         ClientSession session = null;
         try {
+            // getOrCreateSession内部会调用openConnectionWithPassword
+            // openConnectionWithPassword如果异常会设置hostInfo的错误信息
             session = getOrCreateSession(hostInfo);
-            if (session != null && session.isOpen()) {
+
+            // 如果session为null，表示连接失败
+            // 错误信息已经在openConnectionWithPassword中设置到hostInfo
+            if (session == null) {
+                // 确保SSH连接状态为ERROR
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+
+                // 如果没有错误信息，则设置一个默认值
+                if (StringUtils.isBlank(hostInfo.getSshErrorMsg())) {
+                    hostInfo.setSshErrorMsg("无法创建SSH连接，请检查网络连接和SSH配置");
+                }
+
+                if (StringUtils.isBlank(hostInfo.getErrorMessage())) {
+                    hostInfo.setErrorMessage("SSH连接失败：无法创建连接");
+                }
+
+                return false;
+            }
+
+            // 连接成功，执行测试命令
+            if (session.isOpen()) {
                 // 执行一个简单的命令验证连接
                 String result = MinaUtils.execCmdWithResult(session, "echo connection_test");
                 boolean success = result != null && result.contains("connection_test");
@@ -426,14 +448,14 @@ public class InstallServiceImpl implements InstallService {
                     // 命令执行失败
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
-                    hostInfo.setMessage("SSH连接成功但无法执行命令，请检查用户权限");
+                    hostInfo.setErrorMessage("SSH连接成功但无法执行命令，请检查用户权限");
                     return false;
                 }
             } else {
-                // 连接创建失败
+                // 连接创建成功但已关闭
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setSshErrorMsg("无法创建SSH连接，请检查IP地址、端口和防火墙设置");
-                hostInfo.setMessage("无法创建SSH连接，请检查IP地址、端口和防火墙设置");
+                hostInfo.setSshErrorMsg("SSH连接已关闭，请检查SSH服务状态");
+                hostInfo.setErrorMessage("SSH连接已关闭，请检查SSH服务状态");
                 return false;
             }
         } catch (Exception e) {
@@ -442,7 +464,7 @@ public class InstallServiceImpl implements InstallService {
 
             String formattedErrorMsg = formatSshErrorMessage(e);
             hostInfo.setSshErrorMsg(formattedErrorMsg);
-            hostInfo.setMessage("SSH连接失败：" + formattedErrorMsg);
+            hostInfo.setErrorMessage("SSH连接失败：" + formattedErrorMsg);
 
             logger.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), formattedErrorMsg, e);
             return false;
@@ -619,20 +641,15 @@ public class InstallServiceImpl implements InstallService {
         // 使用host作为连接池的键
         String ip = hostInfo.getIp();
         // 创建新会话
-        try {
-            logger.info("创建主机 {} 的新SSH连接", ip);
-            ClientSession newSession = MinaUtils.openConnectionWithPassword(hostInfo);
-            if (newSession != null) {
-                // 将新会话添加到Map中
-                logger.info("成功创建主机 {} 的SSH连接", ip);
-            } else {
-                logger.warn("无法创建主机 {} 的SSH连接", ip);
-            }
-            return newSession;
-        } catch (Exception e) {
-            logger.error("创建主机 {} 的SSH连接时发生异常: {}", ip, e.getMessage());
-            return null;
+        logger.info("创建主机 {} 的新SSH连接", ip);
+        ClientSession newSession = MinaUtils.openConnectionWithPassword(hostInfo);
+        if (newSession != null) {
+            // 将新会话添加到Map中
+            logger.info("成功创建主机 {} 的SSH连接", ip);
+        } else {
+            logger.warn("无法创建主机 {} 的SSH连接", ip);
         }
+        return newSession;
     }
 
     /**
