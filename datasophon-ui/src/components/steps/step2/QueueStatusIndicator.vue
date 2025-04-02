@@ -2373,7 +2373,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .queue-status-compact {
   display: inline-flex;
   align-items: center;

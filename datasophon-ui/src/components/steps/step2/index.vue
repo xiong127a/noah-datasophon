@@ -69,108 +69,16 @@
       </a-table>
     </div>
 
-    <!-- 日志查看弹窗 -->
-    <a-modal
-        v-model="logVisible"
-        :title="logModalTitle"
-        width="80%"
-        :footer="null"
-        @cancel="closeLogModal"
-        class="log-modal apple-modal"
-        :bodyStyle="{ padding: '0' }"
-    >
-      <div class="log-container">
-        <div class="log-header">
-          <!-- 刷新控制区域 -->
-          <div class="header-section">
-            <div class="refresh-options">
-              <a-button type="primary" @click="refreshLog" :loading="logLoading" class="refresh-btn">
-                <a-icon type="reload" />手动刷新
-              </a-button>
-              <a-dropdown>
-                <a-button :type="autoRefreshInterval > 0 ? 'primary' : 'default'" class="auto-refresh-btn">
-                  <a-icon :type="autoRefreshInterval > 0 ? 'sync' : 'clock-circle'" :spin="autoRefreshInterval > 0" />
-                  <span v-if="autoRefreshInterval === 0">开启自动刷新</span>
-                  <span v-else>每 {{autoRefreshInterval}} 秒刷新中</span>
-                  <a-icon type="down" style="margin-left: 4px" />
-                </a-button>
-                <a-menu slot="overlay" @click="handleAutoRefreshChange">
-                  <a-menu-item key="0">
-                    <a-icon type="stop" />关闭自动刷新
-                  </a-menu-item>
-                  <a-menu-divider />
-                  <a-menu-item key="1">
-                    <a-icon type="sync" />每秒刷新
-                  </a-menu-item>
-                  <a-menu-item key="3">
-                    <a-icon type="sync" />每3秒刷新
-                  </a-menu-item>
-                  <a-menu-item key="5">
-                    <a-icon type="sync" />每5秒刷新
-                  </a-menu-item>
-                  <a-menu-item key="10">
-                    <a-icon type="sync" />每10秒刷新
-                  </a-menu-item>
-                </a-menu>
-              </a-dropdown>
-            </div>
-          </div>
-
-          <!-- 筛选控制区域 -->
-          <div class="header-section filter-area">
-            <!-- 日志类型选择 -->
-            <div class="log-type-selector">
-              <div class="filter-title">日志类型筛选：</div>
-              <a-radio-group v-model="currentLogType" button-style="solid" @change="handleLogTypeChange">
-                <a-radio-button value="all">全部日志</a-radio-button>
-                <a-radio-button value="check">检查日志</a-radio-button>
-                <a-radio-button value="fix">修复日志</a-radio-button>
-              </a-radio-group>
-            </div>
-
-            <!-- 添加日志筛选组件 -->
-            <log-filter
-                ref="logFilter"
-                v-if="checkItem && checkItem.clusterId && showLogFilterOptions"
-                :clusterId="checkItem.clusterId"
-                :ip="checkItem.ip"
-                :itemId="checkItem.id"
-                v-model="logContent"
-                hide-reset-button
-                @filter-change="handleFilterChange"
-            ></log-filter>
-          </div>
-
-          <!-- 合并的筛选状态显示区域 -->
-          <div class="combined-filter-status">
-            <div class="filter-description">
-              当前显示:
-              <span class="highlight">{{ currentLogType === 'all' ? '全部' : (currentLogType === 'check' ? '检查' : '修复') }}</span> 类型，
-              <span v-if="checkItem && $refs.logFilter">
-                <template v-if="$refs.logFilter.filterType === 'exact'">
-                  <span class="highlight">{{ $refs.logFilter.selectedLevel }}</span> 级别
-                </template>
-                <template v-else-if="$refs.logFilter.filterType === 'min'">
-                  <span class="highlight">{{ $refs.logFilter.selectedLevel }}</span> 及以上级别
-                </template>
-                <template v-else>
-                  <span class="highlight">全部</span> 级别
-                </template>
-              </span>
-              <span v-else>加载中...</span>
-              的日志
-            </div>
-          </div>
-        </div>
-        <div class="log-content" :class="{'loading-container': logLoading}">
-          <div v-if="logLoading" class="custom-loading">
-            <a-icon type="loading" spin />
-            <span>加载中...</span>
-          </div>
-          <pre v-html="logContent"></pre>
-        </div>
-      </div>
-    </a-modal>
+    <!-- 使用新的AppleLogViewer组件 -->
+    <apple-log-viewer
+      :clusterId="clusterId"
+      :visible.sync="logVisible"
+      :title="logModalTitle"
+      :hostIp="currentLogIp"
+      :itemId="currentLogItemId"
+      :itemName="currentLogItemName"
+      @close="closeLogModal"
+    />
 
     <!-- 修复确认弹窗 - 苹果设计风格 -->
     <a-modal
@@ -313,6 +221,7 @@ import QueueStatusIndicator from '@/components/steps/step2/QueueStatusIndicator.
 import OsFloatingCard from '@/components/steps/step2/OsFloatingCard.vue';
 // 导入HostnameFloatingCard组件
 import HostnameFloatingCard from '@/components/steps/step2/HostnameFloatingCard.vue';
+import AppleLogViewer from './AppleLogViewer.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -325,7 +234,8 @@ export default {
     QueueStatusIndicator,
     OsFloatingCard,
     /* eslint-disable-next-line vue/no-unused-components */
-    HostnameFloatingCard
+    HostnameFloatingCard,
+    AppleLogViewer
   },
   data() {
     return {
@@ -347,7 +257,7 @@ export default {
       firstDataLoaded: false,
       checkItemsMap: {}, // 存储每个主机的校验项
       checkItem: null, // 当前查看日志的检查项
-      showLogFilterOptions: true, // 是否显示日志筛选选项
+      // 使用新的AppleLogViewer组件，不再需要日志相关变量
       queueStatus: {
         queueSize: 0,
         runningTasks: 0,
@@ -977,14 +887,10 @@ export default {
       selectedCheckItems: {}, // 存储每个主机选中的检查项 { hostname: [itemName1, itemName2] }
       logVisible: false,
       logModalTitle: '',
-      logContent: '',
-      logLoading: false,
-      autoRefreshInterval: 0,
       currentLogIp: null,
       currentLogItemId: null,
       currentLogItemName: null,
-      refreshTimer: null,
-      currentLogType: 'all',
+      checkItem: null,
       forceUseTypedApi: false,
       hostnameEditVisible: false,
       currentEditHost: null,
@@ -2391,221 +2297,33 @@ export default {
 
     // 查看日志
     viewItemLog(ip, itemId, itemName) {
-      // 保存当前选择的检查项信息
+      // 保存当前选择的检查项信息用于AppleLogViewer组件
       this.currentLogIp = ip;
       this.currentLogItemId = itemId;
       this.currentLogItemName = itemName;
-
-      // 设置当前检查项信息，用于日志筛选组件
-      this.checkItem = {
-        clusterId: this.clusterId,
-        ip: ip,
-        id: itemId,
-        itemName: itemName
-      };
-
-      // 打开日志弹窗并加载日志
       this.logModalTitle = `日志 - 主机: ${ip}, 检查项: ${itemName}`;
+      
+      // 打开日志弹窗
       this.logVisible = true;
-      this.logContent = '';
-
-      // 设置初始日志类型为全部日志
-      this.currentLogType = 'all';
-
-      // 初始停止之前可能存在的自动刷新定时器
-      this.stopAutoRefresh();
-
-      // 等待DOM更新完成后设置初始筛选条件
-      this.$nextTick(() => {
-        if (this.$refs.logFilter) {
-          // 设置默认筛选条件
-          this.$refs.logFilter.filterType = 'min';
-          this.$refs.logFilter.selectedLevel = 'INFO';
-          // 手动触发筛选
-          this.$refs.logFilter.applyFilter();
-        }
-        // 获取日志数据
-        this.fetchItemLog();
-      });
-    },
-
-    // 获取检查项日志
-    async fetchItemLog() {
-      if (!this.currentLogIp || !this.currentLogItemId) {
-        return;
-      }
-
-      this.logLoading = true;
-
-      try {
-        // 统一使用一个API进行所有筛选
-        const apiUrl = '/ddh/host/check/getLog';
-
-        // 获取级别筛选参数
-        let logLevel = 'INFO'; // 默认显示INFO级别
-        let filterMode = 'min'; // 默认显示INFO及以上级别
-
-        if (this.$refs.logFilter) {
-          filterMode = this.$refs.logFilter.filterType;
-          logLevel = this.$refs.logFilter.selectedLevel;
-        }
-
-        // 准备请求参数
-        const params = {
-          clusterId: this.clusterId,
-          ip: this.currentLogIp,
-          itemId: this.currentLogItemId,
-          logType: this.currentLogType,
-          logLevel: logLevel,
-          filterMode: filterMode
-        };
-
-        console.log('API请求:', apiUrl, params);
-        const res = await this.$axiosPost(apiUrl, params);
-
-        if (res.code === 200) {
-          this.logContent = res.data || '暂无日志数据';
-        } else {
-          this.logContent = `获取日志失败: ${res.msg || '未知错误'}`;
-          if (this.autoRefreshInterval > 0) {
-            this.stopAutoRefresh(); // 如果获取失败，停止自动刷新
-            this.$message.error('日志获取失败，已停止自动刷新');
-          }
-        }
-      } catch (error) {
-        console.error('获取日志失败:', error);
-        this.logContent = '获取日志失败，请稍后重试';
-        if (this.autoRefreshInterval > 0) {
-          this.stopAutoRefresh(); // 如果获取失败，停止自动刷新
-          this.$message.error('日志获取失败，已停止自动刷新');
-        }
-      } finally {
-        this.logLoading = false;
-      }
-    },
-
-    // 手动刷新日志
-    refreshLog() {
-      this.fetchItemLog();
-    },
-
-    // 处理自动刷新间隔变化
-    handleAutoRefreshChange(e) {
-      const value = parseInt(e.key);
-
-      // 停止之前的自动刷新
-      this.stopAutoRefresh();
-
-      // 设置新的自动刷新间隔
-      this.autoRefreshInterval = value;
-
-      // 如果选择了自动刷新，启动定时器
-      if (value > 0) {
-        this.$message.success(`已开启自动刷新(${value}秒)`);
-        this.startAutoRefresh();
-      } else {
-        this.$message.info('已关闭自动刷新');
-      }
-    },
-
-    // 启动自动刷新
-    startAutoRefresh() {
-      if (this.autoRefreshInterval > 0) {
-        this.refreshTimer = setInterval(() => {
-          this.fetchItemLog();
-        }, this.autoRefreshInterval * 1000);
-      }
-    },
-
-    // 停止自动刷新
-    stopAutoRefresh() {
-      if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
-      }
-    },
-
-    // 重置日志筛选，显示INFO级以上的全部类型日志
-    resetLogFilter() {
-      this.currentLogType = 'all';
-      if (this.$refs.logFilter) {
-        this.$refs.logFilter.filterType = 'min';
-        this.$refs.logFilter.selectedLevel = 'INFO';
-        this.$refs.logFilter.applyFilter();
-      }
-      this.fetchItemLog();
-    },
-
-    // 终止单个检查项
-    async stopCheckItem(ip, itemId) {
-      if (!ip || !itemId) {
-        this.$message.error('参数错误：主机IP或检查项ID不能为空');
-        return;
-      }
-
-      try {
-        // 立即将检查项状态更新为"终止中"，提供用户视觉反馈
-        const items = this.checkItemsMap[ip] || [];
-        const targetItem = items.find(item => item.id === itemId);
-
-        if (targetItem && targetItem.status === 'CHECKING') {
-          targetItem.status = 'TERMINATING';
-          targetItem.message = '正在终止检查...';
-          // 更新本地缓存，确保UI立即显示变化
-          this.$set(this.checkItemsMap, ip, [...items]);
-        }
-
-        // 调用后端API
-        const res = await this.$axiosPost(global.API.stopCheckItem, {
-          clusterId: this.clusterId,
-          ip: ip,
-          itemId: itemId
-        });
-
-        if (res && res.code === 200) {
-          this.$message.success('已终止检查项');
-
-          // 延迟1秒后刷新列表，获取最新状态
-          setTimeout(() => {
-            this.refreshHostList();
-          }, 1000);
-        } else {
-          this.$message.error(res.msg || '终止检查失败');
-          this.refreshHostList(); // 还是需要刷新，恢复状态
-        }
-      } catch (error) {
-        console.error('终止检查项失败:', error);
-        this.$message.error('终止检查项失败，请检查网络连接');
-        this.refreshHostList(); // 出错时也刷新，恢复状态
-      }
     },
 
     // 关闭日志查看弹窗
     closeLogModal() {
       this.logVisible = false;
-      this.stopAutoRefresh();
       this.currentLogIp = null;
       this.currentLogItemId = null;
       this.currentLogItemName = null;
-      // 清理checkItem
       this.checkItem = null;
     },
 
+    // 不再需要旧的日志类型变化处理方法，使用AppleLogViewer组件了
     handleLogTypeChange() {
-      // 当日志类型变化时，重新获取日志
-      this.fetchItemLog();
-
-      // 随着系统扩展，如果添加了新的日志类型，在这里不需要特殊处理
-      // 只需要:
-      // 1. 在上面的日志类型选择器中添加新的a-radio-button
-      // 2. 确保后端OperationType枚举中添加了相应的类型
-      // 3. 确保HostCheckServiceImpl.getCheckItemLogWithType方法支持新的日志类型
+      // 该方法保留但不做任何处理，防止兼容问题
     },
 
-    // 处理筛选变化
+    // 不再需要旧的筛选变化处理方法，使用AppleLogViewer组件了
     handleFilterChange(filterData) {
-      // 直接刷新日志以应用新的筛选条件
-      this.fetchItemLog();
+      // 该方法保留但不做任何处理，防止兼容问题
     },
 
     // 去除HTML标签的辅助函数
@@ -3646,167 +3364,7 @@ export default {
   }
 }
 
-// 日志模态框内容样式
-.log-modal {
-  .log-container {
-    display: flex;
-    flex-direction: column;
-    height: 70vh;
 
-    .log-header {
-      padding: 16px 24px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      background-color: @apple-gray-light;
-
-      .header-section {
-        margin-bottom: 12px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-
-      .refresh-options {
-        display: flex;
-        gap: 10px;
-
-        .refresh-btn, .auto-refresh-btn {
-          height: 36px;
-          padding: 0 16px;
-          font-size: 0.9rem;
-          font-weight: 500;
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-
-          .anticon {
-            margin-right: 6px;
-          }
-        }
-      }
-
-      .filter-area {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        align-items: center;
-        margin-top: 16px;
-
-        .log-type-selector {
-          display: flex;
-          align-items: center;
-
-          .filter-title {
-            margin-right: 8px;
-            font-weight: 500;
-            color: @apple-black;
-          }
-        }
-      }
-
-      .combined-filter-status {
-        margin-top: 16px;
-        padding: 10px 16px;
-        background-color: rgba(0, 0, 0, 0.02);
-        border-radius: 8px;
-
-        .filter-description {
-          font-size: 0.9rem;
-          color: @apple-gray;
-
-          .highlight {
-            color: @apple-black;
-            font-weight: 500;
-          }
-        }
-      }
-    }
-
-    .log-content {
-      flex: 1;
-      overflow: auto;
-      padding: 20px 24px;
-      background-color: #f8f8fa;
-      border-radius: 0 0 12px 12px;
-      font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-
-      pre {
-        margin: 0;
-        color: #333;
-        font-size: 0.9rem;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-break: break-word;
-
-        ::selection {
-          background: rgba(0, 113, 227, 0.2);
-        }
-
-        // 设置不同日志级别的颜色
-        :deep(.log-info) {
-          color: #1c1c1e;
-        }
-
-        :deep(.log-warn) {
-          color: #9f6000;
-        }
-
-        :deep(.log-error) {
-          color: #d40000;
-        }
-
-        :deep(.log-debug) {
-          color: #6a737d;
-        }
-
-        :deep(.log-trace) {
-          color: #5c2699;
-        }
-
-        :deep(.log-timestamp) {
-          color: #0071e3;
-          font-weight: 500;
-        }
-      }
-    }
-  }
-}
-
-// 确认弹窗内容样式
-.fix-confirm-content {
-  padding: 20px;
-  background-color: rgba(255, 69, 58, 0.05);
-  border-radius: 10px;
-  border-left: 4px solid @apple-red;
-  margin: 0;
-
-  p {
-    margin: 0 0 10px;
-    line-height: 1.6;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-}
-
-.loading-container {
-  position: relative;
-  min-height: 100px;
-}
-
-.custom-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: @apple-gray;
-  font-size: 14px;
-}
 
 // 添加Apple风格表格的CSS样式到样式部分
 .apple-style-table {
@@ -4553,11 +4111,7 @@ export default {
   }
 }
 
-.log-modal-status-label {
-  font-size: 13px;
-  color: #666;
-  margin-right: 6px;
-}
+// 使用新的AppleLogViewer组件，不再需要旧的日志相关样式
 
 /* 主机名和相关DNS/hosts悬浮框样式 */
 .hostname-detail-tooltip {
@@ -6268,179 +5822,6 @@ export default {
   cursor: pointer;
   transition: background-color 0.3s;
 
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-}
-
-.apple-card-content {
-  margin-bottom: 24px;
-}
-
-.apple-card-section {
-  margin-bottom: 16px;
-}
-
-.warning-message {
-  background-color: rgba(255, 149, 0, 0.05);
-  border-left: 4px solid #FF9500;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #1D1D1F;
-  
-  .message-content {
-    p {
-      margin-bottom: 8px;
-      
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-    
-    ul {
-      margin-top: 8px;
-      margin-bottom: 8px;
-      padding-left: 20px;
-      
-      li {
-        margin-bottom: 4px;
-        
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-    }
-  }
-}
-
-.apple-card-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  padding: 0 16px;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 18px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &.secondary {
-    background-color: rgba(142, 142, 147, 0.12);
-    color: #1D1D1F;
-
-    &:hover {
-      background-color: rgba(142, 142, 147, 0.2);
-    }
-  }
-
-  &.danger {
-    background-color: #FF3B30;
-    color: white;
-
-    &:hover {
-      background-color: #E02D23;
-    }
-    
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-}
-
-.apple-loader {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid white;
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: spin 0.75s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.apple-card-modal {
-  .ant-modal-content {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  }
-  
-  .ant-modal-body {
-    padding: 0;
-  }
-}
-
-.apple-card-container {
-  padding: 24px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  margin: 0px;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-.apple-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.apple-card-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(255, 149, 0, 0.1);
-  margin-right: 16px;
-}
-
-.apple-card-icon-container.warning {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #FF9500;
-}
-
-.apple-card-info {
-  flex: 1;
-}
-
-.apple-card-title {
-  display: flex;
-  flex-direction: column;
-  
-  .card-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1d1d1f;
-  }
-}
-
-.apple-card-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-  transition: background-color 0.3s;
-  color: #8e8e93;
-  
   &:hover {
     background-color: rgba(0, a0, 0, 0.1);
   }
