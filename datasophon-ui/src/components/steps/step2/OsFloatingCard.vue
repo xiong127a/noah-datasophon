@@ -549,6 +549,8 @@ export default {
           osSystem = 'windows';
         } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
           osSystem = 'kylin';
+        } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
+          osSystem = 'alpine';
         }
         
         // 使用switch语句根据操作系统类型返回对应图标
@@ -564,7 +566,9 @@ export default {
           case 'windows':
             return require('@/assets/img/os-logos/windows.svg');
           case 'kylin':
-            return require('@/assets/img/os-logos/kylin.svg');
+            return require('@/assets/img/os-logos/kylin.png');
+          case 'alpine':
+            return require('@/assets/img/os-logos/alpine.svg');
           default:
             return require('@/assets/img/os-logos/linux-tux.svg');
         }

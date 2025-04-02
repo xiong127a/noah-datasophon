@@ -87,6 +87,11 @@ public enum LinuxDistribution {
     OPENEULER("OpenEuler", "OpenEuler Linux", "openeuler"),
 
     /**
+     * Alpine Linux发行版
+     */
+    ALPINE("Alpine", "Alpine Linux", "alpine"),
+
+    /**
      * 其他发行版
      */
     OTHER("Other", "未知Linux发行版", "unknown");

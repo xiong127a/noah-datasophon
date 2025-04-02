@@ -289,6 +289,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     case KYLIN_V10:
                         osInfo.setDistribution("Kylin");
                         break;
+                    case ALPINE:
+                        osInfo.setDistribution("Alpine");
+                        break;
                     default:
                         // 如果不是已知发行版，直接使用ID作为distribution
                         osInfo.setDistribution(StringUtils.capitalize(distributionId));
@@ -519,6 +522,36 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     osInfo.getDistribution(), osInfo.getDisplayName(), osInfo.getDistributionName(),
                     osInfo.getFullName());
         }
+
+        // 处理Alpine Linux系统
+        else if ("alpine".equalsIgnoreCase(distId)) {
+            logger.info("识别到Alpine Linux系统，ID: alpine");
+
+            // 设置发行版名称
+            osInfo.setDistribution("Alpine");
+            osInfo.setDistributionType(LinuxDistribution.ALPINE);
+
+            // 设置简洁的显示名称
+            osInfo.setDisplayName("Alpine");
+
+            String versionId = osInfo.getVersionId();
+            if (versionId != null) {
+                logger.info("Alpine Linux系统版本: {}", versionId);
+
+                // 设置分发版本名称
+                osInfo.setDistributionName("Alpine " + versionId);
+
+                // 获取PRETTY_NAME设置完整名称
+                if (StringUtils.isNotBlank(osInfo.getFullName())) {
+                    // 已设置fullName，保持不变
+                } else {
+                    osInfo.setFullName("Alpine Linux v" + versionId);
+                }
+            } else {
+                osInfo.setDistributionName("Alpine");
+                osInfo.setFullName("Alpine");
+            }
+        }
     }
 
     /**
@@ -547,6 +580,13 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (debianDetected) {
                 logger.info("成功识别为Debian系统");
                 return; // Debian信息已获取，直接返回
+            }
+
+            // 检查Alpine Linux特定文件
+            boolean alpineDetected = checkAlpineFile(osInfo, session);
+            if (alpineDetected) {
+                logger.info("成功识别为Alpine Linux系统");
+                return; // Alpine Linux信息已获取，直接返回
             }
 
             // 检查RedHat/CentOS特定文件
@@ -738,124 +778,62 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     }
 
     /**
-     * 检查RedHat/CentOS系统
+     * 检查Alpine Linux系统
      */
-    private boolean checkRedHatFile(OsInfo osInfo, ClientSession session) {
+    private boolean checkAlpineFile(OsInfo osInfo, ClientSession session) {
         try {
-            // 检查RedHat/CentOS特定文件
-            String redhatRelease = MinaUtils.execCmdWithResult(session, "cat /etc/redhat-release 2>/dev/null");
-            if (StringUtils.isNotBlank(redhatRelease)) {
-                logger.info("发现redhat-release文件，可能是RedHat或CentOS");
-                redhatRelease = redhatRelease.trim();
+            // 检查Alpine的特定文件
+            String alpineRelease = MinaUtils.execCmdWithResult(session, "cat /etc/alpine-release 2>/dev/null");
+            if (StringUtils.isNotBlank(alpineRelease)) {
+                logger.info("发现alpine-release文件，确认为Alpine Linux发行版");
+                alpineRelease = alpineRelease.trim();
 
-                // 提取版本号
-                String versionId = null;
-                Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
-                Matcher versionMatcher = versionPattern.matcher(redhatRelease);
-                if (versionMatcher.find()) {
-                    versionId = versionMatcher.group(1);
-                }
+                osInfo.setDistributionId("alpine");
+                osInfo.setDistribution("Alpine");
+                osInfo.setDistributionType(LinuxDistribution.ALPINE);
+                osInfo.setVersionId(alpineRelease);
+                osInfo.setVersion(alpineRelease);
 
-                if (redhatRelease.toLowerCase().contains("centos")) {
-                    osInfo.setDistributionId("centos");
-                    osInfo.setDistribution("CentOS");
-                    osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                    osInfo.setFullName(redhatRelease);
-
-                    // 设置简洁的显示名称
-                    osInfo.setDisplayName("CentOS");
-
-                    if (versionId != null) {
-                        osInfo.setVersionId(versionId);
-                        osInfo.setVersion(versionId);
-
-                        // 设置特定版本标记和distributionName
-                        if (versionId.startsWith("7")) {
-                            osInfo.setCentOS7(true);
-                            osInfo.setDistributionName("CentOS Linux 7");
-                        } else if (versionId.startsWith("8")) {
-                            osInfo.setCentOS8(true);
-                            osInfo.setDistributionName("CentOS Linux 8");
-                        } else {
-                            osInfo.setDistributionName("CentOS Linux " + versionId);
-                        }
-                    } else {
-                        osInfo.setDistributionName("CentOS Linux");
-                    }
-                } else if (redhatRelease.toLowerCase().contains("fedora")) {
-                    // 处理Fedora系统
-                    osInfo.setDistributionId("fedora");
-                    osInfo.setDistribution("Fedora");
-                    osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
-                    osInfo.setFullName(redhatRelease);
-
-                    // 设置简洁的显示名称
-                    osInfo.setDisplayName("Fedora");
-
-                    if (versionId != null) {
-                        osInfo.setVersionId(versionId);
-                        osInfo.setVersion(versionId);
-                        osInfo.setDistributionName("Fedora " + versionId);
-                    } else {
-                        osInfo.setDistributionName("Fedora");
-                    }
-                } else if (redhatRelease.toLowerCase().contains("red hat")
-                        || redhatRelease.toLowerCase().contains("redhat")) {
-                    osInfo.setDistributionId("rhel");
-                    osInfo.setDistribution("RedHat");
-                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                    osInfo.setFullName(redhatRelease);
-
-                    // 设置简洁的显示名称
-                    osInfo.setDisplayName("Red Hat");
-
-                    if (versionId != null) {
-                        osInfo.setVersionId(versionId);
-                        osInfo.setVersion(versionId);
-                        osInfo.setDistributionName("Red Hat Enterprise Linux " + versionId);
-                    } else {
-                        osInfo.setDistributionName("Red Hat Enterprise Linux");
-                    }
-                } else {
-                    // 其他基于RedHat的发行版
-                    osInfo.setDistributionId("rhel-based");
-                    osInfo.setDistribution("RedHat Based");
-                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                    osInfo.setDistributionName(redhatRelease);
-                    osInfo.setFullName(redhatRelease);
-                    osInfo.setDisplayName("RedHat Based");
-                }
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Alpine");
+                osInfo.setDistributionName("Alpine " + alpineRelease);
+                osInfo.setFullName("Alpine Linux v" + alpineRelease);
 
                 return true;
             }
 
-            // 检查是否存在Fedora系统
-            String fedoraRelease = MinaUtils.execCmdWithResult(session, "cat /etc/fedora-release 2>/dev/null");
-            if (StringUtils.isNotBlank(fedoraRelease)) {
-                logger.info("发现fedora-release文件，确认为Fedora系统");
-                fedoraRelease = fedoraRelease.trim();
+            // 备选方案：检查/etc/os-release
+            String osReleaseId = MinaUtils.execCmdWithResult(session, "grep -i alpine /etc/os-release 2>/dev/null");
+            if (StringUtils.isNotBlank(osReleaseId) && osReleaseId.toLowerCase().contains("alpine")) {
+                logger.info("通过/etc/os-release确认为Alpine Linux系统");
+                osInfo.setDistributionId("alpine");
+                osInfo.setDistribution("Alpine");
+                osInfo.setDistributionType(LinuxDistribution.ALPINE);
 
-                // 提取版本号
-                String versionId = null;
-                Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
-                Matcher versionMatcher = versionPattern.matcher(fedoraRelease);
-                if (versionMatcher.find()) {
-                    versionId = versionMatcher.group(1);
-                }
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Alpine");
 
-                // 设置Fedora系统信息
-                osInfo.setDistributionId("fedora");
-                osInfo.setDistribution("Fedora");
-                osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
-                osInfo.setFullName(fedoraRelease);
-                osInfo.setDisplayName("Fedora");
-
-                if (versionId != null) {
-                    osInfo.setVersionId(versionId);
-                    osInfo.setVersion(versionId);
-                    osInfo.setDistributionName("Fedora " + versionId);
+                // 尝试获取版本号
+                String versionCmd = "grep VERSION_ID /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
+                String version = MinaUtils.execCmdWithResult(session, versionCmd);
+                if (StringUtils.isNotBlank(version)) {
+                    version = version.trim();
+                    osInfo.setVersionId(version);
+                    osInfo.setVersion(version);
+                    osInfo.setDistributionName("Alpine Linux " + version);
+                    osInfo.setFullName("Alpine Linux v" + version);
                 } else {
-                    osInfo.setDistributionName("Fedora");
+                    // 如果无法获取版本号，尝试获取PRETTY_NAME
+                    String prettyNameCmd = "grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '\"'";
+                    String prettyName = MinaUtils.execCmdWithResult(session, prettyNameCmd);
+                    if (StringUtils.isNotBlank(prettyName)) {
+                        prettyName = prettyName.trim();
+                        osInfo.setFullName(prettyName);
+                        osInfo.setDistributionName("Alpine Linux");
+                    } else {
+                        osInfo.setDistributionName("Alpine Linux");
+                        osInfo.setFullName("Alpine Linux");
+                    }
                 }
 
                 return true;
@@ -863,7 +841,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             return false;
         } catch (Exception e) {
-            logger.warn("检查RedHat/CentOS系统时出错: {}", e.getMessage());
+            logger.warn("检查Alpine Linux系统时出错: {}", e.getMessage());
             return false;
         }
     }
@@ -1092,17 +1070,31 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     if (StringUtils.isBlank(osInfo.getFullName())) {
                         osInfo.setFullName("中标麒麟操作系统 V4");
                     }
-                } else if (StringUtils.isNotBlank(kylinVersion)) {
+                } else {
+                    // 其他版本的麒麟
                     osInfo.setDistributionName("中标麒麟 " + kylinVersion);
                     // 设置完整名称如果尚未设置
                     if (StringUtils.isBlank(osInfo.getFullName())) {
                         osInfo.setFullName("中标麒麟操作系统 " + kylinVersion);
                     }
-                } else {
-                    osInfo.setDistributionName("中标麒麟");
+                }
+                break;
+            case "Alpine":
+                // 设置简洁的显示名称
+                osInfo.setDisplayName("Alpine");
+
+                String alpineVersion = osInfo.getVersionId();
+                if (StringUtils.isNotBlank(alpineVersion)) {
+                    osInfo.setDistributionName("Alpine " + alpineVersion);
                     // 设置完整名称如果尚未设置
                     if (StringUtils.isBlank(osInfo.getFullName())) {
-                        osInfo.setFullName("中标麒麟操作系统");
+                        osInfo.setFullName("Alpine Linux v" + alpineVersion);
+                    }
+                } else {
+                    osInfo.setDistributionName("Alpine");
+                    // 设置完整名称如果尚未设置
+                    if (StringUtils.isBlank(osInfo.getFullName())) {
+                        osInfo.setFullName("Alpine Linux");
                     }
                 }
                 break;
@@ -1129,15 +1121,134 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     }
 
     /**
-     * 判断是否为纯数字版本号
+     * 检查RedHat/CentOS系统
      */
-    private boolean isNumericVersion(String version) {
-        if (StringUtils.isBlank(version)) {
+    private boolean checkRedHatFile(OsInfo osInfo, ClientSession session) {
+        try {
+            // 检查RedHat/CentOS特定文件
+            String redhatRelease = MinaUtils.execCmdWithResult(session, "cat /etc/redhat-release 2>/dev/null");
+            if (StringUtils.isNotBlank(redhatRelease)) {
+                logger.info("发现redhat-release文件，可能是RedHat或CentOS");
+                redhatRelease = redhatRelease.trim();
+
+                // 提取版本号
+                String versionId = null;
+                Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
+                Matcher versionMatcher = versionPattern.matcher(redhatRelease);
+                if (versionMatcher.find()) {
+                    versionId = versionMatcher.group(1);
+                }
+
+                if (redhatRelease.toLowerCase().contains("centos")) {
+                    osInfo.setDistributionId("centos");
+                    osInfo.setDistribution("CentOS");
+                    osInfo.setDistributionType(LinuxDistribution.CENTOS);
+                    osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("CentOS");
+
+                    if (versionId != null) {
+                        osInfo.setVersionId(versionId);
+                        osInfo.setVersion(versionId);
+
+                        // 设置特定版本标记和distributionName
+                        if (versionId.startsWith("7")) {
+                            osInfo.setCentOS7(true);
+                            osInfo.setDistributionName("CentOS Linux 7");
+                        } else if (versionId.startsWith("8")) {
+                            osInfo.setCentOS8(true);
+                            osInfo.setDistributionName("CentOS Linux 8");
+                        } else {
+                            osInfo.setDistributionName("CentOS Linux " + versionId);
+                        }
+                    } else {
+                        osInfo.setDistributionName("CentOS Linux");
+                    }
+                } else if (redhatRelease.toLowerCase().contains("fedora")) {
+                    // 处理Fedora系统
+                    osInfo.setDistributionId("fedora");
+                    osInfo.setDistribution("Fedora");
+                    osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
+                    osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("Fedora");
+
+                    if (versionId != null) {
+                        osInfo.setVersionId(versionId);
+                        osInfo.setVersion(versionId);
+                        osInfo.setDistributionName("Fedora " + versionId);
+                    } else {
+                        osInfo.setDistributionName("Fedora");
+                    }
+                } else if (redhatRelease.toLowerCase().contains("red hat")
+                        || redhatRelease.toLowerCase().contains("redhat")) {
+                    osInfo.setDistributionId("rhel");
+                    osInfo.setDistribution("RedHat");
+                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
+                    osInfo.setFullName(redhatRelease);
+
+                    // 设置简洁的显示名称
+                    osInfo.setDisplayName("Red Hat");
+
+                    if (versionId != null) {
+                        osInfo.setVersionId(versionId);
+                        osInfo.setVersion(versionId);
+                        osInfo.setDistributionName("Red Hat Enterprise Linux " + versionId);
+                    } else {
+                        osInfo.setDistributionName("Red Hat Enterprise Linux");
+                    }
+                } else {
+                    // 其他基于RedHat的发行版
+                    osInfo.setDistributionId("rhel-based");
+                    osInfo.setDistribution("RedHat Based");
+                    osInfo.setDistributionType(LinuxDistribution.REDHAT);
+                    osInfo.setDistributionName(redhatRelease);
+                    osInfo.setFullName(redhatRelease);
+                    osInfo.setDisplayName("RedHat Based");
+                }
+
+                return true;
+            }
+
+            // 检查是否存在Fedora系统
+            String fedoraRelease = MinaUtils.execCmdWithResult(session, "cat /etc/fedora-release 2>/dev/null");
+            if (StringUtils.isNotBlank(fedoraRelease)) {
+                logger.info("发现fedora-release文件，确认为Fedora系统");
+                fedoraRelease = fedoraRelease.trim();
+
+                // 提取版本号
+                String versionId = null;
+                Pattern versionPattern = Pattern.compile("release\\s+([\\d\\.]+)");
+                Matcher versionMatcher = versionPattern.matcher(fedoraRelease);
+                if (versionMatcher.find()) {
+                    versionId = versionMatcher.group(1);
+                }
+
+                // 设置Fedora系统信息
+                osInfo.setDistributionId("fedora");
+                osInfo.setDistribution("Fedora");
+                osInfo.setDistributionType(LinuxDistribution.REDHAT); // 目前还是归类为REDHAT族
+                osInfo.setFullName(fedoraRelease);
+                osInfo.setDisplayName("Fedora");
+
+                if (versionId != null) {
+                    osInfo.setVersionId(versionId);
+                    osInfo.setVersion(versionId);
+                    osInfo.setDistributionName("Fedora " + versionId);
+                } else {
+                    osInfo.setDistributionName("Fedora");
+                }
+
+                return true;
+            }
+
+            return false;
+        } catch (Exception e) {
+            logger.warn("检查RedHat/CentOS系统时出错: {}", e.getMessage());
             return false;
         }
-
-        // 判断是否为数字或数字+点号的格式
-        return version.matches("\\d+(\\.\\d+)*");
     }
 
     /**
