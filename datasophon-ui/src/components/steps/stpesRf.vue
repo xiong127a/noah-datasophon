@@ -47,7 +47,7 @@
 import { mapState, mapMutations, mapActions } from "vuex";
 
 import Steps1 from "./step1.vue";
-import Steps2 from "./step2.vue";
+import Index from "./step2/index.vue";
 import Steps3 from "./step3.vue";
 import Steps4 from "./step4.vue";
 import Steps5 from "./step5.vue";
@@ -61,7 +61,7 @@ export default {
   name: "StepsContainer",
   components: {
     Steps1,
-    Steps2,
+    Steps2: Index,
     Steps3,
     Steps4,
     Steps5,

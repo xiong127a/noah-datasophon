@@ -22,7 +22,7 @@
  * @describe: step2-主机环境校验 
  * @Date: 2022-06-13 16:35:02
  * @LastEditTime: 2022-08-15 14:07:04
- * @FilePath: \ddh-ui\src\components\steps\step2.vue
+ * @FilePath: \ddh-ui\src\components\steps\index.vue
 -->
 <template>
   <div class="steps2 steps">
@@ -306,12 +306,12 @@
 </template>
 
 <script>
-import LogFilter from '../log/LogFilter.vue';
-import QueueStatusIndicator from '@/components/QueueStatusIndicator'
+import LogFilter from './LogFilter.vue';
+import QueueStatusIndicator from '@/components/steps/step2/QueueStatusIndicator.vue'
 // 导入操作系统浮窗组件
-import OsFloatingCard from '@/components/os-card/OsFloatingCard.vue';
+import OsFloatingCard from '@/components/steps/step2/OsFloatingCard.vue';
 // 导入HostnameFloatingCard组件
-import HostnameFloatingCard from '@/components/hostname-card/HostnameFloatingCard.vue';
+import HostnameFloatingCard from '@/components/steps/step2/HostnameFloatingCard.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
