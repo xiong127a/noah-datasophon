@@ -142,10 +142,10 @@
           </div>
         </div>
 
-        <!-- Hosts文件内容 -->
-        <div class="hostname-detail-section" v-if="hostInfo.hostsFile">
+        <!-- Hosts文件部分 -->
+        <div class="hosts-section" v-if="hostInfo.hostsFile !== undefined">
           <div class="section-header">
-            <span class="section-title">
+            <div class="title">
               <div class="section-icon hosts-icon">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -155,29 +155,33 @@
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
               </div>
-              Hosts文件内容
-            </span>
-            <div class="hosts-file-info">
+              <span class="section-title">Hosts文件内容</span>
               <div class="file-badge">/etc/hosts</div>
-              <div class="file-actions">
-                <a-tooltip title="测试编辑">
-                  <a-button type="link" class="action-button" @click="showBackupEditDialog">
-                    <a-icon type="bug" />
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip title="编辑Hosts文件">
-                  <a-button type="link" class="action-button" @click="editHostsFile">
-                    <a-icon type="edit" />
-                  </a-button>
-                </a-tooltip>
-                <a-tooltip title="复制Hosts文件内容">
-                  <a-button type="link" class="action-button" @click="copyHostsFile">
-                    <a-icon type="copy" />
-                  </a-button>
-                </a-tooltip>
-              </div>
+            </div>
+            <div class="actions">
+              <!-- 非编辑模式下显示编辑和复制按钮 -->
+              <template v-if="!isEditingHosts">
+                <a-button type="link" class="action-button edit-button" @click="editHostsFile">
+                  <a-icon type="edit" />编辑
+                </a-button>
+                <a-button type="link" class="action-button" @click="copyHostsFile">
+                  <a-icon type="copy" />复制
+                </a-button>
+              </template>
+              <!-- 编辑模式下显示保存和取消按钮 -->
+              <template v-else>
+                <a-button type="link" class="action-button save-button" 
+                          :loading="hostsEditLoading"
+                          @click="saveHostsFile">
+                  <a-icon type="save" />保存
+                </a-button>
+                <a-button type="link" class="action-button cancel-button" @click="cancelHostsEdit">
+                  <a-icon type="close" />取消
+                </a-button>
+              </template>
             </div>
           </div>
+          
           <div class="hosts-file-container">
             <div class="modern-ide">
               <!-- IDE工具栏 -->
@@ -246,23 +250,36 @@
                 </div>
               </div>
               
-              <!-- 代码编辑区域 -->
+              <!-- 代码编辑区域 - 根据模式显示不同内容 -->
               <div class="ide-editor">
                 <!-- 侧边栏 - 行号和折叠等 -->
                 <div class="ide-sidebar">
                   <div class="gutter-container">
                     <div class="gutter-folding"></div>
                     <div class="gutter-line-numbers">
-                      <div v-for="n in (hostInfo.hostsFile.split('\n').length || 1)" :key="n" class="line-number">
+                      <div v-for="n in (isEditingHosts ? hostsFileContent.split('\n').length : hostInfo.hostsFile.split('\n').length || 1)" 
+                          :key="n" 
+                          class="line-number">
                         {{ n }}
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <!-- 主代码区域 -->
-                <div class="code-container" ref="codeContainer">
+                <!-- 主代码区域 - 非编辑模式 -->
+                <div class="code-container" ref="codeContainer" v-if="!isEditingHosts">
                   <div v-html="formatHostsFile(hostInfo.hostsFile)" class="code-content"></div>
+                </div>
+                
+                <!-- 主代码区域 - 编辑模式 -->
+                <div class="code-container editor-mode" v-else>
+                  <textarea 
+                    v-model="hostsFileContent"
+                    class="code-editor"
+                    spellcheck="false"
+                    @input="updateLineNumbers"
+                    placeholder="请输入hosts文件内容"
+                  ></textarea>
                 </div>
               </div>
               
@@ -274,7 +291,10 @@
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                     </svg>
-                    <span>只读</span>
+                    <span>{{ isEditingHosts ? "编辑中" : "只读" }}</span>
+                  </div>
+                  <div v-if="isEditingHosts" class="status-item editing-status">
+                    <span>点击"保存"按钮应用更改</span>
                   </div>
                 </div>
                 <div class="statusbar-right">
@@ -311,26 +331,6 @@
           </div>
           <div class="hosts-file-container loading">
             <div class="modern-ide">
-              <!-- IDE工具栏 - 固定部分 -->
-              <div class="ide-toolbar">
-                <div class="ide-breadcrumb">
-                  <div class="breadcrumb-item root">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
-                    <span>/</span>
-                  </div>
-                  <div class="breadcrumb-item">
-                    <span>etc</span>
-                  </div>
-                  <div class="breadcrumb-separator">/</div>
-                  <div class="breadcrumb-item active">
-                    <span>hosts</span>
-                  </div>
-                </div>
-              </div>
-              
               <!-- 加载动画 -->
               <div class="hosts-file-loading">
                 <div class="hosts-file-loading-lines">
@@ -342,15 +342,6 @@
                   <div class="loading-line very-long"></div>
                   <div class="loading-line medium"></div>
                   <div class="loading-line short"></div>
-                </div>
-              </div>
-              
-              <!-- 底部状态栏 - 固定部分 -->
-              <div class="ide-statusbar">
-                <div class="statusbar-left">
-                  <div class="status-item">
-                    <span>加载中...</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -402,6 +393,7 @@ export default {
       editHostsVisible: false,
       hostsFileContent: '',
       hostsEditLoading: false,
+      isEditingHosts: false,
     };
   },
   methods: {
@@ -428,52 +420,33 @@ export default {
     formatHostsFile(content) {
       if (!content) return '';
       
+      // 分行处理
       const lines = content.split('\n');
-      let formattedContent = '';
-      
-      // 为每一行添加适当的样式
-      lines.forEach((line) => {
-        let lineClass = 'line';
-        let lineContent = '';
-        
-        // 根据行内容添加样式类
+      const formattedLines = lines.map(line => {
+        // 处理注释行
         if (line.trim().startsWith('#')) {
-          lineClass += ' comment-line';
-          lineContent = this.escapeHtml(line);
-        } else if (line.trim() === '') {
-          lineClass += ' empty-line';
-          lineContent = ' ';
-        } else {
-          lineClass += ' config-line';
-          
-          // 高亮IP地址和主机名
-          const parts = line.trim().split(/\s+/);
-          if (parts.length >= 2) {
-            const ip = parts[0];
-            const hostnames = parts.slice(1).join(' ');
-            
-            if (line.includes('#')) {
-              // 行内注释
-              const commentIndex = line.indexOf('#');
-              const beforeComment = line.substring(0, commentIndex);
-              const comment = line.substring(commentIndex);
-              
-              lineContent = this.highlightIpHostname(beforeComment) + 
-                           `<span class="inline-comment">${this.escapeHtml(comment)}</span>`;
-            } else {
-              lineContent = `<span class="ip-address">${this.escapeHtml(ip)}</span> ` + 
-                           `<span class="hostname-entry">${this.escapeHtml(hostnames)}</span>`;
-            }
-          } else {
-            lineContent = this.escapeHtml(line);
-          }
+          return `<span class="comment">${this.escapeHtml(line)}</span>`;
         }
         
-        // 构建行HTML
-        formattedContent += `<div class="${lineClass}"><span class="line-content">${lineContent}</span></div>`;
+        // 处理IP和主机名
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && this.isIPAddress(parts[0])) {
+          const ip = `<span class="ip">${this.escapeHtml(parts[0])}</span>`;
+          const hostnames = parts.slice(1).map(h => `<span class="hostname">${this.escapeHtml(h)}</span>`).join(' ');
+          return `${ip} ${hostnames}`;
+        }
+        
+        // 其他行保持原样
+        return this.escapeHtml(line);
       });
       
-      return formattedContent;
+      // 为整个内容添加额外的类，以提高CSS选择器权重
+      return `<div class="hosts-code-content">${formattedLines.join('\n')}</div>`;
+    },
+    
+    // 辅助方法：判断是否为IP地址
+    isIPAddress(str) {
+      return /^(\d{1,3}\.){3}\d{1,3}$/.test(str);
     },
     
     // 转义HTML字符
@@ -484,17 +457,6 @@ export default {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
-    },
-    
-    // 高亮IP和主机名
-    highlightIpHostname(text) {
-      const parts = text.trim().split(/\s+/);
-      if (parts.length < 2) return this.escapeHtml(text);
-      
-      const ip = parts[0];
-      const hostnames = parts.slice(1).join(' ');
-      
-      return `<span class="ip-address">${this.escapeHtml(ip)}</span> <span class="hostname-entry">${this.escapeHtml(hostnames)}</span>`;
     },
     
     // 切换搜索框显示状态
@@ -686,74 +648,24 @@ export default {
     
     // 打开编辑hosts文件对话框
     editHostsFile() {
-      console.log('编辑按钮被点击，当前hosts文件内容：', this.hostInfo.hostsFile);
+      // 设置编辑内容为当前hosts文件内容
       this.hostsFileContent = this.hostInfo.hostsFile || '';
-      
-      // 直接显示编辑对话框，不需要确认
-      this.editHostsVisible = true;
-      console.log('编辑对话框应该显示，editHostsVisible =', this.editHostsVisible);
-      
-      // 添加更多调试信息
-      console.log('hostInfo对象：', JSON.stringify({
-        clusterId: this.hostInfo.clusterId,
-        ip: this.hostInfo.ip,
-        hostname: this.hostInfo.hostname
-      }));
-      
-      // 延时检查对话框状态
-      setTimeout(() => {
-        console.log('延时检查:editHostsVisible =', this.editHostsVisible);
-        // 尝试强制更新组件
-        this.$forceUpdate();
-        console.log('已强制更新组件');
-      }, 100);
+      // 切换到编辑模式
+      this.isEditingHosts = true;
+      console.log('进入hosts文件编辑模式');
     },
     
-    // 备用编辑对话框实现
-    showBackupEditDialog() {
-      // 使用Ant Design的Modal显示一个临时的编辑框
-      const h = this.$createElement;
-      
-      // 创建textarea元素
-      const textarea = h('a-textarea', {
-        props: {
-          value: this.hostsFileContent,
-          placeholder: '请输入hosts文件内容',
-          rows: 15,
-          autoSize: { minRows: 10, maxRows: 20 }
-        },
-        style: {
-          fontFamily: 'monospace',
-          width: '100%'
-        },
-        on: {
-          input: (e) => {
-            this.hostsFileContent = e.target.value;
-          }
-        }
-      });
-      
-      // 创建表单
-      const form = h('div', [
-        h('div', { style: { marginBottom: '10px' } }, '文件路径: /etc/hosts'),
-        textarea
-      ]);
-      
-      // 显示Modal
-      this.$info({
-        title: '编辑Hosts文件',
-        content: form,
-        width: 700,
-        okText: '保存',
-        onOk: () => {
-          // 执行保存操作
-          this.submitHostsEdit();
-        }
-      });
+    // 取消编辑
+    cancelHostsEdit() {
+      // 清空编辑内容
+      this.hostsFileContent = '';
+      // 退出编辑模式
+      this.isEditingHosts = false;
+      console.log('取消hosts文件编辑');
     },
     
-    // 提交编辑
-    submitHostsEdit() {
+    // 保存编辑
+    saveHostsFile() {
       if (!this.hostsFileContent) {
         this.$message.warning('Hosts文件内容不能为空');
         return;
@@ -761,19 +673,21 @@ export default {
       
       this.hostsEditLoading = true;
       
-      // 使用this.$axiosPost替代this.$http.post
-      this.$axiosPost('/host/updateHostsFile', {
-        clusterId: this.hostInfo.clusterId,
-        ip: this.hostInfo.ip,
-        hostsFileContent: this.hostsFileContent
-      })
+      // 使用FormData格式提交
+      const formData = new FormData();
+      formData.append('clusterId', this.hostInfo.clusterId);
+      formData.append('ip', this.hostInfo.ip);
+      formData.append('hostsFileContent', this.hostsFileContent);
+      
+      // 使用API保存内容
+      this.$axiosPost('/host/updateHostsFile', formData)
         .then(res => {
           if (res.code === 200) {
             this.$message.success('Hosts文件修改成功');
             // 更新本地数据
             this.hostInfo.hostsFile = this.hostsFileContent;
-            // 关闭对话框
-            this.editHostsVisible = false;
+            // 退出编辑模式
+            this.isEditingHosts = false;
           } else {
             this.$message.error(res.msg || 'Hosts文件修改失败');
           }
@@ -787,18 +701,9 @@ export default {
         });
     },
     
-    // 取消编辑
-    cancelHostsEdit() {
-      console.log('取消编辑按钮被点击');
-      this.editHostsVisible = false;
-      this.hostsFileContent = '';
-      console.log('对话框应该关闭，editHostsVisible =', this.editHostsVisible);
-    },
-    
-    // 测试按钮点击事件
-    testClick() {
-      console.log('测试按钮被点击');
-      alert('测试按钮被点击，对话框状态：' + (this.editHostsVisible ? '可见' : '隐藏'));
+    // 修改提交编辑方法，使用新的saveHostsFile
+    submitHostsEdit() {
+      this.saveHostsFile();
     },
     
     // 复制hosts文件内容
@@ -829,6 +734,23 @@ export default {
         document.body.removeChild(textarea);
       }
     },
+    
+    // 更新行号（当编辑器内容变化时）
+    updateLineNumbers() {
+      // 更新行号
+      this.$forceUpdate();
+      
+      // 模拟编辑模式下的高亮效果
+      const textArea = document.querySelector('.code-editor');
+      if (textArea) {
+        // 获取当前编辑内容
+        const content = textArea.value;
+        
+        // 如果有一个显示层，可以应用相同的高亮处理
+        // 这里只是提示未来可以实现的功能
+        console.log('编辑内容已更新');
+      }
+    },
   }
 }
 </script>
@@ -837,11 +759,25 @@ export default {
 <style>
 /* IDE编辑器全局样式 */
 .code-content {
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #d4d4d4;
-  white-space: pre;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  color: #d4d4d4 !important;
+  white-space: pre !important;
+}
+
+.code-content .comment {
+  color: #6a9955 !important;
+  font-style: italic !important;
+}
+
+.code-content .ip {
+  color: #4ec9b0 !important;
+  font-weight: bold !important;
+}
+
+.code-content .hostname {
+  color: #9cdcfe !important;
 }
 
 .line {
@@ -860,21 +796,8 @@ export default {
   padding-left: 4px;
 }
 
-.comment-line {
-  color: #6a9955;
-  font-style: italic;
-}
-
 .empty-line {
   height: 20px;
-}
-
-.ip-address {
-  color: #4ec9b0;
-}
-
-.hostname-entry {
-  color: #9cdcfe;
 }
 
 .inline-comment {
@@ -1036,13 +959,29 @@ export default {
 }
 
 .section-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   margin-right: 8px;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  justify-content: center;
+}
+
+.section-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: #FF9500;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #007AFF, #5AC8FA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 1px rgba(0,122,255,0.1);
 }
 
 .hosts-icon {
@@ -1056,12 +995,12 @@ export default {
 }
 
 .file-badge {
-  font-size: 12px;
-  padding: 2px 8px;
+  font-size: 11px;
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+  padding: 2px 6px;
   border-radius: 4px;
-  background-color: #f5f5f7;
-  color: #8e8e93;
-  margin-right: 8px;
+  margin-left: 8px;
 }
 
 .file-actions {
@@ -1308,20 +1247,45 @@ export default {
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
 }
 
-.gutter-line-numbers .line-number {
-  padding: 0 8px 0 0;
-  height: 20px;
-  line-height: 20px;
-}
-
 .code-container {
   flex: 1;
   overflow: auto;
   padding: 4px 0;
+  background-color: #1e1e1e;
 }
 
-.code-content {
-  min-height: 100%;
+/* 编辑模式样式 - 保持与原始风格一致 */
+.code-container.editor-mode {
+  position: relative;
+  background-color: #1e1e1e;
+  padding: 4px 0;
+}
+
+.code-editor {
+  width: 100%;
+  height: 100%;
+  min-height: 100px;
+  padding: 0 0 0 4px;
+  border: none;
+  background-color: transparent;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #d4d4d4;
+  outline: none;
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+}
+
+.code-editor::placeholder {
+  color: #6a737d;
+}
+
+.code-editor-wrapper {
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
 }
 
 /* IDE状态栏 */
@@ -1633,48 +1597,161 @@ export default {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   background: #f8f9fa;
 }
-</style>
 
-<!-- 添加Hosts文件编辑对话框 -->
-<a-modal
-  title="编辑Hosts文件"
-  :visible="editHostsVisible"
-  :confirm-loading="hostsEditLoading"
-  width="700px"
-  @ok="submitHostsEdit"
-  @cancel="cancelHostsEdit"
-  :maskClosable="false"
-  :keyboard="false"
-  :destroyOnClose="false"
-  forceRender
->
-  <a-form-model>
-    <a-form-model-item label="Hosts文件路径">
-      <span>/etc/hosts</span>
-    </a-form-model-item>
-    <a-form-model-item>
-      <a-textarea
-        v-model="hostsFileContent"
-        placeholder="请输入hosts文件内容"
-        :rows="15"
-        :style="{ fontFamily: 'monospace' }"
-        :disabled="hostsEditLoading"
-      />
-      <div class="form-help-text">
-        <a-icon type="info-circle" />
-        <span>修改hosts文件将通过SSH连接服务器并实际修改系统配置</span>
-      </div>
-    </a-form-model-item>
-    <!-- 添加测试按钮 -->
-    <a-form-model-item>
-      <a-button type="primary" @click="testClick">测试按钮</a-button>
-      <span style="margin-left: 8px;">当前对话框状态: {{ editHostsVisible ? '可见' : '隐藏' }}</span>
-    </a-form-model-item>
-  </a-form-model>
-  <template slot="footer">
-    <a-button key="back" @click="cancelHostsEdit">取消</a-button>
-    <a-button key="submit" type="primary" :loading="hostsEditLoading" @click="submitHostsEdit">
-      更新Hosts文件
-    </a-button>
-  </template>
-</a-modal>
+/* 内联编辑Hosts文件样式 */
+.hosts-section {
+  margin-top: 16px;
+  border-radius: 12px;
+  background-color: #f5f5f7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.hosts-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hosts-section .title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  display: flex;
+  align-items: center;
+}
+
+.hosts-section .title:before {
+  content: none;
+}
+
+.hosts-section .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  padding: 0 8px;
+  height: 28px;
+  line-height: 28px;
+  font-size: 12px;
+  color: #007AFF;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.action-button:hover {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.action-button .anticon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.action-button.edit-button:hover {
+  color: #007AFF;
+}
+
+.action-button.save-button {
+  color: #34C759;
+}
+
+.action-button.save-button:hover {
+  background-color: rgba(52, 199, 89, 0.1);
+}
+
+.action-button.cancel-button {
+  color: #FF3B30;
+}
+
+.action-button.cancel-button:hover {
+  background-color: rgba(255, 59, 48, 0.1);
+}
+
+.hosts-content {
+  padding: 16px;
+  background-color: #f8f8f8;
+  border-radius: 0 0 12px 12px;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.hosts-text {
+  margin: 0;
+  padding: 0;
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hosts-edit-content {
+  padding: 16px;
+  background-color: #f8f8f8;
+}
+
+.hosts-edit-textarea {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  resize: none;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.hosts-edit-textarea:hover {
+  border-color: #007AFF;
+}
+
+.hosts-edit-textarea:focus {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  outline: none;
+}
+
+/* 确保行号样式正确 */
+.gutter-line-numbers .line-number {
+  padding: 0 8px 0 0;
+  height: 20px;
+  line-height: 20px;
+}
+
+/* 确保代码内容样式正确 */
+.code-content {
+  padding: 0 0 0 4px !important;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  color: #d4d4d4 !important;
+  white-space: pre !important;
+}
+
+/* 保持代码高亮样式 */
+.code-content .comment {
+  color: #6a9955;
+}
+
+.code-content .ip {
+  color: #4ec9b0;
+}
+
+.code-content .hostname {
+  color: #9cdcfe;
+}
+
+/* 增加hosts-code-content样式 */
+.hosts-code-content {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
+  color: #d4d4d4 !important;
+}
+</style>
