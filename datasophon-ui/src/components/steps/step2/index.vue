@@ -242,6 +242,7 @@
       @cancel="cancelHostnameEdit"
       :footer="null"
       :maskClosable="false"
+      :closable="false"
       width="420px"
       class="apple-style-modal hostname-edit-modal"
       :destroyOnClose="true"
