@@ -106,6 +106,24 @@ public class HostInfo implements Serializable {
     private OsInfoStatusEnum sshConnectStatus;
 
     /**
+     * SSH连接错误信息
+     * 当SSH连接失败时，存储详细的错误原因
+     */
+    private String sshErrorMsg;
+
+    /**
+     * 操作系统信息收集错误信息
+     * 当操作系统信息收集失败时，存储详细的错误原因
+     */
+    private String osErrorMsg;
+
+    /**
+     * 通用错误信息
+     * 用于存储其他类型的错误或者简洁的错误摘要
+     */
+    private String errorMessage;
+
+    /**
      * 硬件信息收集状态
      * 可能的值: LOADING, SUCCESS, ERROR
      */

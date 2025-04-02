@@ -215,7 +215,6 @@
 </template>
 
 <script>
-import LogFilter from './LogFilter.vue';
 import QueueStatusIndicator from '@/components/steps/step2/QueueStatusIndicator.vue'
 // 导入操作系统浮窗组件
 import OsFloatingCard from '@/components/steps/step2/OsFloatingCard.vue';
@@ -230,7 +229,6 @@ export default {
     depType:String,
   },
   components: {
-    LogFilter,
     QueueStatusIndicator,
     OsFloatingCard,
     /* eslint-disable-next-line vue/no-unused-components */
@@ -302,11 +300,27 @@ export default {
                   getPopupContainer: () => document.body
                 }
               }, [
-                // 使用主机名浮窗组件
+                // 悬浮内容 - SSH错误时显示错误信息
                 h('span', {
                   slot: 'title',
                   class: 'hostname-detail-tooltip'
                 }, [
+                  record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                  // SSH错误时显示的内容
+                  h('div', { class: 'ssh-error-card' }, [
+                    h('div', { class: 'ssh-error-header' }, [
+                      h('div', { class: 'ssh-error-icon' }, [
+                        h('a-icon', { props: { type: 'warning', theme: 'filled' }, style: { color: '#FF3B30', fontSize: '20px' } })
+                      ]),
+                      h('div', { class: 'ssh-error-title' }, ['SSH连接失败'])
+                    ]),
+                    h('div', { class: 'ssh-error-content' }, [
+                      h('div', { class: 'ssh-error-message' }, [
+                        record.sshErrorMsg || record.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
+                      ])
+                    ])
+                  ]) :
+                  // 正常情况下显示常规主机信息卡片
                   h(HostnameFloatingCard, {
                     props: {
                       hostInfo: record
@@ -314,11 +328,40 @@ export default {
                   })
                 ]),
                 
-                // 显示的主机名文本
-                h('span', {
-                  class: 'hostname-text', 
-                  title: record.fqdn || record.hostname || '未知主机名' 
-                }, [record.hostname || '未知主机名']),
+                // 显示的主机名文本 - 突出显示SSH错误状态
+                h('div', { 
+                  class: 'hostname-display', 
+                  style: record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                    { display: 'flex', alignItems: 'center' } : {}
+                }, [
+                  // 如果有SSH错误，显示错误图标
+                  record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                  h('a-icon', { 
+                    props: { type: 'warning' }, 
+                    style: { color: '#FF3B30', marginRight: '6px' } 
+                  }) : null,
+                  
+                  // 主机名或未知主机
+                  record.hasSSHError || record.sshConnectStatus === 'error' ?
+                  h('span', { 
+                    class: 'hostname-text error', 
+                    style: { color: '#FF3B30' },
+                    title: '获取主机名失败 (SSH连接错误)' 
+                  }, [record.hostname || '未获取到主机名']) :
+                  h('span', { 
+                    class: 'hostname-text', 
+                    title: record.fqdn || record.hostname || '主机名加载中' 
+                  }, [
+                    record.hostname || h('div', { class: 'hostname-loading-container' }, [
+                      h('div', { class: 'hostname-loading-dots' }, [
+                        h('span', { class: 'hostname-loading-dot' }),
+                        h('span', { class: 'hostname-loading-dot' }),
+                        h('span', { class: 'hostname-loading-dot' })
+                      ]),
+                      h('span', { class: 'hostname-loading-text' }, ['获取主机名'])
+                    ])
+                  ])
+                ]),
               ]),
               
               // 编辑图标
@@ -361,14 +404,36 @@ export default {
           customRender: (text, row) => {
             const h = this.$createElement;
 
-            // 如果SSH连接失败或未初始化或正在加载，则显示加载中状态
-            if (row.sshConnectStatus === null || 
-                row.osInfo === null || row.osInfoStatus === null ||
-                this.checkStatus(row.osStatus, 'loading') ||
-                this.checkStatus(row.osStatus, 'pending')) {
-              // 如果SSH连接失败，则显示错误状态而不是加载状态
-              if (this.checkStatus(row.sshConnectStatus, 'error') || row.hasSSHError === true) {
-                return h('div', {
+            // 检查是否为SSH错误
+            const hasSSHError = this.checkStatus(row.sshConnectStatus, 'error') || 
+                                row.hasSSHError === true;
+            // 检查是否为OS错误
+            const hasOSError = this.checkStatus(row.osInfoStatus, 'error') || 
+                               this.checkStatus(row.osStatus, 'error');
+            // 检查是否正在加载
+            const isLoading = row.sshConnectStatus === null || 
+                             row.osInfo === null || row.osInfoStatus === null ||
+                             this.checkStatus(row.osStatus, 'loading') || 
+                             this.checkStatus(row.osStatus, 'pending');
+
+            // SSH错误 - 显示错误状态和错误信息
+            if (hasSSHError) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayStyle: { maxWidth: '350px' }
+                }
+              }, [
+                h('span', { slot: 'title' }, [
+                  h('div', { class: 'ssh-error-details' }, [
+                    h('div', { class: 'ssh-error-title' }, ['SSH连接失败']),
+                    h('div', { class: 'ssh-error-message' }, [
+                      row.sshErrorMsg || row.errorMessage || '无法连接SSH，请检查网络连接和SSH配置'
+                    ])
+                  ])
+                ]),
+                h('div', {
                   style: {
                     display: 'flex',
                     alignItems: 'center',
@@ -379,10 +444,46 @@ export default {
                     props: { type: 'warning' },
                     style: { marginRight: '6px' }
                   }),
-                  '无法连接SSH'
-                ]);
-              }
+                  '获取失败'
+                ])
+              ]);
+            }
 
+            // 操作系统错误 - 显示OS获取失败的信息
+            if (hasOSError) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayStyle: { maxWidth: '350px' }
+                }
+              }, [
+                h('span', { slot: 'title' }, [
+                  h('div', { class: 'ssh-error-details' }, [
+                    h('div', { class: 'ssh-error-title' }, ['操作系统信息获取失败']),
+                    h('div', { class: 'ssh-error-message' }, [
+                      row.osErrorMsg || '无法获取操作系统信息，请检查系统配置'
+                    ])
+                  ])
+                ]),
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#FF8800' // 使用橙色区分SSH错误和OS错误
+                  }
+                }, [
+                  h('a-icon', {
+                    props: { type: 'warning' },
+                    style: { marginRight: '6px' }
+                  }),
+                  '获取失败'
+                ])
+              ]);
+            }
+
+            // 加载状态 - 显示加载中动画
+            if (isLoading) {
               // 苹果风格的骨架屏加载动画
               return h('a-tooltip', {
                 props: {
@@ -420,50 +521,17 @@ export default {
                 ]),
 
                 // 显示的加载内容
-                h('div', {
-                  class: 'os-info-loading',
-                  style: {
-                    position: 'relative',
-                    height: '24px',
-                    width: '100%',
-                    borderRadius: '4px',
-                    backgroundColor: 'rgba(240, 240, 240, 0.8)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }
-                }, [
-                  // 添加加载中文字
-                  h('span', {
-                    style: {
-                      fontSize: '12px',
-                      color: '#8E8E93',
-                      fontWeight: '500',
-                      position: 'relative',
-                      zIndex: 2,
-                      whiteSpace: 'nowrap'  // 防止文字换行
-                    }
-                  }, ['正在检索操作系统...'])
+                h('div', { class: 'os-loading-container' }, [
+                  // 背景滑动效果
+                  h('div', { class: 'os-loading-shine' }),
+                  // 内容区域
+                  h('div', { class: 'os-loading-content' }, [
+                    // 旋转的加载图标
+                    h('div', { class: 'os-loading-spinner' }),
+                    // 加载中文字
+                    h('span', { class: 'os-loading-text' }, ['获取系统信息'])
+                  ])
                 ])
-              ]);
-            }
-
-            // 添加处理操作系统信息显示错误的情况
-            if (this.checkStatus(row.osInfoStatus, 'error') ||
-                this.checkStatus(row.osStatus, 'error')) {
-              return h('div', {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#FF3B30'
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'warning' },
-                  style: { marginRight: '6px' }
-                }),
-                '操作系统信息获取失败'
               ]);
             }
 
@@ -890,7 +958,7 @@ export default {
       currentLogIp: null,
       currentLogItemId: null,
       currentLogItemName: null,
-      checkItem: null,
+      // 删除重复的checkItem定义，因为已在第256行定义过
       forceUseTypedApi: false,
       hostnameEditVisible: false,
       currentEditHost: null,
@@ -5840,4 +5908,249 @@ export default {
   justify-content: flex-end;
   gap: 16px;
 }
+
+.ssh-error-card {
+  padding: 16px;
+  background-color: rgba(255, 59, 48, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.ssh-error-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ssh-error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 59, 48, 0.2);
+  margin-right: 8px;
+}
+
+.ssh-error-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FF3B30;
+}
+
+.ssh-error-content {
+  font-size: 12px;
+  color: #1D1D1F;
+}
+
+.ssh-error-message {
+  font-size: 12px;
+  color: #FF3B30;
+}
+
+.hostname-text.error {
+  color: #FF3B30;
+}
+
+.ssh-error-card {
+  padding: 16px;
+  background-color: rgba(255, 59, 48, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.ssh-error-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ssh-error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(255, 59, 48, 0.2);
+  margin-right: 8px;
+}
+
+.ssh-error-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FF3B30;
+}
+
+.ssh-error-content {
+  font-size: 12px;
+  color: #1D1D1F;
+}
+
+.ssh-error-message {
+  font-size: 12px;
+  color: #FF3B30;
+}
+
+.ssh-error-details {
+  padding: 12px;
+  background: #FFF5F5;
+  border-radius: 8px;
+  border: 1px solid #FFCCCC;
+}
+
+.hostname-loading-container {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #007AFF;
+  font-weight: 500;
+  height: 24px;
+}
+
+.hostname-loading-dots {
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.hostname-loading-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #007AFF;
+  margin-right: 2px;
+  animation: hostname-dot-pulse 1.5s infinite ease-in-out;
+}
+
+.hostname-loading-dot:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.hostname-loading-dot:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.hostname-loading-dot:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+@keyframes hostname-dot-pulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.hostname-loading-text {
+  font-weight: 500;
+  color: #007AFF;
+}
+
+/* 苹果风格操作系统加载动画 */
+.os-loading-container {
+  position: relative;
+  height: 24px;
+  width: 100%;
+  border-radius: 6px;
+  background-color: rgba(240, 246, 252, 0.7);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.os-loading-shine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg, 
+    rgba(255,255,255,0), 
+    rgba(230, 242, 255, 0.5), 
+    rgba(255,255,255,0)
+  );
+  animation: os-shimmer 2s infinite;
+  z-index: 1;
+}
+
+@keyframes os-shimmer {
+  0% {
+    transform: translateX(-150%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.os-loading-spinner {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid rgba(0, 122, 255, 0.2);
+  border-left-color: #007AFF;
+  border-radius: 50%;
+  animation: os-spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes os-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.os-loading-content {
+  display: flex;
+  align-items: center;
+  z-index: 2;
+  position: relative;
+}
+
+.os-loading-text {
+  font-size: 13px;
+  color: #007AFF;
+  font-weight: 500;
+  white-space: nowrap;
+}
 </style>
+
+<!-- 添加Hosts文件编辑对话框 -->
+<a-modal
+  title="编辑Hosts文件"
+  :visible="editHostsVisible"
+  :confirm-loading="hostsEditLoading"
+  width="700px"
+  @ok="submitHostsEdit"
+  @cancel="cancelHostsEdit"
+>
+  <a-form-model>
+    <a-form-model-item label="Hosts文件路径">
+      <span>/etc/hosts</span>
+    </a-form-model-item>
+    <a-form-model-item>
+      <a-textarea
+        v-model="hostsFileContent"
+        placeholder="请输入hosts文件内容"
+        :rows="15"
+        :style="{ fontFamily: 'monospace' }"
+      />
+      <div class="form-help-text">
+        <a-icon type="info-circle" />
+        <span>修改hosts文件将通过SSH连接服务器并实际修改系统配置</span>
+      </div>
+    </a-form-model-item>
+  </a-form-model>
+</a-modal>

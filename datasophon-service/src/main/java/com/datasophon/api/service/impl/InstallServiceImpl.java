@@ -156,46 +156,9 @@ public class InstallServiceImpl implements InstallService {
             hostList.sort(Comparator.comparing(HostInfo::getIp));
 
             // 计算每个主机的状态
-            hostList.forEach(HostInfo::calculateStatus);
-
-            // 确保hostsFile信息和操作系统信息可用于前端
             hostList.forEach(hostInfo -> {
-                // 确保hostsFile信息可用于前端
-                if (hostInfo.getHostsFile() == null) {
-                    hostInfo.setHostsFile(""); // 避免前端收到null
-                }
-
-                // 确保操作系统信息可用于前端
-                if (hostInfo.getOsInfo() != null) {
-                    if (hostInfo.getOsInfo().getDistribution() == null) {
-                        hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
-                    }
-
-                    // 确保网络信息不为null
-                    if (hostInfo.getOsInfo().getNetworkInfo() == null) {
-                        hostInfo.getOsInfo().setNetworkInfo(new NetworkInfo());
-                    }
-
-                    // 确保GPU信息不为null
-                    if (hostInfo.getOsInfo().getGpuInfo() == null) {
-                        GpuInfo gpuInfo = new GpuInfo();
-                        gpuInfo.setInfo("未检测到GPU设备");
-                        gpuInfo.setTotalMemory(0.0);
-                        gpuInfo.setUsedMemory(0.0);
-                        hostInfo.getOsInfo().setGpuInfo(gpuInfo);
-                    }
-                }
-
-                // 确保SSH连接状态信息可用于前端
-                if (hostInfo.getSshConnectStatus() == null) {
-                    // 如果osInfoStatus是error，则认为SSH连接失败
-                    if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
-                        hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                    } else {
-                        // 默认设为LOADING，让前端显示加载中
-                        hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
-                    }
-                }
+                processHostInfo(hostInfo);
+                hostInfo.calculateStatus();
             });
 
             // 分页处理
@@ -230,6 +193,68 @@ public class InstallServiceImpl implements InstallService {
     }
 
     /**
+     * 处理主机信息，确保各项信息可用于前端展示
+     * 
+     * @param hostInfo 主机信息对象
+     */
+    private void processHostInfo(HostInfo hostInfo) {
+        // 确保hostsFile信息可用于前端
+        if (hostInfo.getHostsFile() == null) {
+            hostInfo.setHostsFile(""); // 避免前端收到null
+        }
+
+        // 确保错误信息字段不为null
+        if (hostInfo.getSshErrorMsg() == null) {
+            hostInfo.setSshErrorMsg("");
+        }
+
+        if (hostInfo.getErrorMessage() == null) {
+            hostInfo.setErrorMessage("");
+        }
+
+        if (hostInfo.getOsErrorMsg() == null) {
+            hostInfo.setOsErrorMsg("");
+        }
+
+        // 确保操作系统信息可用于前端
+        if (hostInfo.getOsInfo() != null) {
+            if (hostInfo.getOsInfo().getDistribution() == null) {
+                hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+            }
+
+            // 确保网络信息不为null
+            if (hostInfo.getOsInfo().getNetworkInfo() == null) {
+                hostInfo.getOsInfo().setNetworkInfo(new NetworkInfo());
+            }
+
+            // 确保GPU信息不为null
+            if (hostInfo.getOsInfo().getGpuInfo() == null) {
+                GpuInfo gpuInfo = new GpuInfo();
+                gpuInfo.setInfo("未检测到GPU设备");
+                gpuInfo.setTotalMemory(0.0);
+                gpuInfo.setUsedMemory(0.0);
+                hostInfo.getOsInfo().setGpuInfo(gpuInfo);
+            }
+        }
+
+        // 确保SSH连接状态信息可用于前端
+        if (hostInfo.getSshConnectStatus() == null) {
+            // 如果osInfoStatus是error，则认为SSH连接失败
+            if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+
+                // 设置SSH错误信息（如果尚未设置）
+                if (StringUtils.isBlank(hostInfo.getSshErrorMsg())) {
+                    hostInfo.setSshErrorMsg("SSH连接失败，无法获取主机信息");
+                }
+            } else {
+                // 默认设为LOADING，让前端显示加载中
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
+            }
+        }
+    }
+
+    /**
      * 保存主机信息到缓存
      *
      * @param clusterId             集群ID
@@ -259,29 +284,107 @@ public class InstallServiceImpl implements InstallService {
 
         // 如果需要，触发所有主机的操作系统信息收集
         if (startOsInfoCollection) {
-            logger.info("开始统一触发所有主机的操作系统信息收集");
-            // 排序主机列表，保证按IP地址顺序处理
-            List<HostInfo> sortedHosts = new ArrayList<>(hostMap.values());
-            sortedHosts.sort(Comparator.comparing(HostInfo::getIp));
-
-            // 逐个触发主机信息收集，确保每次只处理一台主机
-            for (HostInfo hostInfo : sortedHosts) {
-                // 设置初始状态
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-                logger.info("触发主机[{}]的信息收集", hostInfo.getIp());
-
+            logger.info("开始异步触发所有主机的操作系统信息收集");
+            // 创建一个新线程进行主机信息收集，保证主接口立即返回
+            Thread thread = new Thread(() -> {
                 try {
-                    // 异步获取主机信息
-                    osInfoService.getHostOsInfoAsync(hostInfo);
-                } catch (Exception e) {
-                    logger.error("触发主机[{}]信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
-                }
-            }
+                    // 排序主机列表，保证按IP地址顺序处理
+                    List<HostInfo> sortedHosts = new ArrayList<>(hostMap.values());
+                    sortedHosts.sort(Comparator.comparing(HostInfo::getIp));
 
-            logger.info("所有主机信息收集任务已触发，将按照队列顺序逐一执行");
+                    for (HostInfo hostInfo : sortedHosts) {
+                        // 设置初始状态
+                        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+
+                        try {
+                            // 在线程内进行异步验证SSH连接并收集信息
+                            osInfoService.getHostOsInfoAsync(hostInfo);
+
+                            logger.info("已触发主机[{}]的信息异步收集", hostInfo.getIp());
+                        } catch (Exception e) {
+                            logger.error("触发主机[{}]信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
+                            // 设置错误状态和详细信息
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setSshErrorMsg("SSH连接异常: " + e.getMessage());
+                            hostInfo.setErrorMessage("连接主机时发生异常");
+                            hostInfo.setOsErrorMsg("由于连接异常，无法获取操作系统信息");
+                        }
+                    }
+
+                    logger.info("所有主机信息收集任务已异步触发");
+                } catch (Exception e) {
+                    logger.error("主机信息收集线程异常: {}", e.getMessage(), e);
+                }
+            });
+            thread.setName("Host-OS-Info-Collection-Thread");
+            thread.setDaemon(true);
+            thread.start();
         }
 
         return hostMap;
+    }
+
+    /**
+     * 验证SSH连接
+     * 
+     * @param hostInfo 主机信息
+     * @return 连接是否成功
+     */
+    private boolean validateSshConnection(HostInfo hostInfo) {
+        ClientSession session = null;
+        try {
+            session = getOrCreateSession(hostInfo);
+            if (session != null && session.isOpen()) {
+                // 执行一个简单的命令验证连接
+                String result = MinaUtils.execCmdWithResult(session, "echo connection_test");
+                boolean success = result != null && result.contains("connection_test");
+
+                // 连接成功
+                if (success) {
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                    return true;
+                } else {
+                    // 命令执行失败
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
+                    return false;
+                }
+            } else {
+                // 连接创建失败
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setSshErrorMsg("无法创建SSH连接，请检查IP地址、端口和防火墙设置");
+                return false;
+            }
+        } catch (Exception e) {
+            // 处理不同类型的异常，设置更友好的错误信息
+            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+
+            String errorMsg = e.getMessage();
+            if (errorMsg == null) {
+                errorMsg = e.getClass().getSimpleName();
+            }
+
+            // 根据异常类型和错误消息设置友好的错误提示
+            if (errorMsg.contains("Auth fail") || errorMsg.contains("authentication failed")) {
+                hostInfo.setSshErrorMsg("SSH认证失败：用户名或密码错误");
+            } else if (errorMsg.contains("Connection refused")) {
+                hostInfo.setSshErrorMsg("SSH连接被拒绝：SSH服务未启动或端口未开放");
+            } else if (errorMsg.contains("connect timed out")) {
+                hostInfo.setSshErrorMsg("SSH连接超时：网络不通或防火墙阻止");
+            } else if (errorMsg.contains("UnknownHostException")) {
+                hostInfo.setSshErrorMsg("无法解析主机名：请检查DNS配置或hosts文件");
+            } else if (errorMsg.contains("No route to host")) {
+                hostInfo.setSshErrorMsg("无法访问主机：网络不通或主机未启动");
+            } else {
+                hostInfo.setSshErrorMsg("SSH连接错误：" + errorMsg);
+            }
+
+            logger.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), errorMsg, e);
+            return false;
+        } finally {
+            MinaUtils.closeConnection(session);
+        }
     }
 
     /**
@@ -414,6 +517,11 @@ public class InstallServiceImpl implements InstallService {
         hostInfo.setSshPassword(sshPassword);
         hostInfo.setClusterId(clusterId);
         hostInfo.setCreateTime(new Date());
+
+        // 初始化错误信息字段
+        hostInfo.setSshErrorMsg("");
+        hostInfo.setErrorMessage("");
+        hostInfo.setOsErrorMsg("");
 
         // 2. 检查主机是否已受管
         ClusterHostDO hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
