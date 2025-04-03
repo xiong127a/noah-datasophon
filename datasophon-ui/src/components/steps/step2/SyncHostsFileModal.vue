@@ -2,7 +2,7 @@
   <a-modal
     :visible="visible"
     :title="$t('同步Hosts文件')"
-    :width="700"
+    :width="750"
     :maskClosable="false"
     :destroyOnClose="true"
     @cancel="handleCancel"
@@ -10,63 +10,154 @@
     class="sync-hosts-modal"
   >
     <div class="sync-hosts-container">
+      <!-- 特性描述 -->
       <div class="feature-description">
-        <a-alert type="info" show-icon>
-          <span slot="message">
-            <div class="description-title">{{ $t('功能说明') }}</div>
-            <div class="description-content">
-              {{ $t('该功能会自动生成包含所有主机IP和主机名的hosts文件，并将其同步到所有集群主机。同步后，主机之间可以通过主机名直接通信，无需记忆IP地址。') }}
-            </div>
-          </span>
-        </a-alert>
+        <div class="description-icon">
+          <a-icon type="info-circle" />
+        </div>
+        <div class="description-content">
+          <div class="description-title">{{ $t('功能说明') }}</div>
+          <div class="description-text">
+            {{ $t('该功能会自动生成包含所有主机IP和主机名的hosts文件，并将其同步到所有集群主机。同步后，主机之间可以通过主机名直接通信，无需记忆IP地址。') }}
+          </div>
+        </div>
       </div>
       
-      <div class="hosts-preview-container">
-        <a-spin :spinning="loading">
-          <div class="hosts-preview-header">
-            <div class="hosts-preview-title">{{ $t('Hosts文件预览') }}</div>
-            <div class="hosts-preview-info" v-if="previewData">
-              <a-tag color="blue">{{ previewData.hostCount }} {{ $t('台主机') }}</a-tag>
-            </div>
-          </div>
-          
-          <div class="hosts-content-wrapper">
-            <a-input.TextArea
-              v-model="hostsContent"
-              :rows="15"
-              readonly
-              :placeholder="$t('Hosts文件内容')"
-              class="hosts-content"
-            />
-          </div>
-          
-          <div class="sync-result" v-if="syncResult">
-            <div class="sync-result-header">
-              <div class="sync-result-title">{{ $t('同步结果') }}</div>
-              <div class="sync-result-info">
-                <a-tag color="green" v-if="syncResult.successCount">{{ syncResult.successCount }} {{ $t('台成功') }}</a-tag>
-                <a-tag color="red" v-if="syncResult.failedCount">{{ syncResult.failedCount }} {{ $t('台失败') }}</a-tag>
+      <!-- 卡片式布局 -->
+      <div class="hosts-card-container">
+        <!-- 预览卡片 -->
+        <div class="hosts-preview-card">
+          <a-spin :spinning="loading">
+            <div class="card-title">{{ $t('Hosts文件预览') }}</div>
+            
+            <div class="preview-header">
+              <div class="preview-subtitle">{{ $t('主机IP与主机名映射') }}</div>
+              <div class="preview-info" v-if="previewData">
+                <a-tag color="blue">{{ previewData.hostCount }} {{ $t('台主机') }}</a-tag>
               </div>
             </div>
             
-            <a-collapse v-if="syncResult.failedCount > 0" class="failed-hosts-collapse">
-              <a-collapse-panel :header="$t('查看失败主机')" key="1">
-                <a-list
-                  size="small"
-                  :dataSource="Object.entries(syncResult.failedHosts)"
-                  :pagination="false"
-                >
-                  <a-list-item slot="renderItem" slot-scope="item">
-                    <span class="failed-host-ip">{{ item[0] }}</span>
-                    <span class="failed-host-reason">{{ item[1] }}</span>
-                  </a-list-item>
-                </a-list>
-              </a-collapse-panel>
-            </a-collapse>
+            <!-- 采用IDE风格展示hosts文件 -->
+            <div class="hosts-file-container">
+              <div class="modern-ide">
+                <!-- IDE工具栏 -->
+                <div class="ide-toolbar">
+                  <div class="ide-breadcrumb">
+                    <div class="breadcrumb-item root">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                      </svg>
+                      <span>/</span>
+                    </div>
+                    <div class="breadcrumb-item">
+                      <span>etc</span>
+                    </div>
+                    <div class="breadcrumb-separator">/</div>
+                    <div class="breadcrumb-item active">
+                      <span>hosts</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 代码编辑区域 -->
+                <div class="ide-editor">
+                  <!-- 侧边栏 - 行号 -->
+                  <div class="ide-sidebar">
+                    <div class="gutter-container">
+                      <div class="gutter-line-numbers">
+                        <div 
+                          v-for="n in getLineCount()" 
+                          :key="n" 
+                          class="line-number"
+                        >
+                          {{ n }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 主代码区域 -->
+                  <div class="code-container" ref="codeContainer">
+                    <!-- 使用结构化数据渲染 -->
+                    <div v-if="hasStructuredData()" class="code-content">
+                      <div v-for="(entry, index) in previewData.hostsEntries" :key="index" class="hosts-line">
+                        <!-- 注释行 -->
+                        <template v-if="entry.type === 'COMMENT'">
+                          <span class="comment">{{ entry.comment }}</span>
+                        </template>
+                        <!-- IP映射行 -->
+                        <template v-else-if="entry.type === 'MAPPING'">
+                          <span class="ip">{{ entry.ip }}</span>
+                          <span class="separator">    </span>
+                          <span v-for="(hostname, i) in entry.hostnames" :key="i" class="hostname">
+                            {{ hostname }}{{ i < entry.hostnames.length - 1 ? ' ' : '' }}
+                          </span>
+                        </template>
+                      </div>
+                    </div>
+                    <!-- 向后兼容，使用旧的字符串内容渲染 -->
+                    <div v-else-if="hostsContent" v-html="formatHostsFile(hostsContent)" class="code-content"></div>
+                    <!-- 空内容处理 -->
+                    <div v-else class="empty-content">{{ $t('暂无hosts文件内容') }}</div>
+                  </div>
+                </div>
+                
+                <!-- 底部状态栏 -->
+                <div class="ide-statusbar">
+                  <div class="statusbar-left">
+                    <div class="status-item">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span>{{ $t('只读') }}</span>
+                    </div>
+                  </div>
+                  <div class="statusbar-right">
+                    <div class="status-item">
+                      <a-icon type="info-circle" />
+                      <span>{{ $t('同步后将会备份原hosts文件') }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a-spin>
+        </div>
+      </div>
+      
+      <!-- 同步结果 -->
+      <div class="sync-result-container" v-if="syncResult">
+        <div class="card-title">{{ $t('同步结果') }}</div>
+        
+        <div class="sync-result-summary">
+          <div class="result-stat success">
+            <a-icon type="check-circle" theme="filled" />
+            <div class="stat-value">{{ syncResult.successCount }}</div>
+            <div class="stat-label">{{ $t('成功') }}</div>
           </div>
-        </a-spin>
+          
+          <div class="result-stat failed" v-if="syncResult.failedCount > 0">
+            <a-icon type="close-circle" theme="filled" />
+            <div class="stat-value">{{ syncResult.failedCount }}</div>
+            <div class="stat-label">{{ $t('失败') }}</div>
+          </div>
+        </div>
+        
+        <a-collapse v-if="syncResult.failedCount > 0" class="failed-hosts-collapse">
+          <a-collapse-panel :header="$t('查看失败详情')" key="1">
+            <div class="failed-hosts-list">
+              <div class="failed-host-item" v-for="(reason, ip) in syncResult.failedHosts" :key="ip">
+                <div class="failed-host-ip">{{ ip }}</div>
+                <div class="failed-host-reason">{{ reason }}</div>
+              </div>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
       </div>
 
+      <!-- 操作按钮 -->
       <div class="hosts-actions">
         <a-button @click="handleCancel">{{ $t('取消') }}</a-button>
         <a-button
@@ -74,6 +165,7 @@
           :loading="syncInProgress"
           :disabled="!previewData || syncInProgress"
           @click="handleSync"
+          class="sync-button"
         >{{ $t('同步到所有主机') }}</a-button>
       </div>
     </div>
@@ -112,6 +204,49 @@ export default {
     }
   },
   methods: {
+    // 格式化hosts文件内容，添加语法高亮
+    formatHostsFile(content) {
+      if (!content) return '';
+      
+      // 分行处理
+      const lines = content.split('\n');
+      const formattedLines = lines.map(line => {
+        // 处理注释行
+        if (line.trim().startsWith('#')) {
+          return `<span class="comment">${this.escapeHtml(line)}</span>`;
+        }
+        
+        // 处理IP和主机名
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && this.isIPAddress(parts[0])) {
+          const ip = `<span class="ip">${this.escapeHtml(parts[0])}</span>`;
+          const hostnames = parts.slice(1).map(h => `<span class="hostname">${this.escapeHtml(h)}</span>`).join(' ');
+          return `${ip}<span class="separator">    </span>${hostnames}`;
+        }
+        
+        // 其他行保持原样
+        return this.escapeHtml(line);
+      });
+      
+      // 为整个内容添加额外的类，以提高CSS选择器权重
+      return `<div class="hosts-code-content">${formattedLines.join('\n')}</div>`;
+    },
+    
+    // 辅助方法：判断是否为IP地址
+    isIPAddress(str) {
+      return /^(\d{1,3}\.){3}\d{1,3}$/.test(str);
+    },
+    
+    // 转义HTML字符
+    escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    },
+    
     // 生成hosts文件预览
     async generatePreview() {
       try {
@@ -163,6 +298,19 @@ export default {
     // 取消
     handleCancel() {
       this.$emit('close')
+    },
+
+    // 获取行数
+    getLineCount() {
+      if (this.previewData && this.previewData.hostsEntries) {
+        return this.previewData.hostsEntries.length;
+      }
+      return 1;
+    },
+
+    // 判断是否有结构化数据
+    hasStructuredData() {
+      return this.previewData && this.previewData.hostsEntries;
     }
   }
 }
@@ -172,154 +320,489 @@ export default {
 .sync-hosts-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .feature-description {
-  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  background-color: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.description-icon {
+  color: #0071e3;
+  font-size: 22px;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.description-content {
+  flex: 1;
 }
 
 .description-title {
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: #1d1d1f;
 }
 
-.description-content {
-  color: #666;
+.description-text {
+  color: #6e6e73;
   line-height: 1.5;
+  font-size: 14px;
 }
 
-.hosts-preview-container {
-  border: 1px solid #f0f0f0;
+.hosts-card-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hosts-preview-card {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1d1d1f;
+  position: relative;
+}
+
+.card-title:after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background-color: #0071e3;
+}
+
+.preview-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-subtitle {
+  font-weight: 500;
+  font-size: 15px;
+  color: #1d1d1f;
+}
+
+.preview-info {
+  font-size: 13px;
+}
+
+/* IDE 风格代码编辑器 */
+.hosts-file-container {
   border-radius: 8px;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-ide {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.ide-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #252526;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  height: 30px;
+}
+
+.ide-breadcrumb {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  color: #8e8e93;
+}
+
+.breadcrumb-item.root {
+  padding-right: 4px;
+}
+
+.breadcrumb-item.active {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.breadcrumb-separator {
+  margin: 0 4px;
+  color: #8e8e93;
+}
+
+.ide-editor {
+  display: flex;
+  background-color: #1e1e1e;
+  min-height: 300px;
+  max-height: 350px;
+  overflow: auto;
+}
+
+.ide-sidebar {
+  background-color: #252526;
+  padding: 4px 0;
+  width: 50px;
+  flex-shrink: 0;
   overflow: hidden;
 }
 
-.hosts-preview-header {
+.gutter-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: #f5f5f7;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.hosts-preview-title {
-  font-weight: 500;
-  font-size: 15px;
-  color: #1d1d1f;
-}
-
-.hosts-content-wrapper {
-  padding: 16px;
-  background-color: #fafafa;
-}
-
-.hosts-content {
   width: 100%;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  resize: none;
-  background-color: #fff;
-  border-radius: 6px;
+  height: 100%;
 }
 
-.sync-result {
-  padding: 0 16px 16px;
+.gutter-line-numbers {
+  width: 100%;
+  text-align: right;
+  padding-right: 10px;
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 20px;
+  user-select: none;
 }
 
-.sync-result-header {
+.line-number {
+  color: #858585;
+}
+
+.code-container {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre;
+}
+
+.code-content {
+  padding: 0 12px;
+  min-height: 100%;
+}
+
+.hosts-code-content {
+  color: #d4d4d4;
+}
+
+.hosts-line {
+  line-height: 20px;
+  white-space: pre;
+}
+
+.separator {
+  display: inline-block;
+  min-width: 24px;
+}
+
+.comment {
+  color: #6A9955;
+}
+
+.ip {
+  color: #4ec9b0;
+  font-weight: bold;
+}
+
+.hostname {
+  color: #9cdcfe;
+}
+
+.empty-content {
+  padding: 12px;
+  color: #858585;
+  font-style: italic;
+}
+
+.ide-statusbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  padding: 4px 12px;
+  background-color: #007acc;
+  color: #ffffff;
+  font-size: 12px;
+  height: 24px;
 }
 
-.sync-result-title {
-  font-weight: 500;
-  font-size: 15px;
+.statusbar-left, .statusbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.status-item svg, .status-item .anticon {
+  margin-right: 4px;
+}
+
+.sync-result-container {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.sync-result-summary {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 24px;
+  border-radius: 12px;
+  flex: 1;
+}
+
+.result-stat.success {
+  background-color: rgba(52, 199, 89, 0.1);
+}
+
+.result-stat.success .anticon {
+  color: #34c759;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.result-stat.failed {
+  background-color: rgba(255, 59, 48, 0.1);
+}
+
+.result-stat.failed .anticon {
+  color: #ff3b30;
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
   color: #1d1d1f;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6e6e73;
 }
 
 .failed-hosts-collapse {
-  margin-top: 8px;
+  border: none;
+  background-color: transparent;
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-header {
+  padding: 12px 16px !important;
+  background-color: #f5f5f7;
+  border-radius: 8px !important;
+  font-weight: 500;
+  color: #1d1d1f !important;
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-content {
+  border-top: none;
+}
+
+.failed-hosts-list {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.failed-host-item {
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #f5f5f7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .failed-host-ip {
   font-weight: 500;
   color: #1d1d1f;
-  margin-right: 16px;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 14px;
 }
 
 .failed-host-reason {
-  color: #ff4d4f;
+  color: #ff3b30;
+  font-size: 13px;
 }
 
 .hosts-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
+}
+
+.sync-button {
+  background-color: #0071e3;
+  border-color: #0071e3;
+  border-radius: 8px;
+  padding: 0 20px;
+  height: 38px;
+  font-weight: 500;
+}
+
+.sync-button:hover,
+.sync-button:focus {
+  background-color: #0077ED;
+  border-color: #0077ED;
 }
 </style>
 
 <style>
 /* 全局样式，使用苹果风格 */
 .sync-hosts-modal .ant-modal-content {
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 }
 
 .sync-hosts-modal .ant-modal-header {
-  background-color: #f5f5f7;
+  background-color: #ffffff;
   border-bottom: none;
-  padding: 16px 24px;
+  padding: 24px 24px 0;
 }
 
 .sync-hosts-modal .ant-modal-title {
-  font-weight: 500;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: 20px;
   color: #1d1d1f;
+  text-align: center;
 }
 
 .sync-hosts-modal .ant-modal-body {
   padding: 24px;
-  background-color: #fff;
+  background-color: #ffffff;
 }
 
-.sync-hosts-modal .ant-btn-primary {
-  background-color: #0071e3;
+.sync-hosts-modal .ant-form-item-label label {
+  color: #1d1d1f;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.sync-hosts-modal .ant-select-selection,
+.sync-hosts-modal .ant-input,
+.sync-hosts-modal .ant-input-number {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: auto;
+  border-color: #d2d2d7;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.sync-hosts-modal .ant-select-selection:hover,
+.sync-hosts-modal .ant-input:hover,
+.sync-hosts-modal .ant-input-number:hover {
   border-color: #0071e3;
 }
 
-.sync-hosts-modal .ant-btn-primary:hover, 
-.sync-hosts-modal .ant-btn-primary:focus {
-  background-color: #0077ED;
-  border-color: #0077ED;
+.sync-hosts-modal .ant-select-focused .ant-select-selection,
+.sync-hosts-modal .ant-input:focus,
+.sync-hosts-modal .ant-input-number-focused {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
 }
 
-.sync-hosts-modal .ant-collapse {
+.sync-hosts-modal .ant-btn {
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  font-size: 14px;
+  height: 38px;
+  padding: 0 18px;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-.sync-hosts-modal .ant-collapse-header {
-  padding: 8px 16px !important;
-  color: #1d1d1f !important;
+.sync-hosts-modal .ant-select-dropdown {
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.sync-hosts-modal .ant-collapse-content {
-  border-top: 1px solid #f0f0f0;
+.sync-hosts-modal .ant-select-dropdown-menu-item {
+  padding: 10px 12px;
+  transition: all 0.2s;
 }
 
-.sync-hosts-modal .ant-collapse-content-box {
-  padding: 8px 16px !important;
+.sync-hosts-modal .ant-select-dropdown-menu-item:hover {
+  background-color: #f5f5f7;
 }
 
-.sync-hosts-modal .ant-list-item {
-  padding: 8px 0;
-  display: flex;
-  justify-content: space-between;
+.sync-hosts-modal .ant-select-dropdown-menu-item-selected {
+  color: #0071e3;
+  background-color: rgba(0, 113, 227, 0.05);
+  font-weight: 500;
+}
+
+/* 修复hosts代码编辑区域的滚动样式 */
+.sync-hosts-modal .code-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sync-hosts-modal .code-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sync-hosts-modal .code-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sync-hosts-modal .code-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sync-hosts-modal .ide-editor::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sync-hosts-modal .ide-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sync-hosts-modal .ide-editor::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sync-hosts-modal .ide-editor::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 </style> 

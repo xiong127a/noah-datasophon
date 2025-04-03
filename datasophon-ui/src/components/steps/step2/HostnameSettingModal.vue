@@ -2,7 +2,7 @@
   <a-modal
     :visible="visible"
     :title="$t('设置主机名')"
-    :width="650"
+    :width="750"
     :maskClosable="false"
     :destroyOnClose="true"
     @cancel="handleCancel"
@@ -10,108 +10,140 @@
     class="hostname-setting-modal"
   >
     <div class="hostname-setting-container">
-      <!-- 添加功能介绍 -->
+      <!-- 功能介绍 -->
       <div class="feature-description">
-        <a-alert type="info" show-icon>
-          <span slot="message">
-            <div class="description-title">{{ $t('功能说明') }}</div>
-            <div class="description-content">
-              {{ $t('该功能可以批量设置集群主机名，支持自定义前缀、中间数字位数、分隔符和后缀。系统会根据规则自动为每台主机生成唯一的主机名，便于识别和管理。支持最多5位数字编号，可满足10万台主机的命名需求。') }}
-            </div>
-          </span>
-        </a-alert>
+        <div class="description-icon">
+          <a-icon type="bulb" />
+        </div>
+        <div class="description-content">
+          <div class="description-title">{{ $t('功能说明') }}</div>
+          <div class="description-text">
+            {{ $t('该功能可以批量设置集群主机名，支持自定义前缀、数字编号样式、分隔符和后缀。系统会根据规则自动为每台主机生成唯一的主机名，便于识别和管理。支持最多5位数字编号，可满足10万台主机的命名需求。') }}
+          </div>
+        </div>
       </div>
       
-      <div class="hostname-form">
-        <a-form :form="form" layout="vertical" @change="updatePreview">
-          <a-form-item :label="$t('主机名前缀')" :colon="false">
-            <a-select
-              v-decorator="[
-                'prefix',
-                {
-                  initialValue: 'bigdata',
-                  rules: [{ required: false, message: $t('请选择或输入主机名前缀') }]
-                }
-              ]"
-              :placeholder="$t('请选择或输入主机名前缀')"
-              allow-clear
-              show-search
-              @change="updatePreview"
-            >
-              <a-select-option v-for="item in prefixOptions" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+      <div class="hostname-card-container">
+        <!-- 左侧设置卡片 -->
+        <div class="hostname-form-card">
+          <div class="card-title">{{ $t('命名规则设置') }}</div>
+          <a-form :form="form" layout="vertical" @change="updatePreview">
+            <a-form-item :label="$t('主机名前缀')" :colon="false">
+              <a-select
+                v-decorator="[
+                  'prefix',
+                  {
+                    initialValue: 'bigdata',
+                    rules: [{ required: false, message: $t('请选择或输入主机名前缀') }]
+                  }
+                ]"
+                :placeholder="$t('请选择或输入主机名前缀')"
+                allow-clear
+                show-search
+                @change="updatePreview"
+                @blur="updatePreview"
+              >
+                <a-select-option v-for="item in prefixOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item :label="$t('编号样式')" :colon="false">
-            <a-select
-              v-decorator="[
-                'zeroCount',
-                {
-                  initialValue: 3,
-                  rules: [{ required: false, message: $t('请选择编号样式') }]
-                }
-              ]"
-              :placeholder="$t('请选择编号样式')"
-              style="width: 100%"
-              @change="updatePreview"
-            >
-              <a-select-option v-for="item in numberFormatOptions" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+            <a-form-item :label="$t('编号样式')" :colon="false">
+              <a-select
+                v-decorator="[
+                  'zeroCount',
+                  {
+                    initialValue: 3,
+                    rules: [{ required: false, message: $t('请选择编号样式') }]
+                  }
+                ]"
+                :placeholder="$t('请选择编号样式')"
+                style="width: 100%"
+                @change="updatePreview"
+                @blur="updatePreview"
+              >
+                <a-select-option v-for="item in numberFormatOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item :label="$t('分隔符')" :colon="false">
-            <a-select
-              v-decorator="[
-                'separator',
-                {
-                  initialValue: '',
-                  rules: [{ required: false }]
-                }
-              ]"
-              :placeholder="$t('请选择或输入分隔符')"
-              allow-clear
-              show-search
-              @change="updatePreview"
-            >
-              <a-select-option v-for="item in separatorOptions" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+            <a-form-item :label="$t('分隔符')" :colon="false">
+              <a-select
+                v-decorator="[
+                  'separator',
+                  {
+                    initialValue: '',
+                    rules: [{ required: false }]
+                  }
+                ]"
+                :placeholder="$t('请选择或输入分隔符')"
+                allow-clear
+                show-search
+                @change="updatePreview"
+                @blur="updatePreview"
+              >
+                <a-select-option v-for="item in separatorOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item :label="$t('后缀')" :colon="false">
-            <a-input
-              v-decorator="[
-                'suffix',
-                {
-                  initialValue: '',
-                  rules: [{ required: false }]
-                }
-              ]"
-              :placeholder="$t('请输入后缀（可选）')"
-              allow-clear
-              @change="updatePreview"
-            />
-          </a-form-item>
+            <a-form-item :label="$t('后缀')" :colon="false">
+              <a-input
+                v-decorator="[
+                  'suffix',
+                  {
+                    initialValue: '',
+                    rules: [{ required: false }]
+                  }
+                ]"
+                :placeholder="$t('请输入后缀（可选）')"
+                allow-clear
+                @change="updatePreview"
+                @input="updatePreview"
+                @blur="updatePreview"
+              />
+            </a-form-item>
+          </a-form>
+        </div>
 
-          <a-form-item :label="$t('主机名预览')" :colon="false">
-            <div class="preview-container">
-              <div class="preview-examples">
-                <div class="preview-example">{{ previewExample1 }}</div>
-                <div class="preview-example">{{ previewExample2 }}</div>
-                <div class="preview-example">{{ previewExample3 }}</div>
-                <div class="preview-more">...更多</div>
+        <!-- 右侧预览卡片 -->
+        <div class="hostname-preview-card">
+          <div class="card-title">{{ $t('主机名预览') }}</div>
+          <div class="preview-content">
+            <div class="preview-header">
+              <div class="preview-subtitle">{{ $t('生成结果示例') }}</div>
+              <div class="preview-info">{{ $t('将按此格式为所有主机依次设置') }}</div>
+            </div>
+            
+            <div class="preview-examples">
+              <div class="preview-example">
+                <div class="example-number">1</div>
+                <div class="example-hostname">{{ previewExample1 }}</div>
               </div>
-              <div class="preview-description">
-                {{ $t('实际命名将按上述格式为所有主机依次设置主机名') }}
+              <div class="preview-example">
+                <div class="example-number">2</div>
+                <div class="example-hostname">{{ previewExample2 }}</div>
+              </div>
+              <div class="preview-example">
+                <div class="example-number">3</div>
+                <div class="example-hostname">{{ previewExample3 }}</div>
+              </div>
+              
+              <div class="preview-more">
+                <a-icon type="ellipsis" />
+                <span>{{ $t('更多主机将依此类推') }}</span>
               </div>
             </div>
-          </a-form-item>
-        </a-form>
+            
+            <div class="preview-tips">
+              <a-icon type="info-circle" />
+              <span>{{ $t('主机名将按照设置的规则自动递增') }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="hostname-actions">
@@ -120,11 +152,13 @@
           type="primary"
           :loading="saveLoading"
           @click="handleSave"
+          class="save-button"
         >{{ $t('保存') }}</a-button>
         <a-button
           type="primary"
           :loading="saveAndSyncLoading"
           @click="handleSaveAndSync"
+          class="save-sync-button"
         >{{ $t('保存并同步hosts') }}</a-button>
       </div>
     </div>
@@ -216,17 +250,19 @@ export default {
     // 更新预览示例
     updatePreview() {
       try {
-        // 获取当前表单值（不使用异步方法，避免表单验证）
-        const formValues = this.form.getFieldsValue();
-        const prefix = formValues.prefix || 'bigdata';
-        const zeroCount = formValues.zeroCount || 3;
-        const separator = formValues.separator || '';
-        const suffix = formValues.suffix || '';
-        
-        // 生成预览示例
-        this.previewExample1 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 1);
-        this.previewExample2 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 2);
-        this.previewExample3 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 3);
+        this.$nextTick(() => {
+          // 获取当前表单值（不使用异步方法，避免表单验证）
+          const formValues = this.form.getFieldsValue();
+          const prefix = formValues.prefix || 'bigdata';
+          const zeroCount = formValues.zeroCount || 3;
+          const separator = formValues.separator || '';
+          const suffix = formValues.suffix || '';
+          
+          // 生成预览示例
+          this.previewExample1 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 1);
+          this.previewExample2 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 2);
+          this.previewExample3 = this.generateExampleHostname(prefix, zeroCount, separator, suffix, 3);
+        });
       } catch (e) {
         console.error('Update preview error:', e);
       }
@@ -310,118 +346,239 @@ export default {
 .hostname-setting-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .feature-description {
-  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  background-color: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.description-icon {
+  color: #0071e3;
+  font-size: 22px;
+  margin-right: 12px;
+  margin-top: 2px;
 }
 
 .description-title {
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: #1d1d1f;
 }
 
-.description-content {
-  color: #666;
+.description-text {
+  color: #6e6e73;
   line-height: 1.5;
+  font-size: 14px;
 }
 
-.hostname-form {
-  padding: 0 8px;
+.hostname-card-container {
+  display: flex;
+  gap: 24px;
 }
 
-.preview-container {
-  height: auto;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  background-color: #fafafa;
-  padding: 16px;
+.hostname-form-card {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.hostname-preview-card {
+  flex: 1;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1d1d1f;
+  position: relative;
+}
+
+.card-title:after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background-color: #0071e3;
+}
+
+.preview-content {
+  height: 100%;
+  border: none;
+  background-color: #fff;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  margin-bottom: 20px;
+}
+
+.preview-subtitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 15px;
+  color: #1d1d1f;
+}
+
+.preview-info {
+  font-size: 13px;
+  color: #6e6e73;
 }
 
 .preview-examples {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  background-color: #f5f5f7;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
 .preview-example {
-  font-family: "Consolas", "Monaco", monospace;
-  font-size: 16px;
-  color: #0071e3;
-  padding: 4px 8px;
-  background-color: #f0f8ff;
-  border-radius: 4px;
-  border-left: 3px solid #0071e3;
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease;
+}
+
+.preview-example:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.example-number {
+  width: 24px;
+  height: 24px;
+  background-color: #0071e3;
+  color: white;
+  font-size: 14px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 12px;
+  font-weight: 500;
+}
+
+.example-hostname {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 15px;
+  color: #1d1d1f;
+  letter-spacing: 0.5px;
 }
 
 .preview-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
   font-size: 14px;
-  color: #999;
-  margin-top: 4px;
-  text-align: center;
-  font-style: italic;
+  color: #6e6e73;
+  gap: 8px;
 }
 
-.preview-description {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #666;
-  text-align: center;
+.preview-tips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 14px;
+  color: #6e6e73;
+  background-color: #f5f5f7;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.preview-tips .anticon {
+  color: #0071e3;
 }
 
 .hostname-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 16px;
+}
+
+.save-button,
+.save-sync-button {
+  background-color: #0071e3;
+  border-color: #0071e3;
+  border-radius: 8px;
+  padding: 0 20px;
+  height: 38px;
+  font-weight: 500;
+}
+
+.save-button:hover,
+.save-button:focus,
+.save-sync-button:hover,
+.save-sync-button:focus {
+  background-color: #0077ED;
+  border-color: #0077ED;
 }
 </style>
 
 <style>
 /* 全局样式，使用苹果风格 */
 .hostname-setting-modal .ant-modal-content {
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
 }
 
 .hostname-setting-modal .ant-modal-header {
-  background-color: #f5f5f7;
+  background-color: #ffffff;
   border-bottom: none;
-  padding: 16px 24px;
+  padding: 24px 24px 0;
 }
 
 .hostname-setting-modal .ant-modal-title {
-  font-weight: 500;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: 20px;
   color: #1d1d1f;
+  text-align: center;
 }
 
 .hostname-setting-modal .ant-modal-body {
   padding: 24px;
-  background-color: #fff;
+  background-color: #ffffff;
 }
 
 .hostname-setting-modal .ant-form-item-label label {
   color: #1d1d1f;
   font-weight: 500;
-}
-
-.hostname-setting-modal .ant-btn-primary {
-  background-color: #0071e3;
-  border-color: #0071e3;
-}
-
-.hostname-setting-modal .ant-btn-primary:hover, 
-.hostname-setting-modal .ant-btn-primary:focus {
-  background-color: #0077ED;
-  border-color: #0077ED;
+  font-size: 14px;
 }
 
 .hostname-setting-modal .ant-select-selection,
 .hostname-setting-modal .ant-input,
 .hostname-setting-modal .ant-input-number {
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: auto;
+  border-color: #d2d2d7;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
 .hostname-setting-modal .ant-select-selection:hover,
@@ -435,5 +592,33 @@ export default {
 .hostname-setting-modal .ant-input-number-focused {
   border-color: #0071e3;
   box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+}
+
+.hostname-setting-modal .ant-btn {
+  border-radius: 8px;
+  font-size: 14px;
+  height: 38px;
+  padding: 0 18px;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.hostname-setting-modal .ant-select-dropdown {
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.hostname-setting-modal .ant-select-dropdown-menu-item {
+  padding: 10px 12px;
+  transition: all 0.2s;
+}
+
+.hostname-setting-modal .ant-select-dropdown-menu-item:hover {
+  background-color: #f5f5f7;
+}
+
+.hostname-setting-modal .ant-select-dropdown-menu-item-selected {
+  color: #0071e3;
+  background-color: rgba(0, 113, 227, 0.05);
+  font-weight: 500;
 }
 </style> 
