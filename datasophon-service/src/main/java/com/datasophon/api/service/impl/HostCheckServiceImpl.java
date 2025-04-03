@@ -762,7 +762,28 @@ public class HostCheckServiceImpl implements HostCheckService {
             Thread.currentThread().interrupt();
         }
 
-        logger.info("开始执行新的批量检查，主机数量: {}", ips.size());
+        // 按照IP地址进行排序
+        ips.sort((ip1, ip2) -> {
+            // 将IP地址解析为整数数组进行比较
+            String[] parts1 = ip1.split("\\.");
+            String[] parts2 = ip2.split("\\.");
+            
+            // 比较每一段IP地址
+            for (int i = 0; i < 4; i++) {
+                int num1 = Integer.parseInt(parts1[i]);
+                int num2 = Integer.parseInt(parts2[i]);
+                if (num1 != num2) {
+                    return num1 - num2;
+                }
+            }
+            
+            return 0; // 相等的情况
+        });
+
+        logger.info("开始执行新的批量检查，主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
+                ips.size(),
+                ips.isEmpty() ? "无" : ips.get(0), 
+                ips.isEmpty() ? "无" : ips.get(ips.size() - 1));
 
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
         if (map == null) {
@@ -1831,7 +1852,28 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("没有需要检查的主机");
         }
 
-        logger.info("开始执行全局检查，未受管主机数量: {}", ipsToCheck.size());
+        // 按照IP地址进行排序
+        ipsToCheck.sort((ip1, ip2) -> {
+            // 将IP地址解析为整数数组进行比较
+            String[] parts1 = ip1.split("\\.");
+            String[] parts2 = ip2.split("\\.");
+            
+            // 比较每一段IP地址
+            for (int i = 0; i < 4; i++) {
+                int num1 = Integer.parseInt(parts1[i]);
+                int num2 = Integer.parseInt(parts2[i]);
+                if (num1 != num2) {
+                    return num1 - num2;
+                }
+            }
+            
+            return 0; // 相等的情况
+        });
+
+        logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
+                ipsToCheck.size(), 
+                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(0), 
+                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(ipsToCheck.size() - 1));
 
         // 调用批量检查方法执行检查
         return batchCheckHosts(clusterId, ipsToCheck);
