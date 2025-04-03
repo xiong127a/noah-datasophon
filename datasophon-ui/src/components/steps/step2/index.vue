@@ -83,8 +83,7 @@
     <hostname-edit-modal
       :visible="hostnameEditVisible"
       :loading="editLoading"
-      :host="currentEditHost"
-      :hostname="newHostname"
+      :host="currentEditHost || {}"
       @cancel="cancelHostnameEdit"
       @submit="submitHostnameEdit"
     />
@@ -122,6 +121,7 @@ import HostnameEditModal from './HostnameEditModal.vue';
 import HostCheckItems from './HostCheckItems.vue';
 import HostnameSettingModal from './HostnameSettingModal.vue';
 import SyncHostsFileModal from './SyncHostsFileModal.vue';
+import HostCheckService from './HostCheckService';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -1851,8 +1851,8 @@ export default {
     },
     
     // 提交主机名修改
-    submitHostnameEdit() {
-      if (!this.newHostname) {
+    submitHostnameEdit(newHostname) {
+      if (!newHostname) {
         this.$message.error('主机名不能为空');
         return;
       }
@@ -1860,25 +1860,28 @@ export default {
       this.editLoading = true;
       
       // 调用后端接口修改主机名
-      this.$http.post('/host/updateHostname', {
-        clusterId: this.currentEditHost.clusterId,
-        ip: this.currentEditHost.ip,
-        hostname: this.newHostname
-      }).then(res => {
-        if (res.code === 200) {
-          this.$message.success('主机名修改成功');
-          // 更新本地数据
-          this.currentEditHost.hostname = this.newHostname;
-          // 关闭对话框
-          this.hostnameEditVisible = false;
-        } else {
-          this.$message.error(res.msg || '主机名修改失败');
-        }
-      }).catch(err => {
-        this.$message.error('主机名修改失败: ' + (err.message || err));
-      }).finally(() => {
-        this.editLoading = false;
-      });
+      HostCheckService.updateHostname(this, this.clusterId, this.currentEditHost.ip, newHostname)
+        .then(res => {
+          if (res.code === 200) {
+            this.$message.success('主机名修改成功');
+            // 更新本地数据
+            if (this.currentEditHost) {
+              this.currentEditHost.hostname = newHostname;
+            }
+            // 关闭对话框
+            this.hostnameEditVisible = false;
+            // 刷新数据
+            this.getEnvironmentList();
+          } else {
+            this.$message.error(res.msg || '主机名修改失败');
+          }
+        })
+        .catch(err => {
+          this.$message.error('主机名修改失败: ' + (err.message || err));
+        })
+        .finally(() => {
+          this.editLoading = false;
+        });
     },
     
     // 取消编辑
