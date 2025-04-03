@@ -156,7 +156,7 @@ export default {
           title: '检查项',
           dataIndex: 'itemName',
           key: 'itemName',
-          width: '25%',
+          width: '30%',
           customRender: (text) => {
             const h = this.$createElement;
             return h('div', {
@@ -219,7 +219,7 @@ export default {
           title: '检查结果',
           dataIndex: 'message',
           key: 'message',
-          width: '20%',
+          width: '15%',
           customRender: (text, row) => {
             const h = this.$createElement;
 
@@ -366,7 +366,7 @@ export default {
         {
           title: '操作',
           key: 'action',
-          width: '25%',
+          width: '30%',
           customRender: (text, row) => {
             const h = this.$createElement;
             const isChecking = row.status === 'CHECKING';
@@ -376,163 +376,237 @@ export default {
               class: 'action-buttons',
               style: {
                 display: 'flex',
-                gap: '8px'
+                gap: '8px',
+                justifyContent: 'space-between'
               }
             }, [
-              // 终止按钮 - 检查中时显示
-              isChecking ? h('button', {
+              // 左侧操作按钮组
+              h('div', {
                 style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                  color: '#FF3B30',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                on: {
-                  click: () => this.$emit('stop-check-item', this.record.ip, row.id)
+                  gap: '8px'
                 }
               }, [
-                h('a-icon', {
-                  props: { type: 'close' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "终止"
-              ]) : null,
+                // 终止按钮占位 - 无论是否显示都保留空间
+                h('div', {
+                  style: {
+                    width: '68px',
+                    minWidth: '68px',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }
+                }, [
+                  // 只有检查中状态才显示终止按钮
+                  isChecking ? h('button', {
+                    style: {
+                      border: 'none',
+                      backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                      color: '#FF3B30',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                      minWidth: '68px',
+                      width: '100%'
+                    },
+                    on: {
+                      click: () => this.$emit('stop-check-item', this.record.ip, row.id)
+                    }
+                  }, [
+                    h('a-icon', {
+                      props: { type: 'close' },
+                      style: { marginRight: '4px', fontSize: '12px' }
+                    }),
+                    "终止"
+                  ]) : null
+                ]),
 
-              // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                  color: '#007AFF',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                    !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                    !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                    !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
-                },
-                on: {
-                  click: () => this.$emit('retry-check-item', this.record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'redo' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "重试"
-              ]) : null,
+                // 重试按钮占位
+                h('div', {
+                  style: {
+                    width: '68px',
+                    minWidth: '68px',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }
+                }, [
+                  // 非检查中状态才显示重试按钮
+                  !isChecking ? h('button', {
+                    style: {
+                      border: 'none',
+                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                      color: '#007AFF',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                        !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                        !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                      minWidth: '68px',
+                      width: '100%'
+                    },
+                    attrs: {
+                      disabled: row.status === 'CHECKING' || row.status === 'FIXING' ||
+                        !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
+                    },
+                    on: {
+                      click: () => this.$emit('retry-check-item', this.record.ip, row.id)
+                    }
+                  }, [
+                    h('a-icon', {
+                      props: { type: 'redo' },
+                      style: { marginRight: '4px', fontSize: '12px' }
+                    }),
+                    "重试"
+                  ]) : null
+                ]),
 
-              // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(88, 86, 214, 0.1)',
-                  color: '#5856D6',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: this.isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: this.isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: this.isHostChecking || row.status === 'FIXING'
-                },
-                on: {
-                  click: () => this.$emit('fix-check-item', this.record.ip, row)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'tool' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "修复"
-              ]) : null,
+                // 修复按钮占位
+                h('div', {
+                  style: {
+                    width: '68px',
+                    minWidth: '68px',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }
+                }, [
+                  // 失败状态才显示修复按钮
+                  isFailed ? h('button', {
+                    style: {
+                      border: 'none',
+                      backgroundColor: 'rgba(88, 86, 214, 0.1)',
+                      color: '#5856D6',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: this.isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: this.isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                      minWidth: '68px',
+                      width: '100%'
+                    },
+                    attrs: {
+                      disabled: this.isHostChecking || row.status === 'FIXING'
+                    },
+                    on: {
+                      click: () => this.$emit('fix-check-item', this.record.ip, row)
+                    }
+                  }, [
+                    h('a-icon', {
+                      props: { type: 'tool' },
+                      style: { marginRight: '4px', fontSize: '12px' }
+                    }),
+                    "修复"
+                  ]) : null
+                ]),
 
-              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(142, 142, 147, 0.1)',
-                  color: '#8E8E93',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: this.isHostChecking ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: this.isHostChecking ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: this.isHostChecking
-                },
-                on: {
-                  click: () => this.$emit('skip-check-item', this.record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'forward' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "跳过"
-              ]) : null,
+                // 跳过按钮占位
+                h('div', {
+                  style: {
+                    width: '68px',
+                    minWidth: '68px',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }
+                }, [
+                  // 失败状态才显示跳过按钮
+                  isFailed ? h('button', {
+                    style: {
+                      border: 'none',
+                      backgroundColor: 'rgba(142, 142, 147, 0.1)',
+                      color: '#8E8E93',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: this.isHostChecking ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: this.isHostChecking ? '0.5' : '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                      minWidth: '68px',
+                      width: '100%'
+                    },
+                    attrs: {
+                      disabled: this.isHostChecking
+                    },
+                    on: {
+                      click: () => this.$emit('skip-check-item', this.record.ip, row.id)
+                    }
+                  }, [
+                    h('a-icon', {
+                      props: { type: 'forward' },
+                      style: { marginRight: '4px', fontSize: '12px' }
+                    }),
+                    "跳过"
+                  ]) : null
+                ])
+              ]),
 
-              // 查看日志按钮
-              h('button', {
+              // 右侧固定位置的查看日志按钮
+              h('div', {
                 style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                  color: '#007AFF',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: row.status === 'WAITING' ? '0.5' : '1',
+                  width: '90px',
+                  minWidth: '90px',
                   display: 'flex',
-                  alignItems: 'center',
                   justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: row.status === 'WAITING'
-                },
-                on: {
-                  click: () => this.$emit('view-item-log', this.record.ip, row.id, row.itemName)
                 }
               }, [
-                h('a-icon', {
-                  props: { type: 'file-text' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "查看日志"
+                // 查看日志按钮
+                h('button', {
+                  style: {
+                    border: 'none',
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    color: '#007AFF',
+                    padding: '6px 12px',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: row.status === 'WAITING' ? '0.5' : '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    whiteSpace: 'nowrap',
+                    minWidth: '90px',
+                    width: '100%'
+                  },
+                  attrs: {
+                    disabled: row.status === 'WAITING'
+                  },
+                  on: {
+                    click: () => this.$emit('view-item-log', this.record.ip, row.id, row.itemName)
+                  }
+                }, [
+                  h('a-icon', {
+                    props: { type: 'file-text' },
+                    style: { marginRight: '4px', fontSize: '12px' }
+                  }),
+                  "查看日志"
+                ])
               ])
-            ].filter(Boolean));
+            ]);
           }
         }
       ];
@@ -646,6 +720,9 @@ export default {
         display: flex;
         align-items: center;
         cursor: pointer;
+        white-space: nowrap;
+        min-width: 120px;
+        justify-content: center;
         
         i {
           margin-right: 6px;
