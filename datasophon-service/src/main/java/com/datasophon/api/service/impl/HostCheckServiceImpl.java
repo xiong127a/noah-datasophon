@@ -3,19 +3,20 @@ package com.datasophon.api.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
-import com.datasophon.api.service.checker.helpers.CheckLogger;
+import com.datasophon.api.service.checker.AsyncCheckService;
+import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.api.service.checker.common.LogEntryManager;
 import com.datasophon.api.service.checker.core.ItemChecker;
 import com.datasophon.api.service.checker.core.ItemCheckerFactory;
-import com.datasophon.api.service.checker.common.LogEntryManager;
-import com.datasophon.api.service.checker.AsyncCheckService;
+import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.LogEntry;
+import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.Result;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -763,11 +764,11 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
 
         // 对IP地址进行排序
-        ips = sortIpAddresses(ips);
+        ips = HostUtils.sortIpAddresses(ips);
 
-        logger.info("开始执行新的批量检查，主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
+        logger.info("开始执行新的批量检查，主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
                 ips.size(),
-                ips.isEmpty() ? "无" : ips.get(0), 
+                ips.isEmpty() ? "无" : ips.get(0),
                 ips.isEmpty() ? "无" : ips.get(ips.size() - 1));
 
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
@@ -1837,58 +1838,16 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("没有需要检查的主机");
         }
 
-        // 对IP地址进行排序，使用公共方法
-        ipsToCheck = sortIpAddresses(ipsToCheck);
+        // 使用HostUtils中的统一排序方法对IP地址进行排序
+        ipsToCheck = HostUtils.sortIpAddresses(ipsToCheck);
 
-        logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
-                ipsToCheck.size(), 
-                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(0), 
+        logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}",
+                ipsToCheck.size(),
+                ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(0),
                 ipsToCheck.isEmpty() ? "无" : ipsToCheck.get(ipsToCheck.size() - 1));
 
         // 调用批量检查方法执行检查
         return batchCheckHosts(clusterId, ipsToCheck);
-    }
-
-    /**
-     * 对IP地址进行排序
-     * 按照IP地址的四个段，依次比较数值大小
-     * 
-     * @param ips 需要排序的IP地址列表
-     * @return 排序后的IP地址列表
-     */
-    private List<String> sortIpAddresses(List<String> ips) {
-        if (ips == null || ips.isEmpty()) {
-            return ips;
-        }
-        
-        // 创建副本，避免修改原始集合
-        List<String> sortedIps = new ArrayList<>(ips);
-        
-        // 按照IP地址进行排序
-        sortedIps.sort((ip1, ip2) -> {
-            try {
-                // 将IP地址解析为整数数组进行比较
-                String[] parts1 = ip1.split("\\.");
-                String[] parts2 = ip2.split("\\.");
-                
-                // 比较每一段IP地址
-                for (int i = 0; i < 4; i++) {
-                    int num1 = Integer.parseInt(parts1[i]);
-                    int num2 = Integer.parseInt(parts2[i]);
-                    if (num1 != num2) {
-                        return num1 - num2;
-                    }
-                }
-                
-                return 0; // 相等的情况
-            } catch (Exception e) {
-                // 处理可能的异常情况（无效IP格式等）
-                logger.warn("IP地址排序时发生异常: {}，IP1={}, IP2={}", e.getMessage(), ip1, ip2);
-                return ip1.compareTo(ip2); // 使用字符串比较作为后备方案
-            }
-        });
-        
-        return sortedIps;
     }
 
     /**

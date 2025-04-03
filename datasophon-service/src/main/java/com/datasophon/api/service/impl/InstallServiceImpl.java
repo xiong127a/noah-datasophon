@@ -153,7 +153,23 @@ public class InstallServiceImpl implements InstallService {
             }
 
             List<HostInfo> hostList = new ArrayList<>(hostMap.values());
-            hostList.sort(Comparator.comparing(HostInfo::getIp));
+
+            // 使用HostUtils的统一排序方法对IP进行排序
+            List<String> sortedIps = HostUtils.sortIpAddresses(hostList.stream()
+                    .map(HostInfo::getIp)
+                    .collect(Collectors.toList()));
+
+            // 按照排序后的IP顺序重新组织主机列表
+            List<HostInfo> sortedHostList = new ArrayList<>();
+            for (String ip : sortedIps) {
+                hostList.stream()
+                        .filter(host -> ip.equals(host.getIp()))
+                        .findFirst()
+                        .ifPresent(sortedHostList::add);
+            }
+
+            // 使用排序后的主机列表
+            hostList = sortedHostList;
 
             // 计算每个主机的状态
             hostList.forEach(hostInfo -> {

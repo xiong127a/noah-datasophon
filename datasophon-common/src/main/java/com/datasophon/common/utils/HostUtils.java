@@ -84,10 +84,55 @@ public enum HostUtils {
             throw new RuntimeException(e);
         }
     }
+
     public static List<String> GetMasterHost() {
         String[] array = PropertyUtils.getArray(Constants.MASTER_HOST, ",");
         return Arrays.asList(array);
     }
 
+    /**
+     * 对IP地址进行统一排序
+     * 按照IP地址的四个段，依次比较数值大小
+     * 
+     * 注意：此方法是所有IP排序的标准方法，在多个地方共享使用，包括：
+     * 1. startHostCheck - 开始检查任务时的IP排序
+     * 2. analysisHostList - 解析主机列表时的IP排序
+     * 确保所有地方使用相同的排序逻辑保持一致性
+     * 
+     * @param ips 需要排序的IP地址列表
+     * @return 排序后的IP地址列表
+     */
+    public static List<String> sortIpAddresses(List<String> ips) {
+        if (ips == null || ips.isEmpty()) {
+            return ips;
+        }
 
+        // 创建副本，避免修改原始集合
+        List<String> sortedIps = new ArrayList<>(ips);
+
+        // 按照IP地址进行排序
+        sortedIps.sort((ip1, ip2) -> {
+            try {
+                // 将IP地址解析为整数数组进行比较
+                String[] parts1 = ip1.split("\\.");
+                String[] parts2 = ip2.split("\\.");
+
+                // 比较每一段IP地址
+                for (int i = 0; i < 4; i++) {
+                    int num1 = Integer.parseInt(parts1[i]);
+                    int num2 = Integer.parseInt(parts2[i]);
+                    if (num1 != num2) {
+                        return num1 - num2;
+                    }
+                }
+
+                return 0; // 相等的情况
+            } catch (Exception e) {
+                // 处理可能的异常情况（无效IP格式等）
+                return ip1.compareTo(ip2); // 使用字符串比较作为后备方案
+            }
+        });
+
+        return sortedIps;
+    }
 }
