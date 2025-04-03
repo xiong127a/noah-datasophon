@@ -16,14 +16,9 @@
  *  limitations under the License.
  *
  */
-
-/* eslint-disable vue/no-unused-components */
-
- * @describe: step2-主机环境校验 
- * @Date: 2022-06-13 16:35:02
- * @LastEditTime: 2022-08-15 14:07:04
- * @FilePath: \ddh-ui\src\components\steps\index.vue
 -->
+
+<!-- @describe: step2-主机环境校验 -->
 <template>
   <div class="steps2 steps">
     <!-- 添加OsFloatingCard组件的使用 -->
@@ -39,20 +34,12 @@
     </div>
 
     <div class="hosts-table-container">
-      <!-- 添加表格操作按钮区域 -->
-      <div class="table-operations" style="margin-bottom: 16px; display: flex; justify-content: flex-end; align-items: center;">
-        <div class="operation-group">
-          <!-- 开始检查/重试/终止检查三合一按钮 -->
-          <a-button
-              class="apple-button"
-              :class="isCheckingActive ? 'apple-danger-button' : 'apple-primary-button'"
-              @click="handleCheckAction"
-          >
-            <a-icon :type="isCheckingActive ? 'stop' : (hasStartedCheck ? 'redo' : 'play-circle')" />
-            <span>{{ isCheckingActive ? '终止检查' : (hasStartedCheck ? '重试检查' : '开始检查') }}</span>
-          </a-button>
-        </div>
-      </div>
+      <!-- 使用TableOperations组件 -->
+      <table-operations 
+        :is-checking-active="isCheckingActive"
+        :has-started-check="hasStartedCheck"
+        @check-action="handleCheckAction"
+      />
       <a-table
           @change="tableChange"
           :columns="columns"
@@ -80,137 +67,25 @@
       @close="closeLogModal"
     />
 
-    <!-- 修复确认弹窗 - 苹果设计风格 -->
-    <a-modal
-        v-model="fixConfirmVisible"
-        :footer="null"
-        :maskClosable="false"
-        width="460px"
-        :destroyOnClose="true"
-        :closable="false"
-        class="fix-confirm-modal apple-card-modal"
-    >
-      <!-- 弹窗内容 -->
-      <div class="apple-card-container">
-        <!-- 顶部标题区域 -->
-        <div class="apple-card-header">
-          <div class="apple-card-icon-wrapper">
-            <div class="apple-card-icon-container warning">
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="#FFFFFF" fill="none" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </div>
-          </div>
-          <div class="apple-card-info">
-            <div class="apple-card-title">
-              <span class="card-title">{{ fixConfirmTitle }}</span>
-            </div>
-          </div>
-          <div class="apple-card-close" @click="handleFixCancel">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-          </div>
-        </div>
-        
-        <!-- 内容区域 -->
-        <div class="apple-card-content">
-          <div class="apple-card-section">
-            <div class="warning-message">
-              <div class="message-content" v-html="fixConfirmContent"></div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 底部按钮区域 -->
-        <div class="apple-card-footer">
-          <button class="apple-card-button secondary" @click="handleFixCancel">
-            取消
-          </button>
-          <button 
-            class="apple-card-button danger" 
-            @click="handleFixConfirm"
-            :disabled="fixConfirmLoading"
-          >
-            <span v-if="!fixConfirmLoading">确认修复</span>
-            <span v-else class="apple-loader"></span>
-          </button>
-        </div>
-      </div>
-    </a-modal>
+    <!-- 使用FixConfirmModal组件 -->
+    <fix-confirm-modal
+      :visible.sync="fixConfirmVisible"
+      :title="fixConfirmTitle"
+      :content="fixConfirmContent"
+      :loading="fixConfirmLoading"
+      @cancel="handleFixCancel"
+      @confirm="handleFixConfirm"
+    />
 
-    <!-- 添加主机名编辑对话框 -->
-    <a-modal
+    <!-- 使用HostnameEditModal组件 -->
+    <hostname-edit-modal
       :visible="hostnameEditVisible"
-      :confirm-loading="editLoading"
+      :loading="editLoading"
+      :host="currentEditHost"
+      :hostname="newHostname"
       @cancel="cancelHostnameEdit"
-      :footer="null"
-      :maskClosable="false"
-      :closable="false"
-      width="420px"
-      class="apple-style-modal hostname-edit-modal"
-      :destroyOnClose="true"
-    >
-      <div class="apple-modal-header">
-        <div class="modal-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="1.5" width="20" height="20">
-            <path d="M12 15V12m0-3h.01M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="modal-title">修改主机名</div>
-        <div class="modal-close" @click="cancelHostnameEdit">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </div>
-      </div>
-      
-      <div class="apple-modal-content">
-        <div class="host-info-section">
-          <div class="info-row">
-            <div class="info-label">主机IP</div>
-            <div class="info-value">{{ currentEditHost ? currentEditHost.ip : '' }}</div>
-          </div>
-          <div class="info-row">
-            <div class="info-label">当前主机名</div>
-            <div class="info-value current-hostname">{{ currentEditHost ? (currentEditHost.hostname || '未设置') : '' }}</div>
-          </div>
-        </div>
-        
-        <div class="input-section">
-          <div class="input-label">新主机名</div>
-          <input
-            class="apple-input"
-            v-model="newHostname"
-            placeholder="请输入新的主机名"
-            maxlength="64"
-            ref="hostnameInput"
-          />
-          <div class="input-description">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="1.5" width="16" height="16">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M12 16v-4M12 8h.01" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>修改主机名将通过SSH连接服务器并实际修改系统配置</span>
-          </div>
-        </div>
-        
-        <div class="apple-modal-actions">
-          <button class="apple-button secondary" @click="cancelHostnameEdit">
-            取消
-          </button>
-          <button class="apple-button primary" @click="submitHostnameEdit" :disabled="!newHostname">
-            <span v-if="!editLoading">保存</span>
-            <span v-else class="button-loader"></span>
-          </button>
-        </div>
-      </div>
-    </a-modal>
+      @submit="submitHostnameEdit"
+    />
   </div>
 </template>
 
@@ -221,6 +96,11 @@ import OsFloatingCard from '@/components/steps/step2/OsFloatingCard.vue';
 // 导入HostnameFloatingCard组件
 import HostnameFloatingCard from '@/components/steps/step2/HostnameFloatingCard.vue';
 import AppleLogViewer from './AppleLogViewer.vue';
+// 导入新组件
+import TableOperations from './TableOperations.vue';
+import FixConfirmModal from './FixConfirmModal.vue';
+import HostnameEditModal from './HostnameEditModal.vue';
+import HostCheckItems from './HostCheckItems.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -233,7 +113,12 @@ export default {
     OsFloatingCard,
     /* eslint-disable-next-line vue/no-unused-components */
     HostnameFloatingCard,
-    AppleLogViewer
+    AppleLogViewer,
+    TableOperations,
+    FixConfirmModal,
+    HostnameEditModal,
+    /* eslint-disable-next-line vue/no-unused-components */
+    HostCheckItems
   },
   data() {
     return {
@@ -1320,647 +1205,36 @@ export default {
     },
     // 展开行渲染函数
     expandedRowRender(record) {
-      const h = this.$createElement;
+      // 获取检查项列表
       const checkItems = this.checkItemsMap[record.ip] || [];
-
+      
       // 判断主机是否处于检查中状态
       const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
-
-      const columns = [
-        {
-          title: '检查项',
-          dataIndex: 'itemName',
-          key: 'itemName',
-          width: '25%',
-          customRender: (text) => {
-            const h = this.$createElement;
-            return h('div', {
-              style: {
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1d1d1f'
-              }
-            }, [text]);
-          }
+      
+      // 获取选中的检查项ID
+      const selectedRowKeys = this.selectedCheckItems[record.ip] || [];
+      
+      // 使用HostCheckItems组件渲染扩展行
+      return this.$createElement(HostCheckItems, {
+        props: {
+          record,
+          checkItems,
+          selectedRowKeys,
+          hasRetryableSelectedItems: this.hasRetryableSelectedItems(record.ip),
+          hasFixableSelectedItems: this.hasFixableSelectedItems(record.ip),
+          isHostChecking
         },
-        {
-          title: '状态',
-          dataIndex: 'status',
-          key: 'status',
-          width: '15%',
-          customRender: (text) => {
-            const h = this.$createElement;
-            // 使用字符串类型的状态映射
-            const statusMap = {
-              'WAITING': { text: '待检查', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'clock-circle' },
-              'SUCCESS': { text: '通过', color: '#34C759', bgColor: 'rgba(52, 199, 89, 0.1)', icon: 'check-circle' },
-              'FAILED': { text: '未通过', color: '#FF3B30', bgColor: 'rgba(255, 59, 48, 0.1)', icon: 'close-circle' },
-              'CHECKING': { text: '检查中', color: '#007AFF', bgColor: 'rgba(0, 122, 255, 0.1)', icon: 'loading' },
-              'SKIPPED': { text: '已跳过', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'warning' },
-              'TERMINATING': { text: '终止中', color: '#FF9500', bgColor: 'rgba(255, 149, 0, 0.1)', icon: 'stop', spin: true },
-              'FIXING': { text: '修复中', color: '#5856D6', bgColor: 'rgba(88, 86, 214, 0.1)', icon: 'tool', spin: true }
-            };
-
-            const status = statusMap[text] || { text: '未知', color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.1)', icon: 'question-circle' };
-
-            return h('div', {
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                backgroundColor: status.bgColor,
-                fontSize: '13px',
-                fontWeight: '500',
-                color: status.color,
-                transition: 'all 0.2s ease'
-              }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon,
-                  spin: status.spin || status.icon === 'loading'
-                },
-                style: {
-                  marginRight: '6px',
-                  fontSize: '14px'
-                }
-              }),
-              status.text
-            ]);
-          }
-        },
-        {
-          title: '检查结果',
-          dataIndex: 'message',
-          key: 'message',
-          width: '20%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-
-            // 检查文本是否存在
-            if (!text) return h('span', {}, ['-']);
-
-            // 不再限制文本长度，所有检查项都显示悬浮提示
-            const displayText = text;
-
-            // 根据状态设置颜色
-            const statusColor = row.status === 'SUCCESS' ? '#34C759' :
-                row.status === 'FAILED' ? '#FF3B30' :
-                    row.status === 'SKIPPED' ? '#8E8E93' :
-                        row.status === 'CHECKING' ? '#007AFF' :
-                            row.status === 'FIXING' ? '#5856D6' : '#1d1d1f';
-
-            const statusIcon = row.status === 'SUCCESS' ? 'check-circle' :
-                row.status === 'FAILED' ? 'close-circle' :
-                    row.status === 'SKIPPED' ? 'warning' :
-                        row.status === 'CHECKING' ? 'loading' :
-                            row.status === 'FIXING' ? 'tool' : 'info-circle';
-
-            const statusSpin = row.status === 'CHECKING' || row.status === 'FIXING';
-            const statusTheme = row.status !== 'CHECKING' && row.status !== 'FIXING' ? 'filled' : undefined;
-
-            // 创建一个更符合苹果设计风格的tooltip内容
-            const tooltipContent = h('div', {
-              class: 'check-result-tooltip',
-              style: {
-                maxWidth: '1200px',
-                padding: '0',
-                borderRadius: '16px',
-                background: '#ffffff',
-                color: '#1d1d1f',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                wordBreak: 'break-word',
-                whiteSpace: 'pre-wrap',
-                fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
-                overflow: 'hidden',
-                border: 'none',
-                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05)'
-              }
-            }, [
-              // 添加标题行
-              h('div', {
-                style: {
-                  fontWeight: '500',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
-                  backgroundColor: statusColor,
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }
-              }, [
-                h('div', {
-                  style: {
-                    display: 'flex',
-                    alignItems: 'center'
-                  }
-                }, [
-                  h('a-icon', {
-                    props: {
-                      type: statusIcon,
-                      theme: statusTheme,
-                      spin: statusSpin
-                    },
-                    style: {
-                      marginRight: '8px',
-                      fontSize: '16px'
-                    }
-                  }),
-                  '检查结果详情'
-                ])
-              ]),
-              // 添加检查结果内容
-              h('div', {
-                domProps: {
-                  innerHTML: text
-                },
-                style: {
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  padding: '16px',
-                  maxHeight: '70vh',
-                  overflowY: 'auto'
-                }
-              })
-            ]);
-
-            // 使用tooltip组件但覆盖默认样式
-            return h('a-tooltip', {
-              props: {
-                title: tooltipContent,
-                placement: 'top',
-                mouseEnterDelay: 0.3,
-                overlayClassName: 'apple-style-tooltip',
-                autoAdjustOverflow: true,
-                arrowPointAtCenter: true,
-                color: '#ffffff',
-                getPopupContainer: () => document.body
-              },
-              class: 'custom-tooltip'
-            }, [
-              h('span', {
-                style: {
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-block',
-                  maxWidth: '100%',
-                  color: statusColor,
-                  transition: 'all 0.3s',
-                  fontSize: '14px',
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                  backgroundColor: `${statusColor}15`, // 15是透明度，相当于rgba的0.1
-                  border: `1px solid ${statusColor}30` // 30是透明度，相当于rgba的0.2
-                },
-                class: 'check-result-text'
-              }, [
-                // 状态图标
-                h('a-icon', {
-                  props: {
-                    type: statusIcon,
-                    theme: statusTheme,
-                    spin: statusSpin
-                  },
-                  style: {
-                    marginRight: '4px',
-                    fontSize: '12px'
-                  }
-                }),
-                // 在这里使用一个辅助函数去除HTML标签，只显示纯文本
-                h('span', {}, [
-                  displayText.length > 20 ?
-                      this.stripHtml(displayText).substr(0, 20) + '...' :
-                      this.stripHtml(displayText)
-                ])
-              ])
-            ]);
-          }
-        },
-        {
-          title: '操作',
-          key: 'action',
-          width: '25%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            const isChecking = row.status === 'CHECKING';
-            const isFailed = row.status === 'FAILED';
-
-            return h('div', {
-              class: 'action-buttons',
-              style: {
-                display: 'flex',
-                gap: '8px'
-              }
-            }, [
-              // 终止按钮 - 检查中时显示
-              isChecking ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(255, 59, 48, 0.1)',
-                  color: '#FF3B30',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                on: {
-                  click: () => this.stopCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'close' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "终止"
-              ]) : null,
-
-              // 重试按钮 - 非检查中时显示，检查中则禁用
-              !isChecking ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                  color: '#007AFF',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                  !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                  !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED')) ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: row.status === 'CHECKING' || row.status === 'FIXING' ||
-                      !((row.status === 'FAILED' || row.status === 'SUCCESS' || row.status === 'SKIPPED'))
-                },
-                on: {
-                  click: () => this.retryCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'redo' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "重试"
-              ]) : null,
-
-              // 修复按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(88, 86, 214, 0.1)',
-                  color: '#5856D6',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: isHostChecking || row.status === 'FIXING' ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: isHostChecking || row.status === 'FIXING' ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: isHostChecking || row.status === 'FIXING'
-                },
-                on: {
-                  click: () => this.fixCheckItem(record.ip, row)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'tool' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "修复"
-              ]) : null,
-
-              // 跳过按钮 - 失败时可用，主机整体检查中时禁用
-              isFailed ? h('button', {
-                style: {
-                  border: 'none',
-                  backgroundColor: 'rgba(142, 142, 147, 0.1)',
-                  color: '#8E8E93',
-                  padding: '6px 12px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: isHostChecking ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: isHostChecking ? '0.5' : '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                },
-                attrs: {
-                  disabled: isHostChecking
-                },
-                on: {
-                  click: () => this.skipCheckItem(record.ip, row.id)
-                }
-              }, [
-                h('a-icon', {
-                  props: { type: 'forward' },
-                  style: { marginRight: '4px', fontSize: '12px' }
-                }),
-                "跳过"
-              ]) : null
-            ].filter(Boolean));
-          }
-        },
-        {
-          title: '日志',
-          key: 'log',
-          width: '15%',
-          customRender: (text, row) => {
-            const h = this.$createElement;
-            return h('button', {
-              style: {
-                border: 'none',
-                backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                color: '#007AFF',
-                padding: '6px 12px',
-                borderRadius: '12px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: row.status === 'WAITING' ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                opacity: row.status === 'WAITING' ? '0.5' : '1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              },
-              attrs: {
-                disabled: row.status === 'WAITING'
-              },
-              on: {
-                click: () => this.viewItemLog(record.ip, row.id, row.itemName)
-              }
-            }, [
-              h('a-icon', {
-                props: { type: 'file-text' },
-                style: { marginRight: '4px', fontSize: '12px' }
-              }),
-              "查看日志"
-            ]);
-          }
+        on: {
+          'selected-change': (ip, selectedKeys) => this.onCheckItemSelect(ip, selectedKeys),
+          'retry-selected': ip => this.retrySelectedItems(ip),
+          'fix-selected': ip => this.fixSelectedItems(ip),
+          'stop-check-item': (ip, itemId) => this.stopCheckItem(ip, itemId),
+          'retry-check-item': (ip, itemId) => this.retryCheckItem(ip, itemId),
+          'fix-check-item': (ip, item) => this.fixCheckItem(ip, item),
+          'skip-check-item': (ip, itemId) => this.skipCheckItem(ip, itemId),
+          'view-item-log': (ip, itemId, itemName) => this.viewItemLog(ip, itemId, itemName)
         }
-      ];
-
-      // 创建header-summary部分
-      const headerSummary = h('div', {
-        class: 'header-summary',
-        style: {
-          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif',
-          fontSize: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }
-      }, [
-        h('span', {
-          style: {
-            fontWeight: '600',
-            color: '#1d1d1f'
-          }
-        }, [`共 ${checkItems.length} 项检查`]),
-
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(52, 199, 89, 0.1)',
-            color: '#34C759',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'check-circle' },
-            style: { marginRight: '6px' }
-          }),
-          `${checkItems.filter(item => item.status === 'SUCCESS').length} 项通过`
-        ]),
-
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 59, 48, 0.1)',
-            color: '#FF3B30',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'close-circle' },
-            style: { marginRight: '6px' }
-          }),
-          `${checkItems.filter(item => item.status === 'FAILED').length} 项失败`
-        ]),
-
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 149, 0, 0.1)',
-            color: '#FF9500',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'clock-circle' },
-            style: { marginRight: '6px' }
-          }),
-          `${checkItems.filter(item => item.status === 'WAITING').length} 项待检查`
-        ]),
-
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(0, 122, 255, 0.1)',
-            color: '#007AFF',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', {
-            props: {
-              type: 'loading',
-              spin: true
-            },
-            style: { marginRight: '6px' }
-          }),
-          `${checkItems.filter(item => item.status === 'CHECKING').length} 项检查中`
-        ]),
-
-        h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(142, 142, 147, 0.1)',
-            color: '#8E8E93',
-            fontSize: '14px',
-            fontWeight: '500'
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'warning' },
-            style: { marginRight: '6px' }
-          }),
-          `${checkItems.filter(item => item.status === 'SKIPPED').length} 项已跳过`
-        ])
-      ]);
-
-      // 创建header-actions部分
-      const headerActions = h('div', {
-        class: 'header-actions',
-        style: {
-          display: 'flex',
-          gap: '12px'
-        }
-      }, [
-        h('button', {
-          style: {
-            backgroundColor: '#007AFF',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: !this.hasRetryableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasRetryableSelectedItems(record.ip) ? '0.6' : '1',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center'
-          },
-          attrs: {
-            disabled: !this.hasRetryableSelectedItems(record.ip)
-          },
-          on: {
-            click: () => this.retrySelectedItems(record.ip)
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'redo' },
-            style: { marginRight: '6px' }
-          }),
-          '重试选中项'
-        ]),
-
-        h('button', {
-          style: {
-            backgroundColor: '#5856D6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: !this.hasFixableSelectedItems(record.ip) ? 'not-allowed' : 'pointer',
-            opacity: !this.hasFixableSelectedItems(record.ip) ? '0.6' : '1',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center'
-          },
-          attrs: {
-            disabled: !this.hasFixableSelectedItems(record.ip)
-          },
-          on: {
-            click: () => this.fixSelectedItems(record.ip)
-          }
-        }, [
-          h('a-icon', {
-            props: { type: 'tool' },
-            style: { marginRight: '6px' }
-          }),
-          '修复选中项'
-        ])
-      ]);
-
-      // 创建表格容器，添加苹果风格的样式
-      return h('div', {
-        class: 'check-items-container',
-        style: {
-          padding: '24px',
-          backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-          margin: '0px',
-          fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'
-        }
-      }, [
-        h('div', {
-          class: 'check-items-header',
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            gap: '16px'
-          }
-        }, [
-          headerSummary,
-          headerActions
-        ]),
-
-        // 添加分隔线
-        h('div', {
-          style: {
-            height: '1px',
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            margin: '0 0 20px 0'
-          }
-        }),
-
-        h('a-table', {
-          props: {
-            columns: columns,
-            dataSource: checkItems,
-            pagination: false,
-            size: 'middle',
-            rowKey: 'id',
-            rowSelection: {
-              selectedRowKeys: this.selectedCheckItems[record.ip] || [],
-              onChange: (selectedRowKeys) => this.onCheckItemSelect(record.ip, selectedRowKeys)
-            }
-          },
-          class: 'apple-style-table',
-          style: {
-            borderRadius: '12px',
-            overflow: 'hidden'
-          }
-        })
-      ]);
+      });
     },
 
     // 选择检查项
