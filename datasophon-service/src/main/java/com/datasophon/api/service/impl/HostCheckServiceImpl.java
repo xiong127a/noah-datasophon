@@ -2274,13 +2274,28 @@ public class HostCheckServiceImpl implements HostCheckService {
             hostsEntries.add(HostsEntry.createComment(""));
             hostsEntries.add(HostsEntry.createComment("# Cluster hosts"));
 
-            // 添加所有主机的IP和主机名
-            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                HostInfo hostInfo = entry.getValue();
-                String hostname = hostInfo.getHostname();
-                String ip = hostInfo.getIp();
-                if (StrUtil.isNotBlank(hostname) && StrUtil.isNotBlank(ip)) {
-                    hostsEntries.add(HostsEntry.createMapping(ip, hostname));
+            // 提取IP列表并使用HostUtils进行排序
+            List<String> ipList = hostMap.values().stream()
+                    .map(HostInfo::getIp)
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toList());
+
+            // 使用项目统一的IP排序方法
+            List<String> sortedIps = HostUtils.sortIpAddresses(ipList);
+
+            // 按排序后的顺序添加主机映射
+            for (String ip : sortedIps) {
+                // 查找该IP对应的主机信息
+                Optional<HostInfo> hostInfoOpt = hostMap.values().stream()
+                        .filter(hi -> ip.equals(hi.getIp()))
+                        .findFirst();
+
+                if (hostInfoOpt.isPresent()) {
+                    HostInfo hostInfo = hostInfoOpt.get();
+                    String hostname = hostInfo.getHostname();
+                    if (StrUtil.isNotBlank(hostname)) {
+                        hostsEntries.add(HostsEntry.createMapping(ip, hostname));
+                    }
                 }
             }
 
