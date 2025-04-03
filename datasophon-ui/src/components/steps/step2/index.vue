@@ -101,12 +101,6 @@ import TableOperations from './TableOperations.vue';
 import FixConfirmModal from './FixConfirmModal.vue';
 import HostnameEditModal from './HostnameEditModal.vue';
 import HostCheckItems from './HostCheckItems.vue';
-// 导入表格列定义
-import createColumns from './HostTableColumns';
-// 导入状态计算工具
-import StatusCalculator from './StatusCalculator';
-// 导入主机检查服务
-import HostCheckService from './HostCheckService';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -159,7 +153,720 @@ export default {
       fixConfirmContent: '',
       fixConfirmIp: '',
       fixConfirmItem: null,
-      columns: [], // 使用空数组，会在created中初始化
+      columns: [
+        {
+          title: "序号",
+          key: "index",
+          width: 50,
+          customRender: (text, row, index) => {
+            const h = this.$createElement;
+            const displayIndex = parseInt(
+                this.pagination.current === 1
+                    ? index + 1
+                    : index + 1 + this.pagination.pageSize * (this.pagination.current - 1)
+            );
+            return h('span', {}, [displayIndex]);
+          },
+        },
+        {
+          title: "主机名",
+          key: "hostname",
+          dataIndex: "hostname",
+          width: 200,
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            return h('div', { class: 'hostname-column' }, [
+              // 添加主机名悬浮卡片
+              h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'hostname-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 悬浮内容 - SSH错误时显示错误信息
+                h('span', {
+                  slot: 'title',
+                  class: 'hostname-detail-tooltip'
+                }, [
+                  record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                  // SSH错误时显示的内容
+                  h('div', { class: 'ssh-error-card' }, [
+                    h('div', { class: 'ssh-error-header' }, [
+                      h('div', { class: 'ssh-error-icon' }, [
+                        h('a-icon', { props: { type: 'warning', theme: 'filled' }, style: { color: '#FF3B30', fontSize: '20px' } })
+                      ]),
+                      h('div', { class: 'ssh-error-title' }, ['SSH连接失败'])
+                    ]),
+                    h('div', { class: 'ssh-error-content' }, [
+                      h('div', { class: 'ssh-error-message' }, [
+                        record.sshErrorMsg || record.errorMessage
+                      ]),
+                      // 解析结构化错误信息
+                      this.parseSSHErrorMessage(record.sshErrorMsg || record.errorMessage)
+                    ])
+                  ]) :
+                  // 正常情况下显示常规主机信息卡片
+                  h(HostnameFloatingCard, {
+                    props: {
+                      hostInfo: record
+                    }
+                  })
+                ]),
+                
+                // 显示的主机名文本 - 突出显示SSH错误状态
+                h('div', { 
+                  class: 'hostname-display', 
+                  style: record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                    { display: 'flex', alignItems: 'center' } : {}
+                }, [
+                  // 如果有SSH错误，显示错误图标
+                  record.hasSSHError || record.sshConnectStatus === 'error' ? 
+                  h('a-icon', { 
+                    props: { type: 'warning' }, 
+                    style: { color: '#FF3B30', marginRight: '6px' } 
+                  }) : null,
+                  
+                  // 主机名或未知主机
+                  record.hasSSHError || record.sshConnectStatus === 'error' ?
+                  h('span', { 
+                    class: 'hostname-text error', 
+                    style: { color: '#FF3B30' },
+                    title: '获取主机名失败 (SSH连接错误)' 
+                  }, [record.hostname || '未获取到主机名']) :
+                  h('span', { 
+                    class: 'hostname-text', 
+                    title: record.fqdn || record.hostname || '主机名加载中' 
+                  }, [
+                    record.hostname || h('div', { class: 'hostname-loading-container' }, [
+                      h('div', { class: 'hostname-loading-dots' }, [
+                        h('span', { class: 'hostname-loading-dot' }),
+                        h('span', { class: 'hostname-loading-dot' }),
+                        h('span', { class: 'hostname-loading-dot' })
+                      ]),
+                      h('span', { class: 'hostname-loading-text' }, ['获取主机名'])
+                    ])
+                  ])
+                ]),
+              ]),
+              
+              // 编辑图标
+              h('a-tooltip', { props: { title: '编辑主机名' } }, [
+                h('a-icon', {
+                  class: 'hostname-edit-icon',
+                  props: { type: 'edit' },
+                  on: {
+                    click: (e) => {
+                      e.stopPropagation();
+                      this.editHostname(record);
+                    }
+                  }
+                })
+              ])
+            ]);
+          }
+        },
+        {
+          title: "主机IP",
+          key: "ip",
+          dataIndex: "ip",
+          width: 130,
+          customRender: (text) => {
+            const h = this.$createElement;
+            return h('span', {
+              style: {
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }
+            }, [text]);
+          }
+        },
+        {
+          title: "操作系统",
+          key: "osType",
+          dataIndex: "osType",
+          width: "10%",  // 减小操作系统列宽度，从15%改为10%
+          customRender: (text, row) => {
+            const h = this.$createElement;
+
+            // 检查是否为SSH错误
+            const hasSSHError = this.checkStatus(row.sshConnectStatus, 'error') || 
+                                row.hasSSHError === true;
+            // 检查是否为OS错误
+            const hasOSError = this.checkStatus(row.osInfoStatus, 'error') || 
+                               this.checkStatus(row.osStatus, 'error');
+            // 检查是否正在加载
+            const isLoading = row.sshConnectStatus === null || 
+                             row.osInfo === null || row.osInfoStatus === null ||
+                             this.checkStatus(row.osStatus, 'loading') || 
+                             this.checkStatus(row.osStatus, 'pending');
+
+            // SSH错误 - 显示错误状态和错误信息
+            if (hasSSHError) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayStyle: { maxWidth: '350px' }
+                }
+              }, [
+                h('span', { slot: 'title' }, [
+                  h('div', { class: 'ssh-error-details' }, [
+                    h('div', { class: 'ssh-error-title' }, ['SSH连接失败']),
+                    h('div', { class: 'ssh-error-message' }, [
+                      row.sshErrorMsg || row.errorMessage
+                    ]),
+                    // 解析结构化错误信息
+                    this.parseSSHErrorMessage(row.sshErrorMsg || row.errorMessage)
+                  ])
+                ]),
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#FF3B30'
+                  }
+                }, [
+                  h('a-icon', {
+                    props: { type: 'warning' },
+                    style: { marginRight: '6px' }
+                  }),
+                  '获取失败'
+                ])
+              ]);
+            }
+
+            // 操作系统错误 - 显示OS获取失败的信息
+            if (hasOSError) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayStyle: { maxWidth: '350px' }
+                }
+              }, [
+                h('span', { slot: 'title' }, [
+                  h('div', { class: 'ssh-error-details' }, [
+                    h('div', { class: 'ssh-error-title' }, ['操作系统信息获取失败']),
+                    h('div', { class: 'ssh-error-message' }, [
+                      row.osErrorMsg || '无法获取操作系统信息，请检查系统配置'
+                    ])
+                  ])
+                ]),
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#FF8800' // 使用橙色区分SSH错误和OS错误
+                  }
+                }, [
+                  h('a-icon', {
+                    props: { type: 'warning' },
+                    style: { marginRight: '6px' }
+                  }),
+                  '获取失败'
+                ])
+              ]);
+            }
+
+            // 加载状态 - 显示加载中动画
+            if (isLoading) {
+              // 苹果风格的骨架屏加载动画
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 加载中浮窗内容
+                h('span', {
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [
+                  h('div', { class: 'os-detail-loading' }, [
+                    h('div', { class: 'os-detail-loading-header' }),
+                    h('div', { class: 'os-detail-loading-content' }, [
+                      h('div', { class: 'os-detail-loading-line short' }),
+                      h('div', { class: 'os-detail-loading-line medium' }),
+                      h('div', { class: 'os-detail-loading-line' }),
+                      h('div', { class: 'os-detail-loading-line short' }),
+                      h('div', { class: 'os-detail-loading-line medium' })
+                    ]),
+                    h('div', {
+                      class: 'os-detail-loading-text',
+                      style: {
+                        fontSize: '14px',
+                        textAlign: 'center',
+                        color: '#007AFF',
+                        marginTop: '12px',
+                        fontWeight: '500'
+                      }
+                    }, ['正在优雅地检索操作系统信息...'])
+                  ])
+                ]),
+
+                // 显示的加载内容
+                h('div', { class: 'os-loading-container' }, [
+                  // 背景滑动效果
+                  h('div', { class: 'os-loading-shine' }),
+                  // 内容区域
+                  h('div', { class: 'os-loading-content' }, [
+                    // 旋转的加载图标
+                    h('div', { class: 'os-loading-spinner' }),
+                    // 加载中文字
+                    h('span', { class: 'os-loading-text' }, ['获取系统信息'])
+                  ])
+                ])
+              ]);
+            }
+
+            // 使用osInfo中的数据
+            const hasOsInfo = row.osInfo && (row.osInfo.distribution || row.osInfo.displayName);
+            
+            // 只使用displayName字段，不使用distributionName和distribution
+            const osDisplayName = hasOsInfo 
+              ? (row.osInfo.displayName || row.osInfo.distribution || '-')
+              : (text || row.osType || '-');
+              
+            const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
+
+            // 获取操作系统对应的图标路径
+            function getOsIconPath(osInfo) {
+              try {
+                if (!osInfo) return require('@/assets/img/os-logos/linux-tux.svg');
+                
+                // 根据osInfo.distributionType或distributionId判断操作系统类型
+                const distType = (osInfo.distributionType || '').toLowerCase();
+                const distId = (osInfo.distributionId || '').toLowerCase();
+                const distName = (osInfo.distribution || '').toLowerCase();
+                
+                // 确定主操作系统类型
+                let osType = 'linux';
+                
+                if (distType === 'centos' || distId === 'centos' || distName.includes('centos')) {
+                  osType = 'centos';
+                } else if (distType === 'ubuntu' || distId === 'ubuntu' || distName.includes('ubuntu')) {
+                  osType = 'ubuntu';
+                } else if (distType === 'debian' || distId === 'debian' || distName.includes('debian')) {
+                  osType = 'debian';
+                } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
+                  osType = 'redhat';
+                } else if (distType === 'windows' || distId === 'windows' || distName.includes('windows')) {
+                  osType = 'windows';
+                } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
+                  osType = 'kylin';
+                } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
+                  osType = 'alpine';
+                }
+                
+                // 使用switch语句根据操作系统类型返回对应图标
+                switch (osType) {
+                  case 'centos':
+                    return require('@/assets/img/os-logos/centos.svg');
+                  case 'ubuntu':
+                    return require('@/assets/img/os-logos/ubuntu.svg');
+                  case 'debian':
+                    return require('@/assets/img/os-logos/debian.svg');
+                  case 'redhat':
+                    return require('@/assets/img/os-logos/redhat.svg');
+                  case 'windows':
+                    return require('@/assets/img/os-logos/windows.svg');
+                  case 'kylin':
+                    return require('@/assets/img/os-logos/kylin.png');
+                  case 'alpine':
+                    return require('@/assets/img/os-logos/alpine.svg');
+                  default:
+                    return require('@/assets/img/os-logos/linux-tux.svg');
+                }
+              } catch (error) {
+                // 如果找不到图标文件，返回内置的数据URI
+                return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI2YwZjBmMCIvPjxwYXRoIGQ9Ik0yMy41IDE0QzIzLjUgMTIuMzQzMSAyNC44NDMxIDExIDI2LjUgMTFDMjguMTU2OSAxMSAyOS41IDEyLjM0MzEgMjkuNSAxNFYxNy42NzY4QzMwLjQ5MzcgMTguMTA3MiAzMS4zNjc0IDE4Ljc4NTUgMzIgMTkuNjMyVjE0QzMyIDExLjIzODYgMjkuNzYxNCA5IDI3IDlDMjQuMjM4NiA5IDIyIDExLjIzODYgMjIgMTRWMTkuNjM0QzIyLjYzMzEgMTguNzg2MSAyMy41MDc0IDE4LjEwNzEgMjQuNSAxNy42NzZWMTRIMjMuNVoiIGZpbGw9IiM1MjUyNTIiLz48cGF0aCBkPSJNMzEuOTk5OCAyOC45OUMzMi4wMDE4IDI5LjYzODkgMzEuODA3MSAzMC4yNzMzIDMxLjQ0MjkgMzAuODAyQzMxLjA3ODYgMzEuMzMwNyAzMC41NjAyIDMxLjczMDUgMjkuOTU5OCAzMS45NVYzNC43MkMzMi45MDc1IDM0LjEyMTMgMzUuMTAyIDMxLjM5NjYgMzUgMjguMjlDMzQuODk3OSAyNS4xODM0IDMyLjU1OTYgMjIuNjM5MiAyOS41IDIyLjI1VjE5LjI4QzI5LjUgMTkuMjggMzggMjEuMjggMzggMjlDMzggMzYuNzIgMjkuNTUgMzggMjkuNTUgMzhIMTkuMDNDMTkuMDMgMzggMTAuNTIgMzcuMjkgMTAuMDIgMjcuNzhDOS42OCAxOS43OSAxOS41IDE4LjI3IDE5LjUgMTguMjdWMjEuMjdDMTkuNSAyMS4yNyAxMy4wMDk4IDIyLjYxIDE0LjAyIDE5QzE1LjUgMTQgMjQuOTk5OCAxNCAyNC45OTk4IDE0QzI0Ljk5OTggMTQgMjYuOTk5OCAxNCAyOS4wMDA3IDE0Ljk5QzI5LjAwMDcgMTQuOTkgMjguOTUxNCAxNi42OTMxIDI4LjAyMDcgMTcuODJDMjUuNjgwNyAxOC40OSAyMyAyMC41MSAyMyAyNC41QzIzIDI5LjE1IDI3LjAwMDIgMzAuMTcgMjcuMDAwMiAzMS4yNVYzNC42NkMyMi42NDczIDM0LjMzMDMgMTkuMTk5MSAzMC42NjAzIDE5LjAxOTggMjYuMDZDMTkuMDE5OCAyNS44NiAxOS4wMTk4IDI1LjY2IDE5LjAxOTggMjUuNDZDMTkuMDE5OCAyMy42OTQ1IDE5LjYzOTQgMjEuOTkxMiAyMC43Mzk3IDIwLjY4MTdDMjEuODQwMSAxOS4zNzIyIDIzLjM0NDIgMTguNTUxNiAyNC45OTk4IDE4LjQyVjIyLjE5QzIzLjI4MTQgMjIuNDA1NiAyMS44NTA1IDIzLjU0MTMgMjEuMzcwOSAyNS4xN0MyMi4yMTc3IDI3LjY0MjcgMjQuNzY1OCAyOS4xMjI0IDI3LjI3MDcgMjguNThDMjcuNzk5OSAyOC40NiAyOC4zMTYyIDI4LjI5MTQgMjguODE4MyAyOC4wOEMyOS4wNTQ5IDI3Ljk4ODYgMjkuMzE2MyAyNy45OTk3IDI5LjU0OCAyOC4xMTFDMjkuNzc5NyAyOC4yMjIzIDI5Ljk2MDIgMjguNDI1MiAzMC4wNCAyOC42OEMzMC4yMSAyOS4xNTcgMzAuMzI0NCAyOS42NTMzIDMwLjM4MTcgMzAuMTU3M0MzMC41MDUzIDI5LjY3MjggMzAuNTA4NSAyOS4xNTgxIDMwLjM5MDkgMjguNjcyQzMwLjM5MDkgMjguNjcyIDMxLjk5OTggMjguOTkgMzEuOTk5OCAyOC45OVoiIGZpbGw9IiM1MjUyNTIiLz48L3N2Zz4=';
+              }
+            }
+
+            const iconPath = getOsIconPath(hasOsInfo ? row.osInfo : null);
+
+            // 返回操作系统信息显示
+            if (hasOsInfo) {
+              return h('a-tooltip', {
+                props: {
+                  placement: 'right',
+                  arrowPointAtCenter: true,
+                  overlayClassName: 'os-tooltip',
+                  getPopupContainer: () => document.body
+                }
+              }, [
+                // 使用新的操作系统浮窗组件
+                h('span', {
+                  slot: 'title',
+                  class: 'os-detail-tooltip'
+                }, [
+                  h(OsFloatingCard, {
+                    props: {
+                      osInfo: row.osInfo,
+                      cpuStatus: row.cpuStatus || 'pending',
+                      memoryStatus: row.memoryStatus || 'pending',
+                      diskStatus: row.diskStatus || 'pending',
+                      swapStatus: row.swapStatus || 'pending',
+                      gpuStatus: row.gpuStatus || 'pending'
+                    }
+                  })
+                ]),
+
+                // 显示的操作系统信息
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center'
+                  }
+                }, [
+                  // 操作系统图标
+                  h('div', {
+                    style: {
+                      width: '24px',
+                      height: '24px',
+                      marginRight: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  }, [
+                    h('img', {
+                      attrs: {
+                        src: iconPath,
+                        alt: osDisplayName
+                      },
+                      style: {
+                        width: '20px',
+                        height: '20px'
+                      }
+                    })
+                  ]),
+
+                  // 操作系统名称和版本
+                  h('div', {
+                    style: {
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }
+                  }, [
+                    h('span', {
+                      style: {
+                        color: '#1D1D1F',
+                        fontWeight: '500',
+                        fontSize: '13px',
+                        lineHeight: '1.3'
+                      }
+                    }, [osDisplayName]),
+                    osVersion ? h('span', {
+                      style: {
+                        color: '#8E8E93',
+                        fontSize: '11px',
+                        lineHeight: '1.3'
+                      }
+                    }, [osVersion]) : null
+                  ])
+                ])
+              ]);
+            }
+
+            // 当没有有效的osInfo时，显示简单的信息
+            return h('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center'
+              }
+            }, [
+              h('span', {
+                style: {
+                  color: '#8E8E93',
+                  fontSize: '13px'
+                }
+              }, [text || '未知操作系统'])
+            ]);
+          }
+        },
+        {
+          title: "当前受管",
+          key: "managed",
+          dataIndex: "managed",
+          width: "90px", // 添加固定宽度
+          customRender: (text, row, index) => {
+            const h = this.$createElement;
+            return h('div', {
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '500',
+                backgroundColor: text ? 'rgba(52, 199, 89, 0.1)' : 'rgba(142, 142, 147, 0.1)',
+                color: text ? '#34c759' : '#8e8e93',
+                transition: 'all 0.3s ease'
+              }
+            }, [
+              h('span', {
+                style: {
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: text ? '#34c759' : '#8e8e93',
+                  marginRight: '6px',
+                  display: 'inline-block'
+                }
+              }),
+              text ? "是" : "否"
+            ]);
+          },
+        },
+        {
+          title: "状态",
+          key: "status",
+          width: "15%",  // 增加状态列宽度
+          customRender: (text, row) => {
+            const h = this.$createElement;
+
+            // 状态映射
+            const statusMap = {
+              CHECKING: { text: '检查中', color: '#1890ff', icon: 'loading' },
+              WAITING: { text: '等待检查', color: '#faad14', icon: 'clock-circle' },
+              SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
+              FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
+              SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              TERMINATING: { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
+              MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
+            };
+
+            // 使用主机的状态
+            const hostStatus = row.statusStr || row.status || '';
+
+            // 如果主机有状态，直接显示
+            if (hostStatus && statusMap[hostStatus]) {
+              const status = statusMap[hostStatus];
+              return h('span', {
+                class: 'flex-container',
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: status.color
+                }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [status.text])
+              ]);
+            }
+
+            return h('span', {}, ['-']);
+          },
+        },
+        {
+          title: "检查项",
+          key: "checkItem",
+          width: "18%",  // 增加检查项列宽度
+          customRender: (text, row) => {
+            const h = this.$createElement;
+
+            // 状态映射
+            const statusMap = {
+              CHECKING: { text: '检查中', color: '#1890ff', icon: 'loading' },
+              WAITING: { text: '等待检查', color: '#faad14', icon: 'clock-circle' },
+              SUCCESS: { text: '通过', color: '#52c41a', icon: 'check-circle' },
+              FAILED: { text: '未通过', color: '#f5222d', icon: 'close-circle' },
+              SKIPPED: { text: '已跳过', color: '#d9d9d9', icon: 'stop' },
+              TERMINATING: { text: '终止中', color: '#ff7a45', icon: 'stop', spin: true },
+              MIXED: { text: '部分通过', color: '#faad14', icon: 'exclamation-circle' }
+            };
+
+            // 检查主机是否有检查项
+            const checkItems = row.checkItems || [];
+
+            // 优先级处理：检查中 > 待检查 > 失败 > 跳过 > 成功
+
+            // 1. 先检查是否有正在检查中的项目
+            const currentItem = checkItems.find(item => item.status === 'CHECKING');
+            if (currentItem) {
+              const status = statusMap[currentItem.status];
+              return h('span', {
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [currentItem.itemName])
+              ]);
+            }
+
+            // 2. 其次检查是否有待检查的项目
+            const waitingItem = checkItems.find(item => item.status === 'WAITING');
+            if (waitingItem) {
+              const status = statusMap[waitingItem.status];
+              return h('span', {
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [waitingItem.itemName])
+              ]);
+            }
+
+            // 3. 查找失败的项目，并显示最后一个失败项
+            const failedItems = checkItems.filter(item => item.status === 'FAILED');
+            if (failedItems.length > 0) {
+              const lastFailedItem = failedItems[failedItems.length - 1];
+              const status = statusMap[lastFailedItem.status];
+              return h('span', {
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastFailedItem.itemName])
+              ]);
+            }
+
+            // 4. 查找跳过的项目，显示最后一个跳过项
+            const skippedItems = checkItems.filter(item => item.status === 'SKIPPED');
+            if (skippedItems.length > 0) {
+              const lastSkippedItem = skippedItems[skippedItems.length - 1];
+              const status = statusMap[lastSkippedItem.status];
+              return h('span', {
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastSkippedItem.itemName])
+              ]);
+            }
+
+            // 5. 最后查找成功的项目，显示最后一个成功项
+            const successItems = checkItems.filter(item => item.status === 'SUCCESS');
+            if (successItems.length > 0) {
+              const lastSuccessItem = successItems[successItems.length - 1];
+              const status = statusMap[lastSuccessItem.status];
+              return h('span', {
+                class: 'flex-container',
+                style: { display: 'flex', alignItems: 'center', color: status.color }
+              }, [
+                h('a-icon', {
+                  props: {
+                    type: status.icon,
+                    theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
+                    twoToneColor: status.color,
+                    spin: status.icon === 'loading'
+                  },
+                  style: { fontSize: '14px', marginRight: '4px' }
+                }),
+                h('span', {}, [lastSuccessItem.itemName])
+              ]);
+            }
+
+            // 如果没有任何检查项，则显示占位符
+            return h('span', {}, ['-']);
+          },
+        },
+        {
+          title: "操作",
+          key: "action",
+          width: "10%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            const isChecking = row.status === 'CHECKING' || row.statusStr === 'CHECKING';
+            const isWaiting = row.status === 'WAITING' || row.statusStr === 'WAITING';
+
+            return h('div', { class: 'action-buttons apple-actions' }, [
+              // 终止按钮 - 检查中时显示
+              isChecking ? h('a-button', {
+                attrs: {
+                  type: 'danger',
+                  size: 'small'
+                },
+                class: 'apple-button danger',
+                on: {
+                  click: () => this.stopCheck(row)
+                }
+              }, ["终止"]) : null,
+
+              // 重试按钮 - 非检查中且非等待检查时显示
+              !isChecking ? h('button', {
+                props: {
+                  type: 'link',
+                  size: 'small',
+                },
+                style: {
+                  border: 'none',
+                  backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                  color: '#007AFF',
+                  padding: '6px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: isWaiting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isWaiting ? '0.5' : '1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                },
+                attrs: {
+                  disabled: isWaiting // 等待检查时禁用，但不会显示禁用标识
+                },
+                on: {
+                  click: () => this.retryEnvironment(row)
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'redo' },
+                  style: { marginRight: '4px', fontSize: '12px' }
+                }),
+                "重试"
+              ]) : null
+            ].filter(Boolean));
+          },
+        }
+      ],
       selectedCheckItems: {}, // 存储每个主机选中的检查项 { hostname: [itemName1, itemName2] }
       logVisible: false,
       logModalTitle: '',
@@ -173,10 +880,6 @@ export default {
       newHostname: '',
       editLoading: false,
     };
-  },
-  created() {
-    // 初始化表格列
-    this.columns = createColumns(this);
   },
   computed: {
     // 计算是否有任何主机的检查项正在检查中
@@ -200,7 +903,18 @@ export default {
      * @returns {boolean} 是否匹配
      */
     checkStatus(status, targetStatus) {
-      return StatusCalculator.checkStatus(status, targetStatus);
+      if (!status) return false
+
+      // 处理大小写兼容
+      const statusLower = status.toLowerCase()
+      const targetLower = targetStatus.toLowerCase()
+
+      // 特殊处理loading状态，collecting也视为loading
+      if (targetLower === 'loading') {
+        return statusLower === 'loading' || statusLower === 'collecting'
+      }
+
+      return statusLower === targetLower
     },
 
     tableChange(pagination) {
@@ -225,10 +939,10 @@ export default {
         ips: this.steps1Data.hosts
       };
 
+
       this.isRequesting = true;
 
-      // 使用HostCheckService
-      HostCheckService.getEnvironmentList(this, params)
+      this.$axiosPost(global.API.analysisHostList, params)
           .then((res) => {
             if (res.code === 200) {
               // 处理主机状态
@@ -331,7 +1045,11 @@ export default {
     async startHostCheck() {
       // 调用开始检查API，只传递clusterId参数
       try {
-        const res = await HostCheckService.startHostCheck(this, this.clusterId);
+        const params = {
+          clusterId: this.clusterId
+        };
+
+        const res = await this.$axiosPost(global.API.startHostCheck, params);
         if (res.code === 200) {
           this.$message.success('已开始主机检查');
           this.isCheckingActive = true;
@@ -353,7 +1071,11 @@ export default {
     async stopHostCheck() {
       // 调用终止检查API
       try {
-        const res = await HostCheckService.stopHostCheck(this, this.clusterId);
+        const params = {
+          clusterId: this.clusterId
+        };
+
+        const res = await this.$axiosPost(global.API.stopHostCheck, params);
         if (res.code === 200) {
           this.$message.success(res.msg || '已终止主机检查');
 
@@ -389,7 +1111,7 @@ export default {
 
       // 调用批量检查API
       try {
-        const res = await HostCheckService.batchCheckHosts(this, this.clusterId, ipsToCheck);
+        const res = await this.$axiosJsonPost(global.API.batchCheckHosts + '?clusterId=' + this.clusterId, ipsToCheck);
         if (res.code === 200) {
           console.log('成功启动主机检查:', res.msg);
 
@@ -405,18 +1127,50 @@ export default {
 
     // 计算主机的整体状态
     calculateHostStatus(host) {
-      return StatusCalculator.calculateHostStatus(host);
-    },
+      // 如果主机已经有状态则返回
+      if (host.statusStr || host.status) return host.statusStr || host.status;
 
-    saveK8sHostApi(params){
-      HostCheckService.saveK8sHost(this, this.clusterId, params);
+      // 没有检查项则返回空状态
+      const checkItems = host.checkItems || [];
+      if (checkItems.length === 0) return null;
+
+      // 如果有检查中的项，则状态为"检查中"
+      if (checkItems.some(item => item.status === 'CHECKING')) {
+        return 'CHECKING';
+      }
+
+      // 如果有等待检查的项，则状态为"等待检查"
+      if (checkItems.some(item => item.status === 'WAITING')) {
+        return 'WAITING';
+      }
+
+      // 如果有失败的项，则状态为"未通过"
+      if (checkItems.some(item => item.status === 'FAILED')) {
+        return 'FAILED';
+      }
+
+      // 如果所有项都是"跳过"，则状态为"已跳过"
+      if (checkItems.every(item => item.status === 'SKIPPED')) {
+        return 'SKIPPED';
+      }
+
+      // 如果有的是跳过有的是成功，则状态为"部分通过"
+      if (checkItems.some(item => item.status === 'SKIPPED') &&
+          checkItems.some(item => item.status === 'SUCCESS')) {
+        return 'MIXED';
+      }
+
+      // 默认情况：所有项都通过
+      return 'SUCCESS';
     },
-    
+    saveK8sHostApi (params){
+      this.$axiosJsonPost(global.API.saveK8sHost + '?clusterId=' + this.clusterId, params).then((res) => {
+      });
+    },
     //表格选择
     onSelectChange(selectedRowKeys) {
       this.selectedRowKeys = selectedRowKeys;
     },
-    
     retryEnvironment(row) {
       let ips = "";
       if (row === "all") {
@@ -425,24 +1179,30 @@ export default {
       } else {
         ips = row.ip;
       }
-      HostCheckService.rehostCheck(this, ips, this.clusterId, this.steps1Data.sshUser, this.steps1Data.sshPort)
-        .then((res) => {
-          this.selectedRowKeys = [];
-          this.$message.success(`操作成功`);
-          this.pollingSearch();
-        });
+      const params = {
+        ips,
+        clusterId: this.clusterId,
+        sshUser: this.steps1Data.sshUser,
+        sshPort: this.steps1Data.sshPort,
+      };
+      this.$axiosPost(global.API.rehostCheck, params).then((res) => {
+        this.selectedRowKeys = [];
+        this.$message.success(`操作成功`);
+        this.pollingSearch();
+      });
     },
-    
     // 主机环境校验是否完成 是否可以进入下一步
     async hostCheckCompleted(callback) {
+      const params = {
+        clusterId: this.clusterId,
+      };
       // 等待网络请求结束
-      let flag = await HostCheckService.hostCheckCompleted(this, this.clusterId);
+      let flag = await this.$axiosPost(global.API.hostCheckCompleted, params);
       // 网络请求结束后才执行下边的语句  如果传入的callback方法为空或者没传内容也不会去执行，这样也不会影响此方法在别处的调用
       if (callback) {
         callback(flag);
       }
     },
-
     // 展开行渲染函数
     expandedRowRender(record) {
       // 获取检查项列表
@@ -491,7 +1251,11 @@ export default {
       }
 
       try {
-        const res = await HostCheckService.retryCheckItems(this, this.clusterId, ip, selectedItems);
+        const res = await this.$axiosPost(global.API.retryCheckItems, {
+          clusterId: this.clusterId,
+          ip,
+          itemNames: selectedItems
+        });
 
         if (res.code === 200) {
           this.$message.success('重试指令已发送');
@@ -518,7 +1282,11 @@ export default {
       }
 
       try {
-        const res = await HostCheckService.skipCheckItem(this, this.clusterId, ip, itemId);
+        const res = await this.$axiosPost(global.API.skipCheckItem, {
+          clusterId: this.clusterId,
+          ip: ip,
+          itemId: itemId
+        });
         if (res.code === 200) {
           this.$message.success('已跳过该检查项');
 
@@ -549,7 +1317,7 @@ export default {
     // 获取主机校验项
     async getHostCheckItems(ip, isFirstHost = false) {
       try {
-        const res = await HostCheckService.getHostCheckItems(this, ip, this.clusterId);
+        const res = await this.$axiosGet(global.API.getHostCheckItems + '?ip=' + ip + '&clusterId=' + this.clusterId);
         if (res.code === 200) {
           // 设置检查项数据
           this.$set(this.checkItemsMap, ip, res.data);
@@ -831,24 +1599,26 @@ export default {
         }
 
         // 调用后端API
-        HostCheckService.stopHostCheckByIp(this, this.clusterId, row.ip)
-          .then(res => {
-            if (res && res.code === 200) {
-              this.$message.success('已终止主机检查');
+        this.$axiosPost(global.API.stopHostCheck, {
+          clusterId: this.clusterId,
+          ip: row.ip
+        }).then(res => {
+          if (res && res.code === 200) {
+            this.$message.success('已终止主机检查');
 
-              // 延迟1秒后刷新列表，获取最新状态
-              setTimeout(() => {
-                this.refreshHostList();
-              }, 1000);
-            } else {
-              this.$message.error(res.msg || '终止检查失败');
-              this.refreshHostList(); // 还是需要刷新，恢复状态
-            }
-          }).catch(error => {
-            console.error('终止主机检查失败:', error);
-            this.$message.error('终止主机检查失败，请检查网络连接');
-            this.refreshHostList(); // 出错时也刷新，恢复状态
-          });
+            // 延迟1秒后刷新列表，获取最新状态
+            setTimeout(() => {
+              this.refreshHostList();
+            }, 1000);
+          } else {
+            this.$message.error(res.msg || '终止检查失败');
+            this.refreshHostList(); // 还是需要刷新，恢复状态
+          }
+        }).catch(error => {
+          console.error('终止主机检查失败:', error);
+          this.$message.error('终止主机检查失败，请检查网络连接');
+          this.refreshHostList(); // 出错时也刷新，恢复状态
+        });
       } catch (error) {
         console.error('终止主机检查异常:', error);
         this.$message.error('终止主机检查出现异常');
@@ -971,7 +1741,24 @@ export default {
      * 判断是否有主机正在进行检查，更新按钮状态
      */
     updateCheckingStatus(hostList) {
-      this.isCheckingActive = StatusCalculator.hasCheckingHost(hostList);
+      if (!hostList || hostList.length === 0) {
+        this.isCheckingActive = false;
+        return;
+      }
+
+      // 判断是否有主机正在检查
+      const hasCheckingHost = hostList.some(host => {
+        // 检查主机状态
+        if (host.status === 'CHECKING' || host.statusStr === 'CHECKING') {
+          return true;
+        }
+
+        // 检查所有检查项状态
+        const checkItems = host.checkItems || [];
+        return checkItems.some(item => item.status === 'CHECKING');
+      });
+
+      this.isCheckingActive = hasCheckingHost;
     },
 
     /**
@@ -1078,7 +1865,25 @@ export default {
 
     // 解析SSH错误消息，提取错误代码和解决方案
     parseSSHErrorMessage(message) {
-      return StatusCalculator.parseSSHErrorMessage(message, this.$createElement);
+      if (!message) return null;
+      const h = this.$createElement;
+      
+      // 检查是否包含错误代码，格式如 [SSH_AUTH_ERROR]
+      const codeMatch = message.match(/\[(SSH_[A-Z_]+)\]/);
+      const errorCode = codeMatch ? codeMatch[1] : null;
+      
+      // 检查是否包含解决方案，格式如 - 请检查SSH用户名和密码是否正确
+      const solutionMatch = message.match(/- (.*?)(\(|$)/);
+      const solution = solutionMatch ? solutionMatch[1].trim() : null;
+      
+      // 如果没有解析到结构化信息，返回null
+      if (!errorCode && !solution) return null;
+      
+      // 创建结构化展示组件
+      return h('div', { class: 'ssh-error-parsed' }, [
+        errorCode ? h('div', { class: 'ssh-error-code' }, [errorCode]) : null,
+        solution ? h('div', { class: 'ssh-error-solution' }, [solution]) : null
+      ]);
     },
   },
   mounted() {

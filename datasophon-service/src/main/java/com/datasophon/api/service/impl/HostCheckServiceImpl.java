@@ -762,23 +762,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             Thread.currentThread().interrupt();
         }
 
-        // 按照IP地址进行排序
-        ips.sort((ip1, ip2) -> {
-            // 将IP地址解析为整数数组进行比较
-            String[] parts1 = ip1.split("\\.");
-            String[] parts2 = ip2.split("\\.");
-            
-            // 比较每一段IP地址
-            for (int i = 0; i < 4; i++) {
-                int num1 = Integer.parseInt(parts1[i]);
-                int num2 = Integer.parseInt(parts2[i]);
-                if (num1 != num2) {
-                    return num1 - num2;
-                }
-            }
-            
-            return 0; // 相等的情况
-        });
+        // 对IP地址进行排序
+        ips = sortIpAddresses(ips);
 
         logger.info("开始执行新的批量检查，主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
                 ips.size(),
@@ -1852,23 +1837,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("没有需要检查的主机");
         }
 
-        // 按照IP地址进行排序
-        ipsToCheck.sort((ip1, ip2) -> {
-            // 将IP地址解析为整数数组进行比较
-            String[] parts1 = ip1.split("\\.");
-            String[] parts2 = ip2.split("\\.");
-            
-            // 比较每一段IP地址
-            for (int i = 0; i < 4; i++) {
-                int num1 = Integer.parseInt(parts1[i]);
-                int num2 = Integer.parseInt(parts2[i]);
-                if (num1 != num2) {
-                    return num1 - num2;
-                }
-            }
-            
-            return 0; // 相等的情况
-        });
+        // 对IP地址进行排序，使用公共方法
+        ipsToCheck = sortIpAddresses(ipsToCheck);
 
         logger.info("开始执行全局检查，未受管主机数量: {}, 排序后第一个IP: {}, 最后一个IP: {}", 
                 ipsToCheck.size(), 
@@ -1877,6 +1847,48 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         // 调用批量检查方法执行检查
         return batchCheckHosts(clusterId, ipsToCheck);
+    }
+
+    /**
+     * 对IP地址进行排序
+     * 按照IP地址的四个段，依次比较数值大小
+     * 
+     * @param ips 需要排序的IP地址列表
+     * @return 排序后的IP地址列表
+     */
+    private List<String> sortIpAddresses(List<String> ips) {
+        if (ips == null || ips.isEmpty()) {
+            return ips;
+        }
+        
+        // 创建副本，避免修改原始集合
+        List<String> sortedIps = new ArrayList<>(ips);
+        
+        // 按照IP地址进行排序
+        sortedIps.sort((ip1, ip2) -> {
+            try {
+                // 将IP地址解析为整数数组进行比较
+                String[] parts1 = ip1.split("\\.");
+                String[] parts2 = ip2.split("\\.");
+                
+                // 比较每一段IP地址
+                for (int i = 0; i < 4; i++) {
+                    int num1 = Integer.parseInt(parts1[i]);
+                    int num2 = Integer.parseInt(parts2[i]);
+                    if (num1 != num2) {
+                        return num1 - num2;
+                    }
+                }
+                
+                return 0; // 相等的情况
+            } catch (Exception e) {
+                // 处理可能的异常情况（无效IP格式等）
+                logger.warn("IP地址排序时发生异常: {}，IP1={}, IP2={}", e.getMessage(), ip1, ip2);
+                return ip1.compareTo(ip2); // 使用字符串比较作为后备方案
+            }
+        });
+        
+        return sortedIps;
     }
 
     /**
