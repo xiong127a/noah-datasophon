@@ -56,4 +56,9 @@ export default {
   updateTaskInterval: path + '/host/check/updateTaskInterval', // 修改定时任务执行间隔
   updateQueueHealthMonitorInterval: path + '/host/check/updateQueueHealthMonitorInterval', // 更新队列健康监控间隔
   updateTaskTimeoutMonitorInterval: path + '/host/check/updateTaskTimeoutMonitorInterval', // 更新任务超时监控间隔
+  updateHostname: path + '/host/check/updateHostname', // 更新主机名
+  generateHostsFilePreview: path + '/host/check/generateHostsFilePreview', // 生成hosts文件预览
+  syncHostsFile: path + '/host/check/syncHostsFile', // 同步hosts文件到所有主机
+  updateHostsFile: path + '/host/check/updateHostsFile', // 更新hosts文件
+  batchSetHostname: path + '/host/check/batchSetHostname', // 批量设置主机名
 }

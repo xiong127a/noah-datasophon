@@ -242,4 +242,32 @@ public interface HostCheckService {
          * @return 操作结果
          */
         Result updateHostsFile(Integer clusterId, String ip, String hostsFileContent);
+
+        /**
+         * 生成hosts文件预览
+         *
+         * @param clusterId 集群ID
+         * @return 包含所有主机名和IP的预览内容
+         */
+        Result generateHostsFilePreview(Integer clusterId);
+
+        /**
+         * 同步hosts文件到所有主机
+         * 
+         * @param clusterId 集群ID
+         * @return 操作结果
+         */
+        Result syncHostsFile(Integer clusterId);
+
+        /**
+         * 批量设置主机名
+         *
+         * @param clusterId 集群ID
+         * @param prefix    主机名前缀
+         * @param zeroCount 中间0的位数
+         * @param separator 分隔符
+         * @param suffix    后缀
+         * @return 操作结果
+         */
+        Result batchSetHostname(Integer clusterId, String prefix, Integer zeroCount, String separator, String suffix);
 }

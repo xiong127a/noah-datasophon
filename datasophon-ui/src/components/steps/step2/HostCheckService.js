@@ -203,10 +203,66 @@ export default {
    * @returns {Promise} 请求Promise
    */
   updateHostname(vm, clusterId, ip, hostname) {
-    return vm.$http.post('/host/updateHostname', {
+    return vm.$axiosPost(global.API.updateHostname, {
       clusterId,
       ip,
       hostname
+    });
+  },
+
+  /**
+   * 生成hosts文件预览
+   * @param {Object} vm Vue实例
+   * @param {String} clusterId 集群ID
+   * @returns {Promise} 请求Promise
+   */
+  generateHostsFilePreview(vm, clusterId) {
+    return vm.$axiosGet(global.API.generateHostsFilePreview + '?clusterId=' + clusterId);
+  },
+
+  /**
+   * 同步hosts文件到所有主机
+   * @param {Object} vm Vue实例
+   * @param {String} clusterId 集群ID
+   * @returns {Promise} 请求Promise
+   */
+  syncHostsFile(vm, clusterId) {
+    return vm.$axiosPost(global.API.syncHostsFile, { clusterId });
+  },
+
+  /**
+   * 更新hosts文件
+   * @param {Object} vm Vue实例
+   * @param {String} clusterId 集群ID
+   * @param {String} ip 主机IP
+   * @param {String} hostsFileContent hosts文件内容
+   * @returns {Promise} 请求Promise
+   */
+  updateHostsFile(vm, clusterId, ip, hostsFileContent) {
+    return vm.$axiosPost(global.API.updateHostsFile, {
+      clusterId,
+      ip,
+      hostsFileContent
+    });
+  },
+
+  /**
+   * 批量设置主机名
+   * @param {Object} vm Vue实例
+   * @param {String} clusterId 集群ID
+   * @param {String} prefix 前缀
+   * @param {Number} zeroCount 中间0的位数
+   * @param {String} separator 分隔符
+   * @param {String} suffix 后缀
+   * @returns {Promise} 请求Promise
+   */
+  batchSetHostname(vm, clusterId, prefix, zeroCount, separator, suffix) {
+    return vm.$axiosPost(global.API.batchSetHostname, {
+      clusterId,
+      prefix,
+      zeroCount,
+      separator,
+      suffix
     });
   }
 }; 

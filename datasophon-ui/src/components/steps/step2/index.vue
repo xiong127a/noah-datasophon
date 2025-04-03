@@ -39,6 +39,8 @@
         :is-checking-active="isCheckingActive"
         :has-started-check="hasStartedCheck"
         @check-action="handleCheckAction"
+        @set-hostname="showHostnameSettingModal"
+        @sync-hosts="showSyncHostsModal"
       />
       <a-table
           @change="tableChange"
@@ -86,6 +88,23 @@
       @cancel="cancelHostnameEdit"
       @submit="submitHostnameEdit"
     />
+
+    <!-- 主机名批量设置弹窗 -->
+    <hostname-setting-modal
+      :visible="hostnameSettingVisible"
+      :clusterId="clusterId"
+      @close="closeHostnameSettingModal"
+      @success="handleHostnameSettingSuccess"
+      @syncHosts="showSyncHostsModal"
+    />
+    
+    <!-- 同步hosts文件弹窗 -->
+    <sync-hosts-file-modal
+      :visible="syncHostsVisible"
+      :clusterId="clusterId"
+      @close="closeSyncHostsModal"
+      @success="handleSyncHostsSuccess"
+    />
   </div>
 </template>
 
@@ -101,6 +120,8 @@ import TableOperations from './TableOperations.vue';
 import FixConfirmModal from './FixConfirmModal.vue';
 import HostnameEditModal from './HostnameEditModal.vue';
 import HostCheckItems from './HostCheckItems.vue';
+import HostnameSettingModal from './HostnameSettingModal.vue';
+import SyncHostsFileModal from './SyncHostsFileModal.vue';
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
@@ -118,7 +139,9 @@ export default {
     FixConfirmModal,
     HostnameEditModal,
     /* eslint-disable-next-line vue/no-unused-components */
-    HostCheckItems
+    HostCheckItems,
+    HostnameSettingModal,
+    SyncHostsFileModal
   },
   data() {
     return {
@@ -879,6 +902,8 @@ export default {
       currentEditHost: null,
       newHostname: '',
       editLoading: false,
+      hostnameSettingVisible: false,
+      syncHostsVisible: false,
     };
   },
   computed: {
@@ -1239,7 +1264,7 @@ export default {
 
     // 选择检查项
     onCheckItemSelect(ip, selectedRowKeys) {
-      this.$set(this.selectedCheckItems, ip, selectedRowKeys);
+      this.$set(this.selectedCheckItems, ip, selectedKeys);
     },
 
     // 重试选中的检查项
@@ -1884,6 +1909,38 @@ export default {
         errorCode ? h('div', { class: 'ssh-error-code' }, [errorCode]) : null,
         solution ? h('div', { class: 'ssh-error-solution' }, [solution]) : null
       ]);
+    },
+
+    // 关闭主机名批量设置弹窗
+    closeHostnameSettingModal() {
+      this.hostnameSettingVisible = false;
+    },
+
+    // 处理主机名批量设置成功
+    handleHostnameSettingSuccess() {
+      this.$message.success('主机名批量设置成功');
+      this.getEnvironmentList();
+    },
+
+    // 关闭同步hosts文件弹窗
+    closeSyncHostsModal() {
+      this.syncHostsVisible = false;
+    },
+
+    // 处理同步hosts文件成功
+    handleSyncHostsSuccess() {
+      this.$message.success('同步hosts文件成功');
+      this.getEnvironmentList();
+    },
+
+    // 显示主机名批量设置弹窗
+    showHostnameSettingModal() {
+      this.hostnameSettingVisible = true;
+    },
+
+    // 显示同步hosts文件弹窗
+    showSyncHostsModal(clusterId) {
+      this.syncHostsVisible = true;
     },
   },
   mounted() {

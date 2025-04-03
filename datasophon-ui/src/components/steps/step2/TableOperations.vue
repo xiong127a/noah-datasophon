@@ -19,7 +19,26 @@
 -->
 <template>
   <div class="table-operations">
-    <!-- 开始检查/重试/终止检查三合一按钮 -->
+    <!-- 左侧功能按钮区 -->
+    <div class="left-operations">
+      <a-button
+        class="apple-button apple-outlined-button"
+        @click="$emit('set-hostname')"
+      >
+        <a-icon type="edit" />
+        <span>{{ $t('设置主机名') }}</span>
+      </a-button>
+      
+      <a-button
+        class="apple-button apple-outlined-button"
+        @click="$emit('sync-hosts')"
+      >
+        <a-icon type="sync" />
+        <span>{{ $t('同步hosts文件') }}</span>
+      </a-button>
+    </div>
+    
+    <!-- 右侧开始检查/重试/终止检查三合一按钮 -->
     <a-button
       class="apple-button"
       :class="isCheckingActive ? 'apple-danger-button' : 'apple-primary-button'"
@@ -65,8 +84,13 @@ export default {
 .table-operations {
   margin-bottom: 16px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  
+  .left-operations {
+    display: flex;
+    gap: 8px;
+  }
   
   .apple-button {
     border: none;
@@ -100,6 +124,16 @@ export default {
       
       &:hover {
         background-color: darken(@apple-red, 5%);
+      }
+    }
+    
+    &.apple-outlined-button {
+      background-color: transparent;
+      color: @apple-blue;
+      border: 1px solid @apple-blue;
+      
+      &:hover {
+        background-color: fade(@apple-blue, 5%);
       }
     }
   }

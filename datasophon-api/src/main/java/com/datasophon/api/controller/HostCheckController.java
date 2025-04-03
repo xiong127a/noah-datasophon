@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -484,6 +483,51 @@ public class HostCheckController {
             @RequestParam String ip,
             @RequestParam String hostsFileContent) {
         return hostCheckService.updateHostsFile(clusterId, ip, hostsFileContent);
+    }
+
+    /**
+     * 生成hosts文件预览
+     *
+     * @param clusterId 集群ID
+     * @return 包含所有主机名和IP的预览内容
+     */
+    @GetMapping("/generateHostsFilePreview")
+    @UserPermission
+    public Result generateHostsFilePreview(@RequestParam(name = "clusterId") Integer clusterId) {
+        return hostCheckService.generateHostsFilePreview(clusterId);
+    }
+
+    /**
+     * 同步hosts文件到所有主机
+     *
+     * @param clusterId 集群ID
+     * @return 操作结果
+     */
+    @PostMapping("/syncHostsFile")
+    @UserPermission
+    public Result syncHostsFile(@RequestParam Integer clusterId) {
+        return hostCheckService.syncHostsFile(clusterId);
+    }
+
+    /**
+     * 批量设置主机名
+     *
+     * @param clusterId 集群ID
+     * @param prefix    主机名前缀
+     * @param zeroCount 中间0的位数
+     * @param separator 分隔符
+     * @param suffix    后缀
+     * @return 操作结果
+     */
+    @PostMapping("/batchSetHostname")
+    @UserPermission
+    public Result batchSetHostname(
+            @RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "prefix") String prefix,
+            @RequestParam(name = "zeroCount") Integer zeroCount,
+            @RequestParam(name = "separator", required = false) String separator,
+            @RequestParam(name = "suffix", required = false) String suffix) {
+        return hostCheckService.batchSetHostname(clusterId, prefix, zeroCount, separator, suffix);
     }
 
 }
