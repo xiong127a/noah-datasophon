@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +55,8 @@ public class HostCheckController {
      */
     @GetMapping("/getHostCheckItems")
     @UserPermission
-    public Result getHostCheckItems(@RequestParam String ip, @RequestParam Integer clusterId) {
+    public Result getHostCheckItems(@RequestParam(name = "ip") String ip,
+            @RequestParam(name = "clusterId") Integer clusterId) {
         // 委托给服务层处理业务逻辑
         return hostCheckService.getHostCheckItems(ip, clusterId);
     }
@@ -71,10 +74,9 @@ public class HostCheckController {
     @GetMapping("/queueManager")
     @UserPermission
     public Result manageQueueManager(
-            @RequestParam(value = "action") String action,
-            @RequestParam(value = "scope", required = false, defaultValue = "all") String scopeCode,
-            @RequestParam(value = "taskId", required = false) String taskId) {
-
+            @RequestParam(name = "action") String action,
+            @RequestParam(name = "scope", required = false, defaultValue = "all") String scopeCode,
+            @RequestParam(name = "taskId", required = false) String taskId) {
         log.info("收到队列管理器控制请求: action={}, scope={}, taskId={}", action, scopeCode, taskId);
 
         // 委托给服务层处理所有业务逻辑
@@ -87,8 +89,8 @@ public class HostCheckController {
     @PostMapping("/stopHostCheck")
     @UserPermission
     public Result stopHostCheck(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String ip) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip) {
         return hostCheckService.stopHostCheck(clusterId, ip);
     }
 
@@ -98,9 +100,9 @@ public class HostCheckController {
     @PostMapping("/stopCheckItem")
     @UserPermission
     public Result stopCheckItem(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String ip,
-            @RequestParam Integer itemId) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemId") Integer itemId) {
         return hostCheckService.stopItemCheck(clusterId, ip, itemId);
     }
 
@@ -123,9 +125,9 @@ public class HostCheckController {
     @PostMapping("/fixSelectedCheckItems")
     @UserPermission
     public Result fixSelectedCheckItems(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String ip,
-            @RequestParam String itemIds) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemIds") String itemIds) {
         return hostCheckService.fixSelectedCheckItems(clusterId, ip, itemIds);
     }
 
@@ -135,8 +137,8 @@ public class HostCheckController {
     @PostMapping("/fixAllCheckItems")
     @UserPermission
     public Result fixAllCheckItems(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String ip) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip) {
         return hostCheckService.fixAllCheckItems(clusterId, ip);
     }
 
@@ -147,7 +149,7 @@ public class HostCheckController {
     @PostMapping("/batchCheckHosts")
     @UserPermission
     public Result batchCheckHosts(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
             @RequestBody List<String> ips) {
         return hostCheckService.batchCheckHosts(clusterId, ips);
     }
@@ -159,10 +161,10 @@ public class HostCheckController {
     @PostMapping("/rehostCheck")
     @UserPermission
     public Result rehostCheck(
-            @RequestParam @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam String ips,
-            @RequestParam(required = false) String sshUser,
-            @RequestParam(required = false) Integer sshPort) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ips") String ips,
+            @RequestParam(name = "sshUser", required = false) String sshUser,
+            @RequestParam(name = "sshPort", required = false) Integer sshPort) {
         // 将IP字符串转换为列表
         List<String> ipList = Arrays.asList(ips.split(","));
         return hostCheckService.batchCheckHosts(clusterId, ipList);
@@ -176,7 +178,7 @@ public class HostCheckController {
      */
     @PostMapping("/startHostCheck")
     @UserPermission
-    public Result startHostCheck(@RequestParam Integer clusterId) {
+    public Result startHostCheck(@RequestParam(name = "clusterId") Integer clusterId) {
         return hostCheckService.startHostCheck(clusterId);
     }
 
@@ -186,22 +188,26 @@ public class HostCheckController {
     @PostMapping("/getCheckItemLog")
     @UserPermission
     public Result getCheckItemLog(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("ip") String ip,
-            @RequestParam("itemId") Integer itemId) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemId") Integer itemId) {
         return hostCheckService.getCheckItemLog(clusterId, ip, itemId);
     }
 
     /**
-     * 重试指定的检查项
+     * 重试指定检查项
+     *
+     * @param clusterId    集群ID
+     * @param ip           主机IP
+     * @param itemNamesStr 检查项名称列表，以逗号分隔
+     * @return 操作结果
      */
     @PostMapping("/retryCheckItems")
     @UserPermission
     public Result retryCheckItems(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("ip") String ip,
-            @RequestParam("itemNames") String itemNamesStr) {
-
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemNames") String itemNamesStr) {
         if (clusterId == null) {
             return Result.error("集群ID不能为空");
         }
@@ -235,12 +241,12 @@ public class HostCheckController {
     @PostMapping(value = "/getLog", produces = MediaType.APPLICATION_JSON_VALUE)
     @UserPermission
     public Result getLog(
-            @RequestParam Integer clusterId,
-            @RequestParam String ip,
-            @RequestParam Integer itemId,
-            @RequestParam(required = false) String logType,
-            @RequestParam(required = false) String logLevel,
-            @RequestParam(required = false, defaultValue = "all") String filterMode) {
+            @RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemId") Integer itemId,
+            @RequestParam(name = "logType", required = false) String logType,
+            @RequestParam(name = "logLevel", required = false) String logLevel,
+            @RequestParam(name = "filterMode", required = false, defaultValue = "all") String filterMode) {
         return hostCheckService.getFormattedLog(clusterId, ip, itemId, logType, logLevel, filterMode);
     }
 
@@ -261,9 +267,9 @@ public class HostCheckController {
     @PostMapping("/skipCheckItem")
     @UserPermission
     public Result skipCheckItem(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("ip") String ip,
-            @RequestParam("itemId") Integer itemId) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemId") Integer itemId) {
         return hostCheckService.skipCheckItem(clusterId, ip, itemId);
     }
 
@@ -284,14 +290,16 @@ public class HostCheckController {
     @GetMapping("/getCheckItemConfirmInfo")
     @UserPermission
     public Result getCheckItemConfirmInfo(
-            @RequestParam("clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam("ip") String ip,
-            @RequestParam("itemId") Integer itemId) {
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "itemId") Integer itemId) {
         return hostCheckService.getCheckItemConfirmInfo(clusterId, ip, itemId);
     }
 
     /**
      * 获取异步服务状态
+     *
+     * @return 异步服务状态信息
      */
     @UserPermission
     @GetMapping("/asyncService/status")
@@ -315,8 +323,8 @@ public class HostCheckController {
     @UserPermission
     @PostMapping("/asyncService/schedule")
     public Result configureScheduledTask(
-            @RequestParam("type") String type,
-            @RequestParam("intervalMs") long intervalMs) {
+            @RequestParam(name = "type") String type,
+            @RequestParam(name = "intervalMs") long intervalMs) {
         try {
             boolean success = false;
             String message = "";
@@ -352,6 +360,79 @@ public class HostCheckController {
     }
 
     /**
+     * 修改定时任务执行间隔
+     *
+     * @param taskId          任务ID
+     * @param intervalSeconds 执行间隔（秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateTaskInterval")
+    @UserPermission
+    public Result updateTaskInterval(
+            @RequestParam(name = "taskId") String taskId,
+            @RequestParam(name = "intervalSeconds") int intervalSeconds) {
+        try {
+            // 将秒转换为毫秒
+            long intervalMs = intervalSeconds * 1000L;
+
+            if (intervalSeconds <= 0) {
+                return Result.error("执行间隔必须大于0秒");
+            }
+
+            return queueManagerService.updateTaskInterval(taskId, intervalMs);
+        } catch (Exception e) {
+            log.error("修改定时任务执行间隔失败", e);
+            return Result.error("修改执行间隔失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新队列健康监控任务间隔
+     *
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateQueueHealthMonitorInterval")
+    @UserPermission
+    public Result updateQueueHealthMonitorInterval(
+            @RequestParam(name = "intervalMs") long intervalMs) {
+        try {
+            if (intervalMs <= 0) {
+                return Result.error("执行间隔必须大于0毫秒");
+            }
+
+            // 调用队列管理服务更新间隔
+            return queueManagerService.updateTaskInterval("queueHealthMonitor", intervalMs);
+        } catch (Exception e) {
+            log.error("更新队列健康监控间隔失败", e);
+            return Result.error("更新间隔失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新任务超时监控任务间隔
+     *
+     * @param intervalMs 执行间隔（毫秒）
+     * @return 操作结果
+     */
+    @PostMapping("/updateTaskTimeoutMonitorInterval")
+    @UserPermission
+    public Result updateTaskTimeoutMonitorInterval(
+            @RequestParam(name = "intervalMs") long intervalMs) {
+        try {
+            if (intervalMs <= 0) {
+                return Result.error("执行间隔必须大于0毫秒");
+            }
+
+            // 调用队列管理服务更新间隔
+            return queueManagerService.updateTaskInterval("taskTimeoutMonitor", intervalMs);
+        } catch (Exception e) {
+            log.error("更新任务超时监控间隔失败", e);
+            return Result.error("更新间隔失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 获取队列系统详情（包含所有状态和任务信息）
      * 用于详情页面，一次性获取所有数据
      */
@@ -381,79 +462,6 @@ public class HostCheckController {
     }
 
     /**
-     * 修改定时任务执行间隔
-     *
-     * @param taskId          任务ID
-     * @param intervalSeconds 执行间隔（秒）
-     * @return 操作结果
-     */
-    @PostMapping("/updateTaskInterval")
-    @UserPermission
-    public Result updateTaskInterval(
-            @RequestParam("taskId") String taskId,
-            @RequestParam("intervalSeconds") int intervalSeconds) {
-        try {
-            // 将秒转换为毫秒
-            long intervalMs = intervalSeconds * 1000L;
-
-            if (intervalSeconds <= 0) {
-                return Result.error("执行间隔必须大于0秒");
-            }
-
-            return queueManagerService.updateTaskInterval(taskId, intervalMs);
-        } catch (Exception e) {
-            log.error("修改定时任务执行间隔失败", e);
-            return Result.error("修改执行间隔失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 更新队列健康监控任务间隔
-     *
-     * @param intervalMs 执行间隔（毫秒）
-     * @return 操作结果
-     */
-    @PostMapping("/updateQueueHealthMonitorInterval")
-    @UserPermission
-    public Result updateQueueHealthMonitorInterval(
-            @RequestParam("intervalMs") long intervalMs) {
-        try {
-            if (intervalMs <= 0) {
-                return Result.error("执行间隔必须大于0毫秒");
-            }
-
-            // 调用队列管理服务更新间隔
-            return queueManagerService.updateTaskInterval("queueHealthMonitor", intervalMs);
-        } catch (Exception e) {
-            log.error("更新队列健康监控间隔失败", e);
-            return Result.error("更新间隔失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 更新任务超时监控任务间隔
-     *
-     * @param intervalMs 执行间隔（毫秒）
-     * @return 操作结果
-     */
-    @PostMapping("/updateTaskTimeoutMonitorInterval")
-    @UserPermission
-    public Result updateTaskTimeoutMonitorInterval(
-            @RequestParam("intervalMs") long intervalMs) {
-        try {
-            if (intervalMs <= 0) {
-                return Result.error("执行间隔必须大于0毫秒");
-            }
-
-            // 调用队列管理服务更新间隔
-            return queueManagerService.updateTaskInterval("taskTimeoutMonitor", intervalMs);
-        } catch (Exception e) {
-            log.error("更新任务超时监控间隔失败", e);
-            return Result.error("更新间隔失败: " + e.getMessage());
-        }
-    }
-
-    /**
      * 更新主机名
      *
      * @param clusterId 集群ID
@@ -463,9 +471,10 @@ public class HostCheckController {
      */
     @PostMapping("/updateHostname")
     @UserPermission
-    public Result updateHostname(@RequestParam Integer clusterId,
-            @RequestParam String ip,
-            @RequestParam String hostname) {
+    public Result updateHostname(
+            @RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "hostname") String hostname) {
         return hostCheckService.updateHostname(clusterId, ip, hostname);
     }
 
@@ -479,9 +488,10 @@ public class HostCheckController {
      */
     @PostMapping("/updateHostsFile")
     @UserPermission
-    public Result updateHostsFile(@RequestParam Integer clusterId,
-            @RequestParam String ip,
-            @RequestParam String hostsFileContent) {
+    public Result updateHostsFile(
+            @RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "ip") String ip,
+            @RequestParam(name = "hostsFileContent") String hostsFileContent) {
         return hostCheckService.updateHostsFile(clusterId, ip, hostsFileContent);
     }
 
@@ -505,7 +515,7 @@ public class HostCheckController {
      */
     @PostMapping("/syncHostsFile")
     @UserPermission
-    public Result syncHostsFile(@RequestParam Integer clusterId) {
+    public Result syncHostsFile(@RequestParam(name = "clusterId") Integer clusterId) {
         return hostCheckService.syncHostsFile(clusterId);
     }
 
@@ -528,6 +538,18 @@ public class HostCheckController {
             @RequestParam(name = "separator", required = false) String separator,
             @RequestParam(name = "suffix", required = false) String suffix) {
         return hostCheckService.batchSetHostname(clusterId, prefix, zeroCount, separator, suffix);
+    }
+
+    /**
+     * 获取任务进度
+     *
+     * @param taskId 任务ID
+     * @return 任务进度信息
+     */
+    @GetMapping("/getTaskProgress")
+    @UserPermission
+    public Result getTaskProgress(@RequestParam(name = "taskId") String taskId) {
+        return hostCheckService.getTaskProgress(taskId);
     }
 
 }

@@ -2,164 +2,209 @@
   <a-modal
     :visible="visible"
     :title="$t('设置主机名')"
-    :width="750"
+    :width="650"
     :maskClosable="false"
     :destroyOnClose="true"
     @cancel="handleCancel"
     :footer="null"
     class="hostname-setting-modal"
   >
-    <div class="hostname-setting-container">
-      <!-- 功能介绍 -->
-      <div class="feature-description">
-        <div class="description-icon">
-          <a-icon type="bulb" />
-        </div>
-        <div class="description-content">
-          <div class="description-title">{{ $t('功能说明') }}</div>
-          <div class="description-text">
-            {{ $t('该功能可以批量设置集群主机名，支持自定义前缀、数字编号样式、分隔符和后缀。系统会根据规则自动为每台主机生成唯一的主机名，便于识别和管理。支持最多5位数字编号，可满足10万台主机的命名需求。') }}
+    <div v-if="!taskId">
+      <a-form :form="form" layout="vertical" @change="updatePreview">
+        <a-form-item :label="$t('主机名前缀')" :colon="false">
+          <a-select
+            v-decorator="[
+              'prefix',
+              {
+                initialValue: 'bigdata',
+                rules: [{ required: false, message: $t('请选择或输入主机名前缀') }]
+              }
+            ]"
+            :placeholder="$t('请选择或输入主机名前缀')"
+            allow-clear
+            show-search
+            @change="updatePreview"
+            @blur="updatePreview"
+          >
+            <a-select-option v-for="item in prefixOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item :label="$t('编号样式')" :colon="false">
+          <a-select
+            v-decorator="[
+              'zeroCount',
+              {
+                initialValue: 3,
+                rules: [{ required: false, message: $t('请选择编号样式') }]
+              }
+            ]"
+            :placeholder="$t('请选择编号样式')"
+            style="width: 100%"
+            @change="updatePreview"
+            @blur="updatePreview"
+          >
+            <a-select-option v-for="item in numberFormatOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item :label="$t('分隔符')" :colon="false">
+          <a-select
+            v-decorator="[
+              'separator',
+              {
+                initialValue: '',
+                rules: [{ required: false }]
+              }
+            ]"
+            :placeholder="$t('请选择或输入分隔符')"
+            allow-clear
+            show-search
+            @change="updatePreview"
+            @blur="updatePreview"
+          >
+            <a-select-option v-for="item in separatorOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item :label="$t('后缀')" :colon="false">
+          <a-input
+            v-decorator="[
+              'suffix',
+              {
+                initialValue: '',
+                rules: [{ required: false }]
+              }
+            ]"
+            :placeholder="$t('请输入后缀（可选）')"
+            allow-clear
+            @change="updatePreview"
+            @input="updatePreview"
+            @blur="updatePreview"
+          />
+        </a-form-item>
+        
+        <div class="preview-box">
+          <div class="preview-title">{{ $t('预览') }}</div>
+          <div class="preview-content">
+            <div class="example-line">
+              <span class="example-label">{{ $t('示例1：') }}</span>
+              <span class="example-value">{{ previewExample1 }}</span>
+            </div>
+            <div class="example-line">
+              <span class="example-label">{{ $t('示例2：') }}</span>
+              <span class="example-value">{{ previewExample2 }}</span>
+            </div>
+            <div class="example-line">
+              <span class="example-label">{{ $t('示例3：') }}</span>
+              <span class="example-value">{{ previewExample3 }}</span>
+            </div>
           </div>
         </div>
+
+        <div class="action-buttons">
+          <a-button @click="handleCancel">{{ $t('取消') }}</a-button>
+          <a-button 
+            type="primary"
+            :loading="saveLoading"
+            @click="handleSave"
+          >{{ $t('保存') }}</a-button>
+          <a-button
+            type="primary"
+            :loading="saveAndSyncLoading"
+            @click="handleSaveAndSync"
+          >{{ $t('保存并同步hosts') }}</a-button>
+        </div>
+      </a-form>
+    </div>
+    
+    <!-- 任务进度卡片 -->
+    <div v-if="taskId" class="progress-card">
+      <div class="card-title">{{ $t('设置进度') }}</div>
+      
+      <div class="progress-content">
+        <!-- 进度条和状态 -->
+        <div class="progress-status">
+          <div class="status-header">
+            <div class="status-title" v-if="taskStatus === 'IN_PROGRESS'">
+              <a-icon type="sync" spin class="status-icon in-progress" />
+              <span>{{ $t('正在设置主机名') }}</span>
+            </div>
+            <div class="status-title" v-else-if="taskStatus === 'COMPLETED'">
+              <a-icon type="check-circle" class="status-icon completed" />
+              <span>{{ $t('设置完成') }}</span>
+            </div>
+            <div class="status-title" v-else-if="taskStatus === 'FAILED'">
+              <a-icon type="close-circle" class="status-icon failed" />
+              <span>{{ $t('设置失败') }}</span>
+            </div>
+            
+            <div class="status-stats">
+              <div class="stat-item completed">
+                <div class="stat-value">{{ completedCount }}</div>
+                <div class="stat-label">{{ $t('成功') }}</div>
+              </div>
+              <div class="stat-item failed" v-if="failedCount > 0">
+                <div class="stat-value">{{ failedCount }}</div>
+                <div class="stat-label">{{ $t('失败') }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <a-progress 
+            :percent="percentage" 
+            :status="taskStatus === 'FAILED' ? 'exception' : taskStatus === 'COMPLETED' ? 'success' : 'active'"
+            :strokeColor="taskStatus === 'FAILED' ? '#ff4d4f' : taskStatus === 'COMPLETED' ? '#52c41a' : '#1890ff'"
+          />
+          
+          <!-- 当前处理的主机 -->
+          <div class="current-host" v-if="currentHost && taskStatus === 'IN_PROGRESS'">
+            <a-tag color="processing">{{ $t('正在设置') }}: {{ currentHost }}</a-tag>
+          </div>
+          
+          <!-- 消息通知 -->
+          <div class="task-message" v-if="taskMessage">
+            {{ taskMessage }}
+          </div>
+        </div>
+        
+        <!-- 完成的主机列表 -->
+        <a-collapse v-if="completedHosts.length > 0" class="hosts-collapse">
+          <a-collapse-panel :header="$t('已完成的主机') + ' (' + completedHosts.length + ')'" key="1">
+            <div class="hosts-list">
+              <a-tag v-for="host in completedHosts" :key="host" color="success" class="host-tag">
+                {{ host }}
+              </a-tag>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
+        
+        <!-- 失败的主机列表 -->
+        <a-collapse v-if="failedHosts && Object.keys(failedHosts).length > 0" class="hosts-collapse">
+          <a-collapse-panel :header="$t('失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2">
+            <div class="failed-hosts-list">
+              <div class="failed-host-item" v-for="(reason, ip) in failedHosts" :key="ip">
+                <div class="failed-host-ip">{{ ip }}</div>
+                <div class="failed-host-reason">{{ reason }}</div>
+              </div>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
       </div>
       
-      <div class="hostname-card-container">
-        <!-- 左侧设置卡片 -->
-        <div class="hostname-form-card">
-          <div class="card-title">{{ $t('命名规则设置') }}</div>
-          <a-form :form="form" layout="vertical" @change="updatePreview">
-            <a-form-item :label="$t('主机名前缀')" :colon="false">
-              <a-select
-                v-decorator="[
-                  'prefix',
-                  {
-                    initialValue: 'bigdata',
-                    rules: [{ required: false, message: $t('请选择或输入主机名前缀') }]
-                  }
-                ]"
-                :placeholder="$t('请选择或输入主机名前缀')"
-                allow-clear
-                show-search
-                @change="updatePreview"
-                @blur="updatePreview"
-              >
-                <a-select-option v-for="item in prefixOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item :label="$t('编号样式')" :colon="false">
-              <a-select
-                v-decorator="[
-                  'zeroCount',
-                  {
-                    initialValue: 3,
-                    rules: [{ required: false, message: $t('请选择编号样式') }]
-                  }
-                ]"
-                :placeholder="$t('请选择编号样式')"
-                style="width: 100%"
-                @change="updatePreview"
-                @blur="updatePreview"
-              >
-                <a-select-option v-for="item in numberFormatOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item :label="$t('分隔符')" :colon="false">
-              <a-select
-                v-decorator="[
-                  'separator',
-                  {
-                    initialValue: '',
-                    rules: [{ required: false }]
-                  }
-                ]"
-                :placeholder="$t('请选择或输入分隔符')"
-                allow-clear
-                show-search
-                @change="updatePreview"
-                @blur="updatePreview"
-              >
-                <a-select-option v-for="item in separatorOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item :label="$t('后缀')" :colon="false">
-              <a-input
-                v-decorator="[
-                  'suffix',
-                  {
-                    initialValue: '',
-                    rules: [{ required: false }]
-                  }
-                ]"
-                :placeholder="$t('请输入后缀（可选）')"
-                allow-clear
-                @change="updatePreview"
-                @input="updatePreview"
-                @blur="updatePreview"
-              />
-            </a-form-item>
-          </a-form>
-        </div>
-
-        <!-- 右侧预览卡片 -->
-        <div class="hostname-preview-card">
-          <div class="card-title">{{ $t('主机名预览') }}</div>
-          <div class="preview-content">
-            <div class="preview-header">
-              <div class="preview-subtitle">{{ $t('生成结果示例') }}</div>
-              <div class="preview-info">{{ $t('将按此格式为所有主机依次设置') }}</div>
-            </div>
-            
-            <div class="preview-examples">
-              <div class="preview-example">
-                <div class="example-number">1</div>
-                <div class="example-hostname">{{ previewExample1 }}</div>
-              </div>
-              <div class="preview-example">
-                <div class="example-number">2</div>
-                <div class="example-hostname">{{ previewExample2 }}</div>
-              </div>
-              <div class="preview-example">
-                <div class="example-number">3</div>
-                <div class="example-hostname">{{ previewExample3 }}</div>
-              </div>
-              
-              <div class="preview-more">
-                <a-icon type="ellipsis" />
-                <span>{{ $t('更多主机将依此类推') }}</span>
-              </div>
-            </div>
-            
-            <div class="preview-tips">
-              <a-icon type="info-circle" />
-              <span>{{ $t('主机名将按照设置的规则自动递增') }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hostname-actions">
-        <a-button @click="handleCancel">{{ $t('取消') }}</a-button>
-        <a-button
-          type="primary"
-          :loading="saveLoading"
-          @click="handleSave"
-          class="save-button"
-        >{{ $t('保存') }}</a-button>
-        <a-button
-          type="primary"
-          :loading="saveAndSyncLoading"
-          @click="handleSaveAndSync"
-          class="save-sync-button"
-        >{{ $t('保存并同步hosts') }}</a-button>
+      <div class="progress-actions">
+        <a-button @click="handleCancel">{{ $t('关闭') }}</a-button>
+        <a-button 
+          v-if="taskStatus === 'COMPLETED' && completedCount > 0" 
+          type="primary" 
+          @click="handleSyncHosts"
+        >{{ $t('同步hosts文件') }}</a-button>
       </div>
     </div>
   </a-modal>
@@ -209,21 +254,35 @@ export default {
         { label: '三位数字 (例如: 001、002...)', value: 3 },
         { label: '四位数字 (例如: 0001、0002...)', value: 4 },
         { label: '五位数字 (例如: 00001、00002...)', value: 5 }
-
       ],
       // 预览示例
       previewExample1: 'bigdata001',
       previewExample2: 'bigdata002',
-      previewExample3: 'bigdata003'
+      previewExample3: 'bigdata003',
+      
+      // 任务相关
+      taskId: null,
+      taskStatus: null,
+      completedCount: 0,
+      failedCount: 0,
+      percentage: 0,
+      currentHost: null,
+      taskMessage: null,
+      completedHosts: [],
+      failedHosts: {},
+      
+      // 轮询任务
+      pollingTimer: null
     }
   },
   watch: {
     visible(val) {
       if (val) {
-        // 表单重置
-        this.form.resetFields();
-        // 初始化预览
-        this.updatePreview();
+        // 重置状态
+        this.resetState();
+      } else {
+        // 清除轮询定时器
+        this.clearPollingTimer();
       }
     }
   },
@@ -233,7 +292,38 @@ export default {
       this.updatePreview();
     });
   },
+  beforeDestroy() {
+    this.clearPollingTimer();
+  },
   methods: {
+    // 重置状态
+    resetState() {
+      this.form.resetFields();
+      
+      this.taskId = null;
+      this.taskStatus = null;
+      this.completedCount = 0;
+      this.failedCount = 0;
+      this.percentage = 0;
+      this.currentHost = null;
+      this.taskMessage = null;
+      this.completedHosts = [];
+      this.failedHosts = {};
+      
+      this.clearPollingTimer();
+      
+      // 初始化预览
+      this.updatePreview();
+    },
+    
+    // 清除轮询定时器
+    clearPollingTimer() {
+      if (this.pollingTimer) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+      }
+    },
+    
     // 获取表单值
     getFormValues() {
       return new Promise((resolve, reject) => {
@@ -246,7 +336,7 @@ export default {
         })
       })
     },
-
+    
     // 更新预览示例
     updatePreview() {
       try {
@@ -267,11 +357,70 @@ export default {
         console.error('Update preview error:', e);
       }
     },
-
+    
     // 生成示例主机名
     generateExampleHostname(prefix, zeroCount, separator, suffix, index) {
       const paddedNum = index.toString().padStart(zeroCount, '0');
       return prefix + separator + paddedNum + suffix;
+    },
+    
+    // 开始轮询任务进度
+    startPollingTaskProgress(taskId) {
+      this.clearPollingTimer();
+      this.taskId = taskId;
+      
+      // 立即执行一次
+      this.pollTaskProgress();
+      
+      // 每1秒轮询一次
+      this.pollingTimer = setInterval(() => {
+        this.pollTaskProgress();
+      }, 1000);
+    },
+    
+    // 轮询任务进度
+    async pollTaskProgress() {
+      if (!this.taskId) return;
+      
+      try {
+        const res = await HostCheckService.getTaskProgress(this, this.taskId);
+        
+        if (res.code === 200) {
+          const progress = res.data;
+          
+          // 更新任务状态
+          this.taskStatus = progress.status;
+          this.completedCount = progress.completedCount;
+          this.failedCount = progress.failedCount;
+          this.percentage = progress.percentage;
+          this.currentHost = progress.currentHost;
+          this.taskMessage = progress.message;
+          
+          if (progress.completedHosts) {
+            this.completedHosts = progress.completedHosts;
+          }
+          
+          if (progress.failedHosts) {
+            this.failedHosts = progress.failedHosts;
+          }
+          
+          // 如果任务已完成，停止轮询
+          if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
+            this.clearPollingTimer();
+          }
+        } else {
+          console.error('Poll task progress error:', res.msg);
+          // 尝试5次后如果仍然失败，停止轮询
+          this.failCount = (this.failCount || 0) + 1;
+          if (this.failCount >= 5) {
+            this.clearPollingTimer();
+            this.taskStatus = 'FAILED';
+            this.taskMessage = res.msg || this.$t('获取任务进度失败');
+          }
+        }
+      } catch (e) {
+        console.error('Poll task progress error:', e);
+      }
     },
 
     // 保存主机名
@@ -290,14 +439,14 @@ export default {
         );
         
         if (res.code === 200) {
-          this.$message.success(res.data?.message || this.$t('主机名设置成功'));
-          this.$emit('success');
-          this.$emit('close');
+          // 开始轮询任务进度
+          this.startPollingTaskProgress(res.data);
         } else {
           this.$message.error(res.msg || this.$t('主机名设置失败'));
         }
       } catch (e) {
         console.error('Save error:', e);
+        this.$message.error(e.message || this.$t('主机名设置失败'));
       } finally {
         this.saveLoading = false;
       }
@@ -320,18 +469,27 @@ export default {
         );
         
         if (saveRes.code === 200) {
-          // 再同步hosts文件
-          this.$emit('syncHosts', this.clusterId);
-          this.$emit('success');
-          this.$emit('close');
+          // 开始轮询任务进度
+          this.startPollingTaskProgress(saveRes.data);
+          
+          // 设置标记，完成后自动同步hosts
+          this.autoSyncHosts = true;
         } else {
           this.$message.error(saveRes.msg || this.$t('主机名设置失败'));
         }
       } catch (e) {
         console.error('Save and sync error:', e);
+        this.$message.error(e.message || this.$t('操作失败'));
       } finally {
         this.saveAndSyncLoading = false;
       }
+    },
+    
+    // 同步hosts文件
+    async handleSyncHosts() {
+      this.$emit('syncHosts', this.clusterId);
+      this.$emit('success');
+      this.$emit('close');
     },
 
     // 取消
@@ -536,6 +694,207 @@ export default {
 .save-sync-button:focus {
   background-color: #0077ED;
   border-color: #0077ED;
+}
+
+.preview-box {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.preview-title {
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.preview-content {
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.example-line {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.example-label {
+  color: #666;
+  width: 80px;
+}
+
+.example-value {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-weight: 500;
+  color: #1890ff;
+}
+
+.action-buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-buttons button {
+  margin-left: 12px;
+}
+
+/* 进度卡片样式 */
+.progress-card {
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: #1d1d1f;
+  position: relative;
+}
+
+.progress-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.progress-status {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  font-size: 18px;
+}
+
+.in-progress {
+  color: #1890ff;
+}
+
+.completed {
+  color: #52c41a;
+}
+
+.failed {
+  color: #ff4d4f;
+}
+
+.status-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #1d1d1f;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6e6e73;
+}
+
+.current-host {
+  margin-top: 8px;
+}
+
+.task-message {
+  background-color: #f5f7fa;
+  padding: 12px;
+  border-radius: 4px;
+  color: #666;
+  font-size: 14px;
+}
+
+.hosts-collapse {
+  border: none;
+  background-color: transparent;
+}
+
+/deep/ .ant-collapse-header {
+  padding: 12px 16px !important;
+  background-color: #f5f7fa;
+  border-radius: 4px !important;
+  font-weight: 500;
+  color: #1d1d1f !important;
+}
+
+/deep/ .ant-collapse-content {
+  border-top: none;
+}
+
+.hosts-list {
+  padding: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.host-tag {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.failed-hosts-list {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.failed-host-item {
+  padding: 12px;
+  border-radius: 4px;
+  background-color: #fff1f0;
+  border: 1px solid #ffccc7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.failed-host-ip {
+  font-weight: 500;
+  color: #1d1d1f;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 14px;
+}
+
+.failed-host-reason {
+  color: #ff4d4f;
+  font-size: 13px;
+}
+
+.progress-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
 }
 </style>
 

@@ -270,4 +270,12 @@ public interface HostCheckService {
          * @return 操作结果
          */
         Result batchSetHostname(Integer clusterId, String prefix, Integer zeroCount, String separator, String suffix);
+
+        /**
+         * 获取任务进度
+         * 
+         * @param taskId 任务ID
+         * @return 任务进度信息
+         */
+        Result getTaskProgress(String taskId);
 }

@@ -264,5 +264,15 @@ export default {
       separator,
       suffix
     });
+  },
+
+  /**
+   * 获取任务进度
+   * @param {Object} vm Vue实例
+   * @param {String} taskId 任务ID
+   * @returns {Promise} 请求Promise
+   */
+  getTaskProgress(vm, taskId) {
+    return vm.$axiosGet(global.API.getTaskProgress + '?taskId=' + taskId);
   }
 }; 

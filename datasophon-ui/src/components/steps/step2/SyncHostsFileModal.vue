@@ -10,22 +10,21 @@
     class="sync-hosts-modal"
   >
     <div class="sync-hosts-container">
-      <!-- 特性描述 -->
+      <!-- 功能介绍 -->
       <div class="feature-description">
         <div class="description-icon">
-          <a-icon type="info-circle" />
+          <a-icon type="api" />
         </div>
         <div class="description-content">
           <div class="description-title">{{ $t('功能说明') }}</div>
           <div class="description-text">
-            {{ $t('该功能会自动生成包含所有主机IP和主机名的hosts文件，并将其同步到所有集群主机。同步后，主机之间可以通过主机名直接通信，无需记忆IP地址。') }}
+            {{ $t('该功能可以将包含所有主机IP和主机名的hosts文件同步到集群的所有主机，确保集群中的每台主机都能通过主机名相互访问。在批量设置主机名后，建议执行此操作。') }}
           </div>
         </div>
       </div>
       
-      <!-- 卡片式布局 -->
-      <div class="hosts-card-container">
-        <!-- 预览卡片 -->
+      <!-- Hosts文件预览 -->
+      <div v-if="!taskId" class="hosts-card-container">
         <div class="hosts-preview-card">
           <a-spin :spinning="loading">
             <div class="card-title">{{ $t('Hosts文件预览') }}</div>
@@ -83,17 +82,17 @@
                     <div v-if="hasStructuredData()" class="code-content">
                       <div v-for="(entry, index) in previewData.hostsEntries" :key="index" class="hosts-line">
                         <!-- 注释行 -->
-                        <template v-if="entry.type === 'COMMENT'">
+                        <div v-if="entry.type === 'COMMENT'" class="comment-line">
                           <span class="comment">{{ entry.comment }}</span>
-                        </template>
+                        </div>
                         <!-- IP映射行 -->
-                        <template v-else-if="entry.type === 'MAPPING'">
+                        <div v-else-if="entry.type === 'MAPPING'" class="mapping-line">
                           <span class="ip">{{ entry.ip }}</span>
-                          <span class="separator">    </span>
+                          <span class="separator">&nbsp;&nbsp;&nbsp;&nbsp;</span>
                           <span v-for="(hostname, i) in entry.hostnames" :key="i" class="hostname">
                             {{ hostname }}{{ i < entry.hostnames.length - 1 ? ' ' : '' }}
                           </span>
-                        </template>
+                        </div>
                       </div>
                     </div>
                     <!-- 向后兼容，使用旧的字符串内容渲染 -->
@@ -124,49 +123,99 @@
               </div>
             </div>
           </a-spin>
+          
+          <!-- 同步按钮 -->
+          <div class="hosts-actions" v-if="!loading">
+            <a-button @click="handleCancel">{{ $t('取消') }}</a-button>
+            <a-button
+              type="primary"
+              :loading="syncInProgress"
+              :disabled="!previewData || syncInProgress"
+              @click="handleSync"
+              class="sync-button"
+            >{{ $t('同步到所有主机') }}</a-button>
+          </div>
         </div>
       </div>
       
-      <!-- 同步结果 -->
-      <div class="sync-result-container" v-if="syncResult">
-        <div class="card-title">{{ $t('同步结果') }}</div>
+      <!-- 任务进度卡片 -->
+      <div v-if="taskId" class="progress-card">
+        <div class="card-title">{{ $t('同步进度') }}</div>
         
-        <div class="sync-result-summary">
-          <div class="result-stat success">
-            <a-icon type="check-circle" theme="filled" />
-            <div class="stat-value">{{ syncResult.successCount }}</div>
-            <div class="stat-label">{{ $t('成功') }}</div>
-          </div>
-          
-          <div class="result-stat failed" v-if="syncResult.failedCount > 0">
-            <a-icon type="close-circle" theme="filled" />
-            <div class="stat-value">{{ syncResult.failedCount }}</div>
-            <div class="stat-label">{{ $t('失败') }}</div>
-          </div>
-        </div>
-        
-        <a-collapse v-if="syncResult.failedCount > 0" class="failed-hosts-collapse">
-          <a-collapse-panel :header="$t('查看失败详情')" key="1">
-            <div class="failed-hosts-list">
-              <div class="failed-host-item" v-for="(reason, ip) in syncResult.failedHosts" :key="ip">
-                <div class="failed-host-ip">{{ ip }}</div>
-                <div class="failed-host-reason">{{ reason }}</div>
+        <div class="progress-content">
+          <!-- 进度条和状态 -->
+          <div class="progress-status">
+            <div class="status-header">
+              <div class="status-title" v-if="taskStatus === 'IN_PROGRESS'">
+                <a-icon type="sync" spin class="status-icon in-progress" />
+                <span>{{ $t('正在同步') }}</span>
+              </div>
+              <div class="status-title" v-else-if="taskStatus === 'COMPLETED'">
+                <a-icon type="check-circle" class="status-icon completed" />
+                <span>{{ $t('同步完成') }}</span>
+              </div>
+              <div class="status-title" v-else-if="taskStatus === 'FAILED'">
+                <a-icon type="close-circle" class="status-icon failed" />
+                <span>{{ $t('同步失败') }}</span>
+              </div>
+              
+              <div class="status-stats">
+                <div class="stat-item completed">
+                  <div class="stat-value">{{ completedCount }}</div>
+                  <div class="stat-label">{{ $t('成功') }}</div>
+                </div>
+                <div class="stat-item failed" v-if="failedCount > 0">
+                  <div class="stat-value">{{ failedCount }}</div>
+                  <div class="stat-label">{{ $t('失败') }}</div>
+                </div>
               </div>
             </div>
-          </a-collapse-panel>
-        </a-collapse>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="hosts-actions">
-        <a-button @click="handleCancel">{{ $t('取消') }}</a-button>
-        <a-button
-          type="primary"
-          :loading="syncInProgress"
-          :disabled="!previewData || syncInProgress"
-          @click="handleSync"
-          class="sync-button"
-        >{{ $t('同步到所有主机') }}</a-button>
+            
+            <a-progress 
+              :percent="percentage" 
+              :status="taskStatus === 'FAILED' ? 'exception' : taskStatus === 'COMPLETED' ? 'success' : 'active'"
+              :strokeColor="taskStatus === 'FAILED' ? '#ff4d4f' : taskStatus === 'COMPLETED' ? '#52c41a' : '#1890ff'"
+            />
+            
+            <!-- 当前处理的主机 -->
+            <div class="current-host" v-if="currentHost && taskStatus === 'IN_PROGRESS'">
+              <a-tag color="processing">{{ $t('正在同步') }}: {{ currentHost }}</a-tag>
+            </div>
+            
+            <!-- 消息通知 -->
+            <div class="task-message" v-if="taskMessage">
+              {{ taskMessage }}
+            </div>
+          </div>
+          
+          <!-- 完成的主机列表 -->
+          <a-collapse v-if="completedHosts.length > 0" class="hosts-collapse">
+            <a-collapse-panel :header="$t('已同步主机') + ' (' + completedHosts.length + ')'" key="1">
+              <div class="hosts-list">
+                <a-tag v-for="host in completedHosts" :key="host" color="success" class="host-tag">
+                  {{ host }}
+                </a-tag>
+              </div>
+            </a-collapse-panel>
+          </a-collapse>
+          
+          <!-- 失败的主机列表 -->
+          <a-collapse v-if="failedHosts && Object.keys(failedHosts).length > 0" class="hosts-collapse">
+            <a-collapse-panel :header="$t('同步失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2">
+              <div class="failed-hosts-list">
+                <div class="failed-host-item" v-for="(reason, ip) in failedHosts" :key="ip">
+                  <div class="failed-host-ip">{{ ip }}</div>
+                  <div class="failed-host-reason">{{ reason }}</div>
+                </div>
+              </div>
+            </a-collapse-panel>
+          </a-collapse>
+        </div>
+        
+        <div class="progress-actions">
+          <a-button @click="handleSuccess" v-if="taskStatus === 'COMPLETED'">{{ $t('完成') }}</a-button>
+          <a-button @click="handleCancel" v-else>{{ $t('关闭') }}</a-button>
+        </div>
       </div>
     </div>
   </a-modal>
@@ -193,17 +242,57 @@ export default {
       syncInProgress: false,
       previewData: null,
       hostsContent: '',
-      syncResult: null
+      syncResult: null,
+      taskId: null,
+      taskStatus: null,
+      percentage: 0,
+      completedCount: 0,
+      failedCount: 0,
+      currentHost: null,
+      taskMessage: null,
+      completedHosts: [],
+      failedHosts: {},
+      pollingTimer: null
     }
   },
   watch: {
     visible(val) {
       if (val) {
+        this.resetState();
         this.generatePreview()
+      } else {
+        this.clearPollingTimer();
       }
     }
   },
+  beforeDestroy() {
+    this.clearPollingTimer();
+  },
   methods: {
+    // 重置状态
+    resetState() {
+      this.previewData = null;
+      this.hostsContent = '';
+      this.syncResult = null;
+      this.taskId = null;
+      this.taskStatus = null;
+      this.percentage = 0;
+      this.completedCount = 0;
+      this.failedCount = 0;
+      this.currentHost = null;
+      this.taskMessage = null;
+      this.completedHosts = [];
+      this.failedHosts = {};
+    },
+    
+    // 清除轮询定时器
+    clearPollingTimer() {
+      if (this.pollingTimer) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+      }
+    },
+    
     // 格式化hosts文件内容，添加语法高亮
     formatHostsFile(content) {
       if (!content) return '';
@@ -221,7 +310,7 @@ export default {
         if (parts.length >= 2 && this.isIPAddress(parts[0])) {
           const ip = `<span class="ip">${this.escapeHtml(parts[0])}</span>`;
           const hostnames = parts.slice(1).map(h => `<span class="hostname">${this.escapeHtml(h)}</span>`).join(' ');
-          return `${ip}<span class="separator">    </span>${hostnames}`;
+          return `${ip}<span class="separator">&nbsp;&nbsp;&nbsp;&nbsp;</span>${hostnames}`;
         }
         
         // 其他行保持原样
@@ -268,6 +357,65 @@ export default {
         this.loading = false
       }
     },
+    
+    // 开始轮询任务进度
+    startPollingTaskProgress(taskId) {
+      this.clearPollingTimer();
+      this.taskId = taskId;
+      
+      // 立即执行一次
+      this.pollTaskProgress();
+      
+      // 每1秒轮询一次
+      this.pollingTimer = setInterval(() => {
+        this.pollTaskProgress();
+      }, 1000);
+    },
+    
+    // 轮询任务进度
+    async pollTaskProgress() {
+      if (!this.taskId) return;
+      
+      try {
+        const res = await HostCheckService.getTaskProgress(this, this.taskId);
+        
+        if (res.code === 200) {
+          const progress = res.data;
+          
+          // 更新任务状态
+          this.taskStatus = progress.status;
+          this.completedCount = progress.completedCount;
+          this.failedCount = progress.failedCount;
+          this.percentage = progress.percentage;
+          this.currentHost = progress.currentHost;
+          this.taskMessage = progress.message;
+          
+          if (progress.completedHosts) {
+            this.completedHosts = progress.completedHosts;
+          }
+          
+          if (progress.failedHosts) {
+            this.failedHosts = progress.failedHosts;
+          }
+          
+          // 如果任务已完成，停止轮询
+          if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
+            this.clearPollingTimer();
+          }
+        } else {
+          console.error('Poll task progress error:', res.msg);
+          // 尝试5次后如果仍然失败，停止轮询
+          this.failCount = (this.failCount || 0) + 1;
+          if (this.failCount >= 5) {
+            this.clearPollingTimer();
+            this.taskStatus = 'FAILED';
+            this.taskMessage = res.msg || this.$t('获取任务进度失败');
+          }
+        }
+      } catch (e) {
+        console.error('Poll task progress error:', e);
+      }
+    },
 
     // 同步hosts文件到所有主机
     async handleSync() {
@@ -277,13 +425,8 @@ export default {
         const res = await HostCheckService.syncHostsFile(this, this.clusterId)
         
         if (res.code === 200) {
-          this.syncResult = res.data
-          if (res.data.failedCount === 0) {
-            this.$message.success(this.$t('同步hosts文件成功'))
-            this.$emit('success')
-          } else {
-            this.$message.warning(this.$t('部分主机同步失败，请查看详情'))
-          }
+          // 开始轮询任务进度
+          this.startPollingTaskProgress(res.data);
         } else {
           this.$message.error(res.msg || this.$t('同步hosts文件失败'))
         }
@@ -293,6 +436,12 @@ export default {
       } finally {
         this.syncInProgress = false
       }
+    },
+    
+    // 处理成功完成
+    handleSuccess() {
+      this.$emit('success');
+      this.$emit('close');
     },
 
     // 取消
@@ -683,6 +832,100 @@ export default {
 .sync-button:focus {
   background-color: #0077ED;
   border-color: #0077ED;
+}
+
+.progress-card {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.progress-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.progress-status {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  font-size: 18px;
+}
+
+.status-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #1d1d1f;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6e6e73;
+}
+
+.progress-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.hosts-collapse {
+  border: none;
+  background-color: transparent;
+}
+
+.hosts-collapse /deep/ .ant-collapse-header {
+  padding: 12px 16px !important;
+  background-color: #f5f5f7;
+  border-radius: 8px !important;
+  font-weight: 500;
+  color: #1d1d1f !important;
+}
+
+.hosts-collapse /deep/ .ant-collapse-content {
+  border-top: none;
+}
+
+.hosts-list {
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.host-tag {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background-color: #f5f5f7;
 }
 </style>
 

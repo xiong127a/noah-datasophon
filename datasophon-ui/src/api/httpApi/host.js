@@ -61,4 +61,5 @@ export default {
   syncHostsFile: path + '/host/check/syncHostsFile', // 同步hosts文件到所有主机
   updateHostsFile: path + '/host/check/updateHostsFile', // 更新hosts文件
   batchSetHostname: path + '/host/check/batchSetHostname', // 批量设置主机名
+  getTaskProgress: path + '/host/check/getTaskProgress', // 获取任务进度
 }

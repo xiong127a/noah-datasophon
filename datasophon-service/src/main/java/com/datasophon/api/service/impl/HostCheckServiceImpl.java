@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +60,50 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Autowired
     private AsyncCheckService asyncCheckService;
+
+    /**
+     * 任务执行状态枚举
+     */
+    public enum TaskStatus {
+        /** 进行中 */
+        IN_PROGRESS,
+        /** 已完成 */
+        COMPLETED,
+        /** 失败 */
+        FAILED
+    }
+
+    /**
+     * 任务进度信息
+     */
+    @lombok.Data
+    public static class TaskProgress {
+        /** 任务ID */
+        private String taskId;
+        /** 任务状态 */
+        private TaskStatus status;
+        /** 已完成主机IP列表 */
+        private List<String> completedHosts;
+        /** 处理中的主机IP */
+        private String currentHost;
+        /** 失败主机信息，IP -> 错误信息 */
+        private Map<String, String> failedHosts;
+        /** 总主机数 */
+        private int totalHosts;
+        /** 已完成数量 */
+        private int completedCount;
+        /** 失败数量 */
+        private int failedCount;
+        /** 完成百分比 */
+        private int percentage;
+        /** 任务消息 */
+        private String message;
+    }
+
+    /**
+     * 存储异步任务进度的缓存
+     */
+    private static final Map<String, TaskProgress> taskProgressMap = new ConcurrentHashMap<>();
 
     /**
      * 日志工厂，用于创建日志记录器
@@ -1969,11 +2015,23 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
     }
 
+    /**
+     * 更新主机名
+     */
     @Override
-    public Result updateHostname(Integer clusterId, String ip, String hostname) {
-        logger.info("开始更新主机名: clusterId={}, ip={}, hostname={}", clusterId, ip, hostname);
+    public Result updateHostname(Integer clusterId, String ip, String newHostname) {
+        logger.info("更新主机名: clusterId={}, ip={}, newHostname={}", clusterId, ip, newHostname);
 
-        // 获取主机信息和SSH连接
+        // 校验主机名格式
+        if (StrUtil.isBlank(newHostname)) {
+            return Result.error("主机名不能为空");
+        }
+
+        // 主机名格式检查 - 只允许字母、数字、短横线和下划线，不允许特殊字符
+        if (!newHostname.matches("^[a-zA-Z0-9_.-]+$")) {
+            return Result.error("主机名格式无效，只允许字母、数字、短横线和下划线");
+        }
+
         try {
             // 获取存储在缓存中的主机信息
             Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
@@ -1982,9 +2040,13 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             HostInfo hostInfo = hostMap.get(ip);
-            // 记录更新前的信息用于诊断
-            String oldHostname = hostInfo.getHostname();
-            logger.info("更新前主机名: {}", oldHostname);
+            String currentHostname = hostInfo.getHostname();
+
+            // 如果新旧主机名相同，则无需修改
+            if (newHostname.equals(currentHostname)) {
+                logger.info("主机名未发生变化，无需更新: {}", currentHostname);
+                return Result.success("主机名未发生变化，无需更新");
+            }
 
             // 建立SSH连接
             ClientSession session = null;
@@ -1994,65 +2056,102 @@ public class HostCheckServiceImpl implements HostCheckService {
                     return Result.error("无法连接到主机");
                 }
 
-                // 构建更新主机名的命令
-                String command;
-                if (hostInfo.getOsInfo().getDistribution().toLowerCase().contains("centos") ||
-                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("redhat") ||
-                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("kylin")) {
-                    // CentOS/Red Hat/Kylin系统
-                    command = "sudo hostnamectl set-hostname " + hostname;
-                } else if (hostInfo.getOsInfo().getDistribution().toLowerCase().contains("ubuntu") ||
-                        hostInfo.getOsInfo().getDistribution().toLowerCase().contains("debian")) {
-                    // Ubuntu/Debian系统
-                    command = "sudo hostnamectl set-hostname " + hostname;
+                // 1. 检测操作系统类型
+                String osType = "";
+                if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDistribution() != null) {
+                    String distribution = hostInfo.getOsInfo().getDistribution().toLowerCase();
+                    if (distribution.contains("centos") || distribution.contains("redhat")
+                            || distribution.contains("rhel")) {
+                        osType = "CENTOS";
+                    } else if (distribution.contains("ubuntu")) {
+                        osType = "UBUNTU";
+                    } else if (distribution.contains("debian")) {
+                        osType = "DEBIAN";
+                    } else {
+                        osType = "CENTOS"; // 默认按照CentOS处理
+                    }
                 } else {
-                    // 其他Linux系统
-                    command = "sudo hostname " + hostname + " && " +
-                            "sudo echo '" + hostname + "' | sudo tee /etc/hostname";
+                    // 如果缓存中没有OS类型，则尝试获取
+                    String checkOSCmd = "cat /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || uname -a";
+                    String osInfo = MinaUtils.execCmdWithResult(session, checkOSCmd);
+
+                    if (osInfo.toLowerCase().contains("centos") || osInfo.toLowerCase().contains("redhat")
+                            || osInfo.toLowerCase().contains("rhel")) {
+                        osType = "CENTOS";
+                    } else if (osInfo.toLowerCase().contains("ubuntu")) {
+                        osType = "UBUNTU";
+                    } else if (osInfo.toLowerCase().contains("debian")) {
+                        osType = "DEBIAN";
+                    } else {
+                        // 默认按照CentOS处理
+                        osType = "CENTOS";
+                    }
                 }
 
-                // 执行命令
-                String result = MinaUtils.execCmdWithResult(session, command);
-                logger.info("执行命令结果: {}", result);
+                // 2. 根据OS类型执行不同的主机名设置命令
+                String result;
+                if ("UBUNTU".equals(osType) || "DEBIAN".equals(osType)) {
+                    // Ubuntu/Debian方式
+                    String setHostnameCmd = "sudo hostnamectl set-hostname " + newHostname;
+                    result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
 
-                // 更新主机信息 - 确保所有可能的主机名字段都被更新
-                hostInfo.setHostname(hostname);
-
-                // 由于HostInfo类可能有多个字段表示主机名，确保所有字段都被更新
-                // 这里根据实际情况添加其他可能的字段
-                try {
-                    // 如果有其他字段表示主机名，也要更新
-                    // 例如：hostInfo.setName(hostname);
-                    // 或者 hostInfo.setServerName(hostname);
-                    // 具体取决于HostInfo类的实现
-                } catch (Exception e) {
-                    logger.warn("尝试更新主机名的其他字段时出错: {}", e.getMessage());
-                }
-
-                // 将主机名设置为map的key（如果使用主机名作为key）
-                if (hostMap.containsKey(oldHostname) && !oldHostname.equals(ip)) {
-                    // 如果map使用主机名作为key，则需要移除旧的条目并添加新的
-                    hostMap.remove(oldHostname);
-                    hostMap.put(hostname, hostInfo);
-                    logger.info("已更新hostMap的key: {} -> {}", oldHostname, hostname);
+                    // 更新/etc/hostname文件
+                    String updateHostnameFileCmd = "echo '" + newHostname + "' | sudo tee /etc/hostname";
+                    MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
                 } else {
-                    // 否则直接更新现有条目
-                    hostMap.put(ip, hostInfo);
-                    logger.info("已更新hostMap，使用IP作为key: {}", ip);
+                    // CentOS/RHEL方式
+                    String setHostnameCmd = "sudo hostnamectl set-hostname " + newHostname;
+                    result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
+
+                    // CentOS 6兼容处理
+                    String updateSysConfigCmd = "sudo sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                            + "/' /etc/sysconfig/network 2>/dev/null || true";
+                    MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
                 }
 
-                // 更新主机信息缓存
+                logger.info("设置主机名执行结果: {}", result);
+
+                // 3. 更新/etc/hosts文件中的本机记录
+                // 先获取当前hosts文件
+                String getHostsCmd = "cat /etc/hosts";
+                String hostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
+
+                // 创建临时文件
+                String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+
+                // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
+                String updateHostsCmd = "awk '{ if ($0 ~ /" + currentHostname + "/ && $0 ~ /127.0.1.1|" + ip
+                        + "/) { gsub(\"" + currentHostname + "\", \"" + newHostname + "\") } print $0 }' /etc/hosts > "
+                        + tempFile + " && sudo cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                MinaUtils.execCmdWithResult(session, updateHostsCmd);
+
+                // 4. 获取更新后的主机名进行验证
+                String verifyCmd = "hostname";
+                String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
+
+                if (!verifyResult.equals(newHostname)) {
+                    logger.warn("主机名可能未成功更新，当前主机名为: {}, 期望主机名为: {}", verifyResult, newHostname);
+                }
+
+                // 5. 更新主机信息对象中的主机名
+                String oldHostname = hostInfo.getHostname();
+                hostInfo.setHostname(newHostname);
+
+                // 6. 更新缓存中的主机信息
+                hostMap.remove(ip); // 移除旧的记录
+                hostMap.put(ip, hostInfo); // 添加更新后的记录
+
+                // 7. 将更新后的主机映射放回缓存
                 CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-                logger.info("已更新主机信息缓存");
 
-                // 验证更新是否成功
-                Map<String, HostInfo> updatedMap = (Map<String, HostInfo>) CacheUtils
-                        .get(clusterId + Constants.HOST_MAP);
-                HostInfo updatedInfo = updatedMap.get(ip);
-                logger.info("验证缓存中的主机名: {}", updatedInfo.getHostname());
+                // 8. 刷新单个主机信息缓存
+                updateHostInfoCache(clusterId, hostInfo);
 
-                // 返回更详细的成功信息，包括更新前后的主机名
-                return Result.success("主机名已成功更新: " + oldHostname + " -> " + hostname);
+                // 9. 刷新全局主机信息缓存
+                updateHostMapInCache(clusterId);
+
+                logger.info("主机名已成功更新: {} -> {}", oldHostname, newHostname);
+                return Result.success("主机名已成功更新为: " + newHostname);
             } finally {
                 if (session != null && session.isOpen()) {
                     MinaUtils.closeConnection(session);
@@ -2122,6 +2221,9 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 更新主机信息缓存
                 updateHostInfoCache(clusterId, hostInfo);
+
+                // 立即刷新全局缓存
+                updateHostMapInCache(clusterId);
 
                 return Result.success("hosts文件已成功更新，备份文件: " + backupFileName);
             } finally {
@@ -2353,46 +2455,86 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return Result.error("未找到主机信息");
             }
 
-            // 记录成功和失败的主机
-            List<String> successHosts = new ArrayList<>();
-            Map<String, String> failedHosts = new HashMap<>();
+            // 生成任务ID
+            String taskId = "sync_hosts_" + clusterId + "_" + System.currentTimeMillis();
 
-            // 遍历所有主机，更新hosts文件
-            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                String ip = entry.getKey();
-                try {
-                    // 调用已有的更新hosts文件方法
-                    Result updateResult = updateHostsFile(clusterId, ip, hostsContent);
-                    if (updateResult.isSuccess()) {
-                        successHosts.add(ip);
-                    } else {
-                        failedHosts.put(ip, updateResult.getMsg());
+            // 创建任务进度对象
+            TaskProgress progress = new TaskProgress();
+            progress.setTaskId(taskId);
+            progress.setStatus(TaskStatus.IN_PROGRESS);
+            progress.setCompletedHosts(new ArrayList<>());
+            progress.setFailedHosts(new HashMap<>());
+            progress.setTotalHosts(hostMap.size());
+            progress.setCompletedCount(0);
+            progress.setFailedCount(0);
+            progress.setPercentage(0);
+            progress.setMessage("同步hosts文件任务已启动");
+
+            // 存储任务进度
+            taskProgressMap.put(taskId, progress);
+
+            // 异步执行同步任务
+            CompletableFuture.runAsync(() -> {
+                List<String> ips = new ArrayList<>(hostMap.keySet());
+                // 使用IP统一排序
+                ips = HostUtils.sortIpAddresses(ips);
+
+                for (String ip : ips) {
+                    try {
+                        // 更新当前处理的主机
+                        progress.setCurrentHost(ip);
+
+                        // 调用已有的更新hosts文件方法
+                        Result updateResult = updateHostsFile(clusterId, ip, hostsContent);
+                        if (updateResult.isSuccess()) {
+                            // 添加到成功列表
+                            progress.getCompletedHosts().add(ip);
+                            progress.setCompletedCount(progress.getCompletedCount() + 1);
+                        } else {
+                            // 添加到失败列表
+                            progress.getFailedHosts().put(ip, updateResult.getMsg());
+                            progress.setFailedCount(progress.getFailedCount() + 1);
+                        }
+
+                        // 计算完成百分比
+                        progress.setPercentage(
+                                (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
+                                        / progress.getTotalHosts()) * 100));
+                    } catch (Exception e) {
+                        logger.error("更新主机{}的hosts文件时发生错误", ip, e);
+                        progress.getFailedHosts().put(ip, e.getMessage());
+                        progress.setFailedCount(progress.getFailedCount() + 1);
+                        progress.setPercentage(
+                                (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
+                                        / progress.getTotalHosts()) * 100));
                     }
-                } catch (Exception e) {
-                    logger.error("更新主机{}的hosts文件时发生错误", ip, e);
-                    failedHosts.put(ip, e.getMessage());
                 }
-            }
 
-            // 构建结果
-            Map<String, Object> result = new HashMap<>();
-            result.put("totalHosts", hostMap.size());
-            result.put("successHosts", successHosts);
-            result.put("failedHosts", failedHosts);
-            result.put("successCount", successHosts.size());
-            result.put("failedCount", failedHosts.size());
+                // 更新任务状态
+                progress.setStatus(TaskStatus.COMPLETED);
+                if (progress.getFailedCount() == 0) {
+                    progress.setMessage("所有主机的hosts文件已成功同步");
+                } else {
+                    progress.setMessage("部分主机的hosts文件同步失败，请检查详情");
+                }
 
-            // 如果所有主机都更新成功
-            if (failedHosts.isEmpty()) {
-                result.put("message", "所有主机的hosts文件已成功同步");
-                return Result.success(result);
-            } else {
-                result.put("message", "部分主机的hosts文件同步失败，请检查详情");
-                return Result.success(result);
-            }
+                // 任务完成后保留一段时间进度信息，然后移除
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Thread.sleep(TimeUnit.MINUTES.toMillis(30));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        taskProgressMap.remove(taskId);
+                    }
+                });
+            });
+
+            // 返回任务ID
+            return Result.success(taskId);
         } catch (Exception e) {
-            logger.error("同步hosts文件时发生错误", e);
-            return Result.error("同步hosts文件失败: " + e.getMessage());
+            logger.error("同步hosts文件任务启动时发生错误", e);
+            return Result.error("同步hosts文件任务启动失败: " + e.getMessage());
         }
     }
 
@@ -2434,9 +2576,16 @@ public class HostCheckServiceImpl implements HostCheckService {
             List<Map<String, String>> hostnamePreview = new ArrayList<>();
             int index = 1;
 
-            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                HostInfo hostInfo = entry.getValue();
-                String ip = hostInfo.getIp();
+            // 获取所有IP并按统一规则排序
+            List<String> ips = new ArrayList<>(hostMap.keySet());
+            ips = HostUtils.sortIpAddresses(ips);
+
+            // 构建主机名预览
+            for (String ip : ips) {
+                HostInfo hostInfo = hostMap.get(ip);
+                if (hostInfo == null)
+                    continue;
+
                 String currentHostname = hostInfo.getHostname();
 
                 // 生成新主机名 - 格式: 前缀 + 分隔符 + 数字 + 后缀
@@ -2452,48 +2601,147 @@ public class HostCheckServiceImpl implements HostCheckService {
                 index++;
             }
 
-            // 记录成功和失败的主机
-            List<String> successHosts = new ArrayList<>();
-            Map<String, String> failedHosts = new HashMap<>();
+            // 生成任务ID
+            final String taskId = "set_hostname_" + clusterId + "_" + System.currentTimeMillis();
+            final String finalPrefix = prefix;
+            final Integer finalZeroCount = zeroCount;
+            final String finalSeparator = separator;
+            final String finalSuffix = suffix;
 
-            // 遍历预览结果，为每个主机设置新主机名
-            for (Map<String, String> item : hostnamePreview) {
-                String ip = item.get("ip");
-                String newHostname = item.get("newHostname");
+            // 创建任务进度对象
+            TaskProgress progress = new TaskProgress();
+            progress.setTaskId(taskId);
+            progress.setStatus(TaskStatus.IN_PROGRESS);
+            progress.setCompletedHosts(new ArrayList<>());
+            progress.setFailedHosts(new HashMap<>());
+            progress.setTotalHosts(hostnamePreview.size());
+            progress.setCompletedCount(0);
+            progress.setFailedCount(0);
+            progress.setPercentage(0);
+            progress.setMessage("批量设置主机名任务已启动");
 
-                try {
-                    // 调用已有的更新主机名方法
-                    Result updateResult = updateHostname(clusterId, ip, newHostname);
-                    if (updateResult.isSuccess()) {
-                        successHosts.add(ip);
-                    } else {
-                        failedHosts.put(ip, updateResult.getMsg());
+            // 存储任务进度
+            taskProgressMap.put(taskId, progress);
+
+            // 异步执行设置主机名任务
+            CompletableFuture.runAsync(() -> {
+                // 遍历预览结果，为每个主机设置新主机名
+                for (Map<String, String> item : hostnamePreview) {
+                    String ip = item.get("ip");
+                    String newHostname = item.get("newHostname");
+
+                    // 更新当前处理的主机
+                    progress.setCurrentHost(ip);
+
+                    try {
+                        // 调用已有的更新主机名方法
+                        Result updateResult = updateHostname(clusterId, ip, newHostname);
+                        if (updateResult.isSuccess()) {
+                            // 添加到成功列表
+                            progress.getCompletedHosts().add(ip);
+                            progress.setCompletedCount(progress.getCompletedCount() + 1);
+                        } else {
+                            // 添加到失败列表
+                            progress.getFailedHosts().put(ip, updateResult.getMsg());
+                            progress.setFailedCount(progress.getFailedCount() + 1);
+                        }
+
+                        // 计算完成百分比
+                        progress.setPercentage(
+                                (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
+                                        / progress.getTotalHosts()) * 100));
+                    } catch (Exception e) {
+                        logger.error("设置主机{}的主机名时发生错误", ip, e);
+                        progress.getFailedHosts().put(ip, e.getMessage());
+                        progress.setFailedCount(progress.getFailedCount() + 1);
+                        progress.setPercentage(
+                                (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
+                                        / progress.getTotalHosts()) * 100));
                     }
-                } catch (Exception e) {
-                    logger.error("设置主机{}的主机名时发生错误", ip, e);
-                    failedHosts.put(ip, e.getMessage());
                 }
-            }
 
-            // 构建结果
-            Map<String, Object> result = new HashMap<>();
-            result.put("totalHosts", hostnamePreview.size());
-            result.put("successHosts", successHosts);
-            result.put("failedHosts", failedHosts);
-            result.put("successCount", successHosts.size());
-            result.put("failedCount", failedHosts.size());
+                // 更新任务状态
+                progress.setStatus(TaskStatus.COMPLETED);
+                if (progress.getFailedCount() == 0) {
+                    progress.setMessage("所有主机的主机名已成功设置");
+                } else {
+                    progress.setMessage("部分主机的主机名设置失败，请检查详情");
+                }
 
-            // 如果所有主机都更新成功
-            if (failedHosts.isEmpty()) {
-                result.put("message", "所有主机的主机名已成功设置");
-                return Result.success(result);
-            } else {
-                result.put("message", "部分主机的主机名设置失败，请检查详情");
-                return Result.success(result);
-            }
+                // 更新主机信息到缓存
+                updateHostMapInCache(clusterId);
+
+                // 任务完成后保留一段时间进度信息，然后移除
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Thread.sleep(TimeUnit.MINUTES.toMillis(30));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        taskProgressMap.remove(taskId);
+                    }
+                });
+            });
+
+            // 返回任务ID
+            return Result.success(taskId);
         } catch (Exception e) {
-            logger.error("批量设置主机名时发生错误", e);
-            return Result.error("批量设置主机名失败: " + e.getMessage());
+            logger.error("批量设置主机名任务启动时发生错误", e);
+            return Result.error("批量设置主机名任务启动失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取任务进度
+     * 
+     * @param taskId 任务ID
+     * @return 任务进度信息
+     */
+    @Override
+    public Result getTaskProgress(String taskId) {
+        if (StrUtil.isBlank(taskId)) {
+            return Result.error("任务ID不能为空");
+        }
+
+        TaskProgress progress = taskProgressMap.get(taskId);
+        if (progress == null) {
+            return Result.error("未找到任务：" + taskId + "，可能已完成或已过期");
+        }
+
+        return Result.success(progress);
+    }
+
+    /**
+     * 更新主机信息到缓存
+     * 
+     * @param clusterId 集群ID
+     */
+    private void updateHostMapInCache(Integer clusterId) {
+        try {
+            logger.info("更新集群{}的主机信息缓存", clusterId);
+
+            // 获取当前缓存中的主机信息
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (map == null || map.isEmpty()) {
+                logger.warn("缓存中未找到集群{}的主机信息", clusterId);
+                return;
+            }
+
+            // 遍历所有主机，确保主机信息是最新的
+            for (Map.Entry<String, HostInfo> entry : map.entrySet()) {
+                String ip = entry.getKey();
+                HostInfo hostInfo = entry.getValue();
+
+                // 更新每个主机的信息到缓存
+                updateHostInfoCache(clusterId, hostInfo);
+            }
+
+            // 将更新后的信息重新放入缓存
+            CacheUtils.put(clusterId + Constants.HOST_MAP, map);
+
+            logger.info("成功更新集群{}的主机信息缓存，共{}台主机", clusterId, map.size());
+        } catch (Exception e) {
+            logger.error("更新主机信息缓存时发生错误", e);
         }
     }
 }
