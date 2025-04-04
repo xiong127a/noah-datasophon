@@ -18,7 +18,6 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.common.utils.ShellUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +37,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -774,13 +772,24 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
-     * 更新主机信息缓存
+     * 更新主机信息到缓存
+     * 
+     * @param clusterId 集群ID
+     * @param hostInfo  主机信息
      */
-    private void updateHostInfoCache(Integer clusterId, HostInfo hostInfo) {
+    @Override
+    public void updateHostInfoCache(Integer clusterId, HostInfo hostInfo) {
+        if (clusterId == null || hostInfo == null) {
+            return;
+        }
+
+        // 获取当前缓存中的主机信息
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map != null && hostInfo != null) {
+        if (map != null) {
+            // 更新缓存中的主机信息
             map.put(hostInfo.getIp(), hostInfo);
             CacheUtils.put(clusterId + Constants.HOST_MAP, map);
+            logger.debug("已更新集群{}中主机{}的信息到缓存", clusterId, hostInfo.getIp());
         }
     }
 
@@ -2440,80 +2449,28 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Override
     public Result syncHostsFile(Integer clusterId) {
-        logger.info("开始同步hosts文件到所有主机: clusterId={}", clusterId);
-
         try {
-            // 调用内部方法获取主机文件内容
-            HostsFilePreviewVO previewVO = generateHostsFilePreviewInner(clusterId);
-            if (previewVO == null) {
-                return Result.error("未找到主机信息或生成预览失败");
+            logger.info("开始同步hosts文件，集群ID：{}", clusterId);
+
+            // 生成hosts文件预览内容
+            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId);
+            if (hostsFilePreview == null) {
+                return Result.error("生成hosts文件预览失败");
             }
 
-            // 获取生成的hosts文件内容
-            String hostsContent = previewVO.getHostsContent();
+            logger.info("获取到预览内容，总主机数：{}", hostsFilePreview.getHostCount());
 
-            // 获取存储在缓存中的主机信息
+            // 获取集群主机信息
             Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (hostMap == null || hostMap.isEmpty()) {
-                return Result.error("未找到主机信息");
+                return Result.error("未找到集群的主机信息");
             }
 
-            // 使用TaskProgressHelper初始化任务
+            // 初始化任务进度
             String taskId = TaskProgressHelper.initSyncHostsFileTask(clusterId, hostMap);
 
-            // 获取任务进度对象
-            TaskProgress progress = TaskProgressHelper.getTaskProgress(taskId);
-
-            // 异步执行同步任务
-            CompletableFuture.runAsync(() -> {
-                List<String> ips = new ArrayList<>(hostMap.keySet());
-                // 使用IP统一排序
-                ips = HostUtils.sortIpAddresses(ips);
-
-                for (String ip : ips) {
-                    try {
-                        // 更新当前处理的主机
-                        progress.setCurrentHost(ip);
-
-                        // 调用已有的更新hosts文件方法
-                        Result updateResult = updateHostsFile(clusterId, ip, hostsContent);
-
-                        // 使用TaskProgressHelper更新主机处理状态
-                        TaskProgressHelper.updateHostProcessStatus(
-                                taskId,
-                                ip,
-                                updateResult.isSuccess(),
-                                updateResult.isSuccess() ? null : updateResult.getMsg());
-
-                    } catch (Exception e) {
-                        logger.error("更新主机{}的hosts文件时发生错误", ip, e);
-                        // 使用TaskProgressHelper更新主机处理状态
-                        TaskProgressHelper.updateHostProcessStatus(
-                                taskId,
-                                ip,
-                                false,
-                                e.getMessage());
-                    }
-                }
-
-                // 使用TaskProgressHelper完成任务
-                TaskProgressHelper.completeTask(
-                        taskId,
-                        "所有主机的hosts文件已成功同步",
-                        "部分主机的hosts文件同步失败，请检查详情");
-
-                // 任务完成后保留一段时间进度信息，然后移除
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        Thread.sleep(TimeUnit.MINUTES.toMillis(30));
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    } finally {
-                        // 使用TaskProgressHelper移除任务进度
-                        TaskProgressHelper.removeTaskProgress(taskId);
-                    }
-                });
-            });
+            // 使用异步服务执行同步任务
+            asyncCheckService.syncHostsFileTask(taskId, clusterId, hostMap, hostsFilePreview);
 
             // 返回任务ID
             return Result.success(taskId);
@@ -2555,7 +2512,8 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 
      * @param clusterId 集群ID
      */
-    private void updateHostMapInCache(Integer clusterId) {
+    @Override
+    public void updateHostMapInCache(Integer clusterId) {
         try {
             logger.info("更新集群{}的主机信息缓存", clusterId);
 
@@ -2639,112 +2597,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 初始化任务进度
             String taskId = TaskProgressHelper.initBatchSetHostnameTask(clusterId, hostnamePreview);
 
-            // 异步执行批量设置主机名操作
-            CompletableFuture.runAsync(() -> {
-                for (Map<String, String> hostItem : hostnamePreview) {
-                    String ip = hostItem.get("ip");
-                    String newHostname = hostItem.get("newHostname");
-
-                    try {
-                        // 调用更新主机名的方法
-                        logger.info("为主机 {} 设置新主机名：{}", ip, newHostname);
-
-                        // 获取主机信息
-                        HostInfo hostInfo = hostMap.get(ip);
-                        if (hostInfo == null) {
-                            throw new Exception("未找到主机信息");
-                        }
-
-                        // 获取SSH连接信息
-                        String username = hostInfo.getSshUser();
-                        Integer port = hostInfo.getSshPort();
-
-                        // 执行设置主机名命令
-                        String command;
-                        String osType = "";
-                        if (hostInfo.getOsInfo() != null) {
-                            osType = hostInfo.getOsInfo().getOsType();
-                        }
-
-                        if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
-                                "Fedora".equalsIgnoreCase(osType)) {
-                            // CentOS/RHEL/Fedora
-                            command = "sudo hostnamectl set-hostname " + newHostname;
-                        } else if ("Ubuntu".equalsIgnoreCase(osType) || "Debian".equalsIgnoreCase(osType)) {
-                            // Ubuntu/Debian
-                            command = "sudo hostnamectl set-hostname " + newHostname;
-                        } else {
-                            // 默认使用通用命令
-                            command = "sudo hostname " + newHostname + " && " +
-                                    "sudo echo '" + newHostname + "' > /etc/hostname";
-                        }
-
-                        // 使用SSH执行命令
-                        boolean success = false;
-                        String errorMsg = null;
-
-                        try {
-                            ClientSession session = null;
-                            if (hostInfo.isSessionReady()) {
-                                session = hostInfo.getExternalSession();
-
-                                if (session != null) {
-                                    String result = ShellUtils.execCmdWithResult(session, command);
-                                    if (result != null && !result.startsWith("ERROR:")) {
-                                        success = true;
-                                    } else {
-                                        errorMsg = result;
-                                    }
-                                } else {
-                                    errorMsg = "SSH会话不可用";
-                                }
-                            } else {
-                                errorMsg = "SSH连接未建立";
-                                logger.warn("主机 {} 的SSH会话未准备就绪，无法设置主机名", ip);
-                            }
-                        } catch (Exception e) {
-                            errorMsg = e.getMessage();
-                            logger.error("执行SSH命令时出错", e);
-                        }
-
-                        if (!success) {
-                            throw new Exception("设置主机名失败: " + (errorMsg != null ? errorMsg : "未知错误"));
-                        }
-
-                        // 更新缓存中的主机名
-                        hostInfo.setHostname(newHostname);
-                        updateHostInfoCache(clusterId, hostInfo);
-
-                        // 更新任务进度
-                        TaskProgressHelper.updateHostProcessStatus(taskId, ip, true, null);
-
-                    } catch (Exception e) {
-                        logger.error("为主机 {} 设置主机名时出错", ip, e);
-                        // 更新任务进度
-                        TaskProgressHelper.updateHostProcessStatus(taskId, ip, false, e.getMessage());
-                    }
-                }
-
-                // 完成任务
-                TaskProgressHelper.completeTask(
-                        taskId,
-                        "所有主机名设置成功",
-                        "部分主机名设置失败，请检查详情");
-
-                // 更新整个主机信息缓存
-                updateHostMapInCache(clusterId);
-
-                // 任务完成后保留一段时间进度信息，然后移除
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        Thread.sleep(TimeUnit.MINUTES.toMillis(30));
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    } finally {
-                        TaskProgressHelper.removeTaskProgress(taskId);
-                    }
-                });
-            });
+            // 使用异步服务执行批量设置主机名任务
+            asyncCheckService.batchSetHostnameTask(taskId, clusterId, hostMap, hostnamePreview);
 
             // 返回任务ID
             return Result.success(taskId);

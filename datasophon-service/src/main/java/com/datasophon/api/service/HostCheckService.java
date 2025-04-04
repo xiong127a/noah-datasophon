@@ -278,4 +278,19 @@ public interface HostCheckService {
          * @return 任务进度信息
          */
         Result getTaskProgress(String taskId);
+
+        /**
+         * 更新主机信息缓存
+         * 
+         * @param clusterId 集群ID
+         * @param hostInfo  主机信息
+         */
+        void updateHostInfoCache(Integer clusterId, com.datasophon.common.model.HostInfo hostInfo);
+
+        /**
+         * 更新主机映射缓存
+         * 
+         * @param clusterId 集群ID
+         */
+        void updateHostMapInCache(Integer clusterId);
 }

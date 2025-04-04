@@ -193,17 +193,17 @@ public class AsyncCheckService {
         ScheduledTasksStatus status = new ScheduledTasksStatus();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        status.setScheduledTasksEnabled(scheduledTasksEnabled.get());
+        status.setScheduledTasksEnabled(scheduledTasksEnabled != null ? scheduledTasksEnabled.get() : false);
         status.setTaskCleanupActive(taskCleanupTask != null && !taskCleanupTask.isCancelled());
         status.setConnectionCleanupActive(connectionCleanupTask != null && !connectionCleanupTask.isCancelled());
 
         // 添加定时任务执行间隔
-        status.setTaskCleanupIntervalMs(taskCleanupIntervalMs);
-        status.setConnectionCleanupIntervalMs(connectionCleanupIntervalMs);
+        status.setTaskCleanupIntervalMs(Long.valueOf(this.taskCleanupIntervalMs));
+        status.setConnectionCleanupIntervalMs(Long.valueOf(this.connectionCleanupIntervalMs));
 
         // 格式化为人类可读的时间间隔
-        status.setTaskCleanupInterval(formatTimeInterval(taskCleanupIntervalMs));
-        status.setConnectionCleanupInterval(formatTimeInterval(connectionCleanupIntervalMs));
+        status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
+        status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
 
         // 格式化时间日期
         if (lastTaskCleanupTime > 0) {
@@ -218,8 +218,8 @@ public class AsyncCheckService {
             status.setLastConnectionCleanupTime("未执行");
         }
 
-        status.setConnectionPoolSize(hostConnectionPool.size());
-        status.setRunningTasksCount(runningTasks.size());
+        status.setConnectionPoolSize(hostConnectionPool != null ? hostConnectionPool.size() : 0);
+        status.setRunningTasksCount(runningTasks != null ? runningTasks.size() : 0);
         return status;
     }
 
@@ -280,6 +280,10 @@ public class AsyncCheckService {
      * @return 格式化后的时间间隔
      */
     private String formatTimeInterval(long ms) {
+        if (ms <= 0) {
+            return "0秒";
+        }
+
         long seconds = ms / 1000;
         if (seconds < 60) {
             return seconds + "秒";
@@ -834,6 +838,10 @@ public class AsyncCheckService {
      * @return 缓存命中百分比
      */
     private int calculateSessionCacheHitRate() {
+        if (hostCacheRequests == null || hostCacheHits == null) {
+            return 0;
+        }
+
         long totalHits = 0;
         long totalRequests = 0;
 
@@ -858,28 +866,56 @@ public class AsyncCheckService {
         AsyncServiceStatus status = new AsyncServiceStatus();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        // 获取状态信息
-        ScheduledTasksStatus statusInfo = getScheduledTasksStatus();
+        try {
+            // 获取状态信息
+            ScheduledTasksStatus statusInfo = getScheduledTasksStatus();
+            if (statusInfo != null) {
+                // 填充实体类
+                status.setScheduledTasksEnabled(statusInfo.isScheduledTasksEnabled());
+                status.setLastTaskCleanupTime(statusInfo.getLastTaskCleanupTime());
+                status.setRunningTasksCount(statusInfo.getRunningTasksCount());
+                status.setConnectionPoolSize(statusInfo.getConnectionPoolSize());
+                status.setTaskCleanupActive(statusInfo.isTaskCleanupActive());
+                status.setConnectionCleanupActive(statusInfo.isConnectionCleanupActive());
+                status.setLastConnectionCleanupTime(statusInfo.getLastConnectionCleanupTime());
+            } else {
+                // 如果状态信息为空，设置默认值
+                status.setScheduledTasksEnabled(false);
+                status.setLastTaskCleanupTime("未获取到");
+                status.setRunningTasksCount(0);
+                status.setConnectionPoolSize(0);
+                status.setTaskCleanupActive(false);
+                status.setConnectionCleanupActive(false);
+                status.setLastConnectionCleanupTime("未获取到");
+            }
 
-        // 填充实体类
-        status.setScheduledTasksEnabled(statusInfo.isScheduledTasksEnabled());
-        status.setLastTaskCleanupTime(statusInfo.getLastTaskCleanupTime());
-        status.setRunningTasksCount(statusInfo.getRunningTasksCount());
-        status.setConnectionPoolSize(statusInfo.getConnectionPoolSize());
-        status.setTaskCleanupActive(statusInfo.isTaskCleanupActive());
-        status.setConnectionCleanupActive(statusInfo.isConnectionCleanupActive());
-        status.setLastConnectionCleanupTime(statusInfo.getLastConnectionCleanupTime());
+            // 添加间隔毫秒值
+            status.setTaskCleanupIntervalMs(Long.valueOf(this.taskCleanupIntervalMs));
+            status.setConnectionCleanupIntervalMs(Long.valueOf(this.connectionCleanupIntervalMs));
 
-        // 添加间隔毫秒值
-        status.setTaskCleanupIntervalMs(this.taskCleanupIntervalMs);
-        status.setConnectionCleanupIntervalMs(this.connectionCleanupIntervalMs);
+            // 添加可读间隔
+            status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
+            status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
 
-        // 添加可读间隔
-        status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
-        status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
-
-        // 添加SSH会话缓存命中率
-        status.setSessionCacheHitRate(calculateSessionCacheHitRate());
+            // 添加SSH会话缓存命中率
+            int cacheHitRate = calculateSessionCacheHitRate();
+            status.setSessionCacheHitRate(cacheHitRate);
+        } catch (Exception e) {
+            // 异常处理，设置默认值
+            logger.error("获取异步服务状态时发生异常", e);
+            status.setScheduledTasksEnabled(false);
+            status.setLastTaskCleanupTime("获取异常");
+            status.setRunningTasksCount(0);
+            status.setConnectionPoolSize(0);
+            status.setTaskCleanupActive(false);
+            status.setConnectionCleanupActive(false);
+            status.setLastConnectionCleanupTime("获取异常");
+            status.setTaskCleanupIntervalMs(Long.valueOf(this.taskCleanupIntervalMs));
+            status.setConnectionCleanupIntervalMs(Long.valueOf(this.connectionCleanupIntervalMs));
+            status.setTaskCleanupInterval(formatTimeInterval(this.taskCleanupIntervalMs));
+            status.setConnectionCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
+            status.setSessionCacheHitRate(0);
+        }
 
         return status;
     }
@@ -1035,6 +1071,7 @@ public class AsyncCheckService {
                     LogEntryManager.addLogEntry(logKey, logEntry);
 
                     results.add(item);
+                    continue;
                 }
                 return results;
             }
@@ -1427,5 +1464,206 @@ public class AsyncCheckService {
         }
 
         return results;
+    }
+
+    /**
+     * 异步执行同步hosts文件任务
+     *
+     * @param taskId           任务ID
+     * @param clusterId        集群ID
+     * @param hostMap          主机信息映射
+     * @param hostsFilePreview hosts文件预览信息
+     */
+    public void syncHostsFileTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
+            Object hostsFilePreview) {
+        logger.info("开始异步执行hosts文件同步任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
+
+        // 将任务注册到任务管理器
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            try {
+                // 获取主机IP列表并排序
+                List<String> ips = new ArrayList<>(hostMap.keySet());
+                ips = com.datasophon.common.utils.HostUtils.sortIpAddresses(ips);
+
+                // 获取hosts文件内容
+                String hostsContent = ((com.datasophon.api.service.impl.HostCheckServiceImpl.HostsFilePreviewVO) hostsFilePreview)
+                        .getHostsContent();
+
+                // 从Spring容器获取HostCheckService
+                com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
+                        .getBean(com.datasophon.api.service.HostCheckService.class);
+
+                // 循环处理每个主机
+                for (String ip : ips) {
+                    try {
+                        logger.info("正在同步hosts文件到主机: {}", ip);
+
+                        // 调用主机检查服务更新hosts文件
+                        com.datasophon.common.utils.Result updateResult = hostCheckService.updateHostsFile(clusterId,
+                                ip, hostsContent);
+
+                        // 更新主机处理状态
+                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                taskId,
+                                ip,
+                                updateResult.isSuccess(),
+                                updateResult.isSuccess() ? null : updateResult.getMsg());
+
+                    } catch (Exception e) {
+                        logger.error("同步hosts文件到主机{}时发生错误", ip, e);
+                        // 更新主机处理状态为失败
+                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                taskId,
+                                ip,
+                                false,
+                                e.getMessage());
+                    }
+                }
+
+                // 完成任务
+                com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
+                        taskId,
+                        "所有主机的hosts文件已成功同步",
+                        "部分主机的hosts文件同步失败，请检查详情");
+
+                logger.info("hosts文件同步任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
+
+            } catch (Exception e) {
+                logger.error("执行hosts文件同步任务时发生错误", e);
+            }
+        }, checkExecutor);
+
+        // 注册任务
+        taskManager.registerTask("sync_hosts_file", "同步hosts文件 - 集群ID: " + clusterId, future);
+
+        // 任务完成后保留一段时间进度信息，然后移除
+        future.thenRun(() -> {
+            try {
+                Thread.sleep(TimeUnit.MINUTES.toMillis(30));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                // 移除任务进度
+                com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+            }
+        });
+    }
+
+    /**
+     * 异步执行批量设置主机名任务
+     *
+     * @param taskId          任务ID
+     * @param clusterId       集群ID
+     * @param hostMap         主机信息映射
+     * @param hostnamePreview 主机名预览列表
+     */
+    public void batchSetHostnameTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
+            List<Map<String, String>> hostnamePreview) {
+        logger.info("开始异步执行批量设置主机名任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
+
+        // 将任务注册到任务管理器并使用checkExecutor执行
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            try {
+                // 获取HostCheckService
+                com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
+                        .getBean(com.datasophon.api.service.HostCheckService.class);
+
+                // 处理每台主机
+                for (Map<String, String> hostItem : hostnamePreview) {
+                    String ip = hostItem.get("ip");
+                    String newHostname = hostItem.get("newHostname");
+
+                    try {
+                        // 获取主机信息
+                        HostInfo hostInfo = hostMap.get(ip);
+                        if (hostInfo == null) {
+                            throw new Exception("未找到主机信息");
+                        }
+
+                        logger.info("为主机 {} 设置新主机名：{}", ip, newHostname);
+
+                        // 获取SSH连接信息
+                        String username = hostInfo.getSshUser();
+                        Integer port = hostInfo.getSshPort();
+
+                        // 执行设置主机名命令
+                        String command;
+                        String osType = "";
+                        if (hostInfo.getOsInfo() != null) {
+                            osType = hostInfo.getOsInfo().getOsType();
+                        }
+
+                        if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
+                                "Fedora".equalsIgnoreCase(osType)) {
+                            // CentOS/RHEL/Fedora
+                            command = "sudo hostnamectl set-hostname " + newHostname;
+                        } else if ("Ubuntu".equalsIgnoreCase(osType) || "Debian".equalsIgnoreCase(osType)) {
+                            // Ubuntu/Debian
+                            command = "sudo hostnamectl set-hostname " + newHostname;
+                        } else {
+                            // 默认使用通用命令
+                            command = "sudo hostname " + newHostname + " && " +
+                                    "sudo echo '" + newHostname + "' > /etc/hostname";
+                        }
+
+                        // 获取或创建SSH连接
+                        ClientSession session = getOrCreateConnection(hostInfo);
+                        if (session == null || !session.isOpen()) {
+                            throw new Exception("无法创建SSH连接");
+                        }
+
+                        // 执行命令
+                        com.datasophon.api.service.checker.common.CommandResult result = execCommand(session, command);
+
+                        if (!result.isSuccess()) {
+                            throw new Exception("设置主机名失败: " + result.getError());
+                        }
+
+                        // 更新缓存中的主机名
+                        hostInfo.setHostname(newHostname);
+                        hostCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+                        // 更新任务进度
+                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                taskId, ip, true, null);
+
+                    } catch (Exception e) {
+                        logger.error("为主机 {} 设置主机名时出错", ip, e);
+                        // 更新任务进度
+                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                taskId, ip, false, e.getMessage());
+                    }
+                }
+
+                // 完成任务
+                com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
+                        taskId,
+                        "所有主机名设置成功",
+                        "部分主机名设置失败，请检查详情");
+
+                // 更新主机信息缓存
+                hostCheckService.updateHostMapInCache(clusterId);
+
+                logger.info("批量设置主机名任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
+
+            } catch (Exception e) {
+                logger.error("执行批量设置主机名任务时发生错误", e);
+            }
+        }, checkExecutor);
+
+        // 注册任务
+        taskManager.registerTask("set_hostname", "批量设置主机名 - 集群ID: " + clusterId, future);
+
+        // 任务完成后保留一段时间进度信息，然后移除
+        future.thenRun(() -> {
+            try {
+                Thread.sleep(TimeUnit.MINUTES.toMillis(30));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                // 移除任务进度
+                com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+            }
+        });
     }
 }
