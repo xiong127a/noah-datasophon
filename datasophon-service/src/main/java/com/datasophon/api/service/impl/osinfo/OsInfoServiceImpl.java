@@ -32,6 +32,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -40,6 +41,9 @@ import java.util.regex.Pattern;
 /**
  * 操作系统信息服务实现类
  * 负责管理主机操作系统信息的获取和缓存
+ * 采用分阶段收集策略：
+ * - 第一阶段：使用osInfoExecutor收集主机名和操作系统信息，优先展示给用户
+ * - 第二阶段：使用hardwareInfoExecutor收集详细硬件信息，后台处理
  */
 @Service
 public class OsInfoServiceImpl implements OsInfoService {
@@ -52,9 +56,12 @@ public class OsInfoServiceImpl implements OsInfoService {
     @Autowired
     private OsInfoCollectorFactory osInfoCollectorFactory;
 
-    // 使用Spring的ThreadPoolTaskExecutor替代原来的ExecutorService
+    // 两个专用线程池
+    @Resource(name = "osInfoExecutor")
+    private ExecutorService osInfoExecutor;
+
     @Resource(name = "hardwareInfoExecutor")
-    private ThreadPoolTaskExecutor hostInfoExecutor;
+    private ExecutorService hardwareInfoExecutor;
 
     // 保留缓存管理对象
     private final HostInfoCollectionQueueManager queueManager = new HostInfoCollectionQueueManager(this);
@@ -62,12 +69,13 @@ public class OsInfoServiceImpl implements OsInfoService {
     @PostConstruct
     public void init() {
         logger.debug("=====================================================");
-        logger.debug("初始化OS信息收集服务，使用硬件信息线程池");
+        logger.debug("初始化OS信息收集服务，使用分阶段收集策略");
         logger.debug("信息收集流程：");
-        logger.debug("1. 同时处理最多3台主机");
-        logger.debug("2. 每台主机按顺序收集全部信息（主机名、OS类型、DNS、hosts文件、CPU、内存、磁盘等）");
-        logger.debug("3. 每收集完一项信息立即更新缓存");
-        logger.debug("4. 一台主机收集完毕后自动开始下一台主机");
+        logger.debug("1. 基本信息收集：使用osInfoExecutor线程池，同时处理最多5台主机");
+        logger.debug("2. 详细信息收集：使用hardwareInfoExecutor线程池，同时处理最多3台主机");
+        logger.debug("3. 收集顺序：先收集所有主机的基本信息（主机名和操作系统类型）");
+        logger.debug("4. 然后收集详细硬件信息（CPU、内存、磁盘等）");
+        logger.debug("5. 每收集完一项信息立即更新缓存，优先展示主机名和操作系统信息");
         logger.debug("=====================================================");
     }
 
@@ -139,7 +147,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         private final AtomicInteger processingHostCount = new AtomicInteger(0);
 
         // 最大同时处理的主机数量
-        private static final int MAX_CONCURRENT_HOSTS = 3;
+        private static final int MAX_CONCURRENT_HOSTS = 5;
 
         // 总共处理的主机数量
         private final AtomicInteger totalHostCount = new AtomicInteger(0);
@@ -147,8 +155,39 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 已完成处理的主机数量
         private final AtomicInteger completedHostCount = new AtomicInteger(0);
 
+        // 已完成基本信息收集的主机数量
+        private final AtomicInteger basicInfoCompletedCount = new AtomicInteger(0);
+
+        // 等待收集详细信息的主机列表
+        private final List<HostInfo> waitForDetailInfoList = new ArrayList<>();
+
+        // 阶段二收集状态
+        private final AtomicInteger phase2ProcessingCount = new AtomicInteger(0);
+
+        // 最大同时收集详细信息的主机数量
+        private static final int MAX_CONCURRENT_DETAIL_HOSTS = 3;
+
         public HostInfoCollectionQueueManager(OsInfoServiceImpl service) {
             this.service = service;
+        }
+
+        /**
+         * 重置所有计数器
+         */
+        public synchronized void resetCounters() {
+            // 重置所有计数器
+            totalHostCount.set(0);
+            completedHostCount.set(0);
+            processingHostCount.set(0);
+            basicInfoCompletedCount.set(0);
+            phase2ProcessingCount.set(0);
+
+            // 清空队列和列表
+            hostQueue.clear();
+            sortedHostList.clear();
+            waitForDetailInfoList.clear();
+
+            logger.info("所有计数器和队列已重置");
         }
 
         /**
@@ -180,117 +219,215 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 根据需要开始处理队列
          */
         private synchronized void startProcessingIfNeeded() {
-            // 如果已经达到最大并发数，不再增加
-            if (processingHostCount.get() >= MAX_CONCURRENT_HOSTS) {
-                logger.debug("当前已有{}台主机正在处理中，达到最大并发数", processingHostCount.get());
-                return;
-            }
+            try {
+                // 检查是否有主机等待处理，且未超过最大并发限制
+                while (!hostQueue.isEmpty() && processingHostCount.get() < MAX_CONCURRENT_HOSTS) {
+                    HostInfo hostInfo = hostQueue.poll();
+                    if (hostInfo != null) {
+                        processingHostCount.incrementAndGet();
+                        logger.info("开始处理主机: {}, 当前处理中: {}/{}, 队列中: {}",
+                                hostInfo.getIp(), processingHostCount.get(), totalHostCount.get(), hostQueue.size());
 
-            // 检查队列中是否还有主机待处理
-            HostInfo hostInfo = hostQueue.poll();
-            if (hostInfo == null) {
-                logger.debug("队列中无待处理主机");
-                return;
-            }
-
-            // 增加处理计数
-            processingHostCount.incrementAndGet();
-
-            // 异步处理该主机的全部信息收集
-            CompletableFuture.runAsync(() -> {
-                try {
-                    logger.info("开始收集主机 {} 的全部信息", hostInfo.getIp());
-                    collectAllInfoForHost(hostInfo);
-                } catch (Exception e) {
-                    logger.error("收集主机 {} 信息时发生错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setMessage("信息收集失败: " + e.getMessage());
-                    service.updateHostInfoCache(hostInfo);
-                } finally {
-                    // 完成一台主机的处理，减少计数并增加完成计数
-                    processingHostCount.decrementAndGet();
-                    int completed = completedHostCount.incrementAndGet();
-                    int total = totalHostCount.get();
-
-                    // 记录进度
-                    logger.info("已完成 {}/{} 台主机的信息收集",
-                            completed, total);
-
-                    // 继续处理下一台主机
-                    startProcessingIfNeeded();
+                        // 使用osInfoExecutor异步处理
+                        CompletableFuture.runAsync(() -> {
+                            collectBasicInfoForHost(hostInfo);
+                        }, service.osInfoExecutor); // 使用service中的osInfoExecutor
+                    }
                 }
-            }, service.hostInfoExecutor);
+            } catch (Exception e) {
+                logger.error("启动主机处理时出错", e);
+            }
         }
 
         /**
-         * 为单台主机收集所有信息
-         * 按顺序收集：主机名 -> OS类型 -> 硬件信息
+         * 为单台主机收集基本信息（主机名和操作系统类型）
+         * 第一阶段信息收集，优先级最高，使用osInfoExecutor处理
+         * 收集完成后立即更新缓存，并关闭会话，等待第二阶段收集
          */
-        private void collectAllInfoForHost(HostInfo hostInfo) {
+        private void collectBasicInfoForHost(HostInfo hostInfo) {
+            ClientSession session = null;
             try {
-                logger.info("开始收集主机信息: {}", hostInfo.getIp());
+                logger.info("【第一阶段】开始收集主机 {} 的基本信息", hostInfo.getIp());
                 long startTime = System.currentTimeMillis();
 
                 // 设置状态为正在收集
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.COLLECTING);
+                hostInfo.setMessage("正在收集基本信息...");
                 service.updateHostInfoCache(hostInfo);
 
-                // 1. 收集主机名
-                collectHostName(hostInfo);
-
-                // 如果主机名收集失败，跳过后续步骤
-                if (hostInfo.getHostnameStatus() != OsInfoStatusEnum.SUCCESS) {
-                    logger.warn("主机 {} 主机名收集失败，跳过后续信息收集", hostInfo.getIp());
+                // 建立SSH连接
+                session = connectToHost(hostInfo);
+                if (session == null) {
                     hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setMessage("主机名收集失败，无法继续");
+                    hostInfo.setMessage("无法建立SSH连接");
                     service.updateHostInfoCache(hostInfo);
                     return;
                 }
 
-                // 2. 收集操作系统类型（Linux或Windows）并收集相关信息
-                collectOsType(hostInfo);
+                // 创建一个新的OsInfo对象
+                OsInfo osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
 
-                // 3. 收集网卡信息
-                if (hostInfo.getOsInfo() != null) {
-                    ClientSession session = connectToHost(hostInfo);
-                    if (session != null) {
-                        collectNetworkInfo(hostInfo, hostInfo.getOsInfo(), session, null);
+                // 先收集主机名
+                collectHostName(hostInfo, session);
+
+                // 再收集操作系统基本信息
+                collectOsBasicInfo(hostInfo, session);
+
+                // 关闭会话，第二阶段会重新创建
+                if (session != null && session.isOpen()) {
+                    try {
+                        session.close();
+                        logger.info("【第一阶段完成】已关闭主机 {} 的SSH会话，第二阶段将重新建立连接", hostInfo.getIp());
+                    } catch (Exception e) {
+                        logger.warn("关闭SSH会话时出错: {}", e.getMessage());
                     }
                 }
 
-                // 操作系统信息收集由collectOsType方法完成，包括：
-                // - 识别操作系统类型（Linux或Windows）
-                // - 调用collectLinuxInfo或collectWindowsInfo收集详细信息
-                // - 这些方法内部会使用IOsInfoCollector收集所有必要的硬件和系统信息
-
-                // 完成收集
-                hostInfo.setMessage("主机信息收集完成");
+                // 更新缓存
                 service.updateHostInfoCache(hostInfo);
 
                 // 记录完成时间
-                logger.info("主机 {} 信息收集完成，总耗时 {}ms",
+                logger.info("【第一阶段完成】主机 {} 基本信息收集完成，耗时 {}ms",
                         hostInfo.getIp(), System.currentTimeMillis() - startTime);
 
             } catch (Exception e) {
-                logger.error("收集主机 {} 信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+                logger.error("收集主机 {} 基本信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("主机信息收集失败: " + e.getMessage());
+                hostInfo.setMessage("基本信息收集失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
+
+                // 关闭会话
+                if (session != null && session.isOpen()) {
+                    try {
+                        session.close();
+                    } catch (Exception ex) {
+                        logger.warn("关闭SSH会话时出错: {}", ex.getMessage());
+                    }
+                }
             } finally {
-                // 减少正在处理的主机计数
-                processingHostCount.decrementAndGet();
-                // 完成一台主机，增加计数
-                completedHostCount.incrementAndGet();
-                // 如果有其他主机等待处理，继续处理
-                startProcessingIfNeeded();
+                // 减少处理计数并处理下一个
+                synchronized (HostInfoCollectionQueueManager.this) {
+                    processingHostCount.decrementAndGet();
+
+                    // 增加基本信息完成计数
+                    int completed = basicInfoCompletedCount.incrementAndGet();
+                    int total = totalHostCount.get();
+
+                    // 记录进度
+                    logger.info("已完成 {}/{} 台主机的基本信息收集", completed, total);
+
+                    // 将主机添加到等待详细信息收集的列表
+                    if (hostInfo.getOsInfoStatus() != OsInfoStatusEnum.ERROR) {
+                        synchronized (waitForDetailInfoList) {
+                            waitForDetailInfoList.add(hostInfo);
+                        }
+                    }
+
+                    // 继续处理下一台主机
+                    startProcessingIfNeeded();
+
+                    // 检查是否所有主机的基本信息都已收集完成
+                    if (completed == total) {
+                        logger.info("所有主机的基本信息收集完成，开始第二阶段收集详细信息");
+                        startDetailInfoCollection();
+                    }
+                }
+            }
+        }
+
+        /**
+         * 为单台主机收集详细信息（硬件信息）
+         * 第二阶段信息收集，优先级较低，使用hardwareInfoExecutor处理
+         * 收集完成后立即更新缓存，并关闭会话
+         */
+        private void collectDetailInfoForHost(HostInfo hostInfo) {
+            try {
+                logger.info("【第二阶段】开始收集主机 {} 的详细硬件信息", hostInfo.getIp());
+                // 使用hardwareInfoExecutor执行详细信息收集
+                CompletableFuture.runAsync(() -> {
+                    ClientSession session = null;
+                    try {
+                        // 获取已有的基础信息
+                        OsInfo osInfo = hostInfo.getOsInfo();
+                        if (osInfo == null) {
+                            osInfo = new OsInfo();
+                            hostInfo.setOsInfo(osInfo);
+                        }
+
+                        // 创建新的SSH会话
+                        session = connectToHost(hostInfo);
+                        if (session == null) {
+                            logger.error("【第二阶段】无法连接到主机 {}", hostInfo.getIp());
+                            hostInfo.setMessage("无法建立SSH连接");
+                            service.updateHostInfoCache(hostInfo);
+                            return;
+                        }
+
+                        // 获取收集器
+                        IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector(osInfo.getOsType());
+                        if (collector == null) {
+                            logger.error("【第二阶段】无法为操作系统 {} 找到合适的信息收集器", osInfo.getOsType());
+                            hostInfo.setMessage("不支持的操作系统类型");
+                            service.updateHostInfoCache(hostInfo);
+                            return;
+                        }
+
+                        // 获取详细硬件信息
+                        if ("windows".equalsIgnoreCase(osInfo.getDistributionId())) {
+                            collectWindowsDetailInfo(hostInfo, session, osInfo);
+                        } else {
+                            collectLinuxDetailInfo(hostInfo, session, osInfo);
+                        }
+
+                        // 更新网络信息
+                        collectNetworkInfoNew(hostInfo, osInfo, session, collector);
+
+                        // 更新交换分区信息
+                        collectSwapInfo(hostInfo, osInfo, session, collector);
+
+                        hostInfo.setMessage("硬件信息收集完成");
+                        service.updateHostInfoCache(hostInfo);
+
+                        logger.info("【第二阶段】主机 {} 的详细硬件信息收集完成", hostInfo.getIp());
+                    } catch (Exception e) {
+                        logger.error("【第二阶段】收集主机 {} 的详细硬件信息时出错", hostInfo.getIp(), e);
+                        hostInfo.setMessage("硬件信息收集出错: " + e.getMessage());
+                        service.updateHostInfoCache(hostInfo);
+                    } finally {
+                        // 关闭会话
+                        if (session != null && session.isOpen()) {
+                            try {
+                                session.close();
+                                logger.debug("【第二阶段】已关闭主机 {} 的SSH会话", hostInfo.getIp());
+                            } catch (Exception e) {
+                                logger.warn("【第二阶段】关闭主机 {} 的SSH会话时出错", hostInfo.getIp(), e);
+                            }
+                        }
+
+                        // 更新计数器并启动下一个任务
+                        synchronized (HostInfoCollectionQueueManager.this) {
+                            phase2ProcessingCount.decrementAndGet();
+                            completedHostCount.incrementAndGet();
+                            logger.info("【第二阶段】详细硬件信息收集完成，已完成: {}/{}, 正在处理: {}",
+                                    completedHostCount.get(), totalHostCount.get(), phase2ProcessingCount.get());
+                            startDetailInfoCollection();
+                        }
+                    }
+                }, service.hardwareInfoExecutor); // 使用service中的hardwareInfoExecutor
+            } catch (Exception e) {
+                logger.error("【第二阶段】提交详细信息收集任务时出错", e);
+                synchronized (this) {
+                    phase2ProcessingCount.decrementAndGet();
+                    completedHostCount.incrementAndGet();
+                    startDetailInfoCollection();
+                }
             }
         }
 
         /**
          * 收集主机名
          */
-        private void collectHostName(HostInfo hostInfo) {
+        private void collectHostName(HostInfo hostInfo, ClientSession session) {
             logger.info("开始收集主机名: {}", hostInfo.getIp());
             long startTime = System.currentTimeMillis();
 
@@ -300,14 +437,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             service.updateHostInfoCache(hostInfo);
 
             try {
-                // 创建SSH会话
-                logger.info("开始创建SSH会话：{}", hostInfo.getIp());
-                ClientSession session = service.getOrCreateSession(hostInfo);
-
-                if (session == null) {
-                    throw new Exception("无法创建SSH会话");
-                }
-
                 // 检测是否为Windows系统
                 boolean isWindows = false;
                 try {
@@ -368,19 +497,12 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 收集操作系统类型
+         * 收集操作系统基本信息
          */
-        private void collectOsType(HostInfo hostInfo) {
+        private void collectOsBasicInfo(HostInfo hostInfo, ClientSession session) {
             try {
-                logger.info("开始收集主机 [{}] 的操作系统类型", hostInfo.getIp());
+                logger.info("开始收集主机 [{}] 的操作系统基本信息", hostInfo.getIp());
                 hostInfo.setOsStatus(OsInfoStatusEnum.COLLECTING);
-
-                ClientSession session = connectToHost(hostInfo);
-                if (session == null) {
-                    logger.error("主机 [{}] 的SSH会话未建立，无法收集操作系统类型", hostInfo.getIp());
-                    hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
-                    return;
-                }
 
                 // 创建OsInfo对象
                 OsInfo osInfo = new OsInfo();
@@ -390,11 +512,16 @@ public class OsInfoServiceImpl implements OsInfoService {
                 String osType = service.detectOperatingSystemType(session);
                 osInfo.setOsType(osType);
 
-                // 根据操作系统类型进行不同的信息收集
+                // 获取操作系统基本信息
                 if ("linux".equalsIgnoreCase(osType)) {
-                    collectLinuxInfo(hostInfo, session, osInfo);
+                    // 预先检查常见的Linux发行版文件
+                    preCheckLinuxDistribution(session, osInfo);
+
+                    // 收集基本版本信息
+                    collectLinuxBasicInfo(session, osInfo);
                 } else if ("windows".equalsIgnoreCase(osType)) {
-                    collectWindowsInfo(hostInfo, session, osInfo);
+                    // 收集Windows基本版本信息
+                    collectWindowsBasicInfo(session, osInfo);
                 } else {
                     logger.warn("未知的操作系统类型: {}", osType);
                     osInfo.setDistribution("Unknown");
@@ -440,15 +567,188 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 // 收集成功，更新状态
                 hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
-                hostInfo.setMessage("操作系统信息收集完成");
+                hostInfo.setMessage("操作系统基本信息收集完成");
                 service.updateHostInfoCache(hostInfo);
 
-                logger.info("主机 [{}] 的操作系统信息收集完成: {}", hostInfo.getIp(),
+                logger.info("主机 [{}] 的操作系统基本信息收集完成: {}", hostInfo.getIp(),
                         osInfo.getDistribution() + " " + osInfo.getVersion());
             } catch (Exception e) {
-                logger.error("收集主机 [{}] 的操作系统类型时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+                logger.error("收集主机 [{}] 的操作系统基本信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
                 hostInfo.setOsStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("收集操作系统信息失败: " + e.getMessage());
+                hostInfo.setMessage("收集操作系统基本信息失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 收集Linux基本信息（仅系统版本相关）
+         */
+        private void collectLinuxBasicInfo(ClientSession session, OsInfo osInfo) {
+            try {
+                // 获取内核版本
+                String kernel = executeCommand(session, "uname -r").trim();
+                osInfo.setKernelVersion(kernel);
+
+                // 获取架构
+                String arch = executeCommand(session, "uname -m").trim();
+                osInfo.setArchitecture(arch);
+
+                // 获取Linux版本信息
+                if (osInfo.getDistributionId() == null) {
+                    // 尝试从/etc/os-release获取
+                    checkOsRelease(session, osInfo);
+                }
+
+                // 检查处理器信息（仅基本信息）
+                String processor = executeCommand(session, "grep 'model name' /proc/cpuinfo | head -1").trim();
+                if (processor.contains(":")) {
+                    processor = processor.split(":", 2)[1].trim();
+                    if (osInfo.getCpuInfo() == null) {
+                        osInfo.setCpuInfo(new CpuInfo());
+                    }
+                    osInfo.getCpuInfo().setModel(processor);
+                }
+
+                // 确保设置了基本显示名称
+                if (osInfo.getDisplayName() == null) {
+                    if (StringUtils.isNotBlank(osInfo.getDistribution())) {
+                        if (StringUtils.isNotBlank(osInfo.getVersion())) {
+                            osInfo.setDisplayName(osInfo.getDistribution() + " " + osInfo.getVersion());
+                        } else {
+                            osInfo.setDisplayName(osInfo.getDistribution());
+                        }
+                    } else {
+                        osInfo.setDisplayName("Linux");
+                    }
+                }
+
+                // 标记系统信息有效
+                osInfo.setValid(true);
+
+            } catch (Exception e) {
+                logger.error("收集Linux基本信息时出错: {}", e.getMessage(), e);
+            }
+        }
+
+        /**
+         * 收集Windows基本信息（仅系统版本相关）
+         */
+        private void collectWindowsBasicInfo(ClientSession session, OsInfo osInfo) {
+            try {
+                // 获取Windows版本
+                String winVer = MinaUtils.execCmdWithResult(session, "cmd /c ver").trim();
+                osInfo.setKernelVersion(winVer);
+
+                // 设置分发版信息
+                osInfo.setDistribution("Windows");
+                osInfo.setDistributionId("windows");
+
+                // 设置架构
+                String arch = MinaUtils.execCmdWithResult(session, "cmd /c echo %PROCESSOR_ARCHITECTURE%").trim();
+                osInfo.setArchitecture(arch.equalsIgnoreCase("AMD64") ? "x86_64" : arch);
+
+                // 获取系统信息
+                try {
+                    String sysInfo = MinaUtils.execCmdWithResult(session,
+                            "cmd /c systeminfo | findstr /B /C:\"OS\" /C:\"系统\" /C:\"注册\" /C:\"Registered\"");
+                    if (StringUtils.isNotBlank(sysInfo)) {
+                        // 使用distributionName存储详细系统信息
+                        osInfo.setDistributionName("Windows " + sysInfo.replace("\r\n", " | "));
+
+                        // 解析版本信息
+                        if (sysInfo.contains("Windows 10")) {
+                            osInfo.setVersion("10");
+                            osInfo.setVersionId("10");
+                        } else if (sysInfo.contains("Windows 11")) {
+                            osInfo.setVersion("11");
+                            osInfo.setVersionId("11");
+                        } else if (sysInfo.contains("Windows Server 2019")) {
+                            osInfo.setVersion("2019");
+                            osInfo.setVersionId("2019");
+                        } else if (sysInfo.contains("Windows Server 2022")) {
+                            osInfo.setVersion("2022");
+                            osInfo.setVersionId("2022");
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("获取Windows系统详细信息失败: {}", e.getMessage());
+                }
+
+                // 设置显示名称
+                if (StringUtils.isNotBlank(osInfo.getVersion())) {
+                    osInfo.setDisplayName("Windows " + osInfo.getVersion());
+                } else {
+                    osInfo.setDisplayName("Windows");
+                }
+
+                // 标记系统信息有效
+                osInfo.setValid(true);
+
+            } catch (Exception e) {
+                logger.error("收集Windows基本信息时出错: {}", e.getMessage(), e);
+            }
+        }
+
+        /**
+         * 收集Linux详细信息（硬件信息）
+         */
+        private void collectLinuxDetailInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+            try {
+                logger.info("开始收集Linux详细硬件信息: {}", hostInfo.getIp());
+
+                // 获取适用于Linux的收集器
+                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
+                if (collector != null) {
+                    // 收集硬件信息
+                    collector.collectHardwareInfo(osInfo, session,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+
+                    // 更新状态
+                    hostInfo.setOsInfo(osInfo);
+                    hostInfo.setMessage("Linux硬件信息收集完成");
+                    service.updateHostInfoCache(hostInfo);
+
+                    logger.info("Linux硬件信息收集成功: {}", hostInfo.getIp());
+                } else {
+                    logger.error("找不到Linux系统信息收集器");
+                    hostInfo.setMessage("找不到Linux系统信息收集器");
+                    service.updateHostInfoCache(hostInfo);
+                }
+            } catch (Exception e) {
+                logger.error("收集Linux硬件信息时出错: {}", e.getMessage(), e);
+                hostInfo.setMessage("收集Linux硬件信息失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 收集Windows详细信息（硬件信息）
+         */
+        private void collectWindowsDetailInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+            try {
+                logger.info("开始收集Windows详细硬件信息: {}", hostInfo.getIp());
+
+                // 获取适用于Windows的收集器
+                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("windows");
+                if (collector != null) {
+                    // 收集硬件信息
+                    collector.collectHardwareInfo(osInfo, session,
+                            (info) -> service.updateHostInfoCache(hostInfo));
+
+                    // 更新状态
+                    hostInfo.setOsInfo(osInfo);
+                    hostInfo.setMessage("Windows硬件信息收集完成");
+                    service.updateHostInfoCache(hostInfo);
+
+                    logger.info("Windows硬件信息收集成功: {}", hostInfo.getIp());
+                } else {
+                    logger.error("找不到Windows系统信息收集器");
+                    hostInfo.setMessage("找不到Windows系统信息收集器");
+                    service.updateHostInfoCache(hostInfo);
+                }
+            } catch (Exception e) {
+                logger.error("收集Windows硬件信息时出错: {}", e.getMessage(), e);
+                hostInfo.setMessage("收集Windows硬件信息失败: " + e.getMessage());
                 service.updateHostInfoCache(hostInfo);
             }
         }
@@ -464,93 +764,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             } catch (Exception e) {
                 logger.error("连接到主机 {} 失败: {}", hostInfo.getIp(), e.getMessage(), e);
                 return null;
-            }
-        }
-
-        /**
-         * 收集Linux操作系统信息
-         * 使用Linux系统信息收集器获取系统和硬件信息
-         */
-        private void collectLinuxInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
-            try {
-                logger.info("开始收集Linux系统详细信息: {}", hostInfo.getIp());
-
-                // 预先检查常见的Linux发行版文件
-                preCheckLinuxDistribution(session, osInfo);
-
-                // 获取适用于Linux的收集器
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
-                if (collector != null) {
-                    // 收集操作系统基本信息
-                    osInfo = collector.collectOsInfo(hostInfo, session, osInfo,
-                            (info) -> service.updateHostInfoCache(hostInfo));
-                    hostInfo.setOsInfo(osInfo);
-                    service.updateHostInfoCache(hostInfo);
-
-                    // 收集硬件信息
-                    collector.collectHardwareInfo(osInfo, session,
-                            (info) -> service.updateHostInfoCache(hostInfo));
-
-                    // 更新状态
-                    hostInfo.setOsInfo(osInfo);
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                    hostInfo.setMessage("Linux系统信息收集完成");
-                    service.updateHostInfoCache(hostInfo);
-
-                    logger.info("Linux系统信息收集成功: {}", hostInfo.getIp());
-                } else {
-                    logger.error("找不到Linux系统信息收集器");
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setMessage("找不到Linux系统信息收集器");
-                    service.updateHostInfoCache(hostInfo);
-                }
-            } catch (Exception e) {
-                logger.error("收集Linux系统信息时出错: {}", e.getMessage(), e);
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("收集Linux系统信息失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            }
-        }
-
-        /**
-         * 收集Windows操作系统信息
-         * 使用Windows系统信息收集器获取系统和硬件信息
-         */
-        private void collectWindowsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
-            try {
-                logger.info("开始收集Windows系统详细信息: {}", hostInfo.getIp());
-
-                // 获取适用于Windows的收集器
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("windows");
-                if (collector != null) {
-                    // 收集操作系统基本信息
-                    osInfo = collector.collectOsInfo(hostInfo, session, osInfo,
-                            (info) -> service.updateHostInfoCache(hostInfo));
-                    hostInfo.setOsInfo(osInfo);
-                    service.updateHostInfoCache(hostInfo);
-
-                    // 收集硬件信息
-                    collector.collectHardwareInfo(osInfo, session,
-                            (info) -> service.updateHostInfoCache(hostInfo));
-
-                    // 更新状态
-                    hostInfo.setOsInfo(osInfo);
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
-                    hostInfo.setMessage("Windows系统信息收集完成");
-                    service.updateHostInfoCache(hostInfo);
-
-                    logger.info("Windows系统信息收集成功: {}", hostInfo.getIp());
-                } else {
-                    logger.error("找不到Windows系统信息收集器");
-                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setMessage("找不到Windows系统信息收集器");
-                    service.updateHostInfoCache(hostInfo);
-                }
-            } catch (Exception e) {
-                logger.error("收集Windows系统信息时出错: {}", e.getMessage(), e);
-                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setMessage("收集Windows系统信息失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
             }
         }
 
@@ -1454,26 +1667,6 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 重置所有计数器
-         */
-        public synchronized void resetCounters() {
-            // 清空结果列表但保留当前处理中的任务
-            sortedHostList.clear();
-
-            // 重置完成计数
-            completedHostCount.set(0);
-
-            // 不重置processingHostCount，因为可能有正在处理的主机
-
-            // 如果当前没有处理中的主机，那么也可以重置总数
-            if (processingHostCount.get() == 0) {
-                totalHostCount.set(0);
-            }
-
-            logger.info("主机信息收集计数器已重置");
-        }
-
-        /**
          * 新版收集网络接口信息
          * 获取网卡型号、速率和其他网络信息，使用新的数据模型
          */
@@ -1659,6 +1852,37 @@ public class OsInfoServiceImpl implements OsInfoService {
             } catch (Exception e) {
                 logger.error("收集Linux交换空间信息失败", e);
                 throw e;
+            }
+        }
+
+        /**
+         * 开始第二阶段详细信息收集
+         */
+        private synchronized void startDetailInfoCollection() {
+            logger.info("开始第二阶段详细信息收集，等待队列中有 {} 台主机", waitForDetailInfoList.size());
+
+            // 按照IP排序处理
+            waitForDetailInfoList.sort((h1, h2) -> {
+                if (h1.getIp() == null || h2.getIp() == null) {
+                    return 0;
+                }
+                return h1.getIp().compareTo(h2.getIp());
+            });
+
+            // 批量启动详细信息收集
+            while (phase2ProcessingCount.get() < MAX_CONCURRENT_DETAIL_HOSTS && !waitForDetailInfoList.isEmpty()) {
+                HostInfo hostInfo;
+                synchronized (waitForDetailInfoList) {
+                    if (waitForDetailInfoList.isEmpty()) {
+                        break;
+                    }
+                    hostInfo = waitForDetailInfoList.remove(0);
+                }
+
+                if (hostInfo != null) {
+                    phase2ProcessingCount.incrementAndGet();
+                    collectDetailInfoForHost(hostInfo);
+                }
             }
         }
 

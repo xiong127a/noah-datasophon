@@ -21,6 +21,7 @@ import com.datasophon.common.utils.Result;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -37,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +61,10 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Autowired
     private AsyncCheckService asyncCheckService;
+
+    @Autowired
+    @Qualifier("checkExecutor")
+    private ExecutorService checkExecutor;
 
     /**
      * 任务执行状态枚举
@@ -743,7 +749,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 }
             }
-        });
+        }, checkExecutor);
     }
 
     /**
@@ -1296,7 +1302,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                             cacheLog.error("重新检查失败: " + e.getMessage());
                             logger.error("修复后重新检查失败: {}", e.getMessage(), e);
                         }
-                    });
+                    }, checkExecutor);
                 } else {
                     cacheLog.error("修复失败");
                 }

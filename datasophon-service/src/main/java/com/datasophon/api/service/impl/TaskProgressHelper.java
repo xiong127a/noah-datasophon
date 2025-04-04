@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.HashMap;
 
 /**
  * 任务进度帮助类
@@ -95,37 +97,68 @@ public class TaskProgressHelper {
      * @param taskId       任务ID
      * @param ip           主机IP
      * @param success      是否成功
-     * @param errorMessage 错误消息（如果失败）
+     * @param errorMessage 错误消息
      */
     public static void updateHostProcessStatus(String taskId, String ip, boolean success, String errorMessage) {
+        // 参数检查
+        if (taskId == null || taskId.trim().isEmpty()) {
+            logger.warn("任务ID为空，无法更新主机处理状态");
+            return;
+        }
+
+        if (ip == null || ip.trim().isEmpty()) {
+            logger.warn("主机IP为空，无法更新处理状态，任务ID: {}", taskId);
+            return;
+        }
+
+        if (taskProgressMap == null) {
+            logger.warn("任务进度映射为null，无法更新主机{}的处理状态", ip);
+            return;
+        }
+
         TaskProgress progress = taskProgressMap.get(taskId);
         if (progress == null) {
             logger.warn("任务{}不存在，无法更新主机{}的处理状态", taskId, ip);
             return;
         }
 
-        // 更新当前处理的主机
-        progress.setCurrentHost(ip);
+        try {
+            // 更新当前处理的主机
+            progress.setCurrentHost(ip);
 
-        if (success) {
-            // 添加到成功列表
-            progress.getCompletedHosts().add(ip);
-            progress.setCompletedCount(progress.getCompletedCount() + 1);
-        } else {
-            // 添加到失败列表
-            progress.getFailedHosts().put(ip, errorMessage);
-            progress.setFailedCount(progress.getFailedCount() + 1);
+            if (success) {
+                // 添加到成功列表
+                if (progress.getCompletedHosts() == null) {
+                    progress.setCompletedHosts(new ArrayList<>());
+                }
+                progress.getCompletedHosts().add(ip);
+                progress.setCompletedCount(progress.getCompletedCount() + 1);
+            } else {
+                // 添加到失败列表
+                if (progress.getFailedHosts() == null) {
+                    progress.setFailedHosts(new ConcurrentHashMap<>());
+                }
+                progress.getFailedHosts().put(ip, errorMessage);
+                progress.setFailedCount(progress.getFailedCount() + 1);
+            }
+
+            // 从待处理列表中移除
+            if (progress.getPendingHosts() != null) {
+                progress.getPendingHosts().remove(ip);
+            }
+
+            // 计算完成百分比
+            int totalHosts = progress.getTotalHosts();
+            if (totalHosts > 0) {
+                progress.setPercentage(
+                        (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
+                                / totalHosts) * 100));
+            } else {
+                progress.setPercentage(100); // 如果总主机数为0，则设置为100%完成
+            }
+        } catch (Exception e) {
+            logger.error("更新主机处理状态时发生异常: {}, 任务ID: {}, 主机IP: {}", e.getMessage(), taskId, ip, e);
         }
-
-        // 从待处理列表中移除
-        if (progress.getPendingHosts() != null) {
-            progress.getPendingHosts().remove(ip);
-        }
-
-        // 计算完成百分比
-        progress.setPercentage(
-                (int) (((double) (progress.getCompletedCount() + progress.getFailedCount())
-                        / progress.getTotalHosts()) * 100));
     }
 
     /**

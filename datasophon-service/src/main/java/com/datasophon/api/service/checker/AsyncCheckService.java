@@ -70,6 +70,26 @@ public class AsyncCheckService {
     @Qualifier("fixExecutor")
     private ExecutorService fixExecutor;
 
+    // 操作系统信息获取专用执行器
+    @Autowired
+    @Qualifier("osInfoExecutor")
+    private ExecutorService osInfoExecutor;
+
+    // 硬件信息获取专用执行器
+    @Autowired
+    @Qualifier("hardwareInfoExecutor")
+    private ExecutorService hardwareInfoExecutor;
+
+    // Hosts文件操作专用执行器
+    @Autowired
+    @Qualifier("hostsFileExecutor")
+    private ExecutorService hostsFileExecutor;
+
+    // 主机名设置专用执行器
+    @Autowired
+    @Qualifier("hostnameExecutor")
+    private ExecutorService hostnameExecutor;
+
     // SSH连接池 - 按主机名缓存SSH连接
     private final Map<String, ClientSession> hostConnectionPool = new ConcurrentHashMap<>();
 
@@ -327,7 +347,7 @@ public class AsyncCheckService {
     }
 
     /**
-     * 异步执行单个检查项
+     * 异步执行检查检查项
      * 
      * @param clusterId 集群ID
      * @param hostInfo  主机信息
@@ -343,17 +363,8 @@ public class AsyncCheckService {
             return taskKey;
         }
 
-        // 创建并注册异步任务
-        CompletableFuture<CheckItem> future = CompletableFuture.supplyAsync(() -> {
-            try {
-                return doCheck(clusterId, hostInfo, checkItem);
-            } catch (Exception e) {
-                logger.error("执行检查项时发生异常: {}", e.getMessage(), e);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "检查异常: " + e.getMessage());
-                return checkItem;
-            }
-        }, checkExecutor);
+        // 创建并注册异步任务 - 使用doCheckAsync
+        CompletableFuture<CheckItem> future = doCheckAsync(clusterId, hostInfo, checkItem);
 
         // 注册任务
         String taskId = taskManager.registerTask("CHECK",
@@ -366,6 +377,7 @@ public class AsyncCheckService {
         taskInfo.clusterId = clusterId;
         taskInfo.hostname = hostInfo.getIp();
         taskInfo.itemId = checkItem.getId();
+        taskInfo.setExecutorName("checkExecutor");
 
         runningTasks.put(taskKey, taskInfo);
 
@@ -401,17 +413,8 @@ public class AsyncCheckService {
             return taskKey;
         }
 
-        // 创建并注册异步任务
-        CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(() -> {
-            try {
-                return doFix(clusterId, hostInfo, checkItem);
-            } catch (Exception e) {
-                logger.error("执行修复检查项时发生异常: {}", e.getMessage(), e);
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                setCheckItemMessage(clusterId, hostInfo, checkItem, "修复异常: " + e.getMessage());
-                return false;
-            }
-        }, fixExecutor);
+        // 创建并注册异步任务 - 使用doFixAsync
+        CompletableFuture<Boolean> future = doFixAsync(clusterId, hostInfo, checkItem);
 
         // 注册任务
         String taskId = taskManager.registerTask("FIX",
@@ -424,6 +427,7 @@ public class AsyncCheckService {
         taskInfo.clusterId = clusterId;
         taskInfo.hostname = hostInfo.getIp();
         taskInfo.itemId = checkItem.getId();
+        taskInfo.setExecutorName("fixExecutor");
 
         runningTasks.put(taskKey, taskInfo);
 
@@ -535,9 +539,25 @@ public class AsyncCheckService {
         } catch (Exception e) {
             logger.error("执行检查时发生异常: {}", e.getMessage(), e);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("检查异常: " + e.getMessage());
+            checkItem.setMessage("执行检查异常: " + e.getMessage());
             return checkItem;
         }
+    }
+
+    /**
+     * 异步执行检查逻辑
+     */
+    private CompletableFuture<CheckItem> doCheckAsync(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return doCheck(clusterId, hostInfo, checkItem);
+            } catch (Exception e) {
+                logger.error("异步执行检查时发生异常: {}", e.getMessage(), e);
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("执行检查异常: " + e.getMessage());
+                return checkItem;
+            }
+        }, checkExecutor);
     }
 
     /**
@@ -545,29 +565,51 @@ public class AsyncCheckService {
      */
     private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         try {
-            // 将单个修复项放入列表中使用批量修复方法
-            List<CheckItem> items = new ArrayList<>();
-            items.add(checkItem);
-
-            // 使用批量修复方法进行处理
-            List<CheckItem> results = batchExecuteFix(clusterId, hostInfo, items);
-
-            // 返回修复结果
-            if (results != null && !results.isEmpty()) {
-                CheckItem result = results.get(0);
-                return result != null && result.getStatus() == CheckItem.Status.SUCCESS;
-            } else {
-                // 如果没有结果，则标记为失败
+            // 获取相应的检查器
+            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
+            if (checker == null) {
+                logger.error("找不到检查项 {} 的检查器", checkItem.getItemName());
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("执行修复时发生内部错误");
+                checkItem.setMessage("找不到检查器");
                 return false;
             }
+
+            // 执行修复
+            boolean fixResult = checker.fix(clusterId, hostInfo, checkItem);
+            if (fixResult) {
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                if (checkItem.getMessage() == null || checkItem.getMessage().isEmpty()) {
+                    checkItem.setMessage("修复成功");
+                }
+            } else {
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                if (checkItem.getMessage() == null || checkItem.getMessage().isEmpty()) {
+                    checkItem.setMessage("修复失败");
+                }
+            }
+            return fixResult;
         } catch (Exception e) {
             logger.error("执行修复时发生异常: {}", e.getMessage(), e);
             checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("修复异常: " + e.getMessage());
+            checkItem.setMessage("执行修复异常: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * 异步执行修复逻辑
+     */
+    private CompletableFuture<Boolean> doFixAsync(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return doFix(clusterId, hostInfo, checkItem);
+            } catch (Exception e) {
+                logger.error("异步执行修复时发生异常: {}", e.getMessage(), e);
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("执行修复异常: " + e.getMessage());
+                return false;
+            }
+        }, fixExecutor);
     }
 
     /**
@@ -577,11 +619,29 @@ public class AsyncCheckService {
      * @return SSH会话，如果创建失败则返回null
      */
     private ClientSession getOrCreateConnection(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.error("主机信息为空，无法创建连接");
+            return null;
+        }
+
+        if (hostInfo.getIp() == null || hostInfo.getSshPort() == null) {
+            logger.error("主机IP或SSH端口为空，无法创建连接: {}", hostInfo.getIp());
+            return null;
+        }
+
+        // 检查必要的Map对象是否初始化
+        if (connectionLocks == null || hostConnectionPool == null || connectionLastAccessTime == null) {
+            logger.error("连接相关的Map对象未初始化，无法创建或获取连接");
+            return null;
+        }
+
         String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         // 增加总请求计数
-        long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
-        hostCacheRequests.put(hostKey, requests);
+        if (hostCacheRequests != null) {
+            long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
+            hostCacheRequests.put(hostKey, requests);
+        }
 
         // 获取连接锁，确保同一主机的连接操作串行化
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
@@ -596,14 +656,17 @@ public class AsyncCheckService {
                     if (session.isOpen()) {
                         // 尝试发送一个无害的命令来验证连接是否真正有效
                         CommandResult testResult = execCommand(session, "echo connection_test");
-                        if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
+                        if (testResult != null && testResult.isSuccess()
+                                && testResult.getOutput().trim().contains("connection_test")) {
                             logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
                             // 更新最后访问时间
                             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
                             // 增加缓存命中计数
-                            long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
-                            hostCacheHits.put(hostKey, hits);
+                            if (hostCacheHits != null) {
+                                long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
+                                hostCacheHits.put(hostKey, hits);
+                            }
 
                             return session;
                         } else {
@@ -633,13 +696,15 @@ public class AsyncCheckService {
 
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
+
                     // 设置初始访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+
                     logger.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
                 }
                 return session;
             } catch (Exception e) {
-                logger.error("建立SSH连接失败: {}", e.getMessage());
+                logger.error("建立SSH连接失败: {}", e.getMessage(), e);
                 return null;
             }
         }
@@ -678,9 +743,16 @@ public class AsyncCheckService {
             return;
         }
 
-        int count = taskManager.cleanCompletedTasks(24 * 60 * 60 * 1000); // 24小时
-        lastTaskCleanupTime = System.currentTimeMillis();
-        logger.info("清理了 {} 个过期任务记录", count);
+        // 使用checkExecutor异步执行任务清理
+        CompletableFuture.runAsync(() -> {
+            try {
+                int count = taskManager.cleanCompletedTasks(24 * 60 * 60 * 1000); // 24小时
+                lastTaskCleanupTime = System.currentTimeMillis();
+                logger.info("清理了 {} 个过期任务记录", count);
+            } catch (Exception e) {
+                logger.error("清理过期任务时发生异常: {}", e.getMessage(), e);
+            }
+        }, checkExecutor);
     }
 
     /**
@@ -689,66 +761,88 @@ public class AsyncCheckService {
      */
     @Scheduled(fixedDelay = 60000) // 每分钟执行一次
     public void cleanupConnections() {
-        if (!scheduledTasksEnabled.get()) {
+        if (scheduledTasksEnabled == null || !scheduledTasksEnabled.get()) {
             logger.debug("定时任务已禁用，跳过执行cleanupConnections()");
             return;
         }
 
-        int closedCount = 0;
-        int idleClosedCount = 0;
-        logger.info("开始清理不活跃SSH连接...");
+        if (hostConnectionPool == null || hostConnectionPool.isEmpty()) {
+            logger.debug("连接池为空，跳过清理");
+            return;
+        }
 
-        long currentTime = System.currentTimeMillis();
-        long idleTimeout = TimeUnit.MINUTES.toMillis(1); // 1分钟没有使用的连接将被关闭
-
-        List<String> keysToRemove = new ArrayList<>();
-
-        for (Map.Entry<String, ClientSession> entry : hostConnectionPool.entrySet()) {
-            String key = entry.getKey();
+        // 使用checkExecutor异步执行连接清理
+        CompletableFuture.runAsync(() -> {
             try {
-                ClientSession session = entry.getValue();
-                // 检查连接是否有效
-                if (session == null || !session.isOpen()) {
-                    keysToRemove.add(key);
-                    closedCount++;
-                    logger.debug("已移除无效连接: {}", key);
-                    continue;
-                }
+                int closedCount = 0;
+                int idleClosedCount = 0;
+                logger.info("开始清理不活跃SSH连接...");
 
-                // 检查连接是否空闲超时
-                Long lastAccess = connectionLastAccessTime.get(key);
-                if (lastAccess != null && (currentTime - lastAccess) > idleTimeout) {
+                long currentTime = System.currentTimeMillis();
+                long idleTimeout = TimeUnit.MINUTES.toMillis(1); // 1分钟没有使用的连接将被关闭
+
+                List<String> keysToRemove = new ArrayList<>();
+
+                for (Map.Entry<String, ClientSession> entry : hostConnectionPool.entrySet()) {
+                    String key = entry.getKey();
+                    if (key == null) {
+                        continue;
+                    }
+
                     try {
-                        logger.info("关闭空闲超时的连接: {}, 空闲时长: {}分钟",
-                                key, (currentTime - lastAccess) / 60000);
-                        session.close();
-                        keysToRemove.add(key);
-                        idleClosedCount++;
+                        ClientSession session = entry.getValue();
+                        // 检查连接是否有效
+                        if (session == null || !session.isOpen()) {
+                            keysToRemove.add(key);
+                            closedCount++;
+                            logger.debug("已移除无效连接: {}", key);
+                            continue;
+                        }
+
+                        // 检查连接是否空闲超时
+                        Long lastAccess = connectionLastAccessTime != null ? connectionLastAccessTime.get(key) : null;
+                        if (lastAccess != null && (currentTime - lastAccess) > idleTimeout) {
+                            try {
+                                logger.info("关闭空闲超时的连接: {}, 空闲时长: {}分钟",
+                                        key, (currentTime - lastAccess) / 60000);
+                                session.close();
+                                keysToRemove.add(key);
+                                idleClosedCount++;
+                            } catch (Exception e) {
+                                logger.warn("关闭空闲连接时发生异常: {}", e.getMessage());
+                            }
+                        }
                     } catch (Exception e) {
-                        logger.warn("关闭空闲连接时发生异常: {}", e.getMessage());
+                        logger.warn("检查连接时发生异常: {}", e.getMessage());
                     }
                 }
+
+                // 移除已关闭的连接
+                for (String key : keysToRemove) {
+                    if (key != null) {
+                        hostConnectionPool.remove(key);
+                        // 同时也要移除对应的访问时间记录
+                        if (connectionLastAccessTime != null) {
+                            connectionLastAccessTime.remove(key);
+                        }
+                    }
+                }
+
+                lastConnectionCleanupTime = System.currentTimeMillis();
+                logger.info("SSH连接清理完成，关闭{}个失效连接，{}个空闲连接，当前连接池大小: {}",
+                        closedCount, idleClosedCount, hostConnectionPool.size());
+
+                // 日志记录当前缓存命中率
+                try {
+                    int hitRate = calculateSessionCacheHitRate();
+                    logger.info("当前SSH会话缓存命中率: {}%", hitRate);
+                } catch (Exception e) {
+                    logger.warn("计算缓存命中率时发生异常: {}", e.getMessage());
+                }
             } catch (Exception e) {
-                logger.warn("检查连接时发生异常: {}", e.getMessage());
+                logger.error("清理连接池时发生异常: {}", e.getMessage(), e);
             }
-        }
-
-        // 移除已关闭的连接
-        for (String key : keysToRemove) {
-            hostConnectionPool.remove(key);
-            // 同时也要移除对应的访问时间记录
-            connectionLastAccessTime.remove(key);
-
-            // 注意：不要清除缓存命中统计数据，保留以便计算长期命中率
-        }
-
-        lastConnectionCleanupTime = System.currentTimeMillis();
-        logger.info("SSH连接清理完成，关闭{}个失效连接，{}个空闲连接，当前连接池大小: {}",
-                closedCount, idleClosedCount, hostConnectionPool.size());
-
-        // 日志记录当前缓存命中率
-        int hitRate = calculateSessionCacheHitRate();
-        logger.info("当前SSH会话缓存命中率: {}%", hitRate);
+        }, checkExecutor);
     }
 
     /**
@@ -781,6 +875,11 @@ public class AsyncCheckService {
         String hostname;
         Integer itemId;
         CompletableFuture<?> future;
+        String executorName;
+
+        void setExecutorName(String executorName) {
+            this.executorName = executorName;
+        }
     }
 
     /**
@@ -1034,6 +1133,144 @@ public class AsyncCheckService {
         } catch (Exception e) {
             return new CommandResult("", e.getMessage(), -1);
         }
+    }
+
+    /**
+     * 异步执行命令
+     * 根据命令类型选择合适的线程池执行
+     * 
+     * @param session 会话
+     * @param command 要执行的命令
+     * @return 包含命令执行结果的CompletableFuture
+     */
+    public CompletableFuture<CommandResult> execCommandAsync(ClientSession session, String command) {
+        if (session == null) {
+            CompletableFuture<CommandResult> future = new CompletableFuture<>();
+            future.complete(new CommandResult("", "会话为空", -1));
+            return future;
+        }
+
+        // 根据命令类型选择执行器
+        ExecutorService executor = determineExecutorForCommand(command);
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return execCommand(session, command);
+            } catch (Exception e) {
+                logger.error("异步执行命令时发生异常: {}", e.getMessage(), e);
+                return new CommandResult("", "执行异常: " + e.getMessage(), -1);
+            }
+        }, executor);
+    }
+
+    /**
+     * 根据命令类型确定使用哪个执行器
+     * 
+     * @param command 命令内容
+     * @return 适合的执行器
+     */
+    private ExecutorService determineExecutorForCommand(String command) {
+        // 命令字符串转小写便于比较
+        String lowerCommand = command.toLowerCase();
+
+        // 第一阶段信息收集 - 操作系统基本信息和主机名，主列表显示，优先级高
+        // 操作系统信息相关命令使用osInfoExecutor
+        if (lowerCommand.contains("uname") ||
+                lowerCommand.contains("cat /etc/os-release") ||
+                lowerCommand.contains("cat /etc/system-release") ||
+                lowerCommand.contains("hostname") ||
+                lowerCommand.contains("cat /etc/issue")) {
+            logger.debug("【第一阶段】使用操作系统信息执行器执行命令: {}", command);
+            return osInfoExecutor;
+        }
+
+        // 第二阶段信息收集 - 悬浮卡片中显示的信息，优先级低
+        // 硬件信息相关命令使用hardwareInfoExecutor
+        if (lowerCommand.contains("lscpu") ||
+                lowerCommand.contains("lspci") ||
+                lowerCommand.contains("lsblk") ||
+                lowerCommand.contains("free -m") ||
+                lowerCommand.contains("dmidecode") ||
+                lowerCommand.contains("cat /proc/meminfo") ||
+                lowerCommand.contains("nvidia-smi") ||
+                // DNS相关命令 - 确保所有DNS相关命令都被列出
+                lowerCommand.contains("cat /etc/resolv.conf") ||
+                lowerCommand.contains("dig") ||
+                lowerCommand.contains("nslookup") ||
+                lowerCommand.contains("host ") ||
+                lowerCommand.contains("getent hosts") ||
+                lowerCommand.contains("systemd-resolve") ||
+                // hosts文件相关命令 - 确保所有hosts文件相关命令都被列出
+                lowerCommand.contains("/etc/hosts") ||
+                lowerCommand.contains("ping -c") ||
+                lowerCommand.contains("ping ") ||
+                lowerCommand.contains("traceroute") ||
+                lowerCommand.contains("cat /etc/nsswitch.conf")) {
+            logger.debug("【第二阶段】使用硬件信息执行器执行命令: {}", command);
+            return hardwareInfoExecutor;
+        }
+
+        // 主机名设置相关命令使用hostnameExecutor
+        if (lowerCommand.contains("hostnamectl set-hostname") ||
+                (lowerCommand.contains("echo") && lowerCommand.contains("/etc/hostname"))) {
+            logger.debug("使用主机名设置执行器执行命令: {}", command);
+            return hostnameExecutor;
+        }
+
+        // 其他命令使用默认执行器
+        return checkExecutor;
+    }
+
+    /**
+     * 异步执行硬件信息收集命令
+     * 专门使用hardwareInfoExecutor线程池
+     * 
+     * @param session 会话
+     * @param command 要执行的命令
+     * @return 包含命令执行结果的CompletableFuture
+     */
+    public CompletableFuture<CommandResult> execHardwareInfoCommandAsync(ClientSession session, String command) {
+        if (session == null) {
+            CompletableFuture<CommandResult> future = new CompletableFuture<>();
+            future.complete(new CommandResult("", "会话为空", -1));
+            return future;
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.debug("使用硬件信息执行器执行命令: {}", command);
+                return execCommand(session, command);
+            } catch (Exception e) {
+                logger.error("异步执行硬件信息命令时发生异常: {}", e.getMessage(), e);
+                return new CommandResult("", "执行异常: " + e.getMessage(), -1);
+            }
+        }, hardwareInfoExecutor);
+    }
+
+    /**
+     * 异步执行操作系统信息收集命令
+     * 专门使用osInfoExecutor线程池
+     * 
+     * @param session 会话
+     * @param command 要执行的命令
+     * @return 包含命令执行结果的CompletableFuture
+     */
+    public CompletableFuture<CommandResult> execOsInfoCommandAsync(ClientSession session, String command) {
+        if (session == null) {
+            CompletableFuture<CommandResult> future = new CompletableFuture<>();
+            future.complete(new CommandResult("", "会话为空", -1));
+            return future;
+        }
+
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                logger.debug("使用操作系统信息执行器执行命令: {}", command);
+                return execCommand(session, command);
+            } catch (Exception e) {
+                logger.error("异步执行操作系统信息命令时发生异常: {}", e.getMessage(), e);
+                return new CommandResult("", "执行异常: " + e.getMessage(), -1);
+            }
+        }, osInfoExecutor);
     }
 
     /**
@@ -1476,11 +1713,25 @@ public class AsyncCheckService {
      */
     public void syncHostsFileTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
             Object hostsFilePreview) {
+        // 参数校验
+        if (taskId == null || clusterId == null || hostMap == null || hostsFilePreview == null) {
+            logger.error("同步hosts文件任务参数异常: taskId={}, clusterId={}, hostMap={}, hostsFilePreview={}",
+                    taskId, clusterId, hostMap != null ? "非空" : "空",
+                    hostsFilePreview != null ? "非空" : "空");
+            return;
+        }
+
         logger.info("开始异步执行hosts文件同步任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
 
-        // 将任务注册到任务管理器
+        // 使用hardwareInfoExecutor执行（第二阶段）而不是hostsFileExecutor
         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
             try {
+                // 检查Spring上下文是否可用
+                if (taskManager == null || taskManager.getApplicationContext() == null) {
+                    logger.error("任务管理器或Spring上下文为空，无法获取HostCheckService");
+                    return;
+                }
+
                 // 获取主机IP列表并排序
                 List<String> ips = new ArrayList<>(hostMap.keySet());
                 ips = com.datasophon.common.utils.HostUtils.sortIpAddresses(ips);
@@ -1493,6 +1744,11 @@ public class AsyncCheckService {
                 com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
                         .getBean(com.datasophon.api.service.HostCheckService.class);
 
+                if (hostCheckService == null) {
+                    logger.error("无法获取HostCheckService服务实例");
+                    return;
+                }
+
                 // 循环处理每个主机
                 for (String ip : ips) {
                     try {
@@ -1503,38 +1759,54 @@ public class AsyncCheckService {
                                 ip, hostsContent);
 
                         // 更新主机处理状态
-                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                taskId,
-                                ip,
-                                updateResult.isSuccess(),
-                                updateResult.isSuccess() ? null : updateResult.getMsg());
+                        try {
+                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                    taskId,
+                                    ip,
+                                    updateResult.isSuccess(),
+                                    updateResult.isSuccess() ? null : updateResult.getMsg());
+                        } catch (Exception e) {
+                            logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                        }
 
                     } catch (Exception e) {
                         logger.error("同步hosts文件到主机{}时发生错误", ip, e);
                         // 更新主机处理状态为失败
-                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                taskId,
-                                ip,
-                                false,
-                                e.getMessage());
+                        try {
+                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                    taskId,
+                                    ip,
+                                    false,
+                                    e.getMessage());
+                        } catch (Exception ex) {
+                            logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
+                        }
                     }
                 }
 
                 // 完成任务
-                com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
-                        taskId,
-                        "所有主机的hosts文件已成功同步",
-                        "部分主机的hosts文件同步失败，请检查详情");
+                try {
+                    com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
+                            taskId,
+                            "所有主机的hosts文件已成功同步",
+                            "部分主机的hosts文件同步失败，请检查详情");
+                } catch (Exception e) {
+                    logger.error("完成任务状态更新失败: {}", e.getMessage(), e);
+                }
 
                 logger.info("hosts文件同步任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
 
             } catch (Exception e) {
                 logger.error("执行hosts文件同步任务时发生错误", e);
             }
-        }, checkExecutor);
+        }, hardwareInfoExecutor); // 使用硬件信息执行器（第二阶段）
 
         // 注册任务
-        taskManager.registerTask("sync_hosts_file", "同步hosts文件 - 集群ID: " + clusterId, future);
+        try {
+            taskManager.registerTask("sync_hosts_file", "同步hosts文件 - 集群ID: " + clusterId, future);
+        } catch (Exception e) {
+            logger.error("注册任务时发生错误: {}", e.getMessage(), e);
+        }
 
         // 任务完成后保留一段时间进度信息，然后移除
         future.thenRun(() -> {
@@ -1544,7 +1816,11 @@ public class AsyncCheckService {
                 Thread.currentThread().interrupt();
             } finally {
                 // 移除任务进度
-                com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+                try {
+                    com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+                } catch (Exception e) {
+                    logger.error("移除任务进度信息失败: {}", e.getMessage(), e);
+                }
             }
         });
     }
@@ -1559,19 +1835,43 @@ public class AsyncCheckService {
      */
     public void batchSetHostnameTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
             List<Map<String, String>> hostnamePreview) {
+        // 参数校验
+        if (taskId == null || clusterId == null || hostMap == null || hostnamePreview == null) {
+            logger.error("批量设置主机名任务参数异常: taskId={}, clusterId={}, hostMap={}, hostnamePreview={}",
+                    taskId, clusterId, hostMap != null ? "非空" : "空",
+                    hostnamePreview != null ? "非空" : "空");
+            return;
+        }
+
         logger.info("开始异步执行批量设置主机名任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
 
-        // 将任务注册到任务管理器并使用checkExecutor执行
+        // 将任务注册到任务管理器并使用hostnameExecutor执行
         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
             try {
+                // 检查Spring上下文是否可用
+                if (taskManager == null || taskManager.getApplicationContext() == null) {
+                    logger.error("任务管理器或Spring上下文为空，无法获取HostCheckService");
+                    return;
+                }
+
                 // 获取HostCheckService
                 com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
                         .getBean(com.datasophon.api.service.HostCheckService.class);
+
+                if (hostCheckService == null) {
+                    logger.error("无法获取HostCheckService服务实例");
+                    return;
+                }
 
                 // 处理每台主机
                 for (Map<String, String> hostItem : hostnamePreview) {
                     String ip = hostItem.get("ip");
                     String newHostname = hostItem.get("newHostname");
+
+                    if (ip == null || ip.isEmpty() || newHostname == null || newHostname.isEmpty()) {
+                        logger.warn("主机信息不完整，跳过该主机: {}", hostItem);
+                        continue;
+                    }
 
                     try {
                         // 获取主机信息
@@ -1624,35 +1924,55 @@ public class AsyncCheckService {
                         hostCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                         // 更新任务进度
-                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                taskId, ip, true, null);
+                        try {
+                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                    taskId, ip, true, null);
+                        } catch (Exception e) {
+                            logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                        }
 
                     } catch (Exception e) {
                         logger.error("为主机 {} 设置主机名时出错", ip, e);
                         // 更新任务进度
-                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                taskId, ip, false, e.getMessage());
+                        try {
+                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                    taskId, ip, false, e.getMessage());
+                        } catch (Exception ex) {
+                            logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
+                        }
                     }
                 }
 
                 // 完成任务
-                com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
-                        taskId,
-                        "所有主机名设置成功",
-                        "部分主机名设置失败，请检查详情");
+                try {
+                    com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
+                            taskId,
+                            "所有主机名设置成功",
+                            "部分主机名设置失败，请检查详情");
+                } catch (Exception e) {
+                    logger.error("完成任务状态更新失败: {}", e.getMessage(), e);
+                }
 
                 // 更新主机信息缓存
-                hostCheckService.updateHostMapInCache(clusterId);
+                try {
+                    hostCheckService.updateHostMapInCache(clusterId);
+                } catch (Exception e) {
+                    logger.error("更新主机信息缓存失败: {}", e.getMessage(), e);
+                }
 
                 logger.info("批量设置主机名任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
 
             } catch (Exception e) {
                 logger.error("执行批量设置主机名任务时发生错误", e);
             }
-        }, checkExecutor);
+        }, hostnameExecutor); // 使用专用的hostnameExecutor
 
         // 注册任务
-        taskManager.registerTask("set_hostname", "批量设置主机名 - 集群ID: " + clusterId, future);
+        try {
+            taskManager.registerTask("set_hostname", "批量设置主机名 - 集群ID: " + clusterId, future);
+        } catch (Exception e) {
+            logger.error("注册任务时发生错误: {}", e.getMessage(), e);
+        }
 
         // 任务完成后保留一段时间进度信息，然后移除
         future.thenRun(() -> {
@@ -1662,8 +1982,29 @@ public class AsyncCheckService {
                 Thread.currentThread().interrupt();
             } finally {
                 // 移除任务进度
-                com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+                try {
+                    com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
+                } catch (Exception e) {
+                    logger.error("移除任务进度信息失败: {}", e.getMessage(), e);
+                }
             }
         });
+    }
+
+    /**
+     * 异步获取或创建SSH连接
+     * 
+     * @param hostInfo 主机信息
+     * @return 包含SSH会话的CompletableFuture，如果创建失败则返回包含null的CompletableFuture
+     */
+    public CompletableFuture<ClientSession> getOrCreateConnectionAsync(HostInfo hostInfo) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return getOrCreateConnection(hostInfo);
+            } catch (Exception e) {
+                logger.error("异步创建SSH连接时发生异常: {}", e.getMessage(), e);
+                return null;
+            }
+        }, checkExecutor);
     }
 }
