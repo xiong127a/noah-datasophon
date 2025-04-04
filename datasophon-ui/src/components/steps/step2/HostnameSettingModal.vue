@@ -161,6 +161,7 @@
             :percent="percentage" 
             :status="taskStatus === 'FAILED' ? 'exception' : taskStatus === 'COMPLETED' ? 'success' : 'active'"
             :strokeColor="taskStatus === 'FAILED' ? '#ff4d4f' : taskStatus === 'COMPLETED' ? '#52c41a' : '#1890ff'"
+            :strokeWidth="6"
           />
           
           <!-- 当前处理的主机 -->
@@ -175,10 +176,18 @@
         </div>
         
         <!-- 完成的主机列表 -->
-        <a-collapse v-if="completedHosts.length > 0" class="hosts-collapse">
-          <a-collapse-panel :header="$t('已完成的主机') + ' (' + completedHosts.length + ')'" key="1">
+        <a-collapse 
+          v-if="completedHosts.length > 0" 
+          class="hosts-collapse"
+          expandIconPosition="right"
+        >
+          <a-collapse-panel :header="$t('已完成的主机') + ' (' + completedHosts.length + ')'" key="1" class="apple-collapse-panel">      
             <div class="hosts-list">
-              <a-tag v-for="host in completedHosts" :key="host" color="success" class="host-tag">
+              <a-tag 
+                v-for="host in completedHosts" 
+                :key="host" 
+                class="host-tag success-host-tag"
+              >
                 {{ host }}
               </a-tag>
             </div>
@@ -186,8 +195,12 @@
         </a-collapse>
         
         <!-- 失败的主机列表 -->
-        <a-collapse v-if="failedHosts && Object.keys(failedHosts).length > 0" class="hosts-collapse">
-          <a-collapse-panel :header="$t('失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2">
+        <a-collapse 
+          v-if="failedHosts && Object.keys(failedHosts).length > 0" 
+          class="hosts-collapse"
+          expandIconPosition="right"
+        >
+          <a-collapse-panel :header="$t('失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2" class="apple-collapse-panel error-panel">
             <div class="failed-hosts-list">
               <div class="failed-host-item" v-for="(reason, ip) in failedHosts" :key="ip">
                 <div class="failed-host-ip">{{ ip }}</div>
@@ -199,11 +212,12 @@
       </div>
       
       <div class="progress-actions">
-        <a-button @click="handleCancel">{{ $t('关闭') }}</a-button>
-        <a-button 
-          v-if="taskStatus === 'COMPLETED' && completedCount > 0" 
-          type="primary" 
+        <a-button @click="handleCancel" class="cancel-button">{{ $t('关闭') }}</a-button>
+        <a-button
+          v-if="taskStatus === 'COMPLETED' && completedCount > 0"
+          type="primary"
           @click="handleSyncHosts"
+          class="sync-button"
         >{{ $t('同步hosts文件') }}</a-button>
       </div>
     </div>
@@ -744,15 +758,20 @@ export default {
 
 /* 进度卡片样式 */
 .progress-card {
-  background-color: #fff;
-  border-radius: 4px;
-  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
 }
 
 .card-title {
   font-weight: 600;
-  margin-bottom: 16px;
-  font-size: 16px;
+  margin-bottom: 20px;
+  font-size: 18px;
   color: #1d1d1f;
   position: relative;
 }
@@ -760,59 +779,80 @@ export default {
 .progress-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .progress-status {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .status-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 4px;
 }
 
 .status-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .status-icon {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .in-progress {
-  color: #1890ff;
+  color: #0071e3;
 }
 
 .completed {
-  color: #52c41a;
+  color: #34c759;
 }
 
 .failed {
-  color: #ff4d4f;
+  color: #ff3b30;
 }
 
 .status-stats {
   display: flex;
-  gap: 20px;
+  gap: 24px;
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.stat-item.completed {
+  background-color: rgba(52, 199, 89, 0.1);
+}
+
+.stat-item.failed {
+  background-color: rgba(255, 59, 48, 0.1);
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #1d1d1f;
+}
+
+.stat-item.completed .stat-value {
+  color: #34c759;
+}
+
+.stat-item.failed .stat-value {
+  color: #ff3b30;
 }
 
 .stat-label {
@@ -821,15 +861,27 @@ export default {
 }
 
 .current-host {
-  margin-top: 8px;
+  margin-top: 16px;
+}
+
+/deep/ .ant-tag {
+  border-radius: 6px;
+  font-size: 13px;
+  padding: 4px 10px;
+  border: none;
+  font-weight: 500;
 }
 
 .task-message {
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  color: #666;
+  background-color: rgba(245, 247, 250, 0.7);
+  padding: 16px;
+  border-radius: 12px;
+  color: #6e6e73;
   font-size: 14px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .hosts-collapse {
@@ -837,56 +889,117 @@ export default {
   background-color: transparent;
 }
 
+/deep/ .apple-collapse-panel {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0);
+}
+
+/deep/ .apple-collapse-panel.error-panel .ant-collapse-header {
+  background-color: rgba(255, 59, 48, 0.08);
+  color: #1d1d1f;
+}
+
 /deep/ .ant-collapse-header {
-  padding: 12px 16px !important;
-  background-color: #f5f7fa;
-  border-radius: 4px !important;
+  padding: 14px 16px !important;
+  background-color: rgba(0, 113, 227, 0.08);
+  border-radius: 12px !important;
   font-weight: 500;
   color: #1d1d1f !important;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+/deep/ .ant-collapse-header:hover {
+  background-color: rgba(0, 113, 227, 0.12);
+}
+
+/deep/ .ant-collapse-arrow {
+  font-size: 14px !important;
+  color: #0071e3 !important;
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0) !important;
+}
+
+/deep/ .ant-collapse-item-active .ant-collapse-header {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 
 /deep/ .ant-collapse-content {
   border-top: none;
+  background-color: rgba(250, 250, 252, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: slideDown 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0);
+}
+
+/deep/ .ant-collapse-content-box {
+  padding: 16px !important;
 }
 
 .hosts-list {
   padding: 12px 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .host-tag {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.success-host-tag {
+  background-color: rgba(52, 199, 89, 0.15);
+  color: #116329;
+}
+
+.success-host-tag:hover {
+  background-color: rgba(52, 199, 89, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
 }
 
 .failed-hosts-list {
   padding: 12px 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .failed-host-item {
-  padding: 12px;
-  border-radius: 4px;
-  background-color: #fff1f0;
-  border: 1px solid #ffccc7;
+  padding: 14px;
+  border-radius: 10px;
+  background-color: rgba(255, 59, 48, 0.08);
+  border: 1px solid rgba(255, 59, 48, 0.15);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.failed-host-item:hover {
+  background-color: rgba(255, 59, 48, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
 }
 
 .failed-host-ip {
   font-weight: 500;
   color: #1d1d1f;
-  font-family: "Consolas", "Monaco", monospace;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
   font-size: 14px;
 }
 
 .failed-host-reason {
-  color: #ff4d4f;
+  color: #ff3b30;
   font-size: 13px;
 }
 
@@ -894,7 +1007,65 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 24px;
+}
+
+.cancel-button {
+  border-radius: 10px;
+  font-size: 14px;
+  height: 38px;
+  padding: 0 18px;
+  border: none;
+  background-color: rgba(242, 242, 242, 0.9);
+  color: #1d1d1f;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.cancel-button:hover {
+  background-color: rgba(230, 230, 230, 0.9);
+  transform: translateY(-1px);
+}
+
+.sync-button {
+  border-radius: 10px;
+  font-size: 14px;
+  height: 38px;
+  padding: 0 18px;
+  border: none;
+  background-color: #0071e3;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.3);
+}
+
+.sync-button:hover {
+  background-color: #0077ED;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 113, 227, 0.4);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
 }
 </style>
 
