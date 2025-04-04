@@ -206,6 +206,25 @@
             </a-collapse-panel>
           </a-collapse>
           
+          <!-- 待同步主机列表 -->
+          <a-collapse 
+            v-if="pendingHosts.length > 0" 
+            class="hosts-collapse"
+            expandIconPosition="right"
+          >
+            <a-collapse-panel :header="$t('待同步主机') + ' (' + pendingHosts.length + ')'" key="3" class="apple-collapse-panel pending-panel">
+              <div class="hosts-list">
+                <a-tag 
+                  v-for="host in pendingHosts" 
+                  :key="host" 
+                  class="host-tag pending-host-tag"
+                >
+                  {{ host }}
+                </a-tag>
+              </div>
+            </a-collapse-panel>
+          </a-collapse>
+          
           <!-- 失败的主机列表 -->
           <a-collapse 
             v-if="failedHosts && Object.keys(failedHosts).length > 0" 
@@ -215,8 +234,10 @@
             <a-collapse-panel :header="$t('同步失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2" class="apple-collapse-panel error-panel">
               <div class="failed-hosts-list">
                 <div class="failed-host-item" v-for="(reason, ip) in failedHosts" :key="ip">
-                  <div class="failed-host-ip">{{ ip }}</div>
-                  <div class="failed-host-reason">{{ reason }}</div>
+                  <a-tooltip placement="top" :title="reason">
+                    <div class="failed-host-ip">{{ ip }}</div>
+                  </a-tooltip>
+                  <div class="failed-host-reason">{{ shortenReason(reason) }}</div>
                 </div>
               </div>
             </a-collapse-panel>
@@ -264,6 +285,7 @@ export default {
       taskMessage: null,
       completedHosts: [],
       failedHosts: {},
+      pendingHosts: [],
       pollingTimer: null
     }
   },
@@ -310,6 +332,7 @@ export default {
       this.taskMessage = null;
       this.completedHosts = [];
       this.failedHosts = {};
+      this.pendingHosts = [];
     },
     
     // 清除轮询定时器
@@ -433,6 +456,10 @@ export default {
             this.failedHosts = progress.failedHosts;
           }
           
+          if (progress.pendingHosts) {
+            this.pendingHosts = progress.pendingHosts;
+          }
+          
           // 如果任务已完成，停止轮询
           if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
             this.clearPollingTimer();
@@ -454,6 +481,13 @@ export default {
       } catch (e) {
         console.error('Poll task progress error:', e);
       }
+    },
+    
+    // 缩短错误原因，只显示前70个字符
+    shortenReason(reason) {
+      if (!reason) return '';
+      if (reason.length <= 70) return reason;
+      return reason.substring(0, 70) + '...';
     },
 
     // 同步hosts文件到所有主机
@@ -485,20 +519,7 @@ export default {
 
     // 取消或关闭弹窗
     handleCancel() {
-      // 如果当前有任务正在进行中，确认用户是否要关闭
-      if (this.taskId && this.taskStatus === 'IN_PROGRESS') {
-        this.$confirm({
-          title: this.$t('确认关闭'),
-          content: this.$t('有一个同步hosts文件任务正在进行中，关闭窗口后可以通过再次点击"同步hosts文件"按钮回到进度页面'),
-          okText: this.$t('确定'),
-          cancelText: this.$t('取消'),
-          onOk: () => {
-            this.$emit('close');
-          }
-        });
-      } else {
-        this.$emit('close');
-      }
+      this.$emit('close');
     },
 
     // 获取行数
@@ -831,15 +852,41 @@ export default {
 }
 
 .failed-hosts-collapse /deep/ .ant-collapse-header {
-  padding: 12px 16px !important;
-  background-color: #f5f5f7;
-  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  background-color: rgba(0, 113, 227, 0.08);
+  border-radius: 12px !important;
   font-weight: 500;
   color: #1d1d1f !important;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-header:hover {
+  background-color: rgba(0, 113, 227, 0.12);
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-arrow {
+  font-size: 14px !important;
+  color: #0071e3 !important;
+  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0) !important;
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-item-active .ant-collapse-header {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 
 .failed-hosts-collapse /deep/ .ant-collapse-content {
   border-top: none;
+  background-color: rgba(250, 250, 252, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: slideDown 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0);
+}
+
+.failed-hosts-collapse /deep/ .ant-collapse-content-box {
+  padding: 16px !important;
 }
 
 .failed-hosts-list {
@@ -1332,5 +1379,23 @@ export default {
 
 .sync-hosts-modal .ide-editor::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.2);
+}
+</style>
+
+<style lang="less" scoped>
+/deep/ .apple-collapse-panel.pending-panel .ant-collapse-header {
+  background-color: rgba(255, 149, 0, 0.08);
+  color: #1d1d1f;
+}
+
+.pending-host-tag {
+  background-color: rgba(255, 149, 0, 0.15);
+  color: #804000;
+}
+
+.pending-host-tag:hover {
+  background-color: rgba(255, 149, 0, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
 }
 </style> 

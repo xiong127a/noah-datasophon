@@ -194,6 +194,25 @@
           </a-collapse-panel>
         </a-collapse>
         
+        <!-- 待设置主机列表 -->
+        <a-collapse 
+          v-if="pendingHosts && pendingHosts.length > 0" 
+          class="hosts-collapse"
+          expandIconPosition="right"
+        >
+          <a-collapse-panel :header="$t('待设置主机') + ' (' + pendingHosts.length + ')'" key="3" class="apple-collapse-panel pending-panel">
+            <div class="hosts-list">
+              <a-tag 
+                v-for="host in pendingHosts" 
+                :key="host" 
+                class="host-tag pending-host-tag"
+              >
+                {{ host }}
+              </a-tag>
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
+        
         <!-- 失败的主机列表 -->
         <a-collapse 
           v-if="failedHosts && Object.keys(failedHosts).length > 0" 
@@ -203,8 +222,10 @@
           <a-collapse-panel :header="$t('失败的主机') + ' (' + Object.keys(failedHosts).length + ')'" key="2" class="apple-collapse-panel error-panel">
             <div class="failed-hosts-list">
               <div class="failed-host-item" v-for="(reason, ip) in failedHosts" :key="ip">
-                <div class="failed-host-ip">{{ ip }}</div>
-                <div class="failed-host-reason">{{ reason }}</div>
+                <a-tooltip placement="top" :title="reason">
+                  <div class="failed-host-ip">{{ ip }}</div>
+                </a-tooltip>
+                <div class="failed-host-reason">{{ shortenReason(reason) }}</div>
               </div>
             </div>
           </a-collapse-panel>
@@ -285,6 +306,7 @@ export default {
       taskMessage: null,
       completedHosts: [],
       failedHosts: {},
+      pendingHosts: [],
       
       // 轮询任务
       pollingTimer: null
@@ -339,6 +361,7 @@ export default {
       this.taskMessage = null;
       this.completedHosts = [];
       this.failedHosts = {};
+      this.pendingHosts = [];
       
       this.clearPollingTimer();
       
@@ -437,6 +460,10 @@ export default {
             this.failedHosts = progress.failedHosts;
           }
           
+          if (progress.pendingHosts) {
+            this.pendingHosts = progress.pendingHosts;
+          }
+          
           // 如果任务已完成，停止轮询
           if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
             this.clearPollingTimer();
@@ -459,7 +486,39 @@ export default {
         console.error('Poll task progress error:', e);
       }
     },
-
+    
+    // 获取所有主机列表
+    async getAllHosts() {
+      try {
+        const res = await HostCheckService.getHostList(this, this.clusterId);
+        if (res.code === 200 && res.data) {
+          // 将所有主机IP添加到allHosts数组
+          this.allHosts = res.data.map(host => host.ip);
+          
+          // 初始时，所有主机都是待处理状态
+          this.pendingHosts = [...this.allHosts];
+          
+          return this.allHosts;
+        }
+      } catch (e) {
+        console.error('Get host list error:', e);
+      }
+      return [];
+    },
+    
+    // 更新待设置主机列表
+    updatePendingHosts() {
+      if (!this.allHosts || !Array.isArray(this.allHosts) || this.allHosts.length === 0) return;
+      
+      // 计算待设置主机 = 所有主机 - 已完成主机 - 失败主机
+      const completedSet = new Set(this.completedHosts);
+      const failedSet = new Set(Object.keys(this.failedHosts));
+      
+      this.pendingHosts = this.allHosts.filter(host => 
+        !completedSet.has(host) && !failedSet.has(host)
+      );
+    },
+    
     // 保存主机名
     async handleSave() {
       try {
@@ -531,20 +590,13 @@ export default {
 
     // 取消或关闭弹窗
     handleCancel() {
-      // 如果当前有任务正在进行中，确认用户是否要关闭
-      if (this.taskId && this.taskStatus === 'IN_PROGRESS') {
-        this.$confirm({
-          title: this.$t('确认关闭'),
-          content: this.$t('有一个主机名设置任务正在进行中，关闭窗口后可以通过再次点击"批量设置主机名"按钮回到进度页面'),
-          okText: this.$t('确定'),
-          cancelText: this.$t('取消'),
-          onOk: () => {
-            this.$emit('close');
-          }
-        });
-      } else {
-        this.$emit('close');
-      }
+      this.$emit('close');
+    },
+
+    shortenReason(reason) {
+      if (!reason) return '';
+      if (reason.length <= 70) return reason;
+      return reason.substring(0, 70) + '...';
     }
   }
 }
@@ -1102,6 +1154,22 @@ export default {
     opacity: 1;
     max-height: 1000px;
   }
+}
+
+.pending-host-tag {
+  background-color: rgba(255, 149, 0, 0.15);
+  color: #804000;
+}
+
+.pending-host-tag:hover {
+  background-color: rgba(255, 149, 0, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+/deep/ .apple-collapse-panel.pending-panel .ant-collapse-header {
+  background-color: rgba(255, 149, 0, 0.08);
+  color: #1d1d1f;
 }
 </style>
 
