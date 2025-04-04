@@ -234,6 +234,7 @@
 
 <script>
 import HostCheckService from './HostCheckService'
+import TaskStateManager, { TASK_TYPE } from './TaskStateManager'
 
 export default {
   name: 'SyncHostsFileModal',
@@ -269,8 +270,7 @@ export default {
   watch: {
     visible(val) {
       if (val) {
-        this.resetState();
-        this.generatePreview()
+        this.checkExistingTask();
       } else {
         this.clearPollingTimer();
       }
@@ -280,6 +280,22 @@ export default {
     this.clearPollingTimer();
   },
   methods: {
+    // 检查是否有正在进行的任务
+    async checkExistingTask() {
+      // 获取保存的任务ID
+      const savedTaskId = TaskStateManager.getTaskId(TASK_TYPE.SYNC_HOSTS_FILE, this.clusterId);
+      
+      if (savedTaskId) {
+        // 设置任务ID并开始轮询进度
+        this.taskId = savedTaskId;
+        this.startPollingTaskProgress(savedTaskId);
+      } else {
+        // 没有进行中的任务，重置状态并生成预览
+        this.resetState();
+        this.generatePreview();
+      }
+    },
+    
     // 重置状态
     resetState() {
       this.previewData = null;
@@ -379,6 +395,9 @@ export default {
       this.clearPollingTimer();
       this.taskId = taskId;
       
+      // 保存任务ID到全局状态
+      TaskStateManager.setTaskId(TASK_TYPE.SYNC_HOSTS_FILE, taskId, this.clusterId);
+      
       // 立即执行一次
       this.pollTaskProgress();
       
@@ -417,6 +436,8 @@ export default {
           // 如果任务已完成，停止轮询
           if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
             this.clearPollingTimer();
+            // 清除任务状态
+            TaskStateManager.clearTaskId(TASK_TYPE.SYNC_HOSTS_FILE);
           }
         } else {
           console.error('Poll task progress error:', res.msg);
@@ -426,6 +447,8 @@ export default {
             this.clearPollingTimer();
             this.taskStatus = 'FAILED';
             this.taskMessage = res.msg || this.$t('获取任务进度失败');
+            // 清除任务状态
+            TaskStateManager.clearTaskId(TASK_TYPE.SYNC_HOSTS_FILE);
           }
         }
       } catch (e) {
@@ -460,9 +483,22 @@ export default {
       this.$emit('close');
     },
 
-    // 取消
+    // 取消或关闭弹窗
     handleCancel() {
-      this.$emit('close')
+      // 如果当前有任务正在进行中，确认用户是否要关闭
+      if (this.taskId && this.taskStatus === 'IN_PROGRESS') {
+        this.$confirm({
+          title: this.$t('确认关闭'),
+          content: this.$t('有一个同步hosts文件任务正在进行中，关闭窗口后可以通过再次点击"同步hosts文件"按钮回到进度页面'),
+          okText: this.$t('确定'),
+          cancelText: this.$t('取消'),
+          onOk: () => {
+            this.$emit('close');
+          }
+        });
+      } else {
+        this.$emit('close');
+      }
     },
 
     // 获取行数

@@ -1942,7 +1942,7 @@ export default {
     },
 
     // 显示同步hosts文件弹窗
-    showSyncHostsModal(clusterId) {
+    showSyncHostsModal() {
       this.syncHostsVisible = true;
     },
   },

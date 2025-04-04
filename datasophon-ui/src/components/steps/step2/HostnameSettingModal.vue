@@ -226,6 +226,7 @@
 
 <script>
 import HostCheckService from './HostCheckService'
+import TaskStateManager, { TASK_TYPE } from './TaskStateManager'
 
 export default {
   name: 'HostnameSettingModal',
@@ -292,8 +293,8 @@ export default {
   watch: {
     visible(val) {
       if (val) {
-        // 重置状态
-        this.resetState();
+        // 打开弹窗时，检查是否有正在进行的任务
+        this.checkExistingTask();
       } else {
         // 清除轮询定时器
         this.clearPollingTimer();
@@ -310,6 +311,21 @@ export default {
     this.clearPollingTimer();
   },
   methods: {
+    // 检查是否有正在进行的任务
+    async checkExistingTask() {
+      // 获取保存的任务ID
+      const savedTaskId = TaskStateManager.getTaskId(TASK_TYPE.HOSTNAME_SETTING, this.clusterId);
+      
+      if (savedTaskId) {
+        // 设置任务ID并开始轮询进度
+        this.taskId = savedTaskId;
+        this.startPollingTaskProgress(savedTaskId);
+      } else {
+        // 没有进行中的任务，重置状态
+        this.resetState();
+      }
+    },
+    
     // 重置状态
     resetState() {
       this.form.resetFields();
@@ -383,6 +399,9 @@ export default {
       this.clearPollingTimer();
       this.taskId = taskId;
       
+      // 保存任务ID到全局状态
+      TaskStateManager.setTaskId(TASK_TYPE.HOSTNAME_SETTING, taskId, this.clusterId);
+      
       // 立即执行一次
       this.pollTaskProgress();
       
@@ -421,6 +440,8 @@ export default {
           // 如果任务已完成，停止轮询
           if (progress.status === 'COMPLETED' || progress.status === 'FAILED') {
             this.clearPollingTimer();
+            // 清除任务状态
+            TaskStateManager.clearTaskId(TASK_TYPE.HOSTNAME_SETTING);
           }
         } else {
           console.error('Poll task progress error:', res.msg);
@@ -430,6 +451,8 @@ export default {
             this.clearPollingTimer();
             this.taskStatus = 'FAILED';
             this.taskMessage = res.msg || this.$t('获取任务进度失败');
+            // 清除任务状态
+            TaskStateManager.clearTaskId(TASK_TYPE.HOSTNAME_SETTING);
           }
         }
       } catch (e) {
@@ -506,9 +529,22 @@ export default {
       this.$emit('close');
     },
 
-    // 取消
+    // 取消或关闭弹窗
     handleCancel() {
-      this.$emit('close');
+      // 如果当前有任务正在进行中，确认用户是否要关闭
+      if (this.taskId && this.taskStatus === 'IN_PROGRESS') {
+        this.$confirm({
+          title: this.$t('确认关闭'),
+          content: this.$t('有一个主机名设置任务正在进行中，关闭窗口后可以通过再次点击"批量设置主机名"按钮回到进度页面'),
+          okText: this.$t('确定'),
+          cancelText: this.$t('取消'),
+          onOk: () => {
+            this.$emit('close');
+          }
+        });
+      } else {
+        this.$emit('close');
+      }
     }
   }
 }
