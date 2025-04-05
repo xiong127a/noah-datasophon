@@ -134,303 +134,21 @@ export default function createColumns(vm) {
       title: "操作系统",
       key: "osType",
       dataIndex: "osType",
-      width: "10%",  // 减小操作系统列宽度，从15%改为10%
+      width: "160px",
       customRender: (text, row) => {
-        const h = vm.$createElement;
-
-        // 检查是否为SSH错误
-        const hasSSHError = vm.checkStatus(row.sshConnectStatus, 'error') || 
-                            row.hasSSHError === true;
-        // 检查是否为OS错误
-        const hasOSError = vm.checkStatus(row.osInfoStatus, 'error') || 
-                           vm.checkStatus(row.osStatus, 'error');
-        // 检查是否正在加载
-        const isLoading = row.sshConnectStatus === null || 
-                         row.osInfo === null || row.osInfoStatus === null ||
-                         vm.checkStatus(row.osStatus, 'loading') || 
-                         vm.checkStatus(row.osStatus, 'pending');
-
-        // SSH错误 - 显示错误状态和错误信息
-        if (hasSSHError) {
-          return h('a-tooltip', {
-            props: {
-              placement: 'right',
-              arrowPointAtCenter: true,
-              overlayStyle: { maxWidth: '350px' }
-            }
-          }, [
-            h('span', { slot: 'title' }, [
-              h('div', { class: 'ssh-error-details' }, [
-                h('div', { class: 'ssh-error-title' }, ['SSH连接失败']),
-                h('div', { class: 'ssh-error-message' }, [
-                  row.sshErrorMsg || row.errorMessage
-                ]),
-                // 解析结构化错误信息
-                vm.parseSSHErrorMessage(row.sshErrorMsg || row.errorMessage)
-              ])
-            ]),
-            h('div', {
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                color: '#FF3B30'
-              }
-            }, [
-              h('a-icon', {
-                props: { type: 'warning' },
-                style: { marginRight: '6px' }
-              }),
-              '获取失败'
-            ])
-          ]);
-        }
-
-        // 操作系统错误 - 显示OS获取失败的信息
-        if (hasOSError) {
-          return h('a-tooltip', {
-            props: {
-              placement: 'right',
-              arrowPointAtCenter: true,
-              overlayStyle: { maxWidth: '350px' }
-            }
-          }, [
-            h('span', { slot: 'title' }, [
-              h('div', { class: 'ssh-error-details' }, [
-                h('div', { class: 'ssh-error-title' }, ['操作系统信息获取失败']),
-                h('div', { class: 'ssh-error-message' }, [
-                  row.osErrorMsg || '无法获取操作系统信息，请检查系统配置'
-                ])
-              ])
-            ]),
-            h('div', {
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                color: '#FF8800' // 使用橙色区分SSH错误和OS错误
-              }
-            }, [
-              h('a-icon', {
-                props: { type: 'warning' },
-                style: { marginRight: '6px' }
-              }),
-              '获取失败'
-            ])
-          ]);
-        }
-
-        // 加载状态 - 显示加载中动画
-        if (isLoading) {
-          // 苹果风格的骨架屏加载动画
-          return h('a-tooltip', {
-            props: {
-              placement: 'right',
-              arrowPointAtCenter: true,
-              overlayClassName: 'os-tooltip',
-              getPopupContainer: () => document.body
-            }
-          }, [
-            // 加载中浮窗内容
-            h('span', {
-              slot: 'title',
-              class: 'os-detail-tooltip'
-            }, [
-              h('div', { class: 'os-detail-loading' }, [
-                h('div', { class: 'os-detail-loading-header' }),
-                h('div', { class: 'os-detail-loading-content' }, [
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' }),
-                  h('div', { class: 'os-detail-loading-line' }),
-                  h('div', { class: 'os-detail-loading-line short' }),
-                  h('div', { class: 'os-detail-loading-line medium' })
-                ]),
-                h('div', {
-                  class: 'os-detail-loading-text',
-                  style: {
-                    fontSize: '14px',
-                    textAlign: 'center',
-                    color: '#007AFF',
-                    marginTop: '12px',
-                    fontWeight: '500'
-                  }
-                }, ['正在优雅地检索操作系统信息...'])
-              ])
-            ]),
-
-            // 显示的加载内容
-            h('div', { class: 'os-loading-container' }, [
-              // 背景滑动效果
-              h('div', { class: 'os-loading-shine' }),
-              // 内容区域
-              h('div', { class: 'os-loading-content' }, [
-                // 旋转的加载图标
-                h('div', { class: 'os-loading-spinner' }),
-                // 加载中文字
-                h('span', { class: 'os-loading-text' }, ['获取系统信息'])
-              ])
-            ])
-          ]);
-        }
-
-        // 使用osInfo中的数据
-        const hasOsInfo = row.osInfo && (row.osInfo.distribution || row.osInfo.displayName);
+        let osDisplayName = text || '';
+        const { osInfo } = row;
         
-        // 只使用displayName字段，不使用distributionName和distribution
-        const osDisplayName = hasOsInfo 
-          ? (row.osInfo.displayName || row.osInfo.distribution || '-')
-          : (text || row.osType || '-');
-          
-        const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
-
-        // 获取操作系统对应的图标路径
-        function getOsIconPath(osInfo) {
-          try {
-            if (!osInfo) return require('@/assets/img/os-logos/linux-tux.svg');
-            
-            // 根据osInfo.distributionType或distributionId判断操作系统类型
-            const distType = (osInfo.distributionType || '').toLowerCase();
-            const distId = (osInfo.distributionId || '').toLowerCase();
-            const distName = (osInfo.distribution || '').toLowerCase();
-            
-            // 确定主操作系统类型
-            let osType = 'linux';
-            
-            if (distType === 'centos' || distId === 'centos' || distName.includes('centos')) {
-              osType = 'centos';
-            } else if (distType === 'ubuntu' || distId === 'ubuntu' || distName.includes('ubuntu')) {
-              osType = 'ubuntu';
-            } else if (distType === 'debian' || distId === 'debian' || distName.includes('debian')) {
-              osType = 'debian';
-            } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
-              osType = 'redhat';
-            } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
-              osType = 'kylin';
-            } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
-              osType = 'alpine';
-            }
-            
-            // 使用switch语句根据操作系统类型返回对应图标
-            switch (osType) {
-              case 'centos':
-                return require('@/assets/img/os-logos/centos.svg');
-              case 'ubuntu':
-                return require('@/assets/img/os-logos/ubuntu.svg');
-              case 'debian':
-                return require('@/assets/img/os-logos/debian.svg');
-              case 'redhat':
-                return require('@/assets/img/os-logos/redhat.svg');
-              case 'kylin':
-                return require('@/assets/img/os-logos/kylin.png');
-              case 'alpine':
-                return require('@/assets/img/os-logos/alpine.svg');
-              default:
-                return require('@/assets/img/os-logos/linux-tux.svg');
-            }
-          } catch (error) {
-            // 如果找不到图标文件，返回内置的数据URI
-            return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI2YwZjBmMCIvPjxwYXRoIGQ9Ik0yMy41IDE0QzIzLjUgMTIuMzQzMSAyNC44NDMxIDExIDI2LjUgMTFDMjguMTU2OSAxMSAyOS41IDEyLjM0MzEgMjkuNSAxNFYxNy42NzY4QzMwLjQ5MzcgMTguMTA3MiAzMS4zNjc0IDE4Ljc4NTUgMzIgMTkuNjMyVjE0QzMyIDExLjIzODYgMjkuNzYxNCA5IDI3IDlDMjQuMjM4NiA5IDIyIDExLjIzODYgMjIgMTRWMTkuNjM0QzIyLjYzMzEgMTguNzg2MSAyMy41MDc0IDE4LjEwNzEgMjQuNSAxNy42NzZWMTRIMjMuNVoiIGZpbGw9IiM1MjUyNTIiLz48cGF0aCBkPSJNMzEuOTk5OCAyOC45OUMzMi4wMDE4IDI5LjYzODkgMzEuODA3MSAzMC4yNzMzIDMxLjQ0MjkgMzAuODAyQzMxLjA3ODYgMzEuMzMwNyAzMC41NjAyIDMxLjczMDUgMjkuOTU5OCAzMS45NVYzNC43MkMzMi45MDc1IDM0LjEyMTMgMzUuMTAyIDMxLjM5NjYgMzUgMjguMjlDMzQuODk3OSAyNS4xODM0IDMyLjU1OTYgMjIuNjM5MiAyOS41IDIyLjI1VjE5LjI4QzI5LjUgMTkuMjggMzggMjEuMjggMzggMjlDMzggMzYuNzIgMjkuNTUgMzggMjkuNTUgMzhIMTkuMDNDMTkuMDMgMzggMTAuNTIgMzcuMjkgMTAuMDIgMjcuNzhDOS42OCAxOS43OSAxOS41IDE4LjI3IDE5LjUgMTguMjdWMjEuMjdDMTkuNSAyMS4yNyAxMy4wMDk4IDIyLjYxIDE0LjAyIDE5QzE1LjUgMTQgMjQuOTk5OCAxNCAyNC45OTk4IDE0QzI0Ljk5OTggMTQgMjYuOTk5OCAxNCAyOS4wMDA3IDE0Ljk5QzI5LjAwMDcgMTQuOTkgMjguOTUxNCAxNi42OTMxIDI4LjAyMDcgMTcuODJDMjUuNjgwNyAxOC40OSAyMyAyMC41MSAyMyAyNC41QzIzIDI5LjE1IDI3LjAwMDIgMzAuMTcgMjcuMDAwMiAzMS4yNVYzNC42NkMyMi42NDczIDM0LjMzMDMgMTkuMTk5MSAzMC42NjAzIDE5LjAxOTggMjYuMDZDMTkuMDE5OCAyNS44NiAxOS4wMTk4IDI1LjY2IDE5LjAxOTggMjUuNDZDMTkuMDE5OCAyMy42OTQ1IDE5LjYzOTQgMjEuOTkxMiAyMC43Mzk3IDIwLjY4MTdDMjEuODQwMSAxOS4zNzIyIDIzLjM0NDIgMTguNTUxNiAyNC45OTk4IDE4LjQyVjIyLjE5QzIzLjI4MTQgMjIuNDA1NiAyMS44NTA1IDIzLjU0MTMgMjEuMzcwOSAyNS4xN0MyMi4yMTc3IDI3LjY0MjcgMjQuNzY1OCAyOS4xMjI0IDI3LjI3MDcgMjguNThDMjcuNzk5OSAyOC40NiAyOC4zMTYyIDI4LjI5MTQgMjguODE4MyAyOC4wOEMyOS4wNTQ5IDI3Ljk4ODYgMjkuMzE2MyAyNy45OTk3IDI5LjU0OCAyOC4xMTFDMjkuNzc5NyAyOC4yMjIzIDI5Ljk2MDIgMjguNDI1MiAzMC4wNCAyOC42OEMzMC4yMSAyOS4xNTcgMzAuMzI0NCAyOS42NTMzIDMwLjM4MTcgMzAuMTU3M0MzMC41MDUzIDI5LjY3MjggMzAuNTA4NSAyOS4xNTgxIDMwLjM5MDkgMjguNjcyQzMwLjM5MDkgMjguNjcyIDMxLjk5OTggMjguOTkgMzEuOTk5OCAyOC45OVoiIGZpbGw9IiM1MjUyNTIiLz48L3N2Zz4=';
+        // 如果有osInfo对象，从中获取操作系统名称
+        if (osInfo) {
+          // 直接使用distribution字段，不拼接版本号
+          if (osInfo.distribution) {
+            osDisplayName = osInfo.distribution;
+            // 移除版本号拼接
           }
         }
-
-        const iconPath = getOsIconPath(hasOsInfo ? row.osInfo : null);
-
-        // 返回操作系统信息显示
-        if (hasOsInfo) {
-          return h('a-tooltip', {
-            props: {
-              placement: 'right',
-              arrowPointAtCenter: true,
-              overlayClassName: 'os-tooltip',
-              getPopupContainer: () => document.body
-            }
-          }, [
-            // 使用新的操作系统浮窗组件
-            h('span', {
-              slot: 'title',
-              class: 'os-detail-tooltip'
-            }, [
-              h('OsFloatingCard', {
-                props: {
-                  osInfo: row.osInfo,
-                  cpuStatus: row.cpuStatus || 'pending',
-                  memoryStatus: row.memoryStatus || 'pending',
-                  diskStatus: row.diskStatus || 'pending',
-                  swapStatus: row.swapStatus || 'pending',
-                  gpuStatus: row.gpuStatus || 'pending'
-                }
-              })
-            ]),
-
-            // 显示的操作系统信息
-            h('div', {
-              style: {
-                display: 'flex',
-                alignItems: 'center'
-              }
-            }, [
-              // 操作系统图标
-              h('div', {
-                style: {
-                  width: '24px',
-                  height: '24px',
-                  marginRight: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }
-              }, [
-                h('img', {
-                  attrs: {
-                    src: iconPath,
-                    alt: osDisplayName
-                  },
-                  style: {
-                    width: '20px',
-                    height: '20px'
-                  }
-                })
-              ]),
-
-              // 操作系统名称和版本
-              h('div', {
-                style: {
-                  display: 'flex',
-                  flexDirection: 'column'
-                }
-              }, [
-                h('span', {
-                  style: {
-                    color: '#1D1D1F',
-                    fontWeight: '500',
-                    fontSize: '13px',
-                    lineHeight: '1.3'
-                  }
-                }, [osDisplayName]),
-                osVersion ? h('span', {
-                  style: {
-                    color: '#8E8E93',
-                    fontSize: '11px',
-                    lineHeight: '1.3'
-                  }
-                }, [osVersion]) : null
-              ])
-            ])
-          ]);
-        }
-
-        // 当没有有效的osInfo时，显示简单的信息
-        return h('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center'
-          }
-        }, [
-          h('span', {
-            style: {
-              color: '#8E8E93',
-              fontSize: '13px'
-            }
-          }, [text || '未知操作系统'])
-        ]);
+        
+        return osDisplayName || (text || 'Linux');
       }
     },
     {
@@ -710,4 +428,41 @@ export default function createColumns(vm) {
       },
     }
   ];
+}
+
+// 获取操作系统图标
+const getOsIcon = (row) => {
+  let osType = 'linux';
+  if (row.osInfo) {
+    if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('centos')) {
+      osType = 'centos';
+    } else if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('ubuntu')) {
+      osType = 'ubuntu';
+    } else if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('debian')) {
+      osType = 'debian';
+    } else if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('redhat')) {
+      osType = 'redhat';
+    } else if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('kylin')) {
+      osType = 'kylin';
+    } else if (row.osInfo.distribution && row.osInfo.distribution.toLowerCase().includes('alpine')) {
+      osType = 'alpine';
+    }
+  }
+  
+  switch (osType) {
+    case 'centos':
+      return require('@/assets/img/os-logos/centos.svg');
+    case 'ubuntu':
+      return require('@/assets/img/os-logos/ubuntu.svg');
+    case 'debian':
+      return require('@/assets/img/os-logos/debian.svg');
+    case 'redhat':
+      return require('@/assets/img/os-logos/redhat.svg');
+    case 'kylin':
+      return require('@/assets/img/os-logos/kylin.png');
+    case 'alpine':
+      return require('@/assets/img/os-logos/alpine.svg');
+    default:
+      return require('@/assets/img/os-logos/linux-tux.svg');
+  }
 }

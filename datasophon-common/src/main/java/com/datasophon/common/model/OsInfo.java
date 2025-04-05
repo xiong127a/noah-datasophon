@@ -1,6 +1,6 @@
 package com.datasophon.common.model;
 
-import com.datasophon.common.enums.LinuxDistribution;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.DiskInfo;
@@ -31,11 +31,6 @@ public class OsInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Integer id;
-
-    /**
-     * 操作系统类型(linux) - 固定值
-     */
-    private String osType = "linux";
 
     /**
      * 操作系统发行版本(CentOS/Ubuntu等)
@@ -168,29 +163,14 @@ public class OsInfo implements Serializable {
     private String errorMessage;
 
     /**
-     * 版本ID
-     */
-    private String versionId;
-
-    /**
      * 操作系统全名
      */
     private String fullName;
 
     /**
-     * 显示名称（用于UI显示）
+     * 操作系统发行版
      */
-    private String displayName;
-
-    /**
-     * 主版本号
-     */
-    private String majorVersion;
-
-    /**
-     * Linux发行版类型
-     */
-    private LinuxDistribution distributionType = LinuxDistribution.OTHER;
+    private OsDistribution osDistribution = OsDistribution.OTHER;
 
     /**
      * 信息是否有效
@@ -203,44 +183,18 @@ public class OsInfo implements Serializable {
     private String lastUpdatedItem;
 
     /**
-     * Linux发行版ID（用于兼容旧版API）
+     * 获取版本ID（与version保持一致）
      */
-    private String distributionId;
+    public String getVersionId() {
+        return this.version;
+    }
 
     /**
-     * Linux发行版名称（用于兼容旧版API）
+     * 设置版本ID（同时更新version）
      */
-    private String distributionName;
-
-    /**
-     * 是否为CentOS 7版本
-     */
-    private boolean centOS7;
-
-    /**
-     * 是否为CentOS 8版本
-     */
-    private boolean centOS8;
-
-    /**
-     * 是否为Ubuntu 22.04版本
-     */
-    private boolean ubuntu22;
-
-    /**
-     * 是否为Ubuntu 24.04版本
-     */
-    private boolean ubuntu24;
-
-    /**
-     * 是否为Kylin V10版本
-     */
-    private boolean kylinV10;
-
-    /**
-     * 是否为Kylin V4版本
-     */
-    private boolean kylinV4;
+    public void setVersionId(String versionId) {
+        this.version = versionId;
+    }
 
     /**
      * 设置硬件收集状态
@@ -284,110 +238,51 @@ public class OsInfo implements Serializable {
     }
 
     /**
-     * 获取分发类型
+     * 更新操作系统发行版
+     * 根据当前设置的distribution和version确定具体发行版
      */
-    public LinuxDistribution getDistributionType() {
-        if (distributionType == null) {
-            distributionType = LinuxDistribution.OTHER;
-        }
-        return distributionType;
+    public void updateOsDistribution() {
+        this.osDistribution = OsDistribution.determine(this.distribution, this.version);
     }
 
     /**
-     * 设置分发类型
-     * 同时更新相关发行版信息
-     */
-    public void setDistributionType(LinuxDistribution distributionType) {
-        this.distributionType = distributionType;
-        // 根据分发类型设置显示名称
-        if (distributionType != null) {
-            this.distribution = distributionType.getName();
-            this.displayName = distributionType.getDisplayName();
-        }
-    }
-
-    /**
-     * 更新分发类型
-     * 根据已设置的分发ID自动判断更新分发类型
-     */
-    public void updateDistributionType() {
-        // 检查分发ID是否设置
-        if (this.distribution == null || this.distribution.isEmpty()) {
-            this.distributionType = LinuxDistribution.OTHER;
-            return;
-        }
-
-        // 根据分发ID匹配相应分发类型
-        for (LinuxDistribution distro : LinuxDistribution.values()) {
-            if (distro.matches(this.distribution)) {
-                this.distributionType = distro;
-                this.displayName = distro.getDisplayName();
-                return;
-            }
-        }
-
-        // 未匹配到已知分发类型
-        this.distributionType = LinuxDistribution.OTHER;
-    }
-
-    /**
-     * 检查是否为特定分发类型
-     */
-    public boolean isDistribution(LinuxDistribution distro) {
-        return this.distributionType == distro;
-    }
-
-    /**
-     * 强制更新分发类型
-     * 根据已设置的分发ID自动判断更新分发类型
+     * 根据distributionId强制更新发行版类型
      */
     public void forceUpdateDistribution() {
-        if (this.distribution == null || this.distribution.isEmpty()) {
-            this.distributionType = LinuxDistribution.OTHER;
-            return;
+        // 从distribution字段直接确定发行版
+        if (StringUtils.isNotBlank(this.distribution)) {
+            String distLower = this.distribution.toLowerCase();
+            if (distLower.contains("centos")) {
+                this.osDistribution = OsDistribution.CENTOS;
+            } else if (distLower.contains("ubuntu")) {
+                this.osDistribution = OsDistribution.UBUNTU;
+            } else if (distLower.contains("debian")) {
+                this.osDistribution = OsDistribution.DEBIAN;
+            } else if (distLower.contains("rhel") ||
+                    distLower.contains("redhat")) {
+                this.osDistribution = OsDistribution.REDHAT;
+            } else if (distLower.contains("kylin")) {
+                this.osDistribution = OsDistribution.KYLIN;
+            } else if (distLower.contains("uos")) {
+                this.osDistribution = OsDistribution.UOS;
+            } else {
+                this.osDistribution = OsDistribution.OTHER;
+            }
         }
+    }
 
-        String distId = this.distribution.toLowerCase();
-
-        if (distId.contains("centos")) {
-            if (this.version != null && this.version.startsWith("7")) {
-                this.distributionType = LinuxDistribution.CENTOS7;
-            } else if (this.version != null && this.version.startsWith("8")) {
-                this.distributionType = LinuxDistribution.CENTOS8;
-            } else {
-                this.distributionType = LinuxDistribution.CENTOS;
-            }
-        } else if (distId.contains("redhat") || distId.contains("rhel")) {
-            this.distributionType = LinuxDistribution.REDHAT;
-        } else if (distId.contains("ubuntu")) {
-            if (this.version != null && this.version.startsWith("22")) {
-                this.distributionType = LinuxDistribution.UBUNTU22;
-            } else if (this.version != null && this.version.startsWith("24")) {
-                this.distributionType = LinuxDistribution.UBUNTU24;
-            } else {
-                this.distributionType = LinuxDistribution.UBUNTU;
-            }
-        } else if (distId.contains("debian")) {
-            this.distributionType = LinuxDistribution.DEBIAN;
-        } else if (distId.contains("kylin")) {
-            if (this.version != null && this.version.startsWith("4")) {
-                this.distributionType = LinuxDistribution.KYLIN_V4;
-            } else if (this.version != null && this.version.startsWith("10")) {
-                this.distributionType = LinuxDistribution.KYLIN_V10;
-            } else {
-                this.distributionType = LinuxDistribution.KYLIN;
-            }
-        } else if (distId.contains("uos") || distId.contains("deepin")) {
-            this.distributionType = LinuxDistribution.UOS;
-        } else {
-            this.distributionType = LinuxDistribution.OTHER;
-        }
-
-        this.displayName = this.distributionType.getDisplayName();
+    /**
+     * 获取发行版ID
+     */
+    public String getDistributionId() {
+        return osDistribution != null ? osDistribution.getIdentifier() : "linux";
     }
 
     /**
      * 检查版本是否匹配指定字符串
+     * 
+     * @param versionToCheck 要检查的版本号
+     * @return 是否匹配
      */
     public boolean isVersion(String versionToCheck) {
         if (this.version == null || versionToCheck == null) {
@@ -397,144 +292,9 @@ public class OsInfo implements Serializable {
     }
 
     /**
-     * 判断信息是否有效
+     * 判断是否为特定操作系统版本
      */
-    public boolean isValid() {
-        return valid;
-    }
-
-    /**
-     * 设置信息是否有效
-     */
-    public void setValid(boolean valid) {
-        this.valid = valid;
-    }
-
-    /**
-     * 检查是否为CentOS 7
-     */
-    public boolean isCentOS7() {
-        return centOS7;
-    }
-
-    /**
-     * 设置是否为CentOS 7
-     */
-    public void setCentOS7(boolean centOS7) {
-        this.centOS7 = centOS7;
-    }
-
-    /**
-     * 检查是否为CentOS 8
-     */
-    public boolean isCentOS8() {
-        return centOS8;
-    }
-
-    /**
-     * 设置是否为CentOS 8
-     */
-    public void setCentOS8(boolean centOS8) {
-        this.centOS8 = centOS8;
-    }
-
-    /**
-     * 检查是否为Ubuntu 22.04
-     */
-    public boolean isUbuntu22() {
-        return ubuntu22;
-    }
-
-    /**
-     * 设置是否为Ubuntu 22.04
-     */
-    public void setUbuntu22(boolean ubuntu22) {
-        this.ubuntu22 = ubuntu22;
-    }
-
-    /**
-     * 检查是否为Ubuntu 24.04
-     */
-    public boolean isUbuntu24() {
-        return ubuntu24;
-    }
-
-    /**
-     * 设置是否为Ubuntu 24.04
-     */
-    public void setUbuntu24(boolean ubuntu24) {
-        this.ubuntu24 = ubuntu24;
-    }
-
-    /**
-     * 检查是否为Kylin V10
-     */
-    public boolean isKylinV10() {
-        return kylinV10;
-    }
-
-    /**
-     * 设置是否为Kylin V10
-     */
-    public void setKylinV10(boolean kylinV10) {
-        this.kylinV10 = kylinV10;
-    }
-
-    /**
-     * 检查是否为Kylin V4
-     */
-    public boolean isKylinV4() {
-        return kylinV4;
-    }
-
-    /**
-     * 设置是否为Kylin V4
-     */
-    public void setKylinV4(boolean kylinV4) {
-        this.kylinV4 = kylinV4;
-    }
-
-    /**
-     * 获取发行版ID
-     */
-    public String getDistributionId() {
-        return StringUtils.isNotBlank(distributionId) ? distributionId : distribution;
-    }
-
-    /**
-     * 设置发行版ID
-     */
-    public void setDistributionId(String distributionId) {
-        this.distributionId = distributionId;
-    }
-
-    /**
-     * 获取发行版名称
-     */
-    public String getDistributionName() {
-        return StringUtils.isNotBlank(distributionName) ? distributionName : distribution;
-    }
-
-    /**
-     * 设置发行版名称
-     */
-    public void setDistributionName(String distributionName) {
-        this.distributionName = distributionName;
-    }
-
-    /**
-     * 获取操作系统类型
-     */
-    public String getOsType() {
-        return "linux";
-    }
-
-    /**
-     * 设置操作系统类型
-     * 为保持兼容性，该方法不做任何操作，osType值始终为"linux"
-     */
-    public void setOsType(String osType) {
-        // 什么都不做，osType始终为"linux"
-        this.osType = "linux";
+    public boolean is(OsDistribution distro) {
+        return this.osDistribution == distro;
     }
 }

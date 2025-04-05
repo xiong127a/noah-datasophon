@@ -93,29 +93,28 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-                             String orderField, String orderType, Integer page, Integer pageSize) {
+            String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
-        List<ClusterHostDO> list =
-                this.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
-                        .eq(Constants.MANAGED, 1)
-                        .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
-                        .eq(hostState != null, Constants.HOST_STATE, hostState)
-                        .like(StringUtils.isNotBlank(ip), IP, ip)
-                        .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
-                        .orderByAsc("asc".equals(orderType), orderField)
-                        .orderByDesc("desc".equals(orderType), orderField)
-                        .last("limit " + offset + "," + pageSize));
+        List<ClusterHostDO> list = this.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
+                .eq(Constants.MANAGED, 1)
+                .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
+                .eq(hostState != null, Constants.HOST_STATE, hostState)
+                .like(StringUtils.isNotBlank(ip), IP, ip)
+                .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
+                .orderByAsc("asc".equals(orderType), orderField)
+                .orderByDesc("desc".equals(orderType), orderField)
+                .last("limit " + offset + "," + pageSize));
 
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
-        
+
         // 获取集群代码，用于查询主机信息缓存
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String clusterCode = clusterInfo.getClusterCode();
         Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
-        
+
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
             BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
@@ -125,21 +124,21 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
             queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
-            
+
             // 从缓存中获取hosts文件内容和操作系统类型
             if (hostInfoMap != null) {
                 HostInfo hostInfo = hostInfoMap.get(clusterHostDO.getHostname());
                 if (hostInfo != null) {
                     // 设置hosts文件内容
                     queryHostListPageDTO.setHostsFile(hostInfo.getHostsFile());
-                    
+
                     // 设置操作系统类型
                     if (hostInfo.getOsInfo() != null) {
                         queryHostListPageDTO.setOsType(hostInfo.getOsInfo().getDistribution());
                     }
                 }
             }
-            
+
             hostListPageDTOS.add(queryHostListPageDTO);
         }
         int count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
@@ -159,14 +158,13 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public Result getRoleListByHostname(Integer clusterId, String hostname) {
-        List<ClusterServiceRoleInstanceEntity> list =
-                roleInstanceService.getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
+        List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
             roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
         }
         return Result.success(list);
     }
-
 
     /**
      * 批量删除主机。
@@ -185,13 +183,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         for (String hostId : ids) {
             ClusterHostDO host = this.getById(hostId);
             // 获取主机上安装的服务
-            List<ClusterServiceRoleInstanceEntity> list =
-                    roleInstanceService.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                    .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                             .eq(Constants.CLUSTER_ID, host.getClusterId())
                             .eq(Constants.HOSTNAME, host.getHostname())
                             .eq(Constants.SERVICE_ROLE_STATE, ServiceRoleState.RUNNING)
                             .ne(Constants.ROLE_TYPE, RoleType.CLIENT));
-            List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName).collect(Collectors.toList());
+            List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName)
+                    .collect(Collectors.toList());
             if (!list.isEmpty()) {
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
@@ -205,7 +204,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             this.removeById(hostId);
 
             if (host.getHostState() != HostState.OFFLINE) {
-                //stop the worker on this host
+                // stop the worker on this host
                 ActorRef execCmdActor = ActorUtils.getRemoteActor(host.getHostname(), "executeCmdActor");
                 ExecuteCmdCommand command = new ExecuteCmdCommand();
                 ArrayList<String> commands = new ArrayList<>();
@@ -216,9 +215,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 command.setCommands(commands);
                 execCmdActor.tell(command, ActorRef.noSender());
             }
-            //remove host from prometheus
-            ActorRef prometheusActor =
-                    ActorUtils.getLocalActor(PrometheusActor.class, ActorUtils.getActorRefName(PrometheusActor.class));
+            // remove host from prometheus
+            ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                    ActorUtils.getActorRefName(PrometheusActor.class));
 
             // Prometheus 移除 hosts 信息
             GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
@@ -232,15 +231,13 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorRef.noSender());
 
             // remove the host from the cache
-            Map<String, HostInfo> map =
-                    (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
             }
         }
         return Result.success();
     }
-
 
     @Override
     public Result getRack(Integer clusterId) {

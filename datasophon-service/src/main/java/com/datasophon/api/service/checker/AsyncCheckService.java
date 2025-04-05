@@ -1890,7 +1890,7 @@ public class AsyncCheckService {
                         String command;
                         String osType = "";
                         if (hostInfo.getOsInfo() != null) {
-                            osType = hostInfo.getOsInfo().getOsType();
+                            osType = hostInfo.getOsInfo().getDistribution();
                         }
 
                         if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||

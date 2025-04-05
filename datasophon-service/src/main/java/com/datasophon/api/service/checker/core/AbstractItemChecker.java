@@ -1,14 +1,14 @@
 package com.datasophon.api.service.checker.core;
 
+import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
-import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.enums.LinuxDistribution;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
@@ -105,7 +105,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
                 // 获取ID字段 (例如: ID=centos, ID=ubuntu)
                 String distroId = extractValue(osRelease, "ID=");
-                osInfo.setDistributionId(distroId);
+                osInfo.setDistribution(distroId);
 
                 // 获取VERSION_ID字段 (例如: VERSION_ID="7", VERSION_ID="20.04")
                 String versionId = extractValue(osRelease, "VERSION_ID=");
@@ -116,17 +116,17 @@ public abstract class AbstractItemChecker implements ItemChecker {
                 osInfo.setFullName(prettyName);
 
                 // 设置Linux发行版类型
-                osInfo.setDistributionType(determineDistribution(distroId));
+                osInfo.setOsDistribution(determineDistribution(distroId));
 
                 // 确保操作系统类型与ID保持一致
-                if (osInfo.getDistributionType() == LinuxDistribution.OTHER && !distroId.isEmpty()) {
+                if (osInfo.getOsDistribution() == OsDistribution.OTHER && !distroId.isEmpty()) {
                     logger.warn("操作系统类型识别异常，distroId='{}' 但 distribution={}，尝试强制更新",
-                            distroId, osInfo.getDistributionType());
+                            distroId, osInfo.getOsDistribution());
                     osInfo.forceUpdateDistribution();
-                    logger.info("更新后的操作系统类型：{}", osInfo.getDistributionType());
+                    logger.info("更新后的操作系统类型：{}", osInfo.getOsDistribution());
                 }
 
-                cacheLog.info("操作系统: %s, 版本: %s, 类型: %s", prettyName, versionId, osInfo.getDistributionType());
+                cacheLog.info("操作系统: %s, 版本: %s, 类型: %s", prettyName, versionId, osInfo.getOsDistribution());
             } else {
                 // 如果/etc/os-release不存在，尝试其他方法
 
@@ -138,11 +138,11 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     osInfo.setFullName(release);
 
                     if (release.toLowerCase().contains("centos")) {
-                        osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                        osInfo.setDistributionId("centos");
+                        osInfo.setOsDistribution(OsDistribution.CENTOS);
+                        osInfo.setDistribution("centos");
                     } else if (release.toLowerCase().contains("red hat")) {
-                        osInfo.setDistributionType(LinuxDistribution.REDHAT);
-                        osInfo.setDistributionId("rhel");
+                        osInfo.setOsDistribution(OsDistribution.REDHAT);
+                        osInfo.setDistribution("rhel");
                     }
 
                     // 尝试提取版本号
@@ -161,9 +161,9 @@ public abstract class AbstractItemChecker implements ItemChecker {
                         String description = extractValueFromLine(lsbOutput, "Description:");
 
                         osInfo.setFullName(description);
-                        osInfo.setDistributionId(distro.toLowerCase());
+                        osInfo.setDistribution(distro.toLowerCase());
                         osInfo.setVersionId(version);
-                        osInfo.setDistributionType(determineDistribution(distro.toLowerCase()));
+                        osInfo.setOsDistribution(determineDistribution(distro.toLowerCase()));
 
                         cacheLog.info("操作系统: %s, 版本: %s", description, version);
                     } else {
@@ -171,11 +171,11 @@ public abstract class AbstractItemChecker implements ItemChecker {
                         CommandResult unameResult = execCommand(session, "uname -a");
                         if (unameResult.isSuccess()) {
                             osInfo.setFullName(unameResult.getOutput().trim());
-                            osInfo.setDistributionType(LinuxDistribution.OTHER);
+                            osInfo.setOsDistribution(OsDistribution.OTHER);
                             cacheLog.info("无法确定具体Linux发行版，uname输出: %s", unameResult.getOutput().trim());
                         } else {
                             cacheLog.warn("无法确定操作系统类型和版本");
-                            osInfo.setDistributionType(LinuxDistribution.OTHER);
+                            osInfo.setOsDistribution(OsDistribution.OTHER);
                         }
                     }
                 }
@@ -191,19 +191,19 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } catch (Exception e) {
             logger.error("获取操作系统信息时发生错误: {}", e.getMessage(), e);
             cacheLog.error("获取操作系统信息失败: %s", e.getMessage());
-            osInfo.setDistributionType(LinuxDistribution.OTHER);
+            osInfo.setOsDistribution(OsDistribution.OTHER);
         }
 
         // 设置有效性并缓存结果
         osInfo.setValid(true);
 
         // 最后一次确保操作系统类型与ID保持一致
-        if (osInfo.getDistributionType() == LinuxDistribution.OTHER &&
-                osInfo.getDistributionId() != null && !osInfo.getDistributionId().isEmpty()) {
-            logger.warn("缓存前检测到操作系统类型可能不一致: distributionId='{}' 但 distribution={}",
-                    osInfo.getDistributionId(), osInfo.getDistributionType());
+        if (osInfo.getOsDistribution() == OsDistribution.OTHER &&
+                osInfo.getDistribution() != null && !osInfo.getDistribution().isEmpty()) {
+            logger.warn("缓存前检测到操作系统类型可能不一致: distribution='{}' 但 distribution={}",
+                    osInfo.getDistribution(), osInfo.getOsDistribution());
             osInfo.forceUpdateDistribution();
-            logger.info("缓存前更新后的操作系统类型: {}", osInfo.getDistributionType());
+            logger.info("缓存前更新后的操作系统类型: {}", osInfo.getOsDistribution());
         }
 
         logger.info("最终确定的操作系统信息: {}", osInfo);
@@ -283,32 +283,31 @@ public abstract class AbstractItemChecker implements ItemChecker {
     /**
      * 根据发行版ID确定Linux发行版类型
      */
-    private LinuxDistribution determineDistribution(String distroId) {
-        if (distroId == null) {
-            return LinuxDistribution.OTHER;
+    private OsDistribution determineDistribution(String distroId) {
+        if (distroId == null || distroId.isEmpty()) {
+            return OsDistribution.OTHER;
         }
 
-        distroId = distroId.toLowerCase();
-
-        if (distroId.contains("centos")) {
-            return LinuxDistribution.CENTOS;
-        } else if (distroId.contains("rhel") || distroId.contains("redhat") || distroId.contains("red hat")) {
-            return LinuxDistribution.REDHAT;
-        } else if (distroId.contains("ubuntu")) {
-            return LinuxDistribution.UBUNTU;
-        } else if (distroId.contains("debian")) {
-            return LinuxDistribution.DEBIAN;
-        } else if (distroId.contains("fedora")) {
-            return LinuxDistribution.FEDORA;
-        } else if (distroId.contains("suse") || distroId.contains("sles")) {
-            return LinuxDistribution.SUSE;
-        } else if (distroId.contains("kylin")) {
-            return LinuxDistribution.KYLIN;
-        } else if (distroId.contains("openeuler")) {
-            return LinuxDistribution.OPENEULER;
-        } else {
-            return LinuxDistribution.OTHER;
+        String lowerDistroId = distroId.toLowerCase();
+        if (lowerDistroId.contains("centos")) {
+            return OsDistribution.CENTOS;
+        } else if (lowerDistroId.contains("redhat") || lowerDistroId.contains("rhel")) {
+            return OsDistribution.REDHAT;
+        } else if (lowerDistroId.contains("ubuntu")) {
+            return OsDistribution.UBUNTU;
+        } else if (lowerDistroId.contains("debian")) {
+            return OsDistribution.DEBIAN;
+        } else if (lowerDistroId.contains("fedora")) {
+            return OsDistribution.OTHER; // 新枚举中不包含Fedora，暂时映射到OTHER
+        } else if (lowerDistroId.contains("suse")) {
+            return OsDistribution.OTHER; // 新枚举中不包含SUSE，暂时映射到OTHER
+        } else if (lowerDistroId.contains("kylin")) {
+            return OsDistribution.KYLIN;
+        } else if (lowerDistroId.contains("openeuler")) {
+            return OsDistribution.OTHER; // 新枚举中不包含OpenEuler，暂时映射到OTHER
         }
+
+        return OsDistribution.OTHER;
     }
 
     /**

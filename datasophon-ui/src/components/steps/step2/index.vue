@@ -448,11 +448,11 @@ export default {
             }
 
             // 使用osInfo中的数据
-            const hasOsInfo = row.osInfo && (row.osInfo.distribution || row.osInfo.displayName);
+            const hasOsInfo = row.osInfo && (row.osInfo.distribution || row.osInfo.fullName);
             
-            // 只使用displayName字段，不使用distributionName和distribution
+            // 优先使用fullName字段，其次使用distribution
             const osDisplayName = hasOsInfo 
-              ? (row.osInfo.displayName || row.osInfo.distribution || '-')
+              ? (row.osInfo.fullName || row.osInfo.distribution || '-')
               : (text || row.osType || '-');
               
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
@@ -581,6 +581,7 @@ export default {
                         lineHeight: '1.3'
                       }
                     }, [osDisplayName]),
+                    // 恢复版本号小号字体显示
                     osVersion ? h('span', {
                       style: {
                         color: '#8E8E93',
@@ -1945,9 +1946,9 @@ export default {
     getOsDisplayName(osInfo) {
       if (!osInfo) return '正在检测操作系统...';
       
-      // 优先使用displayName
-      if (osInfo.displayName) {
-        return osInfo.displayName;
+      // 优先使用fullName
+      if (osInfo.fullName) {
+        return osInfo.fullName;
       }
       
       // 其次使用distribution

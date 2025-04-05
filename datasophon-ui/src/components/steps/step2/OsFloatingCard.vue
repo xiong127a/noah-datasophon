@@ -12,7 +12,7 @@
             <div class="os-detail-icon-container">
               <img
                 :src="getOsIconPath(osInfo)"
-                :alt="getOsDisplayName(osInfo)"
+                :alt="getOsName(osInfo)"
                 class="os-detail-icon"
               />
             </div>
@@ -30,12 +30,7 @@
               </div>
               <!-- 操作系统名称已加载 -->
               <template v-else>
-                <span class="os-name">{{ getOsDisplayName(osInfo) }}</span>
-                <!-- 操作系统版本加载动画 -->
-                <span v-if="osInfo.versionId" class="os-version">{{ osInfo.versionId }}</span>
-                <div v-else class="os-version-loading">
-                  <div class="version-loading-bar"></div>
-                </div>
+                <span class="os-name">{{ getOsName(osInfo) }}</span>
               </template>
             </div>
             <div class="os-detail-meta">
@@ -525,34 +520,49 @@ export default {
       }
       return false;
     },
+    getOsName(osInfo) {
+      if (!osInfo) return '未知操作系统';
+      
+      // 优先使用fullName
+      if (osInfo.fullName) {
+        return osInfo.fullName;
+      }
+      
+      // 其次使用distribution
+      else if (osInfo.distribution) {
+        return osInfo.distribution;
+      }
+      
+      return '未知操作系统';
+    },
     getOsIconPath(osType) {
       try {
         if (!osType) return require('@/assets/img/os-logos/linux-tux.svg');
         
-        // 根据osInfo.distributionType或distributionId判断操作系统类型
+        // 根据osInfo判断操作系统类型
         const distType = (osType.distributionType || '').toLowerCase();
         const distId = (osType.distributionId || '').toLowerCase();
         const distName = (osType.distribution || '').toLowerCase();
         
         // 确定主操作系统类型
-        let osSystem = 'linux';
+        let osIconType = 'linux';
         
         if (distType === 'centos' || distId === 'centos' || distName.includes('centos')) {
-          osSystem = 'centos';
+          osIconType = 'centos';
         } else if (distType === 'ubuntu' || distId === 'ubuntu' || distName.includes('ubuntu')) {
-          osSystem = 'ubuntu';
+          osIconType = 'ubuntu';
         } else if (distType === 'debian' || distId === 'debian' || distName.includes('debian')) {
-          osSystem = 'debian';
-        } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
-          osSystem = 'redhat';
-        } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
-          osSystem = 'kylin';
+          osIconType = 'debian';
+        } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat')) {
+          osIconType = 'redhat';
+        } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin')) {
+          osIconType = 'kylin';
         } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
-          osSystem = 'alpine';
+          osIconType = 'alpine';
         }
         
         // 使用switch语句根据操作系统类型返回对应图标
-        switch (osSystem) {
+        switch (osIconType) {
           case 'centos':
             return require('@/assets/img/os-logos/centos.svg');
           case 'ubuntu':
@@ -572,58 +582,6 @@ export default {
         // 如果找不到图标文件，返回内置的数据URI
         return 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI2YwZjBmMCIvPjxwYXRoIGQ9Ik0yMy41IDE0QzIzLjUgMTIuMzQzMSAyNC44NDMxIDExIDI2LjUgMTFDMjguMTU2OSAxMSAyOS41IDEyLjM0MzEgMjkuNSAxNFYxNy42NzY4QzMwLjQ5MzcgMTguMTA3MiAzMS4zNjc0IDE4Ljc4NTUgMzIgMTkuNjMyVjE0QzMyIDExLjIzODYgMjkuNzYxNCA5IDI3IDlDMjQuMjM4NiA5IDIyIDExLjIzODYgMjIgMTRWMTkuNjM0QzIyLjYzMzEgMTguNzg2MSAyMy41MDc0IDE4LjEwNzEgMjQuNSAxNy42NzZWMTRIMjMuNVoiIGZpbGw9IiM1MjUyNTIiLz48cGF0aCBkPSJNMzEuOTk5OCAyOC45OUMzMi4wMDE4IDI5LjYzODkgMzEuODA3MSAzMC4yNzMzIDMxLjQ0MjkgMzAuODAyQzMxLjA3ODYgMzEuMzMwNyAzMC41NjAyIDMxLjczMDUgMjkuOTU5OCAzMS45NVYzNC43MkMzMi45MDc1IDM0LjEyMTMgMzUuMTAyIDMxLjM5NjYgMzUgMjguMjlDMzQuODk3OSAyNS4xODM0IDMyLjU1OTYgMjIuNjM5MiAyOS41IDIyLjI1VjE5LjI4QzI5LjUgMTkuMjggMzggMjEuMjggMzggMjlDMzggMzYuNzIgMjkuNTUgMzggMjkuNTUgMzhIMTkuMDNDMTkuMDMgMzggMTAuNTIgMzcuMjkgMTAuMDIgMjcuNzhDOS42OCAxOS43OSAxOS41IDE4LjI3IDE5LjUgMTguMjdWMjEuMjdDMTkuNSAyMS4yNyAxMy4wMDk4IDIyLjYxIDE0LjAyIDE5QzE1LjUgMTQgMjQuOTk5OCAxNCAyNC45OTk4IDE0QzI0Ljk5OTggMTQgMjYuOTk5OCAxNCAyOS4wMDA3IDE0Ljk5QzI5LjAwMDcgMTQuOTkgMjguOTUxNCAxNi42OTMxIDI4LjAyMDcgMTcuODJDMjUuNjgwNyAxOC40OSAyMyAyMC41MSAyMyAyNC41QzIzIDI5LjE1IDI3LjAwMDIgMzAuMTcgMjcuMDAwMiAzMS4yNVYzNC42NkMyMi42NDczIDM0LjMzMDMgMTkuMTk5MSAzMC42NjAzIDE5LjAxOTggMjYuMDZDMTkuMDE5OCAyNS44NiAxOS4wMTk4IDI1LjY2IDE5LjAxOTggMjUuNDZDMTkuMDE5OCAyMy42OTQ1IDE5LjYzOTQgMjEuOTkxMiAyMC43Mzk3IDIwLjY4MTdDMjEuODQwMSAxOS4zNzIyIDIzLjM0NDIgMTguNTUxNiAyNC45OTk4IDE4LjQyVjIyLjE5QzIzLjI4MTQgMjIuNDA1NiAyMS44NTA1IDIzLjU0MTMgMjEuMzcwOSAyNS4xN0MyMi4yMTc3IDI3LjY0MjcgMjQuNzY1OCAyOS4xMjI0IDI3LjI3MDcgMjguNThDMjcuNzk5OSAyOC40NiAyOC4zMTYyIDI4LjI5MTQgMjguODE4MyAyOC4wOEMyOS4wNTQ5IDI3Ljk4ODYgMjkuMzE2MyAyNy45OTk3IDI5LjU0OCAyOC4xMTFDMjkuNzc5NyAyOC4yMjIzIDI5Ljk2MDIgMjguNDI1MiAzMC4wNCAyOC42OEMzMC4yMSAyOS4xNTcgMzAuMzI0NCAyOS42NTMzIDMwLjM4MTcgMzAuMTU3M0MzMC41MDUzIDI5LjY3MjggMzAuNTA4NSAyOS4xNTgxIDMwLjM5MDkgMjguNjcyQzMwLjM5MDkgMjguNjcyIDMxLjk5OTggMjguOTkgMzEuOTk5OCAyOC45OVoiIGZpbGw9IiM1MjUyNTIiLz48L3N2Zz4=';
       }
-    },
-    getOsDisplayName(osInfo) {
-      if (!osInfo) return '正在检测操作系统...';
-      
-      // 优先使用displayName
-      if (osInfo.displayName) {
-        return osInfo.displayName;
-      }
-      
-      // 其次使用distribution
-      if (osInfo.distribution) {
-        // 常见Linux发行版显示名映射
-        const distroMap = {
-          'centos': 'CentOS Linux',
-          'ubuntu': 'Ubuntu Linux',
-          'debian': 'Debian Linux',
-          'redhat': 'Red Hat Enterprise Linux',
-          'rhel': 'Red Hat Enterprise Linux',
-          'fedora': 'Fedora Linux',
-          'suse': 'SUSE Linux',
-          'opensuse': 'openSUSE Linux',
-          'arch': 'Arch Linux',
-          'gentoo': 'Gentoo Linux',
-          'alpine': 'Alpine Linux',
-          'kylin': '麒麟Linux',
-          'uos': '统信UOS',
-          'deepin': 'Deepin Linux',
-          'kali': 'Kali Linux'
-        };
-        
-        // 尝试从map中匹配，或使用原始名称加上Linux后缀
-        const distLower = osInfo.distribution.toLowerCase();
-        for (const [key, value] of Object.entries(distroMap)) {
-          if (distLower.includes(key)) {
-            return value;
-          }
-        }
-        
-        // 如果无法匹配已知发行版，添加Linux后缀
-        return `${osInfo.distribution} Linux`;
-      }
-      
-      // 最后使用osType
-      if (osInfo.osType) {
-        if (osInfo.osType.toLowerCase() === 'linux') {
-          return 'Linux';
-        }
-        return osInfo.osType;
-      }
-      
-      // 默认情况
-      return 'Linux';
     },
     getUsageColor(percentage) {
       if (percentage > 90) return '#FF3B30';  // 危险

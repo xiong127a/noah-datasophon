@@ -237,13 +237,15 @@ public class OsInfoServiceImpl implements OsInfoService {
         /**
          * 检查Linux发行版信息
          */
-        private void preCheckLinuxDistribution(ClientSession session, OsInfo osInfo) {
+        private void preCheckDistribution(ClientSession session, OsInfo osInfo) {
             // 委托给适当的Linux收集器
             IOsInfoCollector linuxCollector = service.osInfoCollectorFactory.getCollector("linux");
             if (linuxCollector instanceof LinuxOsInfoCollector) {
                 // 直接收集Linux发行版信息
                 try {
                     linuxCollector.collectOsInfo(null, session, osInfo, null);
+                    // 更新为新的发行版枚举
+                    osInfo.updateOsDistribution();
                 } catch (Exception e) {
                     logger.warn("预检查Linux发行版失败: {}", e.getMessage());
                 }
@@ -384,6 +386,7 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 收集Linux详细信息
          */
         private void collectLinuxDetailInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
+            logger.info("开始收集主机[{}]Linux的详细信息", hostInfo.getIp());
             // 实现代码...
         }
 
@@ -462,7 +465,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                 osInfo.setHostname(hostname);
                 osInfo.setFqdn(fqdn);
-                osInfo.setOsType("linux"); // 设置为Linux类型
 
                 // 设置状态为成功
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
@@ -505,7 +507,6 @@ public class OsInfoServiceImpl implements OsInfoService {
                 return;
             }
 
-            // 直接实现收集操作系统信息的逻辑
             // 设置状态为收集中
             hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
             updateHostInfoCache(hostInfo);
@@ -517,9 +518,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                 hostInfo.setOsInfo(osInfo);
             }
 
-            // 设置为Linux系统
-            osInfo.setOsType("linux");
-            logger.info("设置操作系统类型: linux");
+            logger.info("开始收集Linux操作系统信息");
 
             // 使用Linux系统收集器处理
             IOsInfoCollector linuxCollector = osInfoCollectorFactory.getCollector("linux");
@@ -530,8 +529,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             } else {
                 logger.warn("找不到Linux系统信息收集器");
                 osInfo.setDistribution("Linux");
-                osInfo.setDistributionId("linux");
-                osInfo.setDisplayName("Linux");
+                osInfo.setFullName("Linux 操作系统");
             }
 
             // 更新状态
@@ -541,7 +539,11 @@ public class OsInfoServiceImpl implements OsInfoService {
             osInfo.setValid(true);
             updateHostInfoCache(hostInfo);
 
-            logger.info("主机[{}]操作系统信息收集完成: {}", hostInfo.getIp(), osInfo.getDistribution());
+            // 记录收集到的操作系统信息
+            logger.info("主机[{}]操作系统信息收集完成: 简要名称={}, 全称={}",
+                    hostInfo.getIp(),
+                    osInfo.getDistribution(),
+                    osInfo.getFullName());
         } catch (Exception e) {
             logger.error("收集操作系统信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
             hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);

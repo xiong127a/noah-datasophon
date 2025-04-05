@@ -5,7 +5,7 @@ import com.datasophon.api.service.checker.checkers.selinux.generic.GenericSELinu
 import com.datasophon.api.service.checker.checkers.selinux.os.centos.CentOSSELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.os.kylin.KylinSELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.os.ubuntu.UbuntuSELinuxChecker;
-import com.datasophon.common.enums.LinuxDistribution;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public class SELinuxCheckerFactory {
             return new GenericSELinuxChecker();
         }
 
-        LinuxDistribution distribution = osInfo.getDistributionType();
+        OsDistribution distribution = osInfo.getOsDistribution();
         String osVersion = osInfo.getVersionId();
 
         logger.info("为操作系统 {} {} 创建SELinux检查器", distribution, osVersion);

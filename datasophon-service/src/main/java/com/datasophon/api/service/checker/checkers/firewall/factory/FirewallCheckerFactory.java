@@ -6,7 +6,7 @@ import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS7Fir
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS8FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOSFirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.UbuntuFirewallChecker;
-import com.datasophon.common.enums.LinuxDistribution;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +31,7 @@ public class FirewallCheckerFactory {
         }
 
         // 获取操作系统发行版类型
-        LinuxDistribution distribution = osInfo.getDistributionType();
+        OsDistribution distribution = osInfo.getOsDistribution();
 
         // 使用switch语句根据操作系统类型选择对应的检查器
         if (distribution != null) {

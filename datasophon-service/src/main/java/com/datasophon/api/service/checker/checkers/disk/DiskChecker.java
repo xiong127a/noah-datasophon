@@ -14,7 +14,7 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import com.datasophon.common.enums.LinuxDistribution;
+import com.datasophon.common.enums.OsDistribution;
 
 import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
@@ -66,7 +66,7 @@ public class DiskChecker extends AbstractItemChecker {
             hostInfo.setExternalSession(session);
             // 获取操作系统信息
             OsInfo osInfo = getOsInfo(hostInfo);
-            if (osInfo == null || osInfo.getDistributionType() == LinuxDistribution.OTHER) {
+            if (osInfo == null || osInfo.getOsDistribution() == OsDistribution.OTHER) {
                 String errorMsg = "无法获取操作系统信息";
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
@@ -76,7 +76,7 @@ public class DiskChecker extends AbstractItemChecker {
             }
 
             // 检测到的操作系统信息
-            cacheLog.info("检测到操作系统: %s, 版本: %s", osInfo.getDistributionType(), osInfo.getVersionId());
+            cacheLog.info("检测到操作系统: %s, 版本: %s", osInfo.getOsDistribution(), osInfo.getVersionId());
 
             // 通过工厂获取适合当前操作系统的磁盘检查策略
             DiskCheckerStrategy strategy = DiskCheckerFactory.getChecker(osInfo);
@@ -226,7 +226,7 @@ public class DiskChecker extends AbstractItemChecker {
 
             // 获取操作系统信息
             OsInfo osInfo = getOsInfo(hostInfo);
-            if (osInfo == null || osInfo.getDistributionType() == LinuxDistribution.OTHER) {
+            if (osInfo == null || osInfo.getOsDistribution() == OsDistribution.OTHER) {
                 String errorMsg = "无法获取操作系统信息";
                 log.error(errorMsg);
                 cacheLog.error(errorMsg);
@@ -235,7 +235,7 @@ public class DiskChecker extends AbstractItemChecker {
             }
 
             // 检测到的操作系统信息
-            cacheLog.info("检测到操作系统: %s, 版本: %s", osInfo.getDistributionType(), osInfo.getVersionId());
+            cacheLog.info("检测到操作系统: %s, 版本: %s", osInfo.getOsDistribution(), osInfo.getVersionId());
 
             // 通过工厂获取适合当前操作系统的磁盘检查策略
             DiskCheckerStrategy strategy = DiskCheckerFactory.getChecker(osInfo);

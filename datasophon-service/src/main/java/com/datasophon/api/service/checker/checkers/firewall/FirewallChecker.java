@@ -2,12 +2,13 @@ package com.datasophon.api.service.checker.checkers.firewall;
 
 import com.datasophon.api.service.checker.checkers.firewall.factory.FirewallCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
-import com.datasophon.common.model.OsInfo;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
+import com.datasophon.common.model.OsInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +90,7 @@ public class FirewallChecker extends AbstractItemChecker {
                     // 根据不同操作系统执行不同的检查命令
                     String checkCommand = "";
 
-                    switch (osInfo.getDistributionType()) {
+                    switch (osInfo.getOsDistribution()) {
                         case CENTOS:
                         case REDHAT:
                         case KYLIN:
@@ -116,7 +117,7 @@ public class FirewallChecker extends AbstractItemChecker {
                             // 分析输出确定防火墙状态
                             boolean firewallRunning = false;
 
-                            switch (osInfo.getDistributionType()) {
+                            switch (osInfo.getOsDistribution()) {
                                 case CENTOS:
                                 case REDHAT:
                                 case KYLIN:

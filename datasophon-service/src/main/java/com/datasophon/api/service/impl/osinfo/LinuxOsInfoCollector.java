@@ -1,7 +1,6 @@
 package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.common.enums.LinuxDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
@@ -39,18 +38,17 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     @Override
     public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
-            // 1. 检查/etc/os-release文件
-            String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
-            if (StringUtils.isNotBlank(osRelease)) {
-                // 解析OS信息
-                parseOsRelease(osInfo, osRelease);
-            } else {
-                // 检查其他文件
-                checkAlternativeLinuxFiles(session, osInfo);
-            }
+            // 首先尝试读取特定的系统release文件
+            checkAlternativeLinuxFiles(session, osInfo);
 
-            // 设置为Linux类型
-            osInfo.setOsType("linux");
+            // 如果没有获取到全名，再尝试读取/etc/os-release文件
+            if (StringUtils.isBlank(osInfo.getFullName())) {
+                String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
+                if (StringUtils.isNotBlank(osRelease)) {
+                    // 解析OS信息
+                    parseOsRelease(osInfo, osRelease);
+                }
+            }
 
             // 获取内核版本
             String kernel = MinaUtils.execCmdWithResult(session, "uname -r").trim();
@@ -90,32 +88,36 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
      */
     private void parseOsRelease(OsInfo osInfo, String osRelease) {
         try {
-            // 从/etc/os-release中提取ID、NAME、VERSION_ID等信息
+            // 从/etc/os-release中提取ID、NAME和PRETTY_NAME信息
             Pattern idPattern = Pattern.compile("^ID=\"?(.*?)\"?$", Pattern.MULTILINE);
             Pattern namePattern = Pattern.compile("^NAME=\"?(.*?)\"?$", Pattern.MULTILINE);
+            Pattern versionPattern = Pattern.compile("^VERSION=\"?(.*?)\"?$", Pattern.MULTILINE);
             Pattern versionIdPattern = Pattern.compile("^VERSION_ID=\"?(.*?)\"?$", Pattern.MULTILINE);
             Pattern prettyNamePattern = Pattern.compile("^PRETTY_NAME=\"?(.*?)\"?$", Pattern.MULTILINE);
 
-            // 提取ID (发行版ID)
+            // 提取ID (简要操作系统名称)
             Matcher idMatcher = idPattern.matcher(osRelease);
             if (idMatcher.find()) {
                 String distroId = idMatcher.group(1).trim().toLowerCase();
-                osInfo.setDistributionId(distroId);
+                String capitalizedDistroId = distroId.substring(0, 1).toUpperCase() + distroId.substring(1);
+                osInfo.setDistribution(capitalizedDistroId);
+            }
 
-                // 设置发行版
-                if (distroId.contains("centos")) {
-                    osInfo.setDistribution("CentOS");
-                } else if (distroId.contains("ubuntu")) {
-                    osInfo.setDistribution("Ubuntu");
-                } else if (distroId.contains("debian")) {
-                    osInfo.setDistribution("Debian");
-                } else if (distroId.contains("rhel") || distroId.contains("redhat")) {
-                    osInfo.setDistribution("RedHat");
-                } else if (distroId.contains("kylin")) {
-                    osInfo.setDistribution("Kylin");
-                } else {
-                    osInfo.setDistribution(distroId);
+            // 提取NAME(如果ID没有获取到)
+            String name = "";
+            Matcher nameMatcher = namePattern.matcher(osRelease);
+            if (nameMatcher.find()) {
+                name = nameMatcher.group(1).trim();
+                if (StringUtils.isBlank(osInfo.getDistribution())) {
+                    osInfo.setDistribution(name);
                 }
+            }
+
+            // 提取VERSION
+            String version = "";
+            Matcher versionMatcher = versionPattern.matcher(osRelease);
+            if (versionMatcher.find()) {
+                version = versionMatcher.group(1).trim();
             }
 
             // 提取版本ID
@@ -124,13 +126,39 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 String versionId = versionIdMatcher.group(1).trim();
                 osInfo.setVersionId(versionId);
                 osInfo.setVersion(versionId);
+                // 如果VERSION字段为空，使用VERSION_ID
+                if (StringUtils.isBlank(version)) {
+                    version = versionId;
+                }
             }
 
-            // 提取完整名称
-            Matcher prettyNameMatcher = prettyNamePattern.matcher(osRelease);
-            if (prettyNameMatcher.find()) {
-                String prettyName = prettyNameMatcher.group(1).trim();
-                osInfo.setFullName(prettyName);
+            // 设置全名(fullName)，优先使用NAME+VERSION组合
+            if (StringUtils.isNotBlank(name)) {
+                if (StringUtils.isNotBlank(version)) {
+                    // NAME + VERSION组合作为全名
+                    String fullOsName = name + " " + version;
+                    osInfo.setFullName(fullOsName);
+                } else {
+                    // 如果没有版本号，只使用NAME
+                    osInfo.setFullName(name);
+                }
+            } else {
+                // 如果NAME为空，尝试使用PRETTY_NAME
+                Matcher prettyNameMatcher = prettyNamePattern.matcher(osRelease);
+                if (prettyNameMatcher.find()) {
+                    String prettyName = prettyNameMatcher.group(1).trim();
+                    osInfo.setFullName(prettyName);
+                } else if (StringUtils.isNotBlank(osInfo.getDistribution())) {
+                    // 如果没有PRETTY_NAME但有distribution
+                    if (StringUtils.isNotBlank(osInfo.getVersion())) {
+                        // 如果有version，拼接distribution和version
+                        String fullOsName = osInfo.getDistribution() + " " + osInfo.getVersion();
+                        osInfo.setFullName(fullOsName);
+                    } else {
+                        // 如果没有version，只使用distribution
+                        osInfo.setFullName(osInfo.getDistribution());
+                    }
+                }
             }
         } catch (Exception e) {
             logger.warn("解析/etc/os-release时出错: {}", e.getMessage());
@@ -142,39 +170,65 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
      */
     private void checkAlternativeLinuxFiles(ClientSession session, OsInfo osInfo) {
         try {
-            // 检查redhat-release
-            String redhatRelease = MinaUtils.execCmdWithResult(session, "cat /etc/redhat-release 2>/dev/null");
-            if (StringUtils.isNotBlank(redhatRelease)) {
-                redhatRelease = redhatRelease.trim();
+            // 尝试读取版本信息文件
+            String[] versionFiles = {
+                    "/etc/kylin-release", // 银河麒麟
+                    "/etc/redhat-release", // RHEL/CentOS
+                    "/etc/lsb-release", // Ubuntu
+                    "/etc/debian_version", // Debian
+                    "/etc/SuSE-release", // SuSE
+                    "/etc/system-release" // Amazon Linux
+            };
 
-                if (redhatRelease.toLowerCase().contains("centos")) {
-                    osInfo.setDistribution("CentOS");
-                    osInfo.setDistributionId("centos");
+            for (String versionFile : versionFiles) {
+                String releaseInfo = MinaUtils.execCmdWithResult(session, "cat " + versionFile + " 2>/dev/null").trim();
+                if (StringUtils.isNotBlank(releaseInfo)) {
+                    // 直接使用文件内容作为操作系统全称
+                    osInfo.setFullName(releaseInfo);
 
-                    // 提取版本
+                    // 尝试从文件名获取简要操作系统名称
+                    String filename = versionFile.substring(versionFile.lastIndexOf('/') + 1);
+                    switch (filename) {
+                        case "kylin-release":
+                            osInfo.setDistribution("Kylin");
+                            break;
+                        case "redhat-release":
+                            if (releaseInfo.toLowerCase().contains("centos")) {
+                                osInfo.setDistribution("CentOS");
+                            } else {
+                                osInfo.setDistribution("RedHat");
+                            }
+                            break;
+                        case "lsb-release":
+                            osInfo.setDistribution("Ubuntu");
+                            break;
+                        case "debian_version":
+                            osInfo.setDistribution("Debian");
+                            break;
+                        case "SuSE-release":
+                            osInfo.setDistribution("SuSE");
+                            break;
+                        case "system-release":
+                            if (releaseInfo.toLowerCase().contains("amazon")) {
+                                osInfo.setDistribution("Amazon Linux");
+                            }
+                            break;
+                        default:
+                            // 使用文件名作为发行版名
+                            osInfo.setDistribution(filename.replace("-release", "").replace("_version", ""));
+                    }
+
+                    // 提取版本号（如果有）
                     Pattern versionPattern = Pattern.compile("release\\s+([0-9.]+)");
-                    Matcher versionMatcher = versionPattern.matcher(redhatRelease);
+                    Matcher versionMatcher = versionPattern.matcher(releaseInfo);
                     if (versionMatcher.find()) {
                         String version = versionMatcher.group(1);
                         osInfo.setVersion(version);
                         osInfo.setVersionId(version);
                     }
 
-                    osInfo.setFullName(redhatRelease);
-                } else if (redhatRelease.toLowerCase().contains("red hat")) {
-                    osInfo.setDistribution("RedHat");
-                    osInfo.setDistributionId("rhel");
-
-                    // 提取版本
-                    Pattern versionPattern = Pattern.compile("release\\s+([0-9.]+)");
-                    Matcher versionMatcher = versionPattern.matcher(redhatRelease);
-                    if (versionMatcher.find()) {
-                        String version = versionMatcher.group(1);
-                        osInfo.setVersion(version);
-                        osInfo.setVersionId(version);
-                    }
-
-                    osInfo.setFullName(redhatRelease);
+                    // 找到信息后就退出循环
+                    break;
                 }
             }
         } catch (Exception e) {
@@ -186,50 +240,36 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
      * 更新发行版信息
      */
     private void updateDistributionInfo(OsInfo osInfo) {
-        // 更新分发类型和显示名称
-        if (StringUtils.isNotBlank(osInfo.getDistribution())) {
-            // 更新Linux特定版本信息
-            if ("centos".equalsIgnoreCase(osInfo.getDistributionId())) {
-                if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("7")) {
-                    osInfo.setCentOS7(true);
-                    osInfo.setDistributionType(LinuxDistribution.CENTOS7);
-                } else if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("8")) {
-                    osInfo.setCentOS8(true);
-                    osInfo.setDistributionType(LinuxDistribution.CENTOS8);
+        // 确保fullName设置正确
+        if (StringUtils.isBlank(osInfo.getFullName())) {
+            if (StringUtils.isNotBlank(osInfo.getDistribution())) {
+                // 拼接发行版和版本
+                if (StringUtils.isNotBlank(osInfo.getVersion())) {
+                    osInfo.setFullName(osInfo.getDistribution() + " " + osInfo.getVersion());
                 } else {
-                    osInfo.setDistributionType(LinuxDistribution.CENTOS);
-                }
-            } else if ("ubuntu".equalsIgnoreCase(osInfo.getDistributionId())) {
-                if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("22")) {
-                    osInfo.setUbuntu22(true);
-                    osInfo.setDistributionType(LinuxDistribution.UBUNTU22);
-                } else if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("24")) {
-                    osInfo.setUbuntu24(true);
-                    osInfo.setDistributionType(LinuxDistribution.UBUNTU24);
-                } else {
-                    osInfo.setDistributionType(LinuxDistribution.UBUNTU);
-                }
-            } else if ("debian".equalsIgnoreCase(osInfo.getDistributionId())) {
-                osInfo.setDistributionType(LinuxDistribution.DEBIAN);
-            } else if ("kylin".equalsIgnoreCase(osInfo.getDistributionId())) {
-                if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("4")) {
-                    osInfo.setKylinV4(true);
-                    osInfo.setDistributionType(LinuxDistribution.KYLIN_V4);
-                } else if (osInfo.getVersion() != null && osInfo.getVersion().startsWith("10")) {
-                    osInfo.setKylinV10(true);
-                    osInfo.setDistributionType(LinuxDistribution.KYLIN_V10);
-                } else {
-                    osInfo.setDistributionType(LinuxDistribution.KYLIN);
+                    osInfo.setFullName(osInfo.getDistribution());
                 }
             } else {
-                osInfo.setDistributionType(LinuxDistribution.OTHER);
+                // 如果没有其他信息，使用通用名称
+                osInfo.setFullName("Linux 操作系统");
+                osInfo.setDistribution("Linux");
             }
+        }
 
-            // 设置显示名称
-            if (osInfo.getDistributionType() != null) {
-                osInfo.setDisplayName(osInfo.getDistributionType().getDisplayName());
+        // 如果没有设置简要名称，从全称中提取
+        if (StringUtils.isBlank(osInfo.getDistribution()) && StringUtils.isNotBlank(osInfo.getFullName())) {
+            String lowerFullName = osInfo.getFullName().toLowerCase();
+            if (lowerFullName.contains("centos")) {
+                osInfo.setDistribution("CentOS");
+            } else if (lowerFullName.contains("ubuntu")) {
+                osInfo.setDistribution("Ubuntu");
+            } else if (lowerFullName.contains("debian")) {
+                osInfo.setDistribution("Debian");
+            } else if (lowerFullName.contains("red hat") || lowerFullName.contains("redhat")) {
+                osInfo.setDistribution("RedHat");
             } else {
-                osInfo.setDisplayName(osInfo.getDistribution());
+                // 使用通用名称
+                osInfo.setDistribution("Linux");
             }
         }
     }
@@ -299,7 +339,6 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         }
     }
 
-    
     public void collectSwapInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         logger.info("开始收集交换分区信息：{}", hostInfo.getIp());
 
