@@ -47,43 +47,6 @@ public class OsInfoUtils {
     }
 
     /**
-     * 从Windows注册表值中提取信息
-     * 
-     * @param regValue 注册表查询结果
-     * @param key      要查找的键
-     * @return 找到的值，如果未找到则返回空字符串
-     */
-    public static String extractWindowsRegValue(String regValue, String key) {
-        if (regValue == null || key == null) {
-            return "";
-        }
-
-        // 移除可能存在的注册表查询输出头部信息
-        String[] lines = regValue.split("\r\n|\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.contains(key)) {
-                // 提取键后面的值
-                int keyIndex = line.indexOf(key);
-                if (keyIndex >= 0) {
-                    String value = line.substring(keyIndex + key.length()).trim();
-                    // 移除REG_SZ、REG_DWORD等类型标识
-                    int typeIndex = value.indexOf("REG_");
-                    if (typeIndex >= 0) {
-                        int valueStart = value.indexOf(" ", typeIndex + 4);
-                        if (valueStart >= 0) {
-                            value = value.substring(valueStart).trim();
-                        }
-                    }
-                    return value;
-                }
-            }
-        }
-
-        return "";
-    }
-
-    /**
      * 解析内存大小字符串（如4GB，2048MB等）为字节数
      * 
      * @param memoryStr 内存大小字符串

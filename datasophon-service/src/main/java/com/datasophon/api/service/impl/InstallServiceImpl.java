@@ -80,12 +80,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service("installService")
 public class InstallServiceImpl implements InstallService {
 
     private static final Logger logger = LoggerFactory.getLogger(InstallServiceImpl.class);
+
+    // 添加一个原子计数器，用于控制日志打印频率
+    private static final AtomicInteger logCounter = new AtomicInteger(0);
+    private static final int LOG_PRINT_INTERVAL = 10;
 
     @Autowired
     InstallStepMapper stepMapper;
@@ -391,7 +396,11 @@ public class InstallServiceImpl implements InstallService {
 
         // 如果需要，触发当前分页主机的操作系统信息收集
         if (startOsInfoCollection) {
-            logger.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
+            // 每10次请求只打印一次日志
+            int currentCount = logCounter.incrementAndGet();
+            if (currentCount % LOG_PRINT_INTERVAL == 1) {
+                logger.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
+            }
             // 创建一个新线程进行主机信息收集，保证主接口立即返回
             Thread thread = new Thread(() -> {
                 try {
@@ -419,9 +428,13 @@ public class InstallServiceImpl implements InstallService {
                         // 确保参数有效
                         if (offset >= 0 && offset < allSortedHosts.size()) {
                             sortedHosts = allSortedHosts.subList(offset, end);
-                            logger.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
-                                    page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize), offset + 1, end,
-                                    sortedHosts.size());
+                            // 每10次请求只打印一次日志
+                            if (currentCount % LOG_PRINT_INTERVAL == 1) {
+                                logger.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
+                                        page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize), offset + 1,
+                                        end,
+                                        sortedHosts.size());
+                            }
                         } else {
                             // 参数无效，使用所有主机
                             sortedHosts = allSortedHosts;
@@ -446,7 +459,10 @@ public class InstallServiceImpl implements InstallService {
                             .collect(Collectors.toList());
 
                     if (pendingHosts.isEmpty()) {
-                        logger.info("当前页所有主机均已收集过信息或正在收集中，无需再次收集");
+                        // 每10次请求只打印一次日志
+                        if (currentCount % LOG_PRINT_INTERVAL == 1) {
+                            logger.info("当前页所有主机均已收集过信息或正在收集中，无需再次收集");
+                        }
                         return;
                     }
 

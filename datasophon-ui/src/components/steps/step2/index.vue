@@ -478,8 +478,6 @@ export default {
                   osType = 'debian';
                 } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
                   osType = 'redhat';
-                } else if (distType === 'windows' || distId === 'windows' || distName.includes('windows')) {
-                  osType = 'windows';
                 } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
                   osType = 'kylin';
                 } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
@@ -496,8 +494,6 @@ export default {
                     return require('@/assets/img/os-logos/debian.svg');
                   case 'redhat':
                     return require('@/assets/img/os-logos/redhat.svg');
-                  case 'windows':
-                    return require('@/assets/img/os-logos/windows.svg');
                   case 'kylin':
                     return require('@/assets/img/os-logos/kylin.png');
                   case 'alpine':
@@ -1944,6 +1940,59 @@ export default {
     // 显示同步hosts文件弹窗
     showSyncHostsModal() {
       this.syncHostsVisible = true;
+    },
+
+    getOsDisplayName(osInfo) {
+      if (!osInfo) return '正在检测操作系统...';
+      
+      // 优先使用displayName
+      if (osInfo.displayName) {
+        return osInfo.displayName;
+      }
+      
+      // 其次使用distribution
+      if (osInfo.distribution) {
+        // 常见Linux发行版显示名映射
+        const distroMap = {
+          'centos': 'CentOS Linux',
+          'ubuntu': 'Ubuntu Linux',
+          'debian': 'Debian Linux',
+          'redhat': 'Red Hat Enterprise Linux',
+          'rhel': 'Red Hat Enterprise Linux',
+          'fedora': 'Fedora Linux',
+          'suse': 'SUSE Linux',
+          'opensuse': 'openSUSE Linux',
+          'arch': 'Arch Linux',
+          'gentoo': 'Gentoo Linux',
+          'alpine': 'Alpine Linux',
+          'kylin': '麒麟Linux',
+          'uos': '统信UOS',
+          'deepin': 'Deepin Linux', 
+          'kali': 'Kali Linux'
+        };
+        
+        // 尝试从map中匹配，或使用原始名称加上Linux后缀
+        const distLower = osInfo.distribution.toLowerCase();
+        for (const [key, value] of Object.entries(distroMap)) {
+          if (distLower.includes(key)) {
+            return value;
+          }
+        }
+        
+        // 如果无法匹配已知发行版，添加Linux后缀
+        return `${osInfo.distribution} Linux`;
+      }
+      
+      // 最后使用osType
+      if (osInfo.osType) {
+        if (osInfo.osType.toLowerCase() === 'linux') {
+          return 'Linux';
+        }
+        return osInfo.osType;
+      }
+      
+      // 默认情况
+      return 'Linux';
     },
   },
   mounted() {

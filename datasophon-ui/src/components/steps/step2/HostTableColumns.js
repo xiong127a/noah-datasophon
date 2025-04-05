@@ -1,4 +1,4 @@
- // 表格列定义
+// 表格列定义
 export default function createColumns(vm) {
   return [
     {
@@ -302,8 +302,6 @@ export default function createColumns(vm) {
               osType = 'debian';
             } else if (distType === 'redhat' || distId === 'redhat' || distName.includes('redhat') || distName.includes('red hat')) {
               osType = 'redhat';
-            } else if (distType === 'windows' || distId === 'windows' || distName.includes('windows')) {
-              osType = 'windows';
             } else if (distType === 'kylin' || distId === 'kylin' || distName.includes('kylin') || distName.includes('麒麟')) {
               osType = 'kylin';
             } else if (distType === 'alpine' || distId === 'alpine' || distName.includes('alpine')) {
@@ -320,8 +318,6 @@ export default function createColumns(vm) {
                 return require('@/assets/img/os-logos/debian.svg');
               case 'redhat':
                 return require('@/assets/img/os-logos/redhat.svg');
-              case 'windows':
-                return require('@/assets/img/os-logos/windows.svg');
               case 'kylin':
                 return require('@/assets/img/os-logos/kylin.png');
               case 'alpine':

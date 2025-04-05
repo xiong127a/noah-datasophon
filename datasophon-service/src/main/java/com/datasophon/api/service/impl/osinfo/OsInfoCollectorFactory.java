@@ -22,7 +22,7 @@ public class OsInfoCollectorFactory {
     /**
      * 根据操作系统类型获取对应的收集器
      * 
-     * @param osType 操作系统类型："linux" 或 "windows"
+     * @param osType 操作系统类型："linux"
      * @return 对应的操作系统信息收集器，如果找不到则返回null
      */
     public IOsInfoCollector getCollector(String osType) {

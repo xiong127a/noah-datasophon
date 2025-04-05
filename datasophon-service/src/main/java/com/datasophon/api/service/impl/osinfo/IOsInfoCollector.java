@@ -13,7 +13,7 @@ public interface IOsInfoCollector {
     /**
      * 获取操作系统支持的系统类型
      * 
-     * @return 系统类型："linux" 或 "windows"
+     * @return 系统类型："linux"
      */
     String getSupportedOsType();
 
@@ -36,6 +36,76 @@ public interface IOsInfoCollector {
      * @param cacheUpdater 缓存更新函数
      */
     void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集CPU信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectCpuInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集内存信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectMemoryInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集磁盘信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectDiskInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集GPU信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectGpuInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集网络信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectNetworkInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集DNS信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectDnsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
+     * 收集Hosts文件信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectHostsFileInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
      * 缓存更新器接口

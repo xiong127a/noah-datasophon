@@ -33,9 +33,9 @@ public class OsInfo implements Serializable {
     private Integer id;
 
     /**
-     * 操作系统类型(Windows/Linux等)
+     * 操作系统类型(linux) - 固定值
      */
-    private String osType;
+    private String osType = "linux";
 
     /**
      * 操作系统发行版本(CentOS/Ubuntu等)
@@ -520,5 +520,21 @@ public class OsInfo implements Serializable {
      */
     public void setDistributionName(String distributionName) {
         this.distributionName = distributionName;
+    }
+
+    /**
+     * 获取操作系统类型
+     */
+    public String getOsType() {
+        return "linux";
+    }
+
+    /**
+     * 设置操作系统类型
+     * 为保持兼容性，该方法不做任何操作，osType值始终为"linux"
+     */
+    public void setOsType(String osType) {
+        // 什么都不做，osType始终为"linux"
+        this.osType = "linux";
     }
 }
