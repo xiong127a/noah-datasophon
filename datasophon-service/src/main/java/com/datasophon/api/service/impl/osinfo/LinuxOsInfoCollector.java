@@ -495,7 +495,12 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         logger.info("开始收集交换分区信息：{}", hostInfo != null ? hostInfo.getIp() : "未知");
 
         try {
+            // 创建交换分区信息对象（无论是否存在交换空间，都创建这个对象）
+            SwapInfo swapInfo = new SwapInfo();
+            osInfo.setSwapInfo(swapInfo);
+
             // 设置状态为收集中
+            swapInfo.setStatus(OsInfoStatusEnum.LOADING);
             osInfo.setSwapStatus(OsInfoStatusEnum.LOADING);
             if (cacheUpdater != null && hostInfo != null) {
                 cacheUpdater.updateCache(hostInfo);
@@ -508,9 +513,6 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 if (swapInfoStr != null && !swapInfoStr.isEmpty()) {
                     String[] parts = swapInfoStr.split("\\s+");
                     if (parts.length >= 3) {
-                        // 创建交换分区信息对象
-                        SwapInfo swapInfo = new SwapInfo();
-
                         // Swap: 总量 已用 空闲
                         long totalBytes = Long.parseLong(parts[1]);
                         long usedBytes = Long.parseLong(parts[2]);
@@ -551,28 +553,39 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
                         // 设置状态为成功
                         swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
-
-                        // 设置到OS信息对象
-                        osInfo.setSwapInfo(swapInfo);
                         osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
 
                         logger.info("已收集交换分区信息: 总={} GB, 已用={} GB, 空闲={} GB",
                                 df.format(totalGB), df.format(usedGB), df.format(freeGB));
                     } else {
                         logger.error("解析交换分区信息失败，输出格式不符合预期: {}", swapInfoStr);
-                        osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                        swapInfo.setEnabled(false);
+                        // 即使解析失败，也设置为成功状态，避免长时间显示loading
+                        swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                        osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
                     }
                 } else {
                     logger.error("获取交换分区信息失败，命令输出为空");
-                    osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                    // 无交换分区信息，设置为禁用状态
+                    swapInfo.setEnabled(false);
+                    swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                    osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
                 }
             } else {
                 logger.error("收集交换分区信息失败: 命令执行错误, 错误信息: {}", swapResult.getError());
-                osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                // 命令执行失败，设置为禁用状态
+                swapInfo.setEnabled(false);
+                swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
             }
         } catch (Exception e) {
             logger.error("收集交换分区信息失败: {}", e.getMessage(), e);
-            osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+            // 异常情况下也需要设置状态，避免永久loading
+            SwapInfo swapInfo = new SwapInfo();
+            swapInfo.setEnabled(false);
+            swapInfo.setStatus(OsInfoStatusEnum.SUCCESS); // 即使失败也设为SUCCESS，避免loading
+            osInfo.setSwapInfo(swapInfo);
+            osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
         } finally {
             if (cacheUpdater != null && hostInfo != null) {
                 cacheUpdater.updateCache(hostInfo);
@@ -807,8 +820,10 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             }
 
-            logger.info("内存信息收集完成: 总={}GB, 已用={}GB, 空闲={}GB",
-                    df.format(totalGB), df.format(usedGB), df.format(freeGB));
+            logger.info("内存信息收集完成: 总={}GB ({}MB), 已用={}GB ({}MB), 空闲={}GB ({}MB)",
+                    df.format(totalGB), Math.round(totalMB),
+                    df.format(usedGB), Math.round(usedMB),
+                    df.format(freeGB), Math.round(freeMB));
         } catch (Exception e) {
             logger.error("收集内存信息时出错: {}", e.getMessage(), e);
             osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);

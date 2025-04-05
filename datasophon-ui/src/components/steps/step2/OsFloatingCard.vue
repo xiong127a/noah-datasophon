@@ -147,15 +147,15 @@
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.memoryInfo && osInfo.memoryInfo.totalMemory">
                   <div class="info-primary">
-                    {{ osInfo.memoryInfo.totalMemory }} GB 内存
+                    {{ formatMemorySize(osInfo.memoryInfo.totalMemory) }} 内存
                   </div>
                   <div class="info-secondary">
-                    已用 {{ calculateUsedMemory().toFixed(1) }} GB，可用 {{ osInfo.memoryInfo.availableMemory || 0 }} GB
+                    已用 {{ formatMemorySize(osInfo.memoryInfo.usedMemory) }}，可用 {{ formatMemorySize(osInfo.memoryInfo.availableMemory) }}
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateMemoryUsagePercent() }}%</span>
-                      <span>{{ calculateUsedMemory().toFixed(1) }}/{{ osInfo.memoryInfo.totalMemory }} GB</span>
+                      <span>{{ formatMemorySize(osInfo.memoryInfo.usedMemory) }}/{{ formatMemorySize(osInfo.memoryInfo.totalMemory) }}</span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -592,6 +592,11 @@ export default {
       if (!this.osInfo || !this.osInfo.memoryInfo) return 0;
       
       const memInfo = this.osInfo.memoryInfo;
+      // 如果已经有usedMemory，就直接使用
+      if (memInfo.usedMemory != null) {
+        return memInfo.usedMemory;
+      }
+      
       const total = memInfo.totalMemory || 0;
       const available = memInfo.availableMemory || 0;
       
@@ -611,8 +616,8 @@ export default {
       // 避免除零错误
       if (total <= 0) return "0.0";
       
-      const available = memInfo.availableMemory || 0;
-      const usagePercent = 100 * (1 - available / total);
+      const used = memInfo.usedMemory || 0;
+      const usagePercent = 100 * used / total;
       
       return usagePercent.toFixed(1);
     },
@@ -835,6 +840,19 @@ export default {
         unitIndex++;
       }
       return `${size.toFixed(2)} ${units[unitIndex]}`;
+    },
+    // 新增格式化内存大小的方法
+    formatMemorySize(sizeInMB) {
+      if (sizeInMB == null) return "0 GB";
+      
+      // 如果小于1024MB，显示MB单位
+      if (sizeInMB < 1024) {
+        return `${sizeInMB.toFixed(0)} MB`;
+      }
+      
+      // 否则转换为GB显示
+      const sizeInGB = sizeInMB / 1024;
+      return `${sizeInGB.toFixed(2)} GB`;
     }
   }
 };
