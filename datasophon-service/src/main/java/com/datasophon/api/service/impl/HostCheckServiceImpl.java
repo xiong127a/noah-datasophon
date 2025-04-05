@@ -252,7 +252,7 @@ public class HostCheckServiceImpl implements HostCheckService {
         try {
             boolean allSuccess = true;
             for (CheckItem item : itemsToFix) {
-                if (!doFix(clusterId, hostInfo, item)) {
+                if (doFix(clusterId, hostInfo, item)) {
                     allSuccess = false;
                     break;
                 }
@@ -283,7 +283,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             boolean allSuccess = true;
             for (CheckItem item : hostInfo.getCheckItems()) {
                 if (item.getStatus().equals(CheckItem.Status.FAILED)) {
-                    if (!doFix(clusterId, hostInfo, item)) {
+                    if (doFix(clusterId, hostInfo, item)) {
                         allSuccess = false;
                         break;
                     }
@@ -684,18 +684,18 @@ public class HostCheckServiceImpl implements HostCheckService {
             session = MinaUtils.openConnection(hostInfo);
 
             if (session == null) {
-                return false;
+                return true;
             }
 
             ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
             if (checker == null) {
-                return false;
+                return true;
             }
 
-            return checker.fix(clusterId, hostInfo, checkItem);
+            return !checker.fix(clusterId, hostInfo, checkItem);
         } catch (Exception e) {
             logger.error("执行修复失败", e);
-            return false;
+            return true;
         } finally {
             if (session != null) {
                 MinaUtils.closeConnection(session);
