@@ -319,4 +319,54 @@ public class OsInfo implements Serializable {
         }
         dnsInfo.setStatus(status);
     }
+
+    /**
+     * 获取硬件收集状态
+     */
+    public OsInfoStatusEnum getHardwareCollectionStatus() {
+        // 如果任何子组件状态为ERROR，则返回ERROR
+        if (cpuStatus == OsInfoStatusEnum.ERROR ||
+                memoryStatus == OsInfoStatusEnum.ERROR ||
+                diskStatus == OsInfoStatusEnum.ERROR ||
+                networkStatus == OsInfoStatusEnum.ERROR) {
+            return OsInfoStatusEnum.ERROR;
+        }
+
+        // 如果任何子组件状态为LOADING，则返回LOADING
+        if (cpuStatus == OsInfoStatusEnum.LOADING ||
+                memoryStatus == OsInfoStatusEnum.LOADING ||
+                diskStatus == OsInfoStatusEnum.LOADING ||
+                networkStatus == OsInfoStatusEnum.LOADING) {
+            return OsInfoStatusEnum.LOADING;
+        }
+
+        // 如果所有必要组件都是SUCCESS，则返回SUCCESS
+        if (cpuStatus == OsInfoStatusEnum.SUCCESS &&
+                memoryStatus == OsInfoStatusEnum.SUCCESS &&
+                diskStatus == OsInfoStatusEnum.SUCCESS &&
+                networkStatus == OsInfoStatusEnum.SUCCESS) {
+            return OsInfoStatusEnum.SUCCESS;
+        }
+
+        // 默认为COLLECTING
+        return OsInfoStatusEnum.COLLECTING;
+    }
+
+    /**
+     * 检查硬件信息是否已全部收集完成
+     * 
+     * @return 是否完成
+     */
+    public boolean isHardwareInfoComplete() {
+        return getHardwareCollectionStatus() == OsInfoStatusEnum.SUCCESS;
+    }
+
+    /**
+     * 检查硬件信息是否正在收集中
+     * 
+     * @return 是否正在收集
+     */
+    public boolean isHardwareInfoCollecting() {
+        return getHardwareCollectionStatus() == OsInfoStatusEnum.LOADING;
+    }
 }

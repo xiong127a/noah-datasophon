@@ -24,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -57,8 +60,32 @@ public class OsInfoServiceImpl implements OsInfoService {
     // 会话缓存
     private final Map<String, ClientSession> sessionCache = new ConcurrentHashMap<>();
 
+    // 会话最后使用时间
+    private final Map<String, Long> sessionLastUsedTime = new ConcurrentHashMap<>();
+
+    // 硬件信息缓存
+    private final Map<String, OsInfo> hardwareInfoCache = new ConcurrentHashMap<>();
+
+    // 硬件信息上次收集时间
+    private final Map<String, Long> hardwareInfoLastCollectTime = new ConcurrentHashMap<>();
+
+    // 硬件信息缓存有效期(毫秒) - 5分钟
+    private static final long HARDWARE_INFO_CACHE_TTL = 300_000;
+
+    // 会话最大空闲时间(毫秒) - 2分钟
+    private static final long SESSION_MAX_IDLE_TIME = 120_000;
+
+    // 清理线程
+    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
+
     // 连接锁，用于避免多线程对同一主机的并发连接
     private final ConcurrentMap<String, Object> connectionLocks = new ConcurrentHashMap<>();
+
+    // 每个主机的最大连接数
+    private final ConcurrentMap<String, AtomicInteger> hostConnectionCounter = new ConcurrentHashMap<>();
+
+    // 每个主机的最大连接数
+    private static final int MAX_CONNECTIONS_PER_HOST = 2;
 
     // 初始化
     public OsInfoServiceImpl() {
@@ -76,11 +103,110 @@ public class OsInfoServiceImpl implements OsInfoService {
         logger.debug("4. 然后收集详细硬件信息（CPU、内存、磁盘等）");
         logger.debug("5. 每收集完一项信息立即更新缓存，优先展示主机名和操作系统信息");
         logger.debug("=====================================================");
+
+        // 启动定时清理任务
+        startCleanupTasks();
+    }
+
+    /**
+     * 启动定时清理任务
+     */
+    private void startCleanupTasks() {
+        // 会话清理任务 - 每60秒执行一次
+        cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredSessions, 60, 60, TimeUnit.SECONDS);
+
+        // 硬件信息缓存清理任务 - 每5分钟执行一次
+        cleanupExecutor.scheduleAtFixedRate(this::cleanupHardwareInfoCache, 5, 5, TimeUnit.MINUTES);
+
+        logger.info("定时清理任务已启动");
+    }
+
+    /**
+     * 清理过期的SSH会话
+     */
+    private synchronized void cleanupExpiredSessions() {
+        long now = System.currentTimeMillis();
+        List<String> keysToRemove = new ArrayList<>();
+
+        logger.debug("开始清理过期SSH会话...");
+
+        for (Map.Entry<String, Long> entry : sessionLastUsedTime.entrySet()) {
+            if (now - entry.getValue() > SESSION_MAX_IDLE_TIME) {
+                String key = entry.getKey();
+                logger.info("会话 {} 已超过最大空闲时间，准备关闭", key);
+
+                ClientSession session = sessionCache.get(key);
+                if (session != null) {
+                    try {
+                        closeSession(session);
+                    } catch (Exception e) {
+                        logger.debug("关闭过期会话时出错: {}", e.getMessage());
+                    }
+                }
+
+                keysToRemove.add(key);
+
+                // 重置主机连接计数
+                String host = key.split(":")[0];
+                AtomicInteger counter = hostConnectionCounter.get(host);
+                if (counter != null && counter.get() > 0) {
+                    counter.decrementAndGet();
+                }
+            }
+        }
+
+        // 移除过期会话
+        for (String key : keysToRemove) {
+            sessionCache.remove(key);
+            sessionLastUsedTime.remove(key);
+            logger.debug("已移除过期会话: {}", key);
+        }
+
+        logger.debug("过期SSH会话清理完成，已清理 {} 个会话", keysToRemove.size());
+    }
+
+    /**
+     * 清理过期的硬件信息缓存
+     */
+    private synchronized void cleanupHardwareInfoCache() {
+        long now = System.currentTimeMillis();
+        List<String> keysToRemove = new ArrayList<>();
+
+        logger.debug("开始清理过期硬件信息缓存...");
+
+        for (Map.Entry<String, Long> entry : hardwareInfoLastCollectTime.entrySet()) {
+            // 清理超过有效期两倍的缓存，避免频繁清理
+            if (now - entry.getValue() > HARDWARE_INFO_CACHE_TTL * 2) {
+                keysToRemove.add(entry.getKey());
+            }
+        }
+
+        // 移除过期缓存
+        for (String key : keysToRemove) {
+            hardwareInfoCache.remove(key);
+            hardwareInfoLastCollectTime.remove(key);
+            logger.debug("已移除过期硬件信息缓存: {}", key);
+        }
+
+        logger.debug("过期硬件信息缓存清理完成，已清理 {} 个缓存项", keysToRemove.size());
     }
 
     @PreDestroy
     public void destroy() {
         logger.info("OsInfoServiceImpl正在关闭...");
+
+        // 关闭清理线程
+        try {
+            cleanupExecutor.shutdown();
+            if (!cleanupExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                cleanupExecutor.shutdownNow();
+            }
+            logger.info("清理线程已关闭");
+        } catch (Exception e) {
+            logger.warn("关闭清理线程时出错: {}", e.getMessage());
+            cleanupExecutor.shutdownNow();
+        }
+
         // 清理所有缓存的SSH会话
         closeAllSessions();
     }
@@ -297,7 +423,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     // 使用ExecutorService线程池
                     service.hardwareInfoExecutor.execute(() -> {
                         try {
-                            processHostDetailInfo(hostInfo);
+                            processHostDetailInfo(hostInfo, false);
                         } catch (Exception e) {
                             logger.error("处理主机详细信息时发生异常: {}", e.getMessage(), e);
                         } finally {
@@ -489,43 +615,162 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 处理主机详细硬件信息收集
-         * 这个方法实现第二阶段收集：CPU、内存、磁盘等详细硬件信息
+         * 处理主机详细信息（硬件信息）
+         * 
+         * @param hostInfo      主机信息
+         * @param isLongProcess 是否是长时间处理
          */
-        private void processHostDetailInfo(HostInfo hostInfo) {
+        private void processHostDetailInfo(HostInfo hostInfo, boolean isLongProcess) {
             if (hostInfo == null) {
-                logger.error("无法处理空的主机信息");
                 return;
             }
 
-            logger.info("开始收集主机 [{}] 的详细硬件信息", hostInfo.getIp());
+            String hostIp = hostInfo.getIp();
+            if (org.apache.commons.lang.StringUtils.isBlank(hostIp)) {
+                return;
+            }
+
+            // 添加到处理队列并增加计数
+            processingHostCount.incrementAndGet();
 
             try {
-                // 收集CPU信息
-                collectCpuInfo(hostInfo);
+                // 检查是否已经有硬件信息缓存
+                OsInfo osInfo = hostInfo.getOsInfo();
+                boolean isComplete = false;
+                boolean isCollecting = false;
 
-                // 收集内存信息
-                collectMemoryInfo(hostInfo);
+                // 使用try-catch包装可能出错的方法调用
+                if (osInfo != null) {
+                    try {
+                        isComplete = osInfo.isHardwareInfoComplete();
+                    } catch (Exception e) {
+                        // 兼容处理：如果方法不存在，使用状态字段检查
+                        isComplete = osInfo.getCpuStatus() == OsInfoStatusEnum.SUCCESS &&
+                                osInfo.getMemoryStatus() == OsInfoStatusEnum.SUCCESS &&
+                                osInfo.getDiskStatus() == OsInfoStatusEnum.SUCCESS &&
+                                osInfo.getNetworkStatus() == OsInfoStatusEnum.SUCCESS;
+                    }
 
-                // 收集磁盘信息
-                collectDiskInfo(hostInfo);
+                    try {
+                        isCollecting = osInfo.isHardwareInfoCollecting();
+                    } catch (Exception e) {
+                        // 兼容处理：如果方法不存在，使用状态字段检查
+                        isCollecting = osInfo.getCpuStatus() == OsInfoStatusEnum.LOADING ||
+                                osInfo.getMemoryStatus() == OsInfoStatusEnum.LOADING ||
+                                osInfo.getDiskStatus() == OsInfoStatusEnum.LOADING ||
+                                osInfo.getNetworkStatus() == OsInfoStatusEnum.LOADING;
+                    }
+                }
 
-                // 收集网络信息
-                collectNetworkInfo(hostInfo);
+                if (osInfo != null && isComplete) {
+                    logger.info("主机 {} 硬件信息已存在且完整，跳过收集", hostIp);
+                    return;
+                }
 
-                // 收集GPU信息（可选）
-                collectGpuInfo(hostInfo);
+                // 检查是否正在收集中
+                if (osInfo != null && isCollecting) {
+                    logger.info("主机 {} 正在收集硬件信息中，跳过本次收集", hostIp);
+                    return;
+                }
 
-                // 收集DNS信息
-                collectDnsInfo(hostInfo);
+                // 如果osInfo为空，创建一个新的
+                if (osInfo == null) {
+                    osInfo = new OsInfo();
+                    hostInfo.setOsInfo(osInfo);
+                }
 
-                // 收集hosts文件信息
-                collectHostsFileInfo(hostInfo);
+                // 更新状态为加载中
+                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
+                service.updateHostInfoCache(hostInfo);
 
-                logger.info("主机 [{}] 详细硬件信息收集完成", hostInfo.getIp());
+                // 获取或创建SSH连接
+                ClientSession session = null;
+                String lockKey = hostIp;
 
-            } catch (Exception e) {
-                logger.error("收集主机 [{}] 详细硬件信息时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
+                synchronized (connectionLocks.computeIfAbsent(lockKey, k -> new Object())) {
+                    try {
+                        logger.info("尝试获取主机 {} 的SSH连接，用于收集硬件信息", hostIp);
+                        // 检查是否有现有的有效连接可用
+                        session = sessionCache.get(hostIp);
+
+                        // 验证连接是否有效
+                        if (session == null || !MinaUtils.isSessionValid(session)) {
+                            if (session != null) {
+                                // 如果连接无效，关闭它
+                                try {
+                                    MinaUtils.closeConnection(session);
+                                } catch (Exception e) {
+                                    logger.warn("关闭无效SSH连接失败: {}", e.getMessage());
+                                }
+                                sessionCache.remove(hostIp);
+                            }
+
+                            // 创建新连接
+                            logger.info("为主机 {} 创建新的SSH连接", hostIp);
+                            session = MinaUtils.openConnection(hostInfo);
+
+                            if (session != null) {
+                                // 缓存新的有效连接
+                                sessionCache.put(hostIp, session);
+                            }
+                        } else {
+                            logger.info("成功复用主机 {} 的现有SSH连接", hostIp);
+                        }
+
+                        // 如果无法连接，更新状态并返回
+                        if (session == null) {
+                            logger.error("无法连接到主机 {}", hostIp);
+                            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setMessage("无法建立SSH连接");
+                            service.updateHostInfoCache(hostInfo);
+                            return;
+                        }
+
+                        final ClientSession finalSession = session;
+
+                        // 收集详细硬件信息
+                        IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
+                        if (collector != null) {
+                            // 成功创建会话，开始收集硬件信息
+                            logger.info("开始收集主机 {} 的硬件信息", hostIp);
+
+                            // 定义更新缓存的回调
+                            IOsInfoCollector.CacheUpdater cacheUpdater = (hostInfoToUpdate) -> {
+                                if (hostInfoToUpdate != null) {
+                                    service.updateHostInfoCache(hostInfoToUpdate);
+                                }
+                            };
+
+                            try {
+                                // 执行收集过程
+                                collector.collectHardwareInfo(osInfo, finalSession, cacheUpdater);
+
+                                // 更新状态
+                                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.SUCCESS);
+                                logger.info("成功收集主机 {} 的硬件信息", hostIp);
+                            } catch (Exception e) {
+                                logger.error("收集主机 {} 硬件信息时出错: {}", hostIp, e.getMessage(), e);
+                                osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+                            }
+
+                            // 再次更新缓存
+                            service.updateHostInfoCache(hostInfo);
+                        } else {
+                            logger.error("无法找到主机 {} 适用的操作系统信息收集器", hostIp);
+                            osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+                            hostInfo.setMessage("不支持的操作系统类型");
+                            service.updateHostInfoCache(hostInfo);
+                        }
+                    } catch (Exception e) {
+                        logger.error("处理主机 {} 详细信息时出错: {}", hostIp, e.getMessage(), e);
+                        osInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+                        hostInfo.setMessage("处理详细信息时出错: " + e.getMessage());
+                        service.updateHostInfoCache(hostInfo);
+                    }
+                }
+            } finally {
+                // 减少处理计数
+                processingHostCount.decrementAndGet();
             }
         }
 
@@ -534,84 +779,125 @@ public class OsInfoServiceImpl implements OsInfoService {
          */
         private ClientSession connectToHost(HostInfo hostInfo) {
             if (hostInfo == null) {
-                logger.error("无法连接：主机信息为空");
+                logger.error("主机信息为空，无法建立连接");
                 return null;
             }
 
-            String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
+            String hostIp = hostInfo.getIp();
 
-            // 使用外部类中定义的connectionLocks
-            Object lock = service.connectionLocks.computeIfAbsent(hostKey, k -> new Object());
+            // 获取主机连接计数器
+            AtomicInteger connectionCounter = hostConnectionCounter.computeIfAbsent(hostIp, k -> new AtomicInteger(0));
 
-            // 对同一主机的连接进行同步，避免并发连接冲突
+            // 检查是否超过最大连接数
+            if (connectionCounter.get() >= MAX_CONNECTIONS_PER_HOST) {
+                logger.warn("主机 {} 已达到最大连接数 {}", hostIp, MAX_CONNECTIONS_PER_HOST);
+
+                // 尝试查找现有可用连接
+                return findExistingSession(hostInfo);
+            }
+
+            // 生成主机会话的唯一标识，格式为: IP:PORT:USER
+            final String hostKey = hostIp + ":" + hostInfo.getSshPort() + ":" + hostInfo.getSshUser();
+
+            // 获取或创建主机连接锁
+            Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
+
+            // 使用连接锁进行同步，避免并发创建连接
             synchronized (lock) {
-                try {
-                    // 从会话缓存中获取现有会话
-                    ClientSession session = sessionCache.get(hostKey);
+                // 检查缓存中是否已有会话
+                ClientSession session = sessionCache.get(hostKey);
 
-                    // 检查现有会话是否有效
-                    if (session != null && session.isOpen()) {
-                        try {
-                            // 简单测试会话是否可用，使用更快的命令
-                            CommandResult testResult = MinaUtils.execCmdWithResultObject(session,
-                                    "echo connection_test");
-                            if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
-                                logger.debug("复用主机 {} 的现有SSH连接", hostInfo.getIp());
-                                return session;
-                            } else {
-                                logger.warn("会话测试失败，开始重新连接");
-                            }
-                        } catch (Exception e) {
-                            logger.warn("会话测试失败，开始重新连接: {}", e.getMessage());
+                if (session != null) {
+                    try {
+                        // 简单测试会话是否可用，使用更快的命令
+                        CommandResult testResult = MinaUtils.execCmdWithResultObject(session,
+                                "echo connection_test", 5); // 设置5秒超时
+                        if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
+                            logger.debug("复用主机 {} 的现有SSH连接", hostInfo.getIp());
+                            // 更新最后使用时间
+                            sessionLastUsedTime.put(hostKey, System.currentTimeMillis());
+                            return session;
+                        } else {
+                            logger.warn("会话测试失败，开始重新连接");
                         }
-
-                        // 关闭无效会话
-                        try {
-                            service.closeSession(session);
-                        } catch (Exception e) {
-                            logger.debug("关闭失效连接时发生异常: {}", e.getMessage());
-                        } finally {
-                            sessionCache.remove(hostKey);
-                        }
+                    } catch (Exception e) {
+                        logger.warn("会话测试失败，开始重新连接: {}", e.getMessage());
                     }
 
-                    // 创建新会话，设置合理的超时时间
-                    logger.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
-                    session = MinaUtils.openConnectionWithPassword(hostInfo);
-
-                    if (session != null) {
-                        // 不设置额外属性，避免版本兼容性问题
-                        sessionCache.put(hostKey, session);
-                        logger.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
+                    // 关闭无效会话
+                    try {
+                        service.closeSession(session);
+                    } catch (Exception e) {
+                        logger.debug("关闭失效连接时发生异常: {}", e.getMessage());
+                    } finally {
+                        sessionCache.remove(hostKey);
+                        sessionLastUsedTime.remove(hostKey);
+                        // 减少连接计数
+                        connectionCounter.decrementAndGet();
                     }
-                    return session;
-                } catch (Exception e) {
-                    logger.error("连接主机[{}]时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
-                    return null;
                 }
+
+                // 创建新会话，设置合理的超时时间
+                logger.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
+
+                if (session != null) {
+                    // 不设置额外属性，避免版本兼容性问题
+                    sessionCache.put(hostKey, session);
+                    // 更新最后使用时间
+                    sessionLastUsedTime.put(hostKey, System.currentTimeMillis());
+                    // 增加连接计数
+                    connectionCounter.incrementAndGet();
+                    logger.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
+                }
+                return session;
             }
         }
 
         /**
-         * 带超时的命令执行
-         * 
-         * @param session        SSH会话
-         * @param command        要执行的命令
-         * @param timeoutSeconds 超时时间（秒）
-         * @return 命令执行结果
+         * 查找现有可用会话
          */
-        private CommandResult execCommandWithTimeout(ClientSession session, String command, int timeoutSeconds) {
-            if (session == null) {
-                return CommandResult.exception(command, "SSH会话为空");
+        private ClientSession findExistingSession(HostInfo hostInfo) {
+            String hostIp = hostInfo.getIp();
+            int port = hostInfo.getSshPort();
+            String user = hostInfo.getSshUser();
+
+            // 查找以该主机开头的所有会话
+            final String keyPrefix = hostIp + ":" + port + ":" + user;
+
+            // 找出最久未使用的会话
+            String oldestKey = null;
+            long oldestTime = Long.MAX_VALUE;
+
+            for (Map.Entry<String, Long> entry : sessionLastUsedTime.entrySet()) {
+                if (entry.getKey().startsWith(keyPrefix) && entry.getValue() < oldestTime) {
+                    oldestKey = entry.getKey();
+                    oldestTime = entry.getValue();
+                }
             }
 
-            try {
-                // 使用带超时参数的命令执行方法
-                return MinaUtils.execCmdWithResultObject(session, command, timeoutSeconds);
-            } catch (Exception e) {
-                logger.error("执行命令出错: {}, 错误: {}", command, e.getMessage(), e);
-                return CommandResult.exception(command, e.getMessage());
+            if (oldestKey != null) {
+                ClientSession session = sessionCache.get(oldestKey);
+                if (session != null) {
+                    try {
+                        // 测试会话是否可用
+                        CommandResult testResult = MinaUtils.execCmdWithResultObject(session,
+                                "echo reuse_connection", 5); // 设置5秒超时
+                        if (testResult.isSuccess() && testResult.getOutput().trim().contains("reuse_connection")) {
+                            logger.debug("复用主机 {} 的现有SSH连接（共享会话）", hostInfo.getIp());
+                            // 更新最后使用时间
+                            sessionLastUsedTime.put(oldestKey, System.currentTimeMillis());
+                            return session;
+                        }
+                    } catch (Exception e) {
+                        logger.debug("测试共享会话失败: {}", e.getMessage());
+                        // 不关闭会话，留给原始拥有者处理
+                    }
+                }
             }
+
+            // 找不到可用会话，返回null
+            return null;
         }
 
         /**
@@ -1279,7 +1565,13 @@ public class OsInfoServiceImpl implements OsInfoService {
      * 关闭SSH会话
      */
     private void closeSession(ClientSession session) {
-        MinaUtils.closeConnection(session);
+        if (session != null) {
+            try {
+                MinaUtils.closeConnection(session);
+            } catch (Exception e) {
+                logger.debug("关闭SSH会话时出错: {}", e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -1295,5 +1587,21 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
         logger.info("添加主机到收集队列: {}", hostInfo.getIp());
         queueManager.addHostToQueue(hostInfo, this::updateHostInfoCache);
+    }
+
+    /**
+     * 获取适用于特定操作系统的收集器
+     * 
+     * @param osInfo 操作系统信息
+     * @return 收集器实现
+     */
+    private IOsInfoCollector getOsInfoCollector(OsInfo osInfo) {
+        if (osInfo == null) {
+            logger.error("无法获取收集器: osInfo为空");
+            return null;
+        }
+
+        // 默认使用Linux收集器
+        return osInfoCollectorFactory.getCollector("linux");
     }
 }

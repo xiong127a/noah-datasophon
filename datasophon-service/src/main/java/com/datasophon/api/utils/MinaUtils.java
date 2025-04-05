@@ -1227,26 +1227,56 @@ public class MinaUtils {
                 return CommandResult.failed(command, exitStatus, errResult.isEmpty() ? outResult : errResult);
             }
         } catch (Exception e) {
-            LOG.error("执行命令时发生异常: {}, 错误: {}", command, e.getMessage(), e);
+            LOG.error("执行命令时出错: {}, 错误: {}", command, e.getMessage());
             return CommandResult.exception(command, e.getMessage());
         } finally {
-            if (ce != null) {
+            if (ce != null && ce.isOpen()) {
                 try {
                     ce.close();
                 } catch (IOException e) {
-                    LOG.error("关闭通道时发生异常: {}", e.getMessage());
+                    LOG.debug("关闭通道时出错: {}", e.getMessage());
                 }
             }
-            try {
-                out.close();
-            } catch (IOException e) {
-                LOG.error("关闭输出流时发生异常: {}", e.getMessage());
-            }
-            try {
-                err.close();
-            } catch (IOException e) {
-                LOG.error("关闭错误流时发生异常: {}", e.getMessage());
-            }
+        }
+    }
+
+    /**
+     * 执行命令并获取字符串结果，支持自定义超时
+     *
+     * @param session        会话连接
+     * @param command        要执行的命令
+     * @param timeoutSeconds 命令执行超时时间（秒）
+     * @return 命令执行结果字符串
+     * @throws IOException 如果执行命令失败
+     */
+    public static String executeCommandAndGetResult(ClientSession session, String command, int timeoutSeconds)
+            throws IOException {
+        CommandResult result = execCmdWithResultObject(session, command, timeoutSeconds);
+        if (result.isSuccess()) {
+            return result.getOutput();
+        } else {
+            throw new IOException(
+                    "Command execution failed with exit code " + result.getExitCode() + ": " + result.getError());
+        }
+    }
+
+    /**
+     * 检查SSH连接是否有效
+     *
+     * @param session 会话连接
+     * @return 是否有效
+     */
+    public static boolean isSessionValid(ClientSession session) {
+        if (session == null) {
+            return false;
+        }
+        try {
+            // 使用简单的命令来验证连接可用性，设置3秒超时
+            CommandResult result = execCmdWithResultObject(session, "echo 'connection_test'", 3);
+            return result.isSuccess() && result.getOutput().trim().equals("connection_test");
+        } catch (Exception e) {
+            LOG.warn("SSH连接验证失败: {}", e.getMessage());
+            return false;
         }
     }
 }
