@@ -1006,7 +1006,6 @@ public class MinaUtils {
         }
     }
 
-
     /**
      * 获取远程主机的实际主机名
      *
@@ -1176,5 +1175,78 @@ public class MinaUtils {
     public static String execCmdWithResult(ClientSession session, String command) {
         CommandResult result = execCmdWithResultObject(session, command);
         return result.isSuccess() ? result.getOutput() : "EXIT_CODE_" + result.getExitCode() + ": " + result.getError();
+    }
+
+    /**
+     * 执行命令并获取完整结果对象，支持自定义超时
+     *
+     * @param session        会话连接
+     * @param command        要执行的命令
+     * @param timeoutSeconds 命令执行超时时间（秒）
+     * @return 命令执行结果对象
+     */
+    public static CommandResult execCmdWithResultObject(ClientSession session, String command, int timeoutSeconds) {
+        if (session == null) {
+            LOG.error("SSH会话为空，无法执行命令: {}", command);
+            return CommandResult.exception(command, "SSH会话为空");
+        }
+
+        session.resetAuthTimeout();
+        LOG.info("执行命令: {}, 超时时间: {}秒", command, timeoutSeconds);
+        // 命令返回的结果
+        ChannelExec ce = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        try {
+            ce = session.createExecChannel(command);
+            ce.setOut(out);
+            ce.setErr(err);
+            // 打开通道并执行命令
+            ce.open();
+
+            // 等待命令执行完成或超时
+            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
+                    TimeUnit.SECONDS.toMillis(timeoutSeconds));
+
+            if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                LOG.error("命令执行超时: {}, 超时时间: {}秒", command, timeoutSeconds);
+                return CommandResult.failed(command, 124, "命令执行超时");
+            }
+
+            int exitStatus = ce.getExitStatus();
+            LOG.info("命令退出状态: {}", exitStatus);
+
+            String outResult = out.toString();
+            String errResult = err.toString();
+
+            if (exitStatus == 0) {
+                // 成功执行
+                return CommandResult.success(command, outResult);
+            } else {
+                // 执行失败
+                return CommandResult.failed(command, exitStatus, errResult.isEmpty() ? outResult : errResult);
+            }
+        } catch (Exception e) {
+            LOG.error("执行命令时发生异常: {}, 错误: {}", command, e.getMessage(), e);
+            return CommandResult.exception(command, e.getMessage());
+        } finally {
+            if (ce != null) {
+                try {
+                    ce.close();
+                } catch (IOException e) {
+                    LOG.error("关闭通道时发生异常: {}", e.getMessage());
+                }
+            }
+            try {
+                out.close();
+            } catch (IOException e) {
+                LOG.error("关闭输出流时发生异常: {}", e.getMessage());
+            }
+            try {
+                err.close();
+            } catch (IOException e) {
+                LOG.error("关闭错误流时发生异常: {}", e.getMessage());
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.api.utils.MinaUtils.CommandResult;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
@@ -10,6 +11,7 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -20,8 +22,8 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -29,7 +31,7 @@ import java.util.function.Consumer;
  * 操作系统信息服务实现类
  * 负责管理主机操作系统信息的获取和缓存
  * 采用分阶段收集策略：
- * - 第一阶段：使用osInfoExecutor收集主机名和操作系统信息，优先展示给用户
+ * - 第一阶段：使用hostInfoExecutor收集主机名和操作系统信息，优先展示给用户
  * - 第二阶段：使用hardwareInfoExecutor收集详细硬件信息，后台处理
  */
 @Service
@@ -40,23 +42,27 @@ public class OsInfoServiceImpl implements OsInfoService {
     @Autowired
     private OsInfoCollectorFactory osInfoCollectorFactory;
 
+    // 线程池配置
+    @Autowired
+    @Qualifier("osInfoExecutor")
+    private ExecutorService hostInfoExecutor;
+
+    @Autowired
+    @Qualifier("hardwareInfoExecutor")
+    private ExecutorService hardwareInfoExecutor;
+
     // 队列管理器
     private final HostInfoCollectionQueueManager queueManager;
-
-    // 主机信息收集线程池
-    private final ExecutorService osInfoExecutor;
-
-    // 硬件信息收集线程池
-    private final ExecutorService hardwareInfoExecutor;
 
     // 会话缓存
     private final Map<String, ClientSession> sessionCache = new ConcurrentHashMap<>();
 
+    // 连接锁，用于避免多线程对同一主机的并发连接
+    private final ConcurrentMap<String, Object> connectionLocks = new ConcurrentHashMap<>();
+
     // 初始化
     public OsInfoServiceImpl() {
         this.queueManager = new HostInfoCollectionQueueManager(this);
-        this.osInfoExecutor = Executors.newFixedThreadPool(5);
-        this.hardwareInfoExecutor = Executors.newFixedThreadPool(3);
     }
 
     @PostConstruct
@@ -214,14 +220,398 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 根据需要开始处理队列
          */
         private synchronized void startProcessingIfNeeded() {
-            // 实现代码...
+            // 检查是否有可用的处理槽
+            int currentProcessing = processingHostCount.get();
+            if (currentProcessing >= MAX_CONCURRENT_HOSTS) {
+                logger.debug("当前处理中的主机数量已达上限: {}", currentProcessing);
+                return;
+            }
+
+            // 检查队列是否为空
+            if (hostQueue.isEmpty()) {
+                logger.debug("主机队列为空，无法开始新的处理");
+                return;
+            }
+
+            // 计算可以开始处理的主机数量
+            int availableSlots = MAX_CONCURRENT_HOSTS - currentProcessing;
+            int toProcess = Math.min(availableSlots, hostQueue.size());
+            logger.info("开始处理队列中的{}台主机，当前处理中: {}, 最大同时处理: {}",
+                    toProcess, currentProcessing, MAX_CONCURRENT_HOSTS);
+
+            // 从队列中取出主机进行处理
+            for (int i = 0; i < toProcess; i++) {
+                HostInfo hostInfo = hostQueue.poll();
+                if (hostInfo == null) {
+                    break;
+                }
+
+                processingHostCount.incrementAndGet();
+
+                // 使用ExecutorService线程池
+                service.hostInfoExecutor.execute(() -> {
+                    try {
+                        processHost(hostInfo);
+                    } catch (Exception e) {
+                        logger.error("处理主机信息时发生异常: {}", e.getMessage(), e);
+                        hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                        hostInfo.setMessage("处理主机信息时发生异常: " + e.getMessage());
+                        service.updateHostInfoCache(hostInfo);
+                    } finally {
+                        // 无论成功失败，都减少处理中的计数
+                        processingHostCount.decrementAndGet();
+                        // 标记为已完成
+                        completedHostCount.incrementAndGet();
+                        // 检查是否需要处理下一批
+                        startProcessingIfNeeded();
+                    }
+                });
+            }
         }
 
         /**
-         * 连接到主机
+         * 检查第二阶段队列的处理情况
+         */
+        private synchronized void checkPhase2Queue() {
+            int currentPhase2Processing = phase2ProcessingCount.get();
+            if (currentPhase2Processing >= MAX_CONCURRENT_DETAIL_HOSTS) {
+                return;
+            }
+
+            synchronized (waitForDetailInfoList) {
+                if (waitForDetailInfoList.isEmpty()) {
+                    return;
+                }
+
+                int availableSlots = MAX_CONCURRENT_DETAIL_HOSTS - currentPhase2Processing;
+                int toProcess = Math.min(availableSlots, waitForDetailInfoList.size());
+
+                for (int i = 0; i < toProcess; i++) {
+                    if (waitForDetailInfoList.isEmpty()) {
+                        break;
+                    }
+
+                    HostInfo hostInfo = waitForDetailInfoList.remove(0);
+                    phase2ProcessingCount.incrementAndGet();
+
+                    // 使用ExecutorService线程池
+                    service.hardwareInfoExecutor.execute(() -> {
+                        try {
+                            processHostDetailInfo(hostInfo);
+                        } catch (Exception e) {
+                            logger.error("处理主机详细信息时发生异常: {}", e.getMessage(), e);
+                        } finally {
+                            phase2ProcessingCount.decrementAndGet();
+                            checkPhase2Queue();
+                        }
+                    });
+                }
+            }
+        }
+
+        /**
+         * 处理单个主机的信息收集
+         * 这个方法实现第一阶段收集：主机名和基本操作系统信息
+         */
+        private void processHost(HostInfo hostInfo) {
+            if (hostInfo == null) {
+                logger.error("无法处理空的主机信息");
+                return;
+            }
+
+            logger.info("开始收集主机 [{}] 的基本信息", hostInfo.getIp());
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集主机信息...");
+            service.updateHostInfoCache(hostInfo);
+
+            try {
+                // 第一步：收集主机名（最基本信息）
+                collectHostname(hostInfo);
+
+                // 第二步：收集基本操作系统信息
+                collectBasicOsInfo(hostInfo);
+
+                // 收集完成后，将主机添加到第二阶段队列
+                logger.info("主机 [{}] 基本信息收集完成，添加到详细信息收集队列", hostInfo.getIp());
+                synchronized (waitForDetailInfoList) {
+                    waitForDetailInfoList.add(hostInfo);
+                }
+                basicInfoCompletedCount.incrementAndGet();
+
+                // 检查是否开始第二阶段收集
+                checkPhase2Queue();
+
+            } catch (Exception e) {
+                logger.error("收集主机 [{}] 信息时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("收集信息失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            }
+        }
+
+        /**
+         * 收集主机名信息
+         */
+        private void collectHostname(HostInfo hostInfo) {
+            logger.info("收集主机 [{}] 的主机名信息", hostInfo.getIp());
+
+            // 设置状态为收集中
+            hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
+            hostInfo.setMessage("正在收集主机名...");
+            service.updateHostInfoCache(hostInfo);
+
+            ClientSession session = null;
+            try {
+                // 创建SSH会话
+                session = connectToHost(hostInfo);
+                if (session == null) {
+                    logger.error("无法为主机 [{}] 创建SSH会话", hostInfo.getIp());
+                    hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("无法建立SSH连接");
+                    service.updateHostInfoCache(hostInfo);
+                    return;
+                }
+
+                // 执行命令获取主机名
+                try {
+                    // 执行命令获取主机名
+                    CommandResult hostnameResult = MinaUtils.execCmdWithResultObject(session, "hostname");
+                    if (!hostnameResult.isSuccess()) {
+                        throw new Exception("获取主机名失败: " + hostnameResult.getError());
+                    }
+
+                    String hostname = hostnameResult.getOutput().trim();
+                    if (hostname.isEmpty()) {
+                        throw new Exception("获取的主机名为空");
+                    }
+
+                    // 获取FQDN
+                    CommandResult fqdnResult = MinaUtils.execCmdWithResultObject(session, "hostname -f");
+                    String fqdn = hostname; // 默认使用主机名作为FQDN
+                    if (fqdnResult.isSuccess() && !fqdnResult.getOutput().trim().isEmpty()) {
+                        fqdn = fqdnResult.getOutput().trim();
+                    }
+
+                    // 更新OsInfo
+                    OsInfo osInfo = hostInfo.getOsInfo();
+                    if (osInfo == null) {
+                        osInfo = new OsInfo();
+                        hostInfo.setOsInfo(osInfo);
+                    }
+
+                    osInfo.setHostname(hostname);
+                    osInfo.setFqdn(fqdn);
+
+                    // 更新状态
+                    hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+                    hostInfo.setMessage("主机名收集成功");
+                    service.updateHostInfoCache(hostInfo);
+
+                    logger.info("主机 [{}] 的主机名收集完成: {}", hostInfo.getIp(), hostname);
+                } catch (Exception e) {
+                    logger.error("收集主机 [{}] 主机名时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+                    hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("主机名收集失败: " + e.getMessage());
+                    service.updateHostInfoCache(hostInfo);
+                }
+            } catch (Exception e) {
+                logger.error("收集主机 [{}] 主机名过程中出现异常: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("主机名收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            } finally {
+                // 关闭会话
+                service.closeSession(session);
+            }
+        }
+
+        /**
+         * 收集基本操作系统信息
+         */
+        private void collectBasicOsInfo(HostInfo hostInfo) {
+            logger.info("收集主机 [{}] 的基本操作系统信息", hostInfo.getIp());
+
+            // 设置状态为收集中
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+            service.updateHostInfoCache(hostInfo);
+
+            ClientSession session = null;
+            try {
+                // 创建SSH会话，设置15秒连接超时
+                session = connectToHost(hostInfo);
+                if (session == null) {
+                    logger.error("无法为主机 [{}] 创建SSH会话", hostInfo.getIp());
+                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setMessage("无法建立SSH连接");
+                    service.updateHostInfoCache(hostInfo);
+                    return;
+                }
+
+                // 初始化或获取OsInfo
+                OsInfo osInfo = hostInfo.getOsInfo();
+                if (osInfo == null) {
+                    osInfo = new OsInfo();
+                    hostInfo.setOsInfo(osInfo);
+                }
+
+                logger.info("开始收集Linux操作系统信息");
+
+                // 使用Linux系统收集器处理
+                IOsInfoCollector linuxCollector = service.osInfoCollectorFactory.getCollector("linux");
+                if (linuxCollector != null) {
+                    // 收集基本操作系统信息，设置回调更新缓存
+                    linuxCollector.collectOsInfo(hostInfo, session, osInfo, h -> service.updateHostInfoCache(h));
+                } else {
+                    logger.warn("找不到Linux系统信息收集器");
+                    osInfo.setDistribution("Linux");
+                    osInfo.setFullName("Linux 操作系统");
+                }
+
+                // 更新状态
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                hostInfo.setMessage("操作系统信息收集成功");
+                osInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
+                osInfo.setValid(true);
+                service.updateHostInfoCache(hostInfo);
+
+                logger.info("主机 [{}] 操作系统信息收集完成: {}, {}",
+                        hostInfo.getIp(), osInfo.getDistribution(), osInfo.getFullName());
+
+            } catch (Exception e) {
+                logger.error("收集主机 [{}] 操作系统信息时出错: {}", hostInfo.getIp(), e.getMessage(), e);
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.setMessage("操作系统信息收集失败: " + e.getMessage());
+                service.updateHostInfoCache(hostInfo);
+            } finally {
+                // 关闭会话
+                service.closeSession(session);
+            }
+        }
+
+        /**
+         * 处理主机详细硬件信息收集
+         * 这个方法实现第二阶段收集：CPU、内存、磁盘等详细硬件信息
+         */
+        private void processHostDetailInfo(HostInfo hostInfo) {
+            if (hostInfo == null) {
+                logger.error("无法处理空的主机信息");
+                return;
+            }
+
+            logger.info("开始收集主机 [{}] 的详细硬件信息", hostInfo.getIp());
+
+            try {
+                // 收集CPU信息
+                collectCpuInfo(hostInfo);
+
+                // 收集内存信息
+                collectMemoryInfo(hostInfo);
+
+                // 收集磁盘信息
+                collectDiskInfo(hostInfo);
+
+                // 收集网络信息
+                collectNetworkInfo(hostInfo);
+
+                // 收集GPU信息（可选）
+                collectGpuInfo(hostInfo);
+
+                // 收集DNS信息
+                collectDnsInfo(hostInfo);
+
+                // 收集hosts文件信息
+                collectHostsFileInfo(hostInfo);
+
+                logger.info("主机 [{}] 详细硬件信息收集完成", hostInfo.getIp());
+
+            } catch (Exception e) {
+                logger.error("收集主机 [{}] 详细硬件信息时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
+            }
+        }
+
+        /**
+         * 连接到主机并获取会话
          */
         private ClientSession connectToHost(HostInfo hostInfo) {
-            return service.connectToHost(hostInfo);
+            if (hostInfo == null) {
+                logger.error("无法连接：主机信息为空");
+                return null;
+            }
+
+            String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
+
+            // 使用外部类中定义的connectionLocks
+            Object lock = service.connectionLocks.computeIfAbsent(hostKey, k -> new Object());
+
+            // 对同一主机的连接进行同步，避免并发连接冲突
+            synchronized (lock) {
+                try {
+                    // 从会话缓存中获取现有会话
+                    ClientSession session = sessionCache.get(hostKey);
+
+                    // 检查现有会话是否有效
+                    if (session != null && session.isOpen()) {
+                        try {
+                            // 简单测试会话是否可用，使用更快的命令
+                            CommandResult testResult = MinaUtils.execCmdWithResultObject(session,
+                                    "echo connection_test");
+                            if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
+                                logger.debug("复用主机 {} 的现有SSH连接", hostInfo.getIp());
+                                return session;
+                            } else {
+                                logger.warn("会话测试失败，开始重新连接");
+                            }
+                        } catch (Exception e) {
+                            logger.warn("会话测试失败，开始重新连接: {}", e.getMessage());
+                        }
+
+                        // 关闭无效会话
+                        try {
+                            service.closeSession(session);
+                        } catch (Exception e) {
+                            logger.debug("关闭失效连接时发生异常: {}", e.getMessage());
+                        } finally {
+                            sessionCache.remove(hostKey);
+                        }
+                    }
+
+                    // 创建新会话，设置合理的超时时间
+                    logger.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
+                    session = MinaUtils.openConnectionWithPassword(hostInfo);
+
+                    if (session != null) {
+                        // 不设置额外属性，避免版本兼容性问题
+                        sessionCache.put(hostKey, session);
+                        logger.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
+                    }
+                    return session;
+                } catch (Exception e) {
+                    logger.error("连接主机[{}]时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
+                    return null;
+                }
+            }
+        }
+
+        /**
+         * 带超时的命令执行
+         * 
+         * @param session        SSH会话
+         * @param command        要执行的命令
+         * @param timeoutSeconds 超时时间（秒）
+         * @return 命令执行结果
+         */
+        private CommandResult execCommandWithTimeout(ClientSession session, String command, int timeoutSeconds) {
+            if (session == null) {
+                return CommandResult.exception(command, "SSH会话为空");
+            }
+
+            try {
+                // 使用带超时参数的命令执行方法
+                return MinaUtils.execCmdWithResultObject(session, command, timeoutSeconds);
+            } catch (Exception e) {
+                logger.error("执行命令出错: {}, 错误: {}", command, e.getMessage(), e);
+                return CommandResult.exception(command, e.getMessage());
+            }
         }
 
         /**
@@ -232,24 +622,6 @@ public class OsInfoServiceImpl implements OsInfoService {
                 return;
             }
             service.updateHostInfoCache(hostInfo);
-        }
-
-        /**
-         * 检查Linux发行版信息
-         */
-        private void preCheckDistribution(ClientSession session, OsInfo osInfo) {
-            // 委托给适当的Linux收集器
-            IOsInfoCollector linuxCollector = service.osInfoCollectorFactory.getCollector("linux");
-            if (linuxCollector instanceof LinuxOsInfoCollector) {
-                // 直接收集Linux发行版信息
-                try {
-                    linuxCollector.collectOsInfo(null, session, osInfo, null);
-                    // 更新为新的发行版枚举
-                    osInfo.updateOsDistribution();
-                } catch (Exception e) {
-                    logger.warn("预检查Linux发行版失败: {}", e.getMessage());
-                }
-            }
         }
 
         /**
@@ -424,7 +796,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
@@ -440,20 +812,22 @@ public class OsInfoServiceImpl implements OsInfoService {
             updateHostInfoCache(hostInfo);
 
             try {
-                // 直接假设为Linux系统
-                String hostname;
-                String fqdn;
+                // 执行命令获取主机名
+                CommandResult hostnameResult = MinaUtils.execCmdWithResultObject(session, "hostname");
+                if (!hostnameResult.isSuccess()) {
+                    throw new Exception("获取主机名失败: " + hostnameResult.getError());
+                }
 
-                // Linux系统获取主机名
-                hostname = MinaUtils.execCmdWithResult(session, "hostname").trim();
+                String hostname = hostnameResult.getOutput().trim();
                 if (hostname.isEmpty()) {
-                    throw new Exception("获取主机名失败");
+                    throw new Exception("获取的主机名为空");
                 }
 
                 // 获取FQDN
-                fqdn = MinaUtils.execCmdWithResult(session, "hostname -f").trim();
-                if (fqdn.isEmpty()) {
-                    fqdn = hostname; // 如果获取FQDN失败，使用主机名作为FQDN
+                CommandResult fqdnResult = MinaUtils.execCmdWithResultObject(session, "hostname -f");
+                String fqdn = hostname; // 默认使用主机名作为FQDN
+                if (fqdnResult.isSuccess() && !fqdnResult.getOutput().trim().isEmpty()) {
+                    fqdn = fqdnResult.getOutput().trim();
                 }
 
                 // 更新OsInfo信息
@@ -498,7 +872,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
@@ -564,7 +938,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -603,7 +977,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -642,7 +1016,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -681,7 +1055,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -720,7 +1094,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -759,7 +1133,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -798,7 +1172,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         ClientSession session = null;
         try {
             // 创建新会话
-            session = connectToHost(hostInfo);
+            session = queueManager.connectToHost(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
@@ -898,48 +1272,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             logger.debug("已更新主机缓存: {}", hostInfo.getIp());
         } catch (Exception e) {
             logger.error("更新主机缓存失败: {}, 原因: {}", hostInfo.getIp(), e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 连接到主机的SSH
-     *
-     * @param hostInfo 主机信息
-     * @return SSH会话，如果连接失败则返回null
-     */
-    private ClientSession connectToHost(HostInfo hostInfo) {
-        if (hostInfo == null) {
-            logger.error("无法连接：主机信息为空");
-            return null;
-        }
-
-        try {
-            // 从会话缓存中获取现有会话
-            String sessionKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
-            ClientSession session = sessionCache.get(sessionKey);
-
-            // 检查现有会话是否有效
-            if (session != null && session.isOpen()) {
-                try {
-                    // 简单测试会话是否可用
-                    MinaUtils.execCmdWithResult(session, "echo test");
-                    return session;
-                } catch (Exception e) {
-                    logger.warn("会话测试失败，开始重新连接: {}", e.getMessage());
-                    closeSession(session);
-                    sessionCache.remove(sessionKey);
-                }
-            }
-
-            // 创建新会话
-            session = MinaUtils.openConnectionWithPassword(hostInfo);
-            if (session != null) {
-                sessionCache.put(sessionKey, session);
-            }
-            return session;
-        } catch (Exception e) {
-            logger.error("连接主机[{}]时发生异常: {}", hostInfo.getIp(), e.getMessage(), e);
-            return null;
         }
     }
 
