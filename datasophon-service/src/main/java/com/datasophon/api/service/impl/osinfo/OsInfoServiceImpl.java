@@ -12,6 +12,7 @@ import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.OsInfoLegacy;
 import com.datasophon.common.model.hardware.CpuInfo;
+import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
 import org.apache.commons.lang.StringUtils;
@@ -19,7 +20,6 @@ import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -583,7 +583,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         /**
          * 收集Linux基本信息（仅系统版本相关）
          */
-        private void collectLinuxBasicInfo(ClientSession session, OsInfo osInfo) {
+        public void collectLinuxBasicInfo(ClientSession session, OsInfo osInfo) {
             try {
                 // 获取内核版本
                 String kernel = executeCommand(session, "uname -r").trim();
@@ -2219,6 +2219,865 @@ public class OsInfoServiceImpl implements OsInfoService {
         } catch (Exception e) {
             logger.error("创建SSH会话时出错: {}", e.getMessage(), e);
             return null;
+        }
+    }
+
+    // 在OsInfoServiceImpl类中添加以下方法实现
+
+    /**
+     * 收集主机名信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectHostnameInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectHostnameInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 设置状态为收集中
+            hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
+            updateHostInfoCache(hostInfo);
+
+            // 收集主机名
+            String hostname = MinaUtils.execCmdWithResult(session, "hostname -f");
+            if (StringUtils.isNotBlank(hostname)) {
+                hostname = hostname.trim();
+                hostInfo.setHostname(hostname);
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+                logger.info("主机[{}]主机名收集成功: {}", hostInfo.getIp(), hostname);
+            } else {
+                logger.warn("主机[{}]主机名收集失败", hostInfo.getIp());
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]主机名时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+            updateHostInfoCache(hostInfo);
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 收集操作系统基本信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectOsBasicInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectOsBasicInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 设置状态为收集中
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+            updateHostInfoCache(hostInfo);
+
+            // 初始化或获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 检测操作系统类型
+            String osType = detectOperatingSystemType(session);
+
+            // 设置操作系统类型
+            osInfo.setOsType(osType);
+            logger.info("设置操作系统类型: {}", osType);
+
+            // 根据操作系统类型收集基本信息
+            if ("Linux".equalsIgnoreCase(osType)) {
+                queueManager.collectLinuxBasicInfo(session, osInfo);
+            } else if ("Windows".equalsIgnoreCase(osType)) {
+                queueManager.collectWindowsBasicInfo(session, osInfo);
+            } else {
+                logger.warn("不支持的操作系统类型: {}", osType);
+            }
+
+            // 更新状态
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+
+            logger.info("主机[{}]操作系统基本信息收集成功", hostInfo.getIp());
+        } catch (Exception e) {
+            logger.error("收集主机[{}]操作系统基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+            updateHostInfoCache(hostInfo);
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 收集DNS配置信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectDnsInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectDnsInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 获取DNS配置
+            String dnsConfig = MinaUtils.execCmdWithResult(session, "cat /etc/resolv.conf");
+            if (StringUtils.isNotBlank(dnsConfig)) {
+                // 解析DNS配置
+                List<String> dnsServerList = new ArrayList<>();
+                String[] lines = dnsConfig.split("\n");
+                for (String line : lines) {
+                    line = line.trim();
+                    if (line.startsWith("nameserver")) {
+                        String dnsServer = line.substring("nameserver".length()).trim();
+                        if (StringUtils.isNotBlank(dnsServer)) {
+                            dnsServerList.add(dnsServer);
+                        }
+                    }
+                }
+
+                // 设置DNS服务器列表
+                if (!dnsServerList.isEmpty()) {
+                    osInfo.setDnsServers(dnsServerList);
+                    logger.info("主机[{}]DNS配置收集成功，发现{}个DNS服务器", hostInfo.getIp(), dnsServerList.size());
+                } else {
+                    logger.warn("主机[{}]未找到DNS服务器配置", hostInfo.getIp());
+                }
+
+                // 设置DNS状态
+                osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+            } else {
+                logger.warn("主机[{}]DNS配置收集失败", hostInfo.getIp());
+                osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]DNS配置时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            // 设置错误状态
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.ERROR);
+                updateHostInfoCache(hostInfo);
+            }
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 收集hosts文件信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectHostsFileInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectHostsFileInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取hosts文件
+            String hostsFile = MinaUtils.execCmdWithResult(session, "cat /etc/hosts");
+            if (StringUtils.isNotBlank(hostsFile)) {
+                hostInfo.setHostsFile(hostsFile);
+                logger.info("主机[{}]hosts文件收集成功", hostInfo.getIp());
+            } else {
+                logger.warn("主机[{}]hosts文件收集失败", hostInfo.getIp());
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]hosts文件时发生异常: {}", hostInfo.getIp(), e.getMessage());
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 收集CPU信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectCpuInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectCpuInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 获取CPU信息
+            // 获取系统类型
+            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "Linux";
+            if ("Linux".equalsIgnoreCase(osType)) {
+                // 使用Linux的CPU信息收集方法
+                String cpuInfo = MinaUtils.execCmdWithResult(session, "lscpu");
+                if (StringUtils.isNotBlank(cpuInfo)) {
+                    // 解析CPU信息并存储
+                    processCpuInfo(osInfo, cpuInfo);
+                    logger.info("主机[{}]CPU信息收集成功", hostInfo.getIp());
+                }
+            } else {
+                logger.info("暂不支持收集非Linux系统的CPU信息");
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]CPU信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 处理CPU信息
+     */
+    private void processCpuInfo(OsInfo osInfo, String cpuInfoStr) {
+        try {
+            // 创建CPU信息对象
+            CpuInfo cpuInfo = new CpuInfo();
+
+            // 解析CPU信息
+            String[] lines = cpuInfoStr.split("\n");
+            for (String line : lines) {
+                if (line.contains("Model name:")) {
+                    cpuInfo.setModel(line.split(":")[1].trim());
+                } else if (line.contains("CPU(s):")) {
+                    try {
+                        cpuInfo.setCores(Integer.parseInt(line.split(":")[1].trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU核心数失败: {}", e.getMessage());
+                    }
+                } else if (line.contains("CPU MHz:")) {
+                    try {
+                        cpuInfo.setFrequency(Double.parseDouble(line.split(":")[1].trim()));
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析CPU频率失败: {}", e.getMessage());
+                    }
+                }
+            }
+
+            // 设置CPU信息
+            osInfo.setCpuInfo(cpuInfo);
+        } catch (Exception e) {
+            logger.error("处理CPU信息时发生异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 收集内存信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectMemoryInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectMemoryInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 获取内存信息
+            // 获取系统类型
+            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "Linux";
+            if ("Linux".equalsIgnoreCase(osType)) {
+                // 使用Linux命令收集内存信息
+                String memInfo = MinaUtils.execCmdWithResult(session, "free -m");
+                if (StringUtils.isNotBlank(memInfo)) {
+                    // 解析内存信息
+                    processMemoryInfo(osInfo, memInfo);
+                    logger.info("主机[{}]内存信息收集成功", hostInfo.getIp());
+                }
+            } else {
+                logger.info("暂不支持收集非Linux系统的内存信息");
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]内存信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 处理内存信息
+     */
+    private void processMemoryInfo(OsInfo osInfo, String memInfoStr) {
+        try {
+            // 解析内存信息
+            String[] lines = memInfoStr.split("\n");
+            if (lines.length >= 2) {
+                String[] parts = lines[1].trim().split("\\s+");
+                if (parts.length >= 3) {
+                    try {
+                        long totalMemInMB = Long.parseLong(parts[1]); // free -m 输出单位是MB
+                        long totalMemInBytes = totalMemInMB * 1024 * 1024; // 转换为字节
+
+                        // 确保memoryInfo对象已初始化
+                        if (osInfo.getMemoryInfo() == null) {
+                            osInfo.setMemoryInfo(new MemoryInfo());
+                        }
+
+                        // 设置内存大小
+                        osInfo.getMemoryInfo().setTotalMemory(totalMemInBytes);
+                        osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
+                        logger.info("解析内存信息成功: {}MB", totalMemInMB);
+                    } catch (NumberFormatException e) {
+                        logger.warn("解析内存信息失败: {}", e.getMessage());
+                        osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("处理内存信息时发生异常: {}", e.getMessage());
+            osInfo.setMemoryStatus(OsInfoStatusEnum.ERROR);
+        }
+    }
+
+    /**
+     * 收集GPU信息
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectGpuInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectGpuInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 获取GPU信息
+            // 获取系统类型
+            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "Linux";
+            if ("Linux".equalsIgnoreCase(osType)) {
+                // 检查是否安装了nvidia-smi
+                String gpuCheck = MinaUtils.execCmdWithResult(session, "which nvidia-smi");
+                if (StringUtils.isNotBlank(gpuCheck) && !gpuCheck.contains("no nvidia-smi")) {
+                    // 获取GPU信息
+                    String gpuInfo = MinaUtils.execCmdWithResult(session,
+                            "nvidia-smi --query-gpu=name,memory.total,utilization.gpu --format=csv,noheader");
+                    if (StringUtils.isNotBlank(gpuInfo)) {
+                        // 解析GPU信息
+                        processGpuInfo(osInfo, gpuInfo);
+                        logger.info("主机[{}]GPU信息收集成功", hostInfo.getIp());
+                    }
+                } else {
+                    logger.info("主机未安装NVIDIA驱动或无GPU");
+                }
+            } else {
+                logger.info("暂不支持收集非Linux系统的GPU信息");
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]GPU信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    /**
+     * 处理GPU信息
+     */
+    private void processGpuInfo(OsInfo osInfo, String gpuInfoStr) {
+        try {
+            // 解析GPU信息
+            com.datasophon.common.model.hardware.GpuInfo gpuInfo = new com.datasophon.common.model.hardware.GpuInfo();
+            List<com.datasophon.common.model.hardware.GpuInfo.GpuDevice> devices = new ArrayList<>();
+
+            String[] lines = gpuInfoStr.split("\n");
+            for (String line : lines) {
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    com.datasophon.common.model.hardware.GpuInfo.GpuDevice device = new com.datasophon.common.model.hardware.GpuInfo.GpuDevice();
+                    device.setName(parts[0].trim());
+
+                    // 解析内存
+                    try {
+                        String memStr = parts[1].trim();
+                        if (memStr.contains("MiB")) {
+                            double memoryMB = Double.parseDouble(memStr.replace("MiB", "").trim());
+                            device.setTotalMemory(memoryMB);
+                            // 同时更新全局显存大小
+                            gpuInfo.setTotalMemory(
+                                    gpuInfo.getTotalMemory() != null ? gpuInfo.getTotalMemory() + memoryMB : memoryMB);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("解析GPU内存失败: {}", e.getMessage());
+                    }
+
+                    // 解析使用率
+                    try {
+                        String utilStr = parts[2].trim();
+                        if (utilStr.contains("%")) {
+                            double utilization = Double.parseDouble(utilStr.replace("%", "").trim());
+                            device.setUsagePercent(utilization);
+                            // 同时更新全局使用率
+                            gpuInfo.setUtilization(utilization); // 如果有多个GPU，取最后一个值
+                        }
+                    } catch (Exception e) {
+                        logger.warn("解析GPU使用率失败: {}", e.getMessage());
+                    }
+
+                    devices.add(device);
+                }
+            }
+
+            if (!devices.isEmpty()) {
+                gpuInfo.setDeviceCount(devices.size());
+                gpuInfo.setDevices(devices);
+                // 设置GPU型号为第一个设备名称
+                gpuInfo.setModel(devices.get(0).getName());
+                gpuInfo.setInfo("NVIDIA " + devices.get(0).getName());
+                gpuInfo.setVendor("NVIDIA");
+            }
+
+            // 设置GPU信息
+            osInfo.setGpuInfo(gpuInfo);
+        } catch (Exception e) {
+            logger.error("处理GPU信息时发生异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 第一阶段信息收集（主机名和操作系统基本信息）
+     * 供前端主列表显示使用
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectPhaseOneInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectPhaseOneInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            logger.info("【第一阶段】开始收集主机 {} 的基本信息", hostInfo.getIp());
+
+            // 1. 收集主机名
+            collectHostnameInfo(hostInfo);
+
+            // 2. 收集操作系统基本信息
+            collectOsBasicInfo(hostInfo);
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+
+            logger.info("【第一阶段完成】主机 {} 的基本信息收集完成", hostInfo.getIp());
+        } catch (Exception e) {
+            logger.error("【第一阶段异常】收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+            updateHostInfoCache(hostInfo);
+        } finally {
+            // 关闭第一阶段的会话，第二阶段将重新创建
+            if (session != null && session.isOpen()) {
+                try {
+                    session.close();
+                    logger.info("【第一阶段结束】已关闭主机 {} 的SSH会话，第二阶段将重新建立连接", hostInfo.getIp());
+                } catch (Exception e) {
+                    logger.warn("关闭SSH会话时出错: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 第二阶段信息收集（详细硬件和系统配置）
+     * 供前端悬浮卡片显示使用
+     * 
+     * @param hostInfo 主机信息
+     */
+    @Override
+    public void collectPhaseTwoInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectPhaseTwoInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新的SSH会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            logger.info("【第二阶段】开始收集主机 {} 的详细信息", hostInfo.getIp());
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 3. 收集DNS配置信息
+            collectDnsInfo(hostInfo);
+
+            // 4. 收集hosts文件信息
+            collectHostsFileInfo(hostInfo);
+
+            // 5. 收集CPU信息
+            collectCpuInfo(hostInfo);
+
+            // 6. 收集内存信息
+            collectMemoryInfo(hostInfo);
+
+            // 7. 收集磁盘信息
+            collectDiskInfo(hostInfo);
+
+            // 8. 收集网络信息
+            collectNetworkInfo(hostInfo);
+
+            // 9. 收集GPU信息
+            collectGpuInfo(hostInfo);
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+
+            logger.info("【第二阶段完成】主机 {} 的详细信息收集完成", hostInfo.getIp());
+        } catch (Exception e) {
+            logger.error("【第二阶段异常】收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+        } finally {
+            // 关闭会话
+            if (session != null && session.isOpen()) {
+                try {
+                    session.close();
+                    logger.info("【第二阶段结束】已关闭主机 {} 的SSH会话", hostInfo.getIp());
+                } catch (Exception e) {
+                    logger.warn("关闭SSH会话时出错: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    // 添加网络收集接口实现
+    @Override
+    public void collectNetworkInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectNetworkInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 设置网络状态为收集中
+            osInfo.setNetworkStatus(OsInfoStatusEnum.LOADING);
+
+            // 获取系统类型
+            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "Linux";
+            if ("Linux".equalsIgnoreCase(osType)) {
+                // 使用现有代码中的网络收集方法
+                IOsInfoCollector collector = osInfoCollectorFactory.getCollector(osType);
+                if (collector != null) {
+                    queueManager.collectNetworkInfoNew(hostInfo, osInfo, session, collector);
+                    logger.info("主机[{}]网络信息收集成功", hostInfo.getIp());
+                }
+            } else {
+                logger.info("暂不支持收集非Linux系统的网络信息");
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]网络信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            // 设置错误状态
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setNetworkStatus(OsInfoStatusEnum.ERROR);
+            }
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    // 添加磁盘收集接口实现
+    @Override
+    public void collectDiskInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectDiskInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 创建新会话
+            session = getOrCreateSession(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                return;
+            }
+
+            // 获取OsInfo
+            OsInfo osInfo = hostInfo.getOsInfo();
+            if (osInfo == null) {
+                osInfo = new OsInfo();
+                hostInfo.setOsInfo(osInfo);
+            }
+
+            // 设置磁盘状态为收集中
+            osInfo.setDiskStatus(OsInfoStatusEnum.LOADING);
+
+            // 获取系统类型
+            String osType = osInfo.getDistributionId() != null ? osInfo.getDistributionId() : "Linux";
+            if ("Linux".equalsIgnoreCase(osType)) {
+                // 使用Linux命令收集磁盘信息
+                String diskInfo = MinaUtils.execCmdWithResult(session, "df -h");
+                if (StringUtils.isNotBlank(diskInfo)) {
+                    // 解析磁盘信息
+                    processDiskInfo(osInfo, diskInfo);
+                    logger.info("主机[{}]磁盘信息收集成功", hostInfo.getIp());
+                    osInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
+                } else {
+                    logger.warn("主机[{}]磁盘信息收集失败", hostInfo.getIp());
+                    osInfo.setDiskStatus(OsInfoStatusEnum.ERROR);
+                }
+            } else {
+                logger.info("暂不支持收集非Linux系统的磁盘信息");
+            }
+
+            // 更新缓存
+            updateHostInfoCache(hostInfo);
+        } catch (Exception e) {
+            logger.error("收集主机[{}]磁盘信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+            // a设置错误状态
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
+            }
+        } finally {
+            // 不关闭会话，留给其他方法使用
+        }
+    }
+
+    // 添加处理磁盘信息的方法
+    /**
+     * 处理磁盘信息
+     */
+    private void processDiskInfo(OsInfo osInfo, String diskInfoStr) {
+        try {
+            // 从df -h命令输出解析磁盘信息
+            com.datasophon.common.model.hardware.DiskInfo diskInfo = new com.datasophon.common.model.hardware.DiskInfo();
+            List<com.datasophon.common.model.hardware.DiskInfo.DiskPartition> partitions = new ArrayList<>();
+
+            String[] lines = diskInfoStr.split("\n");
+            for (int i = 1; i < lines.length; i++) { // 跳过标题行
+                String line = lines[i].trim();
+                String[] parts = line.split("\\s+");
+                if (parts.length >= 6) {
+                    com.datasophon.common.model.hardware.DiskInfo.DiskPartition partition = new com.datasophon.common.model.hardware.DiskInfo.DiskPartition();
+                    partition.setName(parts[0]); // 文件系统
+                    partition.setMountPoint(parts[5]); // 挂载点
+
+                    // 解析容量
+                    try {
+                        // 总空间
+                        double totalSpace = parseHumanReadableSize(parts[1]);
+                        partition.setTotalSpace(totalSpace);
+
+                        // 已用空间
+                        double usedSpace = parseHumanReadableSize(parts[2]);
+                        partition.setUsedSpace(usedSpace);
+
+                        // 可用空间
+                        double availableSpace = parseHumanReadableSize(parts[3]);
+                        partition.setAvailableSpace(availableSpace);
+
+                        // 使用率
+                        String usageStr = parts[4].replace("%", "");
+                        partition.setUsagePercent(Double.parseDouble(usageStr));
+                    } catch (Exception e) {
+                        logger.warn("解析磁盘分区信息失败: {}", e.getMessage());
+                    }
+
+                    partitions.add(partition);
+                }
+            }
+
+            // 计算总体磁盘信息
+            double totalSpace = 0;
+            double usedSpace = 0;
+            double availableSpace = 0;
+
+            for (com.datasophon.common.model.hardware.DiskInfo.DiskPartition partition : partitions) {
+                if (partition.getTotalSpace() != null) {
+                    totalSpace += partition.getTotalSpace();
+                }
+                if (partition.getUsedSpace() != null) {
+                    usedSpace += partition.getUsedSpace();
+                }
+                if (partition.getAvailableSpace() != null) {
+                    availableSpace += partition.getAvailableSpace();
+                }
+            }
+
+            diskInfo.setTotalDiskSpace(totalSpace);
+            diskInfo.setUsedDiskSpace(usedSpace);
+            diskInfo.setAvailableDiskSpace(availableSpace);
+            diskInfo.setUsagePercent(totalSpace > 0 ? (usedSpace / totalSpace) * 100 : 0);
+            diskInfo.setPartitions(partitions);
+
+            // 设置磁盘信息
+            osInfo.setDiskInfo(diskInfo);
+        } catch (Exception e) {
+            logger.error("处理磁盘信息时发生异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 解析人类可读的容量字符串（如2G, 500M等），转换为GB
+     */
+    private double parseHumanReadableSize(String sizeStr) {
+        if (sizeStr == null || sizeStr.isEmpty()) {
+            return 0;
+        }
+
+        double size;
+
+        try {
+            if (sizeStr.endsWith("K") || sizeStr.endsWith("k")) {
+                size = Double.parseDouble(sizeStr.substring(0, sizeStr.length() - 1)) / 1024.0 / 1024.0; // KB to GB
+            } else if (sizeStr.endsWith("M") || sizeStr.endsWith("m")) {
+                size = Double.parseDouble(sizeStr.substring(0, sizeStr.length() - 1)) / 1024.0; // MB to GB
+            } else if (sizeStr.endsWith("G") || sizeStr.endsWith("g")) {
+                size = Double.parseDouble(sizeStr.substring(0, sizeStr.length() - 1)); // GB
+            } else if (sizeStr.endsWith("T") || sizeStr.endsWith("t")) {
+                size = Double.parseDouble(sizeStr.substring(0, sizeStr.length() - 1)) * 1024.0; // TB to GB
+            } else {
+                size = Double.parseDouble(sizeStr) / 1024.0 / 1024.0 / 1024.0; // Bytes to GB
+            }
+
+            return size;
+        } catch (NumberFormatException e) {
+            logger.warn("解析大小字符串失败: {}", sizeStr);
+            return 0;
         }
     }
 }
