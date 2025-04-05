@@ -28,10 +28,8 @@
             <div class="hostname-detail-name">
               <!-- 主机名显示区域 -->
               <div class="hostname-name-wrapper">
-                <!-- 如果主机名存在并且状态不是LOADING则显示 -->
-                <span v-if="hostInfo.hostname && (!hostInfo.hostnameStatus || hostInfo.hostnameStatus !== 'LOADING')" class="hostname-name">{{ hostInfo.hostname }}</span>
-                <!-- 如果主机名不存在或状态为LOADING，显示加载动画 -->
-                <div v-else class="hostname-loading-container">
+                <!-- 主机名加载中状态 -->
+                <div v-if="isLoading('hostname')" class="hostname-loading-container">
                   <div class="hostname-loading-dots">
                     <span class="hostname-loading-dot"></span>
                     <span class="hostname-loading-dot"></span>
@@ -39,6 +37,10 @@
                   </div>
                   <span class="hostname-loading-text">获取主机名</span>
                 </div>
+                <!-- 主机名已加载 -->
+                <span v-else class="hostname-name">
+                  {{ hostInfo.hostname || (hostInfo.osInfo && hostInfo.osInfo.hostname) || '未知主机名' }}
+                </span>
                 <span class="hostname-ip">{{ hostInfo.ip }}</span>
               </div>
             </div>
@@ -46,13 +48,15 @@
               <!-- FQDN字段 - 独立加载动画 -->
               <div class="hostname-meta-item">
                 <span class="meta-label">FQDN</span>
-                <!-- 如果FQDN存在并且状态不是LOADING则显示 -->
-                <span v-if="hostInfo.fqdn && (!hostInfo.hostnameStatus || hostInfo.hostnameStatus !== 'LOADING')" class="meta-value">{{ hostInfo.fqdn }}</span>
-                <!-- 如果FQDN不存在或状态为LOADING，显示加载动画 -->
-                <div v-else class="fqdn-loading-container">
+                <!-- FQDN加载中状态 -->
+                <div v-if="isLoading('fqdn')" class="fqdn-loading-container">
                   <div class="fqdn-loading-pulse"></div>
                   <span class="fqdn-loading-text">加载中...</span>
                 </div>
+                <!-- FQDN已加载 -->
+                <span v-else class="meta-value">
+                  {{ hostInfo.fqdn || (hostInfo.osInfo && hostInfo.osInfo.fqdn) || '无FQDN' }}
+                </span>
               </div>
               <!-- 集群信息 -->
               <div class="hostname-meta-item" v-if="hostInfo.cluster">
@@ -143,229 +147,56 @@
         </div>
 
         <!-- Hosts文件部分 -->
-        <div class="hosts-section" v-if="hostInfo.hostsFile !== undefined">
+        <div class="hosts-file-section">
           <div class="section-header">
-            <div class="title">
-              <div class="section-icon hosts-icon">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </div>
-              <span class="section-title">Hosts文件内容</span>
-              <div class="file-badge">/etc/hosts</div>
+            <div class="section-title">
+              <a-icon type="profile" />
+              <span>hosts文件</span>
             </div>
-            <div class="actions">
-              <!-- 非编辑模式下显示编辑和复制按钮 -->
-              <template v-if="!isEditingHosts">
-                <a-button type="link" class="action-button edit-button" @click="editHostsFile">
-                  <a-icon type="edit" />编辑
-                </a-button>
-                <a-button type="link" class="action-button" @click="copyHostsFile">
-                  <a-icon type="copy" />复制
-                </a-button>
-              </template>
-              <!-- 编辑模式下显示保存和取消按钮 -->
-              <template v-else>
-                <a-button type="link" class="action-button save-button" 
-                          :loading="hostsEditLoading"
-                          @click="saveHostsFile">
-                  <a-icon type="save" />保存
-                </a-button>
-                <a-button type="link" class="action-button cancel-button" @click="cancelHostsEdit">
-                  <a-icon type="close" />取消
-                </a-button>
-              </template>
+            <div class="section-actions">
+              <!-- 编辑按钮，仅在非加载状态且有hosts文件内容时显示 -->
+              <a-tooltip title="编辑hosts文件" v-if="!isLoading('hosts') && hostInfo.hostsFile">
+                <a-icon type="edit" @click="startEditingHosts" />
+              </a-tooltip>
+              <!-- 复制按钮，仅在非加载状态且有hosts文件内容时显示 -->
+              <a-tooltip title="复制hosts文件内容" v-if="!isLoading('hosts') && hostInfo.hostsFile">
+                <a-icon type="copy" @click="copyHostsContent" />
+              </a-tooltip>
             </div>
           </div>
-          
-          <div class="hosts-file-container">
-            <div class="modern-ide">
-              <!-- IDE工具栏 -->
-              <div class="ide-toolbar">
-                <div class="ide-breadcrumb">
-                  <div class="breadcrumb-item root">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                    </svg>
-                    <span>/</span>
-                  </div>
-                  <div class="breadcrumb-item">
-                    <span>etc</span>
-                  </div>
-                  <div class="breadcrumb-separator">/</div>
-                  <div class="breadcrumb-item active">
-                    <span>hosts</span>
-                  </div>
-                </div>
-                <div class="ide-toolbar-actions">
-                  <div class="ide-toolbar-action" @click="toggleSearch">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                  </div>
-                </div>
+
+          <!-- hosts文件加载中的状态 -->
+          <div class="hosts-loading-section" v-if="isLoading('hosts')">
+            <div class="hosts-loading-container">
+              <div class="toolbar">
+                <div class="loading-line loading-line-small"></div>
+                <div class="loading-line loading-line-medium"></div>
               </div>
-              
-              <!-- 添加搜索框 -->
-              <div class="ide-search" v-if="showSearch">
-                <div class="search-container">
-                  <input 
-                    ref="searchInput"
-                    v-model="searchQuery" 
-                    type="text" 
-                    class="search-input" 
-                    placeholder="在hosts文件中搜索..." 
-                    @input="onSearch"
-                    @keydown.esc="hideSearch"
-                  />
-                  <div class="search-controls">
-                    <span class="match-count" v-if="matchCount !== null">{{ matchIndex + 1 }}/{{ matchCount }}</span>
-                    <div class="search-actions">
-                      <button class="search-button" @click="findPrevious" :disabled="matchCount === 0">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="12" y1="19" x2="12" y2="5"></line>
-                          <polyline points="5 12 12 5 19 12"></polyline>
-                        </svg>
-                      </button>
-                      <button class="search-button" @click="findNext" :disabled="matchCount === 0">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="12" y1="5" x2="12" y2="19"></line>
-                          <polyline points="19 12 12 19 5 12"></polyline>
-                        </svg>
-                      </button>
-                      <button class="search-button close" @click="hideSearch">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 代码编辑区域 - 根据模式显示不同内容 -->
-              <div class="ide-editor">
-                <!-- 侧边栏 - 行号和折叠等 -->
-                <div class="ide-sidebar">
-                  <div class="gutter-container">
-                    <div class="gutter-folding"></div>
-                    <div class="gutter-line-numbers">
-                      <div v-for="n in (isEditingHosts ? hostsFileContent.split('\n').length : hostInfo.hostsFile.split('\n').length || 1)" 
-                          :key="n" 
-                          class="line-number">
-                        {{ n }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- 主代码区域 - 非编辑模式 -->
-                <div class="code-container" ref="codeContainer" v-if="!isEditingHosts">
-                  <div v-html="formatHostsFile(hostInfo.hostsFile)" class="code-content"></div>
-                </div>
-                
-                <!-- 主代码区域 - 编辑模式 -->
-                <div class="code-container editor-mode" v-else>
-                  <textarea 
-                    v-model="hostsFileContent"
-                    class="code-editor"
-                    spellcheck="false"
-                    @input="updateLineNumbers"
-                    placeholder="请输入hosts文件内容"
-                  ></textarea>
-                </div>
-              </div>
-              
-              <!-- 底部状态栏 -->
-              <div class="ide-statusbar">
-                <div class="statusbar-left">
-                  <div class="status-item">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    <span>{{ isEditingHosts ? "编辑中" : "只读" }}</span>
-                  </div>
-                  <div v-if="isEditingHosts" class="status-item editing-status">
-                    <span>点击"保存"按钮应用更改</span>
-                  </div>
-                </div>
-                <div class="statusbar-right">
-                  <div class="status-item">
-                    <span>UTF-8</span>
-                  </div>
-                  <div class="status-item">
-                    <span>LF</span>
-                  </div>
-                  <div class="status-item">
-                    <span>Plain Text</span>
-                  </div>
-                </div>
+              <div class="content">
+                <a-spin />
+                <span class="loading-text">正在获取hosts文件内容...</span>
               </div>
             </div>
           </div>
-        </div>
-        
-        <!-- Hosts文件加载中 -->
-        <div class="hostname-detail-section" v-else-if="isLoading('hosts')">
-          <div class="section-header">
-            <span class="section-title">
-              <div class="section-icon hosts-icon">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </div>
-              Hosts文件内容
-            </span>
-          </div>
-          <div class="hosts-file-container loading">
-            <div class="modern-ide">
-              <!-- 加载动画 -->
-              <div class="hosts-file-loading">
-                <div class="hosts-file-loading-lines">
-                  <div class="loading-line short"></div>
-                  <div class="loading-line medium"></div>
-                  <div class="loading-line long"></div>
-                  <div class="loading-line medium"></div>
-                  <div class="loading-line short"></div>
-                  <div class="loading-line very-long"></div>
-                  <div class="loading-line medium"></div>
-                  <div class="loading-line short"></div>
-                </div>
-              </div>
+
+          <!-- hosts文件内容，当不在加载中且有hosts文件内容时显示 -->
+          <div class="hosts-file-content" v-else-if="hostInfo.hostsFile">
+            <div class="search-bar">
+              <a-input-search
+                placeholder="搜索hosts内容"
+                v-model="hostsSearchKeyword"
+                @change="searchHosts"
+                style="width: 100%"
+              />
+            </div>
+            <div class="hosts-content" ref="hostsContent">
+              <pre v-html="highlightedHostsContent"></pre>
             </div>
           </div>
-        </div>
-        
-        <!-- 如果没有hosts文件 -->
-        <div class="hostname-detail-section" v-else>
-          <div class="section-header">
-            <span class="section-title">
-              <div class="section-icon hosts-icon">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </div>
-              Hosts文件内容
-            </span>
-          </div>
-          <div class="hosts-file-container">
-            <div class="info-empty">暂无hosts文件内容</div>
+
+          <!-- 没有hosts文件内容时的显示 -->
+          <div class="no-hosts-content" v-else>
+            <a-empty description="暂无hosts文件内容" />
           </div>
         </div>
       </div>
@@ -394,27 +225,63 @@ export default {
       hostsFileContent: '',
       hostsEditLoading: false,
       isEditingHosts: false,
+      hostsSearchKeyword: '',
+      highlightedHostsContent: '',
     };
   },
   methods: {
-    // 检查是否处于加载状态
+    // 检查状态，如果不存在或者是loading或pending则返回true
+    checkStatus(status, matchValue = 'loading') {
+      if (status === null || status === undefined) {
+        // 当状态为null或undefined时，如果匹配loading或pending，则返回true
+        return matchValue.toLowerCase() === 'loading' || matchValue.toLowerCase() === 'pending' || matchValue.toLowerCase() === 'collecting';
+      }
+      
+      // 将collecting和pending视为loading状态
+      if (matchValue.toLowerCase() === 'loading' && 
+          (status.toLowerCase() === 'collecting' || status.toLowerCase() === 'pending')) {
+        return true;
+      }
+      
+      // 不区分大小写比较
+      return String(status).toLowerCase() === String(matchValue).toLowerCase();
+    },
+    
+    // 获取loading状态
     isLoading(type) {
-      if (type === 'dns') {
-        // 检查DNS服务器是否在加载中
-        return this.hostInfo.dnsStatus === 'loading' || 
-              this.checkStatus(this.hostInfo.dnsStatus, 'loading') ||
-              (this.hostInfo.osInfo && this.hostInfo.osInfo.networkInfoStatus === 'loading');
+      if (type === 'hostname') {
+        // 判断hostname是否在加载中
+        // 如果hostname还没有获取到，但状态不是error
+        const isHostnameEmpty = !this.hostInfo.hostname || this.hostInfo.hostname.trim() === '';
+        if (isHostnameEmpty && !this.checkStatus(this.hostInfo.hostnameStatus, 'error')) {
+          return true;
+        }
+        return this.checkStatus(this.hostInfo.hostnameStatus, 'loading');
+      } else if (type === 'fqdn') {
+        // 判断fqdn是否在加载中
+        const isFqdnEmpty = !this.hostInfo.fqdn || this.hostInfo.fqdn.trim() === '';
+        if (isFqdnEmpty && !this.checkStatus(this.hostInfo.fqdnStatus, 'error')) {
+          return true;
+        }
+        return this.checkStatus(this.hostInfo.fqdnStatus, 'loading');
+      } else if (type === 'dns') {
+        // 判断dns服务器是否在加载中
+        // 如果没有dns服务器数据，但状态不是error，认为是在加载中
+        const isDnsEmpty = !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsServers || this.hostInfo.osInfo.dnsServers.length === 0;
+        if (isDnsEmpty && !this.checkStatus(this.hostInfo.osInfo.dnsStatus, 'error')) {
+          return true;
+        }
+        return this.checkStatus(this.hostInfo.osInfo.dnsStatus, 'loading');
       } else if (type === 'hosts') {
-        // 检查hosts文件是否在加载中
-        return this.hostInfo.hostsFileStatus === 'loading' || 
-              this.checkStatus(this.hostInfo.hostsFileStatus, 'loading');
+        // 判断hosts文件是否在加载中
+        // 如果没有hosts文件数据，但状态不是error，认为是在加载中
+        const isHostsEmpty = this.hostInfo.hostsFile === undefined;
+        if (isHostsEmpty && !this.checkStatus(this.hostInfo.hostsStatus, 'error')) {
+          return true;
+        }
+        return this.checkStatus(this.hostInfo.hostsStatus, 'loading');
       }
       return false;
-    },
-    // 检查状态方法
-    checkStatus(status, expectedStatus) {
-      if (!status) return expectedStatus === 'pending';
-      return status.toLowerCase() === expectedStatus;
     },
     // 格式化hosts文件内容，添加语法高亮
     formatHostsFile(content) {
@@ -750,6 +617,33 @@ export default {
         // 这里只是提示未来可以实现的功能
         console.log('编辑内容已更新');
       }
+    },
+    
+    // 开始编辑hosts文件
+    startEditingHosts() {
+      this.editHostsFile();
+    },
+    
+    // 复制hosts文件内容
+    copyHostsContent() {
+      this.copyHostsFile();
+    },
+    
+    // 搜索hosts文件内容
+    searchHosts() {
+      if (!this.hostsSearchKeyword || !this.hostInfo.hostsFile) {
+        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.hostsFile);
+        return;
+      }
+      
+      const lines = this.hostInfo.hostsFile.split('\n');
+      const filteredLines = lines.filter(line => line.toLowerCase().includes(this.hostsSearchKeyword.toLowerCase()));
+      const highlightedLines = filteredLines.map(line => {
+        const regex = new RegExp(this.escapeRegExp(this.hostsSearchKeyword), 'gi');
+        return line.replace(regex, match => `<span class="search-highlight">${match}</span>`);
+      });
+      
+      this.highlightedHostsContent = `<div class="hosts-code-content">${highlightedLines.join('\n')}</div>`;
     },
   }
 }
@@ -1567,191 +1461,140 @@ export default {
   width: 85%;
 }
 
-.loading-line.very-long {
-  width: 95%;
+.loading-line.xshort {
+  width: 10%;
 }
 
-.hosts-file-loading {
-  padding: 12px;
+.loading-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.spinner-text {
   margin-top: 8px;
-}
-
-.hosts-file-loading-lines {
-  display: flex;
-  flex-direction: column;
+  color: #007AFF;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 @keyframes shimmer {
   0% {
-    background-position: -468px 0;
+    background-position: -200% 0;
   }
   100% {
-    background-position: 468px 0;
+    background-position: 200% 0;
   }
 }
 
-.hosts-file-container.loading {
-  padding: 0;
+/* Hosts文件加载动画样式 */
+.hosts-loading-section {
+  margin-top: 10px;
   border-radius: 8px;
+  background-color: #f9f9fb;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  background: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* 内联编辑Hosts文件样式 */
-.hosts-section {
-  margin-top: 16px;
-  border-radius: 12px;
-  background-color: #f5f5f7;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+.hosts-loading-container {
+  padding: 16px;
+  
+  .toolbar {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    
+    .loading-text {
+      margin-top: 12px;
+      color: #8c8c8c;
+      font-size: 14px;
+    }
+  }
+
+  .loading-line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-bottom: 8px;
+
+    &.loading-line-small {
+      width: 60px;
+    }
+
+    &.loading-line-medium {
+      width: 120px;
+    }
+
+    &.loading-line-large {
+      width: 180px;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+}
+
+.hosts-file-content {
+  margin-top: 10px;
+  border-radius: 8px;
+  background-color: #f9f9fb;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  
+  .search-bar {
+    padding: 8px 16px;
+    background-color: #f0f2f5;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  
+  .hosts-content {
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+  }
 }
 
-.hosts-section .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: rgba(255, 255, 255, 0.6);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+.no-hosts-content {
+  margin-top: 10px;
+  padding: 24px;
+  background-color: #f9f9fb;
+  border-radius: 8px;
+  text-align: center;
 }
 
-.hosts-section .title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1d1d1f;
-  display: flex;
-  align-items: center;
-}
-
-.hosts-section .title:before {
-  content: none;
-}
-
-.hosts-section .actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-button {
-  padding: 0 8px;
-  height: 28px;
-  line-height: 28px;
-  font-size: 12px;
-  color: #007AFF;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-}
-
-.action-button:hover {
-  background-color: rgba(0, 122, 255, 0.1);
-}
-
-.action-button .anticon {
-  margin-right: 4px;
-  font-size: 14px;
-}
-
-.action-button.edit-button:hover {
-  color: #007AFF;
-}
-
-.action-button.save-button {
-  color: #34C759;
-}
-
-.action-button.save-button:hover {
-  background-color: rgba(52, 199, 89, 0.1);
-}
-
-.action-button.cancel-button {
-  color: #FF3B30;
-}
-
-.action-button.cancel-button:hover {
-  background-color: rgba(255, 59, 48, 0.1);
-}
-
-.hosts-content {
-  padding: 16px;
-  background-color: #f8f8f8;
-  border-radius: 0 0 12px 12px;
-  max-height: 300px;
-  overflow: auto;
-}
-
-.hosts-text {
-  margin: 0;
-  padding: 0;
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #333;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.hosts-edit-content {
-  padding: 16px;
-  background-color: #f8f8f8;
-}
-
-.hosts-edit-textarea {
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
-  font-size: 13px;
-  resize: none;
-  background-color: #fff;
-  transition: all 0.3s ease;
-}
-
-.hosts-edit-textarea:hover {
-  border-color: #007AFF;
-}
-
-.hosts-edit-textarea:focus {
-  border-color: #007AFF;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
-  outline: none;
-}
-
-/* 确保行号样式正确 */
-.gutter-line-numbers .line-number {
-  padding: 0 8px 0 0;
-  height: 20px;
-  line-height: 20px;
-}
-
-/* 确保代码内容样式正确 */
-.code-content {
-  padding: 0 0 0 4px !important;
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
-  font-size: 12px !important;
-  line-height: 1.4 !important;
-  color: #d4d4d4 !important;
-  white-space: pre !important;
-}
-
-/* 保持代码高亮样式 */
-.code-content .comment {
-  color: #6a9955;
-}
-
-.code-content .ip {
-  color: #4ec9b0;
-}
-
-.code-content .hostname {
-  color: #9cdcfe;
-}
-
-/* 增加hosts-code-content样式 */
-.hosts-code-content {
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
-  color: #d4d4d4 !important;
+/* 搜索高亮样式 */
+:deep(.search-highlight) {
+  background-color: #ffff00;
+  color: #000;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 2px;
 }
 </style>

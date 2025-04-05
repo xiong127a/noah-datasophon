@@ -932,7 +932,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
 
             // 创建新会话
-            session = MinaUtils.openConnection(hostInfo);
+            session = MinaUtils.openConnectionWithPassword(hostInfo);
             if (session != null) {
                 sessionCache.put(sessionKey, session);
             }

@@ -44,12 +44,10 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
-import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.model.hardware.GpuInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
@@ -74,7 +72,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1494,7 +1491,7 @@ public class InstallServiceImpl implements InstallService {
 
     private List<HostInfo> getListPage(List<HostInfo> list, Integer offset, Integer pageSize) {
         List<HostInfo> result = new ArrayList<>();
-        Integer limit = offset + pageSize;
+        int limit = offset + pageSize;
         if (list.size() < offset + pageSize) {
             limit = list.size();
         }
@@ -1517,152 +1514,6 @@ public class InstallServiceImpl implements InstallService {
     @Override
     public Result fixAllCheckItems(Integer clusterId, String ip) {
         return hostCheckService.fixAllCheckItems(clusterId, ip);
-    }
-
-    /**
-     * 执行检查
-     */
-    private Result executeCheck(HostInfo hostInfo, CheckItem checkItem) {
-        try {
-            ClientSession session = MinaUtils.openConnection(hostInfo);
-
-            if (Objects.isNull(session)) {
-                return Result.error("无法连接到主机");
-            }
-
-            boolean success = false;
-            String message = "";
-            String result;
-
-            switch (checkItem.getId()) {
-                case 1: // 主机免密检查
-                    MinaUtils.CheckResult checkResult = MinaUtils.checkPasswordlessStatus(session);
-                    success = checkResult.isSuccess();
-                    message = checkResult.getMessage();
-                    break;
-
-                case 2: // Java环境检查
-                    MinaUtils.CommandResult javaResult = MinaUtils.execCmdWithResultObject(session, "which java");
-                    result = javaResult.isSuccess() ? javaResult.getOutput()
-                            : "EXIT_CODE_" + javaResult.getExitCode() + ": " + javaResult.getError();
-                    success = result != null && !result.isEmpty();
-                    message = success ? "Java环境已安装" : "未安装Java环境";
-                    break;
-
-                case 3: // 最大文件句柄数检查
-                    MinaUtils.CommandResult ulimitResult = MinaUtils.execCmdWithResultObject(session, "ulimit -n");
-                    result = ulimitResult.isSuccess() ? ulimitResult.getOutput()
-                            : "EXIT_CODE_" + ulimitResult.getExitCode() + ": " + ulimitResult.getError();
-                    try {
-                        int limit = Integer.parseInt(result.trim());
-                        success = limit >= 65535;
-                        message = success ? "文件句柄数配置正确" : "文件句柄数配置过低";
-                    } catch (NumberFormatException e) {
-                        message = "无法获取文件句柄数配置";
-                    }
-                    break;
-
-                case 4: // 防火墙检查
-                    MinaUtils.CommandResult firewallResult = MinaUtils.execCmdWithResultObject(session,
-                            "systemctl status firewalld | grep Active");
-                    result = firewallResult.isSuccess() ? firewallResult.getOutput()
-                            : "EXIT_CODE_" + firewallResult.getExitCode() + ": " + firewallResult.getError();
-                    success = result.contains("inactive") || result.contains("dead");
-                    message = success ? "防火墙已关闭" : "防火墙未关闭";
-                    break;
-
-                case 5: // SELinux检查
-                    MinaUtils.CommandResult selinuxResult = MinaUtils.execCmdWithResultObject(session, "getenforce");
-                    result = selinuxResult.isSuccess() ? selinuxResult.getOutput()
-                            : "EXIT_CODE_" + selinuxResult.getExitCode() + ": " + selinuxResult.getError();
-                    success = "Disabled".equalsIgnoreCase(result.trim());
-                    message = success ? "SELinux已禁用" : "SELinux未禁用";
-                    break;
-
-                case 6: // 时间同步检查
-                    MinaUtils.CommandResult chronydResult = MinaUtils.execCmdWithResultObject(session,
-                            "systemctl status chronyd | grep Active");
-                    result = chronydResult.isSuccess() ? chronydResult.getOutput()
-                            : "EXIT_CODE_" + chronydResult.getExitCode() + ": " + chronydResult.getError();
-                    success = result.contains("active");
-                    message = success ? "时间同步服务运行正常" : "时间同步服务未运行";
-                    break;
-
-                default:
-                    return Result.error("未知的检查项");
-            }
-
-            MinaUtils.closeConnection(session);
-
-            checkItem.setStatus(success ? CheckItem.Status.SUCCESS : CheckItem.Status.FAILED);
-            checkItem.setMessage(message);
-
-            return Result.success();
-        } catch (Exception e) {
-            logger.error("执行检查失败", e);
-            return Result.error("检查失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 新增一个方法，用于获取主机的操作系统信息状态
-     * 供前端查询主机信息是否已准备好
-     */
-    public Result getHostOsInfoStatus(Integer clusterId, String ip) {
-        try {
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || !hostMap.containsKey(ip)) {
-                return Result.error("找不到指定主机信息");
-            }
-
-            HostInfo hostInfo = hostMap.get(ip);
-            // 使用toString()获取状态的字符串表示，兼容前端
-            String status = hostInfo.getOsInfoStatus() != null ? hostInfo.getOsInfoStatus().toString() : null;
-
-            return Result.success().put("status", status)
-                    .put("hostname", hostInfo.getHostname())
-                    .put("ip", hostInfo.getIp());
-        } catch (Exception e) {
-            logger.error("获取主机操作系统信息状态时出错", e);
-            return Result.error("系统异常: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 新增一个方法，用于获取集群中所有主机的操作系统信息状态
-     * 供前端批量查询主机信息是否已准备好
-     */
-    public Result getAllHostOsInfoStatus(Integer clusterId) {
-        try {
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null) {
-                return Result.error("找不到集群主机信息");
-            }
-
-            List<Map<String, Object>> statusList = new ArrayList<>();
-            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                HostInfo hostInfo = entry.getValue();
-                Map<String, Object> statusInfo = new HashMap<>();
-                statusInfo.put("ip", hostInfo.getIp());
-                statusInfo.put("hostname", hostInfo.getHostname());
-                // 使用toString()获取状态的字符串表示，兼容前端
-                statusInfo.put("status",
-                        hostInfo.getOsInfoStatus() != null ? hostInfo.getOsInfoStatus().toString() : null);
-
-                statusList.add(statusInfo);
-            }
-
-            return Result.success(statusList);
-        } catch (Exception e) {
-            logger.error("获取集群所有主机操作系统信息状态时出错", e);
-            return Result.error("系统异常: " + e.getMessage());
-        }
-    }
-
-    // 修改方法，使用OsInfoService
-    private void getHostOsInfo(HostInfo hostInfo) {
-        // 委托给OsInfoService实现
-
     }
 
     @Override

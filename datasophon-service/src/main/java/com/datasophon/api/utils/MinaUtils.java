@@ -1,6 +1,5 @@
 package com.datasophon.api.utils;
 
-import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
 import lombok.Getter;
 import org.apache.sshd.client.SshClient;
@@ -1007,13 +1006,6 @@ public class MinaUtils {
         }
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        ClientSession session = MinaUtils.openConnection(new HostInfo("localhost", 22, "liuxin"));
-        for (int i = 0; i < Constants.TEN; i++) {
-            CommandResult result = MinaUtils.execCmdWithResultObject(session, "arch");
-            System.out.println(result.isSuccess() ? result.getOutput() : "Error: " + result.getError());
-        }
-    }
 
     /**
      * 获取远程主机的实际主机名

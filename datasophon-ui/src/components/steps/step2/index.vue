@@ -260,11 +260,13 @@ export default {
                   }, [record.hostname || '未获取到主机名']) :
                   h('span', { 
                     class: 'hostname-text', 
-                    title: record.fqdn || record.hostname || '主机名加载中' 
+                    title: record.fqdn || record.hostname || (record.osInfo && record.osInfo.fqdn) || (record.osInfo && record.osInfo.hostname) || '主机名加载中' 
                   }, [
                     // 如果有主机名且状态不是LOADING才显示主机名，否则显示加载动画
-                    (record.hostname && (!record.hostnameStatus || record.hostnameStatus !== 'LOADING')) ? 
-                    record.hostname : 
+                    // 优先使用主对象的hostname，如果为空则尝试从osInfo中获取
+                    ((record.hostname || (record.osInfo && record.osInfo.hostname)) && 
+                    (!record.hostnameStatus || record.hostnameStatus !== 'LOADING')) ? 
+                    (record.hostname || (record.osInfo && record.osInfo.hostname)) : 
                     h('div', { class: 'hostname-loading-container' }, [
                       h('div', { class: 'hostname-loading-dots' }, [
                         h('span', { class: 'hostname-loading-dot' }),
@@ -584,7 +586,7 @@ export default {
                         lineHeight: '1.3'
                       }
                     }, [osDisplayName]),
-                    // 恢复版本号小号字体显示
+                    // 添加恢复版本号小号字体显示
                     osVersion ? h('span', {
                       style: {
                         color: '#8E8E93',
@@ -604,20 +606,58 @@ export default {
                 alignItems: 'center'
               }
             }, [
-              h('span', {
+              // 如果sshConnectStatus是error，则显示错误信息
+              row.sshConnectStatus === 'error' ? 
+              h('div', {
                 style: {
-                  color: '#8E8E93',
-                  fontSize: '13px'
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#FF3B30'
                 }
-              }, [text || '未知操作系统'])
+              }, [
+                h('a-icon', {
+                  props: { type: 'warning' },
+                  style: { marginRight: '6px' }
+                }),
+                'SSH连接失败'
+              ]) :
+              // 如果osInfoStatus是error但SSH连接成功，显示获取OS失败
+              (row.osInfoStatus === 'error' && row.sshConnectStatus === 'success') ?
+              h('div', {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#FF8C00'
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'exclamation-circle' },
+                  style: { marginRight: '6px' }
+                }),
+                '获取OS信息失败'
+              ]) :
+              // 正在加载状态
+              h('div', {
+                style: {
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#8E8E93'
+                }
+              }, [
+                h('a-icon', {
+                  props: { type: 'loading' },
+                  style: { marginRight: '6px' }
+                }),
+                '正在检测操作系统...'
+              ])
             ]);
-          }
+          },
         },
         {
           title: "当前受管",
           key: "managed",
           dataIndex: "managed",
-          width: "90px", // 添加固定宽度
+          width: "90px",
           customRender: (text, row, index) => {
             const h = this.$createElement;
             return h('div', {
@@ -650,7 +690,7 @@ export default {
         {
           title: "状态",
           key: "status",
-          width: "15%",  // 增加状态列宽度
+          width: "15%",
           customRender: (text, row) => {
             const h = this.$createElement;
 
@@ -698,7 +738,7 @@ export default {
         {
           title: "检查项",
           key: "checkItem",
-          width: "18%",  // 增加检查项列宽度
+          width: "18%",
           customRender: (text, row) => {
             const h = this.$createElement;
 

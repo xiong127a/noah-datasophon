@@ -485,6 +485,11 @@ export default {
   methods: {
     // 获取CPU状态
     getCpuStatus() {
+      // 如果osInfo为空或者没有cpuInfo但是状态不是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.cpuInfo) && this.cpuStatus !== 'error') {
+        return 'loading';
+      }
+      
       // 首先尝试从osInfo.cpuStatus获取
       if (this.osInfo && this.osInfo.cpuStatus) {
         return this.osInfo.cpuStatus.toLowerCase();
@@ -692,6 +697,11 @@ export default {
     },
     // 获取内存状态
     getMemoryStatus() {
+      // 如果osInfo为空或者没有memoryInfo但是状态不是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.memoryInfo) && this.memoryStatus !== 'error') {
+        return 'loading';
+      }
+      
       // 首先尝试从osInfo.memoryStatus获取
       if (this.osInfo && this.osInfo.memoryStatus) {
         return this.osInfo.memoryStatus.toLowerCase();
@@ -713,6 +723,11 @@ export default {
     
     // 获取磁盘状态
     getDiskStatus() {
+      // 如果osInfo为空或者没有diskInfo但是状态不是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.diskInfo) && this.diskStatus !== 'error') {
+        return 'loading';
+      }
+      
       // 首先尝试从osInfo.diskStatus获取
       if (this.osInfo && this.osInfo.diskStatus) {
         return this.osInfo.diskStatus.toLowerCase();
@@ -734,6 +749,11 @@ export default {
     
     // 获取GPU状态
     getGpuStatus() {
+      // 如果osInfo为空或者没有gpuInfo但是状态不是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.gpuInfo) && this.gpuStatus !== 'error') {
+        return 'loading';
+      }
+      
       // 首先尝试从osInfo.gpuStatus获取
       if (this.osInfo && this.osInfo.gpuStatus) {
         return this.osInfo.gpuStatus.toLowerCase();
@@ -755,6 +775,11 @@ export default {
     
     // 获取交换空间状态
     getSwapStatus() {
+      // 如果osInfo为空或者没有swapInfo但是状态不是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.swapInfo) && this.swapStatus !== 'error') {
+        return 'loading';
+      }
+      
       // 首先尝试从osInfo.swapStatus获取
       if (this.osInfo && this.osInfo.swapStatus) {
         return this.osInfo.swapStatus.toLowerCase();
@@ -773,11 +798,29 @@ export default {
     checkSwapStatus(status) {
       return this.getSwapStatus() === status.toLowerCase();
     },
-    // 添加网络状态相关方法
+    // 获取网络状态
     getNetworkStatus() {
-      return this.osInfo?.networkStatus?.toLowerCase() || 'pending';
+      // 如果osInfo为空或者没有networkInfo但是没有明确表示networkStatus是error，则显示loading
+      if ((!this.osInfo || !this.osInfo.networkInfo) && 
+          !(this.osInfo && this.osInfo.networkStatus === 'error')) {
+        return 'loading';
+      }
+      
+      // 首先尝试从osInfo.networkStatus获取
+      if (this.osInfo && this.osInfo.networkStatus) {
+        return this.osInfo.networkStatus.toLowerCase();
+      }
+      
+      // 如果osInfo中没有networkStatus，则尝试从osInfo.networkInfo.status获取
+      if (this.osInfo && this.osInfo.networkInfo && this.osInfo.networkInfo.status) {
+        return this.osInfo.networkInfo.status.toLowerCase();
+      }
+      
+      // 如果都没有，则默认为pending
+      return 'pending';
     },
     
+    // 检查网络状态
     checkNetworkStatus(status) {
       return this.getNetworkStatus() === status.toLowerCase();
     },
