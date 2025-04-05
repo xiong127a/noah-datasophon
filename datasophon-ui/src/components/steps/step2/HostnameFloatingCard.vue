@@ -78,7 +78,7 @@
           </div>
 
           <!-- DNS服务器信息 -->
-          <div class="info-item" v-if="hostInfo.osInfo && hostInfo.osInfo.dnsServers && hostInfo.osInfo.dnsServers.length > 0">
+          <div class="info-item" v-if="hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.servers && hostInfo.osInfo.dnsInfo.servers.length > 0">
             <div class="info-icon dns">
               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -90,7 +90,7 @@
               </div>
               <div class="info-data">
                 <div class="dns-servers">
-                  <div v-for="(dns, index) in formatDnsServers(hostInfo.osInfo.dnsServers)" :key="index" class="dns-server-item">
+                  <div v-for="(dns, index) in formatDnsServers(hostInfo.osInfo.dnsInfo.servers)" :key="index" class="dns-server-item">
                     <div class="dns-server-badge">
                       <span class="dns-index">{{ index + 1 }}</span>
                       <span class="dns-ip">{{ dns }}</span>
@@ -155,11 +155,11 @@
             </div>
             <div class="section-actions">
               <!-- 编辑按钮，仅在非加载状态且有hosts文件内容时显示 -->
-              <a-tooltip title="编辑hosts文件" v-if="!isLoading('hosts') && hostInfo.hostsFile">
+              <a-tooltip title="编辑hosts文件" v-if="!isLoading('hosts') && hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
                 <a-icon type="edit" @click="startEditingHosts" />
               </a-tooltip>
               <!-- 复制按钮，仅在非加载状态且有hosts文件内容时显示 -->
-              <a-tooltip title="复制hosts文件内容" v-if="!isLoading('hosts') && hostInfo.hostsFile">
+              <a-tooltip title="复制hosts文件内容" v-if="!isLoading('hosts') && hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
                 <a-icon type="copy" @click="copyHostsContent" />
               </a-tooltip>
             </div>
@@ -180,7 +180,7 @@
           </div>
 
           <!-- hosts文件内容，当不在加载中且有hosts文件内容时显示 -->
-          <div class="hosts-file-content" v-else-if="hostInfo.hostsFile">
+          <div class="hosts-file-content" v-else-if="hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
             <div class="search-bar">
               <a-input-search
                 placeholder="搜索hosts内容"
@@ -281,7 +281,7 @@ export default {
       } else if (type === 'dns') {
         // 判断dns服务器是否在加载中
         // 1. 如果没有dns服务器数据，默认认为是加载中，除非明确指定了error状态
-        const isDnsEmpty = !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsServers || this.hostInfo.osInfo.dnsServers.length === 0;
+        const isDnsEmpty = !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.servers || this.hostInfo.osInfo.dnsInfo.servers.length === 0;
         const dnsStatus = this.hostInfo.osInfo && this.hostInfo.osInfo.dnsStatus;
         const hasNonLoadingStatus = dnsStatus && 
                                    !this.checkStatus(dnsStatus, 'loading') && 
@@ -295,16 +295,17 @@ export default {
       } else if (type === 'hosts') {
         // 判断hosts文件是否在加载中
         // 1. 如果没有hosts文件数据，默认认为是加载中，除非明确指定了error状态
-        const isHostsEmpty = this.hostInfo.hostsFile === undefined;
-        const hasNonLoadingStatus = this.hostInfo.hostsStatus && 
-                                   !this.checkStatus(this.hostInfo.hostsStatus, 'loading') && 
-                                   !this.checkStatus(this.hostInfo.hostsStatus, 'pending') && 
-                                   !this.checkStatus(this.hostInfo.hostsStatus, 'collecting');
+        const isHostsEmpty = !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || this.hostInfo.osInfo.dnsInfo.hostsFileContent === undefined;
+        const dnsStatus = this.hostInfo.osInfo && this.hostInfo.osInfo.dnsStatus;
+        const hasNonLoadingStatus = dnsStatus && 
+                                   !this.checkStatus(dnsStatus, 'loading') && 
+                                   !this.checkStatus(dnsStatus, 'pending') && 
+                                   !this.checkStatus(dnsStatus, 'collecting');
         
-        if (isHostsEmpty && !this.checkStatus(this.hostInfo.hostsStatus, 'error') && !hasNonLoadingStatus) {
+        if (isHostsEmpty && !this.checkStatus(dnsStatus, 'error') && !hasNonLoadingStatus) {
           return true;
         }
-        return this.checkStatus(this.hostInfo.hostsStatus, 'loading');
+        return dnsStatus ? this.checkStatus(dnsStatus, 'loading') : true;
       }
       return false;
     },
@@ -360,8 +361,8 @@ export default {
             this.$refs.searchInput.focus();
           }
           // 预处理文本内容用于搜索
-          if (this.hostInfo && this.hostInfo.hostsFile) {
-            this.hostsLines = this.hostInfo.hostsFile.split('\n');
+          if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo && this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+            this.hostsLines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
           }
         });
       } else {
@@ -531,9 +532,9 @@ export default {
     
     // 判断DNS服务器是否活跃 (这里我们假设第一个DNS是活跃的)
     isDnsActive(dns) {
-      if (!this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsServers) return false;
+      if (!this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.servers) return false;
       
-      const dnsServers = this.formatDnsServers(this.hostInfo.osInfo.dnsServers);
+      const dnsServers = this.formatDnsServers(this.hostInfo.osInfo.dnsInfo.servers);
       // 假设第一个是主要DNS服务器
       return dnsServers[0] === dns;
     },
@@ -541,7 +542,7 @@ export default {
     // 打开编辑hosts文件对话框
     editHostsFile() {
       // 设置编辑内容为当前hosts文件内容
-      this.hostsFileContent = this.hostInfo.hostsFile || '';
+      this.hostsFileContent = this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo ? this.hostInfo.osInfo.dnsInfo.hostsFileContent : '';
       // 切换到编辑模式
       this.isEditingHosts = true;
       console.log('进入hosts文件编辑模式');
@@ -577,7 +578,7 @@ export default {
           if (res.code === 200) {
             this.$message.success('Hosts文件修改成功');
             // 更新本地数据
-            this.hostInfo.hostsFile = this.hostsFileContent;
+            this.hostInfo.osInfo.dnsInfo.hostsFileContent = this.hostsFileContent;
             // 退出编辑模式
             this.isEditingHosts = false;
           } else {
@@ -600,14 +601,14 @@ export default {
     
     // 复制hosts文件内容
     copyHostsFile() {
-      if (!this.hostInfo.hostsFile) {
+      if (!this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
         this.$message.warning('没有可复制的Hosts文件内容');
         return;
       }
       
       // 创建临时文本区域元素
       const textarea = document.createElement('textarea');
-      textarea.value = this.hostInfo.hostsFile;
+      textarea.value = this.hostInfo.osInfo.dnsInfo.hostsFileContent;
       document.body.appendChild(textarea);
       textarea.select();
       
@@ -656,12 +657,12 @@ export default {
     
     // 搜索hosts文件内容
     searchHosts() {
-      if (!this.hostsSearchKeyword || !this.hostInfo.hostsFile) {
-        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.hostsFile);
+      if (!this.hostsSearchKeyword || !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.osInfo.dnsInfo.hostsFileContent);
         return;
       }
       
-      const lines = this.hostInfo.hostsFile.split('\n');
+      const lines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
       const filteredLines = lines.filter(line => line.toLowerCase().includes(this.hostsSearchKeyword.toLowerCase()));
       const highlightedLines = filteredLines.map(line => {
         const regex = new RegExp(this.escapeRegExp(this.hostsSearchKeyword), 'gi');

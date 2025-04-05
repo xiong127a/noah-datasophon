@@ -130,7 +130,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 HostInfo hostInfo = hostInfoMap.get(clusterHostDO.getHostname());
                 if (hostInfo != null) {
                     // 设置hosts文件内容
-                    queryHostListPageDTO.setHostsFile(hostInfo.getHostsFile());
+                    if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDnsInfo() != null) {
+                        queryHostListPageDTO.setHostsFile(hostInfo.getOsInfo().getDnsInfo().getHostsFileContent());
+                    } else {
+                        queryHostListPageDTO.setHostsFile(null);
+                    }
 
                     // 设置操作系统类型
                     if (hostInfo.getOsInfo() != null) {

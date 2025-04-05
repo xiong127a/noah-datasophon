@@ -135,11 +135,6 @@ public class HostInfo implements Serializable {
     private CheckItem.Status status;
 
     /**
-     * hosts文件内容
-     */
-    private String hostsFile;
-
-    /**
      * 状态缓存是否失效 - 不序列化此字段
      */
     private transient boolean statusCacheDirty = true;
@@ -490,32 +485,6 @@ public class HostInfo implements Serializable {
             // 如果osInfo不存在，创建新的OsInfo对象
             osInfo = new OsInfo();
             osInfo.setDnsStatus(status);
-        }
-    }
-
-    /**
-     * 获取Hosts文件状态
-     */
-    public OsInfoStatusEnum getHostsFileStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getHostsFileStatus() != null) {
-            return osInfo.getHostsFileStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置Hosts文件状态
-     */
-    public void setHostsFileStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setHostsFileStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setHostsFileStatus(status);
         }
     }
 

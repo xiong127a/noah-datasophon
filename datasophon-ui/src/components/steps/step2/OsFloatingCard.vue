@@ -145,17 +145,25 @@
                 获取内存信息失败
               </div>
               <div class="hardware-info" v-else>
-                <template v-if="osInfo && osInfo.memoryInfo && osInfo.memoryInfo.totalMemory">
+                <template v-if="osInfo && osInfo.memoryInfo">
                   <div class="info-primary">
-                    {{ formatMemorySize(osInfo.memoryInfo.totalMemory) }} 内存
+                    {{ osInfo.memoryInfo.totalMemoryGB }} GB
+                    <span v-if="osInfo.memoryInfo.memoryType" class="memory-type">
+                      {{ osInfo.memoryInfo.memoryType }}
+                    </span>
                   </div>
                   <div class="info-secondary">
-                    已用 {{ formatMemorySize(osInfo.memoryInfo.usedMemory) }}，可用 {{ formatMemorySize(osInfo.memoryInfo.availableMemory) }}
+                    <span v-if="osInfo.memoryInfo.frequency" class="memory-frequency">
+                      {{ osInfo.memoryInfo.frequency }} MHz
+                    </span>
+                    <span class="memory-usage">
+                      已用: {{ osInfo.memoryInfo.usedMemoryGB }} GB ({{ calculateMemoryUsagePercent() }}%)
+                    </span>
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateMemoryUsagePercent() }}%</span>
-                      <span>{{ formatMemorySize(osInfo.memoryInfo.usedMemory) }}/{{ formatMemorySize(osInfo.memoryInfo.totalMemory) }}</span>
+                      <span>{{ osInfo.memoryInfo.usedMemoryGB }}/{{ osInfo.memoryInfo.totalMemoryGB }} GB</span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -273,7 +281,7 @@
                 <template v-if="hasValidGpuInfo">
                   <div class="info-primary">{{ getGpuDisplayInfo() }}</div>
                   <div class="info-secondary" v-if="hasGpuMemory">
-                    {{ getGpuMemorySize() }} GB 显存
+                    {{ getFormattedGpuMemory() }}
                   </div>
                 </template>
                 <div class="info-empty" v-else-if="osInfo && osInfo.gpuInfo && osInfo.gpuInfo.vendor === '未检测到'">
@@ -605,21 +613,14 @@ export default {
     calculateMemoryUsagePercent() {
       if (!this.osInfo || !this.osInfo.memoryInfo) return "0.0";
       
-      const memInfo = this.osInfo.memoryInfo;
+      const memoryInfo = this.osInfo.memoryInfo;
       
       // 优先使用后端计算的使用率
-      if (memInfo.usagePercent != null) {
-        return memInfo.usagePercent.toFixed(1);
+      if (memoryInfo.usagePercent != null) {
+        return memoryInfo.usagePercent.toFixed(1);
       }
       
-      const total = memInfo.totalMemory || 0;
-      // 避免除零错误
-      if (total <= 0) return "0.0";
-      
-      const used = memInfo.usedMemory || 0;
-      const usagePercent = 100 * used / total;
-      
-      return usagePercent.toFixed(1);
+      return "0.0";
     },
     calculateDiskUsagePercent() {
       if (!this.osInfo || !this.osInfo.diskInfo) return "0.0";
@@ -853,6 +854,15 @@ export default {
       // 否则转换为GB显示
       const sizeInGB = sizeInMB / 1024;
       return `${sizeInGB.toFixed(2)} GB`;
+    },
+    getFormattedGpuMemory() {
+      if (!this.hasGpuMemory) return "";
+      // 优先使用格式化好的显存信息
+      if (this.osInfo.gpuInfo.formattedMemory) {
+        return this.osInfo.gpuInfo.formattedMemory;
+      }
+      // 回退到自己格式化
+      return this.osInfo.gpuInfo.totalMemory.toFixed(1) + " GB 显存";
     }
   }
 };

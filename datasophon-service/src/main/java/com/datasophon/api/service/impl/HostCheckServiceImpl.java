@@ -16,6 +16,8 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
+import com.datasophon.common.model.OsInfo;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.Result;
 import org.apache.sshd.client.session.ClientSession;
@@ -2279,8 +2281,20 @@ public class HostCheckServiceImpl implements HostCheckService {
                 String result = MinaUtils.execCmdWithResult(session, updateCommand);
                 logger.info("执行命令结果: {}", result);
 
-                // 更新主机信息中的hosts文件内容
-                hostInfo.setHostsFile(hostsFileContent);
+                // 更新主机信息中的hosts文件内容，使用DnsInfo对象
+                if (hostInfo.getOsInfo() == null) {
+                    hostInfo.setOsInfo(new OsInfo());
+                }
+
+                if (hostInfo.getOsInfo().getDnsInfo() == null) {
+                    hostInfo.getOsInfo().setDnsInfo(new com.datasophon.common.model.hardware.DnsInfo());
+                }
+
+                // 设置hosts文件内容到DnsInfo对象
+                hostInfo.getOsInfo().getDnsInfo().setHostsFileContent(hostsFileContent);
+
+                // 设置DNS状态为成功
+                hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.SUCCESS);
 
                 // 更新主机信息缓存
                 updateHostInfoCache(clusterId, hostInfo);

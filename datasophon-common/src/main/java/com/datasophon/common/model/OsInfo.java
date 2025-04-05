@@ -9,15 +9,14 @@ import com.datasophon.common.model.hardware.GpuInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * 操作系统信息类
@@ -57,16 +56,6 @@ public class OsInfo implements Serializable {
      * 主机完全限定域名(FQDN)
      */
     private String fqdn;
-
-    /**
-     * DNS服务器列表
-     */
-    private List<String> dnsServers;
-
-    /**
-     * hosts文件内容
-     */
-    private String hostsFile;
 
     /**
      * CPU信息
@@ -122,11 +111,6 @@ public class OsInfo implements Serializable {
      * DNS服务器信息收集状态
      */
     private OsInfoStatusEnum dnsStatus;
-
-    /**
-     * hosts文件收集状态
-     */
-    private OsInfoStatusEnum hostsFileStatus;
 
     /**
      * CPU信息收集状态
@@ -244,6 +228,17 @@ public class OsInfo implements Serializable {
     }
 
     /**
+     * 设置DNS服务器状态
+     */
+    public void setDnsStatus(OsInfoStatusEnum status) {
+        this.dnsStatus = status;
+        if (dnsInfo == null) {
+            dnsInfo = new DnsInfo();
+        }
+        dnsInfo.setStatus(status);
+    }
+
+    /**
      * 更新操作系统发行版
      * 根据当前设置的distribution和version确定具体发行版
      */
@@ -307,17 +302,6 @@ public class OsInfo implements Serializable {
      */
     public boolean is(OsDistribution distro) {
         return this.osDistribution == distro;
-    }
-
-    /**
-     * 设置DNS服务器状态
-     */
-    public void setDnsStatus(OsInfoStatusEnum status) {
-        this.dnsStatus = status;
-        if (dnsInfo == null) {
-            dnsInfo = new DnsInfo();
-        }
-        dnsInfo.setStatus(status);
     }
 
     /**

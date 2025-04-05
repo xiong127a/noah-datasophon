@@ -1270,7 +1270,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
                 if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setHostsFileStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.ERROR);
                 }
                 hostInfo.setMessage("无法建立SSH连接");
                 updateHostInfoCache(hostInfo);
@@ -1286,7 +1286,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         } catch (Exception e) {
             logger.error("收集hosts文件信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
             if (hostInfo.getOsInfo() != null) {
-                hostInfo.getOsInfo().setHostsFileStatus(OsInfoStatusEnum.ERROR);
+                hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.ERROR);
             }
             hostInfo.setMessage("hosts文件信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);

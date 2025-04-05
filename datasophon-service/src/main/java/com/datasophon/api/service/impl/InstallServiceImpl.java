@@ -225,11 +225,6 @@ public class InstallServiceImpl implements InstallService {
      * @param hostInfo 主机信息对象
      */
     private void processHostInfo(HostInfo hostInfo) {
-        // 确保hostsFile信息可用于前端
-        if (hostInfo.getHostsFile() == null) {
-            hostInfo.setHostsFile(""); // 避免前端收到null
-        }
-
         // 确保错误信息字段不为null
         if (hostInfo.getSshErrorMsg() == null) {
             hostInfo.setSshErrorMsg("");
