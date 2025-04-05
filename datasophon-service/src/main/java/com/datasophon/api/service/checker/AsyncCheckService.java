@@ -122,6 +122,9 @@ public class AsyncCheckService {
     private final Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
     private final Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
 
+    @Autowired
+    private com.datasophon.api.service.checker.common.SshConnectionPoolManager sshConnectionPoolManager;
+
     @PostConstruct
     public void init() {
         logger.info("初始化异步检查服务...");
@@ -1912,8 +1915,32 @@ public class AsyncCheckService {
                             throw new Exception("无法创建SSH连接");
                         }
 
+                        // 检查系统是否有sudo命令
+                        com.datasophon.api.service.checker.common.CommandResult checkSudoResult = execCommand(session,
+                                "which sudo || echo 'nosudo'");
+                        boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
+
+                        // 根据是否有sudo命令，选择使用适当的设置主机名命令
+                        String actualCommand;
+                        if (hasSudo) {
+                            // 系统有sudo命令，使用原来的命令
+                            actualCommand = command;
+                        } else {
+                            // 系统没有sudo命令，直接设置主机名
+                            logger.info("主机 {} 没有sudo命令，使用普通用户权限设置主机名", ip);
+                            if (command.contains("hostnamectl")) {
+                                actualCommand = command.replace("sudo hostnamectl", "hostnamectl");
+                            } else if (command.contains("hostname")) {
+                                actualCommand = command.replace("sudo hostname", "hostname").replace("sudo echo",
+                                        "echo");
+                            } else {
+                                actualCommand = command.replace("sudo ", "");
+                            }
+                        }
+
                         // 执行命令
-                        com.datasophon.api.service.checker.common.CommandResult result = execCommand(session, command);
+                        com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
+                                actualCommand);
 
                         if (!result.isSuccess()) {
                             throw new Exception("设置主机名失败: " + result.getError());
@@ -2006,5 +2033,155 @@ public class AsyncCheckService {
                 return null;
             }
         }, checkExecutor);
+    }
+
+    /**
+     * 执行检查项
+     * 
+     * @param clusterId 集群ID
+     * @param hostInfo  主机信息
+     * @param checkItem 检查项信息
+     * @return 检查结果
+     */
+    public CheckItem executeCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
+        logger.info("开始执行检查项: {} for {}", checkItem.getItemName(), hostInfo.getIp());
+
+        // 检查是否已经在使用会话，否则创建新会话
+        ClientSession session = null;
+        boolean shouldCloseSession = false;
+
+        try {
+            if (hostInfo.isUseExistingSession() && hostInfo.getExternalSession() != null) {
+                // 使用外部提供的会话
+                session = hostInfo.getExternalSession();
+                logger.debug("使用外部提供的会话");
+            } else {
+                // 从连接池获取连接
+                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+                shouldCloseSession = false; // 不关闭从连接池获取的连接
+
+                if (session == null) {
+                    checkItem.setStatus(CheckItem.Status.FAILED);
+                    checkItem.setMessage("无法建立SSH连接");
+                    return checkItem;
+                }
+            }
+
+            // 如果还未拿到会话，报告连接失败
+            if (session == null) {
+                logger.error("获取会话失败");
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("无法建立SSH连接");
+                return checkItem;
+            }
+
+            // 获取对应的检查器
+            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
+
+            if (checker == null) {
+                logger.error("未找到对应的检查器: {}", checkItem.getItemCode());
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage("未找到对应的检查器: " + checkItem.getItemCode());
+                return checkItem;
+            }
+
+            // 执行具体检查
+            return checker.check(clusterId, hostInfo, checkItem);
+
+        } catch (Exception e) {
+            logger.error("执行检查项时出错: {}", e.getMessage(), e);
+            checkItem.setStatus(CheckItem.Status.FAILED);
+            checkItem.setMessage("执行检查时发生错误: " + e.getMessage());
+            return checkItem;
+        } finally {
+            // 如果是我们自己创建的会话，并且需要关闭，则关闭它
+            // 连接池中的连接不关闭，而是放回池中
+            if (shouldCloseSession && session != null && !hostInfo.isUseExistingSession()) {
+                try {
+                    session.close();
+                } catch (Exception e) {
+                    logger.warn("关闭SSH会话时出错", e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 执行修复项
+     * 
+     * @param clusterId 集群ID
+     * @param hostInfo  主机信息
+     * @param fixItem   修复项信息
+     * @return 修复结果
+     */
+    public CheckItem executeFix(Integer clusterId, HostInfo hostInfo, CheckItem fixItem) {
+        logger.info("开始执行修复项: {} for {}", fixItem.getItemName(), hostInfo.getIp());
+
+        // 检查是否已经在使用会话，否则创建新会话
+        ClientSession session = null;
+        boolean shouldCloseSession = false;
+
+        try {
+            if (hostInfo.isUseExistingSession() && hostInfo.getExternalSession() != null) {
+                // 使用外部提供的会话
+                session = hostInfo.getExternalSession();
+                logger.debug("使用外部提供的会话");
+            } else {
+                // 从连接池获取连接
+                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+                shouldCloseSession = false; // 不关闭从连接池获取的连接
+
+                if (session == null) {
+                    fixItem.setStatus(CheckItem.Status.FAILED);
+                    fixItem.setMessage("无法建立SSH连接");
+                    return fixItem;
+                }
+            }
+
+            // 如果还未拿到会话，报告连接失败
+            if (session == null) {
+                logger.error("获取会话失败");
+                fixItem.setStatus(CheckItem.Status.FAILED);
+                fixItem.setMessage("无法建立SSH连接");
+                return fixItem;
+            }
+
+            // 获取对应的检查器
+            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(fixItem.getItemCode()));
+
+            if (checker == null) {
+                logger.error("未找到对应的检查器: {}", fixItem.getItemCode());
+                fixItem.setStatus(CheckItem.Status.FAILED);
+                fixItem.setMessage("未找到对应的检查器: " + fixItem.getItemCode());
+                return fixItem;
+            }
+
+            // 执行具体修复
+            boolean fixResult = checker.fix(clusterId, hostInfo, fixItem);
+            if (fixResult) {
+                fixItem.setStatus(CheckItem.Status.SUCCESS);
+                fixItem.setMessage("修复成功");
+            } else {
+                fixItem.setStatus(CheckItem.Status.FAILED);
+                fixItem.setMessage("修复失败");
+            }
+            return fixItem;
+
+        } catch (Exception e) {
+            logger.error("执行修复项时出错: {}", e.getMessage(), e);
+            fixItem.setStatus(CheckItem.Status.FAILED);
+            fixItem.setMessage("执行修复时发生错误: " + e.getMessage());
+            return fixItem;
+        } finally {
+            // 如果是我们自己创建的会话，并且需要关闭，则关闭它
+            // 连接池中的连接不关闭，而是放回池中
+            if (shouldCloseSession && session != null && !hostInfo.isUseExistingSession()) {
+                try {
+                    session.close();
+                } catch (Exception e) {
+                    logger.warn("关闭SSH会话时出错", e);
+                }
+            }
+        }
     }
 }

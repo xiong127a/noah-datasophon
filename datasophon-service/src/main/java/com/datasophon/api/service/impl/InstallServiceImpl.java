@@ -26,6 +26,8 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
@@ -59,6 +61,7 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.dao.mapper.InstallStepMapper;
+import com.datasophon.api.service.checker.common.CommandResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -777,7 +780,7 @@ public class InstallServiceImpl implements InstallService {
             }
 
             // 连接成功，执行测试命令
-            MinaUtils.CommandResult connectionTestResult = MinaUtils.execCmdWithResultObject(session,
+            CommandResult connectionTestResult = MinaUtils.execCmdWithResultObject(session,
                     "echo connection_test");
             String result = connectionTestResult.isSuccess() ? connectionTestResult.getOutput()
                     : "EXIT_CODE_" + connectionTestResult.getExitCode() + ": " + connectionTestResult.getError();
@@ -1444,7 +1447,7 @@ public class InstallServiceImpl implements InstallService {
         List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(clusterHostIdList);
         for (ClusterHostDO clusterHostDO : clusterHostList) {
             ClientSession session = MinaUtils.openConnection(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
-            MinaUtils.CommandResult serviceResult = MinaUtils.execCmdWithResultObject(session,
+            CommandResult serviceResult = MinaUtils.execCmdWithResultObject(session,
                     "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);
             if (ObjectUtil.isNotEmpty(session)) {

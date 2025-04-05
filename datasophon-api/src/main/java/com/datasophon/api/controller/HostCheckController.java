@@ -2,7 +2,7 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.security.UserPermission;
 import com.datasophon.api.service.HostCheckService;
-import com.datasophon.api.service.checker.queue.QueueManagerService;
+import com.datasophon.api.service.checker.queue.QueueManagerServiceImpl;
 import com.datasophon.api.service.checker.AsyncCheckService;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.common.model.ScheduledTasksStatus;
@@ -22,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +40,7 @@ public class HostCheckController {
     private HostCheckService hostCheckService;
 
     @Autowired
-    private QueueManagerService queueManagerService;
+    private QueueManagerServiceImpl queueManagerService;
 
     @Autowired
     private HostCheckQueueManager hostCheckQueueManager;

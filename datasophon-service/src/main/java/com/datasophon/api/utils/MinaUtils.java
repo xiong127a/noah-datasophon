@@ -1,7 +1,7 @@
 package com.datasophon.api.utils;
 
+import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.HostInfo;
-import lombok.Getter;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelExec;
 import org.apache.sshd.client.channel.ClientChannelEvent;
@@ -141,91 +141,6 @@ public class MinaUtils {
     }
 
     /**
-     * 命令执行结果类
-     * 包含命令执行的状态码、输出信息和错误信息
-     */
-    @Getter
-    public static class CommandResult {
-        /** 命令内容 */
-        private final String command;
-
-        /** 命令执行的退出码 */
-        private final int exitCode;
-
-        /** 命令的标准输出内容 */
-        private final String output;
-
-        /** 命令的错误输出内容 */
-        private final String error;
-
-        /** 命令是否执行成功 */
-        private final boolean success;
-
-        /**
-         * 构造命令执行结果
-         * 
-         * @param command  执行的命令
-         * @param exitCode 退出码
-         * @param output   标准输出
-         * @param error    错误输出
-         */
-        public CommandResult(String command, int exitCode, String output, String error) {
-            this.command = command;
-            this.exitCode = exitCode;
-            this.output = output;
-            this.error = error;
-            this.success = exitCode == 0;
-        }
-
-        /**
-         * 创建成功的命令结果
-         */
-        public static CommandResult success(String command, String output) {
-            return new CommandResult(command, 0, output, "");
-        }
-
-        /**
-         * 创建失败的命令结果
-         */
-        public static CommandResult failed(String command, int exitCode, String error) {
-            return new CommandResult(command, exitCode, "", error);
-        }
-
-        /**
-         * 创建异常的命令结果
-         */
-        public static CommandResult exception(String command, String errorMessage) {
-            return new CommandResult(command, -1, "", errorMessage);
-        }
-
-        /**
-         * 获取兼容的旧格式输出
-         * 如果成功则返回output，如果失败则返回带EXIT_CODE前缀的错误信息
-         */
-        public String getLegacyOutput() {
-            if (success) {
-                return output;
-            } else {
-                return "EXIT_CODE_" + exitCode + ": " + (error.isEmpty() ? "执行错误" : error);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return "CommandResult{" +
-                    "command='" + command + '\'' +
-                    ", exitCode=" + exitCode +
-                    ", success=" + success +
-                    ", output='"
-                    + (output != null ? (output.length() > 50 ? output.substring(0, 50) + "..." : output) : "null")
-                    + '\'' +
-                    ", error='"
-                    + (error != null ? (error.length() > 50 ? error.substring(0, 50) + "..." : error) : "null") + '\'' +
-                    '}';
-        }
-    }
-
-    /**
      * 同步执行,需要获取执行完的结果
      *
      * @param session 连接
@@ -235,7 +150,7 @@ public class MinaUtils {
     public static CommandResult execCmdWithResultObject(ClientSession session, String command) {
         if (session == null) {
             LOG.error("SSH会话为空，无法执行命令: {}", command);
-            return CommandResult.exception(command, "SSH会话为空");
+            return new CommandResult(command, -1, "", "SSH会话为空");
         }
 
         session.resetAuthTimeout();
@@ -257,7 +172,7 @@ public class MinaUtils {
 
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
                 LOG.error("命令执行超时: {}", command);
-                return CommandResult.failed(command, 124, "命令执行超时");
+                return new CommandResult(command, 124, "", "命令执行超时");
             }
 
             int exitStatus = ce.getExitStatus();
@@ -287,10 +202,68 @@ public class MinaUtils {
             }
 
             LOG.info("命令执行结果: {}", outResult);
-            return CommandResult.success(command, outResult);
+            return new CommandResult(command, 0, outResult, "");
         } catch (IOException e) {
             LOG.error("执行命令异常: {} - {}", command, e.getMessage());
-            return CommandResult.exception(command, e.getMessage());
+            return new CommandResult(command, -1, "", e.getMessage());
+        } finally {
+            try {
+                if (ce != null) {
+                    ce.close();
+                }
+            } catch (IOException e) {
+                LOG.error("关闭命令通道异常", e);
+            }
+        }
+    }
+
+    /**
+     * 同步执行命令，超时时间自定义
+     */
+    public static CommandResult execCmdWithResultObject(ClientSession session, String command, long timeoutSeconds) {
+        if (session == null) {
+            LOG.error("SSH会话为空，无法执行命令: {}", command);
+            return new CommandResult(command, -1, "", "SSH会话为空");
+        }
+
+        session.resetAuthTimeout();
+        LOG.info("执行命令(超时{}秒): {}", timeoutSeconds, command);
+        // 命令返回的结果
+        ChannelExec ce = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        try {
+            ce = session.createExecChannel(command);
+            ce.setOut(out);
+            ce.setErr(err);
+            // 打开通道并执行命令
+            ce.open();
+
+            // 等待命令执行完成或超时
+            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
+                    TimeUnit.SECONDS.toMillis(timeoutSeconds));
+
+            if (events.contains(ClientChannelEvent.TIMEOUT)) {
+                LOG.error("命令执行超时: {}", command);
+                return new CommandResult(command, 124, "", "命令执行超时");
+            }
+
+            int exitStatus = ce.getExitStatus();
+            LOG.info("命令退出状态: {}", exitStatus);
+
+            String outResult = out.toString();
+            String errResult = err.toString();
+
+            if (exitStatus != 0) {
+                LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
+                return new CommandResult(command, exitStatus, outResult, errResult);
+            }
+
+            LOG.info("命令执行结果: {}", outResult);
+            return new CommandResult(command, 0, outResult, "");
+        } catch (IOException e) {
+            LOG.error("执行命令异常: {} - {}", command, e.getMessage());
+            return new CommandResult(command, -1, "", e.getMessage());
         } finally {
             try {
                 if (ce != null) {
@@ -1188,7 +1161,7 @@ public class MinaUtils {
     public static CommandResult execCmdWithResultObject(ClientSession session, String command, int timeoutSeconds) {
         if (session == null) {
             LOG.error("SSH会话为空，无法执行命令: {}", command);
-            return CommandResult.exception(command, "SSH会话为空");
+            return new CommandResult(command, -1, "", "SSH会话为空");
         }
 
         session.resetAuthTimeout();
@@ -1210,7 +1183,7 @@ public class MinaUtils {
 
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
                 LOG.error("命令执行超时: {}, 超时时间: {}秒", command, timeoutSeconds);
-                return CommandResult.failed(command, 124, "命令执行超时");
+                return new CommandResult(command, 124, "", "命令执行超时");
             }
 
             int exitStatus = ce.getExitStatus();
@@ -1221,14 +1194,14 @@ public class MinaUtils {
 
             if (exitStatus == 0) {
                 // 成功执行
-                return CommandResult.success(command, outResult);
+                return new CommandResult(command, 0, outResult, "");
             } else {
                 // 执行失败
-                return CommandResult.failed(command, exitStatus, errResult.isEmpty() ? outResult : errResult);
+                return new CommandResult(command, exitStatus, outResult, errResult);
             }
         } catch (Exception e) {
             LOG.error("执行命令时出错: {}, 错误: {}", command, e.getMessage());
-            return CommandResult.exception(command, e.getMessage());
+            return new CommandResult(command, -1, "", e.getMessage());
         } finally {
             if (ce != null && ce.isOpen()) {
                 try {

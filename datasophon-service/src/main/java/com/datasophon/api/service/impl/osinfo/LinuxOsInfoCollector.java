@@ -1,36 +1,32 @@
 package com.datasophon.api.service.impl.osinfo;
 
+import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.api.utils.MinaUtils.CommandResult;
-import com.datasophon.common.Constants;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.DiskInfo;
+import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.model.hardware.GpuInfo;
-import com.datasophon.common.model.hardware.HardwareInfo;
 import com.datasophon.common.model.hardware.InterfaceInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
-import com.datasophon.common.model.hardware.DnsInfo;
-import com.datasophon.common.utils.DateUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.text.DecimalFormat;
 
 /**
  * Linux系统信息收集器
