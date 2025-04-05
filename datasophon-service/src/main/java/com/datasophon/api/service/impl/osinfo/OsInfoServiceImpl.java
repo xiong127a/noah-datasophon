@@ -2242,6 +2242,8 @@ public class OsInfoServiceImpl implements OsInfoService {
             session = getOrCreateSession(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                updateHostInfoCache(hostInfo);
                 return;
             }
 
@@ -2249,16 +2251,48 @@ public class OsInfoServiceImpl implements OsInfoService {
             hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
             updateHostInfoCache(hostInfo);
 
-            // 收集主机名
+            // 收集主机名 - 先尝试hostname -f
             String hostname = MinaUtils.execCmdWithResult(session, "hostname -f");
-            if (StringUtils.isNotBlank(hostname)) {
+
+            // 检查执行结果是否包含退出码前缀
+            if (hostname != null && hostname.startsWith("EXIT_CODE_")) {
+                logger.warn("获取主机全名失败: {}，尝试获取短主机名", hostname);
+
+                // 尝试仅获取短主机名
+                hostname = MinaUtils.execCmdWithResult(session, "hostname");
+
+                // 如果短主机名也失败，记录错误并设置状态
+                if (hostname != null && hostname.startsWith("EXIT_CODE_")) {
+                    logger.error("获取主机名失败: {}", hostname);
+                    hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                    // 对于Windows系统，可能需要特殊处理
+                    if (hostname.contains("not recognized") || hostname.contains("不是内部或外部命令")) {
+                        // 尝试Windows特定命令
+                        hostname = MinaUtils.execCmdWithResult(session, "cmd /c hostname");
+                        if (hostname != null && !hostname.startsWith("EXIT_CODE_")) {
+                            hostname = hostname.trim();
+                            hostInfo.setHostname(hostname);
+                            hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+                            logger.info("使用Windows命令成功获取主机名: {}", hostname);
+                        } else {
+                            // 使用IP地址作为主机名
+                            hostInfo.setHostname(hostInfo.getIp());
+                            logger.warn("无法获取主机名，使用IP地址[{}]作为主机名", hostInfo.getIp());
+                        }
+                    } else {
+                        // 使用IP地址作为主机名
+                        hostInfo.setHostname(hostInfo.getIp());
+                        logger.warn("无法获取主机名，使用IP地址[{}]作为主机名", hostInfo.getIp());
+                    }
+                }
+            }
+
+            // 如果获取到了有效的主机名
+            if (hostname != null && !hostname.startsWith("EXIT_CODE_")) {
                 hostname = hostname.trim();
                 hostInfo.setHostname(hostname);
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
                 logger.info("主机[{}]主机名收集成功: {}", hostInfo.getIp(), hostname);
-            } else {
-                logger.warn("主机[{}]主机名收集失败", hostInfo.getIp());
-                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
             }
 
             // 更新缓存
@@ -2266,6 +2300,9 @@ public class OsInfoServiceImpl implements OsInfoService {
         } catch (Exception e) {
             logger.error("收集主机[{}]主机名时发生异常: {}", hostInfo.getIp(), e.getMessage());
             hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+            // 使用IP地址作为主机名
+            hostInfo.setHostname(hostInfo.getIp());
+            logger.warn("发生异常，使用IP地址[{}]作为主机名", hostInfo.getIp());
             updateHostInfoCache(hostInfo);
         } finally {
             // 不关闭会话，留给其他方法使用
@@ -2354,6 +2391,10 @@ public class OsInfoServiceImpl implements OsInfoService {
             session = getOrCreateSession(hostInfo);
             if (session == null) {
                 logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                if (hostInfo.getOsInfo() != null) {
+                    hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.ERROR);
+                    updateHostInfoCache(hostInfo);
+                }
                 return;
             }
 
@@ -2364,35 +2405,21 @@ public class OsInfoServiceImpl implements OsInfoService {
                 hostInfo.setOsInfo(osInfo);
             }
 
-            // 获取DNS配置
-            String dnsConfig = MinaUtils.execCmdWithResult(session, "cat /etc/resolv.conf");
-            if (StringUtils.isNotBlank(dnsConfig)) {
-                // 解析DNS配置
-                List<String> dnsServerList = new ArrayList<>();
-                String[] lines = dnsConfig.split("\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (line.startsWith("nameserver")) {
-                        String dnsServer = line.substring("nameserver".length()).trim();
-                        if (StringUtils.isNotBlank(dnsServer)) {
-                            dnsServerList.add(dnsServer);
-                        }
-                    }
-                }
+            // 设置状态为收集中
+            osInfo.setDnsStatus(OsInfoStatusEnum.LOADING);
 
-                // 设置DNS服务器列表
-                if (!dnsServerList.isEmpty()) {
-                    osInfo.setDnsServers(dnsServerList);
-                    logger.info("主机[{}]DNS配置收集成功，发现{}个DNS服务器", hostInfo.getIp(), dnsServerList.size());
-                } else {
-                    logger.warn("主机[{}]未找到DNS服务器配置", hostInfo.getIp());
-                }
+            // 检测操作系统类型
+            String osType = osInfo.getOsType();
+            if (osType == null) {
+                osType = detectOperatingSystemType(session);
+                osInfo.setOsType(osType);
+            }
 
-                // 设置DNS状态
-                osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+            // 根据不同操作系统类型使用不同的收集方法
+            if ("windows".equalsIgnoreCase(osType)) {
+                collectWindowsDnsInfo(session, osInfo, hostInfo.getIp());
             } else {
-                logger.warn("主机[{}]DNS配置收集失败", hostInfo.getIp());
-                osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                collectLinuxDnsInfo(session, osInfo, hostInfo.getIp());
             }
 
             // 更新缓存
@@ -2407,6 +2434,196 @@ public class OsInfoServiceImpl implements OsInfoService {
         } finally {
             // 不关闭会话，留给其他方法使用
         }
+    }
+
+    /**
+     * 收集Windows系统的DNS信息
+     */
+    private void collectWindowsDnsInfo(ClientSession session, OsInfo osInfo, String ip) {
+        try {
+            // 执行Windows命令获取DNS信息
+            MinaUtils.CommandResult dnsInfoResult = MinaUtils.execCmdWithResultObject(session,
+                    "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses | Where-Object {$_ -notmatch '^::' -and $_ -notmatch '^fe80'} | Select-Object -Unique\"");
+
+            if (dnsInfoResult.isSuccess()) {
+                String dnsInfo = dnsInfoResult.getOutput();
+                // 解析DNS信息
+                List<String> dnsServerList = new ArrayList<>();
+                String[] lines = dnsInfo.split("\r?\n");
+                for (String line : lines) {
+                    line = line.trim();
+                    if (!line.isEmpty() && !line.startsWith("::") && !line.startsWith("fe80")) {
+                        dnsServerList.add(line);
+                    }
+                }
+
+                // 设置DNS服务器列表
+                if (!dnsServerList.isEmpty()) {
+                    osInfo.setDnsServers(dnsServerList);
+                    logger.info("主机[{}]Windows DNS配置收集成功，发现{}个DNS服务器", ip, dnsServerList.size());
+                    osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+                } else {
+                    // 尝试备用方法
+                    MinaUtils.CommandResult ipconfigResult = MinaUtils.execCmdWithResultObject(session,
+                            "powershell -command \"ipconfig /all | Select-String 'DNS Servers'\"");
+
+                    if (ipconfigResult.isSuccess()) {
+                        dnsServerList = parseDnsFromIpconfig(ipconfigResult.getOutput());
+                        if (!dnsServerList.isEmpty()) {
+                            osInfo.setDnsServers(dnsServerList);
+                            logger.info("主机[{}]Windows DNS配置(备用方法)收集成功，发现{}个DNS服务器", ip, dnsServerList.size());
+                            osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+                        } else {
+                            logger.warn("主机[{}]Windows未找到DNS服务器配置", ip);
+                            osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                        }
+                    } else {
+                        logger.warn("主机[{}]Windows DNS配置收集失败: {}", ip, ipconfigResult.getError());
+                        osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                    }
+                }
+            } else {
+                logger.warn("主机[{}]Windows DNS配置收集失败: {}", ip, dnsInfoResult.getError());
+                osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+            }
+        } catch (Exception e) {
+            logger.error("收集Windows DNS配置时发生异常: {}", e.getMessage());
+            osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+        }
+    }
+
+    /**
+     * 收集Linux系统的DNS信息
+     */
+    private void collectLinuxDnsInfo(ClientSession session, OsInfo osInfo, String ip) {
+        // 获取DNS配置
+        MinaUtils.CommandResult dnsConfigResult = MinaUtils.execCmdWithResultObject(session, "cat /etc/resolv.conf");
+
+        if (dnsConfigResult.isSuccess()) {
+            String dnsConfig = dnsConfigResult.getOutput();
+            // 解析DNS配置
+            List<String> dnsServerList = new ArrayList<>();
+            String[] lines = dnsConfig.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (line.startsWith("nameserver")) {
+                    String dnsServer = line.substring("nameserver".length()).trim();
+                    if (StringUtils.isNotBlank(dnsServer)) {
+                        dnsServerList.add(dnsServer);
+                    }
+                }
+            }
+
+            // 设置DNS服务器列表
+            if (!dnsServerList.isEmpty()) {
+                osInfo.setDnsServers(dnsServerList);
+                logger.info("主机[{}]DNS配置收集成功，发现{}个DNS服务器", ip, dnsServerList.size());
+                osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+            } else {
+                // 尝试备用方法
+                MinaUtils.CommandResult nmcliResult = MinaUtils.execCmdWithResultObject(session,
+                        "nmcli dev show | grep DNS");
+                if (nmcliResult.isSuccess()) {
+                    dnsServerList = parseDnsFromNmcli(nmcliResult.getOutput());
+                    if (!dnsServerList.isEmpty()) {
+                        osInfo.setDnsServers(dnsServerList);
+                        logger.info("主机[{}]DNS配置(备用方法)收集成功，发现{}个DNS服务器", ip, dnsServerList.size());
+                        osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+                    } else {
+                        logger.warn("主机[{}]未找到DNS服务器配置", ip);
+                        // 设置一个默认的DNS服务器避免前端显示问题
+                        dnsServerList.add("8.8.8.8");
+                        osInfo.setDnsServers(dnsServerList);
+                        osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                    }
+                } else {
+                    logger.warn("主机[{}]未找到DNS服务器配置，使用默认值", ip);
+                    // 设置一个默认的DNS服务器避免前端显示问题
+                    dnsServerList.add("8.8.8.8");
+                    osInfo.setDnsServers(dnsServerList);
+                    osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                }
+            }
+        } else {
+            logger.warn("主机[{}]DNS配置文件读取失败: {}", ip, dnsConfigResult.getError());
+            // 尝试备用方法
+            MinaUtils.CommandResult nmcliResult = MinaUtils.execCmdWithResultObject(session,
+                    "nmcli dev show | grep DNS");
+            if (nmcliResult.isSuccess()) {
+                List<String> dnsServerList = parseDnsFromNmcli(nmcliResult.getOutput());
+                if (!dnsServerList.isEmpty()) {
+                    osInfo.setDnsServers(dnsServerList);
+                    logger.info("主机[{}]DNS配置(备用方法)收集成功，发现{}个DNS服务器", ip, dnsServerList.size());
+                    osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+                } else {
+                    logger.warn("主机[{}]未找到DNS服务器配置，使用默认值", ip);
+                    List<String> defaultDns = new ArrayList<>();
+                    defaultDns.add("8.8.8.8");
+                    osInfo.setDnsServers(defaultDns);
+                    osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+                }
+            } else {
+                logger.warn("主机[{}]DNS配置收集失败，使用默认值", ip);
+                List<String> defaultDns = new ArrayList<>();
+                defaultDns.add("8.8.8.8");
+                osInfo.setDnsServers(defaultDns);
+                osInfo.setDnsStatus(OsInfoStatusEnum.ERROR);
+            }
+        }
+    }
+
+    /**
+     * 从ipconfig输出解析DNS服务器
+     */
+    private List<String> parseDnsFromIpconfig(String ipconfigOutput) {
+        List<String> dnsServers = new ArrayList<>();
+        if (ipconfigOutput == null || ipconfigOutput.isEmpty()) {
+            return dnsServers;
+        }
+
+        // 解析ipconfig输出中的DNS服务器信息
+        String[] lines = ipconfigOutput.split("\r?\n");
+        for (String line : lines) {
+            if (line.contains("DNS Servers") || line.contains("DNS 服务器")) {
+                // 提取冒号后面的部分
+                int colonPos = line.indexOf(':');
+                if (colonPos > 0 && colonPos < line.length() - 1) {
+                    String dnsServer = line.substring(colonPos + 1).trim();
+                    if (!dnsServer.isEmpty() && !dnsServer.equals("::") && !dnsServer.startsWith("fe80")) {
+                        dnsServers.add(dnsServer);
+                    }
+                }
+            }
+        }
+
+        return dnsServers;
+    }
+
+    /**
+     * 从nmcli输出解析DNS服务器
+     */
+    private List<String> parseDnsFromNmcli(String nmcliOutput) {
+        List<String> dnsServers = new ArrayList<>();
+        if (nmcliOutput == null || nmcliOutput.isEmpty()) {
+            return dnsServers;
+        }
+
+        // 解析nmcli输出中的DNS服务器信息
+        String[] lines = nmcliOutput.split("\n");
+        for (String line : lines) {
+            if (line.contains("DNS")) {
+                // 提取冒号后面的部分
+                int colonPos = line.indexOf(':');
+                if (colonPos > 0 && colonPos < line.length() - 1) {
+                    String dnsServer = line.substring(colonPos + 1).trim();
+                    if (!dnsServer.isEmpty() && !dnsServer.equals("::") && !dnsServer.startsWith("fe80")) {
+                        dnsServers.add(dnsServer);
+                    }
+                }
+            }
+        }
+
+        return dnsServers;
     }
 
     /**

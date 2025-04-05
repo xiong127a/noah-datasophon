@@ -2,6 +2,7 @@ package com.datasophon.api.utils;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.HostInfo;
+import lombok.Getter;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelExec;
 import org.apache.sshd.client.channel.ClientChannelEvent;
@@ -141,16 +142,101 @@ public class MinaUtils {
     }
 
     /**
+     * 命令执行结果类
+     * 包含命令执行的状态码、输出信息和错误信息
+     */
+    @Getter
+    public static class CommandResult {
+        /** 命令内容 */
+        private final String command;
+
+        /** 命令执行的退出码 */
+        private final int exitCode;
+
+        /** 命令的标准输出内容 */
+        private final String output;
+
+        /** 命令的错误输出内容 */
+        private final String error;
+
+        /** 命令是否执行成功 */
+        private final boolean success;
+
+        /**
+         * 构造命令执行结果
+         * 
+         * @param command  执行的命令
+         * @param exitCode 退出码
+         * @param output   标准输出
+         * @param error    错误输出
+         */
+        public CommandResult(String command, int exitCode, String output, String error) {
+            this.command = command;
+            this.exitCode = exitCode;
+            this.output = output;
+            this.error = error;
+            this.success = exitCode == 0;
+        }
+
+        /**
+         * 创建成功的命令结果
+         */
+        public static CommandResult success(String command, String output) {
+            return new CommandResult(command, 0, output, "");
+        }
+
+        /**
+         * 创建失败的命令结果
+         */
+        public static CommandResult failed(String command, int exitCode, String error) {
+            return new CommandResult(command, exitCode, "", error);
+        }
+
+        /**
+         * 创建异常的命令结果
+         */
+        public static CommandResult exception(String command, String errorMessage) {
+            return new CommandResult(command, -1, "", errorMessage);
+        }
+
+        /**
+         * 获取兼容的旧格式输出
+         * 如果成功则返回output，如果失败则返回带EXIT_CODE前缀的错误信息
+         */
+        public String getLegacyOutput() {
+            if (success) {
+                return output;
+            } else {
+                return "EXIT_CODE_" + exitCode + ": " + (error.isEmpty() ? "执行错误" : error);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "CommandResult{" +
+                    "command='" + command + '\'' +
+                    ", exitCode=" + exitCode +
+                    ", success=" + success +
+                    ", output='"
+                    + (output != null ? (output.length() > 50 ? output.substring(0, 50) + "..." : output) : "null")
+                    + '\'' +
+                    ", error='"
+                    + (error != null ? (error.length() > 50 ? error.substring(0, 50) + "..." : error) : "null") + '\'' +
+                    '}';
+        }
+    }
+
+    /**
      * 同步执行,需要获取执行完的结果
      *
      * @param session 连接
      * @param command 命令
-     * @return 结果
+     * @return 结果对象，包含退出码、输出和错误信息
      */
-    public static String execCmdWithResult(ClientSession session, String command) {
+    public static CommandResult execCmdWithResultObject(ClientSession session, String command) {
         if (session == null) {
             LOG.error("SSH会话为空，无法执行命令: {}", command);
-            return null;
+            return CommandResult.exception(command, "SSH会话为空");
         }
 
         // 检测并处理Windows命令
@@ -159,7 +245,7 @@ public class MinaUtils {
         }
 
         session.resetAuthTimeout();
-        LOG.info("exe cmd: {}", command);
+        LOG.info("执行命令: {}", command);
         // 命令返回的结果
         ChannelExec ce = null;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -177,11 +263,11 @@ public class MinaUtils {
 
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
                 LOG.error("命令执行超时: {}", command);
-                return "ERROR: Command timed out";
+                return CommandResult.failed(command, 124, "命令执行超时");
             }
 
             int exitStatus = ce.getExitStatus();
-            LOG.info("mina result {}", exitStatus);
+            LOG.info("命令退出状态: {}", exitStatus);
 
             String outResult = out.toString();
             String errResult = err.toString();
@@ -191,28 +277,26 @@ public class MinaUtils {
                 if (command.contains("chkconfig") && exitStatus == 127) {
                     LOG.warn("chkconfig命令不存在，尝试使用systemctl替代...");
                     String serviceName = command.substring(command.lastIndexOf(" ") + 1);
-                    return execCmdWithResult(session, "systemctl enable " + serviceName);
+                    return execCmdWithResultObject(session, "systemctl enable " + serviceName);
                 } else if (command.contains("\\cp") && exitStatus == 1) {
                     LOG.warn("复制文件失败，尝试使用sudo...");
-                    return execCmdWithResult(session, "sudo " + command);
+                    return execCmdWithResultObject(session, "sudo " + command);
                 } else if (command.contains("service") && command.contains("restart")) {
                     LOG.warn("service命令启动服务失败，尝试使用systemctl...");
                     String serviceName = command.substring(command.indexOf("service ") + 8, command.lastIndexOf(" "));
                     LOG.info("尝试使用systemctl重启服务: {}", serviceName);
-                    return execCmdWithResult(session, "systemctl restart " + serviceName);
+                    return execCmdWithResultObject(session, "systemctl restart " + serviceName);
                 }
 
-                if (!errResult.isEmpty()) {
-                    LOG.error("命令执行失败: {} - 错误信息: {}", command, errResult);
-                    return "ERROR: " + errResult;
-                }
+                LOG.error("命令执行失败: {} - 错误信息: {}, 退出码: {}", command, errResult, exitStatus);
+                return new CommandResult(command, exitStatus, outResult, errResult);
             }
 
-            LOG.info("exe cmd return : {}", outResult);
-            return outResult;
+            LOG.info("命令执行结果: {}", outResult);
+            return CommandResult.success(command, outResult);
         } catch (IOException e) {
             LOG.error("执行命令异常: {} - {}", command, e.getMessage());
-            return "ERROR: " + e.getMessage();
+            return CommandResult.exception(command, e.getMessage());
         } finally {
             try {
                 if (ce != null) {
@@ -229,12 +313,12 @@ public class MinaUtils {
      * 
      * @param session SSH会话
      * @param command 要执行的命令
-     * @return 解码后的命令执行结果
+     * @return 命令执行结果对象
      */
-    public static String execWindowsCmdWithResult(ClientSession session, String command) {
+    public static CommandResult execWindowsCmdWithResult(ClientSession session, String command) {
         if (session == null) {
             LOG.error("SSH会话为空，无法执行Windows命令: {}", command);
-            return null;
+            return CommandResult.exception(command, "SSH会话为空");
         }
 
         session.resetAuthTimeout();
@@ -287,7 +371,7 @@ public class MinaUtils {
 
             if (events.contains(ClientChannelEvent.TIMEOUT)) {
                 LOG.error("Windows命令执行超时: {}", command);
-                return "ERROR: Command timed out";
+                return CommandResult.failed(command, 124, "命令执行超时");
             }
 
             int exitStatus = ce.getExitStatus();
@@ -308,10 +392,11 @@ public class MinaUtils {
                     // Windows没有uname命令
                     LOG.warn("Windows不支持uname命令，尝试获取系统信息");
                     if (command.contains("uname -a")) {
-                        return "Windows"; // 简单返回Windows标识
+                        return CommandResult.success(command, "Windows"); // 简单返回Windows标识
                     } else if (command.contains("uname -m") || command.contains("uname -p")) {
                         // 尝试获取CPU架构
-                        return execWindowsCmdWithResult(session, "powershell -command \"$env:PROCESSOR_ARCHITECTURE\"");
+                        return execWindowsCmdWithResult(session,
+                                "powershell -command \"$env:PROCESSOR_ARCHITECTURE\"");
                     }
                 } else if (command.contains("cat /etc")) {
                     // Windows没有cat和/etc目录
@@ -324,12 +409,16 @@ public class MinaUtils {
                         // DNS信息通过其他方式获取
                         LOG.warn("Windows无法读取/etc/resolv.conf，尝试使用PowerShell获取DNS信息");
                         String dnsCmd = "powershell -command \"Get-DnsClientServerAddress | Select-Object ServerAddresses | Format-List\"";
-                        String ipconfig = execWindowsCmdWithResult(session, dnsCmd);
-                        // 简单提取DNS部分（实际应用中可能需要更复杂的解析）
-                        return ipconfig != null ? ipconfig : "8.8.8.8";
+                        CommandResult ipconfig = execWindowsCmdWithResult(session, dnsCmd);
+                        if (ipconfig.isSuccess()) {
+                            return ipconfig;
+                        } else {
+                            // 简单提取DNS部分（实际应用中可能需要更复杂的解析）
+                            return CommandResult.success(command, "8.8.8.8");
+                        }
                     }
                     // 其他/etc文件，返回空值
-                    return "";
+                    return CommandResult.success(command, "");
                 } else if (command.contains("lspci")) {
                     // Windows没有lspci命令
                     LOG.warn("Windows不支持lspci命令，尝试使用其他方式获取GPU信息");
@@ -340,15 +429,10 @@ public class MinaUtils {
                         errResult.contains("command not found")) {
                     // 通用命令不存在处理
                     LOG.warn("Windows命令不存在: {}, 错误: {}", command, errResult);
-                    return "命令不支持";
+                    return CommandResult.failed(command, exitStatus, "命令不支持: " + errResult);
                 }
 
-                LOG.error("Windows命令执行失败: {} - 错误信息: {}", command, errResult);
-                // 确保错误信息不包含乱码
-                if (errResult.trim().isEmpty()) {
-                    return "执行错误: 未知错误";
-                }
-                return "执行错误: " + errResult;
+                return new CommandResult(command, exitStatus, outResult, errResult);
             }
 
             // 检查输出是否为空
@@ -356,17 +440,17 @@ public class MinaUtils {
                 // 如果标准输出为空，尝试使用错误输出
                 if (errResult != null && !errResult.trim().isEmpty()) {
                     LOG.warn("Windows命令标准输出为空，使用错误输出: {}", errResult);
-                    return errResult;
+                    return new CommandResult(command, exitStatus, "", errResult);
                 }
                 LOG.warn("Windows命令无输出");
-                return "";
+                return CommandResult.success(command, "");
             }
 
             LOG.info("Windows命令执行结果: {}", outResult);
-            return outResult;
+            return CommandResult.success(command, outResult);
         } catch (IOException e) {
             LOG.error("执行Windows命令异常: {} - {}", command, e.getMessage());
-            return "执行异常: " + e.getMessage();
+            return CommandResult.exception(command, e.getMessage());
         } finally {
             try {
                 if (ce != null) {
@@ -404,15 +488,15 @@ public class MinaUtils {
                 return result;
             }
 
-            // 尝试使用chcp命令作为备选方案
-            ce = session.createExecChannel("cmd /c chcp");
-            out = new ByteArrayOutputStream();
-            ce.setOut(out);
-            ce.open();
-            ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(10000));
-            ce.close();
+            // 尝试使用chcp命令作为备选方案，但避免使用execCmdWithResultObject来防止递归调用
+            ChannelExec chcpChannel = session.createExecChannel("cmd /c chcp");
+            ByteArrayOutputStream chcpOut = new ByteArrayOutputStream();
+            chcpChannel.setOut(chcpOut);
+            chcpChannel.open();
+            chcpChannel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(10000));
+            chcpChannel.close();
 
-            result = out.toString();
+            result = chcpOut.toString();
             if (result.contains("活动代码页:") || result.contains("Active code page:")) {
                 String[] parts = result.split("[:,：]");
                 if (parts.length >= 2) {
@@ -442,19 +526,25 @@ public class MinaUtils {
         }
 
         try {
-            String encoding;
-            // 先尝试使用UTF-8解码
+            // 常用编码列表，按优先级排序
+            String[] commonEncodings = {
+                    "UTF-8", "GBK", "GB2312", "Big5", "Cp1252", "Cp850", "Cp437", "ISO-8859-1"
+            };
+
+            // 先尝试UTF-8解码，如果没有问题直接返回
             try {
-                String utf8Result = new String(bytes, "UTF-8");
-                // 如果解码后没有明显的乱码字符，直接返回
-                if (!utf8Result.contains("")) {
+                String utf8Result = new String(bytes, StandardCharsets.UTF_8);
+                // 简单检查是否有明显的乱码
+                if (!containsInvalidUTF8Chars(utf8Result)) {
                     return utf8Result;
                 }
             } catch (Exception e) {
                 // UTF-8解码失败，继续尝试其他编码
+                LOG.debug("UTF-8解码失败，尝试其他编码");
             }
 
-            // 根据代码页选择正确的编码
+            // 根据代码页确定编码名称
+            String encoding;
             switch (codepage) {
                 case "936": // 简体中文GBK
                     encoding = "GBK";
@@ -463,47 +553,102 @@ public class MinaUtils {
                     encoding = "Big5";
                     break;
                 case "437": // 美国英语
+                    encoding = "Cp437";
+                    break;
                 case "850": // 多语言拉丁语-1
-                    encoding = "Cp" + codepage;
+                    encoding = "Cp850";
                     break;
                 case "65001": // UTF-8
                     encoding = "UTF-8";
                     break;
+                case "1252": // 西欧
+                    encoding = "Cp1252";
+                    break;
+                case "932": // 日语
+                    encoding = "Shift_JIS";
+                    break;
+                case "949": // 韩语
+                    encoding = "Cp949";
+                    break;
                 default:
-                    // 尝试使用代码页作为编码名称
+                    // 尝试使用代码页作为编码名称，但先检查是否支持
                     encoding = "Cp" + codepage;
-            }
-
-            // 使用指定编码解码字节
-            String result = new String(bytes, encoding);
-
-            // 检查结果是否包含替换字符()，如果有，尝试其他编码
-            if (result.contains("")) {
-                LOG.warn("使用编码 {} 解码存在问题，尝试其他编码", encoding);
-
-                // 尝试按优先级尝试常见编码
-                String[] fallbackEncodings = { "GBK", "UTF-8", "Cp1252", "Cp850", "ISO-8859-1" };
-                for (String fallbackEncoding : fallbackEncodings) {
-                    if (!fallbackEncoding.equals(encoding)) {
-                        try {
-                            String fallbackResult = new String(bytes, fallbackEncoding);
-                            if (!fallbackResult.contains("")) {
-                                LOG.info("使用备选编码 {} 成功解码", fallbackEncoding);
-                                return fallbackResult;
-                            }
-                        } catch (Exception e) {
-                            // 忽略此编码的错误，继续尝试
+                    try {
+                        if (!isEncodingSupported(encoding)) {
+                            LOG.warn("不支持的编码: {}，使用UTF-8替代", encoding);
+                            encoding = "UTF-8"; // 默认回退到UTF-8
                         }
+                    } catch (Exception e) {
+                        LOG.warn("编码检查异常: {}，使用UTF-8替代", e.getMessage());
+                        encoding = "UTF-8";
                     }
-                }
             }
 
-            return result;
+            // 尝试使用确定的编码
+            try {
+                String result = new String(bytes, encoding);
+                // 检查结果是否包含替换字符()，如果有，尝试其他编码
+                if (containsReplacementChar(result)) {
+                    LOG.warn("使用编码 {} 解码存在问题，尝试其他编码", encoding);
+                    return tryMultipleEncodings(bytes, commonEncodings);
+                }
+                return result;
+            } catch (Exception e) {
+                LOG.warn("使用编码 {} 解码失败: {}，尝试其他编码", encoding, e.getMessage());
+                return tryMultipleEncodings(bytes, commonEncodings);
+            }
         } catch (Exception e) {
             LOG.warn("转换Windows输出编码失败: {}，尝试使用系统默认编码解码", e.getMessage());
             // 出错时使用系统默认编码
             return new String(bytes);
         }
+    }
+
+    /**
+     * 检查字符串是否包含UTF-8解码错误的标志
+     */
+    private static boolean containsInvalidUTF8Chars(String str) {
+        // 检查常见的无效UTF-8解码结果特征
+        return str.contains("") || str.contains("\uFFFD");
+    }
+
+    /**
+     * 检查字符串是否包含替换字符()
+     */
+    private static boolean containsReplacementChar(String str) {
+        return str.contains("") || str.contains("\uFFFD");
+    }
+
+    /**
+     * 检查指定编码是否被Java支持
+     */
+    private static boolean isEncodingSupported(String encoding) {
+        try {
+            return java.nio.charset.Charset.isSupported(encoding);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 尝试多种编码解码字节数组
+     */
+    private static String tryMultipleEncodings(byte[] bytes, String[] encodings) {
+        for (String encoding : encodings) {
+            try {
+                String result = new String(bytes, encoding);
+                if (!containsReplacementChar(result)) {
+                    LOG.info("使用编码 {} 成功解码", encoding);
+                    return result;
+                }
+            } catch (Exception e) {
+                // 忽略此编码的错误，继续尝试
+            }
+        }
+
+        // 如果所有编码都失败，返回系统默认编码的结果
+        LOG.warn("所有编码尝试均失败，使用系统默认编码");
+        return new String(bytes);
     }
 
     /**
@@ -553,44 +698,12 @@ public class MinaUtils {
     }
 
     public static String executeCommandAndGetResult(ClientSession session, String command) throws IOException {
-        session.resetAuthTimeout();
-        LOG.info("Executing command: {}", command);
-
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
-                ChannelExec channelExec = session.createExecChannel(command)) {
-
-            channelExec.setOut(outputStream);
-            channelExec.setErr(errorStream);
-
-            // 打开通道并执行命令
-            channelExec.open();
-
-            // 等待命令执行完成或超时
-            Set<ClientChannelEvent> events = channelExec.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
-                    TimeUnit.SECONDS.toMillis(100000));
-
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                throw new IOException("Command execution timed out");
-            }
-
-            int exitStatus = channelExec.getExitStatus();
-            LOG.info("Command executed with exit status: {}", exitStatus);
-
-            if (exitStatus != 0) {
-                String errorOutput = errorStream.toString().trim();
-                LOG.error("Command execution failed: {}", errorOutput);
-                throw new IOException("Command execution failed with error: " + errorOutput);
-            }
-
-            String result = outputStream.toString().trim();
-            LOG.info("Command output: {}", result);
-
-            return result;
-
-        } catch (Exception e) {
-            LOG.error("Error executing command: {}", e.getMessage());
-            throw e;
+        CommandResult result = execCmdWithResultObject(session, command);
+        if (result.isSuccess()) {
+            return result.getOutput();
+        } else {
+            throw new IOException(
+                    "Command execution failed with exit code " + result.getExitCode() + ": " + result.getError());
         }
     }
 
@@ -715,292 +828,147 @@ public class MinaUtils {
     /** 设置免密登录 */
     public static boolean setupPasswordlessLogin(ClientSession session, String sshUser, String sshPassword) {
         try {
-            // 先修复现有密钥的权限
-            fixSshKeyPermissions();
+            // 检查必要的信息
+            if (session == null) {
+                LOG.error("SSH会话为空，无法设置免密登录");
+                return false;
+            }
 
-            String homeDir = System.getProperty("user.home");
-            String sshDir = homeDir + "/.ssh";
-            String privateKeyPathRSA = sshDir + "/id_rsa";
-            String publicKeyPathRSA = sshDir + "/id_rsa.pub";
-            String privateKeyPathED25519 = sshDir + "/id_ed25519";
-            String publicKeyPathED25519 = sshDir + "/id_ed25519.pub";
+            // 获取用户主目录
+            String userHome = System.getProperty("user.home");
+            String sshDir = userHome + File.separator + ".ssh";
+            String publicKeyFile = sshDir + File.separator + "id_ed25519.pub";
+            String privateKeyFile = sshDir + File.separator + "id_ed25519";
 
-            LOG.info("SSH目录: {}", sshDir);
-            LOG.info("RSA私钥路径: {}", privateKeyPathRSA);
-            LOG.info("RSA公钥路径: {}", publicKeyPathRSA);
-            LOG.info("ED25519私钥路径: {}", privateKeyPathED25519);
-            LOG.info("ED25519公钥路径: {}", publicKeyPathED25519);
-
-            // 创建本地.ssh目录
+            // 1. 检查本地.ssh目录和密钥是否存在
             File sshDirFile = new File(sshDir);
             if (!sshDirFile.exists()) {
                 LOG.info("创建本地.ssh目录: {}", sshDir);
                 sshDirFile.mkdirs();
-                execCmdWithResult(session, "chmod 700 " + sshDir);
+                CommandResult chmodResult = execCmdWithResultObject(session, "chmod 700 " + sshDir);
+                LOG.info("设置本地.ssh目录权限结果: {}", chmodResult.isSuccess() ? "成功" : "失败");
             }
 
-            // 生成RSA密钥对(如果不存在)
-            File privateKeyFileRSA = new File(privateKeyPathRSA);
-            File publicKeyFileRSA = new File(publicKeyPathRSA);
-
-            boolean rsaGenerated = false;
-            if (!privateKeyFileRSA.exists() || !publicKeyFileRSA.exists()) {
-                LOG.info("生成RSA格式SSH密钥对");
-
-                // 使用系统ssh-keygen命令生成RSA密钥对
-                try {
-                    // 确保.ssh目录存在
-                    if (!sshDirFile.exists()) {
-                        sshDirFile.mkdirs();
-                    }
-
-                    // 执行ssh-keygen命令生成RSA密钥
-                    Process process = Runtime.getRuntime().exec(
-                            new String[] {
-                                    "ssh-keygen",
-                                    "-t", "rsa",
-                                    "-b", "2048",
-                                    "-f", privateKeyPathRSA,
-                                    "-N", "" // 空密码
-                            });
-
-                    int exitCode = process.waitFor();
-                    if (exitCode != 0) {
-                        LOG.error("RSA密钥生成失败，退出码: {}", exitCode);
-                        // 读取错误输出
-                        try (BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(process.getErrorStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                LOG.error("ssh-keygen错误: {}", line);
-                            }
-                        }
-                    } else {
-                        LOG.info("RSA密钥生成成功");
-                        rsaGenerated = true;
-                    }
-                } catch (Exception e) {
-                    LOG.error("生成RSA密钥对失败", e);
-                }
-            } else {
-                LOG.info("RSA密钥对已存在");
-                rsaGenerated = true;
+            // 2. 生成SSH密钥对
+            boolean keysExist = new File(publicKeyFile).exists() && new File(privateKeyFile).exists();
+            if (!keysExist) {
+                LOG.info("生成SSH密钥对");
+                generateSshKeyPair(sshDir);
             }
 
-            // 生成ED25519密钥对(如果不存在)
-            File privateKeyFileED25519 = new File(privateKeyPathED25519);
-            File publicKeyFileED25519 = new File(publicKeyPathED25519);
-
-            boolean ed25519Generated = false;
-            if (!privateKeyFileED25519.exists() || !publicKeyFileED25519.exists()) {
-                LOG.info("生成ED25519格式SSH密钥对");
-
-                // 使用系统ssh-keygen命令生成ED25519密钥对
-                try {
-                    // 确保.ssh目录存在
-                    if (!sshDirFile.exists()) {
-                        sshDirFile.mkdirs();
-                    }
-
-                    // 执行ssh-keygen命令生成ED25519密钥
-                    Process process = Runtime.getRuntime().exec(
-                            new String[] {
-                                    "ssh-keygen",
-                                    "-t", "ed25519",
-                                    "-f", privateKeyPathED25519,
-                                    "-N", "" // 空密码
-                            });
-
-                    int exitCode = process.waitFor();
-                    if (exitCode != 0) {
-                        LOG.error("ED25519密钥生成失败，退出码: {}", exitCode);
-                        // 读取错误输出
-                        try (BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(process.getErrorStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                LOG.error("ssh-keygen错误: {}", line);
-                            }
-                        }
-                    } else {
-                        LOG.info("ED25519密钥生成成功");
-                        ed25519Generated = true;
-                    }
-                } catch (Exception e) {
-                    LOG.error("生成ED25519密钥对失败", e);
-                }
-            } else {
-                LOG.info("ED25519密钥对已存在");
-                ed25519Generated = true;
-            }
-
-            // 如果两种密钥都生成失败，则返回失败
-            if (!rsaGenerated && !ed25519Generated) {
-                LOG.error("RSA和ED25519密钥都生成失败");
+            if (!new File(publicKeyFile).exists()) {
+                LOG.error("公钥文件不存在: {}", publicKeyFile);
                 return false;
             }
 
-            // 设置密钥文件权限
             try {
-                // 设置.ssh目录权限
-                Set<PosixFilePermission> sshDirPermissions = new HashSet<>();
-                sshDirPermissions.add(PosixFilePermission.OWNER_READ);
-                sshDirPermissions.add(PosixFilePermission.OWNER_WRITE);
-                sshDirPermissions.add(PosixFilePermission.OWNER_EXECUTE);
-                Files.setPosixFilePermissions(sshDirFile.toPath(), sshDirPermissions);
+                // 1. 确保远程.ssh目录存在且权限正确
+                CommandResult mkdirResult = execCmdWithResultObject(session, "mkdir -p ~/.ssh && chmod 700 ~/.ssh");
+                LOG.info("创建远程.ssh目录结果: {}", mkdirResult.isSuccess() ? "成功" : "失败: " + mkdirResult.getError());
 
-                // 设置RSA密钥权限（如果存在）
-                if (privateKeyFileRSA.exists()) {
-                    Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    Files.setPosixFilePermissions(privateKeyFileRSA.toPath(), privateKeyPermissions);
+                // 2. 检查远程authorized_keys文件
+                CommandResult touchResult = execCmdWithResultObject(session,
+                        "touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys");
+                LOG.info("创建/设置authorized_keys文件权限结果: {}",
+                        touchResult.isSuccess() ? "成功" : "失败: " + touchResult.getError());
+
+                // 3. 读取本地公钥
+                String publicKey = readPublicKeyFile(publicKeyFile);
+                if (publicKey == null || publicKey.isEmpty()) {
+                    LOG.error("无法读取公钥内容: {}", publicKeyFile);
+                    return false;
                 }
 
-                if (publicKeyFileRSA.exists()) {
-                    Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
-                    Files.setPosixFilePermissions(publicKeyFileRSA.toPath(), publicKeyPermissions);
+                // 4. 将公钥写入临时文件
+                String tempFile = createTempPublicKeyFile(publicKey);
+                if (tempFile == null) {
+                    LOG.error("创建临时公钥文件失败");
+                    return false;
                 }
 
-                // 设置ED25519密钥权限（如果存在）
-                if (privateKeyFileED25519.exists()) {
-                    Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    Files.setPosixFilePermissions(privateKeyFileED25519.toPath(), privateKeyPermissions);
+                // 5. 上传公钥到远程服务器并添加到authorized_keys
+                String remoteKeyPath = "/tmp/id_ed25519.pub." + System.currentTimeMillis();
+                boolean uploadResult = uploadFile(session, remoteKeyPath, tempFile);
+                if (!uploadResult) {
+                    LOG.error("上传公钥到远程服务器失败");
+                    new File(tempFile).delete();
+                    return false;
                 }
 
-                if (publicKeyFileED25519.exists()) {
-                    Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
-                    Files.setPosixFilePermissions(publicKeyFileED25519.toPath(), publicKeyPermissions);
+                String addKeyCmd = String.format(
+                        "cat %s >> ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys",
+                        remoteKeyPath);
+                CommandResult addKeyResult = execCmdWithResultObject(session, addKeyCmd);
+                LOG.info("添加公钥到authorized_keys结果: {}",
+                        addKeyResult.isSuccess() ? "成功" : "失败: " + addKeyResult.getError());
+
+                // 6. 清理临时文件
+                CommandResult cleanupResult = execCmdWithResultObject(session, "rm -f " + remoteKeyPath);
+                if (!cleanupResult.isSuccess()) {
+                    LOG.warn("清理远程临时文件失败: {}", cleanupResult.getError());
+                }
+                new File(tempFile).delete();
+
+                // 7. 检查远程SSH配置并尝试修复常见问题
+                // 检查SSH配置是否启用公钥认证
+                CommandResult grepResult = execCmdWithResultObject(session,
+                        "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
+                if (!grepResult.isSuccess() || grepResult.getOutput().isEmpty()) {
+                    LOG.warn("远程SSH服务器可能未明确启用公钥认证，尝试添加配置");
+                    // 尝试添加配置
+                    String backupCmd = "cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak_$(date +%Y%m%d%H%M%S)";
+                    CommandResult backupResult = execCmdWithResultObject(session, backupCmd);
+                    if (!backupResult.isSuccess()) {
+                        LOG.warn("备份SSH配置文件失败: {}", backupResult.getError());
+                    }
+
+                    // 添加或修改PubkeyAuthentication设置
+                    String fixCmd = "grep -q '^PubkeyAuthentication' /etc/ssh/sshd_config && " +
+                            "sed -i 's/^PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config || " +
+                            "echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config";
+                    CommandResult fixResult = execCmdWithResultObject(session, fixCmd);
+                    if (!fixResult.isSuccess()) {
+                        LOG.warn("修复PubkeyAuthentication配置失败: {}", fixResult.getError());
+                    }
+
+                    // 确保支持Ed25519密钥
+                    String checkEd25519Cmd = "grep -q '^HostKey.*ssh_host_ed25519_key' /etc/ssh/sshd_config";
+                    CommandResult ed25519Result = execCmdWithResultObject(session, checkEd25519Cmd);
+
+                    if (!ed25519Result.isSuccess() || ed25519Result.getOutput().isEmpty()) {
+                        LOG.warn("远程SSH服务器可能未启用Ed25519密钥支持，尝试添加配置");
+                        String fixEd25519Cmd = "echo 'HostKey /etc/ssh/ssh_host_ed25519_key' >> /etc/ssh/sshd_config";
+                        CommandResult fixEd25519Result = execCmdWithResultObject(session, fixEd25519Cmd);
+                        if (!fixEd25519Result.isSuccess()) {
+                            LOG.warn("添加Ed25519密钥支持失败: {}", fixEd25519Result.getError());
+                        }
+                    }
+
+                    // 重启SSH服务
+                    LOG.info("尝试重启SSH服务以应用新配置");
+                    String restartCmd = "systemctl restart sshd || service sshd restart || service ssh restart";
+                    CommandResult restartResult = execCmdWithResultObject(session, restartCmd);
+                    if (!restartResult.isSuccess()) {
+                        LOG.warn("重启SSH服务失败: {}", restartResult.getError());
+                    }
+
+                    LOG.info("SSH配置已更新，请在服务器重启后再次尝试免密登录");
                 }
 
-                LOG.info("密钥对权限设置完成");
+                // 检查是否禁用密码认证(可选，通常不推荐自动设置)
+                CommandResult passwordAuthResult = execCmdWithResultObject(session,
+                        "grep -E '^PasswordAuthentication\\s+no' /etc/ssh/sshd_config");
+                if (passwordAuthResult.isSuccess() && !passwordAuthResult.getOutput().isEmpty()) {
+                    LOG.warn("远程SSH服务器已禁用密码认证，请确保公钥认证正常工作");
+                }
+
+                return true;
             } catch (Exception e) {
-                LOG.error("设置密钥文件权限失败", e);
-            }
-
-            // 准备要上传的公钥内容
-            StringBuilder publicKeys = new StringBuilder();
-
-            // 读取RSA公钥
-            if (publicKeyFileRSA.exists()) {
-                try {
-                    String rsaPublicKey = new String(Files.readAllBytes(Paths.get(publicKeyPathRSA)));
-                    LOG.info("读取到的RSA公钥内容: {}", rsaPublicKey);
-                    publicKeys.append(rsaPublicKey.trim()).append("\n");
-                } catch (Exception e) {
-                    LOG.error("读取RSA公钥失败", e);
-                }
-            }
-
-            // 读取ED25519公钥
-            if (publicKeyFileED25519.exists()) {
-                try {
-                    String ed25519PublicKey = new String(Files.readAllBytes(Paths.get(publicKeyPathED25519)));
-                    LOG.info("读取到的ED25519公钥内容: {}", ed25519PublicKey);
-                    publicKeys.append(ed25519PublicKey.trim()).append("\n");
-                } catch (Exception e) {
-                    LOG.error("读取ED25519公钥失败", e);
-                }
-            }
-
-            if (publicKeys.length() == 0) {
-                LOG.error("没有可用的公钥内容");
+                LOG.error("设置免密登录过程发生异常", e);
                 return false;
             }
-
-            // 将公钥添加到远程authorized_keys，使用更明确的步骤和权限设置
-            LOG.info("开始配置远程服务器SSH免密登录...");
-            LOG.info("将上传RSA和ED25519两种格式的公钥");
-
-            // 1. 确保远程.ssh目录存在且权限正确
-            String result = execCmdWithResult(session, "mkdir -p ~/.ssh && chmod 700 ~/.ssh");
-            LOG.info("创建远程.ssh目录结果: {}", result);
-
-            // 2. 检查远程authorized_keys文件
-            result = execCmdWithResult(session, "touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys");
-            LOG.info("创建/设置authorized_keys文件权限结果: {}", result);
-
-            // 3. 清晰地将公钥写入临时文件，然后使用cat追加到authorized_keys
-            String tempFile = "/tmp/temp_pubkey_" + System.currentTimeMillis() + ".pub";
-            try (FileWriter fw = new FileWriter(tempFile)) {
-                fw.write(publicKeys.toString());
-            }
-
-            // 4. 上传临时公钥文件到远程服务器
-            boolean uploadSuccess = uploadFile(session, "/tmp/", tempFile);
-            LOG.info("上传公钥文件结果: {}", uploadSuccess);
-
-            if (!uploadSuccess) {
-                LOG.error("上传公钥文件失败");
-                return false;
-            }
-
-            // 5. 将公钥添加到authorized_keys，并确保不重复添加
-            String remoteKeyPath = "/tmp/" + new File(tempFile).getName();
-            String addKeyCmd = String.format(
-                    "cat %s >> ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys",
-                    remoteKeyPath);
-            result = execCmdWithResult(session, addKeyCmd);
-            LOG.info("添加公钥到authorized_keys结果: {}", result);
-
-            // 6. 清理临时文件
-            execCmdWithResult(session, "rm -f " + remoteKeyPath);
-            new File(tempFile).delete();
-
-            // 7. 检查远程SSH配置并尝试修复常见问题
-            // 检查SSH配置是否启用公钥认证
-            result = execCmdWithResult(session, "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
-            if (result == null || result.isEmpty()) {
-                LOG.warn("远程SSH服务器可能未明确启用公钥认证，尝试添加配置");
-                // 尝试添加配置
-                String backupCmd = "cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak_$(date +%Y%m%d%H%M%S)";
-                execCmdWithResult(session, backupCmd);
-
-                // 添加或修改PubkeyAuthentication设置
-                String fixCmd = "grep -q '^PubkeyAuthentication' /etc/ssh/sshd_config && " +
-                        "sed -i 's/^PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config || " +
-                        "echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config";
-                execCmdWithResult(session, fixCmd);
-
-                // 确保支持Ed25519密钥
-                String checkEd25519Cmd = "grep -q '^HostKey.*ssh_host_ed25519_key' /etc/ssh/sshd_config";
-                result = execCmdWithResult(session, checkEd25519Cmd);
-
-                if (result == null || result.isEmpty()) {
-                    LOG.warn("远程SSH服务器可能未启用Ed25519密钥支持，尝试添加配置");
-                    String fixEd25519Cmd = "echo 'HostKey /etc/ssh/ssh_host_ed25519_key' >> /etc/ssh/sshd_config";
-                    execCmdWithResult(session, fixEd25519Cmd);
-                }
-
-                // 重启SSH服务
-                LOG.info("尝试重启SSH服务以应用新配置");
-                String restartCmd = "systemctl restart sshd || service sshd restart || service ssh restart";
-                execCmdWithResult(session, restartCmd);
-
-                LOG.info("SSH配置已更新，请在服务器重启后再次尝试免密登录");
-            }
-
-            // 检查是否禁用密码认证(可选，通常不推荐自动设置)
-            result = execCmdWithResult(session, "grep -E '^PasswordAuthentication\\s+no' /etc/ssh/sshd_config");
-            if (result != null && !result.isEmpty()) {
-                LOG.warn("远程SSH服务器已禁用密码认证，请确保公钥认证正常工作");
-            }
-
-            LOG.info("SSH免密登录配置完成");
-
-            return true;
         } catch (Exception e) {
-            LOG.error("设置免密登录失败", e);
+            LOG.error("设置免密登录过程发生严重异常", e);
             return false;
         }
     }
@@ -1126,22 +1094,23 @@ public class MinaUtils {
      * @return 发行版信息，如"CentOS 7"、"Ubuntu 20.04"等
      */
     public static String detectLinuxDistro(ClientSession session) {
-        // 尝试多种方法检测发行版
+        // 尝试多种方法检测Linux发行版
         String[] commands = {
-                "cat /etc/os-release | grep -E '^(NAME|VERSION_ID)' | tr '\\n' ' '",
+                "cat /etc/os-release | grep -E '^ID=' | cut -d= -f2",
+                "lsb_release -i | cut -f2",
                 "cat /etc/redhat-release",
-                "cat /etc/issue | head -n 1",
-                "uname -a"
+                "cat /etc/issue | head -1"
         };
 
         for (String cmd : commands) {
-            String result = execCmdWithResult(session, cmd);
-            if (result != null && !result.startsWith("ERROR:") && !result.isEmpty()) {
-                return result.trim();
+            CommandResult result = execCmdWithResultObject(session, cmd);
+            if (result.isSuccess() && !result.getOutput().isEmpty()) {
+                return result.getOutput().trim();
             }
         }
 
-        return "Unknown Linux";
+        // 如果无法检测，默认返回centos
+        return "centos";
     }
 
     /**
@@ -1152,41 +1121,51 @@ public class MinaUtils {
      * @return 调整后的命令
      */
     public static String adaptCommandToDistro(ClientSession session, String command) {
-        // 缓存的发行版信息
-        String distroInfo = detectLinuxDistro(session);
-        LOG.info("检测到Linux发行版: {}", distroInfo);
+        // 检测系统类型
+        String distro = detectLinuxDistro(session).toLowerCase();
+        String adaptedCommand = command;
 
-        // 根据发行版调整命令
-        if (command.startsWith("chkconfig")) {
-            if (distroInfo.toLowerCase().contains("ubuntu") ||
-                    distroInfo.toLowerCase().contains("debian") ||
-                    distroInfo.toLowerCase().contains("centos 8") ||
-                    distroInfo.toLowerCase().contains("rhel 8")) {
-
-                // 替换为systemctl命令
-                if (command.contains("--add")) {
-                    String serviceName = command.substring(command.lastIndexOf(" ") + 1);
-                    return "systemctl enable " + serviceName;
-                }
+        // 如果是服务管理命令，根据发行版调整
+        if (command.contains("service")
+                && (command.contains("start") || command.contains("stop") || command.contains("restart"))) {
+            if (distro.contains("ubuntu") || distro.contains("debian")) {
+                // 对于Debian/Ubuntu, 先尝试systemctl, 如果不存在再用service命令
+                adaptedCommand = command.replace("service", "systemctl");
+                adaptedCommand = adaptedCommand.replace(" start ", " start ");
+                adaptedCommand = adaptedCommand.replace(" stop ", " stop ");
+                adaptedCommand = adaptedCommand.replace(" restart ", " restart ");
             }
-        } else if (command.startsWith("service")) {
-            if (distroInfo.toLowerCase().contains("ubuntu") ||
-                    distroInfo.toLowerCase().contains("debian") ||
-                    distroInfo.toLowerCase().contains("centos 8") ||
-                    distroInfo.toLowerCase().contains("rhel 8")) {
+        } else if (command.contains("chkconfig")) {
+            if (distro.contains("ubuntu") || distro.contains("debian")) {
+                // 替换chkconfig命令
+                if (command.contains("--add")) {
+                    adaptedCommand = command.replace("chkconfig --add", "update-rc.d") + " defaults";
+                } else if (command.contains("on")) {
+                    adaptedCommand = command.replace("chkconfig", "update-rc.d");
+                    adaptedCommand = adaptedCommand.replace("on", "enable");
+                } else if (command.contains("off")) {
+                    adaptedCommand = command.replace("chkconfig", "update-rc.d");
+                    adaptedCommand = adaptedCommand.replace("off", "disable");
+                }
+            } else if (distro.contains("centos") || distro.contains("redhat")) {
+                // 检查目标目录是否存在
+                String checkDir = "[ -d /etc/rc.d/init.d/ ] && echo 'exists' || echo 'not exists'";
+                CommandResult dirCheckResult = execCmdWithResultObject(session, checkDir);
 
-                // 替换为systemctl命令
-                String[] parts = command.split(" ");
-                if (parts.length >= 3) {
-                    String serviceName = parts[1];
-                    String action = parts[2];
-                    return "systemctl " + action + " " + serviceName;
+                if (!dirCheckResult.isSuccess() || "not exists".equals(dirCheckResult.getOutput().trim())) {
+                    // 如果目录不存在，调整为systemctl命令
+                    if (command.contains("on")) {
+                        adaptedCommand = command.replace("chkconfig", "systemctl enable");
+                        adaptedCommand = adaptedCommand.replace("on", "");
+                    } else if (command.contains("off")) {
+                        adaptedCommand = command.replace("chkconfig", "systemctl disable");
+                        adaptedCommand = adaptedCommand.replace("off", "");
+                    }
                 }
             }
         }
 
-        // 默认返回原命令
-        return command;
+        return adaptedCommand;
     }
 
     /**
@@ -1197,69 +1176,49 @@ public class MinaUtils {
      * @return 命令执行结果
      */
     public static String safeExecCommand(ClientSession session, String command) {
-        // 首先执行路径替换
-        String modifiedCommand = command;
+        // 记录原始命令
+        LOG.info("执行命令: {}", command);
 
-        // 替换rc.d路径 (Ubuntu使用/etc/init.d，CentOS使用/etc/rc.d/init.d)
-        if (command.contains("/etc/rc.d/init.d/")) {
-            // 检查目标目录是否存在
-            String checkDir = "[ -d /etc/rc.d/init.d/ ] && echo 'exists' || echo 'not exists'";
-            String dirCheck = execCmdWithResult(session, checkDir);
-
-            if ("not exists".equals(dirCheck.trim())) {
-                LOG.warn("/etc/rc.d/init.d/ 目录不存在，尝试使用 /etc/init.d/");
-                modifiedCommand = command.replace("/etc/rc.d/init.d/", "/etc/init.d/");
-            }
-        }
-
-        // 处理chmod命令特殊情况，确保应用了正确的路径
-        if (modifiedCommand.contains("chmod") && modifiedCommand.contains("datasophon-worker")) {
-            if (modifiedCommand.contains("/etc/rc.d/init.d/") && !command.equals(modifiedCommand)) {
-                // 如果已经做了路径替换，确保chmod命令也使用正确的路径
-                modifiedCommand = modifiedCommand.replace("/etc/rc.d/init.d/", "/etc/init.d/");
-            }
-        }
-
-        // 调整命令以适应不同发行版
-        String adaptedCommand = adaptCommandToDistro(session, modifiedCommand);
-        if (!adaptedCommand.equals(modifiedCommand)) {
-            LOG.info("命令已适配: {} -> {}", modifiedCommand, adaptedCommand);
+        // 首先获取调整后的命令
+        String adaptedCommand = adaptCommandToDistro(session, command);
+        if (!adaptedCommand.equals(command)) {
+            LOG.info("已根据系统类型调整命令: {}", adaptedCommand);
         }
 
         // 执行调整后的命令
-        String result = execCmdWithResult(session, adaptedCommand);
+        CommandResult result = execCmdWithResultObject(session, adaptedCommand);
 
         // 如果是启用服务失败，尝试修复LSB头信息后再重试
-        if (result != null && result.startsWith("ERROR:") &&
-                (adaptedCommand.contains("systemctl enable") || adaptedCommand.contains("chkconfig --add")) &&
-                result.contains("Default-Start contains no runlevels")) {
+        if (result != null && !result.isSuccess() && adaptedCommand.contains("update-rc.d")
+                && adaptedCommand.contains("enable")) {
+            String scriptPath = adaptedCommand.replace("update-rc.d", "").replace("enable", "").trim();
+            LOG.warn("启用服务失败，尝试添加LSB头信息: {}", scriptPath);
 
-            LOG.warn("服务启动脚本缺少正确的LSB头信息，尝试修复...");
-
-            // 获取脚本路径
-            String scriptPath = "/etc/init.d/datasophon-worker";
-            if (adaptedCommand.contains("/etc/rc.d/init.d/")) {
-                scriptPath = "/etc/rc.d/init.d/datasophon-worker";
-            }
-
-            // 添加正确的LSB头信息
-            String fixCmd = "sudo sed -i '2i### BEGIN INIT INFO\\n# Provides:          datasophon-worker\\n# Required-Start:    $remote_fs $syslog\\n# Required-Stop:     $remote_fs $syslog\\n# Default-Start:     2 3 4 5\\n# Default-Stop:      0 1 6\\n# Short-Description: Datasophon Worker Service\\n# Description:       Datasophon Worker Service for Big Data Platform\\n### END INIT INFO' "
+            String fixCmd = "sed -i '1i#!/bin/sh\\n### BEGIN INIT INFO\\n# Provides: " + scriptPath
+                    + "\\n# Required-Start: $network $local_fs $remote_fs\\n# Required-Stop: "
+                    + "$network $local_fs $remote_fs\\n# Default-Start: 2 3 4 5\\n# Default-Stop: 0 1 6\\n"
+                    + "# Short-Description: Datasophon Service\\n# Description: Datasophon Service\\n"
+                    + "### END INIT INFO\\n' "
                     + scriptPath;
 
-            execCmdWithResult(session, fixCmd);
+            CommandResult fixResult = execCmdWithResultObject(session, fixCmd);
             LOG.info("已添加LSB头信息，重试启用服务...");
 
             // 重试启用服务
-            return execCmdWithResult(session, adaptedCommand);
+            CommandResult retryResult = execCmdWithResultObject(session, adaptedCommand);
+            return retryResult.isSuccess() ? retryResult.getOutput()
+                    : "EXIT_CODE_" + retryResult.getExitCode() + ": " + retryResult.getError();
         }
 
         // 如果执行失败，尝试添加sudo再次执行
-        if (result != null && result.startsWith("ERROR:") && !adaptedCommand.startsWith("sudo")) {
+        if (!result.isSuccess() && !adaptedCommand.startsWith("sudo")) {
             LOG.warn("命令执行失败，尝试使用sudo: {}", adaptedCommand);
-            return execCmdWithResult(session, "sudo " + adaptedCommand);
+            CommandResult sudoResult = execCmdWithResultObject(session, "sudo " + adaptedCommand);
+            return sudoResult.isSuccess() ? sudoResult.getOutput()
+                    : "EXIT_CODE_" + sudoResult.getExitCode() + ": " + sudoResult.getError();
         }
 
-        return result;
+        return result.isSuccess() ? result.getOutput() : "EXIT_CODE_" + result.getExitCode() + ": " + result.getError();
     }
 
     /**
@@ -1275,22 +1234,22 @@ public class MinaUtils {
 
         // 1. 检查脚本是否存在
         String checkScript = "[ -f " + scriptPath + " ] && echo 'exists' || echo 'not exists'";
-        String scriptExists = execCmdWithResult(session, checkScript);
-        if (!"exists".equals(scriptExists.trim())) {
+        CommandResult scriptExistsResult = execCmdWithResultObject(session, checkScript);
+        if (!scriptExistsResult.isSuccess() || !"exists".equals(scriptExistsResult.getOutput().trim())) {
             LOG.error("找不到启动脚本: {}", scriptPath);
             return false;
         }
 
         // 2. 确保脚本有执行权限
         String chmodCmd = "chmod 755 " + scriptPath;
-        execCmdWithResult(session, chmodCmd);
+        execCmdWithResultObject(session, chmodCmd);
 
         // 3. 为systemd创建服务文件
         String systemdDir = "/etc/systemd/system";
         String checkSystemd = "[ -d " + systemdDir + " ] && echo 'exists' || echo 'not exists'";
-        String systemdExists = execCmdWithResult(session, checkSystemd);
+        CommandResult systemdExistsResult = execCmdWithResultObject(session, checkSystemd);
 
-        if ("exists".equals(systemdExists.trim())) {
+        if (systemdExistsResult.isSuccess() && "exists".equals(systemdExistsResult.getOutput().trim())) {
             LOG.info("创建systemd服务单元文件");
 
             // 创建服务单元文件内容
@@ -1327,11 +1286,11 @@ public class MinaUtils {
             // 移动到系统目录
             String moveCmd = "sudo mv /tmp/" + new File(tempFile).getName() + " " + systemdDir
                     + "/datasophon-worker.service";
-            execCmdWithResult(session, moveCmd);
+            execCmdWithResultObject(session, moveCmd);
 
             // 重新加载systemd
-            execCmdWithResult(session, "sudo systemctl daemon-reload");
-            execCmdWithResult(session, "sudo systemctl enable datasophon-worker.service");
+            execCmdWithResultObject(session, "sudo systemctl daemon-reload");
+            execCmdWithResultObject(session, "sudo systemctl enable datasophon-worker.service");
 
             new File(tempFile).delete();
             LOG.info("已创建systemd服务单元文件");
@@ -1366,11 +1325,11 @@ public class MinaUtils {
                 return output.toString().trim();
             } else {
                 LOG.error("命令执行失败，退出码: {}", exitCode);
-                return "ERROR: " + exitCode;
+                return "EXIT_CODE_" + exitCode + ": 命令执行失败";
             }
         } catch (Exception e) {
             LOG.error("执行本地命令失败: {}", e.getMessage());
-            return "ERROR: " + e.getMessage();
+            return "EXIT_CODE_-1: " + e.getMessage();
         }
     }
 
@@ -1383,32 +1342,34 @@ public class MinaUtils {
     public static CheckResult checkPasswordlessStatus(ClientSession session) {
         try {
             // 1. 检查SSH服务状态
-            String result = execCmdWithResult(session, "systemctl status sshd | grep Active");
-            if (result == null || !result.contains("active")) {
+            CommandResult sshResult = execCmdWithResultObject(session, "systemctl status sshd | grep Active");
+            if (!sshResult.isSuccess() || !sshResult.getOutput().contains("active")) {
                 return new CheckResult(false, "SSH服务未运行");
             }
 
             // 2. 检查.ssh目录权限
-            result = execCmdWithResult(session, "ls -ld ~/.ssh");
-            if (result == null || !result.contains("drwx------")) {
+            CommandResult dirResult = execCmdWithResultObject(session, "ls -ld ~/.ssh");
+            if (!dirResult.isSuccess() || !dirResult.getOutput().contains("drwx------")) {
                 return new CheckResult(false, "SSH目录权限不正确");
             }
 
             // 3. 检查authorized_keys文件权限
-            result = execCmdWithResult(session, "ls -l ~/.ssh/authorized_keys");
-            if (result == null || !result.contains("-rw-------")) {
+            CommandResult keysResult = execCmdWithResultObject(session, "ls -l ~/.ssh/authorized_keys");
+            if (!keysResult.isSuccess() || !keysResult.getOutput().contains("-rw-------")) {
                 return new CheckResult(false, "authorized_keys文件权限不正确");
             }
 
             // 4. 检查SSH配置
-            result = execCmdWithResult(session, "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
-            if (result == null || result.isEmpty()) {
+            CommandResult configResult = execCmdWithResultObject(session,
+                    "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
+            if (!configResult.isSuccess() || configResult.getOutput().isEmpty()) {
                 return new CheckResult(false, "SSH配置未启用公钥认证");
             }
 
             // 5. 测试免密登录
-            result = execCmdWithResult(session, "ssh -o BatchMode=yes -o StrictHostKeyChecking=no localhost echo OK");
-            if (result == null || !"OK".equals(result.trim())) {
+            CommandResult testResult = execCmdWithResultObject(session,
+                    "ssh -o BatchMode=yes -o StrictHostKeyChecking=no localhost echo OK");
+            if (!testResult.isSuccess() || !"OK".equals(testResult.getOutput().trim())) {
                 return new CheckResult(false, "免密登录测试失败");
             }
 
@@ -1443,14 +1404,9 @@ public class MinaUtils {
     public static void main(String[] args) throws IOException, InterruptedException {
         ClientSession session = MinaUtils.openConnection(new HostInfo("localhost", 22, "liuxin"));
         for (int i = 0; i < Constants.TEN; i++) {
-            String ls = MinaUtils.execCmdWithResult(session, "arch");
-            System.out.println(ls);
+            CommandResult result = MinaUtils.execCmdWithResultObject(session, "arch");
+            System.out.println(result.isSuccess() ? result.getOutput() : "Error: " + result.getError());
         }
-        // boolean dir = MinaUtils.createDir(session,"/home/shinow/test/");
-        // System.out.println(dir);
-        // boolean uploadFile = MinaUtils.uploadFile(session, "/Users/liuxin/opt/test",
-        // "/Users/liuxin/Downloads/yarn-default.xml");
-        // System.out.println(uploadFile);
     }
 
     /**
@@ -1467,31 +1423,31 @@ public class MinaUtils {
 
         try {
             // 尝试获取主机名
-            String hostname = execCmdWithResult(session, "hostname -f 2>/dev/null || hostname");
+            CommandResult hostnameResult = execCmdWithResultObject(session, "hostname -f 2>/dev/null || hostname");
 
             // 如果成功获取到主机名
-            if (hostname != null && !hostname.startsWith("ERROR:") && !hostname.trim().isEmpty()) {
-                hostname = hostname.trim();
+            if (hostnameResult.isSuccess() && !hostnameResult.getOutput().trim().isEmpty()) {
+                String hostname = hostnameResult.getOutput().trim();
                 LOG.info("获取到远程主机名: {}", hostname);
                 return hostname;
             } else {
                 // 如果hostname命令失败，尝试其他方式
-                String hostsEntry = execCmdWithResult(session,
+                CommandResult hostsResult = execCmdWithResultObject(session,
                         "cat /etc/hosts | grep -v '^#' | grep -v '^127.0.0.1' | grep -v '^::1' | head -1");
-                if (hostsEntry != null && !hostsEntry.startsWith("ERROR:") && !hostsEntry.trim().isEmpty()) {
+                if (hostsResult.isSuccess() && !hostsResult.getOutput().trim().isEmpty()) {
                     // 解析/etc/hosts中的第一个非本地回环条目
-                    String[] parts = hostsEntry.trim().split("\\s+");
+                    String[] parts = hostsResult.getOutput().trim().split("\\s+");
                     if (parts.length >= 2) {
-                        hostname = parts[1].trim();
+                        String hostname = parts[1].trim();
                         LOG.info("从/etc/hosts获取到主机名: {}", hostname);
                         return hostname;
                     }
                 }
 
                 // 再尝试一种方法
-                hostname = execCmdWithResult(session, "cat /etc/hostname 2>/dev/null");
-                if (hostname != null && !hostname.startsWith("ERROR:") && !hostname.trim().isEmpty()) {
-                    hostname = hostname.trim();
+                CommandResult hostnameFileResult = execCmdWithResultObject(session, "cat /etc/hostname 2>/dev/null");
+                if (hostnameFileResult.isSuccess() && !hostnameFileResult.getOutput().trim().isEmpty()) {
+                    String hostname = hostnameFileResult.getOutput().trim();
                     LOG.info("从/etc/hostname获取到主机名: {}", hostname);
                     return hostname;
                 }
@@ -1515,70 +1471,165 @@ public class MinaUtils {
     public static String collectWindowsHardwareInfo(ClientSession session, String commandType) {
         if (session == null) {
             LOG.error("SSH会话为空，无法收集Windows硬件信息");
-            return null;
+            return "ERROR: SSH session is null";
         }
 
-        session.resetAuthTimeout();
-        String command = "";
-
-        // 根据不同类型选择合适的命令 - 统一使用PowerShell以获得更好的编码处理
+        String command;
         switch (commandType.toLowerCase()) {
-            case "disk":
-                // 使用PowerShell获取磁盘信息，强制UTF-8输出
-                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, Size, FreeSpace | Format-Table -AutoSize | Out-String -Width 4096\"";
+            case "cpu":
+                command = "powershell -command \"Get-WmiObject -Class Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Format-List\"";
                 break;
             case "memory":
-                // 使用PowerShell获取内存信息，强制UTF-8输出
-                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $os = Get-WmiObject -Class Win32_OperatingSystem; Write-Output ('TotalVisibleMemorySize=' + $os.TotalVisibleMemorySize); Write-Output ('FreePhysicalMemory=' + $os.FreePhysicalMemory)\"";
+                command = "powershell -command \"Get-WmiObject -Class Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory | Format-List\"";
+                break;
+            case "disk":
+                command = "powershell -command \"Get-WmiObject -Class Win32_LogicalDisk -Filter 'DriveType=3' | " +
+                        "Select-Object DeviceID, Size, FreeSpace | Format-List\"";
                 break;
             case "gpu":
-                // 获取GPU信息，强制UTF-8输出
-                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion | Format-List | Out-String -Width 4096\"";
+                command = "powershell -command \"Get-WmiObject -Class Win32_VideoController | " +
+                        "Select-Object Name, AdapterRAM, DriverVersion | Format-List\"";
                 break;
-            case "cpu":
-                // 获取CPU详细信息，强制UTF-8输出
-                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed | Format-List | Out-String -Width 4096\"";
+            case "network":
+                command = "powershell -command \"Get-NetAdapter | " +
+                        "Select-Object Name, InterfaceDescription, Status, LinkSpeed | Format-List\"";
                 break;
             case "swap":
-                // 获取交换空间信息，强制UTF-8输出
-                command = "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-WmiObject -Class Win32_PageFileUsage | Select-Object AllocatedBaseSize, CurrentUsage, PeakUsage | Format-List | Out-String -Width 4096\"";
+                command = "powershell -command \"Get-WmiObject -Class Win32_PageFileUsage | " +
+                        "Select-Object AllocatedBaseSize, CurrentUsage | Format-List\"";
                 break;
             default:
                 LOG.error("未知的硬件信息类型: {}", commandType);
-                return "ERROR: 未知的硬件信息类型";
+                return "ERROR: Unknown hardware info type: " + commandType;
         }
 
-        LOG.info("执行Windows硬件信息收集命令: {} ({})", commandType, command);
+        CommandResult result = execCmdWithResultObject(session, command);
 
-        // 使用改进的execWindowsCmdWithResult方法执行命令
-        String result = execWindowsCmdWithResult(session, command);
+        if (result.isSuccess()) {
+            return result.getOutput();
+        } else {
+            LOG.error("收集Windows {} 信息失败，退出码: {}, 错误: {}",
+                    commandType, result.getExitCode(), result.getError());
+            return "ERROR: Failed to collect " + commandType + " info: " + result.getError();
+        }
+    }
 
-        // 对结果进行验证
-        if (result == null || result.isEmpty() || result.startsWith("ERROR:") || result.startsWith("执行错误:")) {
-            LOG.warn("Windows {} 信息收集失败，尝试使用备选命令", commandType);
+    /**
+     * 生成SSH密钥对
+     * 
+     * @param sshDir .ssh目录路径
+     * @return 是否生成成功
+     */
+    private static boolean generateSshKeyPair(String sshDir) {
+        try {
+            String keyFile = sshDir + File.separator + "id_ed25519";
 
-            // 使用备选命令
-            switch (commandType.toLowerCase()) {
-                case "disk":
-                    return execWindowsCmdWithResult(session,
-                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | Format-Table -AutoSize | Out-String\"");
-                case "memory":
-                    return execWindowsCmdWithResult(session,
-                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory | Format-List | Out-String\"");
-                case "gpu":
-                    return execWindowsCmdWithResult(session,
-                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_VideoController | Select-Object Name | Format-List | Out-String\"");
-                case "cpu":
-                    return execWindowsCmdWithResult(session,
-                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | Format-List | Out-String\"");
-                case "swap":
-                    return execWindowsCmdWithResult(session,
-                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance -ClassName Win32_PageFileUsage | Select-Object AllocatedBaseSize, CurrentUsage | Format-List | Out-String\"");
-                default:
-                    break;
+            // 使用系统ssh-keygen命令生成ED25519密钥对
+            ProcessBuilder pb = new ProcessBuilder(
+                    "ssh-keygen",
+                    "-t", "ed25519",
+                    "-f", keyFile,
+                    "-N", "", // 空密码
+                    "-C", "datasophon-" + System.currentTimeMillis());
+
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            // 读取进程输出
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    LOG.info("ssh-keygen: {}", line);
+                }
             }
-        }
 
-        return result;
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                LOG.error("生成SSH密钥对失败，退出码: {}", exitCode);
+                return false;
+            }
+
+            // 设置正确的密钥文件权限
+            File privateKey = new File(keyFile);
+            File publicKey = new File(keyFile + ".pub");
+
+            if (privateKey.exists()) {
+                try {
+                    Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
+                    privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
+                    privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
+                    Files.setPosixFilePermissions(privateKey.toPath(), privateKeyPermissions);
+                    LOG.info("已设置私钥权限为0600");
+                } catch (Exception e) {
+                    LOG.warn("设置私钥权限失败: {}", e.getMessage());
+                }
+            }
+
+            if (publicKey.exists()) {
+                try {
+                    Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
+                    publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
+                    publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
+                    publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
+                    publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
+                    Files.setPosixFilePermissions(publicKey.toPath(), publicKeyPermissions);
+                    LOG.info("已设置公钥权限为0644");
+                } catch (Exception e) {
+                    LOG.warn("设置公钥权限失败: {}", e.getMessage());
+                }
+            }
+
+            LOG.info("SSH密钥对生成成功: {}", keyFile);
+            return true;
+        } catch (Exception e) {
+            LOG.error("生成SSH密钥对失败: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 读取公钥文件内容
+     * 
+     * @param publicKeyFile 公钥文件路径
+     * @return 公钥内容
+     */
+    private static String readPublicKeyFile(String publicKeyFile) {
+        try {
+            return new String(Files.readAllBytes(Paths.get(publicKeyFile)), StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            LOG.error("读取公钥文件失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 创建临时公钥文件
+     * 
+     * @param publicKey 公钥内容
+     * @return 临时文件路径
+     */
+    private static String createTempPublicKeyFile(String publicKey) {
+        try {
+            String tempFile = System.getProperty("java.io.tmpdir") + File.separator +
+                    "datasophon_pubkey_" + System.currentTimeMillis() + ".pub";
+            Files.write(Paths.get(tempFile), publicKey.getBytes(StandardCharsets.UTF_8));
+            LOG.info("创建临时公钥文件: {}", tempFile);
+            return tempFile;
+        } catch (Exception e) {
+            LOG.error("创建临时公钥文件失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 同步执行命令并获取结果，兼容旧版接口
+     *
+     * @param session 连接会话
+     * @param command 要执行的命令
+     * @return 结果字符串，对于失败的命令会在结果前加上"EXIT_CODE_XXX:"前缀
+     */
+    public static String execCmdWithResult(ClientSession session, String command) {
+        CommandResult result = execCmdWithResultObject(session, command);
+        return result.isSuccess() ? result.getOutput() : "EXIT_CODE_" + result.getExitCode() + ": " + result.getError();
     }
 }

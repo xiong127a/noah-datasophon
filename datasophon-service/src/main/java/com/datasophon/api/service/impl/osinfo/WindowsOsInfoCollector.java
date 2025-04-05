@@ -48,9 +48,10 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             cacheUpdater.updateCache(hostInfo);
 
             // 获取主机名
-            String hostname = MinaUtils.execWindowsCmdWithResult(session, "powershell -command \"hostname\"");
-            if (StringUtils.isNotBlank(hostname)) {
-                hostname = hostname.trim();
+            MinaUtils.CommandResult hostnameResult = MinaUtils.execCmdWithResultObject(session,
+                    "powershell -command \"hostname\"");
+            if (hostnameResult.isSuccess()) {
+                String hostname = hostnameResult.getOutput().trim();
                 osInfo.setHostname(hostname);
                 hostInfo.setHostname(hostname);
                 logger.info("获取到主机名: {}", hostname);
@@ -58,49 +59,54 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             } else {
                 // 如果获取主机名失败，设置默认值
-                hostname = "Windows-Host";
+                logger.warn("获取主机名失败，退出码: {}, 错误: {}，设置默认值",
+                        hostnameResult.getExitCode(), hostnameResult.getError());
+                String hostname = "Windows-Host";
                 osInfo.setHostname(hostname);
                 hostInfo.setHostname(hostname);
-                logger.warn("无法获取主机名，设置默认值: {}", hostname);
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
                 cacheUpdater.updateCache(hostInfo);
             }
 
             // 尝试获取FQDN
-            String fqdn = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult fqdnResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"[System.Net.Dns]::GetHostByName($env:COMPUTERNAME).HostName\"");
-            if (StringUtils.isNotBlank(fqdn) && !fqdn.startsWith("ERROR:")) {
-                fqdn = fqdn.trim();
+            if (fqdnResult.isSuccess()) {
+                String fqdn = fqdnResult.getOutput().trim();
                 osInfo.setFqdn(fqdn);
                 hostInfo.setFqdn(fqdn);
                 logger.info("获取到FQDN: {}", fqdn);
             } else {
                 // 如果获取FQDN失败，使用主机名作为FQDN
-                osInfo.setFqdn(hostname);
-                hostInfo.setFqdn(hostname);
-                logger.warn("无法获取FQDN，使用主机名替代");
+                logger.warn("获取FQDN失败，退出码: {}, 错误: {}，使用主机名替代",
+                        fqdnResult.getExitCode(), fqdnResult.getError());
+                osInfo.setFqdn(osInfo.getHostname());
+                hostInfo.setFqdn(osInfo.getHostname());
             }
             cacheUpdater.updateCache(hostInfo);
 
             // 读取hosts文件
-            String hostsFile = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult hostsFileResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts\"");
-            if (StringUtils.isNotBlank(hostsFile) && !hostsFile.startsWith("ERROR:")) {
+            if (hostsFileResult.isSuccess()) {
+                String hostsFile = hostsFileResult.getOutput();
                 hostInfo.setHostsFile(hostsFile);
                 hostInfo.setHostsFileStatus(OsInfoStatusEnum.SUCCESS);
                 logger.info("获取到hosts文件内容");
             } else {
                 // 如果获取hosts文件失败，设置默认值
+                logger.warn("获取hosts文件失败，退出码: {}, 错误: {}，设置默认值",
+                        hostsFileResult.getExitCode(), hostsFileResult.getError());
                 hostInfo.setHostsFile("# Windows hosts文件未能读取\r\n127.0.0.1 localhost\r\n");
                 hostInfo.setHostsFileStatus(OsInfoStatusEnum.SUCCESS);
-                logger.warn("无法获取hosts文件内容，设置默认值");
             }
             cacheUpdater.updateCache(hostInfo);
 
             // 获取DNS服务器信息
-            String dnsInfo = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult dnsInfoResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"Get-DnsClientServerAddress | Select-Object -ExpandProperty ServerAddresses\"");
-            if (StringUtils.isNotBlank(dnsInfo) && !dnsInfo.startsWith("ERROR:")) {
+            if (dnsInfoResult.isSuccess()) {
+                String dnsInfo = dnsInfoResult.getOutput();
                 // 将DNS服务器信息字符串转换为List<String>
                 List<String> dnsServers = new ArrayList<>();
                 for (String line : dnsInfo.split("\\r?\\n")) {
@@ -113,28 +119,30 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 logger.info("获取到DNS服务器信息: {}", dnsServers);
             } else {
                 // 如果获取DNS服务器信息失败，设置默认值
+                logger.warn("获取DNS服务器信息失败，退出码: {}, 错误: {}，设置默认值",
+                        dnsInfoResult.getExitCode(), dnsInfoResult.getError());
                 List<String> defaultDnsServers = new ArrayList<>();
                 defaultDnsServers.add("8.8.8.8");
                 defaultDnsServers.add("8.8.4.4");
                 osInfo.setDnsServers(defaultDnsServers);
                 hostInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
-                logger.warn("无法获取DNS服务器信息，设置默认值");
             }
             cacheUpdater.updateCache(hostInfo);
 
             // 获取系统版本信息
-            String osVersion = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult osVersionResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"(Get-WmiObject Win32_OperatingSystem).Caption\"");
-            if (StringUtils.isNotBlank(osVersion) && !osVersion.startsWith("ERROR:")) {
-                osVersion = osVersion.trim();
+            if (osVersionResult.isSuccess()) {
+                String osVersion = osVersionResult.getOutput().trim();
                 osInfo.setDistribution("Windows");
                 osInfo.setDistributionName("Windows");
 
                 // 提取Windows版本号
-                String version = MinaUtils.execWindowsCmdWithResult(session,
+                MinaUtils.CommandResult versionResult = MinaUtils.execCmdWithResultObject(session,
                         "powershell -command \"(Get-WmiObject Win32_OperatingSystem).Version\"");
-                osInfo.setVersionId(version != null && !version.startsWith("ERROR:") ? version.trim() : "10.0");
-                osInfo.setVersion(version != null && !version.startsWith("ERROR:") ? version.trim() : "10.0");
+                String version = versionResult.isSuccess() ? versionResult.getOutput().trim() : "10.0";
+                osInfo.setVersionId(version);
+                osInfo.setVersion(version);
 
                 osInfo.setFullName(osVersion);
                 osInfo.setDistributionId("windows"); // 使用小写以保持一致性
@@ -147,6 +155,8 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
             } else {
                 // 如果获取操作系统信息失败，设置默认值
+                logger.warn("获取操作系统信息失败，退出码: {}, 错误: {}，设置默认值",
+                        osVersionResult.getExitCode(), osVersionResult.getError());
                 osInfo.setDistribution("Windows");
                 osInfo.setDistributionName("Windows");
                 osInfo.setVersionId("10.0");
@@ -155,34 +165,37 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistributionId("windows");
                 osInfo.setDistributionType(LinuxDistribution.OTHER); // Windows使用OTHER类型
                 osInfo.setDisplayName("Microsoft Windows 10");
-                logger.warn("无法获取操作系统信息，设置默认值");
                 hostInfo.setOsStatus(OsInfoStatusEnum.SUCCESS);
             }
             cacheUpdater.updateCache(hostInfo);
 
             // 获取内核版本
-            String kernelVersion = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult kernelVersionResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"(Get-WmiObject Win32_OperatingSystem).BuildNumber\"");
-            if (StringUtils.isNotBlank(kernelVersion) && !kernelVersion.startsWith("ERROR:")) {
-                osInfo.setKernelVersion("Windows Build " + kernelVersion.trim());
+            if (kernelVersionResult.isSuccess()) {
+                String kernelVersion = kernelVersionResult.getOutput().trim();
+                osInfo.setKernelVersion("Windows Build " + kernelVersion);
                 logger.info("获取到内核版本: {}", osInfo.getKernelVersion());
             } else {
                 // 如果获取内核版本失败，设置默认值
+                logger.warn("获取内核版本失败，退出码: {}, 错误: {}，设置默认值",
+                        kernelVersionResult.getExitCode(), kernelVersionResult.getError());
                 osInfo.setKernelVersion("Windows Build 19042");
-                logger.warn("无法获取内核版本，设置默认值");
             }
             cacheUpdater.updateCache(hostInfo);
 
             // 获取系统架构
-            String arch = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult archResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"$env:PROCESSOR_ARCHITECTURE\"");
-            if (StringUtils.isNotBlank(arch) && !arch.startsWith("ERROR:")) {
-                osInfo.setArchitecture(arch.trim().equalsIgnoreCase("AMD64") ? "x86_64" : arch.trim());
+            if (archResult.isSuccess()) {
+                String arch = archResult.getOutput().trim();
+                osInfo.setArchitecture(arch.equalsIgnoreCase("AMD64") ? "x86_64" : arch);
                 logger.info("获取到系统架构: {}", osInfo.getArchitecture());
             } else {
                 // 如果获取系统架构失败，设置默认值
+                logger.warn("获取系统架构失败，退出码: {}, 错误: {}，设置默认值",
+                        archResult.getExitCode(), archResult.getError());
                 osInfo.setArchitecture("x86_64");
-                logger.warn("无法获取系统架构，设置默认值");
             }
 
             // 标记操作系统信息收集完成
@@ -367,10 +380,11 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             // 尝试使用备用命令获取简单CPU信息
             if (!parsedSuccessfully) {
                 logger.warn("尝试使用备用命令获取CPU信息");
-                String simpleCpuInfo = MinaUtils.execWindowsCmdWithResult(session,
+                MinaUtils.CommandResult simpleCpuInfoResult = MinaUtils.execCmdWithResultObject(session,
                         "powershell -command \"Get-WmiObject -Class Win32_Processor | Select-Object Name | Format-List\"");
 
-                if (StringUtils.isNotBlank(simpleCpuInfo) && !simpleCpuInfo.startsWith("ERROR:")) {
+                if (simpleCpuInfoResult.isSuccess()) {
+                    String simpleCpuInfo = simpleCpuInfoResult.getOutput();
                     Pattern namePattern = Pattern.compile("Name\\s*:\\s*(.+)");
                     Matcher matcher = namePattern.matcher(simpleCpuInfo);
 
@@ -380,6 +394,9 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                         parsedSuccessfully = true;
                         logger.info("使用备用命令获取到CPU名称: {}", cpuName);
                     }
+                } else {
+                    logger.warn("备用命令获取CPU信息失败，退出码: {}, 错误: {}",
+                            simpleCpuInfoResult.getExitCode(), simpleCpuInfoResult.getError());
                 }
             }
 
@@ -504,10 +521,11 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             // 如果第一种方法失败，尝试使用备用命令
             if (!parsedSuccessfully) {
                 logger.warn("尝试使用备用命令获取内存信息");
-                String backupMemInfo = MinaUtils.execWindowsCmdWithResult(session,
+                MinaUtils.CommandResult backupMemInfoResult = MinaUtils.execCmdWithResultObject(session,
                         "powershell -command \"Get-WmiObject -Class Win32_ComputerSystem | Select-Object TotalPhysicalMemory | Format-List\"");
 
-                if (StringUtils.isNotBlank(backupMemInfo) && !backupMemInfo.startsWith("ERROR:")) {
+                if (backupMemInfoResult.isSuccess()) {
+                    String backupMemInfo = backupMemInfoResult.getOutput();
                     Pattern totalPattern = Pattern.compile("TotalPhysicalMemory\\s*:\\s*(\\d+)");
                     Matcher matcher = totalPattern.matcher(backupMemInfo);
 
@@ -531,6 +549,9 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
                             logger.warn("解析备用命令内存信息失败: {}", e.getMessage());
                         }
                     }
+                } else {
+                    logger.warn("备用命令获取内存信息失败，退出码: {}, 错误: {}",
+                            backupMemInfoResult.getExitCode(), backupMemInfoResult.getError());
                 }
             }
 
@@ -600,29 +621,45 @@ public class WindowsOsInfoCollector implements IOsInfoCollector {
             DiskInfo diskInfo = osInfo.getDiskInfo();
 
             // 首先尝试直接使用最可靠的WMI命令获取磁盘信息
-            String diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
+            MinaUtils.CommandResult diskInfoStrResult = MinaUtils.execCmdWithResultObject(session,
                     "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                             "Get-WmiObject Win32_LogicalDisk -Filter 'DriveType=3' | " +
                             "Select-Object DeviceID,@{Name='Size';Expression={$_.Size}},@{Name='FreeSpace';Expression={$_.FreeSpace}} | "
                             +
                             "ConvertTo-Json\"");
 
-            // 如果第一个命令失败，尝试备用命令
-            if (diskInfoStr == null || diskInfoStr.isEmpty() || diskInfoStr.startsWith("ERROR:")) {
-                logger.warn("主WMI命令失败，尝试使用简单C盘命令");
-                diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
+            String diskInfoStr = null;
+            if (diskInfoStrResult.isSuccess()) {
+                diskInfoStr = diskInfoStrResult.getOutput();
+            } else {
+                logger.warn("主WMI命令获取磁盘信息失败，退出码: {}, 错误: {}, 尝试备用命令",
+                        diskInfoStrResult.getExitCode(), diskInfoStrResult.getError());
+
+                // 如果第一个命令失败，尝试备用命令
+                MinaUtils.CommandResult diskInfoBackupResult = MinaUtils.execCmdWithResultObject(session,
                         "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
                                 "$drive = Get-WmiObject Win32_LogicalDisk -Filter 'DeviceID=\"C:\"'; " +
                                 "Write-Host ('TotalSize=' + $drive.Size); " +
                                 "Write-Host ('FreeSpace=' + $drive.FreeSpace)\"");
-            }
 
-            // 如果前两个命令都失败，尝试使用更通用的PowerShell命令
-            if (diskInfoStr == null || diskInfoStr.isEmpty() || diskInfoStr.startsWith("ERROR:")) {
-                logger.warn("备用命令也失败，尝试使用通用PowerShell命令");
-                diskInfoStr = MinaUtils.execWindowsCmdWithResult(session,
-                        "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
-                                "Get-PSDrive -PSProvider FileSystem | Format-List Name, Used, Free\"");
+                if (diskInfoBackupResult.isSuccess()) {
+                    diskInfoStr = diskInfoBackupResult.getOutput();
+                } else {
+                    logger.warn("备用命令获取磁盘信息也失败，退出码: {}, 错误: {}, 尝试最后一种方法",
+                            diskInfoBackupResult.getExitCode(), diskInfoBackupResult.getError());
+
+                    // 如果前两个命令都失败，尝试使用更通用的PowerShell命令
+                    MinaUtils.CommandResult diskInfoLastResult = MinaUtils.execCmdWithResultObject(session,
+                            "powershell -command \"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
+                                    "Get-PSDrive -PSProvider FileSystem | Format-List Name, Used, Free\"");
+
+                    if (diskInfoLastResult.isSuccess()) {
+                        diskInfoStr = diskInfoLastResult.getOutput();
+                    } else {
+                        logger.warn("所有获取磁盘信息命令都失败，退出码: {}, 错误: {}",
+                                diskInfoLastResult.getExitCode(), diskInfoLastResult.getError());
+                    }
+                }
             }
 
             // 标记是否已成功解析

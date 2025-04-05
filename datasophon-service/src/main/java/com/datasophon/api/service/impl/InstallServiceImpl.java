@@ -717,27 +717,22 @@ public class InstallServiceImpl implements InstallService {
             }
 
             // 连接成功，执行测试命令
-            if (session.isOpen()) {
-                // 执行一个简单的命令验证连接
-                String result = MinaUtils.execCmdWithResult(session, "echo connection_test");
-                boolean success = result != null && result.contains("connection_test");
+            MinaUtils.CommandResult connectionTestResult = MinaUtils.execCmdWithResultObject(session,
+                    "echo connection_test");
+            String result = connectionTestResult.isSuccess() ? connectionTestResult.getOutput()
+                    : "EXIT_CODE_" + connectionTestResult.getExitCode() + ": " + connectionTestResult.getError();
 
-                // 连接成功
-                if (success) {
-                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                    return true;
-                } else {
-                    // 命令执行失败
-                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                    hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
-                    hostInfo.setErrorMessage("SSH连接成功但无法执行命令，请检查用户权限");
-                    return false;
-                }
+            boolean success = result != null && result.contains("connection_test");
+
+            // 连接成功
+            if (success) {
+                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                return true;
             } else {
-                // 连接创建成功但已关闭
+                // 命令执行失败
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setSshErrorMsg("SSH连接已关闭，请检查SSH服务状态");
-                hostInfo.setErrorMessage("SSH连接已关闭，请检查SSH服务状态");
+                hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
+                hostInfo.setErrorMessage("SSH连接成功但无法执行命令，请检查用户权限");
                 return false;
             }
         } catch (Exception e) {
@@ -1389,7 +1384,8 @@ public class InstallServiceImpl implements InstallService {
         List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(clusterHostIdList);
         for (ClusterHostDO clusterHostDO : clusterHostList) {
             ClientSession session = MinaUtils.openConnection(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
-            MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
+            MinaUtils.CommandResult serviceResult = MinaUtils.execCmdWithResultObject(session,
+                    "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);
             if (ObjectUtil.isNotEmpty(session)) {
                 if (session != null) {
@@ -1483,13 +1479,17 @@ public class InstallServiceImpl implements InstallService {
                     break;
 
                 case 2: // Java环境检查
-                    result = MinaUtils.execCmdWithResult(session, "which java");
+                    MinaUtils.CommandResult javaResult = MinaUtils.execCmdWithResultObject(session, "which java");
+                    result = javaResult.isSuccess() ? javaResult.getOutput()
+                            : "EXIT_CODE_" + javaResult.getExitCode() + ": " + javaResult.getError();
                     success = result != null && !result.isEmpty();
                     message = success ? "Java环境已安装" : "未安装Java环境";
                     break;
 
                 case 3: // 最大文件句柄数检查
-                    result = MinaUtils.execCmdWithResult(session, "ulimit -n");
+                    MinaUtils.CommandResult ulimitResult = MinaUtils.execCmdWithResultObject(session, "ulimit -n");
+                    result = ulimitResult.isSuccess() ? ulimitResult.getOutput()
+                            : "EXIT_CODE_" + ulimitResult.getExitCode() + ": " + ulimitResult.getError();
                     try {
                         int limit = Integer.parseInt(result.trim());
                         success = limit >= 65535;
@@ -1500,19 +1500,27 @@ public class InstallServiceImpl implements InstallService {
                     break;
 
                 case 4: // 防火墙检查
-                    result = MinaUtils.execCmdWithResult(session, "systemctl status firewalld | grep Active");
+                    MinaUtils.CommandResult firewallResult = MinaUtils.execCmdWithResultObject(session,
+                            "systemctl status firewalld | grep Active");
+                    result = firewallResult.isSuccess() ? firewallResult.getOutput()
+                            : "EXIT_CODE_" + firewallResult.getExitCode() + ": " + firewallResult.getError();
                     success = result.contains("inactive") || result.contains("dead");
                     message = success ? "防火墙已关闭" : "防火墙未关闭";
                     break;
 
                 case 5: // SELinux检查
-                    result = MinaUtils.execCmdWithResult(session, "getenforce");
+                    MinaUtils.CommandResult selinuxResult = MinaUtils.execCmdWithResultObject(session, "getenforce");
+                    result = selinuxResult.isSuccess() ? selinuxResult.getOutput()
+                            : "EXIT_CODE_" + selinuxResult.getExitCode() + ": " + selinuxResult.getError();
                     success = "Disabled".equalsIgnoreCase(result.trim());
                     message = success ? "SELinux已禁用" : "SELinux未禁用";
                     break;
 
                 case 6: // 时间同步检查
-                    result = MinaUtils.execCmdWithResult(session, "systemctl status chronyd | grep Active");
+                    MinaUtils.CommandResult chronydResult = MinaUtils.execCmdWithResultObject(session,
+                            "systemctl status chronyd | grep Active");
+                    result = chronydResult.isSuccess() ? chronydResult.getOutput()
+                            : "EXIT_CODE_" + chronydResult.getExitCode() + ": " + chronydResult.getError();
                     success = result.contains("active");
                     message = success ? "时间同步服务运行正常" : "时间同步服务未运行";
                     break;
