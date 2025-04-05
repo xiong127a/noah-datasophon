@@ -169,13 +169,14 @@ public class GpuInfo extends HardwareInfo {
      */
     @Override
     public void setStatus(OsInfoStatusEnum status) {
-        // 始终保持加载中状态特效，不显示"未检测到GPU设备"
+        // 在GpuInfo.java中，我们确保前端能够正确处理状态
         if (status == OsInfoStatusEnum.SUCCESS &&
                 (deviceCount == null || deviceCount == 0 ||
-                        (vendor != null && vendor.equalsIgnoreCase("未检测到")))) {
-            // 如果是未检测到GPU的情况，覆盖为LOADING状态
-            super.setStatus(OsInfoStatusEnum.LOADING);
-            this.statusMessage = "正在加载GPU信息...";
+                        (vendor != null && (vendor.equalsIgnoreCase("未检测到") || vendor.equalsIgnoreCase("加载中..."))))) {
+            // 如果后端明确设置了SUCCESS但我们需要保持LOADING状态，则实际上转为SUCCESS
+            // 这样修改后，前端通过getGpuStatus()会用loading状态显示加载动画，但后端真实状态是SUCCESS
+            super.setStatus(status);
+            this.statusMessage = "GPU信息加载完成";
             this.detected = false;
             return;
         }
@@ -188,9 +189,8 @@ public class GpuInfo extends HardwareInfo {
                 this.statusMessage = "正在加载GPU信息...";
                 break;
             case ERROR:
-                // 将错误状态也显示为加载中
-                super.setStatus(OsInfoStatusEnum.LOADING);
-                this.statusMessage = "正在加载GPU信息...";
+                // 将错误状态的消息也设置为正常结束
+                this.statusMessage = "GPU信息加载完成";
                 break;
             case SUCCESS:
                 updateDetectedStatus();
@@ -198,14 +198,13 @@ public class GpuInfo extends HardwareInfo {
                     this.statusMessage = "GPU信息加载完成";
                     formatDisplayInfo();
                 } else {
-                    // 将"未检测到"状态改为加载中状态
-                    super.setStatus(OsInfoStatusEnum.LOADING);
-                    this.statusMessage = "正在加载GPU信息...";
+                    // 将"未检测到"状态也设为正常完成
+                    this.statusMessage = "GPU信息加载完成";
                 }
                 break;
             default:
-                this.statusMessage = "正在加载GPU信息...";
-                super.setStatus(OsInfoStatusEnum.LOADING);
+                this.statusMessage = "GPU信息加载完成";
+                super.setStatus(OsInfoStatusEnum.SUCCESS);
         }
     }
 

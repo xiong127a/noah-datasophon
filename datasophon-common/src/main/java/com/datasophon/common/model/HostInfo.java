@@ -169,17 +169,6 @@ public class HostInfo implements Serializable {
     @JsonIgnore
     private transient ClientSession externalSession = null;
 
-    // 各信息项的独立状态字段
-    private OsInfoStatusEnum hostnameStatus; // 主机名收集状态
-    private OsInfoStatusEnum osStatus; // 操作系统信息收集状态
-    private OsInfoStatusEnum dnsStatus; // DNS服务器信息收集状态
-    private OsInfoStatusEnum hostsFileStatus; // hosts文件收集状态
-    private OsInfoStatusEnum cpuStatus; // CPU信息收集状态
-    private OsInfoStatusEnum memoryStatus; // 内存信息收集状态
-    private OsInfoStatusEnum diskStatus; // 磁盘信息收集状态
-    private OsInfoStatusEnum swapStatus; // 交换空间信息收集状态
-    private OsInfoStatusEnum gpuStatus; // GPU信息收集状态
-
     public HostInfo(String ip, int sshPort, String sshUser) {
         this.ip = ip;
         this.sshPort = sshPort;
@@ -426,69 +415,212 @@ public class HostInfo implements Serializable {
         this.statusCacheDirty = false;
     }
 
-    // 添加对应的getter和setter方法
+    /**
+     * 获取主机名状态
+     */
     public OsInfoStatusEnum getHostnameStatus() {
-        return hostnameStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getHostnameStatus() != null) {
+            return osInfo.getHostnameStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置主机名状态
+     */
     public void setHostnameStatus(OsInfoStatusEnum status) {
-        this.hostnameStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setHostnameStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setHostnameStatus(status);
+        }
     }
 
+    /**
+     * 获取操作系统状态
+     */
     public OsInfoStatusEnum getOsStatus() {
-        return osStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getOsStatus() != null) {
+            return osInfo.getOsStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置操作系统状态
+     */
     public void setOsStatus(OsInfoStatusEnum status) {
-        this.osStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setOsStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setOsStatus(status);
+        }
     }
 
+    /**
+     * 获取DNS状态
+     */
     public OsInfoStatusEnum getDnsStatus() {
-        return dnsStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getDnsStatus() != null) {
+            return osInfo.getDnsStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置DNS状态
+     */
     public void setDnsStatus(OsInfoStatusEnum status) {
-        this.dnsStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setDnsStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setDnsStatus(status);
+        }
     }
 
+    /**
+     * 获取Hosts文件状态
+     */
     public OsInfoStatusEnum getHostsFileStatus() {
-        return hostsFileStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getHostsFileStatus() != null) {
+            return osInfo.getHostsFileStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置Hosts文件状态
+     */
     public void setHostsFileStatus(OsInfoStatusEnum status) {
-        this.hostsFileStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setHostsFileStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setHostsFileStatus(status);
+        }
     }
 
+    /**
+     * 获取CPU状态
+     */
     public OsInfoStatusEnum getCpuStatus() {
-        return cpuStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getCpuStatus() != null) {
+            return osInfo.getCpuStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置CPU状态
+     */
     public void setCpuStatus(OsInfoStatusEnum status) {
-        this.cpuStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setCpuStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setCpuStatus(status);
+        }
     }
 
+    /**
+     * 获取内存状态
+     */
     public OsInfoStatusEnum getMemoryStatus() {
-        return memoryStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getMemoryStatus() != null) {
+            return osInfo.getMemoryStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置内存状态
+     */
     public void setMemoryStatus(OsInfoStatusEnum status) {
-        this.memoryStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setMemoryStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setMemoryStatus(status);
+        }
     }
 
+    /**
+     * 获取磁盘状态
+     */
     public OsInfoStatusEnum getDiskStatus() {
-        return diskStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getDiskStatus() != null) {
+            return osInfo.getDiskStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置磁盘状态
+     */
     public void setDiskStatus(OsInfoStatusEnum status) {
-        this.diskStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setDiskStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setDiskStatus(status);
+        }
     }
 
+    /**
+     * 获取交换空间状态
+     */
     public OsInfoStatusEnum getSwapStatus() {
-        return swapStatus;
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getSwapStatus() != null) {
+            return osInfo.getSwapStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
+    /**
+     * 设置交换空间状态
+     */
     public void setSwapStatus(OsInfoStatusEnum status) {
-        this.swapStatus = status;
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setSwapStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setSwapStatus(status);
+        }
     }
 
     /**
@@ -496,24 +628,50 @@ public class HostInfo implements Serializable {
      */
     public OsInfoStatusEnum getGpuStatus() {
         // 首先检查osInfo对象是否存在
-        if (osInfo != null) {
-            // 使用osInfo对象中的getGpuStatus方法
+        if (osInfo != null && osInfo.getGpuStatus() != null) {
             return osInfo.getGpuStatus();
         }
-        // 如果osInfo为空，回退到本地字段
-        return gpuStatus;
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
     }
 
     /**
      * 设置GPU状态
      */
     public void setGpuStatus(OsInfoStatusEnum status) {
-        // 设置本地字段
-        this.gpuStatus = status;
-
-        // 如果osInfo存在，也设置osInfo中的状态
+        // 如果osInfo存在，设置osInfo中的状态
         if (osInfo != null) {
             osInfo.setGpuStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setGpuStatus(status);
+        }
+    }
+
+    /**
+     * 获取网络状态
+     */
+    public OsInfoStatusEnum getNetworkStatus() {
+        // 首先检查osInfo对象是否存在
+        if (osInfo != null && osInfo.getNetworkStatus() != null) {
+            return osInfo.getNetworkStatus();
+        }
+        // 如果osInfo为空或其中没有状态信息，返回LOADING
+        return OsInfoStatusEnum.LOADING;
+    }
+
+    /**
+     * 设置网络状态
+     */
+    public void setNetworkStatus(OsInfoStatusEnum status) {
+        // 如果osInfo存在，设置osInfo中的状态
+        if (osInfo != null) {
+            osInfo.setNetworkStatus(status);
+        } else {
+            // 如果osInfo不存在，创建新的OsInfo对象
+            osInfo = new OsInfo();
+            osInfo.setNetworkStatus(status);
         }
     }
 
@@ -531,24 +689,5 @@ public class HostInfo implements Serializable {
 
     public void setSshConnectStatus(OsInfoStatusEnum status) {
         this.sshConnectStatus = status;
-    }
-
-    /**
-     * 获取网卡状态
-     */
-    public OsInfoStatusEnum getNetworkStatus() {
-        if (osInfo != null) {
-            return osInfo.getNetworkStatus();
-        }
-        return null;
-    }
-
-    /**
-     * 设置网卡状态
-     */
-    public void setNetworkStatus(OsInfoStatusEnum status) {
-        if (osInfo != null) {
-            osInfo.setNetworkStatus(status);
-        }
     }
 }

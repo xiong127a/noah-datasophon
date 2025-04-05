@@ -1207,18 +1207,13 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 如果既没有NVIDIA也没有AMD GPU，尝试通过lspci检测
             if (!gpuDetected) {
-                // 更新中间状态
-                gpuInfo.setModel("正在通过系统检测图形设备...");
-                gpuInfo.setStatusMessage("正在检测其他图形设备...");
-                if (cacheUpdater != null && hostInfo != null) {
-                    cacheUpdater.updateCache(hostInfo);
-                }
+                // 尝试Alpine和其他特殊Linux系统的兼容命令
+                CommandResult alpineResult = MinaUtils.execCmdWithResultObject(session,
+                        "if command -v lspci >/dev/null 2>&1; then lspci | grep -i 'vga\\|3d\\|display'; else echo 'lspci not found'; fi");
 
-                CommandResult lspciResult = MinaUtils.execCmdWithResultObject(session,
-                        "lspci | grep -i 'vga\\|3d\\|display'");
-
-                if (lspciResult.isSuccess() && !lspciResult.getOutput().trim().isEmpty()) {
-                    String lspciOutput = lspciResult.getOutput().trim();
+                if (alpineResult.isSuccess() && !alpineResult.getOutput().trim().isEmpty()
+                        && !alpineResult.getOutput().contains("lspci not found")) {
+                    String lspciOutput = alpineResult.getOutput().trim();
                     gpuInfo.setInfo(lspciOutput);
                     gpuDetected = true;
 
@@ -1226,15 +1221,22 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     String[] lines = lspciOutput.split("\n");
                     if (lines.length > 0) {
                         String firstLine = lines[0];
-                        String modelInfo = firstLine.substring(firstLine.indexOf(":") + 1).trim();
-                        gpuInfo.setModel(modelInfo);
+                        if (firstLine.contains(":")) {
+                            String modelInfo = firstLine.substring(firstLine.indexOf(":") + 1).trim();
+                            gpuInfo.setModel(modelInfo);
+                        } else {
+                            gpuInfo.setModel(firstLine.trim());
+                        }
                     }
 
+                    // 判断GPU厂商
                     if (lspciOutput.toLowerCase().contains("nvidia")) {
                         gpuInfo.setVendor("NVIDIA");
                         gpuInfo.setType("独立显卡");
                     } else if (lspciOutput.toLowerCase().contains("amd") ||
-                            lspciOutput.toLowerCase().contains("ati")) {
+                            lspciOutput.toLowerCase().contains("ati") ||
+                            lspciOutput.toLowerCase().contains("qxl") ||
+                            lspciOutput.toLowerCase().contains("red hat")) {
                         gpuInfo.setVendor("AMD");
                         gpuInfo.setType("独立显卡");
                     } else if (lspciOutput.toLowerCase().contains("intel")) {
@@ -1250,22 +1252,25 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 即使未检测到GPU，也保持加载状态
+            // 修改为无论是否检测到GPU，都设置为成功状态
             if (!gpuDetected) {
-                // 关键修改：始终保持LOADING状态
-                gpuInfo.setStatus(OsInfoStatusEnum.LOADING);
-                osInfo.setGpuStatus(OsInfoStatusEnum.LOADING);
+                // 将状态改为SUCCESS而不是LOADING
+                gpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                osInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
 
-                // 使用加载中的提示文本，而不是"未检测到"
-                gpuInfo.setVendor("加载中...");
-                gpuInfo.setType("正在搜索设备...");
-                gpuInfo.setModel("正在获取图形设备信息...");
-                gpuInfo.setStatusMessage("正在加载GPU信息，请稍候...");
+                // 更改提示文本为明确的无GPU信息
+                gpuInfo.setVendor("未检测到");
+                gpuInfo.setType("未检测到图形处理器");
+                gpuInfo.setModel("未检测到图形处理器设备");
+                gpuInfo.setStatusMessage("GPU信息加载完成");
                 gpuInfo.setDeviceCount(0);
+                gpuInfo.setDetected(false);
             } else {
                 // 检测到GPU才设置为成功状态
                 gpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
                 osInfo.setGpuStatus(OsInfoStatusEnum.SUCCESS);
+                gpuInfo.setDetected(true);
+                gpuInfo.setStatusMessage("GPU信息加载完成");
             }
 
             // 设置到OS信息对象并更新缓存
