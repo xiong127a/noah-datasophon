@@ -2108,22 +2108,43 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 2. 根据OS类型执行不同的主机名设置命令
                 String result;
+
+                // 检查是否有sudo命令
+                String checkSudoCmd = "which sudo || echo 'nosudo'";
+                String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
+                boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
+                logger.info("检查主机是否有sudo命令: {}", hasSudo ? "有" : "没有");
+
+                // 根据是否有sudo命令决定使用的前缀
+                String sudoPrefix = hasSudo ? "sudo " : "";
+
                 if ("UBUNTU".equals(osType) || "DEBIAN".equals(osType)) {
                     // Ubuntu/Debian方式
-                    String setHostnameCmd = "sudo hostnamectl set-hostname " + newHostname;
+                    String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
                     result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
 
                     // 更新/etc/hostname文件
-                    String updateHostnameFileCmd = "echo '" + newHostname + "' | sudo tee /etc/hostname";
+                    String updateHostnameFileCmd;
+                    if (hasSudo) {
+                        updateHostnameFileCmd = "echo '" + newHostname + "' | " + sudoPrefix + "tee /etc/hostname";
+                    } else {
+                        updateHostnameFileCmd = "echo '" + newHostname + "' > /etc/hostname";
+                    }
                     MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
                 } else {
                     // CentOS/RHEL方式
-                    String setHostnameCmd = "sudo hostnamectl set-hostname " + newHostname;
+                    String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
                     result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
 
                     // CentOS 6兼容处理
-                    String updateSysConfigCmd = "sudo sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
-                            + "/' /etc/sysconfig/network 2>/dev/null || true";
+                    String updateSysConfigCmd;
+                    if (hasSudo) {
+                        updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                                + "/' /etc/sysconfig/network 2>/dev/null || true";
+                    } else {
+                        updateSysConfigCmd = "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                                + "/' /etc/sysconfig/network 2>/dev/null || true";
+                    }
                     MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
                 }
 
@@ -2140,7 +2161,15 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
                 String updateHostsCmd = "awk '{ if ($0 ~ /" + currentHostname + "/ && $0 ~ /127.0.1.1|" + ip
                         + "/) { gsub(\"" + currentHostname + "\", \"" + newHostname + "\") } print $0 }' /etc/hosts > "
-                        + tempFile + " && sudo cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                        + tempFile;
+
+                // 根据是否有sudo，选择不同的命令将临时文件复制到/etc/hosts
+                if (hasSudo) {
+                    updateHostsCmd += " && " + sudoPrefix + "cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                } else {
+                    updateHostsCmd += " && cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                }
+
                 MinaUtils.execCmdWithResult(session, updateHostsCmd);
 
                 // 4. 获取更新后的主机名进行验证
@@ -2208,9 +2237,19 @@ public class HostCheckServiceImpl implements HostCheckService {
                     return Result.error("无法连接到主机");
                 }
 
+                // 检查是否有sudo命令
+                String checkSudoCmd = "which sudo || echo 'nosudo'";
+                String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
+                boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
+                logger.info("检查主机是否有sudo命令: {}", hasSudo ? "有" : "没有");
+
+                // 根据是否有sudo命令决定使用的前缀
+                String sudoPrefix = hasSudo ? "sudo " : "";
+
                 // 创建备份目录
                 String backupDir = "/opt/datasophon/backup/hosts";
-                String createBackupDirCmd = "sudo mkdir -p " + backupDir + " && sudo chmod 755 " + backupDir;
+                String createBackupDirCmd = sudoPrefix + "mkdir -p " + backupDir + " && " + sudoPrefix + "chmod 755 "
+                        + backupDir;
                 MinaUtils.execCmdWithResult(session, createBackupDirCmd);
 
                 // 生成备份文件名（包含时间戳）
@@ -2219,7 +2258,8 @@ public class HostCheckServiceImpl implements HostCheckService {
                 String backupFileName = String.format("%s/hosts_%s_%s.bak", backupDir, hostname, timestamp);
 
                 // 备份当前hosts文件
-                String backupCmd = "sudo cp /etc/hosts " + backupFileName + " && sudo chmod 644 " + backupFileName;
+                String backupCmd = sudoPrefix + "cp /etc/hosts " + backupFileName + " && " + sudoPrefix + "chmod 644 "
+                        + backupFileName;
                 MinaUtils.execCmdWithResult(session, backupCmd);
                 logger.info("已备份hosts文件到: {}", backupFileName);
 
@@ -2229,8 +2269,13 @@ public class HostCheckServiceImpl implements HostCheckService {
                 MinaUtils.execCmdWithResult(session, createTempCommand);
 
                 // 使用sudo将临时文件复制到/etc/hosts
-                String updateCommand = "sudo cp " + tempFile + " /etc/hosts && sudo chmod 644 /etc/hosts && rm "
-                        + tempFile;
+                String updateCommand;
+                if (hasSudo) {
+                    updateCommand = sudoPrefix + "cp " + tempFile + " /etc/hosts && " + sudoPrefix
+                            + "chmod 644 /etc/hosts && rm " + tempFile;
+                } else {
+                    updateCommand = "cp " + tempFile + " /etc/hosts && chmod 644 /etc/hosts && rm " + tempFile;
+                }
                 String result = MinaUtils.execCmdWithResult(session, updateCommand);
                 logger.info("执行命令结果: {}", result);
 
