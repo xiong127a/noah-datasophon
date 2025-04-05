@@ -262,10 +262,8 @@ export default {
                     class: 'hostname-text', 
                     title: record.fqdn || record.hostname || (record.osInfo && record.osInfo.fqdn) || (record.osInfo && record.osInfo.hostname) || '主机名加载中' 
                   }, [
-                    // 如果有主机名且状态不是LOADING才显示主机名，否则显示加载动画
-                    // 优先使用主对象的hostname，如果为空则尝试从osInfo中获取
-                    ((record.hostname || (record.osInfo && record.osInfo.hostname)) && 
-                    (!record.hostnameStatus || record.hostnameStatus !== 'LOADING')) ? 
+                    // 如果有主机名且状态不是loading或相关状态才显示主机名，否则显示加载动画
+                    this.shouldShowHostname(record) ? 
                     (record.hostname || (record.osInfo && record.osInfo.hostname)) : 
                     h('div', { class: 'hostname-loading-container' }, [
                       h('div', { class: 'hostname-loading-dots' }, [
@@ -2052,6 +2050,37 @@ export default {
       
       // 默认情况
       return 'Linux';
+    },
+
+    // 判断是否应该显示主机名而不是加载动画
+    shouldShowHostname(record) {
+      // 如果没有主机名，则显示加载动画
+      if (!record.hostname && !(record.osInfo && record.osInfo.hostname)) {
+        return false;
+      }
+      
+      // 如果主机名状态是明确的成功状态，则显示主机名
+      if (record.hostnameStatus === 'SUCCESS' || record.hostnameStatus === 'success') {
+        return true;
+      }
+      
+      // 如果主机名状态是明确的加载中、收集中或待处理状态，则显示加载动画
+      if (record.hostnameStatus === 'LOADING' || 
+          record.hostnameStatus === 'loading' || 
+          record.hostnameStatus === 'PENDING' || 
+          record.hostnameStatus === 'pending' || 
+          record.hostnameStatus === 'COLLECTING' || 
+          record.hostnameStatus === 'collecting') {
+        return false;
+      }
+      
+      // 如果主机名状态是错误，但有主机名，则显示主机名
+      if (record.hostnameStatus === 'ERROR' || record.hostnameStatus === 'error') {
+        return true;
+      }
+      
+      // 默认情况下，当状态不明确时，如果有主机名则显示主机名，否则显示加载动画
+      return record.hostname && record.hostname.trim() !== '';
     },
   },
   mounted() {
