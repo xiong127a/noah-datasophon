@@ -2615,13 +2615,17 @@ public class HostCheckServiceImpl implements HostCheckService {
                 return Result.error("未找到集群的主机信息");
             }
 
+            // 将IP地址排序（使用HostUtils中的通用排序方法）
+            List<String> sortedIps = HostUtils.sortIpAddresses(new ArrayList<>(hostMap.keySet()));
+            logger.info("按IP排序后的主机列表: {}", sortedIps);
+
             // 生成主机名预览
             List<Map<String, String>> hostnamePreview = new ArrayList<>();
             int index = 1;
 
-            for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                String ip = entry.getKey();
-                HostInfo hostInfo = entry.getValue();
+            // 使用排序后的IP列表来生成主机名
+            for (String ip : sortedIps) {
+                HostInfo hostInfo = hostMap.get(ip);
 
                 // 生成序号部分，前面补0
                 String indexStr = String.format("%0" + zeroCount + "d", index);
