@@ -30,6 +30,21 @@ public class MemoryInfo extends HardwareInfo {
     private Long availableMemory;
 
     /**
+     * 总内存大小(GB)，字符串格式
+     */
+    private String totalMemoryGB;
+
+    /**
+     * 已使用内存大小(GB)，字符串格式
+     */
+    private String usedMemoryGB;
+
+    /**
+     * 可用内存大小(GB)，字符串格式
+     */
+    private String freeMemoryGB;
+
+    /**
      * 内存使用率(%)
      */
     private Double usagePercent;

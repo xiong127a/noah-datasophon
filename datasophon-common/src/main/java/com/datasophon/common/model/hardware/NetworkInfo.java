@@ -17,7 +17,37 @@ public class NetworkInfo extends HardwareInfo {
     /**
      * 网络接口列表
      */
-    private List<NetworkInterface> interfaces;
+    private List<InterfaceInfo> interfaces;
+
+    /**
+     * 活动连接数
+     */
+    private Integer activeConnections;
+
+    /**
+     * 默认网关IP地址
+     */
+    private String defaultGateway;
+
+    /**
+     * DNS服务器列表
+     */
+    private List<String> dnsServers;
+
+    /**
+     * 原始IP信息
+     */
+    private String rawIpInfo;
+
+    /**
+     * 原始路由信息
+     */
+    private String rawRouteInfo;
+
+    /**
+     * 原始DNS信息
+     */
+    private String rawDnsInfo;
 
     public NetworkInfo() {
         setTypeName("网络");

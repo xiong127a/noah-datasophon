@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * GPU详细信息类
- * 存储主机GPU的详细规格和状态信息
+ * 存储主机GPU的详细信息和状态
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -16,29 +16,19 @@ public class GpuInfo extends HardwareInfo {
     private static final long serialVersionUID = 1L;
 
     /**
+     * GPU厂商
+     */
+    private String vendor;
+
+    /**
      * GPU型号
      */
     private String model;
 
     /**
-     * GPU信息
-     */
-    private String info;
-
-    /**
-     * GPU类型（独立显卡、集成显卡等）
+     * GPU类型（独立显卡/集成显卡）
      */
     private String type;
-
-    /**
-     * 制造商
-     */
-    private String vendor;
-
-    /**
-     * 驱动版本
-     */
-    private String driverVersion;
 
     /**
      * 设备数量
@@ -46,42 +36,177 @@ public class GpuInfo extends HardwareInfo {
     private Integer deviceCount;
 
     /**
-     * GPU单个设备列表
+     * 驱动版本
      */
-    private List<GpuDevice> devices;
+    private String driverVersion;
 
     /**
-     * 总显存大小(MB)
+     * GPU信息（原始输出）
+     */
+    private String info;
+
+    /**
+     * 显存总量（MB）
      */
     private Double totalMemory;
 
     /**
-     * 已使用显存大小(MB)
+     * 已使用显存（MB）
      */
     private Double usedMemory;
 
     /**
-     * 空闲显存大小(MB)
+     * 可用显存（MB）
      */
     private Double freeMemory;
 
     /**
-     * 显存使用率(%)
+     * 显存使用率（%）
      */
     private Double memoryUsagePercent;
 
     /**
-     * GPU温度(℃)
+     * GPU温度（摄氏度）
      */
     private Double temperature;
 
     /**
-     * GPU使用率(%)
+     * GPU使用率（%）
      */
     private Double utilization;
 
+    /**
+     * 状态信息
+     */
+    private String statusMessage;
+
+    /**
+     * 是否检测到GPU
+     */
+    private Boolean detected;
+
+    /**
+     * GPU功耗（瓦特）
+     */
+    private Double powerUsage;
+
+    /**
+     * 最大功耗（瓦特）
+     */
+    private Double maxPower;
+
+    /**
+     * 支持的CUDA版本
+     */
+    private String cudaVersion;
+
+    /**
+     * GPU性能模式
+     */
+    private String performanceMode;
+
+    /**
+     * GPU计算模式
+     */
+    private String computeMode;
+
+    /**
+     * 显示格式化的温度（带单位）
+     */
+    private String formattedTemperature;
+
+    /**
+     * 显示格式化的显存（带单位）
+     */
+    private String formattedMemory;
+
+    /**
+     * 显示格式化的使用率（带单位）
+     */
+    private String formattedUtilization;
+
     public GpuInfo() {
-        setTypeName("显卡");
+        setTypeName("图形处理器");
+        this.detected = false;
+        this.deviceCount = 0;
+        this.statusMessage = "尚未检测";
+    }
+
+    /**
+     * 更新是否检测到GPU的状态
+     */
+    public void updateDetectedStatus() {
+        // 如果有设备数量或者供应商信息，则认为检测到了GPU
+        this.detected = (deviceCount != null && deviceCount > 0) ||
+                (vendor != null && !vendor.isEmpty() && !vendor.equalsIgnoreCase("未检测到")
+                        && !vendor.equalsIgnoreCase("无"));
+    }
+
+    /**
+     * 格式化显示信息
+     */
+    public void formatDisplayInfo() {
+        // 格式化温度显示
+        if (temperature != null) {
+            this.formattedTemperature = String.format("%.1f °C", temperature);
+        }
+
+        // 格式化显存显示
+        if (totalMemory != null && usedMemory != null) {
+            this.formattedMemory = String.format("%.0f MB / %.0f MB (%.1f%%)",
+                    usedMemory, totalMemory,
+                    (usedMemory / totalMemory) * 100);
+        }
+
+        // 格式化使用率显示
+        if (utilization != null) {
+            this.formattedUtilization = String.format("%.1f%%", utilization);
+        }
+    }
+
+    /**
+     * 设置状态并更新状态消息
+     */
+    @Override
+    public void setStatus(OsInfoStatusEnum status) {
+        // 始终保持加载中状态特效，不显示"未检测到GPU设备"
+        if (status == OsInfoStatusEnum.SUCCESS &&
+                (deviceCount == null || deviceCount == 0 ||
+                        (vendor != null && vendor.equalsIgnoreCase("未检测到")))) {
+            // 如果是未检测到GPU的情况，覆盖为LOADING状态
+            super.setStatus(OsInfoStatusEnum.LOADING);
+            this.statusMessage = "正在加载GPU信息...";
+            this.detected = false;
+            return;
+        }
+
+        super.setStatus(status);
+
+        // 根据状态更新状态消息
+        switch (status) {
+            case LOADING:
+                this.statusMessage = "正在加载GPU信息...";
+                break;
+            case ERROR:
+                // 将错误状态也显示为加载中
+                super.setStatus(OsInfoStatusEnum.LOADING);
+                this.statusMessage = "正在加载GPU信息...";
+                break;
+            case SUCCESS:
+                updateDetectedStatus();
+                if (this.detected) {
+                    this.statusMessage = "GPU信息加载完成";
+                    formatDisplayInfo();
+                } else {
+                    // 将"未检测到"状态改为加载中状态
+                    super.setStatus(OsInfoStatusEnum.LOADING);
+                    this.statusMessage = "正在加载GPU信息...";
+                }
+                break;
+            default:
+                this.statusMessage = "正在加载GPU信息...";
+                super.setStatus(OsInfoStatusEnum.LOADING);
+        }
     }
 
     /**

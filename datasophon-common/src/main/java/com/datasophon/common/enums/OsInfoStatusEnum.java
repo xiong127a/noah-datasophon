@@ -4,31 +4,49 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * 操作系统信息状态枚举
- * 用于OsInfo中的状态字段
+ * 操作系统信息收集状态枚举
  */
 @Getter
 public enum OsInfoStatusEnum {
+    /**
+     * 尚未开始收集
+     */
+    NONE("none", "未开始"),
 
     /**
-     * 收集中状态
+     * 正在收集中
      */
     COLLECTING("collecting", "收集中"),
 
     /**
-     * 加载中状态
+     * 正在加载
      */
     LOADING("loading", "加载中"),
 
     /**
-     * 成功状态
+     * 收集成功
      */
     SUCCESS("success", "成功"),
 
     /**
-     * 错误状态
+     * 收集出错
      */
-    ERROR("error", "错误");
+    ERROR("error", "错误"),
+
+    /**
+     * 检测中
+     */
+    DETECTING("detecting", "检测中"),
+
+    /**
+     * 未检测到
+     */
+    NOT_DETECTED("not_detected", "未检测到"),
+
+    /**
+     * 部分成功
+     */
+    PARTIAL_SUCCESS("partial_success", "部分成功");
 
     /**
      * 状态码（与原字符串兼容）

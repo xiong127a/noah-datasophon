@@ -23,6 +23,11 @@ public class SwapInfo extends HardwareInfo {
     private Long totalSwap;
 
     /**
+     * 已使用交换空间（字节）
+     */
+    private Long usedSwap;
+
+    /**
      * 可用交换空间（字节）
      */
     private Long availableSwap;
@@ -31,6 +36,36 @@ public class SwapInfo extends HardwareInfo {
      * 使用率百分比
      */
     private Double usagePercent;
+
+    /**
+     * 总交换空间（GB）- 带单位
+     */
+    private String totalSwapGB;
+
+    /**
+     * 已使用交换空间（GB）- 带单位
+     */
+    private String usedSwapGB;
+
+    /**
+     * 可用交换空间（GB）- 带单位
+     */
+    private String freeSwapGB;
+
+    /**
+     * 总交换空间（MB）- 带单位
+     */
+    private String totalSwapMB;
+
+    /**
+     * 已使用交换空间（MB）- 带单位
+     */
+    private String usedSwapMB;
+
+    /**
+     * 可用交换空间（MB）- 带单位
+     */
+    private String freeSwapMB;
 
     /**
      * 格式化后的总交换空间值

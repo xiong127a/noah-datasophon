@@ -108,6 +108,16 @@ public interface IOsInfoCollector {
     void collectHostsFileInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
+     * 收集交换空间信息
+     * 
+     * @param hostInfo     主机信息
+     * @param session      SSH会话
+     * @param osInfo       操作系统信息对象
+     * @param cacheUpdater 缓存更新函数
+     */
+    void collectSwapInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+
+    /**
      * 缓存更新器接口
      */
     @FunctionalInterface

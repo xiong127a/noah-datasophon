@@ -255,7 +255,7 @@
                   <a-icon v-else-if="checkGpuStatus('loading')" type="loading" class="status-icon loading" spin />
                 </div>
               </div>
-              <div class="hardware-info" v-if="getGpuStatus() === 'loading'">
+              <div class="hardware-info" v-if="getGpuStatus() === 'loading' || !hasValidGpuInfo">
                 <div class="apple-hardware-loading gpu-loading">
                   <div class="apple-loading-grid">
                     <div class="apple-loading-cell"></div>
@@ -276,7 +276,6 @@
                     {{ getGpuMemorySize() }} GB 显存
                   </div>
                 </template>
-                <div class="info-empty" v-else>未检测到GPU设备</div>
               </div>
             </div>
           </div>
@@ -441,14 +440,16 @@ export default {
     hasValidGpuInfo() {
       return this.osInfo && 
              this.osInfo.gpuInfo && 
-             ((this.osInfo.gpuInfo.info && this.osInfo.gpuInfo.info !== '未检测到GPU设备') || 
-              this.osInfo.gpuInfo.model);
+             ((this.osInfo.gpuInfo.info && this.osInfo.gpuInfo.info !== '未检测到GPU设备' && 
+               this.osInfo.gpuInfo.info !== '未知GPU' && this.osInfo.gpuInfo.info !== '正在检测...') || 
+              (this.osInfo.gpuInfo.model && this.osInfo.gpuInfo.model !== '未检测到图形处理器设备' && 
+               this.osInfo.gpuInfo.model !== '正在加载GPU信息...'));
     },
     hasGpuMemory() {
       return this.osInfo && 
              this.osInfo.gpuInfo && 
-             this.osInfo.gpuInfo.memorySize && 
-             this.osInfo.gpuInfo.memorySize > 0;
+             this.osInfo.gpuInfo.totalMemory && 
+             this.osInfo.gpuInfo.totalMemory > 0;
     },
     // 交换空间相关计算属性
     hasSwapEnabled() {
@@ -638,7 +639,7 @@ export default {
     },
     getGpuMemorySize() {
       if (!this.hasGpuMemory) return 0;
-      return this.osInfo.gpuInfo.memorySize.toFixed(1);
+      return this.osInfo.gpuInfo.totalMemory.toFixed(1);
     },
     // 交换空间相关方法
     getSwapTotal() {
@@ -730,17 +731,32 @@ export default {
       if ((!this.osInfo || !this.osInfo.gpuInfo) && this.gpuStatus !== 'error') {
         return 'loading';
       }
-      
+
+      // 如果vendor是"未检测到"或model包含"未检测到"，则返回loading状态
+      if (this.osInfo && this.osInfo.gpuInfo && 
+         ((this.osInfo.gpuInfo.vendor && this.osInfo.gpuInfo.vendor === '未检测到') || 
+          (this.osInfo.gpuInfo.model && this.osInfo.gpuInfo.model.includes('未检测到')))) {
+        return 'loading';
+      }
+
       // 首先尝试从osInfo.gpuStatus获取
       if (this.osInfo && this.osInfo.gpuStatus) {
+        // 如果状态是success但是没有检测到有效的GPU信息，则返回loading
+        if (this.osInfo.gpuStatus.toLowerCase() === 'success' && !this.hasValidGpuInfo) {
+          return 'loading';
+        }
         return this.osInfo.gpuStatus.toLowerCase();
       }
-      
+
       // 如果osInfo中没有gpuStatus，则尝试从osInfo.gpuInfo.status获取
       if (this.osInfo && this.osInfo.gpuInfo && this.osInfo.gpuInfo.status) {
+        // 如果状态是success但是没有检测到有效的GPU信息，则返回loading
+        if (this.osInfo.gpuInfo.status.toLowerCase() === 'success' && !this.hasValidGpuInfo) {
+          return 'loading';
+        }
         return this.osInfo.gpuInfo.status.toLowerCase();
       }
-      
+
       // 如果都没有，则使用props中的gpuStatus
       return this.gpuStatus ? this.gpuStatus.toLowerCase() : 'loading';
     },
