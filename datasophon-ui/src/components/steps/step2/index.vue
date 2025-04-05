@@ -634,19 +634,43 @@ export default {
                 }),
                 '获取OS信息失败'
               ]) :
-              // 正在加载状态
+              // 正在加载状态 - 使用OsFloatingCard的加载样式
               h('div', {
+                class: 'os-name-loading',
                 style: {
                   display: 'flex',
-                  alignItems: 'center',
-                  color: '#8E8E93'
+                  alignItems: 'center'
                 }
               }, [
-                h('a-icon', {
-                  props: { type: 'loading' },
-                  style: { marginRight: '6px' }
-                }),
-                '获取系统信息'
+                h('div', { 
+                  class: 'os-loader-container',
+                  style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginRight: '8px'
+                  }
+                }, [
+                  h('div', { 
+                    class: 'os-loader-spinner',
+                    style: {
+                      width: '14px',
+                      height: '14px',
+                      position: 'relative',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(0, 122, 255, 0.1)',
+                      borderLeftColor: '#007AFF',
+                      animation: 'spin 1s linear infinite'
+                    }
+                  })
+                ]),
+                h('span', { 
+                  class: 'os-loading-text',
+                  style: {
+                    color: '#007AFF',
+                    fontSize: '13px',
+                    fontWeight: '500'
+                  }
+                }, ['获取系统信息'])
               ])
             ]);
           },
@@ -5412,6 +5436,22 @@ export default {
 
 // 苹果风格模态框样式已抽离到单独文件
 @import './apple-style.less';
+
+.info-empty {
+  font-size: 13px;
+  color: #86868b;
+  font-style: italic;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
 </style>
 
 <!-- 添加Hosts文件编辑对话框 -->
