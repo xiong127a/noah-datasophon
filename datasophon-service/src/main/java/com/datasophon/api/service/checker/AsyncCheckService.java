@@ -633,18 +633,12 @@ public class AsyncCheckService {
         }
 
         // 检查必要的Map对象是否初始化
-        if (connectionLocks == null || hostConnectionPool == null || connectionLastAccessTime == null) {
-            logger.error("连接相关的Map对象未初始化，无法创建或获取连接");
-            return null;
-        }
 
         String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         // 增加总请求计数
-        if (hostCacheRequests != null) {
-            long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
-            hostCacheRequests.put(hostKey, requests);
-        }
+        long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
+        hostCacheRequests.put(hostKey, requests);
 
         // 获取连接锁，确保同一主机的连接操作串行化
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
@@ -659,17 +653,14 @@ public class AsyncCheckService {
                     if (session.isOpen()) {
                         // 尝试发送一个无害的命令来验证连接是否真正有效
                         CommandResult testResult = execCommand(session, "echo connection_test");
-                        if (testResult != null && testResult.isSuccess()
-                                && testResult.getOutput().trim().contains("connection_test")) {
+                        if (testResult.isSuccess() && testResult.getOutput().trim().contains("connection_test")) {
                             logger.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
                             // 更新最后访问时间
                             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
                             // 增加缓存命中计数
-                            if (hostCacheHits != null) {
-                                long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
-                                hostCacheHits.put(hostKey, hits);
-                            }
+                            long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
+                            hostCacheHits.put(hostKey, hits);
 
                             return session;
                         } else {
@@ -695,7 +686,7 @@ public class AsyncCheckService {
             // 创建新连接
             try {
                 logger.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
-                session = MinaUtils.openConnection(hostInfo);
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
 
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
