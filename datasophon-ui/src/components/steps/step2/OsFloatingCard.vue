@@ -20,7 +20,7 @@
           <div class="os-detail-info">
             <div class="os-detail-name">
               <!-- 操作系统名称加载动画 -->
-              <div v-if="!osInfo || !osInfo.distribution" class="os-name-loading">
+              <div v-if="!osInfo || !osInfo.distribution || osInfo.distribution === ''" class="os-name-loading">
                 <div class="os-loader-container">
                   <div class="os-loader-spinner">
                     <div class="spinner-inner"></div>
@@ -85,7 +85,6 @@
                   <a-icon v-if="checkCpuStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkCpuStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkCpuStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getCpuStatus() === 'loading'">
@@ -132,7 +131,6 @@
                   <a-icon v-if="checkMemoryStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkMemoryStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkMemoryStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getMemoryStatus() === 'loading'">
@@ -194,7 +192,6 @@
                   <a-icon v-if="checkDiskStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkDiskStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkDiskStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getDiskStatus() === 'loading'">
@@ -256,7 +253,6 @@
                   <a-icon v-if="checkGpuStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkGpuStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkGpuStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getGpuStatus() === 'loading'">
@@ -304,7 +300,6 @@
                   <a-icon v-if="checkSwapStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkSwapStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkSwapStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getSwapStatus() === 'loading'">
@@ -365,7 +360,6 @@
                   <a-icon v-if="checkNetworkStatus('success')" type="check-circle" class="status-icon success" />
                   <a-icon v-else-if="checkNetworkStatus('error')" type="close-circle" class="status-icon error" />
                   <a-icon v-else-if="checkNetworkStatus('loading')" type="loading" class="status-icon loading" spin />
-                  <a-icon v-else type="clock-circle" class="status-icon pending" />
                 </div>
               </div>
               <div class="hardware-info" v-if="getNetworkStatus() === 'loading'">
@@ -505,9 +499,6 @@ export default {
       }
       if (target === 'loading') {
         return status === 'loading';
-      }
-      if (target === 'pending') {
-        return status === 'pending';
       }
       return false;
     },
@@ -1117,11 +1108,6 @@ export default {
 
   &.error {
     color: #FF3B30;
-    font-size: 13px;
-  }
-
-  &.pending {
-    color: #FF9500;
     font-size: 13px;
   }
 
