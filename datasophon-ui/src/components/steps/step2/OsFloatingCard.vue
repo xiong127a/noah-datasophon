@@ -93,12 +93,10 @@
                   <div class="apple-loading-line line1"></div>
                   <div class="apple-loading-line line2"></div>
                 </div>
+                <div class="loading-text cpu-loading-text">正在分析处理器信息...</div>
               </div>
               <div class="hardware-info error" v-else-if="getCpuStatus() === 'error'">
                 获取CPU信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getCpuStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.cpuInfo">
@@ -143,12 +141,10 @@
                     <div class="apple-loading-progress-bar"></div>
                   </div>
                 </div>
+                <div class="loading-text memory-loading-text">正在检测内存配置...</div>
               </div>
               <div class="hardware-info error" v-else-if="getMemoryStatus() === 'error'">
                 获取内存信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getMemoryStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.memoryInfo && osInfo.memoryInfo.totalMemory">
@@ -208,12 +204,10 @@
                   </div>
                   <div class="apple-loading-line line3"></div>
                 </div>
+                <div class="loading-text disk-loading-text">正在扫描存储空间...</div>
               </div>
               <div class="hardware-info error" v-else-if="getDiskStatus() === 'error'">
                 获取磁盘信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getDiskStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.diskInfo && osInfo.diskInfo.totalDiskSpace">
@@ -274,12 +268,10 @@
                     <div class="apple-loading-cell"></div>
                   </div>
                 </div>
+                <div class="loading-text gpu-loading-text">正在检测图形处理器...</div>
               </div>
               <div class="hardware-info error" v-else-if="getGpuStatus() === 'error'">
                 获取GPU信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getGpuStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="hasValidGpuInfo">
@@ -323,9 +315,6 @@
               </div>
               <div class="hardware-info error" v-else-if="getSwapStatus() === 'error'">
                 获取交换空间信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getSwapStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="hasSwapEnabled">
@@ -387,9 +376,6 @@
               </div>
               <div class="hardware-info error" v-else-if="getNetworkStatus() === 'error'">
                 获取网络信息失败
-              </div>
-              <div class="hardware-info pending" v-else-if="getNetworkStatus() === 'pending'">
-                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.networkInfo && osInfo.networkInfo.interfaces && osInfo.networkInfo.interfaces.length > 0">
@@ -501,7 +487,7 @@ export default {
       }
       
       // 如果都没有，则使用props中的cpuStatus
-      return this.cpuStatus ? this.cpuStatus.toLowerCase() : 'pending';
+      return this.cpuStatus ? this.cpuStatus.toLowerCase() : 'loading';
     },
     
     // 检查CPU状态是否等于指定状态
@@ -713,7 +699,7 @@ export default {
       }
       
       // 如果都没有，则使用props中的memoryStatus
-      return this.memoryStatus ? this.memoryStatus.toLowerCase() : 'pending';
+      return this.memoryStatus ? this.memoryStatus.toLowerCase() : 'loading';
     },
     
     // 检查内存状态是否等于指定状态
@@ -739,7 +725,7 @@ export default {
       }
       
       // 如果都没有，则使用props中的diskStatus
-      return this.diskStatus ? this.diskStatus.toLowerCase() : 'pending';
+      return this.diskStatus ? this.diskStatus.toLowerCase() : 'loading';
     },
     
     // 检查磁盘状态是否等于指定状态
@@ -765,7 +751,7 @@ export default {
       }
       
       // 如果都没有，则使用props中的gpuStatus
-      return this.gpuStatus ? this.gpuStatus.toLowerCase() : 'pending';
+      return this.gpuStatus ? this.gpuStatus.toLowerCase() : 'loading';
     },
     
     // 检查GPU状态是否等于指定状态
@@ -791,7 +777,7 @@ export default {
       }
       
       // 如果都没有，则使用props中的swapStatus
-      return this.swapStatus ? this.swapStatus.toLowerCase() : 'pending';
+      return this.swapStatus ? this.swapStatus.toLowerCase() : 'loading';
     },
     
     // 检查交换空间状态是否等于指定状态
@@ -816,8 +802,8 @@ export default {
         return this.osInfo.networkInfo.status.toLowerCase();
       }
       
-      // 如果都没有，则默认为pending
-      return 'pending';
+      // 如果都没有，则默认为loading
+      return 'loading';
     },
     
     // 检查网络状态
@@ -1404,6 +1390,7 @@ export default {
   width: 100%;
 }
 
+/* CPU加载动画 */
 .apple-loading-line {
   height: 10px;
   border-radius: 5px;
@@ -1457,7 +1444,7 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: rgba(0, 122, 255, 0.05);
+  background-color: rgba(255, 149, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1467,8 +1454,8 @@ export default {
 .apple-loading-circle-inner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0, 122, 255, 0.2);
-  border-top-color: #007AFF;
+  border: 2px solid rgba(255, 149, 0, 0.2);
+  border-top-color: #FF9500;
   border-radius: 50%;
   animation: spin 1s infinite linear;
 }
@@ -1485,7 +1472,7 @@ export default {
 .apple-loading-cell {
   height: 20px;
   border-radius: 4px;
-  background-color: rgba(0, 122, 255, 0.1);
+  background-color: rgba(255, 45, 85, 0.1);
   animation: pulse 1.5s infinite alternate;
 }
 
@@ -1503,6 +1490,59 @@ export default {
 
 .apple-loading-cell:nth-child(4) {
   animation-delay: 0.6s;
+}
+
+/* 交换空间加载动画 */
+.hardware-info.loading .loading-indicator {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.hardware-info.loading .loading-indicator span {
+  width: 4px;
+  height: 4px;
+  margin: 0 2px;
+  background-color: #AF52DE;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.hardware-info.loading .loading-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.hardware-info.loading .loading-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.hardware-info.loading .loading-text {
+  font-size: 13px;
+  color: #AF52DE;
+}
+
+/* 网络加载动画 */
+.hardware-icon.network.loading {
+  animation: pulse 1.5s infinite alternate;
+}
+
+.hardware-icon.network.loading svg {
+  animation: networkWave 1.5s ease-in-out infinite;
+}
+
+@keyframes networkWave {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
 }
 
 /* 动画关键帧 */
@@ -1524,5 +1564,38 @@ export default {
 @keyframes pulse {
   0% { opacity: 0.3; }
   100% { opacity: 0.8; }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* CPU加载文字样式 */
+.cpu-loading-text {
+  font-size: 13px;
+  color: #5856D6;
+  margin-top: 5px;
+}
+
+/* 内存加载文字样式 */
+.memory-loading-text {
+  font-size: 13px;
+  color: #0A84FF;
+  margin-top: 8px;
+}
+
+/* 磁盘加载文字样式 */
+.disk-loading-text {
+  font-size: 13px;
+  color: #FF9500;
+  margin-top: 8px;
+}
+
+/* GPU加载文字样式 */
+.gpu-loading-text {
+  font-size: 13px;
+  color: #FF2D55;
+  margin-top: 8px;
 }
 </style> 
