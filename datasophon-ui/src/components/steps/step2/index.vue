@@ -431,7 +431,7 @@ export default {
                         marginTop: '12px',
                         fontWeight: '500'
                       }
-                    }, ['正在优雅地检索操作系统信息...'])
+                    }, ['获取系统信息'])
                   ])
                 ]),
 
@@ -646,7 +646,7 @@ export default {
                   props: { type: 'loading' },
                   style: { marginRight: '6px' }
                 }),
-                '正在检测操作系统...'
+                '获取系统信息'
               ])
             ]);
           },

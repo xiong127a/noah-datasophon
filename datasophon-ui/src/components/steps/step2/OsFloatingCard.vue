@@ -25,7 +25,7 @@
                   <div class="os-loader-spinner">
                     <div class="spinner-inner"></div>
                   </div>
-                  <span class="os-loading-text">加载操作系统信息</span>
+                  <span class="os-loading-text">获取系统信息</span>
                 </div>
               </div>
               <!-- 操作系统名称已加载 -->
@@ -98,7 +98,7 @@
                 获取CPU信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getCpuStatus() === 'pending'">
-                等待收集CPU信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.cpuInfo">
@@ -148,7 +148,7 @@
                 获取内存信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getMemoryStatus() === 'pending'">
-                等待收集内存信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.memoryInfo && osInfo.memoryInfo.totalMemory">
@@ -213,7 +213,7 @@
                 获取磁盘信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getDiskStatus() === 'pending'">
-                等待收集磁盘信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.diskInfo && osInfo.diskInfo.totalDiskSpace">
@@ -279,7 +279,7 @@
                 获取GPU信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getGpuStatus() === 'pending'">
-                等待收集GPU信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="hasValidGpuInfo">
@@ -325,7 +325,7 @@
                 获取交换空间信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getSwapStatus() === 'pending'">
-                等待收集交换空间信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="hasSwapEnabled">
@@ -389,7 +389,7 @@
                 获取网络信息失败
               </div>
               <div class="hardware-info pending" v-else-if="getNetworkStatus() === 'pending'">
-                等待收集网络信息
+                获取系统信息
               </div>
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.networkInfo && osInfo.networkInfo.interfaces && osInfo.networkInfo.interfaces.length > 0">
