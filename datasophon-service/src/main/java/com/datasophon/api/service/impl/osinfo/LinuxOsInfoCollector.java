@@ -1,6 +1,7 @@
 package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.api.utils.MinaUtils.CommandResult;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
@@ -9,6 +10,7 @@ import com.datasophon.common.model.hardware.DiskInfo;
 import com.datasophon.common.model.hardware.GpuInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
+import com.datasophon.common.model.hardware.DnsInfo;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -21,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Linux系统信息收集器
@@ -38,33 +42,155 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
     @Override
     public OsInfo collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater) {
         try {
-            // 首先尝试读取特定的系统release文件
-            checkAlternativeLinuxFiles(session, osInfo);
-
-            // 如果没有获取到全名，再尝试读取/etc/os-release文件
-            if (StringUtils.isBlank(osInfo.getFullName())) {
-                String osRelease = MinaUtils.execCmdWithResult(session, "cat /etc/os-release 2>/dev/null");
-                if (StringUtils.isNotBlank(osRelease)) {
-                    // 解析OS信息
-                    parseOsRelease(osInfo, osRelease);
+            if (hostInfo != null) {
+                // 设置初始状态为加载中
+                hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+                if (cacheUpdater != null) {
+                    cacheUpdater.updateCache(hostInfo);
                 }
             }
 
+            // 首先尝试读取特定的系统release文件
+            final boolean[] foundReleaseFile = { false }; // 使用数组作为可变引用
+
+            // 检查麒麟系统文件
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /etc/kylin-release 2>/dev/null || echo 'Not Found'",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        if (!output.contains("Not Found")) {
+                            // 直接使用文件内容作为操作系统全称
+                            osInfo.setFullName(output.trim());
+                            osInfo.setDistribution("Kylin");
+
+                            // 提取版本号（如果有）
+                            Pattern versionPattern = Pattern.compile("release\\s+([0-9.]+)");
+                            Matcher versionMatcher = versionPattern.matcher(output);
+                            if (versionMatcher.find()) {
+                                String version = versionMatcher.group(1);
+                                osInfo.setVersion(version);
+                                osInfo.setVersionId(version);
+                            }
+                            foundReleaseFile[0] = true;
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
+
+            // 如果没有麒麟系统文件，检查redhat-release
+            if (!foundReleaseFile[0]) {
+                executeCommandAndUpdateCache(
+                        session,
+                        "cat /etc/redhat-release 2>/dev/null || echo 'Not Found'",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            if (!output.contains("Not Found")) {
+                                // 直接使用文件内容作为操作系统全称
+                                osInfo.setFullName(output.trim());
+
+                                // 确定是CentOS还是RedHat
+                                if (output.toLowerCase().contains("centos")) {
+                                    osInfo.setDistribution("CentOS");
+                                } else {
+                                    osInfo.setDistribution("RedHat");
+                                }
+
+                                // 提取版本号（如果有）
+                                Pattern versionPattern = Pattern.compile("release\\s+([0-9.]+)");
+                                Matcher versionMatcher = versionPattern.matcher(output);
+                                if (versionMatcher.find()) {
+                                    String version = versionMatcher.group(1);
+                                    osInfo.setVersion(version);
+                                    osInfo.setVersionId(version);
+                                }
+                                foundReleaseFile[0] = true;
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
+
+            // 如果没有获取到全名，再尝试读取/etc/os-release文件
+            if (StringUtils.isBlank(osInfo.getFullName())) {
+                executeCommandAndUpdateCache(
+                        session,
+                        "cat /etc/os-release 2>/dev/null",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            if (StringUtils.isNotBlank(output)) {
+                                // 解析OS信息
+                                parseOsRelease(osInfo, output);
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
+
             // 获取内核版本
-            String kernel = MinaUtils.execCmdWithResult(session, "uname -r").trim();
-            osInfo.setKernelVersion(kernel);
+            executeCommandAndUpdateCache(
+                    session,
+                    "uname -r",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        osInfo.setKernelVersion(output.trim());
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取架构
-            String arch = MinaUtils.execCmdWithResult(session, "uname -m").trim();
-            osInfo.setArchitecture(arch);
+            executeCommandAndUpdateCache(
+                    session,
+                    "uname -m",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        osInfo.setArchitecture(output.trim());
 
-            // 更新发行版信息
-            updateDistributionInfo(osInfo);
+                        // 更新发行版信息
+                        updateDistributionInfo(osInfo);
 
-            // 标记系统信息有效
-            osInfo.setValid(true);
+                        // 标记系统信息有效
+                        osInfo.setValid(true);
 
-            // 如果提供了主机信息和缓存更新器，更新缓存
+                        // 更新状态为成功
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
+
+            // 最终更新
             if (hostInfo != null && cacheUpdater != null) {
                 hostInfo.setOsInfo(osInfo);
                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
@@ -267,11 +393,16 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistribution("Debian");
             } else if (lowerFullName.contains("red hat") || lowerFullName.contains("redhat")) {
                 osInfo.setDistribution("RedHat");
+            } else if (lowerFullName.contains("kylin")) {
+                osInfo.setDistribution("Kylin");
             } else {
                 // 使用通用名称
                 osInfo.setDistribution("Linux");
             }
         }
+
+        // 更新osDistribution枚举值
+        osInfo.updateOsDistribution();
     }
 
     @Override
@@ -327,15 +458,29 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
         }
     }
 
-    /**
-     * 执行命令并返回结果
-     */
-    private String executeCommand(ClientSession session, String command) {
-        try {
-            return MinaUtils.execCmdWithResult(session, command);
-        } catch (Exception e) {
-            logger.error("执行命令失败: {}, 错误: {}", command, e.getMessage(), e);
-            return "";
+    private <T> void executeCommandAndUpdateCache(ClientSession session, String command, HostInfo hostInfo,
+            OsInfo osInfo, CacheUpdater cacheUpdater, Function<String, T> resultProcessor, Runnable fieldStatus) {
+        if (session != null) {
+            try {
+                CommandResult commandResult = MinaUtils.execCmdWithResultObject(session, command);
+                if (commandResult.isSuccess()) {
+                    String commandOutput = commandResult.getOutput();
+                    if (resultProcessor != null && commandOutput != null) {
+                        T processedResult = resultProcessor.apply(commandOutput);
+                        if (fieldStatus != null) {
+                            fieldStatus.run();
+                        }
+                    }
+                } else {
+                    logger.error("命令执行失败: {}, 错误: {}", command, commandResult.getError());
+                }
+            } catch (Exception e) {
+                logger.error("执行命令时出错: " + command, e);
+            } finally {
+                if (cacheUpdater != null && hostInfo != null) {
+                    cacheUpdater.updateCache(hostInfo);
+                }
+            }
         }
     }
 
@@ -350,38 +495,44 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             }
 
             // 使用free命令获取交换分区信息
-            String swapInfoStr = executeCommand(session, "free -b | grep Swap");
-            if (swapInfoStr != null && !swapInfoStr.isEmpty()) {
-                String[] parts = swapInfoStr.trim().split("\\s+");
-                if (parts.length >= 3) {
-                    // 创建交换分区信息对象
-                    SwapInfo swapInfo = new SwapInfo();
+            CommandResult swapResult = MinaUtils.execCmdWithResultObject(session, "free -b | grep Swap");
+            if (swapResult.isSuccess()) {
+                String swapInfoStr = swapResult.getOutput().trim();
+                if (swapInfoStr != null && !swapInfoStr.isEmpty()) {
+                    String[] parts = swapInfoStr.split("\\s+");
+                    if (parts.length >= 3) {
+                        // 创建交换分区信息对象
+                        SwapInfo swapInfo = new SwapInfo();
 
-                    // Swap: 总量 已用 空闲
-                    long totalBytes = Long.parseLong(parts[1]);
-                    long usedBytes = Long.parseLong(parts[2]);
-                    long freeBytes = Long.parseLong(parts[3]);
+                        // Swap: 总量 已用 空闲
+                        long totalBytes = Long.parseLong(parts[1]);
+                        long usedBytes = Long.parseLong(parts[2]);
+                        long freeBytes = Long.parseLong(parts[3]);
 
-                    // 设置交换分区信息（字节）
-                    swapInfo.setTotalSwap(totalBytes);
-                    swapInfo.setEnabled(totalBytes > 0); // 如果总容量大于0，说明启用了交换分区
-                    swapInfo.setAvailableSwap(freeBytes);
+                        // 设置交换分区信息（字节）
+                        swapInfo.setTotalSwap(totalBytes);
+                        swapInfo.setEnabled(totalBytes > 0); // 如果总容量大于0，说明启用了交换分区
+                        swapInfo.setAvailableSwap(freeBytes);
 
-                    // 设置使用率百分比
-                    if (totalBytes > 0) {
-                        swapInfo.setUsagePercent((double) usedBytes / totalBytes * 100);
+                        // 设置使用率百分比
+                        if (totalBytes > 0) {
+                            swapInfo.setUsagePercent((double) usedBytes / totalBytes * 100);
+                        }
+
+                        // 设置状态为成功
+                        swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+
+                        // 设置到OS信息对象
+                        osInfo.setSwapInfo(swapInfo);
+                        osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
+
+                        logger.info("已收集交换分区信息: 总={} 字节, 已用={} 字节, 空闲={} 字节",
+                                totalBytes, usedBytes, freeBytes);
                     }
-
-                    // 设置状态为成功
-                    swapInfo.setStatus(OsInfoStatusEnum.SUCCESS);
-
-                    // 设置到OS信息对象
-                    osInfo.setSwapInfo(swapInfo);
-                    osInfo.setSwapStatus(OsInfoStatusEnum.SUCCESS);
-
-                    logger.info("已收集交换分区信息: 总={} 字节, 已用={} 字节, 空闲={} 字节",
-                            totalBytes, usedBytes, freeBytes);
                 }
+            } else {
+                logger.error("收集交换分区信息失败: 命令执行错误, 错误信息: {}", swapResult.getError());
+                osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
             }
         } catch (Exception e) {
             logger.error("收集交换分区信息失败: {}", e.getMessage(), e);
@@ -406,48 +557,133 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 创建CPU信息对象
             CpuInfo cpuInfo = new CpuInfo();
+            osInfo.setCpuInfo(cpuInfo);
 
             // 获取CPU型号
-            String cpuModel = MinaUtils.execCmdWithResult(session,
-                    "cat /proc/cpuinfo | grep 'model name' | head -n 1 | cut -d':' -f2").trim();
-            cpuInfo.setModel(cpuModel);
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/cpuinfo | grep 'model name' | head -n 1 | cut -d':' -f2",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        cpuInfo.setModel(output.trim());
+                        // 设置中间状态，表示部分信息已收集
+                        cpuInfo.setStatus(OsInfoStatusEnum.LOADING);
+                        osInfo.setCpuStatus(OsInfoStatusEnum.LOADING);
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取物理CPU个数
-            String physicalCpuCount = MinaUtils.execCmdWithResult(session,
-                    "cat /proc/cpuinfo | grep 'physical id' | sort -u | wc -l").trim();
-            cpuInfo.setPhysicalCount(Integer.parseInt(physicalCpuCount));
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/cpuinfo | grep 'physical id' | sort -u | wc -l",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        try {
+                            cpuInfo.setPhysicalCount(Integer.parseInt(output.trim()));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析物理CPU个数失败: {}", output);
+                            cpuInfo.setPhysicalCount(1); // 设置默认值
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取CPU核心数
-            String cpuCores = MinaUtils.execCmdWithResult(session,
-                    "cat /proc/cpuinfo | grep 'cpu cores' | head -n 1 | cut -d':' -f2").trim();
-            if (cpuCores.isEmpty()) {
-                // 如果获取不到核心数，则尝试获取处理器个数
-                cpuCores = MinaUtils.execCmdWithResult(session, "nproc").trim();
-            }
-            cpuInfo.setCores(Integer.parseInt(cpuCores));
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/cpuinfo | grep 'cpu cores' | head -n 1 | cut -d':' -f2",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String cpuCores = output.trim();
+                        if (cpuCores.isEmpty()) {
+                            // 如果获取不到，使用nproc命令
+                            try {
+                                CommandResult nprocResult = MinaUtils.execCmdWithResultObject(session, "nproc");
+                                if (nprocResult.isSuccess()) {
+                                    cpuCores = nprocResult.getOutput().trim();
+                                } else {
+                                    logger.warn("获取CPU核心数失败: {}", nprocResult.getError());
+                                }
+                            } catch (Exception e) {
+                                logger.warn("获取CPU核心数失败", e);
+                            }
+                        }
+
+                        try {
+                            cpuInfo.setCores(Integer.parseInt(cpuCores.isEmpty() ? "1" : cpuCores));
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析CPU核心数失败: {}", cpuCores);
+                            cpuInfo.setCores(1); // 设置默认值
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取CPU频率
-            String cpuFreq = MinaUtils.execCmdWithResult(session,
-                    "cat /proc/cpuinfo | grep 'cpu MHz' | head -n 1 | cut -d':' -f2").trim();
-            if (!cpuFreq.isEmpty()) {
-                cpuInfo.setFrequency(Double.parseDouble(cpuFreq));
-            }
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/cpuinfo | grep 'cpu MHz' | head -n 1 | cut -d':' -f2",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String cpuFreq = output.trim();
+                        if (!cpuFreq.isEmpty()) {
+                            try {
+                                double freqMHz = Double.parseDouble(cpuFreq);
+                                // 转换为GHz并保留一位小数
+                                cpuInfo.setFrequency(freqMHz / 1000.0);
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析CPU频率失败: {}", cpuFreq);
+                            }
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 存储CPU原始信息
-            String rawInfo = MinaUtils.execCmdWithResult(session, "cat /proc/cpuinfo | head -20").trim();
-            cpuInfo.setRawInfo(rawInfo);
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/cpuinfo | head -20",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        cpuInfo.setRawInfo(output.trim());
 
-            // 设置状态为成功
-            cpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
-
-            // 设置到OS信息对象
-            osInfo.setCpuInfo(cpuInfo);
-            osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
-
-            // 更新缓存
-            if (cacheUpdater != null && hostInfo != null) {
-                cacheUpdater.updateCache(hostInfo);
-            }
+                        // 设置状态为成功
+                        cpuInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                        osInfo.setCpuStatus(OsInfoStatusEnum.SUCCESS);
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             logger.info("CPU信息收集完成");
         } catch (Exception e) {
@@ -474,40 +710,68 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 创建内存信息对象
             MemoryInfo memoryInfo = new MemoryInfo();
+            osInfo.setMemoryInfo(memoryInfo);
 
             // 获取总内存大小和已使用内存（MB）
-            String memoryInfoStr = MinaUtils.execCmdWithResult(session, "free -m | grep Mem").trim();
-            if (!memoryInfoStr.isEmpty()) {
-                String[] parts = memoryInfoStr.split("\\s+");
-                if (parts.length >= 3) {
-                    // Mem: 总内存 已用内存 空闲内存
-                    long totalMB = Long.parseLong(parts[1]);
-                    long usedMB = Long.parseLong(parts[2]);
-                    long freeMB = Long.parseLong(parts[3]);
+            executeCommandAndUpdateCache(
+                    session,
+                    "free -m | grep Mem",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String memoryInfoStr = output.trim();
+                        if (!memoryInfoStr.isEmpty()) {
+                            String[] parts = memoryInfoStr.split("\\s+");
+                            if (parts.length >= 3) {
+                                try {
+                                    // Mem: 总内存 已用内存 空闲内存
+                                    long totalMB = Long.parseLong(parts[1]);
+                                    long usedMB = Long.parseLong(parts[2]);
+                                    long freeMB = Long.parseLong(parts[3]);
 
-                    // 转换为字节
-                    memoryInfo.setTotalMemory(totalMB);
-                    memoryInfo.setUsedMemory(usedMB);
-                    memoryInfo.setAvailableMemory(freeMB);
+                                    memoryInfo.setTotalMemory(totalMB);
+                                    memoryInfo.setUsedMemory(usedMB);
+                                    memoryInfo.setAvailableMemory(freeMB);
 
-                    // 计算使用率
-                    if (totalMB > 0) {
-                        memoryInfo.setUsagePercent((double) usedMB / totalMB * 100);
-                    }
-                }
-            }
+                                    // 计算使用率
+                                    if (totalMB > 0) {
+                                        memoryInfo.setUsagePercent((double) usedMB / totalMB * 100);
+                                    }
 
-            // 设置状态为成功
-            memoryInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                                    // 立即更新状态
+                                    memoryInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                                    osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
+                                } catch (NumberFormatException e) {
+                                    logger.warn("解析内存信息失败: {}", memoryInfoStr);
+                                }
+                            }
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
-            // 设置到OS信息对象
-            osInfo.setMemoryInfo(memoryInfo);
-            osInfo.setMemoryStatus(OsInfoStatusEnum.SUCCESS);
-
-            // 更新缓存
-            if (cacheUpdater != null && hostInfo != null) {
-                cacheUpdater.updateCache(hostInfo);
-            }
+            // 额外获取内存详细信息，如缓存和缓冲区（非必须，但可以提供更多信息）
+            executeCommandAndUpdateCache(
+                    session,
+                    "cat /proc/meminfo | head -10",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        // 将原始内存信息存储到描述字段
+                        memoryInfo.setDescription(output.trim());
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             logger.info("内存信息收集完成");
         } catch (Exception e) {
@@ -534,60 +798,115 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 创建磁盘信息对象
             DiskInfo diskInfo = new DiskInfo();
+            osInfo.setDiskInfo(diskInfo);
+
+            // 构建描述信息累积器
+            StringBuilder diskDescription = new StringBuilder();
 
             // 获取df命令输出
-            String dfOutput = MinaUtils.execCmdWithResult(session, "df -h").trim();
-            diskInfo.setDescription(dfOutput);
+            executeCommandAndUpdateCache(
+                    session,
+                    "df -h",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String dfOutput = output.trim();
+                        diskDescription.append(dfOutput);
+
+                        // 部分更新状态
+                        diskInfo.setDescription(diskDescription.toString());
+                        diskInfo.setStatus(OsInfoStatusEnum.LOADING);
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取lsblk命令输出
-            String lsblkOutput = MinaUtils.execCmdWithResult(session, "lsblk -d -o NAME,SIZE,TYPE,MODEL").trim();
-            diskInfo.setDescription(diskInfo.getDescription() + "\n\n" + lsblkOutput);
+            executeCommandAndUpdateCache(
+                    session,
+                    "lsblk -d -o NAME,SIZE,TYPE,MODEL",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String lsblkOutput = output.trim();
+                        diskDescription.append("\n\n").append(lsblkOutput);
+                        diskInfo.setDescription(diskDescription.toString());
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 使用df -BG命令获取总容量
-            String diskTotal = MinaUtils.execCmdWithResult(session,
-                    "df -BG / | tail -1 | awk '{print $2}'").trim().replace("G", "");
-            if (!diskTotal.isEmpty()) {
-                try {
-                    double totalGB = Double.parseDouble(diskTotal);
-                    diskInfo.setTotalDiskSpace(totalGB);
-                } catch (NumberFormatException e) {
-                    logger.warn("解析磁盘总容量失败: {}", diskTotal);
-                }
-            }
+            executeCommandAndUpdateCache(
+                    session,
+                    "df -BG / | tail -1 | awk '{print $2}'",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String diskTotal = output.trim().replace("G", "");
+                        if (!diskTotal.isEmpty()) {
+                            try {
+                                double totalGB = Double.parseDouble(diskTotal);
+                                diskInfo.setTotalDiskSpace(totalGB);
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析磁盘总容量失败: {}", diskTotal);
+                            }
+                        }
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             // 获取已用容量
-            String diskUsed = MinaUtils.execCmdWithResult(session,
-                    "df -BG / | tail -1 | awk '{print $3}'").trim().replace("G", "");
-            if (!diskUsed.isEmpty()) {
-                try {
-                    double usedGB = Double.parseDouble(diskUsed);
-                    diskInfo.setUsedDiskSpace(usedGB);
-                } catch (NumberFormatException e) {
-                    logger.warn("解析磁盘已用容量失败: {}", diskUsed);
-                }
-            }
+            executeCommandAndUpdateCache(
+                    session,
+                    "df -BG / | tail -1 | awk '{print $3}'",
+                    hostInfo,
+                    osInfo,
+                    cacheUpdater,
+                    (output) -> {
+                        String diskUsed = output.trim().replace("G", "");
+                        if (!diskUsed.isEmpty()) {
+                            try {
+                                double usedGB = Double.parseDouble(diskUsed);
+                                diskInfo.setUsedDiskSpace(usedGB);
 
-            // 计算剩余容量
-            if (diskInfo.getTotalDiskSpace() != null && diskInfo.getUsedDiskSpace() != null) {
-                diskInfo.setAvailableDiskSpace(diskInfo.getTotalDiskSpace() - diskInfo.getUsedDiskSpace());
+                                // 计算剩余容量
+                                if (diskInfo.getTotalDiskSpace() != null) {
+                                    diskInfo.setAvailableDiskSpace(diskInfo.getTotalDiskSpace() - usedGB);
 
-                // 计算使用率
-                if (diskInfo.getTotalDiskSpace() > 0) {
-                    diskInfo.setUsagePercent(diskInfo.getUsedDiskSpace() / diskInfo.getTotalDiskSpace() * 100);
-                }
-            }
+                                    // 计算使用率
+                                    if (diskInfo.getTotalDiskSpace() > 0) {
+                                        diskInfo.setUsagePercent(usedGB / diskInfo.getTotalDiskSpace() * 100);
+                                    }
+                                }
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析磁盘已用容量失败: {}", diskUsed);
+                            }
+                        }
 
-            // 设置状态为成功
-            diskInfo.setStatus(OsInfoStatusEnum.SUCCESS);
-
-            // 设置到OS信息对象
-            osInfo.setDiskInfo(diskInfo);
-            osInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
-
-            // 更新缓存
-            if (cacheUpdater != null && hostInfo != null) {
-                cacheUpdater.updateCache(hostInfo);
-            }
+                        // 设置状态为成功
+                        diskInfo.setStatus(OsInfoStatusEnum.SUCCESS);
+                        osInfo.setDiskStatus(OsInfoStatusEnum.SUCCESS);
+                        return null;
+                    },
+                    () -> {
+                        if (hostInfo != null) {
+                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                        }
+                    });
 
             logger.info("磁盘信息收集完成");
         } catch (Exception e) {
@@ -616,56 +935,83 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             GpuInfo gpuInfo = new GpuInfo();
 
             // 检查是否有NVIDIA GPU
-            String hasNvidia = MinaUtils.execCmdWithResult(session,
-                    "command -v nvidia-smi >/dev/null 2>&1 && echo 'yes' || echo 'no'").trim();
-            if ("yes".equals(hasNvidia)) {
+            CommandResult hasNvidiaResult = MinaUtils.execCmdWithResultObject(session,
+                    "command -v nvidia-smi >/dev/null 2>&1 && echo 'yes' || echo 'no'");
+
+            if (hasNvidiaResult.isSuccess() && "yes".equals(hasNvidiaResult.getOutput().trim())) {
                 logger.info("检测到NVIDIA GPU");
 
                 // 获取NVIDIA GPU信息
-                String gpuOutput = MinaUtils.execCmdWithResult(session,
-                        "nvidia-smi --query-gpu=name,memory.total,memory.used,temperature.gpu --format=csv,noheader")
-                        .trim();
-                if (!gpuOutput.isEmpty()) {
+                CommandResult gpuOutputResult = MinaUtils.execCmdWithResultObject(session,
+                        "nvidia-smi --query-gpu=name,memory.total,memory.used,temperature.gpu --format=csv,noheader");
+
+                if (gpuOutputResult.isSuccess() && !gpuOutputResult.getOutput().trim().isEmpty()) {
+                    String gpuOutput = gpuOutputResult.getOutput().trim();
                     gpuInfo.setInfo(gpuOutput);
                     gpuInfo.setVendor("NVIDIA");
                     gpuInfo.setType("独立显卡");
 
                     // 计算GPU卡数量
-                    String gpuCount = MinaUtils.execCmdWithResult(session,
-                            "nvidia-smi --query-gpu=count --format=csv,noheader").trim();
-                    try {
-                        gpuInfo.setDeviceCount(Integer.parseInt(gpuCount));
-                    } catch (NumberFormatException e) {
+                    CommandResult gpuCountResult = MinaUtils.execCmdWithResultObject(session,
+                            "nvidia-smi --query-gpu=count --format=csv,noheader");
+
+                    if (gpuCountResult.isSuccess()) {
+                        try {
+                            gpuInfo.setDeviceCount(Integer.parseInt(gpuCountResult.getOutput().trim()));
+                        } catch (NumberFormatException e) {
+                            gpuInfo.setDeviceCount(1); // 默认值
+                        }
+                    } else {
+                        logger.error("获取NVIDIA GPU数量失败: {}", gpuCountResult.getError());
                         gpuInfo.setDeviceCount(1); // 默认值
                     }
+                } else {
+                    logger.error("获取NVIDIA GPU信息失败: {}",
+                            gpuOutputResult.isSuccess() ? "无输出" : gpuOutputResult.getError());
                 }
             } else {
                 // 检查是否有AMD GPU
-                String hasAmd = MinaUtils.execCmdWithResult(session,
-                        "command -v rocm-smi >/dev/null 2>&1 && echo 'yes' || echo 'no'").trim();
-                if ("yes".equals(hasAmd)) {
+                CommandResult hasAmdResult = MinaUtils.execCmdWithResultObject(session,
+                        "command -v rocm-smi >/dev/null 2>&1 && echo 'yes' || echo 'no'");
+
+                if (hasAmdResult.isSuccess() && "yes".equals(hasAmdResult.getOutput().trim())) {
                     logger.info("检测到AMD GPU");
 
                     // 获取AMD GPU信息
-                    String gpuOutput = MinaUtils.execCmdWithResult(session, "rocm-smi --showproductname").trim();
-                    if (!gpuOutput.isEmpty()) {
+                    CommandResult gpuOutputResult = MinaUtils.execCmdWithResultObject(session,
+                            "rocm-smi --showproductname");
+
+                    if (gpuOutputResult.isSuccess() && !gpuOutputResult.getOutput().trim().isEmpty()) {
+                        String gpuOutput = gpuOutputResult.getOutput().trim();
                         gpuInfo.setInfo(gpuOutput);
                         gpuInfo.setVendor("AMD");
                         gpuInfo.setType("独立显卡");
 
                         // 计算GPU卡数量
-                        String gpuCount = MinaUtils.execCmdWithResult(session, "rocm-smi -i | wc -l").trim();
-                        try {
-                            gpuInfo.setDeviceCount(Integer.parseInt(gpuCount));
-                        } catch (NumberFormatException e) {
+                        CommandResult gpuCountResult = MinaUtils.execCmdWithResultObject(session,
+                                "rocm-smi -i | wc -l");
+
+                        if (gpuCountResult.isSuccess()) {
+                            try {
+                                gpuInfo.setDeviceCount(Integer.parseInt(gpuCountResult.getOutput().trim()));
+                            } catch (NumberFormatException e) {
+                                gpuInfo.setDeviceCount(1); // 默认值
+                            }
+                        } else {
+                            logger.error("获取AMD GPU数量失败: {}", gpuCountResult.getError());
                             gpuInfo.setDeviceCount(1); // 默认值
                         }
+                    } else {
+                        logger.error("获取AMD GPU信息失败: {}",
+                                gpuOutputResult.isSuccess() ? "无输出" : gpuOutputResult.getError());
                     }
                 } else {
                     // 尝试通过lspci检测GPU
-                    String lspciOutput = MinaUtils.execCmdWithResult(session,
-                            "lspci | grep -i 'vga\\|3d\\|display'").trim();
-                    if (!lspciOutput.isEmpty()) {
+                    CommandResult lspciResult = MinaUtils.execCmdWithResultObject(session,
+                            "lspci | grep -i 'vga\\|3d\\|display'");
+
+                    if (lspciResult.isSuccess() && !lspciResult.getOutput().trim().isEmpty()) {
+                        String lspciOutput = lspciResult.getOutput().trim();
                         gpuInfo.setInfo(lspciOutput);
 
                         if (lspciOutput.toLowerCase().contains("nvidia")) {
@@ -687,7 +1033,10 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         String[] lines = lspciOutput.split("\n");
                         gpuInfo.setDeviceCount(lines.length);
                     } else {
-                        // 没有检测到GPU
+                        // 没有检测到GPU或命令执行失败
+                        if (!lspciResult.isSuccess()) {
+                            logger.error("执行lspci命令失败: {}", lspciResult.getError());
+                        }
                         gpuInfo.setVendor("无");
                         gpuInfo.setType("无");
                         gpuInfo.setDeviceCount(0);
@@ -731,19 +1080,37 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             }
 
             // 获取IP地址信息
-            String ipInfo = MinaUtils.execCmdWithResult(session, "ip addr show").trim();
+            CommandResult ipInfoResult = MinaUtils.execCmdWithResultObject(session, "ip addr show");
+            if (!ipInfoResult.isSuccess()) {
+                logger.error("获取IP地址信息失败: {}", ipInfoResult.getError());
+                osInfo.setNetworkStatus(OsInfoStatusEnum.ERROR);
+                if (cacheUpdater != null && hostInfo != null) {
+                    cacheUpdater.updateCache(hostInfo);
+                }
+                return;
+            }
+            String ipInfo = ipInfoResult.getOutput().trim();
 
             // 获取路由信息
-            String routeInfo = MinaUtils.execCmdWithResult(session, "ip route").trim();
+            CommandResult routeInfoResult = MinaUtils.execCmdWithResultObject(session, "ip route");
+            if (!routeInfoResult.isSuccess()) {
+                logger.error("获取路由信息失败: {}", routeInfoResult.getError());
+                // 不返回，继续收集其他信息
+            }
+            String routeInfo = routeInfoResult.isSuccess() ? routeInfoResult.getOutput().trim() : "";
 
             // 获取活动连接信息
-            String connectionsStr = MinaUtils.execCmdWithResult(session, "netstat -an | grep ESTABLISHED | wc -l")
-                    .trim();
+            CommandResult connectionsResult = MinaUtils.execCmdWithResultObject(session,
+                    "netstat -an | grep ESTABLISHED | wc -l");
             int connections = 0;
-            try {
-                connections = Integer.parseInt(connectionsStr);
-            } catch (NumberFormatException e) {
-                logger.warn("解析活动连接数失败: {}", connectionsStr);
+            if (connectionsResult.isSuccess()) {
+                try {
+                    connections = Integer.parseInt(connectionsResult.getOutput().trim());
+                } catch (NumberFormatException e) {
+                    logger.warn("解析活动连接数失败: {}", connectionsResult.getOutput());
+                }
+            } else {
+                logger.error("获取活动连接数失败: {}", connectionsResult.getError());
             }
 
             // 解析IP地址信息，提取网络接口名称和IP地址
@@ -800,7 +1167,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             }
 
             // 获取resolv.conf文件内容
-            String resolvConf = MinaUtils.execCmdWithResult(session, "cat /etc/resolv.conf").trim();
+            CommandResult resolvConfResult = MinaUtils.execCmdWithResultObject(session, "cat /etc/resolv.conf");
+            String resolvConf = "";
+
+            if (resolvConfResult.isSuccess()) {
+                resolvConf = resolvConfResult.getOutput().trim();
+            } else {
+                logger.error("获取DNS配置失败: {}", resolvConfResult.getError());
+            }
 
             // 提取DNS服务器地址
             List<String> dnsServers = new ArrayList<>();
@@ -810,9 +1184,32 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 dnsServers.add(matcher.group(1));
             }
 
-            // 设置DNS服务器列表
-            osInfo.setDnsServers(dnsServers);
-            osInfo.setDnsStatus(OsInfoStatusEnum.SUCCESS);
+            // 获取/etc/hosts文件内容
+            CommandResult hostsResult = MinaUtils.execCmdWithResultObject(session, "cat /etc/hosts");
+            String hostsFile = "";
+
+            if (hostsResult.isSuccess()) {
+                hostsFile = hostsResult.getOutput().trim();
+            } else {
+                logger.error("获取hosts文件失败: {}", hostsResult.getError());
+            }
+
+            // 尝试进行DNS解析测试
+            CommandResult digResult = MinaUtils.execCmdWithResultObject(session,
+                    "dig +short www.baidu.com || host -t A www.baidu.com | grep 'has address'");
+            boolean dnsWorking = digResult.isSuccess() && !digResult.getOutput().trim().isEmpty();
+
+            // 创建DNS信息对象
+            DnsInfo dnsInfo = new DnsInfo();
+            dnsInfo.setServers(dnsServers);
+            dnsInfo.setHostsFileContent(hostsFile);
+            dnsInfo.setResolvConfContent(resolvConf);
+            dnsInfo.setWorking(dnsWorking);
+            dnsInfo.setStatus(dnsWorking ? OsInfoStatusEnum.SUCCESS : OsInfoStatusEnum.ERROR);
+
+            // 设置到OS信息对象
+            osInfo.setDnsInfo(dnsInfo);
+            osInfo.setDnsStatus(dnsInfo.getStatus());
 
             // 更新缓存
             if (cacheUpdater != null && hostInfo != null) {

@@ -262,7 +262,10 @@ export default {
                     class: 'hostname-text', 
                     title: record.fqdn || record.hostname || '主机名加载中' 
                   }, [
-                    record.hostname || h('div', { class: 'hostname-loading-container' }, [
+                    // 如果有主机名且状态不是LOADING才显示主机名，否则显示加载动画
+                    (record.hostname && (!record.hostnameStatus || record.hostnameStatus !== 'LOADING')) ? 
+                    record.hostname : 
+                    h('div', { class: 'hostname-loading-container' }, [
                       h('div', { class: 'hostname-loading-dots' }, [
                         h('span', { class: 'hostname-loading-dot' }),
                         h('span', { class: 'hostname-loading-dot' }),
@@ -450,9 +453,9 @@ export default {
             // 使用osInfo中的数据
             const hasOsInfo = row.osInfo && (row.osInfo.distribution || row.osInfo.fullName);
             
-            // 优先使用fullName字段，其次使用distribution
+            // 优先使用distribution字段，其次使用fullName
             const osDisplayName = hasOsInfo 
-              ? (row.osInfo.fullName || row.osInfo.distribution || '-')
+              ? (row.osInfo.distribution || row.osInfo.fullName || '-')
               : (text || row.osType || '-');
               
             const osVersion = hasOsInfo ? row.osInfo.versionId : (row.osVersion || '');
@@ -1856,6 +1859,11 @@ export default {
       
       this.editLoading = true;
       
+      // 设置主机名状态为加载中
+      if (this.currentEditHost) {
+        this.currentEditHost.hostnameStatus = 'LOADING';
+      }
+      
       // 调用后端接口修改主机名
       HostCheckService.updateHostname(this, this.clusterId, this.currentEditHost.ip, newHostname)
         .then(res => {
@@ -1864,6 +1872,8 @@ export default {
             // 更新本地数据
             if (this.currentEditHost) {
               this.currentEditHost.hostname = newHostname;
+              // 恢复主机名状态
+              this.currentEditHost.hostnameStatus = 'SUCCESS';
             }
             // 关闭对话框
             this.hostnameEditVisible = false;
@@ -1871,10 +1881,18 @@ export default {
             this.getEnvironmentList();
           } else {
             this.$message.error(res.msg || '主机名修改失败');
+            // 设置错误状态
+            if (this.currentEditHost) {
+              this.currentEditHost.hostnameStatus = 'ERROR';
+            }
           }
         })
         .catch(err => {
           this.$message.error('主机名修改失败: ' + (err.message || err));
+          // 设置错误状态
+          if (this.currentEditHost) {
+            this.currentEditHost.hostnameStatus = 'ERROR';
+          }
         })
         .finally(() => {
           this.editLoading = false;
@@ -1946,12 +1964,7 @@ export default {
     getOsDisplayName(osInfo) {
       if (!osInfo) return '正在检测操作系统...';
       
-      // 优先使用fullName
-      if (osInfo.fullName) {
-        return osInfo.fullName;
-      }
-      
-      // 其次使用distribution
+      // 优先使用distribution
       if (osInfo.distribution) {
         // 常见Linux发行版显示名映射
         const distroMap = {
@@ -1982,6 +1995,11 @@ export default {
         
         // 如果无法匹配已知发行版，添加Linux后缀
         return `${osInfo.distribution} Linux`;
+      }
+      
+      // 其次使用fullName
+      if (osInfo.fullName) {
+        return osInfo.fullName;
       }
       
       // 最后使用osType

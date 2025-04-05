@@ -4,6 +4,7 @@ import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.DiskInfo;
+import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.model.hardware.GpuInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
@@ -183,6 +184,11 @@ public class OsInfo implements Serializable {
     private String lastUpdatedItem;
 
     /**
+     * DNS信息
+     */
+    private DnsInfo dnsInfo;
+
+    /**
      * 获取版本ID（与version保持一致）
      */
     public String getVersionId() {
@@ -275,6 +281,11 @@ public class OsInfo implements Serializable {
      * 获取发行版ID
      */
     public String getDistributionId() {
+        // 优先返回distribution字段作为简要系统名称
+        if (StringUtils.isNotBlank(distribution)) {
+            return distribution;
+        }
+        // 如果distribution为空，则使用枚举值的identifier
         return osDistribution != null ? osDistribution.getIdentifier() : "linux";
     }
 
@@ -296,5 +307,16 @@ public class OsInfo implements Serializable {
      */
     public boolean is(OsDistribution distro) {
         return this.osDistribution == distro;
+    }
+
+    /**
+     * 设置DNS服务器状态
+     */
+    public void setDnsStatus(OsInfoStatusEnum status) {
+        this.dnsStatus = status;
+        if (dnsInfo == null) {
+            dnsInfo = new DnsInfo();
+        }
+        dnsInfo.setStatus(status);
     }
 }

@@ -44,10 +44,12 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.InstallState;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.model.hardware.GpuInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
@@ -241,10 +243,55 @@ public class InstallServiceImpl implements InstallService {
             hostInfo.setOsErrorMsg("");
         }
 
+        // 确保主机名状态字段初始化，使用与OS状态相同的加载逻辑
+        if (hostInfo.getHostnameStatus() == null) {
+            // 如果SSH连接是成功的，但主机名尚未收集，设置为LOADING
+            if (StringUtils.isBlank(hostInfo.getHostname())) {
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
+            } else {
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+            }
+        } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getHostnameStatus())) {
+            // 如果已经获取到主机名，但状态仍为ERROR，修正为SUCCESS
+            if (StringUtils.isNotBlank(hostInfo.getHostname()) && !hostInfo.getHostname().equals(hostInfo.getIp())) {
+                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
+            }
+        }
+
         // 确保操作系统信息可用于前端
         if (hostInfo.getOsInfo() != null) {
-            if (hostInfo.getOsInfo().getDistribution() == null) {
-                hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+            // 确保distribution字段有值
+            if (hostInfo.getOsInfo().getDistribution() == null || hostInfo.getOsInfo().getDistribution().isEmpty()) {
+                // 如果fullName有值，从fullName中提取distribution
+                String fullName = hostInfo.getOsInfo().getFullName();
+                if (fullName != null && !fullName.isEmpty()) {
+                    String lowerFullName = fullName.toLowerCase();
+                    if (lowerFullName.contains("centos")) {
+                        hostInfo.getOsInfo().setDistribution("CentOS");
+                    } else if (lowerFullName.contains("ubuntu")) {
+                        hostInfo.getOsInfo().setDistribution("Ubuntu");
+                    } else if (lowerFullName.contains("debian")) {
+                        hostInfo.getOsInfo().setDistribution("Debian");
+                    } else if (lowerFullName.contains("red hat") || lowerFullName.contains("redhat")) {
+                        hostInfo.getOsInfo().setDistribution("RedHat");
+                    } else if (lowerFullName.contains("kylin")) {
+                        hostInfo.getOsInfo().setDistribution("Kylin");
+                    } else {
+                        hostInfo.getOsInfo().setDistribution("Linux");
+                    }
+                } else {
+                    hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
+                }
+            }
+
+            // 确保osDistribution字段正确设置
+            if (hostInfo.getOsInfo().getDistribution() != null && !hostInfo.getOsInfo().getDistribution().isEmpty()) {
+                // 更新操作系统发行版枚举
+                hostInfo.getOsInfo().updateOsDistribution();
+                // 如果更新后仍为其他类型，则强制使用distribution字段设置
+                if ("linux".equals(hostInfo.getOsInfo().getDistributionId())) {
+                    hostInfo.getOsInfo().forceUpdateDistribution();
+                }
             }
 
             // 确保网络信息不为null

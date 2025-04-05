@@ -28,9 +28,9 @@
             <div class="hostname-detail-name">
               <!-- 主机名显示区域 -->
               <div class="hostname-name-wrapper">
-                <!-- 如果主机名存在则显示 -->
-                <span v-if="hostInfo.hostname" class="hostname-name">{{ hostInfo.hostname }}</span>
-                <!-- 如果主机名不存在，显示加载动画 -->
+                <!-- 如果主机名存在并且状态不是LOADING则显示 -->
+                <span v-if="hostInfo.hostname && (!hostInfo.hostnameStatus || hostInfo.hostnameStatus !== 'LOADING')" class="hostname-name">{{ hostInfo.hostname }}</span>
+                <!-- 如果主机名不存在或状态为LOADING，显示加载动画 -->
                 <div v-else class="hostname-loading-container">
                   <div class="hostname-loading-dots">
                     <span class="hostname-loading-dot"></span>
@@ -46,9 +46,9 @@
               <!-- FQDN字段 - 独立加载动画 -->
               <div class="hostname-meta-item">
                 <span class="meta-label">FQDN</span>
-                <!-- 如果FQDN存在则显示 -->
-                <span v-if="hostInfo.fqdn" class="meta-value">{{ hostInfo.fqdn }}</span>
-                <!-- 如果FQDN不存在，显示加载动画 -->
+                <!-- 如果FQDN存在并且状态不是LOADING则显示 -->
+                <span v-if="hostInfo.fqdn && (!hostInfo.hostnameStatus || hostInfo.hostnameStatus !== 'LOADING')" class="meta-value">{{ hostInfo.fqdn }}</span>
+                <!-- 如果FQDN不存在或状态为LOADING，显示加载动画 -->
                 <div v-else class="fqdn-loading-container">
                   <div class="fqdn-loading-pulse"></div>
                   <span class="fqdn-loading-text">加载中...</span>
