@@ -1938,7 +1938,13 @@ public class AsyncCheckService {
                                     osType = hostInfo.getOsInfo().getDistribution();
                                 }
 
-                                if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
+                                // 检查系统类型
+                                if ("Alpine".equalsIgnoreCase(osType) || osType.toLowerCase().contains("alpine")) {
+                                    // Alpine Linux 专用设置
+                                    logger.info("检测到Alpine Linux系统，使用特定命令设置主机名");
+                                    command = "hostname " + newHostname + " && " +
+                                            "echo '" + newHostname + "' > /etc/hostname";
+                                } else if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
                                         "Fedora".equalsIgnoreCase(osType)) {
                                     // CentOS/RHEL/Fedora
                                     command = "sudo hostnamectl set-hostname " + newHostname;
@@ -1962,6 +1968,25 @@ public class AsyncCheckService {
                                         session,
                                         "which sudo || echo 'nosudo'");
                                 boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
+
+                                // 检查系统是否有hostnamectl命令
+                                com.datasophon.api.service.checker.common.CommandResult checkHostnamectlResult = execCommand(
+                                        session,
+                                        "which hostnamectl || echo 'nohostnamectl'");
+                                boolean hasHostnamectl = !checkHostnamectlResult.getOutput().trim()
+                                        .contains("nohostnamectl");
+
+                                // 如果命令中包含hostnamectl但系统没有此命令，改用标准hostname命令
+                                if (command.contains("hostnamectl") && !hasHostnamectl) {
+                                    logger.info("主机 {} 不支持hostnamectl命令，使用标准hostname命令代替", ip);
+                                    if (hasSudo) {
+                                        command = "sudo hostname " + newHostname + " && " +
+                                                "sudo sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
+                                    } else {
+                                        command = "hostname " + newHostname + " && " +
+                                                "sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
+                                    }
+                                }
 
                                 // 根据是否有sudo命令，选择使用适当的设置主机名命令
                                 String actualCommand;
@@ -1988,6 +2013,40 @@ public class AsyncCheckService {
 
                                 if (!result.isSuccess()) {
                                     throw new Exception("设置主机名失败: " + result.getError());
+                                }
+
+                                // 验证主机名是否设置成功
+                                com.datasophon.api.service.checker.common.CommandResult verifyResult = execCommand(
+                                        session,
+                                        "hostname");
+                                String currentHostname = verifyResult.getOutput().trim();
+
+                                if (!currentHostname.equals(newHostname)) {
+                                    logger.warn("主机名未成功设置，期望: {}，实际: {}", newHostname, currentHostname);
+
+                                    // 如果第一次设置失败，尝试使用更直接的方式
+                                    logger.info("尝试使用直接方式设置主机名: {}", newHostname);
+                                    String directCommand = hasSudo
+                                            ? "sudo hostname " + newHostname + " && sudo sh -c 'echo \"" + newHostname
+                                                    + "\" > /etc/hostname'"
+                                            : "hostname " + newHostname + " && sh -c 'echo \"" + newHostname
+                                                    + "\" > /etc/hostname'";
+
+                                    com.datasophon.api.service.checker.common.CommandResult retryResult = execCommand(
+                                            session, directCommand);
+
+                                    // 再次验证
+                                    verifyResult = execCommand(session, "hostname");
+                                    currentHostname = verifyResult.getOutput().trim();
+
+                                    if (!currentHostname.equals(newHostname)) {
+                                        throw new Exception(
+                                                "重试后设置主机名仍然失败，期望: " + newHostname + "，实际: " + currentHostname);
+                                    } else {
+                                        logger.info("重试设置主机名成功: {}", newHostname);
+                                    }
+                                } else {
+                                    logger.info("主机名成功设置为: {}", newHostname);
                                 }
 
                                 // 更新缓存中的主机名
