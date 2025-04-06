@@ -6,6 +6,7 @@ import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.checker.AsyncCheckService;
 import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.common.LogEntryManager;
+import com.datasophon.api.service.checker.config.TaskManager;
 import com.datasophon.api.service.checker.core.ItemChecker;
 import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
@@ -13,14 +14,13 @@ import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.OsInfo;
-import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.api.service.checker.config.TaskManager;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +34,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -233,6 +235,9 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
     }
 
+    /**
+     * 修复选中的检查项
+     */
     @Override
     public Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds) {
         Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
@@ -246,27 +251,38 @@ public class HostCheckServiceImpl implements HostCheckService {
                 .map(Integer::parseInt)
                 .collect(Collectors.toList());
 
+        return fixSelectedCheckItems(clusterId, hostInfo, itemIdList);
+    }
+
+    /**
+     * 修复指定主机上的选中检查项（重载方法）
+     * 
+     * @param clusterId  集群ID
+     * @param hostInfo   主机信息对象
+     * @param itemIdList 需要修复的检查项ID列表
+     * @return 操作结果
+     */
+    public Result fixSelectedCheckItems(Integer clusterId, HostInfo hostInfo, List<Integer> itemIdList) {
+        if (Objects.isNull(hostInfo)) {
+            return Result.error("主机不存在");
+        }
+
         List<CheckItem> itemsToFix = hostInfo.getCheckItems().stream()
                 .filter(item -> itemIdList.contains(item.getId()) &&
                         item.getStatus().equals(CheckItem.Status.FAILED))
                 .collect(Collectors.toList());
 
         if (itemsToFix.isEmpty()) {
-            return Result.error("没有可修复的检查项");
+            return Result.success("没有可修复的检查项");
         }
 
         try {
-            boolean allSuccess = true;
-            for (CheckItem item : itemsToFix) {
-                if (doFix(clusterId, hostInfo, item)) {
-                    allSuccess = false;
-                    break;
-                }
-            }
+            // 使用doHostFix进行批量修复，实现SSH连接复用
+            boolean success = doHostFix(clusterId, hostInfo, itemsToFix);
 
-            if (allSuccess) {
+            if (success) {
                 retriggerHostCheck(hostInfo, clusterId);
-                return Result.success();
+                return Result.success("修复成功");
             } else {
                 return Result.error("部分检查项修复失败");
             }
@@ -274,6 +290,95 @@ public class HostCheckServiceImpl implements HostCheckService {
             logger.error("修复选中检查项失败", e);
             return Result.error("修复失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 修复指定主机列表的指定检查项
+     * 
+     * @param clusterId    集群ID
+     * @param hostInfoList 主机信息列表
+     * @param itemIdList   需要修复的检查项ID列表
+     * @return 操作结果
+     */
+    public Result fixSelectedCheckItems(Integer clusterId, List<HostInfo> hostInfoList, List<Integer> itemIdList) {
+        if (hostInfoList == null || hostInfoList.isEmpty()) {
+            return Result.error("主机列表为空");
+        }
+
+        if (itemIdList == null || itemIdList.isEmpty()) {
+            return Result.success("没有指定需要修复的检查项");
+        }
+
+        StringBuilder resultMessage = new StringBuilder();
+        boolean hasErrors = false;
+        int totalFixedItems = 0;
+
+        // 遍历所有主机，对每个主机执行修复操作
+        for (HostInfo hostInfo : hostInfoList) {
+            try {
+                Result result = fixSelectedCheckItems(clusterId, hostInfo, itemIdList);
+
+                // 计算成功修复的项数
+                List<CheckItem> fixedItems = hostInfo.getCheckItems().stream()
+                        .filter(item -> itemIdList.contains(item.getId()) &&
+                                item.getStatus().equals(CheckItem.Status.SUCCESS))
+                        .collect(Collectors.toList());
+
+                totalFixedItems += fixedItems.size();
+
+                if (!result.isSuccess()) {
+                    hasErrors = true;
+                    resultMessage.append("主机 ").append(hostInfo.getHostname())
+                            .append(" 的部分检查项修复失败: ")
+                            .append(result.getMsg()).append("; ");
+                }
+            } catch (Exception e) {
+                hasErrors = true;
+                logger.error("修复主机 {} 的检查项时发生错误: {}", hostInfo.getHostname(), e.getMessage(), e);
+                resultMessage.append("主机 ").append(hostInfo.getHostname())
+                        .append(" 修复失败: ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        // 更新主机映射缓存
+        updateHostMapInCache(clusterId);
+
+        if (hasErrors) {
+            return Result.error("部分修复失败: " + resultMessage.toString() + "已修复 " + totalFixedItems + " 个项目");
+        } else if (totalFixedItems == 0) {
+            return Result.success("没有找到需要修复的失败项");
+        } else {
+            return Result.success("已成功修复选中的失败项，共 " + totalFixedItems + " 个");
+        }
+    }
+
+    /**
+     * 一键修复所有失败项
+     */
+    @Override
+    public Result fixAllFailedItems(Integer clusterId) {
+        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        if (hostMap == null || hostMap.isEmpty()) {
+            return Result.error("集群未找到或无主机信息");
+        }
+
+        // 获取所有主机列表
+        List<HostInfo> hostInfoList = new ArrayList<>(hostMap.values());
+
+        // 收集所有失败项的ID
+        Set<Integer> allFailedItemIds = new HashSet<>();
+        for (HostInfo hostInfo : hostInfoList) {
+            hostInfo.getCheckItems().stream()
+                    .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
+                    .forEach(item -> allFailedItemIds.add(item.getId()));
+        }
+
+        if (allFailedItemIds.isEmpty()) {
+            return Result.success("没有发现需要修复的失败项");
+        }
+
+        // 调用公共方法进行批量修复
+        return fixSelectedCheckItems(clusterId, hostInfoList, new ArrayList<>(allFailedItemIds));
     }
 
     @Override
@@ -2980,62 +3085,6 @@ public class HostCheckServiceImpl implements HostCheckService {
         } catch (Exception e) {
             logger.error("批量设置主机名任务启动时发生错误", e);
             return Result.error("批量设置主机名任务启动失败: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public Result fixAllFailedItems(Integer clusterId) {
-        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostMap == null || hostMap.isEmpty()) {
-            return Result.error("集群未找到或无主机信息");
-        }
-
-        StringBuilder resultMessage = new StringBuilder();
-        boolean hasErrors = false;
-        int totalFixedItems = 0;
-
-        // 遍历所有主机
-        for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-            String hostname = entry.getKey();
-            HostInfo hostInfo = entry.getValue();
-            int hostFixedItems = 0;
-
-            try {
-                // 筛选该主机上所有失败状态的检查项
-                List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
-                        .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
-                        .collect(Collectors.toList());
-
-                if (!failedItems.isEmpty()) {
-                    // 为所有失败项执行修复
-                    boolean success = doHostFix(clusterId, hostInfo, failedItems);
-                    hostFixedItems = failedItems.size();
-                    totalFixedItems += hostFixedItems;
-
-                    if (!success) {
-                        hasErrors = true;
-                        resultMessage.append("主机 ").append(hostname).append(" 的部分检查项修复失败; ");
-                    }
-
-                    // 更新主机的缓存信息
-                    updateHostInfoCache(clusterId, hostInfo);
-                }
-            } catch (Exception e) {
-                hasErrors = true;
-                logger.error("修复主机 {} 的检查项时发生错误: {}", hostname, e.getMessage(), e);
-                resultMessage.append("主机 ").append(hostname).append(" 修复失败: ").append(e.getMessage()).append("; ");
-            }
-        }
-
-        // 更新主机映射缓存
-        updateHostMapInCache(clusterId);
-
-        if (hasErrors) {
-            return Result.error("部分修复失败: " + resultMessage.toString() + "已修复 " + totalFixedItems + " 个项目");
-        } else if (totalFixedItems == 0) {
-            return Result.success("没有发现需要修复的失败项");
-        } else {
-            return Result.success("已成功修复所有失败项，共 " + totalFixedItems + " 个");
         }
     }
 
