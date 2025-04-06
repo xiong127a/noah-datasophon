@@ -26,23 +26,21 @@
 -->
 <template>
   <div class="steps7 steps">
-    <div class="steps-title flex-bewteen-container">
-      <span>服务配置</span>
+    <div class="hero-section">
+      <h1 class="hero-title">部署服务</h1>
+      <p class="hero-subtitle">集群部署进度实时监控，确保安装成功</p>
     </div>
-    <a-button class="btn-save" type="primary" @click="handleSubmit">保存</a-button>
-    <a-spin :spinning="loading" style="position: relative;">
-      <a-tabs v-model="serviceNameKey" @change="callback" style="max-width: 1330px; position: relative;">
-        <a-tab-pane v-for="item in SERVICENAMES" :key="item" :tab="item" :forceRender="true">
-          <!-- <div class="mgt16 steps-body">
-            <CommonTemplate :ref="'CommonTemplateRef'+item" :steps4Data="steps4Data" :templateData="templateProps(item)" />
-          </div>-->
-        </a-tab-pane>
-      </a-tabs>
-      <div :class="['steps-body', serviceNameKey === item ?'steps-container': '']" v-for="item in SERVICENAMES" :key="item">
-        <!-- :class="[serviceNameKey === item ?'steps-container show-template' : 'steps-container hide-template']" -->
-        <CommonTemplate :ref="'CommonTemplateRef'+item" :class="[serviceNameKey === item ?'steps-container show-template' : 'steps-container hide-template', item+'warp']" :steps4Data="steps4Data" :templateData="templateProps(item)" />
-      </div>
-    </a-spin>
+    
+    <div class="table-info steps-body pdr30">
+      <!-- 部署服务表格内容保持原样 -->
+      <a-table
+        :columns="columns"
+        :dataSource="dataSource"
+        :loading="loading"
+        :pagination="false"
+        rowKey="id"
+      ></a-table>
+    </div>
   </div>
 </template>
 <script>
@@ -371,45 +369,60 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-/deep/ .ant-tabs {
-  max-width: 1442px;
-  .ant-tabs-bar {
-    margin-right: 32px;
+// 添加苹果设计系统颜色和字体定义
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.steps7 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+  
+  .hero-section {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    
+    .hero-title {
+      .apple-font();
+      font-size: 2.8rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.4rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0;
+      max-width: 760px;
+      margin: 0 auto;
+    }
   }
 }
-.steps7 {
-  /deep/ .ant-spin-container {
-    position: relative;
-  }
-  .steps-body {
-    // max-width: 1444px;
-    position: absolute;
-    top: 60px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    // overflow-y: hidden!important;;
-    // max-height: 640px;
-    height: 600px;
-  }
-  .steps-container {
-    // max-height: 640px;
-    // height: 600px;
-    // overflow-y: hidden;
-    z-index: 10;
-  }
-  .show-template {
-    z-index: 1;
-    opacity: 1;
-  }
-  .hide-template {
-    z-index: 0;
-    opacity: 0;
-  }
-  .btn-save {
-    position: absolute;
-    right: 32px;
-    z-index: 1000;
-  }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style> 

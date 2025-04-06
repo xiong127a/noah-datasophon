@@ -25,16 +25,23 @@
  * @FilePath: \ddh-ui\src\components\steps\step5.vue
 -->
 <template>
-  <a-spin :spinning="loading" style="min-height: 600px">
-    <div class="steps5 steps">
-      <div class="steps-title flex-bewteen-container">
-        <span>分配服务Master角色</span>
-      </div>
-      <div class="mgt16 steps-body">
-        <CommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
-      </div>
+  <div class="steps5 steps">
+    <div class="hero-section">
+      <h1 class="hero-title">分配主机</h1>
+      <p class="hero-subtitle">为不同组件选择合适的主机，优化资源分配和集群性能</p>
     </div>
-  </a-spin>
+    
+    <div class="mgt16 steps-body scroll-limit pdr30">
+      <!-- 服务关系引用 -->
+      <a-tabs v-if="activeKey.length > 0" v-model="tabActive">
+        <a-tab-pane :tab="item.serviceName" v-for="item in activeKey" :key="item.serviceId">
+          <div class="table-up-info" v-if="tabActive === item.serviceId">
+            <CommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
+          </div>
+        </a-tab-pane>
+      </a-tabs>
+    </div>
+  </div>
 </template>
 <script>
 import CommonTemplate from "@/components/commonTemplate/index";
@@ -51,6 +58,8 @@ export default {
       templateData: [],
       saveData: [],
       hostList: [],
+      activeKey: [],
+      tabActive: null,
     };
   },
   methods: {
@@ -161,4 +170,62 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 添加苹果设计系统颜色和字体定义
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.steps5 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+  
+  .hero-section {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    
+    .hero-title {
+      .apple-font();
+      font-size: 2.8rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.4rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+  }
+
+  // 保留原有样式...
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 </style>

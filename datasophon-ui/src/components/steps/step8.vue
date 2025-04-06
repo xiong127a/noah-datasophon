@@ -26,46 +26,58 @@
 -->
 <template>
   <div class="steps8 steps">
-    <div class="steps-title flex-bewteen-container pdr30">
-      <div>
-        <a-icon v-if="currentPage !== 1" type="left" @click="goBack" />
-         {{title}}
-        </div>
-      <!-- <div class="close-x" @click="handleCancel">X</div> -->
-      <a-button @click="handleCancel" class="mgb16" style="height: 28px;position: absolute;right: 20px;top:15px;z-index:2" icon="close" />
-      <!-- <div v-if="currentPage === 1" class="flex-bewteen-container"> -->
-        <!-- <div class="status-num mgr20">
-          <span :class="[hostType === 'all' ? 'host-selected' : '']" @click="changeType('all')">
-            全部
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '1' ? 'host-selected' : '']" @click="changeType('1')">
-            安装中
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '2' ? 'host-selected' : '']" @click="changeType('2')">
-            成功
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '3' ? 'host-selected' : '']" @click="changeType('3')">
-            失败
-            <span>10</span>
-          </span>
-        </div>-->
-       <!-- <a-button type="primary" @click="retryHost('all')">全部重试</a-button>-->
-      <!-- </div> -->
+    <div class="hero-section">
+      <h1 class="hero-title">安装完成</h1>
+      <p class="hero-subtitle">集群部署完成，可以开始使用</p>
     </div>
-    <div class="table-info mgt16 steps-body" style="overflow-y: visible;max-height: 700px;">
-      <a-table v-if="currentPage === 1" @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :scroll="{y: 500}" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" rowKey="commandId" :pagination="pagination"></a-table>
-      <a-table v-if="[2,3].includes(currentPage)" @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :scroll="{y: 500}" rowKey="hostCommandId" :pagination="pagination"></a-table>
-      <LOGS v-if="currentPage === 4" :logData="logData" :hideCancel="true" />
+    
+    <div class="steps-body steps-container">
+      <div class="steps-title flex-bewteen-container pdr30">
+        <div>
+          <a-icon v-if="currentPage !== 1" type="left" @click="goBack" />
+           {{title}}
+          </div>
+        <!-- <div class="close-x" @click="handleCancel">X</div> -->
+        <a-button @click="handleCancel" class="mgb16" style="height: 28px;position: absolute;right: 20px;top:15px;z-index:2" icon="close" />
+        <!-- <div v-if="currentPage === 1" class="flex-bewteen-container"> -->
+          <!-- <div class="status-num mgr20">
+            <span :class="[hostType === 'all' ? 'host-selected' : '']" @click="changeType('all')">
+              全部
+              <span>10</span>
+            </span>
+            <a-divider type="vertical" />
+            <span :class="[hostType === '1' ? 'host-selected' : '']" @click="changeType('1')">
+              安装中
+              <span>10</span>
+            </span>
+            <a-divider type="vertical" />
+            <span :class="[hostType === '2' ? 'host-selected' : '']" @click="changeType('2')">
+              成功
+              <span>10</span>
+            </span>
+            <a-divider type="vertical" />
+            <span :class="[hostType === '3' ? 'host-selected' : '']" @click="changeType('3')">
+              失败
+              <span>10</span>
+            </span>
+          </div>-->
+         <!-- <a-button type="primary" @click="retryHost('all')">全部重试</a-button>-->
+        <!-- </div> -->
+      </div>
+      <div class="table-info mgt16 steps-body" style="overflow-y: visible;max-height: 700px;">
+        <a-table v-if="currentPage === 1" @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :scroll="{y: 500}" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" rowKey="commandId" :pagination="pagination"></a-table>
+        <a-table v-if="[2,3].includes(currentPage)" @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :scroll="{y: 500}" rowKey="hostCommandId" :pagination="pagination"></a-table>
+        <LOGS v-if="currentPage === 4" :logData="logData" :hideCancel="true" />
+      </div>
+      <!-- <div class="cluster-setting-footer pdr30" v-if="stepsType === 'cluster-setting'">
+        <a-button type="primary" @click="handleCancel">关闭</a-button>
+      </div> -->
+      <div class="finish-wrap steps-container">
+        <img src="@/assets/success.png" style="width: 72px; height: 72px" />
+        <div class="text">集群安装成功! 现在您可以返回进入集群管理页面查看该集群！</div>
+        <a-button class="mgt20" type="primary" @click="routerTo">返回集群管理</a-button>
+      </div>
     </div>
-    <!-- <div class="cluster-setting-footer pdr30" v-if="stepsType === 'cluster-setting'">
-      <a-button type="primary" @click="handleCancel">关闭</a-button>
-    </div> -->
   </div>
 </template>
 <script>
@@ -384,6 +396,9 @@ export default {
         callback(flag);
       }
     },
+    routerTo() {
+      // 实现路由到集群管理页面的逻辑
+    },
   },
   mounted() {
     this.pollingSearch();
@@ -396,6 +411,74 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 添加苹果设计系统颜色和字体定义
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.steps8 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+  
+  .hero-section {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    
+    .hero-title {
+      .apple-font();
+      font-size: 2.8rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.4rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+  }
+  
+  .finish-wrap {
+    width: 100%;
+    text-align: center;
+    margin-top: 100px;
+    
+    .text {
+      font-size: 16px;
+      margin-top: 20px;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .steps8 {
   .status-num {
     span {

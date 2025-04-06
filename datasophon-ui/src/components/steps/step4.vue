@@ -26,17 +26,19 @@
 -->
 <template>
   <div class="steps4 steps">
-    <div class="steps-title flex-bewteen-container pdr30 mgb12">
-      <span>选择服务</span>
+    <div class="hero-section">
+      <h1 class="hero-title">选择服务</h1>
+      <p class="hero-subtitle">选择需要部署的大数据组件服务和版本</p>
     </div>
+    
     <!-- 只有从集群进入(stepsType:cluster) step4才会有选择服务下拉框 同时table数据也变 -->
-    <a-row type="flex" align="middle" v-if="stepsType == 'cluster'">
-      <a-col :span="22">
-        <a-select allowClear showSearch placeholder="请选择" class="w252 mgr12" v-model="params.type"
-          @change="(value) => getVal(value, 'type')">
-          <a-select-option v-for="(item, index) in serveList" :key="index" :value="item">{{ item }}</a-select-option>
-        </a-select></a-col>
-    </a-row>
+    <div class="select-section" v-if="stepsType == 'cluster'">
+      <a-select allowClear showSearch placeholder="请选择服务类型" class="service-select" v-model="params.type"
+        @change="(value) => getVal(value, 'type')">
+        <a-select-option v-for="(item, index) in serveList" :key="index" :value="item">{{ item }}</a-select-option>
+      </a-select>
+    </div>
+    
     <div class="table-info mgt16 steps-body pdr30">
       <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource"
         :rowSelection="{ selectedRowKeys: stepsType == 'cluster' ? selectedRowKeysArr : selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
@@ -222,8 +224,71 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-.edit {
-  display: flex;
-  justify-content: space-between;
+// 添加苹果设计系统颜色和字体定义
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+.steps4 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+  
+  .hero-section {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    
+    .hero-title {
+      .apple-font();
+      font-size: 2.8rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.4rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+  }
+  
+  .select-section {
+    margin-bottom: 24px;
+    padding: 0 30px;
+    
+    .service-select {
+      width: 252px;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+// 保留原有样式
 </style>

@@ -26,34 +26,16 @@
 -->
 <template>
   <div class="steps3 steps">
-    <div class="steps-title flex-bewteen-container pdr30">
-      <span>主机Agent分发</span>
-      <div class="flex-bewteen-container">
-        <!-- <div class="status-num mgr20">
-          <span :class="[hostType === 'all' ? 'host-selected' : '']" @click="changeType('all')">
-            全部
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '1' ? 'host-selected' : '']" @click="changeType('1')">
-            安装中
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '2' ? 'host-selected' : '']" @click="changeType('2')">
-            成功
-            <span>10</span>
-          </span>
-          <a-divider type="vertical" />
-          <span :class="[hostType === '3' ? 'host-selected' : '']" @click="changeType('3')">
-            失败
-            <span>10</span>
-          </span>
-        </div> -->
+    <div class="hero-section">
+      <h1 class="hero-title">主机Agent分发</h1>
+      <p class="hero-subtitle">确保所有主机成功安装必要的Agent程序，以便执行后续操作</p>
+    </div>
+    
+    <div class="table-info mgt16 steps-body pdr30">
+      <div class="flex-bewteen-container action-bar">
+        <div></div>
         <a-button type="primary" @click="retryHost('all')">全部重试</a-button>
       </div>
-    </div>
-    <div class="table-info mgt16 steps-body pdr30">
       <a-table @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" rowKey="hostname" :pagination="pagination"></a-table>
     </div>
   </div>
@@ -240,7 +222,61 @@ export default {
 };
 </script>
 <style lang="less" scoped>
+// 添加苹果设计系统颜色和字体定义
+@apple-white: #ffffff;
+@apple-black: #1d1d1f;
+@apple-gray-light: #f5f5f7;
+@apple-gray: #86868b;
+@apple-blue: #0071e3;
+@apple-blue-hover: #147CE5;
+
+// 苹果设计系统字体
+.apple-font() {
+  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 .steps3 {
+  margin: 0;
+  max-width: 100%;
+  background-color: @apple-white;
+  overflow: hidden;
+  animation: fadeIn 0.8s ease-out;
+  
+  .hero-section {
+    text-align: center;
+    margin-bottom: 3.5rem;
+    
+    .hero-title {
+      .apple-font();
+      font-size: 2.8rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.022em;
+      color: @apple-black;
+      margin-bottom: 0.8rem;
+      background: linear-gradient(120deg, @apple-black, #505050);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      .apple-font();
+      font-size: 1.4rem;
+      line-height: 1.4;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: @apple-gray;
+      margin: 0;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+  }
+  
+  .action-bar {
+    margin-bottom: 16px;
+  }
+
   .status-num {
     span {
       margin: 0 4px;
@@ -260,5 +296,10 @@ export default {
   .progress-warp {
     width: 70%;
   }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>
