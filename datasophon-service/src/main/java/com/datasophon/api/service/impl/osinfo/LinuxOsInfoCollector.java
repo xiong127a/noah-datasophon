@@ -301,6 +301,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             // 尝试读取版本信息文件
             String[] versionFiles = {
                     "/etc/kylin-release", // 银河麒麟
+                    "/etc/fedora-release", // Fedora
                     "/etc/redhat-release", // RHEL/CentOS
                     "/etc/lsb-release", // Ubuntu
                     "/etc/debian_version", // Debian
@@ -320,9 +321,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         case "kylin-release":
                             osInfo.setDistribution("Kylin");
                             break;
+                        case "fedora-release":
+                            osInfo.setDistribution("Fedora");
+                            break;
                         case "redhat-release":
                             if (releaseInfo.toLowerCase().contains("centos")) {
                                 osInfo.setDistribution("CentOS");
+                            } else if (releaseInfo.toLowerCase().contains("fedora")) {
+                                osInfo.setDistribution("Fedora");
                             } else {
                                 osInfo.setDistribution("RedHat");
                             }
@@ -393,6 +399,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistribution("Ubuntu");
             } else if (lowerFullName.contains("debian")) {
                 osInfo.setDistribution("Debian");
+            } else if (lowerFullName.contains("fedora")) {
+                osInfo.setDistribution("Fedora");
             } else if (lowerFullName.contains("red hat") || lowerFullName.contains("redhat")) {
                 osInfo.setDistribution("RedHat");
             } else if (lowerFullName.contains("kylin")) {

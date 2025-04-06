@@ -259,6 +259,8 @@ public class OsInfo implements Serializable {
                 this.osDistribution = OsDistribution.UBUNTU;
             } else if (distLower.contains("debian")) {
                 this.osDistribution = OsDistribution.DEBIAN;
+            } else if (distLower.contains("fedora")) {
+                this.osDistribution = OsDistribution.FEDORA;
             } else if (distLower.contains("rhel") ||
                     distLower.contains("redhat")) {
                 this.osDistribution = OsDistribution.REDHAT;

@@ -15,6 +15,7 @@ public enum OsDistribution {
     UBUNTU24("Ubuntu 24.04", "ubuntu"),
     DEBIAN("Debian", "debian"),
     REDHAT("RedHat", "rhel"),
+    FEDORA("Fedora", "fedora"),
     KYLIN("Kylin", "kylin"),
     KYLIN_V10("Kylin V10", "kylin"),
     KYLIN_V4("Kylin V4", "kylin"),
@@ -76,6 +77,8 @@ public enum OsDistribution {
                 }
             }
             return KYLIN;
+        } else if (distLower.contains("fedora")) {
+            return FEDORA;
         } else if (distLower.contains("redhat") || distLower.contains("rhel")) {
             return REDHAT;
         } else if (distLower.contains("debian")) {
