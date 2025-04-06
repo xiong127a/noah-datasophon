@@ -713,7 +713,7 @@ export default {
           },
         },
         {
-          title: "状态test",
+          title: "状态",
           key: "status",
           width: "10%",
           customRender: (text, row) => {
@@ -737,10 +737,16 @@ export default {
             if (hostStatus && statusMap[hostStatus]) {
               const status = statusMap[hostStatus];
               return h('span', {
-                class: 'flex-container',
+                class: 'apple-status-tag flex-container',
                 style: {
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
                   color: status.color
                 }
               }, [
@@ -788,8 +794,18 @@ export default {
             if (currentItem) {
               const status = statusMap[currentItem.status];
               return h('span', {
-                class: 'flex-container',
-                style: { display: 'flex', alignItems: 'center', color: status.color }
+                class: 'apple-status-tag flex-container',
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
+                  color: status.color
+                }
               }, [
                 h('a-icon', {
                   props: {
@@ -809,8 +825,18 @@ export default {
             if (waitingItem) {
               const status = statusMap[waitingItem.status];
               return h('span', {
-                class: 'flex-container',
-                style: { display: 'flex', alignItems: 'center', color: status.color }
+                class: 'apple-status-tag flex-container',
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
+                  color: status.color
+                }
               }, [
                 h('a-icon', {
                   props: {
@@ -831,8 +857,18 @@ export default {
               const lastFailedItem = failedItems[failedItems.length - 1];
               const status = statusMap[lastFailedItem.status];
               return h('span', {
-                class: 'flex-container',
-                style: { display: 'flex', alignItems: 'center', color: status.color }
+                class: 'apple-status-tag flex-container',
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
+                  color: status.color
+                }
               }, [
                 h('a-icon', {
                   props: {
@@ -853,8 +889,18 @@ export default {
               const lastSkippedItem = skippedItems[skippedItems.length - 1];
               const status = statusMap[lastSkippedItem.status];
               return h('span', {
-                class: 'flex-container',
-                style: { display: 'flex', alignItems: 'center', color: status.color }
+                class: 'apple-status-tag flex-container',
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
+                  color: status.color
+                }
               }, [
                 h('a-icon', {
                   props: {
@@ -875,8 +921,18 @@ export default {
               const lastSuccessItem = successItems[successItems.length - 1];
               const status = statusMap[lastSuccessItem.status];
               return h('span', {
-                class: 'flex-container',
-                style: { display: 'flex', alignItems: 'center', color: status.color }
+                class: 'apple-status-tag flex-container',
+                style: {
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  backgroundColor: `${status.color}15`,
+                  border: `1px solid ${status.color}30`,
+                  color: status.color
+                }
               }, [
                 h('a-icon', {
                   props: {
