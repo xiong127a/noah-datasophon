@@ -2040,7 +2040,21 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Result updateHostname(Integer clusterId, String ip, String newHostname) {
-        logger.info("更新主机名: clusterId={}, ip={}, newHostname={}", clusterId, ip, newHostname);
+        // 默认不同步hosts文件
+        return updateHostname(clusterId, ip, newHostname, false);
+    }
+
+    /**
+     * 更新主机名 - 支持可选的hosts文件同步
+     * 
+     * @param clusterId   集群ID
+     * @param ip          主机IP地址
+     * @param newHostname 新主机名
+     * @param syncHosts   是否同步更新hosts文件
+     * @return 操作结果
+     */
+    public Result updateHostname(Integer clusterId, String ip, String newHostname, boolean syncHosts) {
+        logger.info("更新主机名: clusterId={}, ip={}, newHostname={}, syncHosts={}", clusterId, ip, newHostname, syncHosts);
 
         // 校验主机名格式
         if (StrUtil.isBlank(newHostname)) {
@@ -2119,27 +2133,33 @@ public class HostCheckServiceImpl implements HostCheckService {
                         + "/' /etc/sysconfig/network 2>/dev/null || true";
                 MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
 
-                // 3. 更新/etc/hosts文件中的本机记录
-                // 先获取当前hosts文件
-                String getHostsCmd = "cat /etc/hosts";
-                String hostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
+                // 3. 根据syncHosts参数决定是否更新/etc/hosts文件
+                if (syncHosts) {
+                    logger.info("同步更新hosts文件中的本机记录");
+                    // 先获取当前hosts文件
+                    String getHostsCmd = "cat /etc/hosts";
+                    String hostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
 
-                // 创建临时文件
-                String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+                    // 创建临时文件
+                    String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
 
-                // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
-                String updateHostsCmd = "awk '{ if ($0 ~ /" + currentHostname + "/ && $0 ~ /127.0.1.1|" + ip
-                        + "/) { gsub(\"" + currentHostname + "\", \"" + newHostname + "\") } print $0 }' /etc/hosts > "
-                        + tempFile;
+                    // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
+                    String updateHostsCmd = "awk '{ if ($0 ~ /" + currentHostname + "/ && $0 ~ /127.0.1.1|" + ip
+                            + "/) { gsub(\"" + currentHostname + "\", \"" + newHostname
+                            + "\") } print $0 }' /etc/hosts > "
+                            + tempFile;
 
-                // 根据是否有sudo，选择不同的命令将临时文件复制到/etc/hosts
-                if (hasSudo) {
-                    updateHostsCmd += " && " + sudoPrefix + "cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                    // 根据是否有sudo，选择不同的命令将临时文件复制到/etc/hosts
+                    if (hasSudo) {
+                        updateHostsCmd += " && " + sudoPrefix + "cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                    } else {
+                        updateHostsCmd += " && cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                    }
+
+                    MinaUtils.execCmdWithResult(session, updateHostsCmd);
                 } else {
-                    updateHostsCmd += " && cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                    logger.info("不更新hosts文件，仅设置主机名");
                 }
-
-                MinaUtils.execCmdWithResult(session, updateHostsCmd);
 
                 // 4. 获取更新后的主机名进行验证
                 String verifyCmd = "hostname";

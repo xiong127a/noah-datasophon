@@ -1913,7 +1913,7 @@ export default {
     },
     
     // 提交主机名修改
-    submitHostnameEdit(newHostname) {
+    submitHostnameEdit(newHostname, syncHosts = false) {
       if (!newHostname) {
         this.$message.error('主机名不能为空');
         return;
@@ -1927,10 +1927,10 @@ export default {
       }
       
       // 调用后端接口修改主机名
-      HostCheckService.updateHostname(this, this.clusterId, this.currentEditHost.ip, newHostname)
+      HostCheckService.updateHostname(this, this.clusterId, this.currentEditHost.ip, newHostname, syncHosts)
         .then(res => {
           if (res.code === 200) {
-            this.$message.success('主机名修改成功');
+            this.$message.success(syncHosts ? '主机名修改并同步hosts文件成功' : '主机名修改成功');
             // 更新本地数据
             if (this.currentEditHost) {
               this.currentEditHost.hostname = newHostname;

@@ -200,13 +200,15 @@ export default {
    * @param {String} clusterId 集群ID
    * @param {String} ip 主机IP
    * @param {String} hostname 新主机名
+   * @param {Boolean} syncHosts 是否同步更新hosts文件
    * @returns {Promise} 请求Promise
    */
-  updateHostname(vm, clusterId, ip, hostname) {
+  updateHostname(vm, clusterId, ip, hostname, syncHosts = false) {
     return vm.$axiosPost(global.API.updateHostname, {
       clusterId,
       ip,
-      hostname
+      hostname,
+      syncHosts
     });
   },
 

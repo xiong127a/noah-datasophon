@@ -465,6 +465,7 @@ public class HostCheckController {
      * @param clusterId 集群ID
      * @param ip        主机IP
      * @param hostname  新主机名
+     * @param syncHosts 是否同步更新hosts文件
      * @return 操作结果
      */
     @PostMapping("/updateHostname")
@@ -472,8 +473,9 @@ public class HostCheckController {
     public Result updateHostname(
             @RequestParam(name = "clusterId") Integer clusterId,
             @RequestParam(name = "ip") String ip,
-            @RequestParam(name = "hostname") String hostname) {
-        return hostCheckService.updateHostname(clusterId, ip, hostname);
+            @RequestParam(name = "hostname") String hostname,
+            @RequestParam(name = "syncHosts", required = false, defaultValue = "false") Boolean syncHosts) {
+        return hostCheckService.updateHostname(clusterId, ip, hostname, syncHosts);
     }
 
     /**

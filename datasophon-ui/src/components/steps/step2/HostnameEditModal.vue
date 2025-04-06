@@ -64,13 +64,20 @@
     <template slot="footer">
       <a-button @click="$emit('cancel')" class="cancel-button">取消</a-button>
       <a-button 
+        @click="handleSubmit(false)" 
+        :disabled="!isValid"
+        class="save-button"
+      >
+        保存
+      </a-button>
+      <a-button 
         type="primary" 
         :loading="loading" 
-        @click="handleSubmit" 
+        @click="handleSubmit(true)" 
         :disabled="!isValid"
         class="submit-button"
       >
-        确认修改
+        保存并同步hosts
       </a-button>
     </template>
   </a-modal>
@@ -118,9 +125,9 @@ export default {
     }
   },
   methods: {
-    handleSubmit() {
+    handleSubmit(syncHosts = false) {
       if (!this.isValid) return;
-      this.$emit('submit', this.newHostname);
+      this.$emit('submit', this.newHostname, syncHosts);
     }
   }
 };
@@ -220,6 +227,11 @@ export default {
   
   .cancel-button {
     border-radius: 8px;
+  }
+  
+  .save-button {
+    border-radius: 8px;
+    margin-right: 8px;
   }
   
   .submit-button {

@@ -234,6 +234,17 @@ public interface HostCheckService {
         Result updateHostname(Integer clusterId, String ip, String hostname);
 
         /**
+         * 更新主机名（可选是否同步hosts文件）
+         * 
+         * @param clusterId 集群ID
+         * @param ip        主机IP
+         * @param hostname  新主机名
+         * @param syncHosts 是否同步更新hosts文件
+         * @return 操作结果
+         */
+        Result updateHostname(Integer clusterId, String ip, String hostname, boolean syncHosts);
+
+        /**
          * 更新hosts文件内容
          * 
          * @param clusterId        集群ID
