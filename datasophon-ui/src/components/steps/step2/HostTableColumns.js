@@ -186,9 +186,9 @@ export default function createColumns(vm) {
       },
     },
     {
-      title: "状态",
+      title: "状态test",
       key: "status",
-      width: "15%",  // 增加状态列宽度
+      width: "10%",  // 增加状态列宽度
       customRender: (text, row) => {
         const h = vm.$createElement;
 
@@ -205,140 +205,117 @@ export default function createColumns(vm) {
           WAITING_FIX: { text: '等待修复', color: '#FF9F0A', icon: 'hourglass' }
         };
 
-        // 使用主机的状态
-        const hostStatus = row.statusStr || row.status || '';
-
-        // 如果主机有状态，直接显示
-        if (hostStatus && statusMap[hostStatus]) {
-          const status = statusMap[hostStatus];
-          return h('span', {
-            class: 'flex-container',
+        // 创建居中包装容器
+        const createStatusElement = (status) => {
+          return h('div', {
             style: {
               display: 'flex',
-              alignItems: 'center',
-              color: status.color
+              justifyContent: 'center', // 水平居中
+              alignItems: 'center',     // 垂直居中
+              width: '100%'
             }
           }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                theme: !['loading', 'clock-circle'].includes(status.icon) ? "twoTone" : undefined,
-                twoToneColor: status.color,
-                spin: status.spin || status.icon === 'loading'
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [status.text])
+            h('span', {
+              class: 'status-tag',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: `${status.color}15`, // 15是透明度，相当于rgba的0.1
+                border: `1px solid ${status.color}30`, // 30是透明度，相当于rgba的0.2
+                fontSize: '13px',
+                color: status.color
+              }
+            }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle', 'tool', 'hourglass'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.spin || status.icon === 'loading' || status.icon === 'tool'
+                },
+                style: { fontSize: '14px', marginRight: '4px' }
+              }),
+              h('span', {}, [status.text])
+            ])
           ]);
+        };
+        
+        // 创建显示自定义文本的函数
+        const createCustomStatusElement = (status, customText) => {
+          return h('div', {
+            style: {
+              display: 'flex',
+              justifyContent: 'center', // 水平居中
+              alignItems: 'center',     // 垂直居中
+              width: '100%'
+            }
+          }, [
+            h('span', {
+              class: 'custom-status-tag',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: `${status.color}15`, // 15是透明度，相当于rgba的0.1
+                border: `1px solid ${status.color}30`, // 30是透明度，相当于rgba的0.2
+                fontSize: '13px',
+                color: status.color
+              }
+            }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle', 'tool', 'hourglass'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.spin || status.icon === 'loading' || status.icon === 'tool'
+                },
+                style: { fontSize: '14px', marginRight: '4px' }
+              }),
+              h('span', {}, [customText || status.text])
+            ])
+          ]);
+        };
+
+        // 检查项状态优先级：修复中 > 等待修复 > 检查中 > 等待检查 > 失败 > 跳过 > 成功
+        const priorityOrder = ['FIXING', 'WAITING_FIX', 'CHECKING', 'WAITING', 'FAILED', 'SKIPPED', 'SUCCESS'];
+        
+        // 优先检查主机是否有显式的修复中状态
+        if (row.status === 'FIXING' || row.statusStr === 'FIXING') {
+          const status = statusMap['FIXING'];
+          return createStatusElement(status);
+        }
+        
+        // 优先检查主机是否有显式的等待修复状态
+        if (row.status === 'WAITING_FIX' || row.statusStr === 'WAITING_FIX') {
+          const status = statusMap['WAITING_FIX'];
+          return createStatusElement(status);
         }
 
-        // 如果没有状态，检查是否有检查项来决定状态
+        // 检查检查项状态，按优先级顺序确定主机的显示状态
         if (row.checkItems && row.checkItems.length > 0) {
-          // 优先级顺序：修复中 > 等待修复 > 检查中 > 等待检查 > 失败 > 跳过 > 成功
-          const fixingItem = row.checkItems.find(item => item.status === 'FIXING');
-          if (fixingItem) {
-            const status = statusMap['FIXING'];
-            return h('span', {
-              class: 'flex-container',
-              style: { display: 'flex', alignItems: 'center', color: status.color }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon,
-                  spin: true
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [status.text])
-            ]);
-          }
-
-          const waitingFixItem = row.checkItems.find(item => item.status === 'WAITING_FIX');
-          if (waitingFixItem) {
-            const status = statusMap['WAITING_FIX'];
-            return h('span', {
-              class: 'flex-container',
-              style: { display: 'flex', alignItems: 'center', color: status.color }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [status.text])
-            ]);
-          }
-
-          const checkingItem = row.checkItems.find(item => item.status === 'CHECKING');
-          if (checkingItem) {
-            const status = statusMap['CHECKING'];
-            return h('span', {
-              class: 'flex-container',
-              style: { display: 'flex', alignItems: 'center', color: status.color }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon,
-                  spin: true
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [status.text])
-            ]);
-          }
-
-          const waitingItem = row.checkItems.find(item => item.status === 'WAITING');
-          if (waitingItem) {
-            const status = statusMap['WAITING'];
-            return h('span', {
-              class: 'flex-container',
-              style: { display: 'flex', alignItems: 'center', color: status.color }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [status.text])
-            ]);
-          }
-
-          const failedItems = row.checkItems.filter(item => item.status === 'FAILED');
-          if (failedItems.length > 0) {
-            const status = statusMap['FAILED'];
-            return h('span', {
-              class: 'flex-container',
-              style: { display: 'flex', alignItems: 'center', color: status.color }
-            }, [
-              h('a-icon', {
-                props: {
-                  type: status.icon,
-                  theme: "twoTone",
-                  twoToneColor: status.color
-                },
-                style: { fontSize: '14px', marginRight: '4px' }
-              }),
-              h('span', {}, [status.text])
-            ]);
+          // 遍历优先级顺序，找到最高优先级的检查项状态
+          for (const statusType of priorityOrder) {
+            const hasItemWithStatus = row.checkItems.some(item => item.status === statusType);
+            if (hasItemWithStatus) {
+              const status = statusMap[statusType];
+              return createStatusElement(status);
+            }
           }
         }
 
-        // 如果没有任何状态，显示等待检查
+        // 如果主机有状态且在状态映射中，则显示主机状态
+        const hostStatus = row.statusStr || row.status || '';
+        if (hostStatus && statusMap[hostStatus]) {
+          const status = statusMap[hostStatus];
+          return createStatusElement(status);
+        }
+
+        // 默认显示等待检查
         const defaultStatus = statusMap['WAITING'];
-        return h('span', {
-          class: 'flex-container',
-          style: { display: 'flex', alignItems: 'center', color: defaultStatus.color }
-        }, [
-          h('a-icon', {
-            props: {
-              type: defaultStatus.icon
-            },
-            style: { fontSize: '14px', marginRight: '4px' }
-          }),
-          h('span', {}, ['等待检查'])
-        ]);
+        return createStatusElement(defaultStatus);
       },
     },
     {
@@ -361,162 +338,121 @@ export default function createColumns(vm) {
           WAITING_FIX: { text: '等待修复', color: '#FF9F0A', icon: 'hourglass' }
         };
 
+        // 创建居中包装容器(在检查项列也需要定义此函数)
+        const createStatusElement = (status) => {
+          return h('div', {
+            style: {
+              display: 'flex',
+              justifyContent: 'center', // 水平居中
+              alignItems: 'center',     // 垂直居中
+              width: '100%'
+            }
+          }, [
+            h('span', {
+              class: 'status-tag',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: `${status.color}15`, // 15是透明度，相当于rgba的0.1
+                border: `1px solid ${status.color}30`, // 30是透明度，相当于rgba的0.2
+                fontSize: '13px',
+                color: status.color
+              }
+            }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle', 'tool', 'hourglass'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.spin || status.icon === 'loading' || status.icon === 'tool'
+                },
+                style: { fontSize: '14px', marginRight: '4px' }
+              }),
+              h('span', {}, [status.text])
+            ])
+          ]);
+        };
+        
+        // 创建显示自定义文本的函数
+        const createCustomStatusElement = (status, customText) => {
+          return h('div', {
+            style: {
+              display: 'flex',
+              justifyContent: 'center', // 水平居中
+              alignItems: 'center',     // 垂直居中
+              width: '100%'
+            }
+          }, [
+            h('span', {
+              class: 'custom-status-tag',
+              style: {
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                backgroundColor: `${status.color}15`, // 15是透明度，相当于rgba的0.1
+                border: `1px solid ${status.color}30`, // 30是透明度，相当于rgba的0.2
+                fontSize: '13px',
+                color: status.color
+              }
+            }, [
+              h('a-icon', {
+                props: {
+                  type: status.icon,
+                  theme: !['loading', 'clock-circle', 'tool', 'hourglass'].includes(status.icon) ? "twoTone" : undefined,
+                  twoToneColor: status.color,
+                  spin: status.spin || status.icon === 'loading' || status.icon === 'tool'
+                },
+                style: { fontSize: '14px', marginRight: '4px' }
+              }),
+              h('span', {}, [customText || status.text])
+            ])
+          ]);
+        };
+
         // 检查主机是否有检查项
         const checkItems = row.checkItems || [];
-
-        // 优先级处理：修复中 > 等待修复 > 检查中 > 等待检查 > 失败 > 跳过 > 成功
-
-        // 0. 先检查是否有正在修复中的项目
-        const fixingItem = checkItems.find(item => item.status === 'FIXING');
-        if (fixingItem) {
-          const status = statusMap['FIXING'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                spin: true
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [fixingItem.itemName])
-          ]);
+        if (checkItems.length === 0) {
+          // 如果没有任何检查项，则显示等待检查
+          const defaultStatus = statusMap['WAITING'];
+          return createStatusElement(defaultStatus);
         }
 
-        // 1. 检查是否有等待修复的项目
-        const waitingFixItem = checkItems.find(item => item.status === 'WAITING_FIX');
-        if (waitingFixItem) {
-          const status = statusMap['WAITING_FIX'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [waitingFixItem.itemName])
-          ]);
+        // 优先级顺序：修复中 > 等待修复 > 检查中 > 等待检查 > 失败 > 跳过 > 成功
+        // 按优先级定义状态类型的顺序
+        const priorityOrder = ['FIXING', 'WAITING_FIX', 'CHECKING', 'WAITING', 'FAILED', 'SKIPPED', 'SUCCESS'];
+        
+        // 创建状态优先级映射，值越小优先级越高
+        const priorityMap = {};
+        priorityOrder.forEach((status, index) => {
+          priorityMap[status] = index;
+        });
+        
+        // 对检查项按优先级顺序排序
+        const sortedItems = [...checkItems].sort((a, b) => {
+          const priorityA = priorityMap[a.status] !== undefined ? priorityMap[a.status] : 999;
+          const priorityB = priorityMap[b.status] !== undefined ? priorityMap[b.status] : 999;
+          return priorityA - priorityB;
+        });
+        
+        // 获取最高优先级的检查项
+        const highestPriorityItem = sortedItems[0];
+        
+        // 确保检查项存在并且有状态
+        if (highestPriorityItem && highestPriorityItem.status) {
+          const status = statusMap[highestPriorityItem.status] || statusMap['WAITING'];
+          const iconSpin = highestPriorityItem.status === 'CHECKING' || 
+                           highestPriorityItem.status === 'FIXING' || 
+                           highestPriorityItem.status === 'TERMINATING';
+          
+          return createCustomStatusElement(status, highestPriorityItem.itemName);
         }
 
-        // 2. 检查是否有正在检查中的项目
-        const checkingItem = checkItems.find(item => item.status === 'CHECKING');
-        if (checkingItem) {
-          const status = statusMap['CHECKING'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                spin: true
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [checkingItem.itemName])
-          ]);
-        }
-
-        // 3. 检查是否有等待检查的项目
-        const waitingItem = checkItems.find(item => item.status === 'WAITING');
-        if (waitingItem) {
-          const status = statusMap['WAITING'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [waitingItem.itemName])
-          ]);
-        }
-
-        // 4. 查找失败的项目，显示最后一个失败项
-        const failedItems = checkItems.filter(item => item.status === 'FAILED');
-        if (failedItems.length > 0) {
-          const lastFailedItem = failedItems[failedItems.length - 1];
-          const status = statusMap['FAILED'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                theme: "twoTone",
-                twoToneColor: status.color
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [lastFailedItem.itemName])
-          ]);
-        }
-
-        // 5. 查找跳过的项目，显示最后一个跳过项
-        const skippedItems = checkItems.filter(item => item.status === 'SKIPPED');
-        if (skippedItems.length > 0) {
-          const lastSkippedItem = skippedItems[skippedItems.length - 1];
-          const status = statusMap['SKIPPED'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                theme: "twoTone",
-                twoToneColor: status.color
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [lastSkippedItem.itemName])
-          ]);
-        }
-
-        // 6. 最后查找成功的项目，显示最后一个成功项
-        const successItems = checkItems.filter(item => item.status === 'SUCCESS');
-        if (successItems.length > 0) {
-          const lastSuccessItem = successItems[successItems.length - 1];
-          const status = statusMap['SUCCESS'];
-          return h('span', {
-            class: 'flex-container',
-            style: { display: 'flex', alignItems: 'center', color: status.color }
-          }, [
-            h('a-icon', {
-              props: {
-                type: status.icon,
-                theme: "twoTone",
-                twoToneColor: status.color
-              },
-              style: { fontSize: '14px', marginRight: '4px' }
-            }),
-            h('span', {}, [lastSuccessItem.itemName])
-          ]);
-        }
-
-        // 如果没有任何检查项，则显示等待检查
+        // 最后的默认情况
         const defaultStatus = statusMap['WAITING'];
-        return h('span', {
-          class: 'flex-container',
-          style: { display: 'flex', alignItems: 'center', color: defaultStatus.color }
-        }, [
-          h('a-icon', {
-            props: {
-              type: defaultStatus.icon
-            },
-            style: { fontSize: '14px', marginRight: '4px' }
-          }),
-          h('span', {}, ['等待检查'])
-        ]);
+        return createStatusElement(defaultStatus);
       },
     },
     {

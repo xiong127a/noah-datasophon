@@ -44,13 +44,11 @@
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
 import { mapActions, mapState } from "vuex";
 import { de } from "date-fns/locale";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: { CommonTemplate },
   props: {
     steps4Data: Object,
   },

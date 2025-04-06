@@ -713,9 +713,9 @@ export default {
           },
         },
         {
-          title: "状态",
+          title: "状态test",
           key: "status",
-          width: "15%",
+          width: "10%",
           customRender: (text, row) => {
             const h = this.$createElement;
 
@@ -1334,6 +1334,25 @@ export default {
       // 获取检查项列表
       const checkItems = this.checkItemsMap[record.ip] || [];
       
+      // 对检查项列表按优先级排序
+      const priorityOrder = {
+        'FIXING': 0, 
+        'WAITING_FIX': 1, 
+        'CHECKING': 2, 
+        'WAITING': 3, 
+        'FAILED': 4, 
+        'SKIPPED': 5, 
+        'SUCCESS': 6
+      };
+      
+      // 对检查项进行排序，使其按优先级顺序显示
+      const sortedCheckItems = [...checkItems].sort((a, b) => {
+        // 获取每个项目的优先级，如果状态未定义则默认最低优先级
+        const priorityA = priorityOrder[a.status] !== undefined ? priorityOrder[a.status] : 999; 
+        const priorityB = priorityOrder[b.status] !== undefined ? priorityOrder[b.status] : 999;
+        return priorityA - priorityB; // 按优先级升序排序
+      });
+      
       // 判断主机是否处于检查中状态
       const isHostChecking = record.status === 'CHECKING' || record.statusStr === 'CHECKING';
       
@@ -1344,7 +1363,7 @@ export default {
       return this.$createElement(HostCheckItems, {
         props: {
           record,
-          checkItems,
+          checkItems: sortedCheckItems, // 使用排序后的检查项列表
           selectedRowKeys,
           hasRetryableSelectedItems: this.hasRetryableSelectedItems(record.ip),
           hasFixableSelectedItems: this.hasFixableSelectedItems(record.ip),

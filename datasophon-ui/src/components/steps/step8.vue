@@ -73,7 +73,7 @@
         <a-button type="primary" @click="handleCancel">关闭</a-button>
       </div> -->
       <div class="finish-wrap steps-container">
-        <img src="@/assets/success.png" style="width: 72px; height: 72px" />
+        <a-icon type="check-circle" style="font-size: 72px; color: #52c41a" />
         <div class="text">集群安装成功! 现在您可以返回进入集群管理页面查看该集群！</div>
         <a-button class="mgt20" type="primary" @click="routerTo">返回集群管理</a-button>
       </div>

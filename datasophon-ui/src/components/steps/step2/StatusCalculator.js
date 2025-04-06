@@ -16,6 +16,18 @@ export default {
     const checkItems = host.checkItems || [];
     if (checkItems.length === 0) return null;
 
+    // 按优先级顺序检查状态：修复中 > 等待修复 > 检查中 > 等待检查 > 失败 > 跳过 > 成功
+    
+    // 如果有修复中的项，则状态为"修复中"
+    if (checkItems.some(item => item.status === 'FIXING')) {
+      return 'FIXING';
+    }
+    
+    // 如果有等待修复的项，则状态为"等待修复" 
+    if (checkItems.some(item => item.status === 'WAITING_FIX')) {
+      return 'WAITING_FIX';
+    }
+
     // 如果有检查中的项，则状态为"检查中"
     if (checkItems.some(item => item.status === 'CHECKING')) {
       return 'CHECKING';
