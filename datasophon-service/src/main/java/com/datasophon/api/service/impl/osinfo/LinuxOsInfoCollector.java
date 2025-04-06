@@ -1626,22 +1626,38 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             }
 
-            // 获取IP地址信息
+            // 尝试多种命令获取IP地址信息，优先使用ip地址
             CommandResult ipInfoResult = MinaUtils.execCmdWithResultObject(session, "ip addr show");
-            if (!ipInfoResult.isSuccess()) {
-                logger.error("获取IP地址信息失败: {}", ipInfoResult.getError());
-                osInfo.setNetworkStatus(OsInfoStatusEnum.ERROR);
-                networkInfo.setStatus(OsInfoStatusEnum.ERROR);
-                if (cacheUpdater != null && hostInfo != null) {
-                    cacheUpdater.updateCache(hostInfo);
-                }
-                return;
-            }
-            String ipInfo = ipInfoResult.getOutput().trim();
+            String ipInfo = "";
 
-            // 获取网络接口状态
+            if (ipInfoResult.isSuccess()) {
+                ipInfo = ipInfoResult.getOutput().trim();
+            } else {
+                // 备用：尝试使用ifconfig
+                logger.warn("使用ip addr show命令获取网络信息失败，尝试ifconfig命令");
+                CommandResult ifconfigResult = MinaUtils.execCmdWithResultObject(session, "ifconfig -a");
+                if (ifconfigResult.isSuccess()) {
+                    ipInfo = ifconfigResult.getOutput().trim();
+                } else {
+                    logger.error("获取网络信息失败: {}", ifconfigResult.getError());
+                    osInfo.setNetworkStatus(OsInfoStatusEnum.ERROR);
+                    networkInfo.setStatus(OsInfoStatusEnum.ERROR);
+                    if (cacheUpdater != null && hostInfo != null) {
+                        cacheUpdater.updateCache(hostInfo);
+                    }
+                    return;
+                }
+            }
+
+            // 获取网络接口状态和流量
             CommandResult ifstatResult = MinaUtils.execCmdWithResultObject(session, "ip -s link");
             String ifstatInfo = ifstatResult.isSuccess() ? ifstatResult.getOutput().trim() : "";
+
+            // 如果ip -s link失败，尝试其他命令
+            if (ifstatInfo.isEmpty()) {
+                logger.warn("使用ip -s link命令获取网络流量信息失败，尝试其他命令");
+                // 没有更多的操作，会在后续的备用策略中处理
+            }
 
             // 获取路由信息
             CommandResult routeInfoResult = MinaUtils.execCmdWithResultObject(session, "ip route");
@@ -1721,35 +1737,89 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             // 解析网络接口状态和流量信息
             currentIface = null;
             Pattern ifstatNamePattern = Pattern.compile("\\d+:\\s+(\\w+):");
+            // 旧的匹配模式
             Pattern rxPacketsPattern = Pattern.compile("\\s+RX:\\s+bytes\\s+(\\d+)\\s+");
             Pattern txPacketsPattern = Pattern.compile("\\s+TX:\\s+bytes\\s+(\\d+)\\s+");
+
+            // 新增匹配模式，支持更多Linux发行版的ip -s link输出格式
+            Pattern rxHeaderPattern = Pattern.compile("\\s+RX:\\s+bytes\\s+packets\\s+errors");
+            Pattern txHeaderPattern = Pattern.compile("\\s+TX:\\s+bytes\\s+packets\\s+errors");
+            Pattern rxDataPattern = Pattern.compile("\\s+(\\d+)\\s+\\d+\\s+\\d+"); // 匹配RX数据行的字节数
+            Pattern txDataPattern = Pattern.compile("\\s+(\\d+)\\s+\\d+\\s+\\d+"); // 匹配TX数据行的字节数
+
+            // 使用备用命令补充网络流量数据
+            if (ifstatInfo.isEmpty() || !ifstatInfo.contains("bytes")) {
+                logger.info("ip -s link 命令输出格式不匹配，尝试使用备用命令");
+                // 备用命令：获取网络流量统计
+                CommandResult netDevResult = MinaUtils.execCmdWithResultObject(session, "cat /proc/net/dev");
+                if (netDevResult.isSuccess()) {
+                    String netDevInfo = netDevResult.getOutput().trim();
+                    // 解析 /proc/net/dev 输出
+                    Pattern netDevPattern = Pattern.compile(
+                            "(\\w+):\\s*(\\d+)\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+(\\d+)");
+                    for (String line : netDevInfo.split("\n")) {
+                        Matcher netDevMatcher = netDevPattern.matcher(line);
+                        if (netDevMatcher.find()) {
+                            String ifaceName = netDevMatcher.group(1).trim();
+                            if (!ifaceName.equals("lo") && interfaces.containsKey(ifaceName)) {
+                                try {
+                                    // 接收字节数在第2个分组
+                                    long rxBytes = Long.parseLong(netDevMatcher.group(2));
+                                    // 发送字节数在第9个分组
+                                    long txBytes = Long.parseLong(netDevMatcher.group(3));
+
+                                    // 设置接收流量
+                                    interfaces.get(ifaceName).setRxBytes(rxBytes);
+                                    interfaces.get(ifaceName).setRxTraffic(formatTraffic(rxBytes));
+                                    logger.debug("接口 {} 接收流量: {}", ifaceName, formatTraffic(rxBytes));
+
+                                    // 设置发送流量
+                                    interfaces.get(ifaceName).setTxBytes(txBytes);
+                                    interfaces.get(ifaceName).setTxTraffic(formatTraffic(txBytes));
+                                    logger.debug("接口 {} 发送流量: {}", ifaceName, formatTraffic(txBytes));
+                                } catch (NumberFormatException e) {
+                                    logger.warn("解析网络接口 {} 流量数据失败: {}", ifaceName, e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            boolean inRxSection = false;
+            boolean inTxSection = false;
 
             for (String line : ifstatInfo.split("\n")) {
                 Matcher ifstatNameMatcher = ifstatNamePattern.matcher(line);
                 if (ifstatNameMatcher.find()) {
                     currentIface = ifstatNameMatcher.group(1);
+                    inRxSection = false;
+                    inTxSection = false;
                 } else if (currentIface != null && interfaces.containsKey(currentIface)) {
+                    // 检查是否处于RX头部行
+                    Matcher rxHeaderMatcher = rxHeaderPattern.matcher(line);
+                    if (rxHeaderMatcher.find()) {
+                        inRxSection = true;
+                        inTxSection = false;
+                        continue;
+                    }
+
+                    // 检查是否处于TX头部行
+                    Matcher txHeaderMatcher = txHeaderPattern.matcher(line);
+                    if (txHeaderMatcher.find()) {
+                        inRxSection = false;
+                        inTxSection = true;
+                        continue;
+                    }
+
+                    // 旧格式匹配
                     Matcher rxMatcher = rxPacketsPattern.matcher(line);
                     if (rxMatcher.find()) {
                         try {
                             long rxBytes = Long.parseLong(rxMatcher.group(1));
                             interfaces.get(currentIface).setRxBytes(rxBytes);
-                            // 转换为KB/MB/GB
-                            double rxKB = rxBytes / 1024.0;
-                            double rxMB = rxKB / 1024.0;
-                            double rxGB = rxMB / 1024.0;
-
-                            DecimalFormat df = new DecimalFormat("0.00");
-                            String rxTraffic = "";
-                            if (rxGB >= 1.0) {
-                                rxTraffic = df.format(rxGB) + " GB";
-                            } else if (rxMB >= 1.0) {
-                                rxTraffic = df.format(rxMB) + " MB";
-                            } else {
-                                rxTraffic = df.format(rxKB) + " KB";
-                            }
-                            interfaces.get(currentIface).setRxTraffic(rxTraffic);
-                            logger.debug("接口 {} 接收流量: {}", currentIface, rxTraffic);
+                            interfaces.get(currentIface).setRxTraffic(formatTraffic(rxBytes));
+                            logger.debug("接口 {} 接收流量: {}", currentIface, formatTraffic(rxBytes));
                         } catch (NumberFormatException e) {
                             logger.warn("解析接收字节数失败: {}", rxMatcher.group(1));
                         }
@@ -1760,24 +1830,79 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         try {
                             long txBytes = Long.parseLong(txMatcher.group(1));
                             interfaces.get(currentIface).setTxBytes(txBytes);
-                            // 转换为KB/MB/GB
-                            double txKB = txBytes / 1024.0;
-                            double txMB = txKB / 1024.0;
-                            double txGB = txMB / 1024.0;
-
-                            DecimalFormat df = new DecimalFormat("0.00");
-                            String txTraffic = "";
-                            if (txGB >= 1.0) {
-                                txTraffic = df.format(txGB) + " GB";
-                            } else if (txMB >= 1.0) {
-                                txTraffic = df.format(txMB) + " MB";
-                            } else {
-                                txTraffic = df.format(txKB) + " KB";
-                            }
-                            interfaces.get(currentIface).setTxTraffic(txTraffic);
-                            logger.debug("接口 {} 发送流量: {}", currentIface, txTraffic);
+                            interfaces.get(currentIface).setTxTraffic(formatTraffic(txBytes));
+                            logger.debug("接口 {} 发送流量: {}", currentIface, formatTraffic(txBytes));
                         } catch (NumberFormatException e) {
                             logger.warn("解析发送字节数失败: {}", txMatcher.group(1));
+                        }
+                    }
+
+                    // 新格式匹配：在RX部分后面的数据行
+                    if (inRxSection) {
+                        Matcher rxDataMatcher = rxDataPattern.matcher(line);
+                        if (rxDataMatcher.find()) {
+                            try {
+                                long rxBytes = Long.parseLong(rxDataMatcher.group(1));
+                                interfaces.get(currentIface).setRxBytes(rxBytes);
+                                interfaces.get(currentIface).setRxTraffic(formatTraffic(rxBytes));
+                                logger.debug("接口 {} 接收流量(新格式): {}", currentIface, formatTraffic(rxBytes));
+                                inRxSection = false;
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析接收字节数失败(新格式): {}", rxDataMatcher.group(1));
+                            }
+                        }
+                    }
+
+                    // 新格式匹配：在TX部分后面的数据行
+                    if (inTxSection) {
+                        Matcher txDataMatcher = txDataPattern.matcher(line);
+                        if (txDataMatcher.find()) {
+                            try {
+                                long txBytes = Long.parseLong(txDataMatcher.group(1));
+                                interfaces.get(currentIface).setTxBytes(txBytes);
+                                interfaces.get(currentIface).setTxTraffic(formatTraffic(txBytes));
+                                logger.debug("接口 {} 发送流量(新格式): {}", currentIface, formatTraffic(txBytes));
+                                inTxSection = false;
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析发送字节数失败(新格式): {}", txDataMatcher.group(1));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 再次尝试使用ifconfig命令获取流量数据（对于某些没有ip命令的旧系统）
+            for (String ifaceName : interfaces.keySet()) {
+                if (interfaces.get(ifaceName).getRxBytes() == null || interfaces.get(ifaceName).getTxBytes() == null) {
+                    CommandResult ifconfigResult = MinaUtils.execCmdWithResultObject(session, "ifconfig " + ifaceName);
+                    if (ifconfigResult.isSuccess()) {
+                        String ifconfigOutput = ifconfigResult.getOutput().trim();
+                        // 匹配 RX bytes 和 TX bytes
+                        Pattern rxBytesPattern = Pattern.compile("RX\\s+bytes[:\\s]+(\\d+)");
+                        Pattern txBytesPattern = Pattern.compile("TX\\s+bytes[:\\s]+(\\d+)");
+
+                        Matcher rxBytesMatcher = rxBytesPattern.matcher(ifconfigOutput);
+                        if (rxBytesMatcher.find()) {
+                            try {
+                                long rxBytes = Long.parseLong(rxBytesMatcher.group(1));
+                                interfaces.get(ifaceName).setRxBytes(rxBytes);
+                                interfaces.get(ifaceName).setRxTraffic(formatTraffic(rxBytes));
+                                logger.debug("通过ifconfig获取接口 {} 接收流量: {}", ifaceName, formatTraffic(rxBytes));
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析ifconfig的接收字节数失败: {}", rxBytesMatcher.group(1));
+                            }
+                        }
+
+                        Matcher txBytesMatcher = txBytesPattern.matcher(ifconfigOutput);
+                        if (txBytesMatcher.find()) {
+                            try {
+                                long txBytes = Long.parseLong(txBytesMatcher.group(1));
+                                interfaces.get(ifaceName).setTxBytes(txBytes);
+                                interfaces.get(ifaceName).setTxTraffic(formatTraffic(txBytes));
+                                logger.debug("通过ifconfig获取接口 {} 发送流量: {}", ifaceName, formatTraffic(txBytes));
+                            } catch (NumberFormatException e) {
+                                logger.warn("解析ifconfig的发送字节数失败: {}", txBytesMatcher.group(1));
+                            }
                         }
                     }
                 }
@@ -2015,6 +2140,31 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             if (cacheUpdater != null) {
                 cacheUpdater.updateCache(hostInfo);
             }
+        }
+    }
+
+    /**
+     * 格式化流量数据，将字节数转换为可读的流量格式（KB/MB/GB）
+     * 
+     * @param bytes 字节数
+     * @return 格式化后的流量字符串
+     */
+    private String formatTraffic(long bytes) {
+        if (bytes <= 0) {
+            return "0 B";
+        }
+        // 转换为KB/MB/GB
+        double KB = bytes / 1024.0;
+        double MB = KB / 1024.0;
+        double GB = MB / 1024.0;
+
+        DecimalFormat df = new DecimalFormat("0.00");
+        if (GB >= 1.0) {
+            return df.format(GB) + " GB";
+        } else if (MB >= 1.0) {
+            return df.format(MB) + " MB";
+        } else {
+            return df.format(KB) + " KB";
         }
     }
 }
