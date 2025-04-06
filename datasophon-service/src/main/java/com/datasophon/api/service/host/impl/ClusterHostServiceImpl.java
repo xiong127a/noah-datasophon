@@ -19,7 +19,6 @@ package com.datasophon.api.service.host.impl;
 
 import akka.actor.ActorRef;
 import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -308,7 +307,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 clusterHostDO.setManaged(MANAGED.YES);
                 clusterHostDO.setNodeLabel("default");
 
-                ClientSession session = MinaUtils.openConnection(hostInfo);
+                ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo);
                 String arch;
                 try {
                     arch = MinaUtils.executeCommandAndGetResult(session, "arch");

@@ -1492,7 +1492,7 @@ public class InstallServiceImpl implements InstallService {
         List<String> clusterHostIdList = Arrays.asList(clusterHostIdArray);
         List<ClusterHostDO> clusterHostList = hostService.getHostListByIds(clusterHostIdList);
         for (ClusterHostDO clusterHostDO : clusterHostList) {
-            ClientSession session = MinaUtils.openConnection(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
+            ClientSession session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostDO.getIp(), 22, Constants.ROOT));
             CommandResult serviceResult = MinaUtils.execCmdWithResultObject(session,
                     "service datasophon-worker " + commandType);
             logger.info("hostAgent command:{}", "service datasophon-worker " + commandType);

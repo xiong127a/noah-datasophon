@@ -54,7 +54,7 @@ public class DispatcherWorkerActor extends UntypedActor {
                 MessageResolverUtils.getMessage(
                         "distributed.host.management.agent.installation.package"));
         ClientSession session =
-                MinaUtils.openConnection(hostInfo);
+                MinaUtils.openConnectionWithPassword(hostInfo);
         DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
         handlerChain.addHandler(new UploadWorkerHandler());
         handlerChain.addHandler(new CheckWorkerMd5Handler());

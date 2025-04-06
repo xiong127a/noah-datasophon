@@ -513,7 +513,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             session = null;
 
             // 尝试建立会话连接
-            session = MinaUtils.openConnection(hostInfo);
+            session = MinaUtils.openConnectionWithPassword(hostInfo);
 
             // 验证session是否成功建立
             if (session == null) {

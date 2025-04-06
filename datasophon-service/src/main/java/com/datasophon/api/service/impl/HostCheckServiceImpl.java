@@ -683,7 +683,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
         ClientSession session = null;
         try {
-            session = MinaUtils.openConnection(hostInfo);
+            session = MinaUtils.openConnectionWithPassword(hostInfo);
 
             if (session == null) {
                 return true;

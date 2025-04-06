@@ -879,7 +879,7 @@ public class OsInfoServiceImpl implements OsInfoService {
 
                             // 创建新连接
                             logger.info("为主机 {} 创建新的SSH连接", hostIp);
-                            session = MinaUtils.openConnection(hostInfo);
+                            session = MinaUtils.openConnectionWithPassword(hostInfo);
 
                             if (session != null) {
                                 // 缓存新的有效连接
