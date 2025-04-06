@@ -270,11 +270,11 @@
               
               <!-- 代码编辑区域 - 根据模式显示不同内容 -->
               <div class="ide-editor">
-                <!-- 侧边栏 - 行号和折叠等 -->
-                <div class="ide-sidebar">
+                <!-- 侧边栏 - 减小宽度至最小 -->
+                <div class="ide-sidebar" style="min-width: 28px;">
                   <div class="gutter-container">
-                    <div class="gutter-folding"></div>
-                    <div class="gutter-line-numbers">
+                    <div class="gutter-folding" style="width: 4px;"></div>
+                    <div class="gutter-line-numbers" style="min-width: 20px; text-align: center;">
                       <div v-for="n in (isEditingHosts ? editingHostsContent.split('\n').length : hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n').length || 1)" 
                            :key="n" 
                            class="line-number">
@@ -285,18 +285,19 @@
                 </div>
                 
                 <!-- 主代码区域 - 非编辑模式 -->
-                <div class="code-container" ref="codeContainer" v-if="!isEditingHosts">
-                  <div v-html="highlightedHostsContent" class="code-content"></div>
+                <div class="code-container" ref="codeContainer" v-if="!isEditingHosts" style="padding: 0;">
+                  <div v-html="highlightedHostsContent" class="code-content" style="padding-left: 0;"></div>
                 </div>
                 
                 <!-- 主代码区域 - 编辑模式 -->
-                <div class="code-container editor-mode" v-else>
+                <div class="code-container editor-mode" v-else style="padding: 0;">
                   <textarea 
                     v-model="editingHostsContent"
                     class="code-editor"
                     spellcheck="false"
                     @input="updateLineNumbers"
                     placeholder="请输入hosts文件内容"
+                    style="padding: 0; text-indent: 0;"
                   ></textarea>
                 </div>
               </div>
@@ -565,7 +566,7 @@ export default {
       
       // 分行处理
       const lines = content.split('\n');
-      let formattedContent = '';
+      let formattedContent = '<div class="hosts-code-content" style="padding:0; margin:0;">'; // 添加一个容器类并确保无内边距和外边距
       
       // 为每一行添加适当的样式
       lines.forEach((line, index) => {
@@ -605,10 +606,11 @@ export default {
           }
         }
         
-        // 构建行HTML - 减小内容与左侧的间距
-        formattedContent += `<div class="${lineClass}"><span class="line-content">${lineContent}</span></div>`;
+        // 构建行HTML - 完全靠左，并设置inline样式确保无内边距和外边距
+        formattedContent += `<div class="${lineClass}" style="padding:0; margin:0;"><span class="line-content" style="padding:0; margin:0;">${lineContent}</span></div>`;
       });
       
+      formattedContent += '</div>';
       return formattedContent;
     },
     
@@ -1001,11 +1003,9 @@ export default {
   line-height: 1.4;
   color: #d4d4d4;
   white-space: pre;
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
-  font-size: 12px !important;
-  line-height: 1.4 !important;
-  color: #d4d4d4 !important;
-  white-space: pre !important;
+  padding: 0;
+  margin: 0;
+  text-indent: 0;
 }
 
 .code-content .comment {
@@ -1027,6 +1027,8 @@ export default {
   line-height: 20px;
   white-space: pre;
   position: relative;
+  padding-left: 0; /* 确保行没有左内边距 */
+  margin-left: 0; /* 确保行没有左外边距 */
 }
 
 .line:hover {
@@ -1035,7 +1037,9 @@ export default {
 
 .line-content {
   display: inline-block;
-  padding-left: 0;
+  padding-left: 0; /* 移除行内容左内边距 */
+  margin-left: 0; /* 移除行内容左外边距 */
+  text-indent: 0; /* 移除文本缩进 */
 }
 
 .comment-line {
@@ -1512,8 +1516,9 @@ export default {
 .ide-sidebar {
   background-color: #1e1e1e;
   border-right: 1px solid #2d2d2d;
-  min-width: 50px;
+  min-width: 28px; /* 进一步减小侧边栏宽度 */
   overflow: hidden;
+  flex-shrink: 0; /* 防止侧边栏被挤压 */
 }
 
 .gutter-container {
@@ -1522,14 +1527,14 @@ export default {
 }
 
 .gutter-folding {
-  width: 12px;
+  width: 4px; /* 减小折叠区域宽度 */
   background-color: #1e1e1e;
 }
 
 .gutter-line-numbers {
   padding: 4px 0;
-  min-width: 30px;
-  text-align: right;
+  min-width: 20px; /* 减小行号区域宽度 */
+  text-align: center;
   color: #858585;
   user-select: none;
   font-size: 12px;
@@ -1539,16 +1544,15 @@ export default {
 .code-container {
   flex: 1;
   overflow: auto;
-  padding: 4px 0 4px 0;
+  padding: 0;
   background-color: #1e1e1e;
-  position: relative; /* 添加定位上下文 */
 }
 
 /* 编辑模式样式 - 保持与原始风格一致 */
 .code-container.editor-mode {
   position: relative;
   background-color: #1e1e1e;
-  padding: 4px 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -1557,6 +1561,7 @@ export default {
   height: 100%;
   min-height: 100px;
   padding: 0;
+  text-indent: 0; /* 确保没有文本缩进 */
   border: none;
   background-color: transparent;
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
@@ -1817,5 +1822,9 @@ export default {
 .code-container, .code-editor {
   scrollbar-width: thin;
   scrollbar-color: rgba(110, 110, 110, var(--scrollbar-opacity)) transparent;
+}
+
+.hosts-code-content {
+  padding-left: 0; /* 确保特定代码内容也靠左 */
 }
 </style>
