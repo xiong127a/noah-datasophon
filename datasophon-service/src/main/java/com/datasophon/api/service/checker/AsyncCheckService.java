@@ -40,6 +40,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.HashMap;
 
 /**
  * 异步检查服务
@@ -1743,38 +1744,63 @@ public class AsyncCheckService {
                     return;
                 }
 
-                // 循环处理每个主机
-                for (String ip : ips) {
+                // 批量并行处理主机（每批10个）
+                final int batchSize = 10;
+                for (int i = 0; i < ips.size(); i += batchSize) {
+                    // 获取当前批次的主机IP
+                    int endIndex = Math.min(i + batchSize, ips.size());
+                    List<String> batchIps = ips.subList(i, endIndex);
+
+                    logger.info("开始并行处理第{}批主机，数量: {}", (i / batchSize) + 1, batchIps.size());
+
+                    // 创建当前批次的任务列表
+                    List<CompletableFuture<Void>> batchTasks = new ArrayList<>();
+
+                    // 为每个主机创建异步任务
+                    for (String ip : batchIps) {
+                        CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
+                            try {
+                                logger.info("正在同步hosts文件到主机: {}", ip);
+
+                                // 调用主机检查服务更新hosts文件
+                                com.datasophon.common.utils.Result updateResult = hostCheckService.updateHostsFile(
+                                        clusterId,
+                                        ip, hostsContent);
+
+                                // 更新主机处理状态
+                                try {
+                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                            taskId,
+                                            ip,
+                                            updateResult.isSuccess(),
+                                            updateResult.isSuccess() ? null : updateResult.getMsg());
+                                } catch (Exception e) {
+                                    logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                                }
+                            } catch (Exception e) {
+                                logger.error("同步hosts文件到主机{}时发生错误", ip, e);
+                                // 更新主机处理状态为失败
+                                try {
+                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                            taskId,
+                                            ip,
+                                            false,
+                                            e.getMessage());
+                                } catch (Exception ex) {
+                                    logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
+                                }
+                            }
+                        }, hardwareInfoExecutor);
+
+                        batchTasks.add(task);
+                    }
+
+                    // 等待当前批次的所有任务完成
                     try {
-                        logger.info("正在同步hosts文件到主机: {}", ip);
-
-                        // 调用主机检查服务更新hosts文件
-                        com.datasophon.common.utils.Result updateResult = hostCheckService.updateHostsFile(clusterId,
-                                ip, hostsContent);
-
-                        // 更新主机处理状态
-                        try {
-                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                    taskId,
-                                    ip,
-                                    updateResult.isSuccess(),
-                                    updateResult.isSuccess() ? null : updateResult.getMsg());
-                        } catch (Exception e) {
-                            logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
-                        }
-
+                        CompletableFuture.allOf(batchTasks.toArray(new CompletableFuture[0])).get();
+                        logger.info("第{}批主机处理完成", (i / batchSize) + 1);
                     } catch (Exception e) {
-                        logger.error("同步hosts文件到主机{}时发生错误", ip, e);
-                        // 更新主机处理状态为失败
-                        try {
-                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                    taskId,
-                                    ip,
-                                    false,
-                                    e.getMessage());
-                        } catch (Exception ex) {
-                            logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
-                        }
+                        logger.error("等待批处理任务完成时发生错误", e);
                     }
                 }
 
@@ -1857,107 +1883,145 @@ public class AsyncCheckService {
                     return;
                 }
 
-                // 处理每台主机
+                // 创建主机IP与预览信息的映射，便于查找
+                Map<String, Map<String, String>> ipToPreviewMap = new HashMap<>();
                 for (Map<String, String> hostItem : hostnamePreview) {
                     String ip = hostItem.get("ip");
-                    String newHostname = hostItem.get("newHostname");
+                    if (ip != null && !ip.isEmpty()) {
+                        ipToPreviewMap.put(ip, hostItem);
+                    }
+                }
 
-                    if (ip == null || ip.isEmpty() || newHostname == null || newHostname.isEmpty()) {
-                        logger.warn("主机信息不完整，跳过该主机: {}", hostItem);
-                        continue;
+                // 获取待处理主机的IP列表
+                List<String> ips = new ArrayList<>(ipToPreviewMap.keySet());
+
+                // 批量并行处理主机（每批10个）
+                final int batchSize = 10;
+                for (int i = 0; i < ips.size(); i += batchSize) {
+                    // 获取当前批次的主机IP
+                    int endIndex = Math.min(i + batchSize, ips.size());
+                    List<String> batchIps = ips.subList(i, endIndex);
+
+                    logger.info("开始并行处理第{}批主机名设置，数量: {}", (i / batchSize) + 1, batchIps.size());
+
+                    // 创建当前批次的任务列表
+                    List<CompletableFuture<Void>> batchTasks = new ArrayList<>();
+
+                    // 为每个主机创建异步任务
+                    for (String ip : batchIps) {
+                        CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
+                            try {
+                                Map<String, String> hostItem = ipToPreviewMap.get(ip);
+                                String newHostname = hostItem.get("newHostname");
+
+                                if (newHostname == null || newHostname.isEmpty()) {
+                                    logger.warn("主机信息不完整，跳过该主机: {}", hostItem);
+                                    return;
+                                }
+
+                                // 获取主机信息
+                                HostInfo hostInfo = hostMap.get(ip);
+                                if (hostInfo == null) {
+                                    throw new Exception("未找到主机信息");
+                                }
+
+                                logger.info("为主机 {} 设置新主机名：{}", ip, newHostname);
+
+                                // 获取SSH连接信息
+                                String username = hostInfo.getSshUser();
+                                Integer port = hostInfo.getSshPort();
+
+                                // 执行设置主机名命令
+                                String command;
+                                String osType = "";
+                                if (hostInfo.getOsInfo() != null) {
+                                    osType = hostInfo.getOsInfo().getDistribution();
+                                }
+
+                                if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
+                                        "Fedora".equalsIgnoreCase(osType)) {
+                                    // CentOS/RHEL/Fedora
+                                    command = "sudo hostnamectl set-hostname " + newHostname;
+                                } else if ("Ubuntu".equalsIgnoreCase(osType) || "Debian".equalsIgnoreCase(osType)) {
+                                    // Ubuntu/Debian
+                                    command = "sudo hostnamectl set-hostname " + newHostname;
+                                } else {
+                                    // 默认使用通用命令
+                                    command = "sudo hostname " + newHostname + " && " +
+                                            "sudo echo '" + newHostname + "' > /etc/hostname";
+                                }
+
+                                // 获取或创建SSH连接
+                                ClientSession session = getOrCreateConnection(hostInfo);
+                                if (session == null || !session.isOpen()) {
+                                    throw new Exception("无法创建SSH连接");
+                                }
+
+                                // 检查系统是否有sudo命令
+                                com.datasophon.api.service.checker.common.CommandResult checkSudoResult = execCommand(
+                                        session,
+                                        "which sudo || echo 'nosudo'");
+                                boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
+
+                                // 根据是否有sudo命令，选择使用适当的设置主机名命令
+                                String actualCommand;
+                                if (hasSudo) {
+                                    // 系统有sudo命令，使用原来的命令
+                                    actualCommand = command;
+                                } else {
+                                    // 系统没有sudo命令，直接设置主机名
+                                    logger.info("主机 {} 没有sudo命令，使用普通用户权限设置主机名", ip);
+                                    if (command.contains("hostnamectl")) {
+                                        actualCommand = command.replace("sudo hostnamectl", "hostnamectl");
+                                    } else if (command.contains("hostname")) {
+                                        actualCommand = command.replace("sudo hostname", "hostname").replace(
+                                                "sudo echo",
+                                                "echo");
+                                    } else {
+                                        actualCommand = command.replace("sudo ", "");
+                                    }
+                                }
+
+                                // 执行命令
+                                com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
+                                        actualCommand);
+
+                                if (!result.isSuccess()) {
+                                    throw new Exception("设置主机名失败: " + result.getError());
+                                }
+
+                                // 更新缓存中的主机名
+                                hostInfo.setHostname(newHostname);
+                                hostCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+                                // 更新任务进度
+                                try {
+                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                            taskId, ip, true, null);
+                                } catch (Exception e) {
+                                    logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                                }
+                            } catch (Exception e) {
+                                logger.error("为主机 {} 设置主机名时出错", ip, e);
+                                // 更新任务进度
+                                try {
+                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                            taskId, ip, false, e.getMessage());
+                                } catch (Exception ex) {
+                                    logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
+                                }
+                            }
+                        }, hostnameExecutor);
+
+                        batchTasks.add(task);
                     }
 
+                    // 等待当前批次的所有任务完成
                     try {
-                        // 获取主机信息
-                        HostInfo hostInfo = hostMap.get(ip);
-                        if (hostInfo == null) {
-                            throw new Exception("未找到主机信息");
-                        }
-
-                        logger.info("为主机 {} 设置新主机名：{}", ip, newHostname);
-
-                        // 获取SSH连接信息
-                        String username = hostInfo.getSshUser();
-                        Integer port = hostInfo.getSshPort();
-
-                        // 执行设置主机名命令
-                        String command;
-                        String osType = "";
-                        if (hostInfo.getOsInfo() != null) {
-                            osType = hostInfo.getOsInfo().getDistribution();
-                        }
-
-                        if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
-                                "Fedora".equalsIgnoreCase(osType)) {
-                            // CentOS/RHEL/Fedora
-                            command = "sudo hostnamectl set-hostname " + newHostname;
-                        } else if ("Ubuntu".equalsIgnoreCase(osType) || "Debian".equalsIgnoreCase(osType)) {
-                            // Ubuntu/Debian
-                            command = "sudo hostnamectl set-hostname " + newHostname;
-                        } else {
-                            // 默认使用通用命令
-                            command = "sudo hostname " + newHostname + " && " +
-                                    "sudo echo '" + newHostname + "' > /etc/hostname";
-                        }
-
-                        // 获取或创建SSH连接
-                        ClientSession session = getOrCreateConnection(hostInfo);
-                        if (session == null || !session.isOpen()) {
-                            throw new Exception("无法创建SSH连接");
-                        }
-
-                        // 检查系统是否有sudo命令
-                        com.datasophon.api.service.checker.common.CommandResult checkSudoResult = execCommand(session,
-                                "which sudo || echo 'nosudo'");
-                        boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
-
-                        // 根据是否有sudo命令，选择使用适当的设置主机名命令
-                        String actualCommand;
-                        if (hasSudo) {
-                            // 系统有sudo命令，使用原来的命令
-                            actualCommand = command;
-                        } else {
-                            // 系统没有sudo命令，直接设置主机名
-                            logger.info("主机 {} 没有sudo命令，使用普通用户权限设置主机名", ip);
-                            if (command.contains("hostnamectl")) {
-                                actualCommand = command.replace("sudo hostnamectl", "hostnamectl");
-                            } else if (command.contains("hostname")) {
-                                actualCommand = command.replace("sudo hostname", "hostname").replace("sudo echo",
-                                        "echo");
-                            } else {
-                                actualCommand = command.replace("sudo ", "");
-                            }
-                        }
-
-                        // 执行命令
-                        com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
-                                actualCommand);
-
-                        if (!result.isSuccess()) {
-                            throw new Exception("设置主机名失败: " + result.getError());
-                        }
-
-                        // 更新缓存中的主机名
-                        hostInfo.setHostname(newHostname);
-                        hostCheckService.updateHostInfoCache(clusterId, hostInfo);
-
-                        // 更新任务进度
-                        try {
-                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                    taskId, ip, true, null);
-                        } catch (Exception e) {
-                            logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
-                        }
-
+                        CompletableFuture.allOf(batchTasks.toArray(new CompletableFuture[0])).get();
+                        logger.info("第{}批主机名设置完成", (i / batchSize) + 1);
                     } catch (Exception e) {
-                        logger.error("为主机 {} 设置主机名时出错", ip, e);
-                        // 更新任务进度
-                        try {
-                            com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                    taskId, ip, false, e.getMessage());
-                        } catch (Exception ex) {
-                            logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
-                        }
+                        logger.error("等待批处理任务完成时发生错误", e);
                     }
                 }
 
