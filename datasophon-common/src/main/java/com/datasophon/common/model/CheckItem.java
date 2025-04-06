@@ -22,7 +22,8 @@ public class CheckItem implements Serializable {
         CHECKING(3, "检查中"),
         SKIPPED(4, "已跳过"),
         TERMINATING(5, "终止中"),
-        FIXING(6, "修复中");
+        FIXING(6, "修复中"),
+        WAITING_FIX(7, "等待修复");
 
         private final int code;
         private final String desc;

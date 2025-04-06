@@ -323,15 +323,32 @@ public class HostInfo implements Serializable {
     /**
      * 计算主机的整体状态
      * 状态计算规则：
-     * 1. 如果有任何检查项正在检查中，则状态为CHECKING
-     * 2. 如果有任何检查项失败，则状态为FAILED
-     * 3. 如果所有检查项都成功，则状态为SUCCESS
-     * 4. 如果有等待检查的项目，则状态为WAITING
-     * 5. 如果所有项目都被跳过，则状态为SKIPPED
+     * 1. 如果主机状态已经是FIXING或WAITING_FIX，保持不变（手动设置的状态优先）
+     * 2. 如果有任何检查项正在检查中，则状态为CHECKING
+     * 3. 如果有任何检查项失败，则状态为FAILED
+     * 4. 如果所有检查项都成功，则状态为SUCCESS
+     * 5. 如果有等待检查的项目，则状态为WAITING
+     * 6. 如果所有项目都被跳过，则状态为SKIPPED
      *
      * 该方法同时设置status和checkResult字段，确保两者一致
      */
     public void calculateStatus() {
+        // 如果状态是手动设置的修复中或等待修复状态，保持不变
+        if (this.status == CheckItem.Status.FIXING || this.status == CheckItem.Status.WAITING_FIX) {
+            String statusName = this.status == CheckItem.Status.FIXING ? "修复中" : "等待修复";
+            if (this.status == CheckItem.Status.WAITING_FIX) {
+                // 如果是等待修复状态，更新checkResult以反映等待修复
+                this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
+                this.statusCacheDirty = false;
+                return;
+            } else if (this.status == CheckItem.Status.FIXING) {
+                // 如果是修复中状态，更新checkResult以反映正在修复
+                this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
+                this.statusCacheDirty = false;
+                return;
+            }
+        }
+
         if (checkItems == null || checkItems.isEmpty()) {
             this.status = CheckItem.Status.WAITING;
             // 没有检查项或检查项为空时，设置为等待检查
@@ -345,6 +362,7 @@ public class HostInfo implements Serializable {
         boolean hasWaiting = false;
         boolean hasSkipped = false;
         boolean hasSuccess = false;
+        boolean hasFixing = false;
 
         // 统计检查项的状态
         int total = checkItems.size();
@@ -353,6 +371,7 @@ public class HostInfo implements Serializable {
         int waitingCount = 0;
         int checkingCount = 0;
         int skippedCount = 0;
+        int fixingCount = 0;
 
         for (CheckItem item : checkItems) {
             CheckItem.Status itemStatus = item.getStatus();
@@ -372,11 +391,19 @@ public class HostInfo implements Serializable {
             } else if (itemStatus == CheckItem.Status.SUCCESS) {
                 hasSuccess = true;
                 successCount++;
+            } else if (itemStatus == CheckItem.Status.FIXING) {
+                hasFixing = true;
+                fixingCount++;
             }
         }
 
         // 根据检查项状态计算主机整体状态
-        if (hasChecking) {
+        if (hasFixing) {
+            this.status = CheckItem.Status.FIXING;
+            // 修复中，提供更详细的信息
+            this.checkResult = new CheckResult(10046,
+                    String.format("修复进行中：正在修复%d个检查项", fixingCount));
+        } else if (hasChecking) {
             this.status = CheckItem.Status.CHECKING;
             // 检查中，提供更详细的信息
             this.checkResult = new CheckResult(10000,

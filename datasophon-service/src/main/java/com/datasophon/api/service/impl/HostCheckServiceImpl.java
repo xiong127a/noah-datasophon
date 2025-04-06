@@ -326,7 +326,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     if (processedHostCount < hostInfoList.size() - 1) {
                         for (int i = processedHostCount + 1; i < hostInfoList.size(); i++) {
                             HostInfo nextHost = hostInfoList.get(i);
-                            nextHost.setStatus(CheckItem.Status.WAITING);
+                            nextHost.setStatus(CheckItem.Status.WAITING_FIX);
                             nextHost.setMessage("等待修复");
                             updateHostInfoCache(clusterId, nextHost);
                         }
@@ -419,7 +419,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     firstHost = false;
                 } else {
                     // 其他主机设为等待修复
-                    hostInfo.setStatus(CheckItem.Status.WAITING);
+                    hostInfo.setStatus(CheckItem.Status.WAITING_FIX);
                     hostInfo.setMessage("等待修复");
                 }
                 // 更新缓存

@@ -10,7 +10,8 @@ export const HOST_STATUS = {
   FAILED: 'FAILED',       // 检查失败
   TERMINATING: 'TERMINATING', // 终止中
   SKIPPED: 'SKIPPED',     // 已跳过
-  FIXING: 'FIXING'        // 修复中
+  FIXING: 'FIXING',       // 修复中
+  WAITING_FIX: 'WAITING_FIX' // 等待修复
 };
 
 // 主机状态文本映射
@@ -21,7 +22,8 @@ export const HOST_STATUS_TEXT = {
   [HOST_STATUS.FAILED]: '失败',
   [HOST_STATUS.TERMINATING]: '终止中',
   [HOST_STATUS.SKIPPED]: '已跳过',
-  [HOST_STATUS.FIXING]: '修复中'
+  [HOST_STATUS.FIXING]: '修复中',
+  [HOST_STATUS.WAITING_FIX]: '等待修复'
 };
 
 // 主机状态样式类映射
@@ -32,7 +34,8 @@ export const HOST_STATUS_CLASS = {
   [HOST_STATUS.FAILED]: 'failed-status',
   [HOST_STATUS.TERMINATING]: 'terminating-status',
   [HOST_STATUS.SKIPPED]: 'skipped-status',
-  [HOST_STATUS.FIXING]: 'fixing-status'
+  [HOST_STATUS.FIXING]: 'fixing-status',
+  [HOST_STATUS.WAITING_FIX]: 'waiting-fix-status'
 };
 
 // 主机状态图标映射
@@ -43,7 +46,8 @@ export const HOST_STATUS_ICON = {
   [HOST_STATUS.FAILED]: 'close-circle',
   [HOST_STATUS.TERMINATING]: 'stop',
   [HOST_STATUS.SKIPPED]: 'warning',
-  [HOST_STATUS.FIXING]: 'tool'
+  [HOST_STATUS.FIXING]: 'tool',
+  [HOST_STATUS.WAITING_FIX]: 'hourglass'
 };
 
 // 主机状态颜色映射
@@ -54,7 +58,8 @@ export const HOST_STATUS_COLOR = {
   [HOST_STATUS.FAILED]: '#FF3B30',
   [HOST_STATUS.TERMINATING]: '#FF9500',
   [HOST_STATUS.SKIPPED]: '#8E8E93',
-  [HOST_STATUS.FIXING]: '#5856D6'
+  [HOST_STATUS.FIXING]: '#5856D6',
+  [HOST_STATUS.WAITING_FIX]: '#FF9F0A'
 };
 
 // 主机状态背景色映射 (rgba格式)
@@ -65,7 +70,8 @@ export const HOST_STATUS_BG_COLOR = {
   [HOST_STATUS.FAILED]: 'rgba(255, 59, 48, 0.1)',
   [HOST_STATUS.TERMINATING]: 'rgba(255, 149, 0, 0.1)',
   [HOST_STATUS.SKIPPED]: 'rgba(142, 142, 147, 0.1)',
-  [HOST_STATUS.FIXING]: 'rgba(88, 86, 214, 0.1)'
+  [HOST_STATUS.FIXING]: 'rgba(88, 86, 214, 0.1)',
+  [HOST_STATUS.WAITING_FIX]: 'rgba(255, 159, 10, 0.1)'
 };
 
 // 可操作状态定义

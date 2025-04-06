@@ -387,7 +387,7 @@ export default {
                   gap: '8px'
                 }
               }, [
-                // 终止按钮占位 - 无论是否显示都保留空间
+                // 终止/重试按钮 (共享同一位置)
                 h('div', {
                   style: {
                     width: '68px',
@@ -396,8 +396,9 @@ export default {
                     justifyContent: 'center'
                   }
                 }, [
-                  // 只有检查中状态才显示终止按钮
-                  isChecking ? h('button', {
+                  // 检查中状态显示终止按钮，否则显示重试按钮
+                  isChecking ? 
+                  h('button', {
                     style: {
                       border: 'none',
                       backgroundColor: 'rgba(255, 59, 48, 0.1)',
@@ -424,20 +425,8 @@ export default {
                       style: { marginRight: '4px', fontSize: '12px' }
                     }),
                     "终止"
-                  ]) : null
-                ]),
-
-                // 重试按钮占位
-                h('div', {
-                  style: {
-                    width: '68px',
-                    minWidth: '68px',
-                    display: 'flex',
-                    justifyContent: 'center'
-                  }
-                }, [
-                  // 非检查中状态才显示重试按钮
-                  !isChecking ? h('button', {
+                  ]) : 
+                  h('button', {
                     style: {
                       border: 'none',
                       backgroundColor: 'rgba(0, 122, 255, 0.1)',
@@ -471,7 +460,7 @@ export default {
                       style: { marginRight: '4px', fontSize: '12px' }
                     }),
                     "重试"
-                  ]) : null
+                  ])
                 ]),
 
                 // 修复按钮占位
