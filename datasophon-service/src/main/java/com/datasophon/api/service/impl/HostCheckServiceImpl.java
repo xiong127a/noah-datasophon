@@ -2933,36 +2933,73 @@ public class HostCheckServiceImpl implements HostCheckService {
             String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
             boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
 
-            // 添加注释标记
-            String hostsWithMarkers = "# BEGIN DATASOPHON MANAGED HOSTS - DO NOT EDIT THIS SECTION\n" +
-                    hostsContent +
-                    "# END DATASOPHON MANAGED HOSTS\n";
-
-            // 创建临时文件
-            String tempFileName = "/tmp/hosts_" + System.currentTimeMillis();
-            MinaUtils.execCmdWithResult(session, "echo '" + hostsWithMarkers + "' > " + tempFileName);
-
             // 根据是否有sudo命令决定使用的前缀
             String sudoPrefix = hasSudo ? "sudo " : "";
+
+            // 定义标记
+            final String BEGIN_MARKER = "# BEGIN DATASOPHON MANAGED HOSTS - DO NOT EDIT THIS SECTION";
+            final String END_MARKER = "# END DATASOPHON MANAGED HOSTS";
+
+            // 添加注释标记包裹内容
+            String hostsWithMarkers = BEGIN_MARKER + "\n" +
+                    hostsContent +
+                    "\n" + END_MARKER;
 
             // 备份当前hosts文件
             String backupCmd = sudoPrefix + "cp /etc/hosts /etc/hosts.backup." + System.currentTimeMillis();
             MinaUtils.execCmdWithResult(session, backupCmd);
 
+            // 获取原始hosts文件内容
+            String getOriginalCmd = "cat /etc/hosts";
+            String originalHosts = MinaUtils.execCmdWithResult(session, getOriginalCmd);
+
+            // 检查原始hosts文件是否已包含标记
+            boolean hasMarkers = originalHosts.contains(BEGIN_MARKER) && originalHosts.contains(END_MARKER);
+            String newHostsContent;
+
+            if (hasMarkers) {
+                // 找到标记位置
+                int beginIndex = originalHosts.indexOf(BEGIN_MARKER);
+                int endIndex = originalHosts.indexOf(END_MARKER) + END_MARKER.length();
+
+                // 替换标记之间的内容
+                newHostsContent = originalHosts.substring(0, beginIndex) +
+                        hostsWithMarkers +
+                        originalHosts.substring(endIndex);
+
+                logger.info("主机 {} 的hosts文件已包含标记，替换标记之间的内容", ip);
+            } else {
+                // 如果没有标记，则将标记内容添加到文件末尾，保持原内容
+                // 确保原内容最后有换行符
+                if (!originalHosts.endsWith("\n")) {
+                    originalHosts += "\n";
+                }
+
+                // 添加一个空行分隔原内容和管理内容
+                newHostsContent = originalHosts + "\n" + hostsWithMarkers + "\n";
+
+                logger.info("主机 {} 的hosts文件未包含标记，追加到文件末尾", ip);
+            }
+
+            // 创建临时文件
+            String tempFileName = "/tmp/hosts_" + System.currentTimeMillis();
+            // 使用单引号保留原始格式，使用cat输出到文件避免特殊字符问题
+            MinaUtils.execCmdWithResult(session, "cat > " + tempFileName + " << 'EOL'\n" + newHostsContent + "\nEOL");
+
             // 将临时文件复制到/etc/hosts
             String copyCmd = sudoPrefix + "cp " + tempFileName + " /etc/hosts";
-            String copyResult = MinaUtils.execCmdWithResult(session, copyCmd);
+            MinaUtils.execCmdWithResult(session, copyCmd);
 
             // 删除临时文件
             MinaUtils.execCmdWithResult(session, "rm -f " + tempFileName);
 
             // 验证hosts文件是否已更新
-            String verifyCmd = "cat /etc/hosts | grep 'DATASOPHON MANAGED HOSTS'";
+            String verifyCmd = "cat /etc/hosts | grep '" + BEGIN_MARKER + "'";
             String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd);
-            boolean success = verifyResult.contains("DATASOPHON MANAGED HOSTS");
+            boolean success = verifyResult.contains(BEGIN_MARKER);
 
             if (success) {
-                logger.info("主机 {} 的hosts文件已成功更新", ip);
+                logger.info("主机 {} 的hosts文件已成功更新，保留了原有用户配置", ip);
             } else {
                 logger.warn("主机 {} 的hosts文件更新失败", ip);
             }
