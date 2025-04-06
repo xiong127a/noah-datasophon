@@ -338,15 +338,33 @@ public class MinaUtils {
         return false;
     }
 
-    /** 使用密码打开远程会话 */
+    /** 使用密码进行连接 */
     public static ClientSession openConnectionWithPassword(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            LOG.error("主机信息为空，无法建立连接");
+            return null;
+        }
+
         String sshIp = hostInfo.getIp();
-        int sshPort = hostInfo.getSshPort();
+        Integer sshPort = hostInfo.getSshPort();
         String sshUser = hostInfo.getSshUser();
         String sshPassword = hostInfo.getSshPassword();
+
+        if (sshIp == null || sshPort == null || sshUser == null || sshPassword == null) {
+            LOG.error("SSH连接信息不完整: IP={}, 端口={}, 用户名={}, 密码={}",
+                    sshIp, sshPort, sshUser, sshPassword == null ? "null" : "******");
+            hostInfo.setSshErrorMsg("SSH连接信息不完整");
+            hostInfo.setErrorMessage("SSH连接失败: 连接信息不完整");
+            return null;
+        }
+
         SshClient sshClient = SshClient.setUpDefaultClient();
 
-        // 配置自动接受未知主机密钥
+        // 设置连接超时为10秒，减少对慢主机的等待时间
+        long connectTimeout = 10000; // 10秒
+
+        // 使用正确的字符串常量设置连接超时
+        sshClient.getProperties().put("ssh.connectTimeout", String.valueOf(connectTimeout));
         sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
 
         sshClient.start();

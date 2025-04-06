@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.HashMap;
 
 /**
  * SSH连接池管理器
@@ -73,8 +74,17 @@ public class SshConnectionPoolManager {
     // 连接池是否已初始化
     private final AtomicBoolean initialized = new AtomicBoolean(false);
 
-    // 默认超时时间（30秒）
-    private static final long DEFAULT_TIMEOUT = 30000;
+    // 默认超时时间（减少到15秒）
+    private static final long DEFAULT_TIMEOUT = 15000;
+
+    // 添加连接超时监控
+    private final Map<String, Integer> hostConnectFailCount = new ConcurrentHashMap<>();
+    private final Map<String, Long> hostLastFailTime = new ConcurrentHashMap<>();
+
+    // 重试等待时间上限（10分钟）
+    private static final long MAX_RETRY_WAIT_TIME = TimeUnit.MINUTES.toMillis(10);
+    // 基础重试等待时间（5秒）
+    private static final long BASE_RETRY_WAIT_TIME = TimeUnit.SECONDS.toMillis(5);
 
     /**
      * 默认构造方法
@@ -168,77 +178,185 @@ public class SshConnectionPoolManager {
             return null;
         }
 
-        // 检查必要的Map对象是否初始化
+        // 日志显示当前连接池状态
+        log.debug("SSH连接池当前状态: 池大小={}, 主机IP={}",
+                hostConnectionPool.size(), hostInfo.getIp());
 
+        // 检查主机是否处于退避期间
         String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
+        if (shouldBackoff(hostKey)) {
+            log.warn("主机 {} 处于退避期间，暂不尝试连接", hostInfo.getIp());
+            return null;
+        }
 
         // 增加总请求计数
         long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
         hostCacheRequests.put(hostKey, requests);
 
         // 获取连接锁，确保同一主机的连接操作串行化
+        // 但不要让其他主机的连接请求被同一个锁阻塞
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
 
+        ClientSession session = null;
         synchronized (lock) {
-            ClientSession session = hostConnectionPool.get(hostKey);
+            session = hostConnectionPool.get(hostKey);
 
             // 检查连接是否存在且有效
-            if (session != null) {
-                try {
-                    // 检查连接是否仍然可用
-                    if (session.isOpen()) {
-                        // 尝试发送一个无害的命令来验证连接是否真正有效
-                        CommandResult testResult = execCommand(session, "echo connection_test");
-                        if (testResult != null && testResult.isSuccess()
-                                && testResult.getOutput().trim().contains("connection_test")) {
-                            log.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
-                            // 更新最后访问时间
-                            connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
+            if (session != null && checkSessionValid(session, hostInfo)) {
+                // 更新最后访问时间
+                connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
-                            // 增加缓存命中计数
-                            long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
-                            hostCacheHits.put(hostKey, hits);
+                // 增加缓存命中计数
+                long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
+                hostCacheHits.put(hostKey, hits);
 
-                            return session;
-                        } else {
-                            log.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getIp());
-                        }
-                    } else {
-                        log.info("主机 {} 的SSH连接已关闭，将创建新连接", hostInfo.getIp());
-                    }
-                } catch (Exception e) {
-                    log.warn("测试SSH连接时发生异常: {}", e.getMessage());
-                }
+                // 重置失败计数
+                resetFailCounter(hostKey);
 
-                // 关闭无效连接
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    log.debug("关闭失效连接时发生异常: {}", e.getMessage());
-                } finally {
-                    hostConnectionPool.remove(hostKey);
-                }
+                return session;
             }
+        }
 
-            // 创建新连接
-            try {
-                log.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
-                session = MinaUtils.openConnectionWithPassword(hostInfo);
+        // 如果没有有效的会话，则在锁外创建新连接
+        // 这样其他主机的连接请求不会被阻塞
+        try {
+            log.info("创建主机 {} 的新SSH连接，当前连接池大小: {}",
+                    hostInfo.getIp(), hostConnectionPool.size());
 
+            // 设置短超时以减少慢主机影响
+            long startTime = System.currentTimeMillis();
+            session = MinaUtils.openConnectionWithPassword(hostInfo);
+            long connectionTime = System.currentTimeMillis() - startTime;
+
+            // 再次获取锁，确保更新连接池的操作是线程安全的
+            synchronized (lock) {
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
 
                     // 设置初始访问时间
                     connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
-                    log.info("成功创建主机 {} 的SSH连接", hostInfo.getIp());
+                    log.info("成功创建主机 {} 的SSH连接，耗时: {}ms，连接池新大小: {}",
+                            hostInfo.getIp(), connectionTime, hostConnectionPool.size());
+
+                    // 连接成功后重置失败计数
+                    resetFailCounter(hostKey);
+
+                    // 连接时间超过5秒的警告
+                    if (connectionTime > 5000) {
+                        log.warn("警告: 主机 {} 的SSH连接建立时间超过5秒 ({}ms)，可能存在网络问题",
+                                hostInfo.getIp(), connectionTime);
+                    }
+                } else {
+                    log.error("创建主机 {} 的SSH连接失败，耗时: {}ms", hostInfo.getIp(), connectionTime);
+
+                    // 增加失败计数
+                    incrementFailCounter(hostKey);
                 }
-                return session;
-            } catch (Exception e) {
-                log.error("建立SSH连接失败: {}", e.getMessage(), e);
-                return null;
             }
+            return session;
+        } catch (Exception e) {
+            log.error("创建SSH连接时发生异常: {}", e.getMessage());
+
+            // 增加失败计数
+            incrementFailCounter(hostKey);
+
+            return null;
         }
+    }
+
+    /**
+     * 检查会话是否有效
+     * 
+     * @param session  SSH会话
+     * @param hostInfo 主机信息
+     * @return 是否有效
+     */
+    private boolean checkSessionValid(ClientSession session, HostInfo hostInfo) {
+        try {
+            // 检查连接是否仍然可用
+            if (session.isOpen()) {
+                // 尝试发送一个无害的命令来验证连接是否真正有效
+                CommandResult testResult = execCommand(session, "echo connection_test");
+                if (testResult != null && testResult.isSuccess()
+                        && testResult.getOutput().trim().contains("connection_test")) {
+                    log.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
+                    return true;
+                } else {
+                    log.warn("主机 {} 的SSH连接健康检查失败，将创建新连接", hostInfo.getIp());
+                }
+            } else {
+                log.info("主机 {} 的SSH连接已关闭，将创建新连接", hostInfo.getIp());
+            }
+
+            // 关闭无效连接
+            try {
+                session.close();
+            } catch (Exception e) {
+                log.debug("关闭失效连接时发生异常: {}", e.getMessage());
+            } finally {
+                String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
+                hostConnectionPool.remove(hostKey);
+            }
+        } catch (Exception e) {
+            log.warn("测试SSH连接时发生异常: {}", e.getMessage());
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * 重置指定主机的失败计数
+     */
+    private void resetFailCounter(String hostKey) {
+        hostConnectFailCount.remove(hostKey);
+        hostLastFailTime.remove(hostKey);
+    }
+
+    /**
+     * 增加指定主机的失败计数
+     */
+    private void incrementFailCounter(String hostKey) {
+        int failCount = hostConnectFailCount.getOrDefault(hostKey, 0) + 1;
+        hostConnectFailCount.put(hostKey, failCount);
+        hostLastFailTime.put(hostKey, System.currentTimeMillis());
+
+        long waitTime = calculateBackoffTime(failCount);
+        log.warn("主机 {} 连接失败 {} 次，将等待 {} 秒后再次尝试",
+                hostKey, failCount, waitTime / 1000);
+    }
+
+    /**
+     * 计算退避时间（指数增长）
+     */
+    private long calculateBackoffTime(int failCount) {
+        // 使用指数退避策略: 5秒 * 2^(失败次数-1)，上限为10分钟
+        long waitTime = BASE_RETRY_WAIT_TIME * (long) Math.pow(2, failCount - 1);
+        return Math.min(waitTime, MAX_RETRY_WAIT_TIME);
+    }
+
+    /**
+     * 判断是否应该退避（不尝试连接）
+     */
+    private boolean shouldBackoff(String hostKey) {
+        Integer failCount = hostConnectFailCount.get(hostKey);
+        Long lastFailTime = hostLastFailTime.get(hostKey);
+
+        if (failCount == null || failCount == 0 || lastFailTime == null) {
+            return false;
+        }
+
+        long waitTime = calculateBackoffTime(failCount);
+        long elapsedTime = System.currentTimeMillis() - lastFailTime;
+
+        return elapsedTime < waitTime;
+    }
+
+    /**
+     * 获取主机失败统计
+     */
+    public Map<String, Integer> getHostFailureStats() {
+        return new HashMap<>(hostConnectFailCount);
     }
 
     /**
