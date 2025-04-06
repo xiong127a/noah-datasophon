@@ -2695,14 +2695,26 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 生成序号部分，前面补0
                 String indexStr = String.format("%0" + zeroCount + "d", index);
 
-                // 构建主机名
-                StringBuilder hostname = new StringBuilder(prefix);
-                if (separator != null) {
+                // 构建主机名 - 重写逻辑，避免分隔符问题
+                StringBuilder hostname = new StringBuilder();
+
+                // 添加前缀
+                hostname.append(prefix);
+
+                // 添加前缀和序号之间的分隔符
+                if (separator != null && !separator.isEmpty()) {
                     hostname.append(separator);
                 }
+
+                // 添加序号
                 hostname.append(indexStr);
-                if (suffix != null) {
-                    hostname.append(separator).append(suffix);
+
+                // 如果有后缀，添加序号和后缀之间的分隔符，然后添加后缀
+                if (suffix != null && !suffix.isEmpty()) {
+                    if (separator != null && !separator.isEmpty()) {
+                        hostname.append(separator);
+                    }
+                    hostname.append(suffix);
                 }
 
                 Map<String, String> hostItem = new HashMap<>();
