@@ -2265,9 +2265,60 @@ public class HostCheckServiceImpl implements HostCheckService {
                 MinaUtils.execCmdWithResult(session, backupCmd);
                 logger.info("已备份hosts文件到: {}", backupFileName);
 
+                // 读取当前hosts文件内容
+                String getCurrentHostsCmd = "cat /etc/hosts";
+                String currentHostsContent = MinaUtils.execCmdWithResult(session, getCurrentHostsCmd);
+                logger.info("获取到当前hosts文件内容，长度：{}", currentHostsContent.length());
+
+                // 定义标记，用于标识由系统管理的部分
+                String startMark = "### BEGIN DATASOPHON MANAGED HOSTS ###";
+                String endMark = "### END DATASOPHON MANAGED HOSTS ###";
+
+                // 准备新的hosts文件内容
+                StringBuilder newHostsContent = new StringBuilder();
+
+                // 检查当前文件是否已经包含我们的标记
+                if (currentHostsContent.contains(startMark) && currentHostsContent.contains(endMark)) {
+                    // 文件已经包含我们的标记，替换这部分内容
+                    int startIndex = currentHostsContent.indexOf(startMark);
+                    int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
+
+                    // 保留标记前的内容
+                    newHostsContent.append(currentHostsContent.substring(0, startIndex));
+
+                    // 添加我们的内容（包含标记）
+                    newHostsContent.append(startMark).append("\n");
+                    newHostsContent.append(hostsFileContent).append("\n");
+                    newHostsContent.append(endMark);
+
+                    // 如果标记后还有内容，也保留
+                    if (endIndex < currentHostsContent.length()) {
+                        newHostsContent.append(currentHostsContent.substring(endIndex));
+                    }
+                } else {
+                    // 文件不包含我们的标记，追加到末尾
+                    newHostsContent.append(currentHostsContent);
+
+                    // 如果最后一行不是空行，添加一个空行
+                    if (!currentHostsContent.endsWith("\n")) {
+                        newHostsContent.append("\n");
+                    }
+
+                    // 再添加一个空行作为分隔
+                    newHostsContent.append("\n");
+
+                    // 添加我们的内容（包含标记）
+                    newHostsContent.append(startMark).append("\n");
+                    newHostsContent.append(hostsFileContent).append("\n");
+                    newHostsContent.append(endMark).append("\n");
+                }
+
                 // 创建临时文件
                 String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
-                String createTempCommand = "echo '" + hostsFileContent.replace("'", "'\\''") + "' > " + tempFile;
+                // 这里需要注意特殊字符的处理，使用单引号包裹并转义内部的单引号
+                String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
+                        newHostsContent.toString() +
+                        "\nEOL";
                 MinaUtils.execCmdWithResult(session, createTempCommand);
 
                 // 使用sudo将临时文件复制到/etc/hosts
@@ -2290,7 +2341,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     hostInfo.getOsInfo().setDnsInfo(new com.datasophon.common.model.hardware.DnsInfo());
                 }
 
-                // 设置hosts文件内容到DnsInfo对象
+                // 设置hosts文件内容到DnsInfo对象 - 这里只保存我们添加的部分
                 hostInfo.getOsInfo().getDnsInfo().setHostsFileContent(hostsFileContent);
 
                 // 设置DNS状态为成功
