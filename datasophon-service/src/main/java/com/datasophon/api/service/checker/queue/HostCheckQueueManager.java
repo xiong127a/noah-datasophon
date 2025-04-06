@@ -12,6 +12,7 @@ import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.utils.HostUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -580,6 +581,38 @@ public class HostCheckQueueManager {
                 if (!checkQueue.isEmpty()) {
                     logger.info("当前队列状态: 队列中等待的任务数量={}, 正在执行的任务数量={}",
                             checkQueue.size(), runningTasks.size());
+
+                    // 从队列中获取所有待处理的任务
+                    List<CheckTask> taskList = new ArrayList<>();
+                    checkQueue.drainTo(taskList);
+
+                    if (!taskList.isEmpty()) {
+                        // 使用HostUtils.sortIpAddresses方法对任务按IP地址排序
+                        taskList.sort((task1, task2) -> {
+                            // 创建一个只包含两个IP的列表
+                            List<String> ips = new ArrayList<>(2);
+                            ips.add(task1.getHostInfo().getIp());
+                            ips.add(task2.getHostInfo().getIp());
+
+                            // 使用HostUtils排序这两个IP
+                            List<String> sortedIps = HostUtils.sortIpAddresses(ips);
+
+                            // 如果第一个IP是task1的IP，则task1排在前面，否则task2排在前面
+                            if (sortedIps.get(0).equals(task1.getHostInfo().getIp())) {
+                                return -1;
+                            } else {
+                                return 1;
+                            }
+                        });
+
+                        // 排序后的任务重新放回队列
+                        for (CheckTask task : taskList) {
+                            checkQueue.put(task);
+                        }
+
+                        logger.info("已完成队列任务排序，按IP排序后第一个任务: {}",
+                                taskList.isEmpty() ? "无" : taskList.get(0).getHostInfo().getIp());
+                    }
                 }
 
                 // 添加超时机制，避免无限期阻塞
