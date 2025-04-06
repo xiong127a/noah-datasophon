@@ -2140,27 +2140,81 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 3. 根据syncHosts参数决定是否更新/etc/hosts文件
                 if (syncHosts) {
                     logger.info("同步更新hosts文件中的本机记录");
+
                     // 先获取当前hosts文件
                     String getHostsCmd = "cat /etc/hosts";
-                    String hostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
+                    String currentHostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
 
-                    // 创建临时文件
-                    String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+                    // 定义标记，用于标识由系统管理的部分
+                    String startMark = "### BEGIN DATASOPHON MANAGED HOSTS ###";
+                    String endMark = "### END DATASOPHON MANAGED HOSTS ###";
 
-                    // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
-                    String updateHostsCmd = "awk '{ if ($0 ~ /" + currentHostname + "/ && $0 ~ /127.0.1.1|" + ip
-                            + "/) { gsub(\"" + currentHostname + "\", \"" + newHostname
-                            + "\") } print $0 }' /etc/hosts > "
-                            + tempFile;
-
-                    // 根据是否有sudo，选择不同的命令将临时文件复制到/etc/hosts
-                    if (hasSudo) {
-                        updateHostsCmd += " && " + sudoPrefix + "cp " + tempFile + " /etc/hosts && rm " + tempFile;
+                    // 根据集群ID生成完整的hosts文件内容
+                    HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId, 1, 10);
+                    if (hostsFilePreview == null) {
+                        logger.warn("生成hosts文件预览内容失败，将只设置主机名，不同步hosts文件");
                     } else {
-                        updateHostsCmd += " && cp " + tempFile + " /etc/hosts && rm " + tempFile;
-                    }
+                        String hostsFileContent = hostsFilePreview.getHostsContent();
 
-                    MinaUtils.execCmdWithResult(session, updateHostsCmd);
+                        // 准备新的hosts文件内容
+                        StringBuilder newHostsContent = new StringBuilder();
+
+                        // 检查当前文件是否已经包含我们的标记
+                        if (currentHostsContent.contains(startMark) && currentHostsContent.contains(endMark)) {
+                            // 文件已经包含我们的标记，替换这部分内容
+                            int startIndex = currentHostsContent.indexOf(startMark);
+                            int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
+
+                            // 保留标记前的内容
+                            newHostsContent.append(currentHostsContent.substring(0, startIndex));
+
+                            // 添加我们的内容（包含标记）
+                            newHostsContent.append(startMark).append("\n");
+                            newHostsContent.append(hostsFileContent).append("\n");
+                            newHostsContent.append(endMark);
+
+                            // 如果标记后还有内容，也保留
+                            if (endIndex < currentHostsContent.length()) {
+                                newHostsContent.append(currentHostsContent.substring(endIndex));
+                            }
+                        } else {
+                            // 文件不包含我们的标记，追加到末尾
+                            newHostsContent.append(currentHostsContent);
+
+                            // 如果最后一行不是空行，添加一个空行
+                            if (!currentHostsContent.endsWith("\n")) {
+                                newHostsContent.append("\n");
+                            }
+
+                            // 再添加一个空行作为分隔
+                            newHostsContent.append("\n");
+
+                            // 添加我们的内容（包含标记）
+                            newHostsContent.append(startMark).append("\n");
+                            newHostsContent.append(hostsFileContent).append("\n");
+                            newHostsContent.append(endMark).append("\n");
+                        }
+
+                        // 创建临时文件
+                        String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+                        // 使用单引号包裹并转义内部的单引号
+                        String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
+                                newHostsContent.toString() +
+                                "\nEOL";
+                        MinaUtils.execCmdWithResult(session, createTempCommand);
+
+                        // 使用sudo将临时文件复制到/etc/hosts
+                        String updateCommand;
+                        if (hasSudo) {
+                            updateCommand = sudoPrefix + "cp " + tempFile + " /etc/hosts && " + sudoPrefix
+                                    + "chmod 644 /etc/hosts && rm " + tempFile;
+                        } else {
+                            updateCommand = "cp " + tempFile + " /etc/hosts && chmod 644 /etc/hosts && rm " + tempFile;
+                        }
+                        MinaUtils.execCmdWithResult(session, updateCommand);
+
+                        logger.info("hosts文件已使用系统标记方式更新");
+                    }
                 } else {
                     logger.info("不更新hosts文件，仅设置主机名");
                 }
