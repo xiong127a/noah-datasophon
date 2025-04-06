@@ -2,6 +2,7 @@ package com.datasophon.api.service.checker.checkers.disk.factory;
 
 import com.datasophon.api.service.checker.checkers.disk.DiskCheckerStrategy;
 import com.datasophon.api.service.checker.checkers.disk.generic.GenericDiskChecker;
+import com.datasophon.api.service.checker.checkers.disk.os.alpine.AlpineDiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOS7DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOS8DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.os.centos.CentOSDiskChecker;
@@ -55,6 +56,9 @@ public class DiskCheckerFactory {
                 case DEBIAN:
                     // Ubuntu使用Ubuntu专用检查器
                     return new UbuntuDiskChecker();
+                case ALPINE:
+                    // Alpine使用Alpine专用检查器
+                    return new AlpineDiskChecker();
                 default:
                     // 其他操作系统使用通用检查器
                     logger.info("未找到适配的磁盘检查器，使用通用检查器");
