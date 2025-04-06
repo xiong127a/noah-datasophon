@@ -97,6 +97,43 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         QueueManagerStatus queueManagerStatus = hostCheckQueueManager.getQueueManagerStatus();
         AsyncServiceStatus asyncServiceStatus = asyncCheckService.getAsyncServiceStatus();
 
+        // 获取主机信息和硬件信息相关线程池状态
+        if (osInfoExecutor != null) {
+            if (osInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
+                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) osInfoExecutor;
+                queueManagerStatus.setOsInfoExecutorActiveCount(executor.getActiveCount());
+                queueManagerStatus.setOsInfoExecutorQueueSize(executor.getQueue().size());
+                queueManagerStatus.setOsInfoExecutorCompletedTasks(executor.getCompletedTaskCount());
+            }
+        }
+
+        if (hardwareInfoExecutor != null) {
+            if (hardwareInfoExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
+                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hardwareInfoExecutor;
+                queueManagerStatus.setHardwareInfoExecutorActiveCount(executor.getActiveCount());
+                queueManagerStatus.setHardwareInfoExecutorQueueSize(executor.getQueue().size());
+                queueManagerStatus.setHardwareInfoExecutorCompletedTasks(executor.getCompletedTaskCount());
+            }
+        }
+
+        if (hostsFileExecutor != null) {
+            if (hostsFileExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
+                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hostsFileExecutor;
+                queueManagerStatus.setHostsFileExecutorActiveCount(executor.getActiveCount());
+                queueManagerStatus.setHostsFileExecutorQueueSize(executor.getQueue().size());
+                queueManagerStatus.setHostsFileExecutorCompletedTasks(executor.getCompletedTaskCount());
+            }
+        }
+
+        if (hostnameExecutor != null) {
+            if (hostnameExecutor instanceof java.util.concurrent.ThreadPoolExecutor) {
+                java.util.concurrent.ThreadPoolExecutor executor = (java.util.concurrent.ThreadPoolExecutor) hostnameExecutor;
+                queueManagerStatus.setHostnameExecutorActiveCount(executor.getActiveCount());
+                queueManagerStatus.setHostnameExecutorQueueSize(executor.getQueue().size());
+                queueManagerStatus.setHostnameExecutorCompletedTasks(executor.getCompletedTaskCount());
+            }
+        }
+
         // 创建QueueSystemStatus对象
         QueueSystemStatus queueSystemStatus = new QueueSystemStatus();
         queueSystemStatus.setQueueManager(queueManagerStatus);

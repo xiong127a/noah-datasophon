@@ -47,6 +47,26 @@ public class QueueManagerStatus {
     private int fixExecutorActiveCount;
     private int fixExecutorQueueSize;
 
+    // 主机信息收集线程池状态
+    private int osInfoExecutorActiveCount;
+    private int osInfoExecutorQueueSize;
+    private long osInfoExecutorCompletedTasks;
+
+    // 硬件信息收集线程池状态
+    private int hardwareInfoExecutorActiveCount;
+    private int hardwareInfoExecutorQueueSize;
+    private long hardwareInfoExecutorCompletedTasks;
+
+    // hosts文件设置线程池状态
+    private int hostsFileExecutorActiveCount;
+    private int hostsFileExecutorQueueSize;
+    private long hostsFileExecutorCompletedTasks;
+
+    // 主机名设置线程池状态
+    private int hostnameExecutorActiveCount;
+    private int hostnameExecutorQueueSize;
+    private long hostnameExecutorCompletedTasks;
+
     // 线程池总统计
     private int totalActiveThreads;
     private int totalPoolSize;

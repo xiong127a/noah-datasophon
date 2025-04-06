@@ -823,6 +823,10 @@ public class HostCheckQueueManager {
         List<String> queueNames = new ArrayList<>();
         queueNames.add("检查队列(checkQueue)");
         queueNames.add("修复队列(fixQueue)");
+        queueNames.add("主机信息收集队列(osInfoExecutor)");
+        queueNames.add("硬件信息收集队列(hardwareInfoExecutor)");
+        queueNames.add("hosts文件设置队列(hostsFileExecutor)");
+        queueNames.add("主机名设置队列(hostnameExecutor)");
         status.put("queueNames", queueNames);
 
         return status;
@@ -1015,6 +1019,10 @@ public class HostCheckQueueManager {
         List<String> queueNames = new ArrayList<>();
         queueNames.add("检查队列(checkQueue)");
         queueNames.add("修复队列(fixQueue)");
+        queueNames.add("主机信息收集队列(osInfoExecutor)");
+        queueNames.add("硬件信息收集队列(hardwareInfoExecutor)");
+        queueNames.add("hosts文件设置队列(hostsFileExecutor)");
+        queueNames.add("主机名设置队列(hostnameExecutor)");
         status.setQueueNames(queueNames);
 
         // 线程池信息
@@ -1026,6 +1034,15 @@ public class HostCheckQueueManager {
         int fixQueueSize = 0;
         int fixPoolSize = 0;
         long fixCompletedTasks = 0;
+
+        // 获取修复线程池状态
+        if (fixExecutorService != null && fixExecutorService instanceof ThreadPoolExecutor) {
+            ThreadPoolExecutor fixExecutor = (ThreadPoolExecutor) fixExecutorService;
+            fixActiveCount = fixExecutor.getActiveCount();
+            fixQueueSize = fixExecutor.getQueue().size();
+            fixPoolSize = fixExecutor.getPoolSize();
+            fixCompletedTasks = fixExecutor.getCompletedTaskCount();
+        }
 
         status.setMainExecutorActiveCount(mainExecutor.getActiveCount());
         status.setMainExecutorQueueSize(mainExecutor.getQueue().size());
