@@ -72,8 +72,6 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Autowired
     private TaskManager taskManager;
 
-
-
     /**
      * 任务执行状态枚举
      */
@@ -2769,12 +2767,16 @@ public class HostCheckServiceImpl implements HostCheckService {
                 zeroCount = 1;
             }
 
+            // 将IP地址排序（使用HostUtils中的通用排序方法）
+            List<String> sortedIps = HostUtils.sortIpAddresses(new ArrayList<>(hostMap.keySet()));
+            logger.info("按IP排序后的主机列表: {}", sortedIps);
+
             // 准备主机名预览列表
             List<Map<String, String>> hostnamePreview = new ArrayList<>();
             int index = 1;
 
-            // 生成主机名预览
-            for (String ip : hostMap.keySet()) {
+            // 生成主机名预览，使用排序后的IP列表
+            for (String ip : sortedIps) {
                 HostInfo hostInfo = hostMap.get(ip);
                 // 生成数字部分，使用零填充
                 String numberPart = String.format("%0" + zeroCount + "d", index);
