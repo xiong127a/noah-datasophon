@@ -2021,6 +2021,8 @@ public class AsyncCheckService {
                                         "hostname");
                                 String currentHostname = verifyResult.getOutput().trim();
 
+                                boolean hostnameSetSuccess = false; // 标记主机名是否设置成功
+
                                 if (!currentHostname.equals(newHostname)) {
                                     logger.warn("主机名未成功设置，期望: {}，实际: {}", newHostname, currentHostname);
 
@@ -2044,14 +2046,21 @@ public class AsyncCheckService {
                                                 "重试后设置主机名仍然失败，期望: " + newHostname + "，实际: " + currentHostname);
                                     } else {
                                         logger.info("重试设置主机名成功: {}", newHostname);
+                                        hostnameSetSuccess = true; // 重试成功
                                     }
                                 } else {
                                     logger.info("主机名成功设置为: {}", newHostname);
+                                    hostnameSetSuccess = true; // 首次设置成功
                                 }
 
-                                // 更新缓存中的主机名
-                                hostInfo.setHostname(newHostname);
-                                hostCheckService.updateHostInfoCache(clusterId, hostInfo);
+                                // 只有当主机名设置成功时才更新缓存
+                                if (hostnameSetSuccess) {
+                                    // 更新缓存中的主机名
+                                    hostInfo.setHostname(newHostname);
+                                    hostCheckService.updateHostInfoCache(clusterId, hostInfo);
+                                } else {
+                                    logger.warn("主机 {} 设置主机名失败，不更新缓存", ip);
+                                }
 
                                 // 更新任务进度
                                 try {
