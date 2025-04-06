@@ -3,7 +3,6 @@ package com.datasophon.api.service.checker.common;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.HostInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -27,7 +27,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.nio.charset.StandardCharsets;
 
 /**
  * SSH连接池管理器
@@ -170,18 +169,12 @@ public class SshConnectionPoolManager {
         }
 
         // 检查必要的Map对象是否初始化
-        if (connectionLocks == null || hostConnectionPool == null || connectionLastAccessTime == null) {
-            log.error("连接相关的Map对象未初始化，无法创建或获取连接");
-            return null;
-        }
 
         String hostKey = hostInfo.getIp() + ":" + hostInfo.getSshPort();
 
         // 增加总请求计数
-        if (hostCacheRequests != null) {
-            long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
-            hostCacheRequests.put(hostKey, requests);
-        }
+        long requests = hostCacheRequests.getOrDefault(hostKey, 0L) + 1;
+        hostCacheRequests.put(hostKey, requests);
 
         // 获取连接锁，确保同一主机的连接操作串行化
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
@@ -203,10 +196,8 @@ public class SshConnectionPoolManager {
                             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
 
                             // 增加缓存命中计数
-                            if (hostCacheHits != null) {
-                                long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
-                                hostCacheHits.put(hostKey, hits);
-                            }
+                            long hits = hostCacheHits.getOrDefault(hostKey, 0L) + 1;
+                            hostCacheHits.put(hostKey, hits);
 
                             return session;
                         } else {
@@ -232,7 +223,7 @@ public class SshConnectionPoolManager {
             // 创建新连接
             try {
                 log.info("创建主机 {} 的新SSH连接", hostInfo.getIp());
-                session = MinaUtils.openConnection(hostInfo);
+                session = MinaUtils.openConnectionWithPassword(hostInfo);
 
                 if (session != null) {
                     hostConnectionPool.put(hostKey, session);
