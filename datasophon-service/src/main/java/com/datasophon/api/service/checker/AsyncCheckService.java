@@ -1931,85 +1931,42 @@ public class AsyncCheckService {
                                 String username = hostInfo.getSshUser();
                                 Integer port = hostInfo.getSshPort();
 
-                                // 执行设置主机名命令
-                                String command;
-                                String osType = "";
-                                if (hostInfo.getOsInfo() != null) {
-                                    osType = hostInfo.getOsInfo().getDistribution();
-                                }
-
-                                // 检查系统类型
-                                if ("Alpine".equalsIgnoreCase(osType) || osType.toLowerCase().contains("alpine")) {
-                                    // Alpine Linux 专用设置
-                                    logger.info("检测到Alpine Linux系统，使用特定命令设置主机名");
-                                    command = "hostname " + newHostname + " && " +
-                                            "echo '" + newHostname + "' > /etc/hostname";
-                                } else if ("CentOS".equalsIgnoreCase(osType) || "RedHat".equalsIgnoreCase(osType) ||
-                                        "Fedora".equalsIgnoreCase(osType)) {
-                                    // CentOS/RHEL/Fedora
-                                    command = "sudo hostnamectl set-hostname " + newHostname;
-                                } else if ("Ubuntu".equalsIgnoreCase(osType) || "Debian".equalsIgnoreCase(osType)) {
-                                    // Ubuntu/Debian
-                                    command = "sudo hostnamectl set-hostname " + newHostname;
-                                } else {
-                                    // 默认使用通用命令
-                                    command = "sudo hostname " + newHostname + " && " +
-                                            "sudo echo '" + newHostname + "' > /etc/hostname";
-                                }
-
                                 // 获取或创建SSH连接
                                 ClientSession session = getOrCreateConnection(hostInfo);
                                 if (session == null || !session.isOpen()) {
                                     throw new Exception("无法创建SSH连接");
                                 }
 
-                                // 检查系统是否有sudo命令
+                                // 先检查系统是否有sudo命令
                                 com.datasophon.api.service.checker.common.CommandResult checkSudoResult = execCommand(
                                         session,
                                         "which sudo || echo 'nosudo'");
                                 boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
+                                String sudoPrefix = hasSudo ? "sudo " : "";
 
-                                // 检查系统是否有hostnamectl命令
+                                // 再检查系统是否有hostnamectl命令
                                 com.datasophon.api.service.checker.common.CommandResult checkHostnamectlResult = execCommand(
                                         session,
                                         "which hostnamectl || echo 'nohostnamectl'");
                                 boolean hasHostnamectl = !checkHostnamectlResult.getOutput().trim()
                                         .contains("nohostnamectl");
 
-                                // 如果命令中包含hostnamectl但系统没有此命令，改用标准hostname命令
-                                if (command.contains("hostnamectl") && !hasHostnamectl) {
-                                    logger.info("主机 {} 不支持hostnamectl命令，使用标准hostname命令代替", ip);
-                                    if (hasSudo) {
-                                        command = "sudo hostname " + newHostname + " && " +
-                                                "sudo sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
-                                    } else {
-                                        command = "hostname " + newHostname + " && " +
-                                                "sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
-                                    }
-                                }
-
-                                // 根据是否有sudo命令，选择使用适当的设置主机名命令
-                                String actualCommand;
-                                if (hasSudo) {
-                                    // 系统有sudo命令，使用原来的命令
-                                    actualCommand = command;
+                                // 根据命令可用性决定使用哪种方式设置主机名
+                                String command;
+                                if (hasHostnamectl) {
+                                    // 使用hostnamectl命令设置主机名
+                                    logger.info("使用hostnamectl命令设置主机名: {}", newHostname);
+                                    command = sudoPrefix + "hostnamectl set-hostname " + newHostname;
                                 } else {
-                                    // 系统没有sudo命令，直接设置主机名
-                                    logger.info("主机 {} 没有sudo命令，使用普通用户权限设置主机名", ip);
-                                    if (command.contains("hostnamectl")) {
-                                        actualCommand = command.replace("sudo hostnamectl", "hostnamectl");
-                                    } else if (command.contains("hostname")) {
-                                        actualCommand = command.replace("sudo hostname", "hostname").replace(
-                                                "sudo echo",
-                                                "echo");
-                                    } else {
-                                        actualCommand = command.replace("sudo ", "");
-                                    }
+                                    // 使用hostname命令并直接修改/etc/hostname文件
+                                    logger.info("使用hostname命令设置主机名: {}", newHostname);
+                                    command = sudoPrefix + "hostname " + newHostname + " && " +
+                                            sudoPrefix + "sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
                                 }
 
                                 // 执行命令
                                 com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
-                                        actualCommand);
+                                        command);
 
                                 if (!result.isSuccess()) {
                                     throw new Exception("设置主机名失败: " + result.getError());

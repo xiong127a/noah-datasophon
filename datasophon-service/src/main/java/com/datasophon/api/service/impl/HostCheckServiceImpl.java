@@ -2076,81 +2076,48 @@ public class HostCheckServiceImpl implements HostCheckService {
                     return Result.error("无法连接到主机");
                 }
 
-                // 1. 检测操作系统类型
-                String osType = "";
-                if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDistribution() != null) {
-                    String distribution = hostInfo.getOsInfo().getDistribution().toLowerCase();
-                    if (distribution.contains("centos") || distribution.contains("redhat")
-                            || distribution.contains("rhel")) {
-                        osType = "CENTOS";
-                    } else if (distribution.contains("ubuntu")) {
-                        osType = "UBUNTU";
-                    } else if (distribution.contains("debian")) {
-                        osType = "DEBIAN";
-                    } else {
-                        osType = "CENTOS"; // 默认按照CentOS处理
-                    }
-                } else {
-                    // 如果缓存中没有OS类型，则尝试获取
-                    String checkOSCmd = "cat /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || uname -a";
-                    String osInfo = MinaUtils.execCmdWithResult(session, checkOSCmd);
-
-                    if (osInfo.toLowerCase().contains("centos") || osInfo.toLowerCase().contains("redhat")
-                            || osInfo.toLowerCase().contains("rhel")) {
-                        osType = "CENTOS";
-                    } else if (osInfo.toLowerCase().contains("ubuntu")) {
-                        osType = "UBUNTU";
-                    } else if (osInfo.toLowerCase().contains("debian")) {
-                        osType = "DEBIAN";
-                    } else {
-                        // 默认按照CentOS处理
-                        osType = "CENTOS";
-                    }
-                }
-
-                // 2. 根据OS类型执行不同的主机名设置命令
-                String result;
-
-                // 检查是否有sudo命令
+                // 1. 检查系统是否有sudo命令
                 String checkSudoCmd = "which sudo || echo 'nosudo'";
                 String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
                 boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
                 logger.info("检查主机是否有sudo命令: {}", hasSudo ? "有" : "没有");
 
-                // 根据是否有sudo命令决定使用的前缀
+                // 2. 检查系统是否有hostnamectl命令
+                String checkHostnamectlCmd = "which hostnamectl || echo 'nohostnamectl'";
+                String checkHostnamectlResult = MinaUtils.execCmdWithResult(session, checkHostnamectlCmd);
+                boolean hasHostnamectl = !checkHostnamectlResult.trim().contains("nohostnamectl");
+                logger.info("检查主机是否有hostnamectl命令: {}", hasHostnamectl ? "有" : "没有");
+
+                // 根据命令可用性决定使用哪种方式设置主机名
                 String sudoPrefix = hasSudo ? "sudo " : "";
+                String setHostnameCmd;
 
-                if ("UBUNTU".equals(osType) || "DEBIAN".equals(osType)) {
-                    // Ubuntu/Debian方式
-                    String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
-                    result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
-
-                    // 更新/etc/hostname文件
-                    String updateHostnameFileCmd;
-                    if (hasSudo) {
-                        updateHostnameFileCmd = "echo '" + newHostname + "' | " + sudoPrefix + "tee /etc/hostname";
-                    } else {
-                        updateHostnameFileCmd = "echo '" + newHostname + "' > /etc/hostname";
-                    }
-                    MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
+                if (hasHostnamectl) {
+                    // 使用hostnamectl命令设置主机名
+                    logger.info("使用hostnamectl命令设置主机名: {}", newHostname);
+                    setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
                 } else {
-                    // CentOS/RHEL方式
-                    String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
-                    result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
-
-                    // CentOS 6兼容处理
-                    String updateSysConfigCmd;
-                    if (hasSudo) {
-                        updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
-                                + "/' /etc/sysconfig/network 2>/dev/null || true";
-                    } else {
-                        updateSysConfigCmd = "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
-                                + "/' /etc/sysconfig/network 2>/dev/null || true";
-                    }
-                    MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
+                    // 使用hostname命令设置主机名
+                    logger.info("使用hostname命令设置主机名: {}", newHostname);
+                    setHostnameCmd = sudoPrefix + "hostname " + newHostname;
                 }
 
+                String result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
                 logger.info("设置主机名执行结果: {}", result);
+
+                // 更新/etc/hostname文件
+                String updateHostnameFileCmd;
+                if (hasSudo) {
+                    updateHostnameFileCmd = "echo '" + newHostname + "' | " + sudoPrefix + "tee /etc/hostname";
+                } else {
+                    updateHostnameFileCmd = "echo '" + newHostname + "' > /etc/hostname";
+                }
+                MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
+
+                // 兼容旧版本的CentOS/RHEL
+                String updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                        + "/' /etc/sysconfig/network 2>/dev/null || true";
+                MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
 
                 // 3. 更新/etc/hosts文件中的本机记录
                 // 先获取当前hosts文件
@@ -2178,11 +2145,27 @@ public class HostCheckServiceImpl implements HostCheckService {
                 String verifyCmd = "hostname";
                 String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
 
+                boolean hostnameSetSuccess = true; // 默认认为设置成功
+
                 if (!verifyResult.equals(newHostname)) {
                     logger.warn("主机名可能未成功更新，当前主机名为: {}, 期望主机名为: {}", verifyResult, newHostname);
+
+                    // 尝试再次使用直接方式设置主机名
+                    logger.info("尝试使用直接方式再次设置主机名: {}", newHostname);
+                    String directCmd = sudoPrefix + "hostname " + newHostname;
+                    MinaUtils.execCmdWithResult(session, directCmd);
+
+                    // 再次验证
+                    verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
+                    if (!verifyResult.equals(newHostname)) {
+                        logger.error("重试后主机名设置仍然失败，当前主机名: {}", verifyResult);
+                        hostnameSetSuccess = false;
+                    } else {
+                        logger.info("重试设置主机名成功: {}", newHostname);
+                    }
                 }
 
-                // 5. 更新主机信息对象中的主机名
+                // 5. 只有当主机名设置成功或系统重启后会生效的情况下，才更新缓存
                 String oldHostname = hostInfo.getHostname();
                 hostInfo.setHostname(newHostname);
 
@@ -2199,8 +2182,13 @@ public class HostCheckServiceImpl implements HostCheckService {
                 // 9. 刷新全局主机信息缓存
                 updateHostMapInCache(clusterId);
 
-                logger.info("主机名已成功更新: {} -> {}", oldHostname, newHostname);
-                return Result.success("主机名已成功更新为: " + newHostname);
+                if (hostnameSetSuccess) {
+                    logger.info("主机名已成功更新: {} -> {}", oldHostname, newHostname);
+                    return Result.success("主机名已成功更新为: " + newHostname);
+                } else {
+                    logger.warn("主机名设置未立即生效，可能需要重启系统: {} -> {}", oldHostname, newHostname);
+                    return Result.success("主机名已设置，但未立即生效，可能需要重启系统后生效: " + newHostname);
+                }
             } finally {
                 if (session != null && session.isOpen()) {
                     MinaUtils.closeConnection(session);
