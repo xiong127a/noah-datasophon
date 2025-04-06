@@ -454,11 +454,6 @@ public class InstallServiceImpl implements InstallService {
             }
             // 使用线程池进行主机信息收集，保证主接口立即返回
             osInfoExecutor.execute(() -> {
-                // 为线程设置一个有意义的名称，包含当前时间戳
-                Thread currentThread = Thread.currentThread();
-                String originalName = currentThread.getName();
-                currentThread.setName("Host-Info-Collection-" + System.currentTimeMillis());
-
                 try {
                     // 使用与返回给前端相同的排序逻辑，确保一致性
                     List<HostInfo> tempList = new ArrayList<>(hostMap.values());
@@ -548,6 +543,11 @@ public class InstallServiceImpl implements InstallService {
                     // 并行为所有主机执行SSH验证和基本信息收集
                     for (HostInfo hostInfo : pendingHosts) {
                         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                            // 设置更有意义的线程名，包含主机IP
+                            Thread thread = Thread.currentThread();
+                            String threadOriginalName = thread.getName();
+                            thread.setName("os-info-executor-" + hostInfo.getIp());
+
                             try {
                                 logger.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
                                 boolean sshSuccess = validateSshConnection(hostInfo);
@@ -630,6 +630,9 @@ public class InstallServiceImpl implements InstallService {
                                     collectingHosts.remove(hostInfo.getIp());
                                     CacheUtils.put(collectingHostsKey, collectingHosts);
                                 }
+                            } finally {
+                                // 恢复线程原始名称
+                                thread.setName(threadOriginalName);
                             }
                         }, osInfoExecutor);
 
@@ -655,6 +658,11 @@ public class InstallServiceImpl implements InstallService {
                         // 并行为第一阶段成功的主机收集详细信息
                         for (HostInfo hostInfo : firstPhaseSuccessHosts) {
                             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                                // 设置更有意义的线程名，包含主机IP
+                                Thread thread = Thread.currentThread();
+                                String threadOriginalName = thread.getName();
+                                thread.setName("hardware-info-executor-" + hostInfo.getIp());
+
                                 try {
                                     logger.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
 
@@ -692,6 +700,9 @@ public class InstallServiceImpl implements InstallService {
                                     }
 
                                     logger.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
+                                } finally {
+                                    // 恢复线程原始名称
+                                    thread.setName(threadOriginalName);
                                 }
                             }, hardwareInfoExecutor);
 
@@ -713,9 +724,6 @@ public class InstallServiceImpl implements InstallService {
                     logger.info("当前页所有主机的信息收集任务已全部完成，共处理{}台主机", pendingHosts.size());
                 } catch (Exception e) {
                     logger.error("主机信息收集线程异常: {}", e.getMessage(), e);
-                } finally {
-                    // 恢复线程原始名称
-                    currentThread.setName(originalName);
                 }
             });
         }
