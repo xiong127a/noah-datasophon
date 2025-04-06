@@ -1968,9 +1968,16 @@ public class AsyncCheckService {
                                 com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
                                         command);
 
-                                if (!result.isSuccess()) {
-                                    throw new Exception("设置主机名失败: " + result.getError());
-                                }
+                                // 更新/etc/hostname文件 (确保hostname文件存在)
+                                String updateHostnameCmd = sudoPrefix + "sh -c 'echo \"" + newHostname
+                                        + "\" > /etc/hostname'";
+                                execCommand(session, updateHostnameCmd);
+
+                                // 兼容旧版本的CentOS/RHEL，更新/etc/sysconfig/network文件
+                                String updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME="
+                                        + newHostname
+                                        + "/' /etc/sysconfig/network 2>/dev/null || true";
+                                execCommand(session, updateSysConfigCmd);
 
                                 // 验证主机名是否设置成功
                                 com.datasophon.api.service.checker.common.CommandResult verifyResult = execCommand(
@@ -1985,11 +1992,7 @@ public class AsyncCheckService {
 
                                     // 如果第一次设置失败，尝试使用更直接的方式
                                     logger.info("尝试使用直接方式设置主机名: {}", newHostname);
-                                    String directCommand = hasSudo
-                                            ? "sudo hostname " + newHostname + " && sudo sh -c 'echo \"" + newHostname
-                                                    + "\" > /etc/hostname'"
-                                            : "hostname " + newHostname + " && sh -c 'echo \"" + newHostname
-                                                    + "\" > /etc/hostname'";
+                                    String directCommand = sudoPrefix + "hostname " + newHostname;
 
                                     com.datasophon.api.service.checker.common.CommandResult retryResult = execCommand(
                                             session, directCommand);
@@ -1999,8 +2002,9 @@ public class AsyncCheckService {
                                     currentHostname = verifyResult.getOutput().trim();
 
                                     if (!currentHostname.equals(newHostname)) {
-                                        throw new Exception(
-                                                "重试后设置主机名仍然失败，期望: " + newHostname + "，实际: " + currentHostname);
+                                        logger.error("重试后设置主机名仍然失败，期望: {}, 实际: {}", newHostname, currentHostname);
+                                        // 不抛出异常，而是标记设置失败
+                                        hostnameSetSuccess = false;
                                     } else {
                                         logger.info("重试设置主机名成功: {}", newHostname);
                                         hostnameSetSuccess = true; // 重试成功
@@ -2015,16 +2019,26 @@ public class AsyncCheckService {
                                     // 更新缓存中的主机名
                                     hostInfo.setHostname(newHostname);
                                     hostCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+                                    // 更新任务进度为成功
+                                    try {
+                                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                                taskId, ip, true, null);
+                                    } catch (Exception e) {
+                                        logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                                    }
                                 } else {
                                     logger.warn("主机 {} 设置主机名失败，不更新缓存", ip);
-                                }
 
-                                // 更新任务进度
-                                try {
-                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                            taskId, ip, true, null);
-                                } catch (Exception e) {
-                                    logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                                    // 更新任务进度为失败
+                                    try {
+                                        String errorMsg = "设置主机名失败，期望主机名: " + newHostname + "，实际主机名: "
+                                                + currentHostname;
+                                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
+                                                taskId, ip, false, errorMsg);
+                                    } catch (Exception e) {
+                                        logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
+                                    }
                                 }
                             } catch (Exception e) {
                                 logger.error("为主机 {} 设置主机名时出错", ip, e);
