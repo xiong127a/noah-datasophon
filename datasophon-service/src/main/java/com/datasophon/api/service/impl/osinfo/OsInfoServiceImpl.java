@@ -994,82 +994,10 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         /**
-         * 收集磁盘信息
-         */
-        public void collectDiskInfo(HostInfo hostInfo) {
-            if (hostInfo == null) {
-                logger.warn("collectDiskInfo: 主机信息为空");
-                return;
-            }
-
-            ClientSession session = null;
-            try {
-                // 使用SSH连接池管理器创建或获取连接
-                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-                if (session == null) {
-                    logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
-                    if (hostInfo.getOsInfo() != null) {
-                        hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
-                    }
-                    hostInfo.setMessage("无法建立SSH连接");
-                    service.updateHostInfoCache(hostInfo);
-                    return;
-                }
-
-                // 直接使用IOsInfoCollector接口收集磁盘信息
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
-                if (collector != null) {
-                    collector.collectDiskInfo(hostInfo, session, hostInfo.getOsInfo(),
-                            h -> service.updateHostInfoCache(h));
-                }
-            } catch (Exception e) {
-                logger.error("收集磁盘信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
-                }
-                hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            } finally {
-                // 不再关闭连接，由连接池管理器管理连接的生命周期
-            }
-        }
-
-        /**
          * 启动详细信息收集流程
          */
         private void startDetailInfoCollection() {
             // 实现代码...
-        }
-
-        /**
-         * 收集Linux详细信息
-         */
-        private void collectLinuxDetailInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo) {
-            logger.info("开始收集主机[{}]Linux的详细信息", hostInfo.getIp());
-            // 实现代码...
-        }
-
-        /**
-         * 收集网络详细信息
-         */
-        private void collectNetworkInfoNew(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            // 实现代码...
-        }
-
-        /**
-         * 收集交换分区信息
-         */
-        private void collectSwapInfo(HostInfo hostInfo, OsInfo osInfo, ClientSession session,
-                IOsInfoCollector collector) {
-            // 实现代码...
-        }
-
-        /**
-         * 执行命令
-         */
-        private String executeCommand(ClientSession session, String command) throws Exception {
-            return MinaUtils.execCmdWithResult(session, command);
         }
     }
 
@@ -1374,45 +1302,6 @@ public class OsInfoServiceImpl implements OsInfoService {
     }
 
     @Override
-    public void collectDiskInfo(HostInfo hostInfo) {
-        if (hostInfo == null) {
-            logger.warn("collectDiskInfo: 主机信息为空");
-            return;
-        }
-
-        ClientSession session = null;
-        try {
-            // 使用SSH连接池管理器创建或获取连接
-            session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-            if (session == null) {
-                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
-                if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
-                }
-                hostInfo.setMessage("无法建立SSH连接");
-                updateHostInfoCache(hostInfo);
-                return;
-            }
-
-            // 直接使用IOsInfoCollector接口收集磁盘信息
-            IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
-            if (collector != null) {
-                collector.collectDiskInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
-            }
-        } catch (Exception e) {
-            logger.error("收集磁盘信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-            if (hostInfo.getOsInfo() != null) {
-                hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
-            }
-            hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
-            updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
-        }
-    }
-
-    @Override
     public void collectGpuInfo(HostInfo hostInfo) {
         if (hostInfo == null) {
             logger.warn("collectGpuInfo: 主机信息为空");
@@ -1491,6 +1380,96 @@ public class OsInfoServiceImpl implements OsInfoService {
     }
 
     @Override
+    public void collectSwapInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectSwapInfo: 主机信息为空");
+            return;
+        }
+
+        logger.info("开始收集交换空间信息: {}", hostInfo.getIp());
+        ClientSession session = null;
+
+        try {
+            // 使用SSH连接池管理器创建或获取连接
+            session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                if (hostInfo.getOsInfo() != null) {
+                    hostInfo.getOsInfo().setSwapStatus(OsInfoStatusEnum.ERROR);
+                }
+                hostInfo.setMessage("无法建立SSH连接");
+                updateHostInfoCache(hostInfo);
+                return;
+            }
+
+            // 使用收集器收集交换空间信息
+            OsInfo osInfo = hostInfo.getOsInfo();
+            // 创建更新缓存的回调函数
+            IOsInfoCollector.CacheUpdater cacheUpdater = h -> updateHostInfoCache(h);
+            // 使用linux收集器
+            IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
+
+            if (collector != null) {
+                collector.collectSwapInfo(hostInfo, session, osInfo, cacheUpdater);
+                logger.info("交换空间信息收集完成: {}", hostInfo.getIp());
+            } else {
+                logger.error("无法获取合适的系统信息收集器");
+                if (osInfo != null) {
+                    osInfo.setSwapStatus(OsInfoStatusEnum.ERROR);
+                }
+                updateHostInfoCache(hostInfo);
+            }
+        } catch (Exception e) {
+            logger.error("收集交换空间信息失败: {}", e.getMessage(), e);
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setSwapStatus(OsInfoStatusEnum.ERROR);
+            }
+            hostInfo.setMessage("交换空间信息收集失败: " + e.getMessage());
+            updateHostInfoCache(hostInfo);
+        }
+        // 不再显式关闭连接，由连接池管理器管理连接的生命周期
+    }
+
+    @Override
+    public void collectDiskInfo(HostInfo hostInfo) {
+        if (hostInfo == null) {
+            logger.warn("collectDiskInfo: 主机信息为空");
+            return;
+        }
+
+        ClientSession session = null;
+        try {
+            // 使用SSH连接池管理器创建或获取连接
+            session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+            if (session == null) {
+                logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
+                if (hostInfo.getOsInfo() != null) {
+                    hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
+                }
+                hostInfo.setMessage("无法建立SSH连接");
+                updateHostInfoCache(hostInfo);
+                return;
+            }
+
+            // 直接使用IOsInfoCollector接口收集磁盘信息
+            IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
+            if (collector != null) {
+                collector.collectDiskInfo(hostInfo, session, hostInfo.getOsInfo(),
+                        this::updateHostInfoCache);
+            }
+        } catch (Exception e) {
+            logger.error("收集磁盘信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
+            if (hostInfo.getOsInfo() != null) {
+                hostInfo.getOsInfo().setDiskStatus(OsInfoStatusEnum.ERROR);
+            }
+            hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
+            updateHostInfoCache(hostInfo);
+        } finally {
+            // 不再关闭连接，由连接池管理器管理连接的生命周期
+        }
+    }
+
+    @Override
     public void collectPhaseOneInfo(HostInfo hostInfo) {
         if (hostInfo == null) {
             logger.warn("collectPhaseOneInfo: 主机信息为空");
@@ -1535,10 +1514,13 @@ public class OsInfoServiceImpl implements OsInfoService {
         // 7. 收集磁盘信息
         collectDiskInfo(hostInfo);
 
-        // 8. 收集网络信息
+        // 8. 收集交换空间信息
+        collectSwapInfo(hostInfo);
+
+        // 9. 收集网络信息
         collectNetworkInfo(hostInfo);
 
-        // 9. 收集GPU信息
+        // 10. 收集GPU信息
         collectGpuInfo(hostInfo);
 
         // 更新缓存

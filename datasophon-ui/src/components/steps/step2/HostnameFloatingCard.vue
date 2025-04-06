@@ -294,18 +294,26 @@ export default {
         return dnsStatus ? this.checkStatus(dnsStatus, 'loading') : true;
       } else if (type === 'hosts') {
         // 判断hosts文件是否在加载中
-        // 1. 如果没有hosts文件数据，默认认为是加载中，除非明确指定了error状态
-        const isHostsEmpty = !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || this.hostInfo.osInfo.dnsInfo.hostsFileContent === undefined;
         const dnsStatus = this.hostInfo.osInfo && this.hostInfo.osInfo.dnsStatus;
-        const hasNonLoadingStatus = dnsStatus && 
-                                   !this.checkStatus(dnsStatus, 'loading') && 
-                                   !this.checkStatus(dnsStatus, 'pending') && 
-                                   !this.checkStatus(dnsStatus, 'collecting');
         
-        if (isHostsEmpty && !this.checkStatus(dnsStatus, 'error') && !hasNonLoadingStatus) {
+        // 如果明确是loading状态，返回true
+        if (dnsStatus && this.checkStatus(dnsStatus, 'loading')) {
           return true;
         }
-        return dnsStatus ? this.checkStatus(dnsStatus, 'loading') : true;
+        
+        // 如果已经有hosts文件内容，则不是loading状态
+        if (this.hostInfo.osInfo && 
+            this.hostInfo.osInfo.dnsInfo && 
+            this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+          return false;
+        }
+        
+        // 如果没有hosts文件内容且没有error状态，则可能是loading状态
+        const isHostsEmpty = !this.hostInfo.osInfo || 
+                            !this.hostInfo.osInfo.dnsInfo || 
+                            !this.hostInfo.osInfo.dnsInfo.hostsFileContent;
+        
+        return isHostsEmpty && !this.checkStatus(dnsStatus, 'error');
       }
       return false;
     },

@@ -313,10 +313,14 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getSwapStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading swap-loading">
+                  <div class="apple-loading-wave">
+                    <div class="apple-loading-wave-item"></div>
+                    <div class="apple-loading-wave-item"></div>
+                    <div class="apple-loading-wave-item"></div>
+                  </div>
                 </div>
-                <span class="loading-text">正在收集交换空间信息...</span>
+                <div class="loading-text swap-loading-text">正在收集交换空间信息...</div>
               </div>
               <div class="hardware-info error" v-else-if="getSwapStatus() === 'error'">
                 获取交换空间信息失败
@@ -373,10 +377,15 @@
                 </div>
               </div>
               <div class="hardware-info" v-if="getNetworkStatus() === 'loading'">
-                <div class="loading-indicator">
-                  <span></span><span></span><span></span>
+                <div class="apple-hardware-loading network-loading">
+                  <div class="apple-loading-signal">
+                    <div class="apple-loading-signal-item"></div>
+                    <div class="apple-loading-signal-item"></div>
+                    <div class="apple-loading-signal-item"></div>
+                    <div class="apple-loading-signal-item"></div>
+                  </div>
                 </div>
-                <span class="loading-text">正在收集网络信息...</span>
+                <div class="loading-text network-loading-text">正在收集网络信息...</div>
               </div>
               <div class="hardware-info error" v-else-if="getNetworkStatus() === 'error'">
                 获取网络信息失败
@@ -390,19 +399,19 @@
                     <div v-for="(iface, index) in osInfo.networkInfo.interfaces" :key="index" class="network-interface">
                       <div class="interface-name">
                         {{ iface.name }}
-                        <span class="interface-status" :class="{ 'up': iface.enabled }">
-                          {{ iface.enabled ? '已连接' : '未连接' }}
+                        <span class="interface-status" :class="{ 'up': iface.status !== 'DOWN' }">
+                          {{ iface.status === 'DOWN' ? '未连接' : '已连接' }}
                         </span>
                       </div>
                       <div class="interface-details">
-                        <span v-if="iface.ipv4Address" class="ip-address">{{ iface.ipv4Address }}</span>
+                        <span v-if="iface.ipAddress" class="ip-address">{{ iface.ipAddress }}</span>
                         <span v-if="iface.macAddress" class="mac-address">{{ iface.macAddress }}</span>
                         <span v-if="iface.speed" class="speed">{{ formatSpeed(iface.speed) }}</span>
                         <span v-if="iface.model" class="model">{{ iface.model }}</span>
                       </div>
-                      <div class="interface-stats" v-if="iface.bytesSent || iface.bytesReceived">
-                        <span class="tx">发送: {{ formatBytes(iface.bytesSent) }}</span>
-                        <span class="rx">接收: {{ formatBytes(iface.bytesReceived) }}</span>
+                      <div class="interface-stats" v-if="iface.rxTraffic || iface.txTraffic || iface.rxBytes || iface.txBytes">
+                        <span class="tx">发送: {{ iface.txTraffic || formatBytes(iface.txBytes) }}</span>
+                        <span class="rx">接收: {{ iface.rxTraffic || formatBytes(iface.rxBytes) }}</span>
                       </div>
                     </div>
                   </div>
@@ -1627,5 +1636,243 @@ export default {
   font-size: 13px;
   color: #FF2D55;
   margin-top: 8px;
+}
+
+// 添加交换空间加载动画样式
+.swap-loading {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.swap-loading-text {
+  font-size: 14px;
+  color: @apple-blue;
+  font-weight: 500;
+}
+
+.apple-loading-wave {
+  display: flex;
+  align-items: flex-end;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.apple-loading-wave-item {
+  width: 4px;
+  height: 10px;
+  margin: 0 2px;
+  background-color: @apple-blue;
+  border-radius: 2px;
+  animation: waveAnimation 1.2s infinite ease-in-out;
+}
+
+.apple-loading-wave-item:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.apple-loading-wave-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.apple-loading-wave-item:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes waveAnimation {
+  0%, 100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+// 添加网络信息加载动画样式
+.network-loading {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.network-loading-text {
+  font-size: 14px;
+  color: @apple-blue;
+  font-weight: 500;
+}
+
+.apple-loading-signal {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  height: 30px;
+  margin-right: 10px;
+}
+
+.apple-loading-signal-item {
+  width: 4px;
+  height: 10px;
+  margin: 0 3px;
+  background-color: @apple-blue;
+  border-radius: 2px;
+  animation: signalAnimation 1.5s infinite ease-in-out;
+}
+
+.apple-loading-signal-item:nth-child(1) {
+  animation-delay: 0s;
+  height: 10px;
+}
+
+.apple-loading-signal-item:nth-child(2) {
+  animation-delay: 0.2s;
+  height: 16px;
+}
+
+.apple-loading-signal-item:nth-child(3) {
+  animation-delay: 0.4s;
+  height: 22px;
+}
+
+.apple-loading-signal-item:nth-child(4) {
+  animation-delay: 0.6s;
+  height: 28px;
+}
+
+@keyframes signalAnimation {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+// 新增苹果风格加载动画
+.apple-hardware-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  margin-bottom: 8px;
+  
+  // 交换分区的波浪加载动画
+  &.swap-loading {
+    .apple-loading-wave {
+      display: flex;
+      align-items: flex-end;
+      height: 30px;
+      
+      .apple-loading-wave-item {
+        width: 4px;
+        height: 100%;
+        margin: 0 3px;
+        background-color: @apple-blue;
+        border-radius: 2px;
+        animation: waveAnimation 1.2s infinite ease-in-out;
+        
+        &:nth-child(1) {
+          animation-delay: -0.4s;
+        }
+        
+        &:nth-child(2) {
+          animation-delay: -0.2s;
+          height: 60%;
+        }
+        
+        &:nth-child(3) {
+          animation-delay: 0s;
+          height: 80%;
+        }
+      }
+    }
+  }
+  
+  // 网卡的信号加载动画
+  &.network-loading {
+    .apple-loading-signal {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      height: 30px;
+      
+      .apple-loading-signal-item {
+        width: 4px;
+        height: 10px;
+        margin: 0 3px;
+        background-color: @apple-blue;
+        border-radius: 2px;
+        animation: signalAnimation 1.5s infinite ease-in-out;
+        
+        &:nth-child(1) {
+          animation-delay: 0s;
+          height: 10px;
+        }
+        
+        &:nth-child(2) {
+          animation-delay: 0.2s;
+          height: 16px;
+        }
+        
+        &:nth-child(3) {
+          animation-delay: 0.4s;
+          height: 22px;
+        }
+        
+        &:nth-child(4) {
+          animation-delay: 0.6s;
+          height: 28px;
+        }
+      }
+    }
+  }
+}
+
+// 加载中文字样式
+.loading-text {
+  font-size: 12px;
+  color: @apple-gray-dark;
+  margin-top: 8px;
+  text-align: center;
+  
+  &.swap-loading-text,
+  &.network-loading-text {
+    animation: textPulse 2s infinite ease-in-out;
+  }
+}
+
+// 波浪动画
+@keyframes waveAnimation {
+  0%, 100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+// 信号动画
+@keyframes signalAnimation {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+// 文字脉冲动画
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 </style> 

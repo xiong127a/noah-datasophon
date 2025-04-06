@@ -82,6 +82,13 @@ public interface OsInfoService {
     void collectNetworkInfo(HostInfo hostInfo);
 
     /**
+     * 收集交换空间信息
+     * 
+     * @param hostInfo 主机信息对象
+     */
+    void collectSwapInfo(HostInfo hostInfo);
+
+    /**
      * 第一阶段信息收集（主机名和操作系统基本信息）
      * 供前端主列表显示使用
      * 

@@ -1674,6 +1674,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             Pattern ifacePattern = Pattern.compile("\\d+:\\s+(\\w+):.*");
             Pattern ipv4Pattern = Pattern.compile("\\s+inet\\s+([0-9.]+)/\\d+\\s+");
             Pattern macPattern = Pattern.compile("\\s+link/ether\\s+([0-9a-f:]+)\\s+");
+            Pattern statusPattern = Pattern.compile("\\d+:\\s+\\w+:\\s+<([^>]*)>");
 
             Map<String, InterfaceInfo> interfaces = new HashMap<>();
             String currentIface = null;
@@ -1686,6 +1687,21 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                     if (!currentIface.equals("lo")) {
                         interfaces.put(currentIface, new InterfaceInfo());
                         interfaces.get(currentIface).setName(currentIface);
+                        interfaces.get(currentIface).setStatus("UP"); // 默认设置为UP状态
+
+                        // 检查接口状态
+                        Matcher statusMatcher = statusPattern.matcher(line);
+                        if (statusMatcher.find()) {
+                            String statusFlags = statusMatcher.group(1);
+                            // 如果包含UP标志，则设置为UP
+                            if (statusFlags.contains("UP")) {
+                                interfaces.get(currentIface).setStatus("UP");
+                            }
+                            // 如果包含DOWN标志，则设置为DOWN
+                            else if (statusFlags.contains("DOWN")) {
+                                interfaces.get(currentIface).setStatus("DOWN");
+                            }
+                        }
                     }
                 } else if (currentIface != null && !currentIface.equals("lo")) {
                     Matcher ipv4Matcher = ipv4Pattern.matcher(line);
