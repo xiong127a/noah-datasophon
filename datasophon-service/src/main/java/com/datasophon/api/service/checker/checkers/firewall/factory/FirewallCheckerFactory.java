@@ -39,6 +39,10 @@ public class FirewallCheckerFactory {
                 case CENTOS:
                 case REDHAT:
                     return createCentOSFirewallChecker(osInfo.getVersionId());
+                case FEDORA:
+                    // Fedora使用与CentOS相同的防火墙检查器，因为它们使用相同的防火墙管理工具
+                    log.info("创建Fedora防火墙检查器");
+                    return createCentOSFirewallChecker(osInfo.getVersionId());
                 case UBUNTU:
                 case DEBIAN:
                     return createUbuntuFirewallChecker(osInfo.getVersionId());

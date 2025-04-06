@@ -347,6 +347,9 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 osInfo.setDistribution("Amazon Linux");
                             }
                             break;
+                        case "alpine-release":
+                            osInfo.setDistribution("Alpine");
+                            break;
                         default:
                             // 使用文件名作为发行版名
                             osInfo.setDistribution(filename.replace("-release", "").replace("_version", ""));
@@ -405,6 +408,8 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 osInfo.setDistribution("RedHat");
             } else if (lowerFullName.contains("kylin")) {
                 osInfo.setDistribution("Kylin");
+            } else if (lowerFullName.contains("alpine")) {
+                osInfo.setDistribution("Alpine");
             } else {
                 // 使用通用名称
                 osInfo.setDistribution("Linux");

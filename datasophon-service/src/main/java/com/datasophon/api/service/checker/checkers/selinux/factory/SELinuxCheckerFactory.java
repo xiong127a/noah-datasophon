@@ -42,6 +42,10 @@ public class SELinuxCheckerFactory {
                 case REDHAT:
                     // CentOS使用CentOS专用检查器
                     return new CentOSSELinuxChecker();
+                case FEDORA:
+                    // Fedora使用CentOS专用检查器，因为它们有相同的SELinux实现
+                    logger.info("为Fedora创建SELinux检查器（基于CentOS实现）");
+                    return new CentOSSELinuxChecker();
                 case KYLIN:
                     // Kylin使用Kylin专用检查器
                     return new KylinSELinuxChecker();

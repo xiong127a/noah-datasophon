@@ -226,4 +226,19 @@ public class HtmlStyleHelper {
         public static final String BLUE = "#2f54eb"; // 蓝色
         public static final String GRAY = "#8c8c8c"; // 灰色
     }
+
+    /**
+     * 创建一个进度条
+     * 
+     * @param percentage 百分比数值
+     * @param isError    是否显示为错误状态（红色）
+     * @return 进度条HTML代码
+     */
+    public static String createProgressBar(int percentage, boolean isError) {
+        String colorClass = isError ? "background-color:#f5222d" : "background-color:#52c41a";
+        return "<div style='width:100%;height:20px;background-color:#f0f0f0;border-radius:10px;margin:10px 0'>" +
+                "<div style='width:" + percentage + "%;height:100%;" + colorClass
+                + ";border-radius:10px;text-align:center;line-height:20px;color:white;font-size:12px'>" +
+                percentage + "%</div></div>";
+    }
 }

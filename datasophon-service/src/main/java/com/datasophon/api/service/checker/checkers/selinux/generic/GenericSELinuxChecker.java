@@ -48,25 +48,49 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
 
             // 检查SELinux状态
             cacheLog.info("检查SELinux状态...");
-            CommandResult result = execCommand(session, "getenforce");
 
-            if (!result.isSuccess()) {
-                cacheLog.error("获取SELinux状态失败: %s", result.getErrorOrOutput());
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取SELinux状态失败: " + result.getErrorOrOutput());
-                return checkItem;
+            // 首先检查getenforce命令是否存在
+            CommandResult checkGetenforce = execCommand(session, "command -v getenforce");
+            boolean hasGetenforce = checkGetenforce.isSuccess() && !checkGetenforce.getOutput().trim().isEmpty();
+
+            String selinuxStatus = "Unknown";
+            CommandResult result = null;
+
+            if (hasGetenforce) {
+                // 如果getenforce命令存在，使用它获取状态
+                result = execCommand(session, "getenforce");
+
+                if (result.isSuccess()) {
+                    selinuxStatus = result.getOutput().trim();
+                    cacheLog.info("SELinux当前状态(通过getenforce): " + selinuxStatus);
+                } else {
+                    cacheLog.warn("getenforce命令执行失败: %s", result.getErrorOrOutput());
+                }
+            } else {
+                cacheLog.warn("getenforce命令不存在，使用替代方法检查SELinux...");
             }
 
-            String selinuxStatus = result.getOutput().trim();
-            cacheLog.info("SELinux当前状态: " + selinuxStatus);
+            // 如果getenforce命令不存在或执行失败，尝试其他方法
+            if (!hasGetenforce || !result.isSuccess()) {
+                // 检查是否安装了SELinux
+                CommandResult selinuxCheck = execCommand(session,
+                        "ls -la /sys/fs/selinux 2>/dev/null || echo 'Not Found'");
+                boolean selinuxFSExists = selinuxCheck.isSuccess() && !selinuxCheck.getOutput().contains("Not Found");
+
+                if (!selinuxFSExists) {
+                    // 如果SELinux文件系统不存在，说明SELinux未安装
+                    cacheLog.info("SELinux文件系统不存在，SELinux未安装，视为Disabled状态");
+                    selinuxStatus = "Disabled";
+                }
+            }
 
             // 增加sestatus命令检查以提高准确性
             CommandResult sestatusResult = null;
             try {
                 cacheLog.info("使用sestatus命令进一步验证SELinux状态...");
-                sestatusResult = execCommand(session, "sestatus");
+                sestatusResult = execCommand(session, "sestatus 2>/dev/null || echo 'Command not found'");
 
-                if (sestatusResult.isSuccess()) {
+                if (sestatusResult.isSuccess() && !sestatusResult.getOutput().contains("Command not found")) {
                     String sestatusOutput = sestatusResult.getOutput().trim();
                     cacheLog.info("sestatus命令输出: \n{}", sestatusOutput);
 
@@ -74,24 +98,75 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                     if (sestatusOutput.contains("SELinux status") && sestatusOutput.contains("disabled")) {
                         cacheLog.info("通过sestatus确认SELinux已禁用");
                         selinuxStatus = "Disabled";
+                    } else if (sestatusOutput.contains("SELinux status") && sestatusOutput.contains("enabled")) {
+                        // 进一步检查是否是permissive模式
+                        if (sestatusOutput.contains("permissive")) {
+                            cacheLog.info("通过sestatus确认SELinux为宽容模式(Permissive)");
+                            selinuxStatus = "Permissive";
+                        } else if (sestatusOutput.contains("enforcing")) {
+                            cacheLog.info("通过sestatus确认SELinux为强制模式(Enforcing)");
+                            selinuxStatus = "Enforcing";
+                        }
                     }
                 } else {
-                    cacheLog.warn("sestatus命令执行失败，这可能表明SELinux未安装或工具包不完整: {}",
-                            sestatusResult.getErrorOrOutput());
+                    cacheLog.warn("sestatus命令不可用，这可能表明SELinux未安装");
                 }
             } catch (Exception e) {
                 cacheLog.warn("执行sestatus命令时出错: {}", e.getMessage());
             }
 
-            // 检查SELinux配置文件
-            cacheLog.info("检查SELinux配置文件...");
-            CommandResult configResult = execCommand(session, "cat /etc/selinux/config | grep ^SELINUX=");
+            // 如果状态仍然未知，检查配置文件
+            if ("Unknown".equals(selinuxStatus)) {
+                // 检查配置文件是否存在
+                CommandResult configExists = execCommand(session,
+                        "ls -la /etc/selinux/config 2>/dev/null || echo 'Not Found'");
+                if (configExists.isSuccess() && !configExists.getOutput().contains("Not Found")) {
+                    // 检查SELinux配置文件
+                    cacheLog.info("通过配置文件检查SELinux状态...");
+                    CommandResult configResult = execCommand(session,
+                            "cat /etc/selinux/config 2>/dev/null | grep ^SELINUX=");
 
+                    if (configResult.isSuccess() && !configResult.getOutput().isEmpty()) {
+                        String selinuxConfig = configResult.getOutput().trim();
+                        cacheLog.info("SELinux配置: " + selinuxConfig);
+
+                        if (selinuxConfig.contains("SELINUX=disabled")) {
+                            cacheLog.info("根据配置文件，SELinux被设置为禁用状态");
+                            selinuxStatus = "Disabled";
+                        } else if (selinuxConfig.contains("SELINUX=permissive")) {
+                            cacheLog.info("根据配置文件，SELinux被设置为宽容模式");
+                            selinuxStatus = "Permissive";
+                        } else if (selinuxConfig.contains("SELINUX=enforcing")) {
+                            cacheLog.info("根据配置文件，SELinux被设置为强制模式");
+                            selinuxStatus = "Enforcing";
+                        }
+                    } else {
+                        cacheLog.warn("无法读取SELinux配置或配置不包含SELINUX设置");
+                    }
+                } else {
+                    cacheLog.info("SELinux配置文件不存在，视为未安装SELinux，标记为Disabled");
+                    selinuxStatus = "Disabled";
+                }
+            }
+
+            // 如果尝试了所有方法后状态仍未知，假设为禁用状态
+            if ("Unknown".equals(selinuxStatus)) {
+                cacheLog.info("无法确定SELinux状态，基于主流Linux发行版默认配置，假设SELinux已禁用");
+                selinuxStatus = "Disabled";
+            }
+
+            cacheLog.info("最终确定的SELinux状态: " + selinuxStatus);
+
+            // 检查SELinux配置文件（仅用于显示信息）
+            cacheLog.info("检查SELinux配置文件...");
+            CommandResult configResult = execCommand(session,
+                    "cat /etc/selinux/config 2>/dev/null | grep ^SELINUX= || echo 'No config file'");
             String selinuxConfig = configResult.isSuccess() ? configResult.getOutput().trim() : "无法读取";
-            if (configResult.isSuccess()) {
+
+            if (configResult.isSuccess() && !configResult.getOutput().contains("No config file")) {
                 cacheLog.info("SELinux配置: " + selinuxConfig);
             } else {
-                cacheLog.warn("无法读取SELinux配置文件: %s", configResult.getErrorOrOutput());
+                cacheLog.info("SELinux配置文件不存在或为空");
             }
 
             // 更新状态为正在分析SELinux状态

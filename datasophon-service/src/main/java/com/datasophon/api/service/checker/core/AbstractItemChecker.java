@@ -298,11 +298,13 @@ public abstract class AbstractItemChecker implements ItemChecker {
         } else if (lowerDistroId.contains("debian")) {
             return OsDistribution.DEBIAN;
         } else if (lowerDistroId.contains("fedora")) {
-            return OsDistribution.OTHER; // 新枚举中不包含Fedora，暂时映射到OTHER
+            return OsDistribution.FEDORA;
         } else if (lowerDistroId.contains("suse")) {
             return OsDistribution.OTHER; // 新枚举中不包含SUSE，暂时映射到OTHER
         } else if (lowerDistroId.contains("kylin")) {
             return OsDistribution.KYLIN;
+        } else if (lowerDistroId.contains("alpine")) {
+            return OsDistribution.ALPINE;
         } else if (lowerDistroId.contains("openeuler")) {
             return OsDistribution.OTHER; // 新枚举中不包含OpenEuler，暂时映射到OTHER
         }

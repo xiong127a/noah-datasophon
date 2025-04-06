@@ -20,6 +20,8 @@ public enum OsDistribution {
     KYLIN_V10("Kylin V10", "kylin"),
     KYLIN_V4("Kylin V4", "kylin"),
     UOS("UOS", "uos"),
+    ALPINE("Alpine", "alpine"),
+    ALPINE3("Alpine 3", "alpine"),
     OTHER("Linux", "linux");
 
     // 显示名称
@@ -77,6 +79,13 @@ public enum OsDistribution {
                 }
             }
             return KYLIN;
+        } else if (distLower.contains("alpine")) {
+            if (version != null) {
+                if (version.startsWith("3")) {
+                    return ALPINE3;
+                }
+            }
+            return ALPINE;
         } else if (distLower.contains("fedora")) {
             return FEDORA;
         } else if (distLower.contains("redhat") || distLower.contains("rhel")) {
