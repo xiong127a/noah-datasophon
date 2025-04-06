@@ -147,56 +147,272 @@
         </div>
 
         <!-- Hosts文件部分 -->
-        <div class="hosts-file-section">
+        <div class="hosts-section" v-if="hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
           <div class="section-header">
-            <div class="section-title">
-              <a-icon type="profile" />
-              <span>hosts文件</span>
-            </div>
-            <div class="section-actions">
-              <!-- 编辑按钮，仅在非加载状态且有hosts文件内容时显示 -->
-              <a-tooltip title="编辑hosts文件" v-if="!isLoading('hosts') && hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
-                <a-icon type="edit" @click="startEditingHosts" />
-              </a-tooltip>
-              <!-- 复制按钮，仅在非加载状态且有hosts文件内容时显示 -->
-              <a-tooltip title="复制hosts文件内容" v-if="!isLoading('hosts') && hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
-                <a-icon type="copy" @click="copyHostsContent" />
-              </a-tooltip>
-            </div>
-          </div>
-
-          <!-- hosts文件加载中的状态 -->
-          <div class="hosts-loading-section" v-if="isLoading('hosts')">
-            <div class="hosts-loading-container">
-              <div class="toolbar">
-                <div class="loading-line loading-line-small"></div>
-                <div class="loading-line loading-line-medium"></div>
+            <span class="section-title">
+              <div class="section-icon hosts-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
               </div>
-              <div class="content">
-                <a-spin />
-                <span class="loading-text">正在获取hosts文件内容...</span>
+              Hosts文件内容
+            </span>
+            <div class="actions">
+              <!-- 非编辑模式下显示编辑和复制按钮 -->
+              <template v-if="!isEditingHosts">
+                <a-button class="apple-button edit-button" @click="startEditingHosts">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="button-icon">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                  <span>编辑</span>
+                </a-button>
+                <a-button class="apple-button copy-button" @click="copyHostsContent">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="button-icon">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>复制</span>
+                </a-button>
+              </template>
+              <!-- 编辑模式下显示保存和取消按钮 -->
+              <template v-else>
+                <a-button class="apple-button cancel-button" @click="cancelHostsEdit">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="button-icon">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  <span>取消</span>
+                </a-button>
+                <a-button class="apple-button save-button" @click="saveHostsFile" :loading="hostsEditLoading">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="button-icon" v-if="!hostsEditLoading">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span>保存</span>
+                </a-button>
+              </template>
+            </div>
+          </div>
+          
+          <div class="hosts-file-container">
+            <div class="modern-ide">
+              <!-- IDE工具栏 -->
+              <div class="ide-toolbar">
+                <div class="ide-breadcrumb">
+                  <div class="breadcrumb-item root">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>/</span>
+                  </div>
+                  <div class="breadcrumb-item">
+                    <span>etc</span>
+                  </div>
+                  <div class="breadcrumb-separator">/</div>
+                  <div class="breadcrumb-item active">
+                    <span>hosts</span>
+                  </div>
+                </div>
+                <div class="ide-toolbar-actions">
+                  <div class="ide-toolbar-action" @click="toggleSearch">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 添加搜索框 -->
+              <div class="ide-search" v-if="showSearch">
+                <div class="search-container">
+                  <input 
+                    ref="searchInput"
+                    v-model="searchQuery" 
+                    type="text" 
+                    class="search-input" 
+                    placeholder="在hosts文件中搜索..." 
+                    @input="onSearch"
+                    @keydown.esc="hideSearch"
+                  />
+                  <div class="search-controls">
+                    <span class="match-count" v-if="matchCount !== null">{{ matchIndex + 1 }}/{{ matchCount }}</span>
+                    <div class="search-actions">
+                      <button class="search-button" @click="findPrevious" :disabled="matchCount === 0">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="12" y1="19" x2="12" y2="5"></line>
+                          <polyline points="5 12 12 5 19 12"></polyline>
+                        </svg>
+                      </button>
+                      <button class="search-button" @click="findNext" :disabled="matchCount === 0">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <polyline points="19 12 12 19 5 12"></polyline>
+                        </svg>
+                      </button>
+                      <button class="search-button close" @click="hideSearch">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 代码编辑区域 - 根据模式显示不同内容 -->
+              <div class="ide-editor">
+                <!-- 侧边栏 - 行号和折叠等 -->
+                <div class="ide-sidebar">
+                  <div class="gutter-container">
+                    <div class="gutter-folding"></div>
+                    <div class="gutter-line-numbers">
+                      <div v-for="n in (isEditingHosts ? editingHostsContent.split('\n').length : hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n').length || 1)" 
+                           :key="n" 
+                           class="line-number">
+                        {{ n }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 主代码区域 - 非编辑模式 -->
+                <div class="code-container" ref="codeContainer" v-if="!isEditingHosts">
+                  <div v-html="highlightedHostsContent" class="code-content"></div>
+                </div>
+                
+                <!-- 主代码区域 - 编辑模式 -->
+                <div class="code-container editor-mode" v-else>
+                  <textarea 
+                    v-model="editingHostsContent"
+                    class="code-editor"
+                    spellcheck="false"
+                    @input="updateLineNumbers"
+                    placeholder="请输入hosts文件内容"
+                  ></textarea>
+                </div>
+              </div>
+              
+              <!-- 底部状态栏 -->
+              <div class="ide-statusbar">
+                <div class="statusbar-left">
+                  <div class="status-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>{{ isEditingHosts ? "编辑中" : "只读" }}</span>
+                  </div>
+                  <div v-if="isEditingHosts" class="status-item editing-status">
+                    <span>点击"保存"按钮应用更改</span>
+                  </div>
+                </div>
+                <div class="statusbar-right">
+                  <div class="status-item">
+                    <span>UTF-8</span>
+                  </div>
+                  <div class="status-item">
+                    <span>LF</span>
+                  </div>
+                  <div class="status-item">
+                    <span>Plain Text</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- hosts文件内容，当不在加载中且有hosts文件内容时显示 -->
-          <div class="hosts-file-content" v-else-if="hostInfo.osInfo && hostInfo.osInfo.dnsInfo && hostInfo.osInfo.dnsInfo.hostsFileContent">
-            <div class="search-bar">
-              <a-input-search
-                placeholder="搜索hosts内容"
-                v-model="hostsSearchKeyword"
-                @change="searchHosts"
-                style="width: 100%"
-              />
-            </div>
-            <div class="hosts-content" ref="hostsContent">
-              <pre v-html="highlightedHostsContent"></pre>
+        <!-- Hosts文件加载中 -->
+        <div class="hosts-section" v-else-if="isLoading('hosts')">
+          <div class="section-header">
+            <span class="section-title">
+              <div class="section-icon hosts-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              Hosts文件内容
+            </span>
+          </div>
+          <div class="hosts-file-container loading">
+            <div class="modern-ide">
+              <!-- IDE工具栏 - 固定部分 -->
+              <div class="ide-toolbar">
+                <div class="ide-breadcrumb">
+                  <div class="breadcrumb-item root">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>/</span>
+                  </div>
+                  <div class="breadcrumb-item">
+                    <span>etc</span>
+                  </div>
+                  <div class="breadcrumb-separator">/</div>
+                  <div class="breadcrumb-item active">
+                    <span>hosts</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 加载动画 -->
+              <div class="hosts-file-loading">
+                <div class="hosts-file-loading-lines">
+                  <div class="loading-line short"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line long"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line short"></div>
+                  <div class="loading-line very-long"></div>
+                  <div class="loading-line medium"></div>
+                  <div class="loading-line short"></div>
+                </div>
+              </div>
+              
+              <!-- 底部状态栏 - 固定部分 -->
+              <div class="ide-statusbar">
+                <div class="statusbar-left">
+                  <div class="status-item">
+                    <span>加载中...</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- 没有hosts文件内容时的显示 -->
-          <div class="no-hosts-content" v-else>
-            <a-empty description="暂无hosts文件内容" />
+        <!-- 如果没有hosts文件 -->
+        <div class="hosts-section" v-else>
+          <div class="section-header">
+            <span class="section-title">
+              <div class="section-icon hosts-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              Hosts文件内容
+            </span>
+          </div>
+          <div class="hosts-file-container">
+            <div class="info-empty">暂无hosts文件内容</div>
           </div>
         </div>
       </div>
@@ -215,21 +431,47 @@ export default {
   },
   data() {
     return {
+      loadingStates: {
+        dns: true,
+        hosts: true,
+      },
+      dnsServers: [],
+      hostsFileContent: '',
+      editingHostsContent: '',
+      highlightedHostsContent: '',
+      hostsSearchKeyword: '',
+      isEditingHosts: false,
+      hostsEditLoading: false,
       showSearch: false,
       searchQuery: '',
       matchCount: null,
       matchIndex: 0,
       matches: [],
       hostsLines: [],
-      editHostsVisible: false,
-      hostsFileContent: '',
-      hostsEditLoading: false,
-      isEditingHosts: false,
-      hostsSearchKeyword: '',
-      highlightedHostsContent: '',
     };
   },
+  created() {
+    // 初始化hosts文件内容
+    this.initializeHostsContent();
+  },
+  updated() {
+    // 当hostInfo更新时，重新初始化hosts文件内容
+    this.initializeHostsContent();
+  },
   methods: {
+    // 初始化hosts文件内容
+    initializeHostsContent() {
+      if (this.hostInfo && 
+          this.hostInfo.osInfo && 
+          this.hostInfo.osInfo.dnsInfo && 
+          this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+        // 格式化并高亮hosts文件内容
+        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.osInfo.dnsInfo.hostsFileContent);
+        
+        // 同时初始化hostsLines用于搜索
+        this.hostsLines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
+      }
+    },
     // 检查状态，如果不存在或者是loading或pending则返回true
     checkStatus(status, matchValue = 'loading') {
       if (status === null || status === undefined) {
@@ -323,31 +565,62 @@ export default {
       
       // 分行处理
       const lines = content.split('\n');
-      const formattedLines = lines.map(line => {
-        // 处理注释行
+      let formattedContent = '';
+      
+      // 为每一行添加适当的样式
+      lines.forEach((line, index) => {
+        let lineClass = 'line';
+        let lineContent = '';
+        
+        // 根据行内容添加样式类
         if (line.trim().startsWith('#')) {
-          return `<span class="comment">${this.escapeHtml(line)}</span>`;
+          lineClass += ' comment-line';
+          lineContent = this.escapeHtml(line);
+        } else if (line.trim() === '') {
+          lineClass += ' empty-line';
+          lineContent = ' ';
+        } else {
+          lineClass += ' config-line';
+          
+          // 高亮IP地址和主机名
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            const ip = parts[0];
+            const hostnames = parts.slice(1).join(' ');
+            
+            if (line.includes('#')) {
+              // 行内注释
+              const commentIndex = line.indexOf('#');
+              const beforeComment = line.substring(0, commentIndex);
+              const comment = line.substring(commentIndex);
+              
+              lineContent = this.highlightIpHostname(beforeComment) + 
+                           `<span class="inline-comment">${this.escapeHtml(comment)}</span>`;
+            } else {
+              lineContent = `<span class="ip-address">${this.escapeHtml(ip)}</span> ` + 
+                           `<span class="hostname-entry">${this.escapeHtml(hostnames)}</span>`;
+            }
+          } else {
+            lineContent = this.escapeHtml(line);
+          }
         }
         
-        // 处理IP和主机名
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 2 && this.isIPAddress(parts[0])) {
-          const ip = `<span class="ip">${this.escapeHtml(parts[0])}</span>`;
-          const hostnames = parts.slice(1).map(h => `<span class="hostname">${this.escapeHtml(h)}</span>`).join(' ');
-          return `${ip} ${hostnames}`;
-        }
-        
-        // 其他行保持原样
-        return this.escapeHtml(line);
+        // 构建行HTML
+        formattedContent += `<div class="${lineClass}"><span class="line-content">${lineContent}</span></div>`;
       });
       
-      // 为整个内容添加额外的类，以提高CSS选择器权重
-      return `<div class="hosts-code-content">${formattedLines.join('\n')}</div>`;
+      return formattedContent;
     },
     
-    // 辅助方法：判断是否为IP地址
-    isIPAddress(str) {
-      return /^(\d{1,3}\.){3}\d{1,3}$/.test(str);
+    // 高亮IP和主机名
+    highlightIpHostname(text) {
+      const parts = text.trim().split(/\s+/);
+      if (parts.length < 2) return this.escapeHtml(text);
+      
+      const ip = parts[0];
+      const hostnames = parts.slice(1).join(' ');
+      
+      return `<span class="ip-address">${this.escapeHtml(ip)}</span> <span class="hostname-entry">${this.escapeHtml(hostnames)}</span>`;
     },
     
     // 转义HTML字符
@@ -360,7 +633,9 @@ export default {
         .replace(/'/g, "&#039;");
     },
     
-    // 切换搜索框显示状态
+    /**
+     * 切换搜索框显示状态
+     */
     toggleSearch() {
       this.showSearch = !this.showSearch;
       if (this.showSearch) {
@@ -368,7 +643,8 @@ export default {
           if (this.$refs.searchInput) {
             this.$refs.searchInput.focus();
           }
-          // 预处理文本内容用于搜索
+          
+          // 在打开搜索时初始化 hostsLines 数组
           if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo && this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
             this.hostsLines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
           }
@@ -421,70 +697,68 @@ export default {
     
     // 执行搜索，在DOM中查找并高亮匹配项
     performSearch() {
-      this.clearHighlights();
-      if (!this.$refs.codeContainer || !this.searchQuery) return;
-      
-      const codeLines = this.$refs.codeContainer.querySelectorAll('.line');
-      const query = this.searchQuery.toLowerCase();
+      // 确保 hostsLines 数组已初始化
+      if (!this.hostsLines || !this.hostsLines.length) {
+        if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo && this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+          this.hostsLines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
+        } else {
+          this.matchCount = 0;
+          this.matches = [];
+          this.matchIndex = -1;
+          return;
+        }
+      }
+
+      if (!this.searchQuery || this.searchQuery.trim() === '') {
+        this.clearHighlights();
+        this.matchCount = null;
+        this.matchIndex = -1;
+        this.matches = [];
+        return;
+      }
+
+      // 查找所有匹配项
       this.matches = [];
-      
-      codeLines.forEach((line, lineIndex) => {
-        const content = line.textContent;
-        let tempContent = content;
-        let offset = 0;
-        let pos = tempContent.toLowerCase().indexOf(query);
+      const codeContainer = this.$refs.codeContainer;
+      if (!codeContainer) return;
+
+      const codeLines = codeContainer.querySelectorAll('.line');
+      const query = this.escapeRegExp(this.searchQuery.trim());
+      const regex = new RegExp(query, 'gi');
+
+      // 清除之前的高亮
+      this.clearHighlights();
+
+      // 遍历所有代码行查找匹配项
+      codeLines.forEach((line, index) => {
+        const lineContent = line.textContent || '';
+        let match;
+        let lastIndex = 0;
         
-        while (pos !== -1) {
+        // 使用正则表达式查找所有匹配项
+        regex.lastIndex = 0;
+        while ((match = regex.exec(lineContent)) !== null) {
           this.matches.push({
-            lineIndex,
-            line: lineIndex + 1,
-            position: pos + offset,
-            element: line
+            line: index,
+            lineEl: line,
+            text: match[0],
+            startIndex: match.index,
+            endIndex: regex.lastIndex
           });
-          
-          // 添加高亮
-          const before = tempContent.substring(0, pos);
-          const match = tempContent.substring(pos, pos + this.searchQuery.length);
-          const after = tempContent.substring(pos + this.searchQuery.length);
-          
-          const span = document.createElement('span');
-          span.className = 'search-highlight';
-          span.textContent = match;
-          
-          tempContent = after;
-          offset += before.length + match.length;
-          
-          // 查找下一个匹配
-          pos = tempContent.toLowerCase().indexOf(query);
+          lastIndex = regex.lastIndex;
         }
       });
-      
+
+      // 更新匹配数量
       this.matchCount = this.matches.length;
-      this.matchIndex = this.matches.length > 0 ? 0 : -1;
       
+      // 如果有匹配项，高亮第一个匹配
       if (this.matches.length > 0) {
-        this.highlightMatches();
-        this.scrollToMatch(0);
+        this.matchIndex = 0;
+        this.highlightCurrentMatch();
+      } else {
+        this.matchIndex = -1;
       }
-    },
-    
-    // 高亮所有匹配
-    highlightMatches() {
-      if (!this.$refs.codeContainer) return;
-      
-      const content = this.$refs.codeContainer.querySelector('.code-content');
-      if (!content || !this.searchQuery) return;
-      
-      const html = content.innerHTML;
-      const regex = new RegExp(this.escapeRegExp(this.searchQuery), 'gi');
-      content.innerHTML = html.replace(regex, match => 
-        `<span class="search-highlight">${match}</span>`
-      );
-    },
-    
-    // 转义正则表达式中的特殊字符
-    escapeRegExp(string) {
-      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
     
     // 滚动到指定匹配项
@@ -492,25 +766,36 @@ export default {
       if (index < 0 || index >= this.matches.length || !this.$refs.codeContainer) return;
       
       const match = this.matches[index];
-      if (!match.element) return;
+      if (!match || !match.lineEl) return;
       
+      // 清除之前的高亮状态
       const highlights = this.$refs.codeContainer.querySelectorAll('.search-highlight');
-      if (highlights.length <= index) return;
+      highlights.forEach(el => el.classList.remove('current-highlight'));
       
-      // 设置当前高亮
-      highlights.forEach((el, i) => {
-        if (i === index) {
-          el.classList.add('current-highlight');
-        } else {
-          el.classList.remove('current-highlight');
-        }
-      });
+      // 添加当前高亮
+      this.highlightCurrentMatch();
       
       // 滚动到匹配项
-      match.element.scrollIntoView({
+      match.lineEl.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
       });
+    },
+    
+    // 高亮当前匹配项
+    highlightCurrentMatch() {
+      if (this.matchIndex < 0 || this.matchIndex >= this.matches.length || !this.$refs.codeContainer) return;
+      
+      const highlights = this.$refs.codeContainer.querySelectorAll('.search-highlight');
+      if (highlights.length <= this.matchIndex) return;
+      
+      // 清除所有当前高亮
+      highlights.forEach(el => el.classList.remove('current-highlight'));
+      
+      // 添加当前高亮
+      if (highlights[this.matchIndex]) {
+        highlights[this.matchIndex].classList.add('current-highlight');
+      }
     },
     
     // 查找下一项
@@ -547,27 +832,64 @@ export default {
       return dnsServers[0] === dns;
     },
     
-    // 打开编辑hosts文件对话框
-    editHostsFile() {
-      // 设置编辑内容为当前hosts文件内容
-      this.hostsFileContent = this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo ? this.hostInfo.osInfo.dnsInfo.hostsFileContent : '';
-      // 切换到编辑模式
-      this.isEditingHosts = true;
-      console.log('进入hosts文件编辑模式');
+    /**
+     * 开始编辑hosts文件内容
+     */
+    startEditingHosts() {
+      if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo) {
+        this.editingHostsContent = this.hostInfo.osInfo.dnsInfo.hostsFileContent || '';
+        this.isEditingHosts = true;
+      }
     },
     
-    // 取消编辑
-    cancelHostsEdit() {
-      // 清空编辑内容
-      this.hostsFileContent = '';
-      // 退出编辑模式
-      this.isEditingHosts = false;
-      console.log('取消hosts文件编辑');
+    /**
+     * 获取hosts文件行数
+     */
+    getHostsLinesCount() {
+      if (!this.editingHostsContent) return 0;
+      return this.editingHostsContent.split('\n').length;
     },
     
-    // 保存编辑
+    /**
+     * 复制hosts文件内容到剪贴板
+     */
+    copyHostsContent() {
+      if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo) {
+        const content = this.hostInfo.osInfo.dnsInfo.hostsFileContent || '';
+        
+        // 使用更可靠的clipboard复制方法
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        textArea.style.position = 'fixed';  // 避免滚动到底部
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          if (successful) {
+            this.$message.success('hosts文件内容已复制到剪贴板');
+          } else {
+            // 尝试使用Clipboard API作为备选方法
+            navigator.clipboard.writeText(content).then(() => {
+              this.$message.success('hosts文件内容已复制到剪贴板');
+            }).catch(err => {
+              this.$message.error('复制失败，请手动选择并复制内容');
+            });
+          }
+        } catch (err) {
+          this.$message.error('复制失败，请手动选择并复制内容');
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+    },
+    
+    /**
+     * 保存编辑的hosts文件内容
+     */
     saveHostsFile() {
-      if (!this.hostsFileContent) {
+      if (!this.editingHostsContent) {
         this.$message.warning('Hosts文件内容不能为空');
         return;
       }
@@ -578,7 +900,7 @@ export default {
       const formData = new FormData();
       formData.append('clusterId', this.hostInfo.clusterId);
       formData.append('ip', this.hostInfo.ip);
-      formData.append('hostsFileContent', this.hostsFileContent);
+      formData.append('hostsFileContent', this.editingHostsContent);
       
       // 使用API保存内容
       this.$axiosPost('/host/updateHostsFile', formData)
@@ -586,9 +908,11 @@ export default {
           if (res.code === 200) {
             this.$message.success('Hosts文件修改成功');
             // 更新本地数据
-            this.hostInfo.osInfo.dnsInfo.hostsFileContent = this.hostsFileContent;
+            this.hostInfo.osInfo.dnsInfo.hostsFileContent = this.editingHostsContent;
             // 退出编辑模式
             this.isEditingHosts = false;
+            // 重新初始化内容显示
+            this.initializeHostsContent();
           } else {
             this.$message.error(res.msg || 'Hosts文件修改失败');
           }
@@ -602,82 +926,51 @@ export default {
         });
     },
     
-    // 修改提交编辑方法，使用新的saveHostsFile
-    submitHostsEdit() {
-      this.saveHostsFile();
-    },
-    
-    // 复制hosts文件内容
-    copyHostsFile() {
-      if (!this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
-        this.$message.warning('没有可复制的Hosts文件内容');
-        return;
-      }
-      
-      // 创建临时文本区域元素
-      const textarea = document.createElement('textarea');
-      textarea.value = this.hostInfo.osInfo.dnsInfo.hostsFileContent;
-      document.body.appendChild(textarea);
-      textarea.select();
-      
-      try {
-        // 执行复制命令
-        const successful = document.execCommand('copy');
-        if (successful) {
-          this.$message.success('Hosts文件内容已复制到剪贴板');
-        } else {
-          this.$message.error('复制失败，请手动复制');
-        }
-      } catch (err) {
-        this.$message.error('复制失败: ' + err);
-      } finally {
-        // 移除临时元素
-        document.body.removeChild(textarea);
-      }
-    },
-    
-    // 更新行号（当编辑器内容变化时）
-    updateLineNumbers() {
-      // 更新行号
-      this.$forceUpdate();
-      
-      // 模拟编辑模式下的高亮效果
-      const textArea = document.querySelector('.code-editor');
-      if (textArea) {
-        // 获取当前编辑内容
-        const content = textArea.value;
-        
-        // 如果有一个显示层，可以应用相同的高亮处理
-        // 这里只是提示未来可以实现的功能
-        console.log('编辑内容已更新');
-      }
-    },
-    
-    // 开始编辑hosts文件
-    startEditingHosts() {
-      this.editHostsFile();
-    },
-    
-    // 复制hosts文件内容
-    copyHostsContent() {
-      this.copyHostsFile();
-    },
-    
-    // 搜索hosts文件内容
+    /**
+     * 搜索hosts文件内容
+     */
     searchHosts() {
+      // 如果没有搜索关键词或者没有hosts文件内容，显示全部内容
       if (!this.hostsSearchKeyword || !this.hostInfo.osInfo || !this.hostInfo.osInfo.dnsInfo || !this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
-        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.osInfo.dnsInfo.hostsFileContent);
+        if (this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo && this.hostInfo.osInfo.dnsInfo.hostsFileContent) {
+          this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.osInfo.dnsInfo.hostsFileContent);
+        }
         return;
       }
       
       const lines = this.hostInfo.osInfo.dnsInfo.hostsFileContent.split('\n');
-      const filteredLines = lines.filter(line => line.toLowerCase().includes(this.hostsSearchKeyword.toLowerCase()));
-      const highlightedLines = filteredLines.map(line => {
-        const regex = new RegExp(this.escapeRegExp(this.hostsSearchKeyword), 'gi');
-        return line.replace(regex, match => `<span class="search-highlight">${match}</span>`);
-      });
       
-      this.highlightedHostsContent = `<div class="hosts-code-content">${highlightedLines.join('\n')}</div>`;
+      // 如果启用了搜索功能，则过滤和高亮显示
+      if (this.hostsSearchKeyword.trim() !== '') {
+        const filteredLines = lines.filter(line => 
+          line.toLowerCase().includes(this.hostsSearchKeyword.toLowerCase())
+        );
+        
+        if (filteredLines.length > 0) {
+          const highlightedLines = filteredLines.map(line => {
+            const regex = new RegExp(this.escapeRegExp(this.hostsSearchKeyword), 'gi');
+            return line.replace(regex, match => `<span class="search-highlight">${match}</span>`);
+          });
+          
+          this.highlightedHostsContent = `<div class="hosts-code-content">${highlightedLines.join('\n')}</div>`;
+        } else {
+          // 没有匹配结果时显示提示
+          this.highlightedHostsContent = '';
+        }
+      } else {
+        // 如果搜索关键词为空，显示全部内容
+        this.highlightedHostsContent = this.formatHostsFile(this.hostInfo.osInfo.dnsInfo.hostsFileContent);
+      }
+    },
+    /**
+     * 转义正则表达式中的特殊字符
+     */
+    escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    },
+    cancelHostsEdit() {
+      this.isEditingHosts = false;
+      this.editingHostsContent = '';
     },
   }
 }
@@ -687,6 +980,11 @@ export default {
 <style>
 /* IDE编辑器全局样式 */
 .code-content {
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #d4d4d4;
+  white-space: pre;
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace !important;
   font-size: 12px !important;
   line-height: 1.4 !important;
@@ -724,8 +1022,21 @@ export default {
   padding-left: 4px;
 }
 
+.comment-line {
+  color: #6a9955;
+  font-style: italic;
+}
+
 .empty-line {
   height: 20px;
+}
+
+.ip-address {
+  color: #4ec9b0;
+}
+
+.hostname-entry {
+  color: #9cdcfe;
 }
 
 .inline-comment {
@@ -743,6 +1054,31 @@ export default {
   background-color: rgba(255, 160, 0, 0.5);
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(255, 160, 0, 0.8);
+}
+
+/* 添加没有搜索结果时的样式 */
+.no-search-results {
+  padding: 20px;
+  text-align: center;
+  color: #8e8e93;
+  font-style: italic;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.no-search-results::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" stroke="%238e8e93" stroke-width="2" fill="none"><path d="M10 3a7 7 0 100 14 7 7 0 000-14z"/><path d="M21 21l-6-6"/></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
 }
 </style>
 
@@ -1187,6 +1523,7 @@ export default {
   position: relative;
   background-color: #1e1e1e;
   padding: 4px 0;
+  overflow: hidden;
 }
 
 .code-editor {
@@ -1247,16 +1584,6 @@ export default {
   margin-right: 0;
   margin-left: 12px;
   opacity: 0.8;
-}
-
-.hostname-detail-header-blur {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8));
-  z-index: 0;
 }
 
 /* IDE搜索框样式 */
@@ -1331,304 +1658,87 @@ export default {
   margin-left: 8px;
 }
 
-/* 移除标题栏的样式，保留工具栏的样式 */
-.ide-titlebar {
-  display: none;
-}
-
-.form-help-text {
-  color: #888;
-  font-size: 12px;
+/* 无搜索结果样式 */
+.no-search-results {
+  padding: 10px 15px;
+  text-align: center;
+  font-style: italic;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
-  margin-top: 4px;
-  
-  .anticon {
-    margin-right: 4px;
-    font-size: 14px;
-  }
+  justify-content: center;
 }
 
-/* 主机名加载动画样式 */
-.hostname-loading-container {
-  display: flex;
-  align-items: center;
-  height: 20px;
-}
-
-.hostname-loading-dots {
-  display: flex;
-  align-items: center;
-  margin-right: 8px;
-}
-
-.hostname-loading-dot {
+.no-search-results::before {
+  content: "";
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #007AFF;
-  margin: 0 2px;
-  opacity: 0.2;
-  animation: pulse 1.4s infinite ease-in-out;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3Cline x1='8' y1='11' x2='14' y2='11'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
-.hostname-loading-dot:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.hostname-loading-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.hostname-loading-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.hostname-loading-text {
-  font-size: 14px;
-  color: #007AFF;
-  font-weight: 500;
-}
-
-/* FQDN加载动画 */
-.fqdn-loading-container {
-  display: flex;
+/* 使用更加苹果风格的按钮样式 */
+.apple-button {
+  display: inline-flex;
   align-items: center;
-  height: 16px;
-}
-
-.fqdn-loading-pulse {
-  width: 80px;
-  height: 16px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.fqdn-loading-text {
-  font-size: 12px;
-  color: #8E8E93;
+  justify-content: center;
+  height: 32px;
+  padding: 0 16px;
   margin-left: 8px;
-}
-
-/* 动画关键帧 */
-@keyframes pulse {
-  0%, 80%, 100% { 
-    transform: scale(0.6);
-    opacity: 0.2;
-  }
-  40% { 
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -80px 0;
-  }
-  100% {
-    background-position: 80px 0;
-  }
-}
-
-/* 强制覆盖Modal样式确保可见 */
-/deep/ .ant-modal, /deep/ .ant-modal-mask, /deep/ .ant-modal-wrap {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 1000 !important;
-}
-
-/deep/ .ant-modal-wrap {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  overflow: auto !important;
-}
-
-/deep/ .ant-modal {
-  position: relative !important;
-  margin: 100px auto !important;
-  width: auto !important;
-  max-width: 700px !important;
-}
-
-.hostlist-tooltip .info-data {
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-
-/* 加载动画样式 */
-.dns-servers-loading {
-  width: 100%;
-  padding: 8px 0;
-}
-
-.loading-shimmer {
-  width: 100%;
-  animation: shimmer 1.5s infinite linear;
-  background: linear-gradient(to right, rgba(0,122,255,0.06) 4%, rgba(0,122,255,0.12) 25%, rgba(0,122,255,0.06) 36%);
-  background-size: 1000px 100%;
-}
-
-.loading-line {
-  height: 15px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-  background: rgba(0,122,255,0.1);
-}
-
-.loading-line.short {
-  width: 30%;
-}
-
-.loading-line.medium {
-  width: 60%;
-}
-
-.loading-line.long {
-  width: 85%;
-}
-
-.loading-line.xshort {
-  width: 10%;
-}
-
-.loading-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-
-.spinner-text {
-  margin-top: 8px;
-  color: #007AFF;
   font-size: 14px;
   font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid transparent;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+.button-icon {
+  margin-right: 6px;
 }
 
-/* Hosts文件加载动画样式 */
-.hosts-loading-section {
-  margin-top: 10px;
-  border-radius: 8px;
-  background-color: #f9f9fb;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+.edit-button {
+  color: #007aff;
+  background-color: rgba(0, 122, 255, 0.1);
+  border-color: transparent;
 }
 
-.hosts-loading-container {
-  padding: 16px;
-  
-  .toolbar {
-    margin-bottom: 12px;
-    display: flex;
-    justify-content: space-between;
-  }
-  
-  .content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 120px;
-    
-    .loading-text {
-      margin-top: 12px;
-      color: #8c8c8c;
-      font-size: 14px;
-    }
-  }
-
-  .loading-line {
-    height: 12px;
-    border-radius: 6px;
-    background: linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    margin-bottom: 8px;
-
-    &.loading-line-small {
-      width: 60px;
-    }
-
-    &.loading-line-medium {
-      width: 120px;
-    }
-
-    &.loading-line-large {
-      width: 180px;
-    }
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
+.edit-button:hover {
+  background-color: rgba(0, 122, 255, 0.15);
 }
 
-.hosts-file-content {
-  margin-top: 10px;
-  border-radius: 8px;
-  background-color: #f9f9fb;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  
-  .search-bar {
-    padding: 8px 16px;
-    background-color: #f0f2f5;
-    border-bottom: 1px solid #e8e8e8;
-  }
-  
-  .hosts-content {
-    padding: 16px;
-    max-height: 300px;
-    overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    line-height: 1.5;
-    
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-  }
+.copy-button {
+  color: #5856d6;
+  background-color: rgba(88, 86, 214, 0.1);
+  border-color: transparent;
 }
 
-.no-hosts-content {
-  margin-top: 10px;
-  padding: 24px;
-  background-color: #f9f9fb;
-  border-radius: 8px;
-  text-align: center;
+.copy-button:hover {
+  background-color: rgba(88, 86, 214, 0.15);
 }
 
-/* 搜索高亮样式 */
-:deep(.search-highlight) {
-  background-color: #ffff00;
-  color: #000;
-  font-weight: bold;
-  padding: 1px 2px;
-  border-radius: 2px;
+.cancel-button {
+  color: #8e8e93;
+  background-color: rgba(142, 142, 147, 0.1);
+  border-color: transparent;
+}
+
+.cancel-button:hover {
+  background-color: rgba(142, 142, 147, 0.15);
+}
+
+.save-button {
+  color: #ffffff;
+  background-color: #007aff;
+  border-color: transparent;
+}
+
+.save-button:hover {
+  background-color: #0071e3;
 }
 </style>
