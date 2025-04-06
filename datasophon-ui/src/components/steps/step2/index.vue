@@ -1169,24 +1169,50 @@ export default {
      * 终止批量检查主机
      */
     async stopHostCheck() {
-      // 调用终止检查API
       try {
-        const params = {
-          clusterId: this.clusterId
-        };
+        // 确保获取到集群ID
+        const clusterId = this.$store.state.clusterId || this.clusterId;
+        if (!clusterId) {
+          this.$message.error("集群ID不能为空，请确认当前集群已选择");
+          return;
+        }
 
+        const params = {
+          clusterId: clusterId,  // 明确指定参数名称
+          ip: this.currentHost ? this.currentHost.ip : "-1"  // 确保作为字符串传递
+        };
+        
+        console.log("终止检查参数:", params); // 调试日志
+        
+        this.$message.loading({
+          content: this.currentHost ? 
+            `正在终止主机 ${this.currentHost.hostname || this.currentHost.ip} 的检查...` : 
+            "正在终止所有主机检查...",
+          key: "stopCheck"
+        });
+        
         const res = await this.$axiosPost(global.API.stopHostCheck, params);
         if (res.code === 200) {
-          this.$message.success(res.msg || '已终止主机检查');
-
-          // 立即刷新一次，不等待自动刷新
+          this.$message.success({
+            content: this.currentHost ? 
+              `已终止主机 ${this.currentHost.hostname || this.currentHost.ip} 的检查` : 
+              "已终止所有主机检查",
+            key: "stopCheck"
+          });
+          // 刷新主机列表 - 修正方法名
           this.getEnvironmentList(false);
         } else {
-          this.$message.error('终止主机检查失败: ' + res.msg);
+          this.$message.error({
+            content: res.msg || "终止检查失败，请稍后重试",
+            key: "stopCheck"
+          });
         }
-      } catch (err) {
-        console.error('调用终止检查API失败:', err);
-        this.$message.error('终止主机检查出错');
+      } catch (error) {
+        console.error("终止检查失败", error);
+        this.$message.error({
+          content: "终止检查失败: " + (error.message || "请检查网络连接"),
+          key: "stopCheck"
+        });
       }
     },
 

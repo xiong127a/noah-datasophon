@@ -87,8 +87,20 @@ public class HostCheckController {
     @PostMapping("/stopHostCheck")
     @UserPermission
     public Result stopHostCheck(
-            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId,
-            @RequestParam(name = "ip") String ip) {
+            @RequestParam(name = "clusterId", required = true) Integer clusterId,
+            @RequestParam(name = "ip", required = false, defaultValue = "-1") String ip) {
+        log.info("收到终止主机检查请求，clusterId: {}, ip: {}", clusterId, ip);
+
+        if (clusterId == null) {
+            return Result.error("集群ID不能为空");
+        }
+
+        // 当ip为"-1"或null或空字符串时，终止所有主机的检查
+        if ("-1".equals(ip) || ip == null || ip.trim().isEmpty()) {
+            log.info("终止所有主机检查，集群ID: {}", clusterId);
+            return hostCheckService.cancelAllCheckTasks();
+        }
+
         return hostCheckService.stopHostCheck(clusterId, ip);
     }
 
