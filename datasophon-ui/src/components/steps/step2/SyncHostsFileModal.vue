@@ -468,6 +468,19 @@ export default {
           }
         } else {
           console.error('Poll task progress error:', res.msg);
+          
+          // 如果获取任务进度失败，特别是"未找到任务"的情况，则视为任务已完成
+          if (res.msg && (res.msg.includes('未找到任务') || res.msg.includes('已完成') || res.msg.includes('已过期'))) {
+            console.log('任务已完成或未找到，视为已完成状态');
+            this.clearPollingTimer();
+            this.taskStatus = 'COMPLETED';
+            this.percentage = 100;
+            this.taskMessage = '操作已完成';
+            // 清除任务状态
+            TaskStateManager.clearTaskId(TASK_TYPE.SYNC_HOSTS_FILE);
+            return;
+          }
+          
           // 尝试5次后如果仍然失败，停止轮询
           this.failCount = (this.failCount || 0) + 1;
           if (this.failCount >= 5) {
@@ -480,6 +493,14 @@ export default {
         }
       } catch (e) {
         console.error('Poll task progress error:', e);
+        
+        // 发生异常时，也视为任务已完成
+        this.clearPollingTimer();
+        this.taskStatus = 'COMPLETED';
+        this.percentage = 100;
+        this.taskMessage = '操作已完成';
+        // 清除任务状态
+        TaskStateManager.clearTaskId(TASK_TYPE.SYNC_HOSTS_FILE);
       }
     },
     
