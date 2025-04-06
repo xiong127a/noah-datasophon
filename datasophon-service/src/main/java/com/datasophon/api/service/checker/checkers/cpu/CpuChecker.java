@@ -67,156 +67,129 @@ public class CpuChecker extends AbstractItemChecker {
 
             // 检查CPU使用率
             cacheLog.info("检查CPU使用率");
-            // 先检查Alpine Linux格式
-            String cpuUsageCommand = "top -b -n 1 | head -n 3 | grep CPU";
+
+            // 使用更可靠的方式获取CPU使用率
+            String cpuUsageCommand = "top -b -n 1 | grep '%Cpu' | awk '{print $2+$4}'";
             CommandResult cpuUsageResult = execCommand(session, cpuUsageCommand);
 
             double cpuUsage = 0.0;
-            if (cpuUsageResult.isSuccess()) {
+            boolean usageDetected = false;
+
+            if (cpuUsageResult.isSuccess() && !cpuUsageResult.getOutput().trim().isEmpty()) {
                 try {
-                    String output = cpuUsageResult.getOutput().trim();
-                    cacheLog.info("CPU使用率原始输出: %s", output);
+                    // 清理输出，移除可能导致解析错误的字符
+                    String cleanedOutput = cpuUsageResult.getOutput().trim()
+                            .replaceAll("[^0-9\\.]", "") // 仅保留数字和小数点
+                            .replace(",,", "."); // 处理特殊格式
 
-                    // 检查是否匹配Alpine Linux格式 (CPU: x% usr y% sys...)
-                    if (output.contains("CPU:") && output.contains("idle")) {
-                        // Alpine Linux格式处理
-                        // 从idle提取空闲CPU百分比
-                        String idlePercentStr = "";
-                        if (output.contains("idle")) {
-                            int idleIndex = output.indexOf("idle");
-                            // 向前查找百分比数字
-                            int percentEndIndex = idleIndex - 1;
-                            int percentStartIndex = percentEndIndex;
-                            while (percentStartIndex > 0 &&
-                                    (Character.isDigit(output.charAt(percentStartIndex - 1)) ||
-                                            output.charAt(percentStartIndex - 1) == '.')) {
-                                percentStartIndex--;
-                            }
-                            idlePercentStr = output.substring(percentStartIndex, percentEndIndex).trim();
-                            cacheLog.info("提取的CPU空闲百分比: %s", idlePercentStr);
-
-                            try {
-                                double idlePercent = Double.parseDouble(idlePercentStr);
-                                cpuUsage = 100.0 - idlePercent;
-                                cacheLog.info("计算得到CPU使用率: %.2f", cpuUsage);
-                            } catch (NumberFormatException e) {
-                                cacheLog.error("无法解析CPU空闲百分比: %s", idlePercentStr);
-                            }
-                        }
-                    } else {
-                        // 尝试标准Linux格式
-                        cpuUsageCommand = "top -b -n 1 | grep '%Cpu' | awk '{print $2+$4}'";
-                        cpuUsageResult = execCommand(session, cpuUsageCommand);
-
-                        if (cpuUsageResult.isSuccess()) {
-                            try {
-                                // 清理输出，移除可能导致解析错误的字符
-                                String cleanedOutput = cpuUsageResult.getOutput().trim()
-                                        .replaceAll("[^0-9\\.]", "") // 仅保留数字和小数点
-                                        .replace(",,", "."); // 处理特殊格式
-
-                                // 确保有有效数据
-                                if (!cleanedOutput.isEmpty()) {
-                                    String[] parts = cleanedOutput.split("\\s+");
-                                    if (parts.length > 0) {
-                                        cpuUsage = Double.parseDouble(parts[0]);
-                                        // 验证结果合理性
-                                        if (cpuUsage > 100.0) {
-                                            cacheLog.warn("CPU使用率异常高: %.2f，可能是解析错误，使用替代方法", cpuUsage);
-                                            cpuUsage = 0.0; // 重置为0，触发下面的替代方法
-                                        } else {
-                                            cacheLog.info("当前CPU使用率: %.2f", cpuUsage);
-                                        }
-                                    } else {
-                                        cpuUsage = 0.0; // 没有有效部分
-                                    }
-                                } else {
-                                    cpuUsage = 0.0; // 输出为空
-                                }
-                            } catch (Exception e) {
-                                cacheLog.warn("无法解析标准格式CPU使用率: %s，尝试替代命令", e.getMessage());
-                                cpuUsage = 0.0;
-                            }
+                    // 确保有有效数据
+                    if (!cleanedOutput.isEmpty()) {
+                        cpuUsage = Double.parseDouble(cleanedOutput);
+                        // 验证结果合理性
+                        if (cpuUsage > 100.0) {
+                            cacheLog.warn("CPU使用率异常高: %.2f，可能是解析错误，使用替代方法", cpuUsage);
+                            cpuUsage = 0.0; // 重置为0，触发下面的替代方法
+                        } else {
+                            cacheLog.info("当前CPU使用率: %.2f", cpuUsage);
+                            usageDetected = true;
                         }
                     }
                 } catch (Exception e) {
-                    cacheLog.warn("处理CPU使用率时出错: %s，尝试替代命令", e.getMessage());
-                    cpuUsage = 0.0;
+                    cacheLog.warn("无法解析标准格式CPU使用率: %s，尝试替代命令", e.getMessage());
+                }
+            } else {
+                cacheLog.warn("获取CPU使用率失败或返回空，尝试替代命令");
+            }
+
+            // 尝试Ubuntu/Debian系统专用命令
+            if (!usageDetected) {
+                cacheLog.info("尝试使用Ubuntu/Debian系统的专用命令获取CPU使用率");
+                cpuUsageCommand = "top -b -n 1 | grep 'Cpu(s)' | awk '{print $2+$4}'";
+                cpuUsageResult = execCommand(session, cpuUsageCommand);
+
+                if (cpuUsageResult.isSuccess() && !cpuUsageResult.getOutput().trim().isEmpty()) {
+                    try {
+                        String cleanedOutput = cpuUsageResult.getOutput().trim()
+                                .replaceAll("[^0-9\\.]", "")
+                                .replace(",,", ".");
+
+                        if (!cleanedOutput.isEmpty()) {
+                            cpuUsage = Double.parseDouble(cleanedOutput);
+                            if (cpuUsage > 0.0 && cpuUsage <= 100.0) {
+                                cacheLog.info("通过Ubuntu专用命令获取CPU使用率: %.2f", cpuUsage);
+                                usageDetected = true;
+                            }
+                        }
+                    } catch (Exception e) {
+                        cacheLog.warn("处理Ubuntu CPU使用率时出错: %s", e.getMessage());
+                    }
                 }
             }
 
             // 如果上述方法都失败，尝试使用mpstat命令
-            if (cpuUsage == 0.0) {
+            if (!usageDetected) {
                 cacheLog.info("尝试使用mpstat命令获取CPU使用率");
-                CommandResult mpstatResult = execCommand(session, "command -v mpstat");
-                if (mpstatResult.isSuccess() && !mpstatResult.getOutput().trim().isEmpty()) {
-                    CommandResult mpstatUsageResult = execCommand(session, "mpstat | tail -n 1");
-                    if (mpstatUsageResult.isSuccess()) {
+                CommandResult mpstatResult = execCommand(session, "command -v mpstat || echo 'not_found'");
+                if (mpstatResult.isSuccess() && !mpstatResult.getOutput().trim().contains("not_found")) {
+                    CommandResult mpstatUsageResult = execCommand(session,
+                            "mpstat | tail -n 1 | awk '{print 100-$NF}'");
+                    if (mpstatUsageResult.isSuccess() && !mpstatUsageResult.getOutput().trim().isEmpty()) {
                         try {
                             String mpstatOutput = mpstatUsageResult.getOutput().trim();
-                            cacheLog.info("mpstat输出: %s", mpstatOutput);
+                            cacheLog.info("mpstat计算的CPU使用率: %s", mpstatOutput);
 
-                            // 尝试提取最后一个字段（%idle）
-                            String[] parts = mpstatOutput.split("\\s+");
-                            if (parts.length > 0) {
-                                String idleStr = parts[parts.length - 1];
-                                double idlePercent = Double.parseDouble(idleStr);
-                                cpuUsage = 100.0 - idlePercent;
-                                cacheLog.info("通过mpstat获取CPU使用率: %.2f", cpuUsage);
-
-                                if (cpuUsage < 0 || cpuUsage > 100.0) {
-                                    cacheLog.warn("通过mpstat获取的CPU使用率异常: %.2f，使用替代方法", cpuUsage);
-                                    cpuUsage = 0.0;
+                            if (!mpstatOutput.isEmpty()) {
+                                cpuUsage = Double.parseDouble(mpstatOutput);
+                                if (cpuUsage >= 0 && cpuUsage <= 100.0) {
+                                    cacheLog.info("通过mpstat获取CPU使用率: %.2f", cpuUsage);
+                                    usageDetected = true;
+                                } else {
+                                    cacheLog.warn("通过mpstat获取的CPU使用率异常: %.2f", cpuUsage);
                                 }
                             }
                         } catch (Exception ex) {
                             cacheLog.warn("无法解析mpstat CPU使用率: %s", ex.getMessage());
-                            cpuUsage = 0.0;
                         }
                     }
                 }
             }
 
             // 如果仍然失败，尝试vmstat
-            if (cpuUsage == 0.0) {
+            if (!usageDetected) {
                 cacheLog.info("尝试使用vmstat命令获取CPU使用率");
                 try {
                     CommandResult vmstatResult = execCommand(session, "vmstat 1 2 | tail -n 1");
-                    if (vmstatResult.isSuccess()) {
+                    if (vmstatResult.isSuccess() && !vmstatResult.getOutput().trim().isEmpty()) {
                         String vmstatOutput = vmstatResult.getOutput().trim();
                         cacheLog.info("vmstat输出: %s", vmstatOutput);
 
                         String[] parts = vmstatOutput.split("\\s+");
                         if (parts.length >= 15) { // vmstat输出的idle通常是倒数第二个字段
                             try {
-                                double idlePercent = Double.parseDouble(parts[14]);
-                                cpuUsage = 100.0 - idlePercent;
-                                cacheLog.info("通过vmstat获取CPU使用率: %.2f", cpuUsage);
+                                String idleStr = parts[14].trim();
+                                if (!idleStr.isEmpty()) {
+                                    double idlePercent = Double.parseDouble(idleStr);
+                                    cpuUsage = 100.0 - idlePercent;
+                                    cacheLog.info("通过vmstat获取CPU使用率: %.2f", cpuUsage);
+                                    usageDetected = true;
 
-                                if (cpuUsage < 0 || cpuUsage > 100.0) {
-                                    cpuUsage = 20.0; // 如果异常，使用默认值
-                                    cacheLog.warn("通过vmstat获取的CPU使用率异常，使用默认值: %.2f", cpuUsage);
+                                    if (cpuUsage < 0 || cpuUsage > 100.0) {
+                                        cpuUsage = 20.0; // 如果异常，使用默认值
+                                        cacheLog.warn("通过vmstat获取的CPU使用率异常，使用默认值: %.2f", cpuUsage);
+                                    }
                                 }
                             } catch (NumberFormatException ex) {
-                                cpuUsage = 20.0;
-                                cacheLog.warn("无法解析vmstat CPU使用率字段，使用默认值: %.2f", cpuUsage);
+                                cacheLog.warn("无法解析vmstat CPU使用率字段: %s", ex.getMessage());
                             }
-                        } else {
-                            cpuUsage = 20.0;
-                            cacheLog.warn("vmstat输出格式不符合预期，使用默认值: %.2f", cpuUsage);
                         }
-                    } else {
-                        cpuUsage = 20.0;
-                        cacheLog.warn("执行vmstat命令失败，使用默认值: %.2f", cpuUsage);
                     }
                 } catch (Exception ex) {
-                    cpuUsage = 20.0;
-                    cacheLog.warn("处理vmstat命令时出错，使用默认值: %.2f", cpuUsage);
+                    cacheLog.warn("处理vmstat命令时出错: %s", ex.getMessage());
                 }
             }
 
             // 如果所有方法都失败，使用默认值
-            if (cpuUsage == 0.0) {
+            if (!usageDetected) {
                 cpuUsage = 20.0;
                 cacheLog.warn("无法通过任何方法获取CPU使用率，使用默认值: %.2f", cpuUsage);
             }
