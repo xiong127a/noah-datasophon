@@ -109,6 +109,7 @@ public class ExecutorConfiguration {
 
         @Override
         public Thread newThread(Runnable r) {
+            // 创建线程时使用前缀+序号的命名方式，业务代码可以在运行时修改线程名称添加主机信息
             Thread thread = new Thread(r, namePrefix + threadNumber.getAndIncrement());
             if (thread.isDaemon()) {
                 thread.setDaemon(false); // 确保不是守护线程

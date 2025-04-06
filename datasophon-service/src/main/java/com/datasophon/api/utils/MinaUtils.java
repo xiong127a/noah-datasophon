@@ -1169,85 +1169,73 @@ public class MinaUtils {
     }
 
     /**
-     * 执行命令并获取完整结果对象，支持自定义超时
-     *
-     * @param session        会话连接
-     * @param command        要执行的命令
-     * @param timeoutSeconds 命令执行超时时间（秒）
-     * @return 命令执行结果对象
+     * 执行命令
+     * 
+     * @param session SSH会话
+     * @param command 要执行的命令
+     * @return 命令执行结果
      */
-    public static CommandResult execCmdWithResultObject(ClientSession session, String command, int timeoutSeconds) {
+    public static CommandResult execCommand(ClientSession session, String command) {
         if (session == null) {
-            LOG.error("SSH会话为空，无法执行命令: {}", command);
-            return new CommandResult(command, -1, "", "SSH会话为空");
+            LOG.error("会话为空，无法执行命令");
+            return new CommandResult("", "SSH会话为空", -1);
         }
 
-        session.resetAuthTimeout();
-        LOG.info("执行命令: {}, 超时时间: {}秒", command, timeoutSeconds);
-        // 命令返回的结果
-        ChannelExec ce = null;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        if (!session.isOpen()) {
+            LOG.error("会话已关闭，无法执行命令");
+            return new CommandResult("", "SSH会话已关闭", -1);
+        }
+
+        // 获取当前线程名称，用于日志
+        String currentThreadName = Thread.currentThread().getName();
+        String hostAddress = "";
         try {
-            ce = session.createExecChannel(command);
-            ce.setOut(out);
-            ce.setErr(err);
-            // 打开通道并执行命令
-            ce.open();
-
-            // 等待命令执行完成或超时
-            Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED),
-                    TimeUnit.SECONDS.toMillis(timeoutSeconds));
-
-            if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                LOG.error("命令执行超时: {}, 超时时间: {}秒", command, timeoutSeconds);
-                return new CommandResult(command, 124, "", "命令执行超时");
+            // 尝试从会话中提取远程地址信息
+            hostAddress = session.getIoSession().getRemoteAddress().toString();
+            // 简化地址信息，通常是/IP:端口格式
+            if (hostAddress.startsWith("/")) {
+                hostAddress = hostAddress.substring(1);
             }
-
-            int exitStatus = ce.getExitStatus();
-            LOG.info("命令退出状态: {}", exitStatus);
-
-            String outResult = out.toString();
-            String errResult = err.toString();
-
-            if (exitStatus == 0) {
-                // 成功执行
-                return new CommandResult(command, 0, outResult, "");
-            } else {
-                // 执行失败
-                return new CommandResult(command, exitStatus, outResult, errResult);
+            if (hostAddress.contains(":")) {
+                hostAddress = hostAddress.substring(0, hostAddress.indexOf(":"));
             }
         } catch (Exception e) {
-            LOG.error("执行命令时出错: {}, 错误: {}", command, e.getMessage());
-            return new CommandResult(command, -1, "", e.getMessage());
-        } finally {
-            if (ce != null && ce.isOpen()) {
-                try {
-                    ce.close();
-                } catch (IOException e) {
-                    LOG.debug("关闭通道时出错: {}", e.getMessage());
-                }
-            }
+            // 忽略异常，使用默认值
+            hostAddress = "unknown";
         }
-    }
 
-    /**
-     * 执行命令并获取字符串结果，支持自定义超时
-     *
-     * @param session        会话连接
-     * @param command        要执行的命令
-     * @param timeoutSeconds 命令执行超时时间（秒）
-     * @return 命令执行结果字符串
-     * @throws IOException 如果执行命令失败
-     */
-    public static String executeCommandAndGetResult(ClientSession session, String command, int timeoutSeconds)
-            throws IOException {
-        CommandResult result = execCmdWithResultObject(session, command, timeoutSeconds);
-        if (result.isSuccess()) {
-            return result.getOutput();
-        } else {
-            throw new IOException(
-                    "Command execution failed with exit code " + result.getExitCode() + ": " + result.getError());
+        LOG.info("执行命令: {}, 主机: {}, 线程: {}", command, hostAddress, currentThreadName);
+
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ByteArrayOutputStream errorStream = new ByteArrayOutputStream();
+
+            ChannelExec channel = session.createExecChannel(command);
+            channel.setOut(outputStream);
+            channel.setErr(errorStream);
+            channel.open().verify(30000); // 30秒超时
+
+            Set<ClientChannelEvent> events = channel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), 30000); // 30秒超时
+
+            // 检查是否在超时时间内关闭
+            if (!events.contains(ClientChannelEvent.CLOSED)) {
+                LOG.warn("命令执行超时，强制关闭通道: {}", command);
+                channel.close(true);
+            }
+
+            int exitStatus = channel.getExitStatus();
+            String output = outputStream.toString(StandardCharsets.UTF_8.name());
+            String error = errorStream.toString(StandardCharsets.UTF_8.name());
+
+            if (exitStatus != 0) {
+                LOG.error("命令执行失败 [exit={}]: {}\n错误信息: {}", exitStatus, command, error);
+                return new CommandResult(output, error, exitStatus);
+            }
+
+            return new CommandResult(output, error, exitStatus);
+        } catch (Exception e) {
+            LOG.error("执行命令时异常 {}: {}", command, e.getMessage());
+            return new CommandResult("", "执行异常: " + e.getMessage(), -1);
         }
     }
 

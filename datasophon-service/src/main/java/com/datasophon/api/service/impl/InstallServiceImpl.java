@@ -84,6 +84,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.concurrent.ExecutorService;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Service("installService")
 public class InstallServiceImpl implements InstallService {
@@ -117,6 +119,14 @@ public class InstallServiceImpl implements InstallService {
 
     @Autowired
     private OsInfoService osInfoService;
+
+    @Autowired
+    @Qualifier("osInfoExecutor")
+    private ExecutorService osInfoExecutor;
+
+    @Autowired
+    @Qualifier("hardwareInfoExecutor")
+    private ExecutorService hardwareInfoExecutor;
 
     private static final String SSHUSER = "SSHUSER";
 
@@ -443,8 +453,13 @@ public class InstallServiceImpl implements InstallService {
             if (currentCount % LOG_PRINT_INTERVAL == 1) {
                 logger.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
             }
-            // 创建一个新线程进行主机信息收集，保证主接口立即返回
-            Thread thread = new Thread(() -> {
+            // 使用线程池进行主机信息收集，保证主接口立即返回
+            osInfoExecutor.execute(() -> {
+                // 为线程设置一个有意义的名称，包含当前时间戳
+                Thread currentThread = Thread.currentThread();
+                String originalName = currentThread.getName();
+                currentThread.setName("Host-Info-Collection-" + System.currentTimeMillis());
+
                 try {
                     // 使用与返回给前端相同的排序逻辑，确保一致性
                     List<HostInfo> tempList = new ArrayList<>(hostMap.values());
@@ -473,7 +488,8 @@ public class InstallServiceImpl implements InstallService {
                             // 每10次请求只打印一次日志
                             if (currentCount % LOG_PRINT_INTERVAL == 1) {
                                 logger.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
-                                        page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize), offset + 1,
+                                        page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize),
+                                        offset + 1,
                                         end,
                                         sortedHosts.size());
                             }
@@ -670,11 +686,11 @@ public class InstallServiceImpl implements InstallService {
                     logger.info("当前页所有主机的信息收集任务已全部完成，共处理{}台主机", pendingHosts.size());
                 } catch (Exception e) {
                     logger.error("主机信息收集线程异常: {}", e.getMessage(), e);
+                } finally {
+                    // 恢复线程原始名称
+                    currentThread.setName(originalName);
                 }
             });
-            thread.setName("Host-SSH-Validation-Thread-" + System.currentTimeMillis());
-            thread.setDaemon(true);
-            thread.start();
         }
 
         return hostMap;

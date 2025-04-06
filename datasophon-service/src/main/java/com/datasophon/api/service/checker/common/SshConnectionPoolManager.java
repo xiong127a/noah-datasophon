@@ -472,35 +472,42 @@ public class SshConnectionPoolManager {
      * @return 命令执行结果
      */
     public CommandResult execCommand(ClientSession session, String command) {
+        if (session == null) {
+            log.error("无法执行命令，会话为空");
+            return new CommandResult("", "SSH会话为空", -1);
+        }
+
+        // 获取主机IP地址
+        String hostAddress = "unknown";
         try {
-            ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-            ByteArrayOutputStream errStream = new ByteArrayOutputStream();
-
-            ClientChannel channel = session.createExecChannel(command);
-            channel.setOut(outStream);
-            channel.setErr(errStream);
-
-            // 打开通道并等待完成
-            channel.open().verify(DEFAULT_TIMEOUT);
-            channel.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), DEFAULT_TIMEOUT);
-
-            // 获取退出状态
-            Integer exitStatus = channel.getExitStatus();
-
-            // 关闭通道
-            channel.close(false);
-
-            String output = outStream.toString(StandardCharsets.UTF_8.name());
-            String error = errStream.toString(StandardCharsets.UTF_8.name());
-
-            // 清理资源
-            outStream.close();
-            errStream.close();
-
-            return new CommandResult(output, error, exitStatus != null ? exitStatus : -1);
+            hostAddress = session.getIoSession().getRemoteAddress().toString();
+            if (hostAddress.startsWith("/")) {
+                hostAddress = hostAddress.substring(1);
+            }
+            if (hostAddress.contains(":")) {
+                hostAddress = hostAddress.substring(0, hostAddress.indexOf(":"));
+            }
         } catch (Exception e) {
-            log.error("执行SSH命令时发生错误: {}", command, e);
-            return new CommandResult("", e.getMessage(), -1);
+            // 忽略错误，使用默认值
+        }
+
+        // 保存原始线程名称
+        Thread currentThread = Thread.currentThread();
+        String originalThreadName = currentThread.getName();
+
+        // 设置新的线程名称，包含线程池名称和主机IP
+        String threadPoolName = originalThreadName;
+        if (threadPoolName.contains("-")) {
+            threadPoolName = threadPoolName.substring(0, threadPoolName.lastIndexOf("-"));
+        }
+        currentThread.setName(threadPoolName + "-" + hostAddress);
+
+        try {
+            // 执行命令
+            return MinaUtils.execCommand(session, command);
+        } finally {
+            // 恢复原始线程名称
+            currentThread.setName(originalThreadName);
         }
     }
 
