@@ -252,6 +252,16 @@ public interface HostCheckService {
         Result generateHostsFilePreview(Integer clusterId);
 
         /**
+         * 生成hosts文件预览（带分页）
+         *
+         * @param clusterId 集群ID
+         * @param page      当前页码，从1开始
+         * @param pageSize  每页显示数量
+         * @return 包含当前页主机名和IP的预览内容
+         */
+        Result generateHostsFilePreview(Integer clusterId, Integer page, Integer pageSize);
+
+        /**
          * 同步hosts文件到所有主机
          * 
          * @param clusterId 集群ID

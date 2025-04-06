@@ -497,12 +497,16 @@ public class HostCheckController {
      * 生成hosts文件预览
      *
      * @param clusterId 集群ID
+     * @param page      页码
+     * @param pageSize  每页大小
      * @return 包含所有主机名和IP的预览内容
      */
     @GetMapping("/generateHostsFilePreview")
     @UserPermission
-    public Result generateHostsFilePreview(@RequestParam(name = "clusterId") Integer clusterId) {
-        return hostCheckService.generateHostsFilePreview(clusterId);
+    public Result generateHostsFilePreview(@RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "page", required = false, defaultValue = "1") Integer page,
+            @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return hostCheckService.generateHostsFilePreview(clusterId, page, pageSize);
     }
 
     /**

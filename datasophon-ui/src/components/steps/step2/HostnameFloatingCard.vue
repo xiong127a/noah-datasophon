@@ -158,7 +158,7 @@
                   <line x1="16" y1="17" x2="8" y2="17"></line>
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
-              </div>
+            </div>
               Hosts文件内容
             </span>
             <div class="actions">
@@ -199,7 +199,7 @@
               </template>
             </div>
           </div>
-          
+
           <div class="hosts-file-container">
             <div class="modern-ide">
               <!-- IDE工具栏 -->
@@ -211,7 +211,7 @@
                       <polyline points="9 22 9 12 15 12 15 22"></polyline>
                     </svg>
                     <span>/</span>
-                  </div>
+              </div>
                   <div class="breadcrumb-item">
                     <span>etc</span>
                   </div>
@@ -226,10 +226,10 @@
                       <circle cx="11" cy="11" r="8"></circle>
                       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                  </div>
-                </div>
               </div>
-              
+            </div>
+          </div>
+
               <!-- 添加搜索框 -->
               <div class="ide-search" v-if="showSearch">
                 <div class="search-container">
@@ -263,11 +263,11 @@
                           <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
                       </button>
-                    </div>
+            </div>
                   </div>
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
               <!-- 代码编辑区域 - 根据模式显示不同内容 -->
               <div class="ide-editor">
                 <!-- 侧边栏 - 减小宽度至最小 -->
@@ -586,7 +586,7 @@ export default {
           lineClass += ' config-line';
           
           // 高亮IP地址和主机名
-          const parts = line.trim().split(/\s+/);
+        const parts = line.trim().split(/\s+/);
           if (parts.length >= 2) {
             const ip = parts[0];
             const hostnames = parts.slice(1).join(' ');
@@ -714,7 +714,7 @@ export default {
       }
 
       if (!this.searchQuery || this.searchQuery.trim() === '') {
-        this.clearHighlights();
+      this.clearHighlights();
         this.matchCount = null;
         this.matchIndex = -1;
         this.matches = [];
@@ -842,7 +842,7 @@ export default {
     startEditingHosts() {
       if (this.hostInfo && this.hostInfo.osInfo && this.hostInfo.osInfo.dnsInfo) {
         this.editingHostsContent = this.hostInfo.osInfo.dnsInfo.hostsFileContent || '';
-        this.isEditingHosts = true;
+      this.isEditingHosts = true;
       }
     },
     

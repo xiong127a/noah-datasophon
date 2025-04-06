@@ -2454,6 +2454,11 @@ public class HostCheckServiceImpl implements HostCheckService {
         private Integer hostCount;
 
         /**
+         * 当前页显示的主机数
+         */
+        private Integer currentPageCount;
+
+        /**
          * 根据条目列表生成hosts文件内容
          */
         public void generateHostsContent() {
@@ -2476,14 +2481,15 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
-     * 生成hosts文件预览
      * 内部方法，直接返回VO对象，不包装Result
      * 
      * @param clusterId 集群ID
+     * @param page      当前页码，从1开始
+     * @param pageSize  每页显示数量
      * @return 预览VO对象
      */
-    private HostsFilePreviewVO generateHostsFilePreviewInner(Integer clusterId) {
-        logger.info("开始生成hosts文件预览(内部): clusterId={}", clusterId);
+    private HostsFilePreviewVO generateHostsFilePreviewInner(Integer clusterId, Integer page, Integer pageSize) {
+        logger.info("开始生成hosts文件预览(内部): clusterId={}, page={}, pageSize={}", clusterId, page, pageSize);
 
         try {
             // 获取存储在缓存中的主机信息
@@ -2513,8 +2519,24 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 使用项目统一的IP排序方法
             List<String> sortedIps = HostUtils.sortIpAddresses(ipList);
 
+            // 计算分页
+            int totalHosts = sortedIps.size();
+            int startIndex = (page - 1) * pageSize;
+            int endIndex = Math.min(startIndex + pageSize, totalHosts);
+
+            // 如果起始索引超出范围，则返回空列表
+            if (startIndex >= totalHosts) {
+                startIndex = 0;
+                endIndex = 0;
+            }
+
+            // 获取当前页的IP列表
+            List<String> pagedIps = startIndex < endIndex ? sortedIps.subList(startIndex, endIndex) : new ArrayList<>();
+
+            logger.info("主机总数: {}, 当前页显示: {} (从索引 {} 到 {})", totalHosts, pagedIps.size(), startIndex, endIndex - 1);
+
             // 按排序后的顺序添加主机映射
-            for (String ip : sortedIps) {
+            for (String ip : pagedIps) {
                 // 查找该IP对应的主机信息
                 Optional<HostInfo> hostInfoOpt = hostMap.values().stream()
                         .filter(hi -> ip.equals(hi.getIp()))
@@ -2522,17 +2544,31 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 if (hostInfoOpt.isPresent()) {
                     HostInfo hostInfo = hostInfoOpt.get();
-                    String hostname = hostInfo.getHostname();
-                    if (StrUtil.isNotBlank(hostname)) {
-                        hostsEntries.add(HostsEntry.createMapping(ip, hostname));
+
+                    String hostname = null;
+                    // 添加空判断，避免空指针异常
+                    if (hostInfo.getOsInfo() != null) {
+                        hostname = StrUtil.blankToDefault(hostInfo.getOsInfo().getHostname(), hostInfo.getHostname());
                     }
+
+                    // 添加逻辑：如果hostname为空，则生成error-xxx格式的默认名称
+                    if (StrUtil.isBlank(hostname)) {
+                        // 计算当前是第几个IP
+                        int index = sortedIps.indexOf(ip) + 1;
+                        // 生成error-001格式的主机名
+                        hostname = "error-" + String.format("%03d", index);
+                        logger.warn("主机 {} 没有主机名，使用默认名称: {}", ip, hostname);
+                    }
+
+                    hostsEntries.add(HostsEntry.createMapping(ip, hostname));
                 }
             }
 
             // 创建返回实体
             HostsFilePreviewVO previewVO = new HostsFilePreviewVO();
             previewVO.setHostsEntries(hostsEntries);
-            previewVO.setHostCount(hostMap.size());
+            previewVO.setHostCount(hostMap.size()); // 总主机数
+            previewVO.setCurrentPageCount(pagedIps.size()); // 当前页显示的主机数
 
             // 同时生成hostsContent字符串以兼容旧代码
             previewVO.generateHostsContent();
@@ -2546,11 +2582,32 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Override
     public Result generateHostsFilePreview(Integer clusterId) {
-        logger.info("开始生成hosts文件预览: clusterId={}", clusterId);
+        return generateHostsFilePreview(clusterId, 1, 10); // 默认第1页，每页10条
+    }
+
+    /**
+     * 生成hosts文件预览（带分页）
+     * 
+     * @param clusterId 集群ID
+     * @param page      当前页码，从1开始
+     * @param pageSize  每页显示数量
+     * @return 操作结果
+     */
+    @Override
+    public Result generateHostsFilePreview(Integer clusterId, Integer page, Integer pageSize) {
+        logger.info("开始生成hosts文件预览: clusterId={}, page={}, pageSize={}", clusterId, page, pageSize);
 
         try {
+            // 参数校验
+            if (page == null || page < 1) {
+                page = 1;
+            }
+            if (pageSize == null || pageSize < 1) {
+                pageSize = 10;
+            }
+
             // 调用内部方法获取VO
-            HostsFilePreviewVO previewVO = generateHostsFilePreviewInner(clusterId);
+            HostsFilePreviewVO previewVO = generateHostsFilePreviewInner(clusterId, page, pageSize);
             if (previewVO == null) {
                 return Result.error("未找到主机信息或生成预览失败");
             }
@@ -2569,7 +2626,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             logger.info("开始同步hosts文件，集群ID：{}", clusterId);
 
             // 生成hosts文件预览内容
-            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId);
+            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId, 1, 10);
             if (hostsFilePreview == null) {
                 return Result.error("生成hosts文件预览失败");
             }
@@ -2719,7 +2776,16 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 Map<String, String> hostItem = new HashMap<>();
                 hostItem.put("ip", ip);
-                hostItem.put("oldHostname", hostInfo.getHostname());
+
+                // 处理旧主机名为空的情况
+                String oldHostname = hostInfo.getHostname();
+                if (StrUtil.isBlank(oldHostname)) {
+                    // 使用与generateHostsFilePreviewInner相同的逻辑生成默认主机名
+                    oldHostname = "error-" + String.format("%03d", sortedIps.indexOf(ip) + 1);
+                    logger.warn("主机 {} 没有主机名，在预览中使用默认名称: {}", ip, oldHostname);
+                }
+
+                hostItem.put("oldHostname", oldHostname);
                 hostItem.put("newHostname", hostname.toString());
 
                 hostnamePreview.add(hostItem);
@@ -2727,7 +2793,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 生成hosts文件预览内容，用于后续设置hosts文件
-            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId);
+            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId, 1, 10);
             if (hostsFilePreview == null) {
                 logger.warn("生成hosts文件预览内容失败，将只设置主机名，不同步hosts文件");
             }

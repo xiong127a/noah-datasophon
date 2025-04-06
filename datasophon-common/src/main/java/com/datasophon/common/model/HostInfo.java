@@ -17,6 +17,7 @@
 
 package com.datasophon.common.model;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -40,6 +41,15 @@ public class HostInfo implements Serializable {
     private String ip;
 
     private String hostname;
+
+    public void setHostname(String hostname) {
+        if (StrUtil.isBlank(hostname)) {
+            if (osInfo != null) {
+                hostname = osInfo.getHostname();
+            }
+        }
+        this.hostname = hostname;
+    }
 
     /**
      * 完全限定域名(FQDN)
@@ -144,7 +154,7 @@ public class HostInfo implements Serializable {
      * 是否使用已存在的会话（用于连接复用）
      * -- SETTER --
      * 设置是否使用已存在的会话
-     * 
+     *
      */
     // 添加连接复用相关属性
     @Setter
@@ -157,7 +167,7 @@ public class HostInfo implements Serializable {
      * 获取外部会话
      * -- SETTER --
      * 设置外部会话
-     * 
+     *
      */
     @Setter
     @Getter
@@ -318,7 +328,7 @@ public class HostInfo implements Serializable {
      * 3. 如果所有检查项都成功，则状态为SUCCESS
      * 4. 如果有等待检查的项目，则状态为WAITING
      * 5. 如果所有项目都被跳过，则状态为SKIPPED
-     * 
+     *
      * 该方法同时设置status和checkResult字段，确保两者一致
      */
     public void calculateStatus() {
