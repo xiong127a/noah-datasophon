@@ -556,4 +556,26 @@ public class HostCheckController {
         return hostCheckService.getTaskProgress(taskId);
     }
 
+    /**
+     * 修复集群中所有主机的所有失败项
+     */
+    @PostMapping("/fixAllFailedItems")
+    @UserPermission
+    public Result fixAllFailedItems(
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId) {
+        log.info("收到修复所有失败项请求: clusterId={}", clusterId);
+        return hostCheckService.fixAllFailedItems(clusterId);
+    }
+
+    /**
+     * 跳过集群中所有主机的所有失败项
+     */
+    @PostMapping("/skipAllFailedItems")
+    @UserPermission
+    public Result skipAllFailedItems(
+            @RequestParam(name = "clusterId") @NotNull(message = "集群ID不能为空") Integer clusterId) {
+        log.info("收到跳过所有失败项请求: clusterId={}", clusterId);
+        return hostCheckService.skipAllFailedItems(clusterId);
+    }
+
 }

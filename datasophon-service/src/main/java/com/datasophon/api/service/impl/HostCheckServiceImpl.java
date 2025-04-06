@@ -2982,4 +2982,128 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("批量设置主机名任务启动失败: " + e.getMessage());
         }
     }
+
+    @Override
+    public Result fixAllFailedItems(Integer clusterId) {
+        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        if (hostMap == null || hostMap.isEmpty()) {
+            return Result.error("集群未找到或无主机信息");
+        }
+
+        StringBuilder resultMessage = new StringBuilder();
+        boolean hasErrors = false;
+        int totalFixedItems = 0;
+
+        // 遍历所有主机
+        for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+            String hostname = entry.getKey();
+            HostInfo hostInfo = entry.getValue();
+            int hostFixedItems = 0;
+
+            try {
+                // 筛选该主机上所有失败状态的检查项
+                List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
+                        .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
+                        .collect(Collectors.toList());
+
+                if (!failedItems.isEmpty()) {
+                    // 为所有失败项执行修复
+                    boolean success = doHostFix(clusterId, hostInfo, failedItems);
+                    hostFixedItems = failedItems.size();
+                    totalFixedItems += hostFixedItems;
+
+                    if (!success) {
+                        hasErrors = true;
+                        resultMessage.append("主机 ").append(hostname).append(" 的部分检查项修复失败; ");
+                    }
+
+                    // 更新主机的缓存信息
+                    updateHostInfoCache(clusterId, hostInfo);
+                }
+            } catch (Exception e) {
+                hasErrors = true;
+                logger.error("修复主机 {} 的检查项时发生错误: {}", hostname, e.getMessage(), e);
+                resultMessage.append("主机 ").append(hostname).append(" 修复失败: ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        // 更新主机映射缓存
+        updateHostMapInCache(clusterId);
+
+        if (hasErrors) {
+            return Result.error("部分修复失败: " + resultMessage.toString() + "已修复 " + totalFixedItems + " 个项目");
+        } else if (totalFixedItems == 0) {
+            return Result.success("没有发现需要修复的失败项");
+        } else {
+            return Result.success("已成功修复所有失败项，共 " + totalFixedItems + " 个");
+        }
+    }
+
+    @Override
+    public Result skipAllFailedItems(Integer clusterId) {
+        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        if (hostMap == null || hostMap.isEmpty()) {
+            return Result.error("集群未找到或无主机信息");
+        }
+
+        StringBuilder resultMessage = new StringBuilder();
+        boolean hasErrors = false;
+        int totalSkippedItems = 0;
+
+        // 遍历所有主机
+        for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+            String hostname = entry.getKey();
+            HostInfo hostInfo = entry.getValue();
+            int hostSkippedItems = 0;
+
+            try {
+                // 筛选该主机上所有失败状态的检查项
+                List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
+                        .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
+                        .collect(Collectors.toList());
+
+                // 先尝试停止所有正在运行的检查项
+                for (CheckItem item : failedItems) {
+                    try {
+                        stopItemCheck(clusterId, hostname, item.getId());
+                    } catch (Exception e) {
+                        logger.warn("停止检查项 {} 失败: {}", item.getId(), e.getMessage());
+                    }
+                }
+
+                // 将所有失败项状态更新为已跳过
+                for (CheckItem item : failedItems) {
+                    hostInfo.updateCheckItemStatus(item.getId(), CheckItem.Status.SKIPPED, "用户已跳过该检查项");
+
+                    // 记录日志
+                    LoggerFactory.getCheckLogger(this, clusterId, hostname, item.getId())
+                            .info("用户批量跳过了该检查项");
+
+                    hostSkippedItems++;
+                }
+
+                totalSkippedItems += hostSkippedItems;
+
+                // 更新主机的缓存信息
+                if (hostSkippedItems > 0) {
+                    updateHostInfoCache(clusterId, hostInfo);
+                }
+            } catch (Exception e) {
+                hasErrors = true;
+                logger.error("跳过主机 {} 的检查项时发生错误: {}", hostname, e.getMessage(), e);
+                resultMessage.append("主机 ").append(hostname).append(" 跳过失败: ").append(e.getMessage()).append("; ");
+            }
+        }
+
+        // 更新主机映射缓存
+        updateHostMapInCache(clusterId);
+
+        if (hasErrors) {
+            return Result.error("部分跳过失败: " + resultMessage.toString() + "已跳过 " + totalSkippedItems + " 个项目");
+        } else if (totalSkippedItems == 0) {
+            return Result.success("没有发现需要跳过的失败项");
+        } else {
+            return Result.success("已成功跳过所有失败项，共 " + totalSkippedItems + " 个");
+        }
+    }
 }

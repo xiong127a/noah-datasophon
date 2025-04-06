@@ -62,4 +62,6 @@ export default {
   updateHostsFile: path + '/host/check/updateHostsFile', // 更新hosts文件
   batchSetHostname: path + '/host/check/batchSetHostname', // 批量设置主机名
   getTaskProgress: path + '/host/check/getTaskProgress', // 获取任务进度
+  fixAllFailedItems: path + '/host/check/fixAllFailedItems', // 一键修复所有失败项
+  skipAllFailedItems: path + '/host/check/skipAllFailedItems', // 一键跳过所有失败项
 }

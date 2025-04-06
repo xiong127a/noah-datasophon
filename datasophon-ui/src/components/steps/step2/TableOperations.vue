@@ -36,6 +36,24 @@
         <a-icon type="sync" />
         <span>{{ $t('同步hosts文件') }}</span>
       </a-button>
+      
+      <a-button
+        class="apple-button apple-outlined-button apple-success-button"
+        @click="$emit('fix-all-failed')"
+        :disabled="!hasFailedItems"
+      >
+        <a-icon type="tool" />
+        <span>{{ $t('一键修复') }}</span>
+      </a-button>
+      
+      <a-button
+        class="apple-button apple-outlined-button apple-warning-button"
+        @click="$emit('skip-all-failed')"
+        :disabled="!hasFailedItems"
+      >
+        <a-icon type="forward" />
+        <span>{{ $t('一键跳过') }}</span>
+      </a-button>
     </div>
     
     <!-- 右侧开始检查/重试/终止检查三合一按钮 -->
@@ -61,6 +79,11 @@ export default {
     },
     // 是否已开始过检查
     hasStartedCheck: {
+      type: Boolean,
+      default: false
+    },
+    // 是否有失败的检查项
+    hasFailedItems: {
       type: Boolean,
       default: false
     }
@@ -134,6 +157,36 @@ export default {
       
       &:hover {
         background-color: fade(@apple-blue, 5%);
+      }
+      
+      &.apple-success-button {
+        color: @apple-green;
+        border: 1px solid @apple-green;
+        
+        &:hover {
+          background-color: fade(@apple-green, 5%);
+        }
+        
+        &[disabled] {
+          color: fade(@apple-green, 40%);
+          border: 1px solid fade(@apple-green, 40%);
+          cursor: not-allowed;
+        }
+      }
+      
+      &.apple-warning-button {
+        color: @apple-orange;
+        border: 1px solid @apple-orange;
+        
+        &:hover {
+          background-color: fade(@apple-orange, 5%);
+        }
+        
+        &[disabled] {
+          color: fade(@apple-orange, 40%);
+          border: 1px solid fade(@apple-orange, 40%);
+          cursor: not-allowed;
+        }
       }
     }
   }

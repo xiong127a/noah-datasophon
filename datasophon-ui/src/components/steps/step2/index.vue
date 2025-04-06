@@ -38,9 +38,12 @@
       <table-operations 
         :is-checking-active="isCheckingActive"
         :has-started-check="hasStartedCheck"
+        :has-failed-items="hasFailedItems"
         @check-action="handleCheckAction"
         @set-hostname="showHostnameSettingModal"
         @sync-hosts="showSyncHostsModal"
+        @fix-all-failed="fixAllFailedItems"
+        @skip-all-failed="skipAllFailedItems"
       />
       <a-table
           @change="tableChange"
@@ -979,7 +982,17 @@ export default {
         const checkItems = this.checkItemsMap[host.ip] || [];
         return checkItems.some(item => item.status === 'CHECKING');
       });
-    }
+    },
+    // 是否有失败的检查项
+    hasFailedItems() {
+      // 检查是否有主机包含失败的检查项
+      return this.dataSource.some(host => {
+        // 获取该主机的检查项
+        const checkItems = this.checkItemsMap[host.ip] || [];
+        // 检查是否有失败的检查项
+        return checkItems.some(item => item.status === 'FAILED');
+      });
+    },
   },
   methods: {
     /**
@@ -1525,14 +1538,22 @@ export default {
     // 修复所有检查项
     async fixAllCheckItems(ip) {
       try {
-        const res = await this.$axiosPost(global.API.fixAllCheckItems, {
-          clusterId: this.clusterId,
-          ip
+        // 调用API之前显示loading消息 
+        this.$message.loading('正在发送修复指令...', 2);
+        
+        // 使用host.js中定义的API
+        const res = await this.$axiosPost(this.$api.host.fixAllCheckItems, {
+          clusterId: this.clusterId
         });
+        
         if (res.code === 200) {
-          this.$message.success('修复指令已发送');
-          // 通过轮询获取最新状态
-          this.pollingSearch();
+          this.$message.success(res.msg || '修复指令已发送');
+          // 刷新主机列表
+          this.refreshHostList();
+          // 设置定时轮询，跟踪修复进度
+          this.setRefreshInterval(2000);
+        } else {
+          this.$message.error(res.msg || '发送修复指令失败');
         }
       } catch (error) {
         console.error('修复所有检查项失败:', error);
@@ -2105,6 +2126,62 @@ export default {
       
       // 默认情况下，当状态不明确时，如果有主机名则显示主机名，否则显示加载动画
       return record.hostname && record.hostname.trim() !== '';
+    },
+
+    /**
+     * 修复所有失败项
+     */
+    async fixAllFailedItems() {
+      try {
+        // 调用API之前显示loading消息 
+        this.$message.loading('正在发送修复指令...', 2);
+        
+        // 使用global.API直接访问接口
+        const params = {
+          clusterId: this.clusterId
+        };
+        const res = await this.$axiosPost(global.API.fixAllFailedItems, params);
+        
+        if (res.code === 200) {
+          this.$message.success(res.msg || '修复指令已发送');
+          // 刷新主机列表
+          this.refreshHostList();
+          // 设置定时轮询，跟踪修复进度
+          this.setRefreshInterval(2000);
+        } else {
+          this.$message.error(res.msg || '发送修复指令失败');
+        }
+      } catch (error) {
+        console.error('修复所有失败项出错:', error);
+        this.$message.error('修复所有失败项失败');
+      }
+    },
+
+    /**
+     * 跳过所有失败项
+     */
+    async skipAllFailedItems() {
+      try {
+        // 调用API之前显示loading消息
+        this.$message.loading('正在发送跳过指令...', 2);
+        
+        // 使用global.API直接访问接口
+        const params = {
+          clusterId: this.clusterId
+        };
+        const res = await this.$axiosPost(global.API.skipAllFailedItems, params);
+        
+        if (res.code === 200) {
+          this.$message.success(res.msg || '跳过指令已发送');
+          // 刷新主机列表
+          this.refreshHostList();
+        } else {
+          this.$message.error(res.msg || '发送跳过指令失败');
+        }
+      } catch (error) {
+        console.error('跳过所有失败项出错:', error);
+        this.$message.error('跳过所有失败项失败');
+      }
     },
   },
   mounted() {

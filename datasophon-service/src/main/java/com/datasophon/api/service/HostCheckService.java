@@ -314,4 +314,20 @@ public interface HostCheckService {
          * @param clusterId 集群ID
          */
         void updateHostMapInCache(Integer clusterId);
+
+        /**
+         * 修复集群中所有主机的所有失败项
+         * 
+         * @param clusterId 集群ID
+         * @return 操作结果
+         */
+        Result fixAllFailedItems(Integer clusterId);
+
+        /**
+         * 跳过集群中所有主机的所有失败项
+         * 
+         * @param clusterId 集群ID
+         * @return 操作结果
+         */
+        Result skipAllFailedItems(Integer clusterId);
 }
