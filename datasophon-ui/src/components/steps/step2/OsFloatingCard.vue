@@ -147,7 +147,8 @@
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.memoryInfo">
                   <div class="info-primary">
-                    {{ osInfo.memoryInfo.totalMemoryGB }} GB
+                    <span v-if="osInfo.memoryInfo.totalMemoryFormatted" class="memory-highlight">{{ osInfo.memoryInfo.totalMemoryFormatted }}</span>
+                    <span v-else>{{ osInfo.memoryInfo.totalMemoryGB }} GB</span>
                     <span v-if="osInfo.memoryInfo.memoryType" class="memory-type">
                       {{ osInfo.memoryInfo.memoryType }}
                     </span>
@@ -157,13 +158,19 @@
                       {{ osInfo.memoryInfo.frequency }} MHz
                     </span>
                     <span class="memory-usage">
-                      已用: {{ osInfo.memoryInfo.usedMemoryGB }} GB ({{ calculateMemoryUsagePercent() }}%)
+                      已用: <span v-if="osInfo.memoryInfo.usedMemoryFormatted" class="memory-highlight">{{ osInfo.memoryInfo.usedMemoryFormatted }}</span>
+                      <span v-else>{{ osInfo.memoryInfo.usedMemoryGB }} GB</span> ({{ calculateMemoryUsagePercent() }}%)
                     </span>
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateMemoryUsagePercent() }}%</span>
-                      <span>{{ osInfo.memoryInfo.usedMemoryGB }}/{{ osInfo.memoryInfo.totalMemoryGB }} GB</span>
+                      <span v-if="osInfo.memoryInfo.usedMemoryFormatted && osInfo.memoryInfo.totalMemoryFormatted">
+                        {{ osInfo.memoryInfo.usedMemoryFormatted }}/{{ osInfo.memoryInfo.totalMemoryFormatted }}
+                      </span>
+                      <span v-else>
+                        {{ osInfo.memoryInfo.usedMemoryGB }}/{{ osInfo.memoryInfo.totalMemoryGB }} GB
+                      </span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -217,15 +224,26 @@
               <div class="hardware-info" v-else>
                 <template v-if="osInfo && osInfo.diskInfo && osInfo.diskInfo.totalDiskSpace">
                   <div class="info-primary">
-                    {{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB 存储空间
+                    <span v-if="osInfo.diskInfo.totalDiskSpaceFormatted" class="disk-highlight">{{ osInfo.diskInfo.totalDiskSpaceFormatted }}</span>
+                    <span v-else>{{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB</span> 存储空间
                   </div>
                   <div class="info-secondary">
-                    已用 {{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }} GB，可用 {{ (osInfo.diskInfo.availableDiskSpace || 0).toFixed(1) }} GB
+                    已用 
+                    <span v-if="osInfo.diskInfo.usedDiskSpaceFormatted" class="disk-highlight">{{ osInfo.diskInfo.usedDiskSpaceFormatted }}</span>
+                    <span v-else>{{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }} GB</span>，
+                    可用 
+                    <span v-if="osInfo.diskInfo.availableDiskSpaceFormatted" class="disk-highlight">{{ osInfo.diskInfo.availableDiskSpaceFormatted }}</span>
+                    <span v-else>{{ (osInfo.diskInfo.availableDiskSpace || 0).toFixed(1) }} GB</span>
                   </div>
                   <div class="usage-bar-container">
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateDiskUsagePercent() }}%</span>
-                      <span>{{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }}/{{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB</span>
+                      <span v-if="osInfo.diskInfo.usedDiskSpaceFormatted && osInfo.diskInfo.totalDiskSpaceFormatted">
+                        {{ osInfo.diskInfo.usedDiskSpaceFormatted }}/{{ osInfo.diskInfo.totalDiskSpaceFormatted }}
+                      </span>
+                      <span v-else>
+                        {{ (osInfo.diskInfo.usedDiskSpace || 0).toFixed(1) }}/{{ osInfo.diskInfo.totalDiskSpace.toFixed(1) }} GB
+                      </span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -328,10 +346,16 @@
               <div class="hardware-info" v-else>
                 <template v-if="hasSwapEnabled">
                   <div class="info-primary">
-                    {{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }} 交换空间
+                    <span v-if="osInfo.swapInfo.totalSwapGB" class="swap-highlight">{{ osInfo.swapInfo.totalSwapGB }}</span>
+                    <span v-else>{{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }}</span> 交换空间
                   </div>
                   <div class="info-secondary">
-                    已用 {{ osInfo.swapInfo.usedSwapFormatted }} {{ osInfo.swapInfo.usedSwapUnit }}，可用 {{ osInfo.swapInfo.availableSwapFormatted }} {{ osInfo.swapInfo.availableSwapUnit }}
+                    已用 
+                    <span v-if="osInfo.swapInfo.usedSwapGB" class="swap-highlight">{{ osInfo.swapInfo.usedSwapGB }}</span>
+                    <span v-else>{{ osInfo.swapInfo.usedSwapFormatted }} {{ osInfo.swapInfo.usedSwapUnit }}</span>，
+                    可用 
+                    <span v-if="osInfo.swapInfo.freeSwapGB" class="swap-highlight">{{ osInfo.swapInfo.freeSwapGB }}</span>
+                    <span v-else>{{ osInfo.swapInfo.availableSwapFormatted }} {{ osInfo.swapInfo.availableSwapUnit }}</span>
                   </div>
                   <div 
                     class="usage-bar-container" 
@@ -339,7 +363,12 @@
                   >
                     <div class="usage-bar-header">
                       <span>使用率 {{ calculateSwapUsagePercent() }}%</span>
-                      <span>{{ osInfo.swapInfo.usedSwapFormatted }}/{{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }}</span>
+                      <span v-if="osInfo.swapInfo.usedSwapGB && osInfo.swapInfo.totalSwapGB">
+                        {{ osInfo.swapInfo.usedSwapGB }}/{{ osInfo.swapInfo.totalSwapGB }}
+                      </span>
+                      <span v-else>
+                        {{ osInfo.swapInfo.usedSwapFormatted }}/{{ osInfo.swapInfo.totalSwapFormatted }} {{ osInfo.swapInfo.totalSwapUnit }}
+                      </span>
                     </div>
                     <div class="usage-bar">
                       <div 
@@ -1874,5 +1903,21 @@ export default {
   50% {
     opacity: 1;
   }
+}
+
+.memory-highlight,
+.disk-highlight,
+.swap-highlight {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 与CPU频率一致的样式 */
+.chip-frequency {
+  margin-left: 6px;
+  color: #1890ff;
+  font-weight: bold;
 }
 </style> 

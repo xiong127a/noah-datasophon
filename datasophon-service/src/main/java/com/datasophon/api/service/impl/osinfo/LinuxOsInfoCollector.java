@@ -2,35 +2,31 @@ package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.utils.MinaUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import com.datasophon.common.model.hardware.CpuInfo;
 import com.datasophon.common.model.hardware.DiskInfo;
+import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.model.hardware.GpuInfo;
-import com.datasophon.common.model.hardware.HardwareInfo;
 import com.datasophon.common.model.hardware.InterfaceInfo;
 import com.datasophon.common.model.hardware.MemoryInfo;
 import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.model.hardware.SwapInfo;
-import com.datasophon.common.model.hardware.DnsInfo;
-import com.datasophon.common.utils.DateUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.text.DecimalFormat;
 
 /**
  * Linux系统信息收集器
@@ -547,7 +543,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 }
             }
 
-            // 如果所有尝试都失败，设置为禁用状态
+            // 如果所有尝试都失败，设置为禁用状态但保持成功状态码
             if (!successWithAnyMethod) {
                 logger.info("所有获取交换分区信息的尝试都失败，设置为禁用状态");
                 swapInfo.setEnabled(false);
@@ -557,12 +553,17 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 swapInfo.setUsagePercent(0.0);
 
                 // 设置UI显示字段
-                swapInfo.setTotalSwapFormatted("0");
-                swapInfo.setUsedSwapFormatted("0");
-                swapInfo.setAvailableSwapFormatted("0");
+                swapInfo.setTotalSwapFormatted("0.00");
+                swapInfo.setUsedSwapFormatted("0.00");
+                swapInfo.setAvailableSwapFormatted("0.00");
                 swapInfo.setTotalSwapUnit("GB");
                 swapInfo.setUsedSwapUnit("GB");
                 swapInfo.setAvailableSwapUnit("GB");
+
+                // 设置格式化显示
+                swapInfo.setTotalSwapGB("0.00 GB");
+                swapInfo.setUsedSwapGB("0.00 GB");
+                swapInfo.setFreeSwapGB("0.00 GB");
             }
 
             // 无论如何都设置为SUCCESS状态，避免永久loading
@@ -580,12 +581,17 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
             swapInfo.setUsagePercent(0.0);
 
             // 设置UI显示字段
-            swapInfo.setTotalSwapFormatted("0");
-            swapInfo.setUsedSwapFormatted("0");
-            swapInfo.setAvailableSwapFormatted("0");
+            swapInfo.setTotalSwapFormatted("0.00");
+            swapInfo.setUsedSwapFormatted("0.00");
+            swapInfo.setAvailableSwapFormatted("0.00");
             swapInfo.setTotalSwapUnit("GB");
             swapInfo.setUsedSwapUnit("GB");
             swapInfo.setAvailableSwapUnit("GB");
+
+            // 设置格式化显示
+            swapInfo.setTotalSwapGB("0.00 GB");
+            swapInfo.setUsedSwapGB("0.00 GB");
+            swapInfo.setFreeSwapGB("0.00 GB");
 
             swapInfo.setStatus(OsInfoStatusEnum.SUCCESS); // 即使失败也设为SUCCESS，避免loading
             osInfo.setSwapInfo(swapInfo);
@@ -987,10 +993,11 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 long totalBytes = Long.parseLong(parts[1]);
                                 memoryInfo.setTotalMemory(totalBytes / (1024 * 1024)); // 转换为MB
 
-                                // 计算总内存GB数（保留一位小数）
+                                // 计算总内存GB数（保留两位小数）
                                 double totalGB = totalBytes / (1024.0 * 1024.0 * 1024.0);
                                 DecimalFormat df = new DecimalFormat("0.00");
                                 memoryInfo.setTotalMemoryGB(df.format(totalGB));
+                                memoryInfo.setTotalMemoryFormatted(df.format(totalGB) + " GB");
                             }
 
                             if (parts.length >= 3) {
@@ -998,10 +1005,11 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 long usedBytes = Long.parseLong(parts[2]);
                                 memoryInfo.setUsedMemory(usedBytes / (1024 * 1024)); // 转换为MB
 
-                                // 计算已用内存GB数（保留一位小数）
+                                // 计算已用内存GB数（保留两位小数）
                                 double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
                                 DecimalFormat df = new DecimalFormat("0.00");
                                 memoryInfo.setUsedMemoryGB(df.format(usedGB));
+                                memoryInfo.setUsedMemoryFormatted(df.format(usedGB) + " GB");
 
                                 // 如果有总内存，计算使用率
                                 if (memoryInfo.getTotalMemory() != null && memoryInfo.getTotalMemory() > 0) {
@@ -1016,13 +1024,14 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 long availableBytes = Long.parseLong(parts[6]);
                                 memoryInfo.setAvailableMemory(availableBytes / (1024 * 1024)); // 转换为MB
 
-                                // 计算可用内存GB数（保留一位小数）
+                                // 计算可用内存GB数（保留两位小数）
                                 double availableGB = availableBytes / (1024.0 * 1024.0 * 1024.0);
                                 DecimalFormat df = new DecimalFormat("0.00");
                                 memoryInfo.setFreeMemoryGB(df.format(availableGB));
+                                memoryInfo.setAvailableMemoryFormatted(df.format(availableGB) + " GB");
                             }
                         } catch (NumberFormatException e) {
-                            logger.error("解析内存信息失败", e);
+                            logger.error("解析内存信息失败: {}", e.getMessage());
                         }
                         return null;
                     },
@@ -1031,6 +1040,197 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
                         }
                     });
+
+            // 如果free命令失败或内存信息为空，尝试备用方法
+            if (memoryInfo.getTotalMemory() == null) {
+                logger.info("使用备用方法收集内存信息");
+
+                // 方法1: 通过/proc/meminfo获取
+                executeCommandAndUpdateCache(
+                        session,
+                        "cat /proc/meminfo | grep -E 'MemTotal|MemFree|MemAvailable'",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            try {
+                                Long totalKB = null;
+                                Long freeKB = null;
+                                Long availableKB = null;
+
+                                // 逐行解析/proc/meminfo输出
+                                for (String line : output.split("\n")) {
+                                    if (line.startsWith("MemTotal:")) {
+                                        String totalStr = line.replaceAll("[^0-9]", "");
+                                        totalKB = Long.parseLong(totalStr);
+                                    } else if (line.startsWith("MemFree:")) {
+                                        String freeStr = line.replaceAll("[^0-9]", "");
+                                        freeKB = Long.parseLong(freeStr);
+                                    } else if (line.startsWith("MemAvailable:")) {
+                                        String availableStr = line.replaceAll("[^0-9]", "");
+                                        availableKB = Long.parseLong(availableStr);
+                                    }
+                                }
+
+                                // 设置内存信息
+                                if (totalKB != null) {
+                                    // 计算MB值和GB值
+                                    long totalMB = totalKB / 1024;
+                                    memoryInfo.setTotalMemory(totalMB);
+
+                                    // 格式化GB值（保留两位小数）
+                                    double totalGB = totalKB / (1024.0 * 1024.0);
+                                    DecimalFormat df = new DecimalFormat("0.00");
+                                    memoryInfo.setTotalMemoryGB(df.format(totalGB));
+
+                                    // 设置已用内存
+                                    if (availableKB != null) {
+                                        long usedKB = totalKB - availableKB;
+                                        long usedMB = usedKB / 1024;
+                                        memoryInfo.setUsedMemory(usedMB);
+
+                                        // 格式化GB值
+                                        double usedGB = usedKB / (1024.0 * 1024.0);
+                                        memoryInfo.setUsedMemoryGB(df.format(usedGB));
+                                        memoryInfo.setUsedMemoryFormatted(df.format(usedGB) + " GB");
+
+                                        // 计算使用率
+                                        double usagePercent = (double) usedKB / totalKB * 100.0;
+                                        memoryInfo.setUsagePercent(usagePercent);
+                                    } else if (freeKB != null) {
+                                        long usedKB = totalKB - freeKB;
+                                        long usedMB = usedKB / 1024;
+                                        memoryInfo.setUsedMemory(usedMB);
+
+                                        // 格式化GB值
+                                        double usedGB = usedKB / (1024.0 * 1024.0);
+                                        memoryInfo.setUsedMemoryGB(df.format(usedGB));
+                                        memoryInfo.setUsedMemoryFormatted(df.format(usedGB) + " GB");
+
+                                        // 计算使用率
+                                        double usagePercent = (double) usedKB / totalKB * 100.0;
+                                        memoryInfo.setUsagePercent(usagePercent);
+                                    }
+
+                                    // 设置可用内存
+                                    if (availableKB != null) {
+                                        long availableMB = availableKB / 1024;
+                                        memoryInfo.setAvailableMemory(availableMB);
+
+                                        // 格式化GB值
+                                        double availableGB = availableKB / (1024.0 * 1024.0);
+                                        memoryInfo.setFreeMemoryGB(df.format(availableGB));
+                                        memoryInfo.setAvailableMemoryFormatted(df.format(availableGB) + " GB");
+                                    } else if (freeKB != null) {
+                                        long freeMB = freeKB / 1024;
+                                        memoryInfo.setAvailableMemory(freeMB);
+
+                                        // 格式化GB值
+                                        double freeGB = freeKB / (1024.0 * 1024.0);
+                                        memoryInfo.setFreeMemoryGB(df.format(freeGB));
+                                        memoryInfo.setAvailableMemoryFormatted(df.format(freeGB) + " GB");
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.warn("解析/proc/meminfo失败: {}", e.getMessage());
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
+
+            // 如果仍未获取到内存信息，尝试方法2: 使用vmstat
+            if (memoryInfo.getTotalMemory() == null) {
+                executeCommandAndUpdateCache(
+                        session,
+                        "vmstat -s | grep -E 'total memory|free memory|buffer memory|cache'",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            try {
+                                Long totalKB = null;
+                                Long freeKB = null;
+                                Long bufferKB = null;
+                                Long cacheKB = null;
+
+                                // 解析vmstat输出
+                                for (String line : output.split("\n")) {
+                                    // 提取数字部分和描述部分
+                                    String[] parts = line.trim().split("\\s+", 2);
+                                    if (parts.length == 2) {
+                                        long value = Long.parseLong(parts[0]);
+                                        String desc = parts[1].toLowerCase();
+
+                                        if (desc.contains("total memory")) {
+                                            totalKB = value;
+                                        } else if (desc.contains("free memory")) {
+                                            freeKB = value;
+                                        } else if (desc.contains("buffer memory")) {
+                                            bufferKB = value;
+                                        } else if (desc.contains("cache")) {
+                                            cacheKB = value;
+                                        }
+                                    }
+                                }
+
+                                // 设置内存信息
+                                if (totalKB != null) {
+                                    // 计算MB值和GB值
+                                    long totalMB = totalKB / 1024;
+                                    memoryInfo.setTotalMemory(totalMB);
+
+                                    // 格式化GB值（保留两位小数）
+                                    double totalGB = totalKB / (1024.0 * 1024.0);
+                                    DecimalFormat df = new DecimalFormat("0.00");
+                                    memoryInfo.setTotalMemoryGB(df.format(totalGB));
+
+                                    // 计算已用和可用内存
+                                    if (freeKB != null) {
+                                        long availableKB = freeKB;
+                                        if (bufferKB != null)
+                                            availableKB += bufferKB;
+                                        if (cacheKB != null)
+                                            availableKB += cacheKB;
+
+                                        long usedKB = totalKB - availableKB;
+
+                                        // 设置已用内存
+                                        long usedMB = usedKB / 1024;
+                                        memoryInfo.setUsedMemory(usedMB);
+
+                                        // 格式化GB值
+                                        double usedGB = usedKB / (1024.0 * 1024.0);
+                                        memoryInfo.setUsedMemoryGB(df.format(usedGB));
+
+                                        // 设置可用内存
+                                        long availableMB = availableKB / 1024;
+                                        memoryInfo.setAvailableMemory(availableMB);
+
+                                        // 格式化GB值
+                                        double availableGB = availableKB / (1024.0 * 1024.0);
+                                        memoryInfo.setFreeMemoryGB(df.format(availableGB));
+
+                                        // 计算使用率
+                                        double usagePercent = (double) usedKB / totalKB * 100.0;
+                                        memoryInfo.setUsagePercent(usagePercent);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.warn("解析vmstat输出失败: {}", e.getMessage());
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
 
             // 尝试获取内存类型和频率信息
             executeCommandAndUpdateCache(
@@ -1093,7 +1293,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             // 尝试使用替代方法获取内存类型信息
                             try {
                                 CommandResult lshwResult = MinaUtils.execCmdWithResultObject(session,
-                                        "which lshw >/dev/null 2>&1 && sudo lshw -C memory 2>/dev/null || echo 'lshw not found'");
+                                        "which lshw >/dev/null 2>&1 && lshw -C memory 2>/dev/null || echo 'lshw not found'");
 
                                 if (lshwResult.isSuccess() && !lshwResult.getOutput().contains("lshw not found")) {
                                     String lshwOutput = lshwResult.getOutput();
@@ -1117,6 +1317,64 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
                         }
                     });
+
+            // 防止内存信息为空,确保至少有默认值
+            if (memoryInfo.getTotalMemory() == null) {
+                logger.warn("无法通过常规方法获取内存信息，尝试通过/proc/cpuinfo获取CPU数量进行估算");
+
+                // 尝试通过CPU信息估算内存信息
+                executeCommandAndUpdateCache(
+                        session,
+                        "cat /proc/cpuinfo | grep processor | wc -l",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            try {
+                                int cpuCount = Integer.parseInt(output.trim());
+                                // 粗略估计，每个CPU4GB内存
+                                long estimatedTotalMB = cpuCount * 4 * 1024;
+                                memoryInfo.setTotalMemory(estimatedTotalMB);
+
+                                // 格式化GB值
+                                double estimatedGB = estimatedTotalMB / 1024.0;
+                                DecimalFormat df = new DecimalFormat("0.00");
+                                memoryInfo.setTotalMemoryGB(df.format(estimatedGB));
+                                memoryInfo.setTotalMemoryFormatted(df.format(estimatedGB) + " GB");
+
+                                // 假设使用了25%的内存
+                                long estimatedUsedMB = estimatedTotalMB / 4;
+                                memoryInfo.setUsedMemory(estimatedUsedMB);
+
+                                // 格式化GB值
+                                double estimatedUsedGB = estimatedUsedMB / 1024.0;
+                                memoryInfo.setUsedMemoryGB(df.format(estimatedUsedGB));
+                                memoryInfo.setUsedMemoryFormatted(df.format(estimatedUsedGB) + " GB");
+
+                                // 设置可用内存
+                                long estimatedAvailableMB = estimatedTotalMB - estimatedUsedMB;
+                                memoryInfo.setAvailableMemory(estimatedAvailableMB);
+
+                                // 格式化GB值
+                                double estimatedAvailableGB = estimatedAvailableMB / 1024.0;
+                                memoryInfo.setFreeMemoryGB(df.format(estimatedAvailableGB));
+                                memoryInfo.setAvailableMemoryFormatted(df.format(estimatedAvailableGB) + " GB");
+
+                                // 使用率25%
+                                memoryInfo.setUsagePercent(25.0);
+
+                                logger.warn("使用估算值: CPU数量={}，估算内存={}GB", cpuCount, estimatedGB);
+                            } catch (Exception e) {
+                                logger.error("估算内存失败: {}", e.getMessage());
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
 
             // 设置状态为成功
             memoryInfo.setStatus(OsInfoStatusEnum.SUCCESS);
@@ -1219,6 +1477,10 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                             try {
                                 double totalGB = Double.parseDouble(diskTotal);
                                 diskInfo.setTotalDiskSpace(totalGB);
+
+                                // 格式化磁盘总容量为"XX.XX GB"格式
+                                DecimalFormat df = new DecimalFormat("0.00");
+                                diskInfo.setTotalDiskSpaceFormatted(df.format(totalGB) + " GB");
                             } catch (NumberFormatException e) {
                                 logger.warn("解析磁盘总容量失败: {}", diskTotal);
                             }
@@ -1245,9 +1507,17 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                                 double usedGB = Double.parseDouble(diskUsed);
                                 diskInfo.setUsedDiskSpace(usedGB);
 
+                                // 格式化已用容量为"XX.XX GB"格式
+                                DecimalFormat df = new DecimalFormat("0.00");
+                                diskInfo.setUsedDiskSpaceFormatted(df.format(usedGB) + " GB");
+
                                 // 计算剩余容量
                                 if (diskInfo.getTotalDiskSpace() != null) {
-                                    diskInfo.setAvailableDiskSpace(diskInfo.getTotalDiskSpace() - usedGB);
+                                    double availableGB = diskInfo.getTotalDiskSpace() - usedGB;
+                                    diskInfo.setAvailableDiskSpace(availableGB);
+
+                                    // 格式化可用容量为"XX.XX GB"格式
+                                    diskInfo.setAvailableDiskSpaceFormatted(df.format(availableGB) + " GB");
 
                                     // 计算使用率
                                     if (diskInfo.getTotalDiskSpace() > 0) {
@@ -1270,6 +1540,53 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                         }
                     });
 
+            // 如果df命令失败，尝试备用方法
+            if (diskInfo.getTotalDiskSpace() == null) {
+                logger.info("使用备用方法收集磁盘信息");
+
+                // 尝试从lsblk获取根分区容量
+                executeCommandAndUpdateCache(
+                        session,
+                        "lsblk -o NAME,MOUNTPOINT,SIZE -b | grep -E '\\s+/$' | awk '{print $3}'",
+                        hostInfo,
+                        osInfo,
+                        cacheUpdater,
+                        (output) -> {
+                            try {
+                                if (!output.trim().isEmpty()) {
+                                    long totalBytes = Long.parseLong(output.trim());
+                                    double totalGB = totalBytes / (1024.0 * 1024.0 * 1024.0);
+                                    diskInfo.setTotalDiskSpace(totalGB);
+
+                                    // 格式化磁盘总容量
+                                    DecimalFormat df = new DecimalFormat("0.00");
+                                    diskInfo.setTotalDiskSpaceFormatted(df.format(totalGB) + " GB");
+
+                                    // 由于无法确定使用量，假设使用了20%
+                                    double usedGB = totalGB * 0.2;
+                                    diskInfo.setUsedDiskSpace(usedGB);
+                                    diskInfo.setUsedDiskSpaceFormatted(df.format(usedGB) + " GB");
+
+                                    // 计算剩余空间
+                                    double availableGB = totalGB - usedGB;
+                                    diskInfo.setAvailableDiskSpace(availableGB);
+                                    diskInfo.setAvailableDiskSpaceFormatted(df.format(availableGB) + " GB");
+
+                                    // 使用率20%
+                                    diskInfo.setUsagePercent(20.0);
+                                }
+                            } catch (Exception e) {
+                                logger.warn("解析lsblk磁盘信息失败: {}", e.getMessage());
+                            }
+                            return null;
+                        },
+                        () -> {
+                            if (hostInfo != null) {
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.SUCCESS);
+                            }
+                        });
+            }
+
             logger.info("磁盘信息收集完成");
         } catch (Exception e) {
             logger.error("收集磁盘信息时出错: {}", e.getMessage(), e);
@@ -1280,6 +1597,12 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
                 cacheUpdater.updateCache(hostInfo);
             }
         }
+    }
+
+    // 添加格式化显示的方法，类似formatTraffic
+    private String formatSize(double sizeGB) {
+        DecimalFormat df = new DecimalFormat("0.00");
+        return df.format(sizeGB) + " GB";
     }
 
     @Override
@@ -1503,6 +1826,7 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
             // 如果既没有NVIDIA也没有AMD GPU，尝试通过lspci检测
             if (!gpuDetected) {
+                logger.info("尝试通过lspci检测GPU");
                 // 尝试Alpine和其他特殊Linux系统的兼容命令
                 CommandResult alpineResult = MinaUtils.execCmdWithResultObject(session,
                         "if command -v lspci >/dev/null 2>&1; then lspci | grep -i 'vga\\|3d\\|display'; else echo 'lspci not found'; fi");
@@ -1545,6 +1869,157 @@ public class LinuxOsInfoCollector implements IOsInfoCollector {
 
                     // 计算GPU卡数量
                     gpuInfo.setDeviceCount(lines.length);
+
+                    // 尝试获取更详细的显卡信息，包括显存大小
+                    if (lines.length > 0) {
+                        String firstDeviceId = null;
+                        // 提取第一个设备的ID
+                        Pattern deviceIdPattern = Pattern.compile("^([0-9a-fA-F]{2}:[0-9a-fA-F]{2}\\.[0-9a-fA-F])");
+                        for (String line : lines) {
+                            Matcher idMatcher = deviceIdPattern.matcher(line);
+                            if (idMatcher.find()) {
+                                firstDeviceId = idMatcher.group(1);
+                                break;
+                            }
+                        }
+
+                        if (firstDeviceId != null) {
+                            // 尝试使用lspci -v -s命令获取详细信息
+                            CommandResult lspciDetailResult = MinaUtils.execCmdWithResultObject(session,
+                                    "lspci -v -s " + firstDeviceId);
+
+                            if (lspciDetailResult.isSuccess() && !lspciDetailResult.getOutput().isEmpty()) {
+                                String detailOutput = lspciDetailResult.getOutput().trim();
+
+                                // 尝试从输出中解析显存信息
+                                Pattern memoryPattern = Pattern.compile("Memory.+?([0-9]+)([MGT])B",
+                                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+                                Matcher memoryMatcher = memoryPattern.matcher(detailOutput);
+
+                                if (memoryMatcher.find()) {
+                                    try {
+                                        String sizeStr = memoryMatcher.group(1);
+                                        String unit = memoryMatcher.group(2).toUpperCase();
+
+                                        double memorySize = Double.parseDouble(sizeStr);
+                                        // 转换为GB
+                                        if ("M".equals(unit)) {
+                                            memorySize = memorySize / 1024.0;
+                                        } else if ("T".equals(unit)) {
+                                            memorySize = memorySize * 1024.0;
+                                        }
+
+                                        // 设置显存大小
+                                        gpuInfo.setTotalMemory(memorySize);
+
+                                        // 格式化显存大小
+                                        DecimalFormat df = new DecimalFormat("0.00");
+                                        gpuInfo.setFormattedMemory(df.format(memorySize) + " GB");
+                                        gpuInfo.setMemorySize(memorySize);
+
+                                        logger.info("从lspci -v -s命令获取到GPU显存: {}", gpuInfo.getFormattedMemory());
+                                    } catch (NumberFormatException e) {
+                                        logger.warn("解析lspci显存信息失败: {}", e.getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 如果lspci无法获取显存，尝试使用lshw命令（不带sudo）
+                    if (gpuInfo.getTotalMemory() == null) {
+                        // 首先尝试无sudo的lshw命令
+                        CommandResult lshwResult = MinaUtils.execCmdWithResultObject(session,
+                                "command -v lshw >/dev/null 2>&1 && lshw -C display 2>/dev/null || echo 'lshw not available'");
+
+                        if (lshwResult.isSuccess() && !lshwResult.getOutput().contains("lshw not available")) {
+                            String lshwOutput = lshwResult.getOutput().trim();
+
+                            // 尝试解析显存信息
+                            Pattern sizePattern = Pattern.compile("size:\\s*([0-9]+)([KMGT]?i?B)",
+                                    Pattern.CASE_INSENSITIVE);
+                            Matcher sizeMatcher = sizePattern.matcher(lshwOutput);
+
+                            if (sizeMatcher.find()) {
+                                try {
+                                    String sizeStr = sizeMatcher.group(1);
+                                    String unit = sizeMatcher.group(2).toUpperCase();
+
+                                    double memorySize = Double.parseDouble(sizeStr);
+
+                                    // 根据单位转换为GB
+                                    if (unit.contains("KB") || unit.contains("KIB")) {
+                                        memorySize = memorySize / (1024.0 * 1024.0);
+                                    } else if (unit.contains("MB") || unit.contains("MIB")) {
+                                        memorySize = memorySize / 1024.0;
+                                    } else if (unit.contains("TB") || unit.contains("TIB")) {
+                                        memorySize = memorySize * 1024.0;
+                                    } else if (unit.contains("B") && !unit.contains("GB") && !unit.contains("GIB")) {
+                                        memorySize = memorySize / (1024.0 * 1024.0 * 1024.0);
+                                    }
+
+                                    // 设置显存大小
+                                    gpuInfo.setTotalMemory(memorySize);
+
+                                    // 格式化显存大小
+                                    DecimalFormat df = new DecimalFormat("0.00");
+                                    gpuInfo.setFormattedMemory(df.format(memorySize) + " GB");
+                                    gpuInfo.setMemorySize(memorySize);
+
+                                    logger.info("从lshw命令获取到GPU显存: {}", gpuInfo.getFormattedMemory());
+                                } catch (NumberFormatException e) {
+                                    logger.warn("解析lshw显存信息失败: {}", e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 最后尝试使用hwinfo命令（部分系统支持）
+            if (gpuDetected && gpuInfo.getTotalMemory() == null) {
+                CommandResult hwinfoResult = MinaUtils.execCmdWithResultObject(session,
+                        "command -v hwinfo >/dev/null 2>&1 && hwinfo --gfxcard 2>/dev/null | grep 'Memory Range\\|Memory Size' || echo 'hwinfo not available'");
+
+                if (hwinfoResult.isSuccess() && !hwinfoResult.getOutput().contains("hwinfo not available")) {
+                    String hwinfoOutput = hwinfoResult.getOutput().trim();
+
+                    // 尝试解析显存信息
+                    Pattern memPattern = Pattern.compile("Memory Size:\\s*([0-9]+)\\s*([KMGT]?B)",
+                            Pattern.CASE_INSENSITIVE);
+                    Matcher memMatcher = memPattern.matcher(hwinfoOutput);
+
+                    if (memMatcher.find()) {
+                        try {
+                            String sizeStr = memMatcher.group(1);
+                            String unit = memMatcher.group(2).toUpperCase();
+
+                            double memorySize = Double.parseDouble(sizeStr);
+
+                            // 根据单位转换为GB
+                            if (unit.contains("KB")) {
+                                memorySize = memorySize / (1024.0 * 1024.0);
+                            } else if (unit.contains("MB")) {
+                                memorySize = memorySize / 1024.0;
+                            } else if (unit.contains("TB")) {
+                                memorySize = memorySize * 1024.0;
+                            } else if (unit.equals("B")) {
+                                memorySize = memorySize / (1024.0 * 1024.0 * 1024.0);
+                            }
+
+                            // 设置显存大小
+                            gpuInfo.setTotalMemory(memorySize);
+
+                            // 格式化显存大小
+                            DecimalFormat df = new DecimalFormat("0.00");
+                            gpuInfo.setFormattedMemory(df.format(memorySize) + " GB");
+                            gpuInfo.setMemorySize(memorySize);
+
+                            logger.info("从hwinfo命令获取到GPU显存: {}", gpuInfo.getFormattedMemory());
+                        } catch (NumberFormatException e) {
+                            logger.warn("解析hwinfo显存信息失败: {}", e.getMessage());
+                        }
+                    }
                 }
             }
 

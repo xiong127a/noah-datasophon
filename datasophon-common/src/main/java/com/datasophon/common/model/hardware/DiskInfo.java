@@ -60,6 +60,21 @@ public class DiskInfo extends HardwareInfo {
     private Double writeSpeed;
 
     /**
+     * 总磁盘空间格式化显示（如：128.50 GB）
+     */
+    private String totalDiskSpaceFormatted;
+
+    /**
+     * 已使用磁盘空间格式化显示（如：64.25 GB）
+     */
+    private String usedDiskSpaceFormatted;
+
+    /**
+     * 可用磁盘空间格式化显示（如：64.25 GB）
+     */
+    private String availableDiskSpaceFormatted;
+
+    /**
      * 物理磁盘信息列表
      */
     private List<PhysicalDisk> physicalDisks;

@@ -45,6 +45,21 @@ public class MemoryInfo extends HardwareInfo {
     private String freeMemoryGB;
 
     /**
+     * 总内存格式化显示（如：16.00 GB）
+     */
+    private String totalMemoryFormatted;
+
+    /**
+     * 已使用内存格式化显示（如：8.50 GB）
+     */
+    private String usedMemoryFormatted;
+
+    /**
+     * 可用内存格式化显示（如：7.50 GB）
+     */
+    private String availableMemoryFormatted;
+
+    /**
      * 内存使用率(%)
      */
     private Double usagePercent;
