@@ -92,6 +92,9 @@ public class OsInfoServiceImpl implements OsInfoService {
     // 每个主机的最大连接数
     private static final int MAX_CONNECTIONS_PER_HOST = 2;
 
+    // 最大同时处理的主机数量
+    private static final int MAX_CONCURRENT_HOSTS = 10;
+
     // 初始化
     public OsInfoServiceImpl() {
         this.queueManager = new HostInfoCollectionQueueManager(this);
@@ -276,7 +279,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         private final AtomicInteger processingHostCount = new AtomicInteger(0);
 
         // 最大同时处理的主机数量
-        private static final int MAX_CONCURRENT_HOSTS = 5;
+        private static final int MAX_CONCURRENT_HOSTS = 10;
 
         // 总共处理的主机数量
         private final AtomicInteger totalHostCount = new AtomicInteger(0);

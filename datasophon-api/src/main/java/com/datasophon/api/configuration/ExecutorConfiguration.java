@@ -45,7 +45,7 @@ public class ExecutorConfiguration {
      */
     @Bean(name = "osInfoExecutor")
     public ExecutorService osInfoExecutor() {
-        return createThreadPool("os-info-executor", 10);
+        return createThreadPool("os-info-executor", 20);
     }
 
     /**
