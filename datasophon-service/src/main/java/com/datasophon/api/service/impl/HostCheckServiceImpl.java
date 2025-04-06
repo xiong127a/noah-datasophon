@@ -2726,11 +2726,103 @@ public class HostCheckServiceImpl implements HostCheckService {
                 index++;
             }
 
-            // 初始化任务进度
+            // 生成hosts文件预览内容，用于后续设置hosts文件
+            HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId);
+            if (hostsFilePreview == null) {
+                logger.warn("生成hosts文件预览内容失败，将只设置主机名，不同步hosts文件");
+            }
+
+            // 创建一个合并的任务进度对象，包含主机名设置和hosts文件同步
             String taskId = TaskProgressHelper.initBatchSetHostnameTask(clusterId, hostnamePreview);
 
-            // 使用异步服务执行批量设置主机名任务
-            asyncCheckService.batchSetHostnameTask(taskId, clusterId, hostMap, hostnamePreview);
+            // 创建并执行合并的任务：主机名设置+hosts文件同步
+            CompletableFuture.runAsync(() -> {
+                try {
+                    logger.info("开始执行主机名设置和hosts文件同步合并任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
+
+                    // 处理每台主机，在同一个SSH连接中设置主机名和同步hosts
+                    for (Map<String, String> hostItem : hostnamePreview) {
+                        String ip = hostItem.get("ip");
+                        String newHostname = hostItem.get("newHostname");
+
+                        if (ip == null || ip.isEmpty() || newHostname == null || newHostname.isEmpty()) {
+                            logger.warn("主机信息不完整，跳过该主机: {}", hostItem);
+                            continue;
+                        }
+
+                        try {
+                            // 获取主机信息
+                            HostInfo hostInfo = hostMap.get(ip);
+                            if (hostInfo == null) {
+                                throw new Exception("未找到主机信息");
+                            }
+
+                            logger.info("为主机 {} 设置新主机名并同步hosts文件: {}", ip, newHostname);
+
+                            // 获取或创建SSH连接（复用连接）
+                            ClientSession session = null;
+                            try {
+                                // 使用连接池获取SSH连接
+                                session = MinaUtils.openConnectionWithPassword(hostInfo);
+                                if (session == null) {
+                                    throw new Exception("无法创建SSH连接");
+                                }
+
+                                // 1. 设置主机名
+                                boolean hostnameSuccess = setHostname(session, hostInfo, newHostname);
+
+                                // 2. 同步hosts文件（使用相同的SSH连接）
+                                boolean hostsSuccess = false;
+                                if (hostsFilePreview != null) {
+                                    hostsSuccess = updateHostsFile(session, hostInfo,
+                                            hostsFilePreview.getHostsContent());
+                                } else {
+                                    // 如果没有hosts文件预览，则视为跳过hosts文件同步
+                                    hostsSuccess = true;
+                                }
+
+                                // 更新主机信息缓存
+                                hostInfo.setHostname(newHostname);
+                                updateHostInfoCache(clusterId, hostInfo);
+
+                                // 更新任务状态
+                                boolean success = hostnameSuccess && hostsSuccess;
+                                String message = null;
+                                if (!success) {
+                                    message = hostnameSuccess ? "hosts文件同步失败" : "主机名设置失败";
+                                }
+
+                                TaskProgressHelper.updateHostProcessStatus(taskId, ip, success, message);
+
+                            } finally {
+                                // 确保连接关闭（由连接池管理）
+                                if (session != null) {
+                                    try {
+                                        MinaUtils.closeConnection(session);
+                                    } catch (Exception e) {
+                                        logger.warn("关闭SSH连接异常: {}", e.getMessage());
+                                    }
+                                }
+                            }
+
+                        } catch (Exception e) {
+                            logger.error("处理主机 {} 时发生错误: {}", ip, e.getMessage(), e);
+                            TaskProgressHelper.updateHostProcessStatus(taskId, ip, false, e.getMessage());
+                        }
+                    }
+
+                    // 完成任务
+                    TaskProgressHelper.completeTask(taskId,
+                            "所有主机名设置和hosts文件同步完成",
+                            "部分主机操作失败，请检查详情");
+
+                    // 更新缓存
+                    updateHostMapInCache(clusterId);
+
+                } catch (Exception e) {
+                    logger.error("执行合并任务时发生异常", e);
+                }
+            }, checkExecutor);
 
             // 返回任务ID
             return Result.success(taskId);
@@ -2738,6 +2830,147 @@ public class HostCheckServiceImpl implements HostCheckService {
         } catch (Exception e) {
             logger.error("批量设置主机名任务启动时发生错误", e);
             return Result.error("批量设置主机名任务启动失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 设置主机名 - 内部方法，在单个SSH会话中执行
+     */
+    private boolean setHostname(ClientSession session, HostInfo hostInfo, String newHostname) {
+        try {
+            String ip = hostInfo.getIp();
+            logger.info("在SSH会话中为主机 {} 设置主机名: {}", ip, newHostname);
+
+            // 构建系统类型
+            String osType = "";
+            if (hostInfo.getOsInfo() != null && hostInfo.getOsInfo().getDistribution() != null) {
+                osType = hostInfo.getOsInfo().getDistribution().toLowerCase();
+            } else {
+                // 尝试获取系统类型
+                String checkOSCmd = "cat /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || uname -a";
+                String osInfo = MinaUtils.execCmdWithResult(session, checkOSCmd).toLowerCase();
+
+                if (osInfo.contains("centos") || osInfo.contains("redhat") || osInfo.contains("rhel")) {
+                    osType = "centos";
+                } else if (osInfo.contains("ubuntu")) {
+                    osType = "ubuntu";
+                } else if (osInfo.contains("debian")) {
+                    osType = "debian";
+                } else {
+                    osType = "centos"; // 默认按CentOS处理
+                }
+            }
+
+            // 检查是否有sudo命令
+            String checkSudoCmd = "which sudo || echo 'nosudo'";
+            String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
+            boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
+            logger.info("检查主机{}是否有sudo命令: {}", ip, hasSudo ? "有" : "没有");
+
+            // 根据是否有sudo命令决定使用的前缀
+            String sudoPrefix = hasSudo ? "sudo " : "";
+
+            // 根据系统类型设置主机名
+            String result;
+            if (osType.contains("ubuntu") || osType.contains("debian")) {
+                // Ubuntu/Debian方式
+                String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
+                result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
+
+                // 更新/etc/hostname文件
+                String updateHostnameFileCmd;
+                if (hasSudo) {
+                    updateHostnameFileCmd = "echo '" + newHostname + "' | " + sudoPrefix + "tee /etc/hostname";
+                } else {
+                    updateHostnameFileCmd = "echo '" + newHostname + "' > /etc/hostname";
+                }
+                MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
+            } else {
+                // CentOS/RHEL方式
+                String setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
+                result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
+
+                // CentOS 6兼容处理
+                String updateSysConfigCmd;
+                if (hasSudo) {
+                    updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                            + "/' /etc/sysconfig/network 2>/dev/null || true";
+                } else {
+                    updateSysConfigCmd = "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
+                            + "/' /etc/sysconfig/network 2>/dev/null || true";
+                }
+                MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
+            }
+
+            // 验证主机名设置是否成功
+            String verifyCmd = "hostname";
+            String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
+            boolean success = verifyResult.equals(newHostname);
+
+            if (success) {
+                logger.info("主机 {} 的主机名已成功设置为: {}", ip, newHostname);
+            } else {
+                logger.warn("主机 {} 的主机名设置失败，期望: {}, 实际: {}", ip, newHostname, verifyResult);
+            }
+
+            return success;
+        } catch (Exception e) {
+            logger.error("设置主机名时发生错误", e);
+            return false;
+        }
+    }
+
+    /**
+     * 更新hosts文件 - 内部方法，在单个SSH会话中执行
+     */
+    private boolean updateHostsFile(ClientSession session, HostInfo hostInfo, String hostsContent) {
+        try {
+            String ip = hostInfo.getIp();
+            logger.info("在SSH会话中为主机 {} 更新hosts文件", ip);
+
+            // 检查是否有sudo命令
+            String checkSudoCmd = "which sudo || echo 'nosudo'";
+            String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
+            boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
+
+            // 添加注释标记
+            String hostsWithMarkers = "# BEGIN DATASOPHON MANAGED HOSTS - DO NOT EDIT THIS SECTION\n" +
+                    hostsContent +
+                    "# END DATASOPHON MANAGED HOSTS\n";
+
+            // 创建临时文件
+            String tempFileName = "/tmp/hosts_" + System.currentTimeMillis();
+            MinaUtils.execCmdWithResult(session, "echo '" + hostsWithMarkers + "' > " + tempFileName);
+
+            // 根据是否有sudo命令决定使用的前缀
+            String sudoPrefix = hasSudo ? "sudo " : "";
+
+            // 备份当前hosts文件
+            String backupCmd = sudoPrefix + "cp /etc/hosts /etc/hosts.backup." + System.currentTimeMillis();
+            MinaUtils.execCmdWithResult(session, backupCmd);
+
+            // 将临时文件复制到/etc/hosts
+            String copyCmd = sudoPrefix + "cp " + tempFileName + " /etc/hosts";
+            String copyResult = MinaUtils.execCmdWithResult(session, copyCmd);
+
+            // 删除临时文件
+            MinaUtils.execCmdWithResult(session, "rm -f " + tempFileName);
+
+            // 验证hosts文件是否已更新
+            String verifyCmd = "cat /etc/hosts | grep 'DATASOPHON MANAGED HOSTS'";
+            String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd);
+            boolean success = verifyResult.contains("DATASOPHON MANAGED HOSTS");
+
+            if (success) {
+                logger.info("主机 {} 的hosts文件已成功更新", ip);
+            } else {
+                logger.warn("主机 {} 的hosts文件更新失败", ip);
+            }
+
+            return success;
+        } catch (Exception e) {
+            logger.error("更新hosts文件时发生错误", e);
+            return false;
         }
     }
 }

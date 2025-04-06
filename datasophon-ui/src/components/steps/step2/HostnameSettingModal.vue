@@ -234,12 +234,6 @@
       
       <div class="progress-actions">
         <a-button @click="handleCancel" class="cancel-button">{{ $t('关闭') }}</a-button>
-        <a-button
-          v-if="taskStatus === 'COMPLETED' && completedCount > 0"
-          type="primary"
-          @click="handleSyncHosts"
-          class="sync-button"
-        >{{ $t('同步hosts文件') }}</a-button>
       </div>
     </div>
   </a-modal>
@@ -567,9 +561,6 @@ export default {
         if (saveRes.code === 200) {
           // 开始轮询任务进度
           this.startPollingTaskProgress(saveRes.data);
-          
-          // 设置标记，完成后自动同步hosts
-          this.autoSyncHosts = true;
         } else {
           this.$message.error(saveRes.msg || this.$t('主机名设置失败'));
         }
@@ -581,13 +572,6 @@ export default {
       }
     },
     
-    // 同步hosts文件
-    async handleSyncHosts() {
-      this.$emit('syncHosts', this.clusterId);
-      this.$emit('success');
-      this.$emit('close');
-    },
-
     // 取消或关闭弹窗
     handleCancel() {
       this.$emit('close');
