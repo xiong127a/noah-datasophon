@@ -605,7 +605,7 @@ export default {
           }
         }
         
-        // 构建行HTML
+        // 构建行HTML - 减小内容与左侧的间距
         formattedContent += `<div class="${lineClass}"><span class="line-content">${lineContent}</span></div>`;
       });
       
@@ -972,6 +972,22 @@ export default {
       this.isEditingHosts = false;
       this.editingHostsContent = '';
     },
+    /**
+     * 更新行号显示
+     * 根据文本内容更新编辑器左侧的行号
+     */
+    updateLineNumbers() {
+      // 这个方法会在文本编辑器内容变化时触发
+      // 由于我们的行号是通过 v-for 动态生成的，不需要额外逻辑
+      // 当 editingHostsContent 变化时，Vue 会自动重新计算 v-for 中的行数
+      
+      // 如果需要执行其他操作，可以在这里添加
+      // 例如计算行数并在状态栏显示
+      const lineCount = this.editingHostsContent.split('\n').length;
+      
+      // 在需要时，可以添加额外的状态更新
+      // this.lineCount = lineCount;
+    },
   }
 }
 </script>
@@ -1019,7 +1035,7 @@ export default {
 
 .line-content {
   display: inline-block;
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 .comment-line {
@@ -1417,6 +1433,15 @@ export default {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   background-color: #1e1e1e;
   height: 300px;
+  --scrollbar-opacity: 0.1; /* 初始透明度较低 */
+}
+
+.modern-ide:hover {
+  --scrollbar-opacity: 0.3; /* 悬停时提高透明度 */
+}
+
+.modern-ide:active {
+  --scrollbar-opacity: 0.5; /* 激活时透明度更高 */
 }
 
 /* IDE工具栏 */
@@ -1503,7 +1528,7 @@ export default {
 
 .gutter-line-numbers {
   padding: 4px 0;
-  min-width: 38px;
+  min-width: 30px;
   text-align: right;
   color: #858585;
   user-select: none;
@@ -1514,8 +1539,9 @@ export default {
 .code-container {
   flex: 1;
   overflow: auto;
-  padding: 4px 0;
+  padding: 4px 0 4px 0;
   background-color: #1e1e1e;
+  position: relative; /* 添加定位上下文 */
 }
 
 /* 编辑模式样式 - 保持与原始风格一致 */
@@ -1530,7 +1556,7 @@ export default {
   width: 100%;
   height: 100%;
   min-height: 100px;
-  padding: 0 0 0 4px;
+  padding: 0;
   border: none;
   background-color: transparent;
   font-family: 'JetBrains Mono', 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace;
@@ -1740,5 +1766,56 @@ export default {
 
 .save-button:hover {
   background-color: #0071e3;
+}
+
+/* 应用透明度变量到滚动条 */
+.code-container::-webkit-scrollbar-thumb,
+.code-editor::-webkit-scrollbar-thumb {
+  background-color: rgba(110, 110, 110, var(--scrollbar-opacity));
+  transition: background-color 0.3s ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.code-container::-webkit-scrollbar-thumb:hover,
+.code-editor::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(140, 140, 140, calc(var(--scrollbar-opacity) + 0.2));
+}
+
+.code-container::-webkit-scrollbar-thumb:active,
+.code-editor::-webkit-scrollbar-thumb:active {
+  background-color: rgba(170, 170, 170, calc(var(--scrollbar-opacity) + 0.4));
+}
+
+/* 使滚动条更圆润，更贴近macOS风格 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: transparent;
+}
+
+/* 滚动条轨道 */
+::-webkit-scrollbar-track {
+  background-color: transparent;
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 100px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  min-height: 40px;
+}
+
+/* 滚动条角落 */
+::-webkit-scrollbar-corner {
+  background-color: transparent;
+}
+
+/* 为Firefox添加自定义滚动条 */
+.code-container, .code-editor {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(110, 110, 110, var(--scrollbar-opacity)) transparent;
 }
 </style>
