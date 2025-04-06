@@ -422,6 +422,8 @@
 </template>
 
 <script>
+import host from '@/api/httpApi/host';
+
 export default {
   name: 'HostnameFloatingCard',
   props: {
@@ -898,14 +900,15 @@ export default {
       
       this.hostsEditLoading = true;
       
-      // 使用FormData格式提交
-      const formData = new FormData();
-      formData.append('clusterId', this.hostInfo.clusterId);
-      formData.append('ip', this.hostInfo.ip);
-      formData.append('hostsFileContent', this.editingHostsContent);
+      // 准备请求参数 - 注意使用正确的参数名，保持与后端一致
+      const params = {
+        clusterId: parseInt(this.hostInfo.clusterId, 10), // 确保clusterId是整数类型
+        ip: this.hostInfo.ip,
+        hostsFileContent: this.editingHostsContent
+      };
       
-      // 使用API保存内容
-      this.$axiosPost('/host/updateHostsFile', formData)
+      // 使用$axiosPost方法调用API
+      this.$axiosPost(host.updateHostsFile, params)
         .then(res => {
           if (res.code === 200) {
             this.$message.success('Hosts文件修改成功');
