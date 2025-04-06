@@ -384,6 +384,12 @@ public class OsInfoServiceImpl implements OsInfoService {
                 return;
             }
 
+            // 第一个主机添加时，重置计数器
+            if (totalHostCount.get() == 0) {
+                logger.info("第一个主机添加到队列，重置所有计数器");
+                resetCounters();
+            }
+
             // 确保状态重置
             hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
             hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
@@ -755,6 +761,18 @@ public class OsInfoServiceImpl implements OsInfoService {
                 return;
             }
 
+            // 检查是否超过半数主机完成了第一阶段
+            int totalHosts = totalHostCount.get();
+            int completedBasicInfo = basicInfoCompletedCount.get();
+            boolean shouldStartPhase2 = totalHosts > 0 && completedBasicInfo >= totalHosts / 2;
+
+            if (shouldStartPhase2) {
+                logger.info("已有{}个主机完成第一阶段收集（总共{}个主机），超过半数，开始处理第二阶段任务",
+                        completedBasicInfo, totalHosts);
+            } else if (waitForDetailInfoList.isEmpty()) {
+                return;
+            }
+
             synchronized (waitForDetailInfoList) {
                 if (waitForDetailInfoList.isEmpty()) {
                     return;
@@ -774,6 +792,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     // 使用ExecutorService线程池
                     service.hardwareInfoExecutor.execute(() -> {
                         try {
+                            logger.info("开始处理主机[{}]的第二阶段详细信息收集", hostInfo.getIp());
                             processHostDetailInfo(hostInfo, false);
                         } catch (Exception e) {
                             logger.error("处理主机详细信息时发生异常: {}", e.getMessage(), e);
