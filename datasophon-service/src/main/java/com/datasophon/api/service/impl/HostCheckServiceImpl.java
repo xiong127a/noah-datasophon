@@ -2139,7 +2139,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 3. 根据syncHosts参数决定是否更新/etc/hosts文件
                 if (syncHosts) {
-                    logger.info("同步更新hosts文件中的本机记录");
+                    logger.info("同步更新hosts文件中本机的主机名记录: {} -> {}", currentHostname, newHostname);
 
                     // 先获取当前hosts文件
                     String getHostsCmd = "cat /etc/hosts";
@@ -2149,72 +2149,115 @@ public class HostCheckServiceImpl implements HostCheckService {
                     String startMark = "### BEGIN DATASOPHON MANAGED HOSTS ###";
                     String endMark = "### END DATASOPHON MANAGED HOSTS ###";
 
-                    // 根据集群ID生成完整的hosts文件内容
-                    HostsFilePreviewVO hostsFilePreview = generateHostsFilePreviewInner(clusterId, 1, 10);
-                    if (hostsFilePreview == null) {
-                        logger.warn("生成hosts文件预览内容失败，将只设置主机名，不同步hosts文件");
-                    } else {
-                        String hostsFileContent = hostsFilePreview.getHostsContent();
+                    // 准备新的hosts文件内容
+                    StringBuilder newHostsContent = new StringBuilder();
 
-                        // 准备新的hosts文件内容
-                        StringBuilder newHostsContent = new StringBuilder();
+                    // 检查当前文件是否已经包含系统标记
+                    if (currentHostsContent.contains(startMark) && currentHostsContent.contains(endMark)) {
+                        // 文件已经包含系统标记，只更新标记内的主机名
+                        int startIndex = currentHostsContent.indexOf(startMark);
+                        int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
 
-                        // 检查当前文件是否已经包含我们的标记
-                        if (currentHostsContent.contains(startMark) && currentHostsContent.contains(endMark)) {
-                            // 文件已经包含我们的标记，替换这部分内容
-                            int startIndex = currentHostsContent.indexOf(startMark);
-                            int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
+                        // 获取标记内的内容
+                        String managedContent = currentHostsContent.substring(
+                                startIndex + startMark.length(),
+                                currentHostsContent.indexOf(endMark));
 
-                            // 保留标记前的内容
-                            newHostsContent.append(currentHostsContent.substring(0, startIndex));
+                        // 在标记内的内容中，只修改当前IP对应的主机名
+                        String updatedManagedContent = "";
+                        String[] lines = managedContent.split("\n");
+                        for (String line : lines) {
+                            line = line.trim();
+                            if (line.isEmpty() || line.startsWith("#")) {
+                                // 保持注释和空行不变
+                                updatedManagedContent += line + "\n";
+                            } else if (line.contains(ip)) {
+                                // 这一行包含当前IP，需要修改主机名
+                                String[] parts = line.split("\\s+");
+                                if (parts.length >= 2) {
+                                    // 构建新行，保留IP和其他主机名，但将匹配当前主机名的替换为新主机名
+                                    StringBuilder newLine = new StringBuilder(parts[0]); // IP地址
 
-                            // 添加我们的内容（包含标记）
-                            newHostsContent.append(startMark).append("\n");
-                            newHostsContent.append(hostsFileContent).append("\n");
-                            newHostsContent.append(endMark);
-
-                            // 如果标记后还有内容，也保留
-                            if (endIndex < currentHostsContent.length()) {
-                                newHostsContent.append(currentHostsContent.substring(endIndex));
+                                    for (int i = 1; i < parts.length; i++) {
+                                        if (parts[i].equals(currentHostname)) {
+                                            newLine.append(" ").append(newHostname);
+                                        } else {
+                                            newLine.append(" ").append(parts[i]);
+                                        }
+                                    }
+                                    updatedManagedContent += newLine.toString() + "\n";
+                                } else {
+                                    // 如果格式不正确，添加正确的格式
+                                    updatedManagedContent += ip + " " + newHostname + "\n";
+                                }
+                            } else {
+                                // 保持其他行不变
+                                updatedManagedContent += line + "\n";
                             }
-                        } else {
-                            // 文件不包含我们的标记，追加到末尾
-                            newHostsContent.append(currentHostsContent);
+                        }
 
-                            // 如果最后一行不是空行，添加一个空行
-                            if (!currentHostsContent.endsWith("\n")) {
+                        // 组合新的hosts文件内容
+                        newHostsContent.append(currentHostsContent.substring(0, startIndex));
+                        newHostsContent.append(startMark).append("\n");
+                        newHostsContent.append(updatedManagedContent);
+                        newHostsContent.append(endMark);
+
+                        // 如果标记后还有内容，也保留
+                        if (endIndex < currentHostsContent.length()) {
+                            newHostsContent.append(currentHostsContent.substring(endIndex));
+                        }
+                    } else {
+                        // 文件不包含系统标记，以原始方式更新主机名引用
+                        // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
+                        String[] lines = currentHostsContent.split("\n");
+                        boolean foundEntry = false;
+
+                        for (String line : lines) {
+                            if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                                // 保持注释和空行不变
+                                newHostsContent.append(line).append("\n");
+                            } else if (line.contains(ip)
+                                    || (line.contains("127.0.1.1") && line.contains(currentHostname))) {
+                                // 这一行包含当前IP或者包含127.0.1.1和当前主机名，需要修改主机名
+                                String updatedLine = line.replace(currentHostname, newHostname);
+                                newHostsContent.append(updatedLine).append("\n");
+                                foundEntry = true;
+                            } else {
+                                // 保持其他行不变
+                                newHostsContent.append(line).append("\n");
+                            }
+                        }
+
+                        // 如果没有找到匹配的条目，添加一个新条目
+                        if (!foundEntry) {
+                            if (!newHostsContent.toString().endsWith("\n")) {
                                 newHostsContent.append("\n");
                             }
-
-                            // 再添加一个空行作为分隔
-                            newHostsContent.append("\n");
-
-                            // 添加我们的内容（包含标记）
-                            newHostsContent.append(startMark).append("\n");
-                            newHostsContent.append(hostsFileContent).append("\n");
-                            newHostsContent.append(endMark).append("\n");
+                            newHostsContent.append("\n# Added by Datasophon\n");
+                            newHostsContent.append(ip).append(" ").append(newHostname).append("\n");
                         }
-
-                        // 创建临时文件
-                        String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
-                        // 使用单引号包裹并转义内部的单引号
-                        String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
-                                newHostsContent.toString() +
-                                "\nEOL";
-                        MinaUtils.execCmdWithResult(session, createTempCommand);
-
-                        // 使用sudo将临时文件复制到/etc/hosts
-                        String updateCommand;
-                        if (hasSudo) {
-                            updateCommand = sudoPrefix + "cp " + tempFile + " /etc/hosts && " + sudoPrefix
-                                    + "chmod 644 /etc/hosts && rm " + tempFile;
-                        } else {
-                            updateCommand = "cp " + tempFile + " /etc/hosts && chmod 644 /etc/hosts && rm " + tempFile;
-                        }
-                        MinaUtils.execCmdWithResult(session, updateCommand);
-
-                        logger.info("hosts文件已使用系统标记方式更新");
                     }
+
+                    // 创建临时文件
+                    String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
+                    // 使用单引号包裹并转义内部的单引号
+                    String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
+                            newHostsContent.toString() +
+                            "\nEOL";
+                    MinaUtils.execCmdWithResult(session, createTempCommand);
+
+                    // 使用sudo将临时文件复制到/etc/hosts
+                    String updateCommand;
+                    if (hasSudo) {
+                        updateCommand = sudoPrefix + "cp " + tempFile + " /etc/hosts && " + sudoPrefix
+                                + "chmod 644 /etc/hosts && rm " + tempFile;
+                    } else {
+                        updateCommand = "cp " + tempFile + " /etc/hosts && chmod 644 /etc/hosts && rm " + tempFile;
+                    }
+                    String updateResult = MinaUtils.execCmdWithResult(session, updateCommand);
+                    logger.info("更新hosts文件结果: {}", updateResult);
+
+                    logger.info("hosts文件中的主机名记录已更新: {} -> {}", currentHostname, newHostname);
                 } else {
                     logger.info("不更新hosts文件，仅设置主机名");
                 }
