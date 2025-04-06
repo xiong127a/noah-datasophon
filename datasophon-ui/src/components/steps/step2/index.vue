@@ -1365,7 +1365,7 @@ export default {
 
     // 选择检查项
     onCheckItemSelect(ip, selectedRowKeys) {
-      this.$set(this.selectedCheckItems, ip, selectedKeys);
+      this.$set(this.selectedCheckItems, ip, selectedRowKeys);
     },
 
     // 重试选中的检查项
