@@ -26,8 +26,6 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
@@ -36,6 +34,7 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
+import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.queue.HostCheckQueueManager;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.impl.osinfo.OsInfoCollectorFactory;
@@ -61,13 +60,13 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.datasophon.dao.mapper.InstallStepMapper;
-import com.datasophon.api.service.checker.common.CommandResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -82,10 +81,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.concurrent.ExecutorService;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 @Service("installService")
 public class InstallServiceImpl implements InstallService {
@@ -537,59 +536,87 @@ public class InstallServiceImpl implements InstallService {
                         CacheUtils.put(collectingHostsKey, collectingHosts);
                     }
 
-                    // ==================== 第一阶段：收集所有主机的基本信息 ====================
-                    logger.info("【第一阶段开始】首先为所有{}台主机收集基本信息（主机名和操作系统类型）", pendingHosts.size());
+                    // ==================== 第一阶段：并行收集所有主机的基本信息 ====================
+                    logger.info("【第一阶段开始】首先为所有{}台主机并行收集基本信息（主机名和操作系统类型）", pendingHosts.size());
 
                     // 用于跟踪第一阶段成功的主机
-                    List<HostInfo> firstPhaseSuccessHosts = new ArrayList<>();
+                    List<HostInfo> firstPhaseSuccessHosts = Collections.synchronizedList(new ArrayList<>());
 
-                    // 为所有主机执行SSH验证和基本信息收集
+                    // 创建一个并行任务列表，为每台主机创建一个独立的任务
+                    List<CompletableFuture<Void>> firstPhaseFutures = new ArrayList<>();
+
+                    // 并行为所有主机执行SSH验证和基本信息收集
                     for (HostInfo hostInfo : pendingHosts) {
-                        try {
-                            logger.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
-                            boolean sshSuccess = validateSshConnection(hostInfo);
-
-                            // 如果SSH连接失败，设置相关错误状态并跳过后续操作
-                            if (!sshSuccess) {
-                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setErrorMessage("SSH连接失败，无法获取主机信息");
-                                hostInfo.setOsErrorMsg("由于SSH连接失败，无法获取操作系统信息");
-                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setMessage("SSH连接失败：" + hostInfo.getSshErrorMsg());
-
-                                // 即使失败也标记为已收集，避免反复尝试失败的主机
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-
-                                logger.warn("主机[{}]SSH连接失败，标记为已处理", hostInfo.getIp());
-                                continue;
-                            }
-
-                            // SSH连接成功，开始收集操作系统信息第一阶段
-                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-                            hostInfo.setMessage("正在收集主机信息...");
-
+                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                             try {
-                                // 使用第一阶段收集方法
-                                osInfoService.collectPhaseOneInfo(hostInfo);
-                                logger.info("主机[{}]的基本信息收集完成", hostInfo.getIp());
+                                logger.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
+                                boolean sshSuccess = validateSshConnection(hostInfo);
 
-                                // 将成功的主机添加到列表，用于第二阶段处理
-                                firstPhaseSuccessHosts.add(hostInfo);
+                                // 如果SSH连接失败，设置相关错误状态并跳过后续操作
+                                if (!sshSuccess) {
+                                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                                    hostInfo.setErrorMessage("SSH连接失败，无法获取主机信息");
+                                    hostInfo.setOsErrorMsg("由于SSH连接失败，无法获取操作系统信息");
+                                    hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                                    hostInfo.setMessage("SSH连接失败：" + hostInfo.getSshErrorMsg());
+
+                                    // 即使失败也标记为已收集，避免反复尝试失败的主机
+                                    synchronized (collectedHosts) {
+                                        collectedHosts.add(hostInfo.getIp());
+                                        // 更新缓存
+                                        CacheUtils.put(collectedHostsKey, collectedHosts);
+                                    }
+
+                                    // 从正在收集的列表中移除
+                                    synchronized (collectingHosts) {
+                                        collectingHosts.remove(hostInfo.getIp());
+                                        CacheUtils.put(collectingHostsKey, collectingHosts);
+                                    }
+
+                                    logger.warn("主机[{}]SSH连接失败，标记为已处理", hostInfo.getIp());
+                                    return;
+                                }
+
+                                // SSH连接成功，开始收集操作系统信息第一阶段
+                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+                                hostInfo.setMessage("正在收集主机信息...");
+
+                                try {
+                                    // 使用第一阶段收集方法
+                                    osInfoService.collectPhaseOneInfo(hostInfo);
+                                    logger.info("主机[{}]的基本信息收集完成", hostInfo.getIp());
+
+                                    // 将成功的主机添加到列表，用于第二阶段处理
+                                    firstPhaseSuccessHosts.add(hostInfo);
+                                } catch (Exception e) {
+                                    logger.error("收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                                    // 异常情况仍然标记为已收集，避免重复尝试
+                                    hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+                                    hostInfo.setOsErrorMsg("收集基本信息异常: " + e.getMessage());
+
+                                    // 即使失败也标记为已收集，避免反复尝试
+                                    synchronized (collectedHosts) {
+                                        collectedHosts.add(hostInfo.getIp());
+                                        // 更新缓存
+                                        CacheUtils.put(collectedHostsKey, collectedHosts);
+                                    }
+
+                                    // 从正在收集的列表中移除
+                                    synchronized (collectingHosts) {
+                                        collectingHosts.remove(hostInfo.getIp());
+                                        CacheUtils.put(collectingHostsKey, collectingHosts);
+                                    }
+                                }
                             } catch (Exception e) {
-                                logger.error("收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
-                                // 异常情况仍然标记为已收集，避免重复尝试
+                                logger.error("为主机[{}]执行基本信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
+                                // 设置错误状态和详细信息
                                 hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setOsErrorMsg("收集基本信息异常: " + e.getMessage());
+                                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setSshErrorMsg("SSH连接异常: " + formatSshErrorMessage(e));
+                                hostInfo.setErrorMessage("连接主机时发生异常");
+                                hostInfo.setOsErrorMsg("由于连接异常，无法获取操作系统信息");
+                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
+                                hostInfo.setMessage("SSH连接失败：" + formatSshErrorMessage(e));
 
                                 // 即使失败也标记为已收集，避免反复尝试
                                 synchronized (collectedHosts) {
@@ -604,78 +631,78 @@ public class InstallServiceImpl implements InstallService {
                                     CacheUtils.put(collectingHostsKey, collectingHosts);
                                 }
                             }
-                        } catch (Exception e) {
-                            logger.error("为主机[{}]执行基本信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
-                            // 设置错误状态和详细信息
-                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshErrorMsg("SSH连接异常: " + formatSshErrorMessage(e));
-                            hostInfo.setErrorMessage("连接主机时发生异常");
-                            hostInfo.setOsErrorMsg("由于连接异常，无法获取操作系统信息");
-                            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setMessage("SSH连接失败：" + formatSshErrorMessage(e));
+                        }, osInfoExecutor);
 
-                            // 即使失败也标记为已收集，避免反复尝试
-                            synchronized (collectedHosts) {
-                                collectedHosts.add(hostInfo.getIp());
-                                // 更新缓存
-                                CacheUtils.put(collectedHostsKey, collectedHosts);
-                            }
+                        firstPhaseFutures.add(future);
+                    }
 
-                            // 从正在收集的列表中移除
-                            synchronized (collectingHosts) {
-                                collectingHosts.remove(hostInfo.getIp());
-                                CacheUtils.put(collectingHostsKey, collectingHosts);
-                            }
-                        }
+                    // 等待所有第一阶段任务完成
+                    try {
+                        CompletableFuture.allOf(firstPhaseFutures.toArray(new CompletableFuture[0])).get();
+                    } catch (Exception e) {
+                        logger.error("等待第一阶段任务完成时发生异常: {}", e.getMessage(), e);
                     }
 
                     logger.info("【第一阶段完成】所有主机基本信息收集完毕，成功收集{}台主机的基本信息", firstPhaseSuccessHosts.size());
 
-                    // ==================== 第二阶段：收集详细信息 ====================
+                    // ==================== 第二阶段：并行收集详细信息 ====================
                     if (!firstPhaseSuccessHosts.isEmpty()) {
-                        logger.info("【第二阶段开始】开始收集{}台主机的详细硬件信息", firstPhaseSuccessHosts.size());
+                        logger.info("【第二阶段开始】开始并行收集{}台主机的详细硬件信息", firstPhaseSuccessHosts.size());
 
-                        // 为第一阶段成功的主机收集详细信息
+                        // 创建第二阶段任务列表
+                        List<CompletableFuture<Void>> secondPhaseFutures = new ArrayList<>();
+
+                        // 并行为第一阶段成功的主机收集详细信息
                         for (HostInfo hostInfo : firstPhaseSuccessHosts) {
-                            try {
-                                logger.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
+                            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                                try {
+                                    logger.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
 
-                                // 使用第二阶段收集方法
-                                osInfoService.collectPhaseTwoInfo(hostInfo);
-                                logger.info("主机[{}]的详细信息收集完成", hostInfo.getIp());
+                                    // 使用第二阶段收集方法
+                                    osInfoService.collectPhaseTwoInfo(hostInfo);
+                                    logger.info("主机[{}]的详细信息收集完成", hostInfo.getIp());
 
-                                // 标记为已完全收集
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
+                                    // 标记为已完全收集
+                                    synchronized (collectedHosts) {
+                                        collectedHosts.add(hostInfo.getIp());
+                                        // 更新缓存
+                                        CacheUtils.put(collectedHostsKey, collectedHosts);
+                                    }
+
+                                    // 从正在收集的列表中移除
+                                    synchronized (collectingHosts) {
+                                        collectingHosts.remove(hostInfo.getIp());
+                                        CacheUtils.put(collectingHostsKey, collectingHosts);
+                                    }
+
+                                    logger.info("主机[{}]所有信息收集完成，已更新收集状态", hostInfo.getIp());
+                                } catch (Exception e) {
+                                    logger.error("收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
+                                    // 即使第二阶段失败，也标记为已收集，因为基本信息已经收集完成
+                                    synchronized (collectedHosts) {
+                                        collectedHosts.add(hostInfo.getIp());
+                                        // 更新缓存
+                                        CacheUtils.put(collectedHostsKey, collectedHosts);
+                                    }
+
+                                    // 从正在收集的列表中移除
+                                    synchronized (collectingHosts) {
+                                        collectingHosts.remove(hostInfo.getIp());
+                                        CacheUtils.put(collectingHostsKey, collectingHosts);
+                                    }
+
+                                    logger.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
                                 }
+                            }, hardwareInfoExecutor);
 
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
+                            secondPhaseFutures.add(future);
+                        }
 
-                                logger.info("主机[{}]所有信息收集完成，已更新收集状态", hostInfo.getIp());
-                            } catch (Exception e) {
-                                logger.error("收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
-                                // 即使第二阶段失败，也标记为已收集，因为基本信息已经收集完成
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-
-                                logger.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
-                            }
+                        // 等待所有第二阶段任务完成
+                        try {
+                            CompletableFuture.allOf(secondPhaseFutures.toArray(new CompletableFuture[0])).get();
+                        } catch (Exception e) {
+                            logger.error("等待第二阶段任务完成时发生异常: {}", e.getMessage(), e);
                         }
 
                         logger.info("【第二阶段完成】所有主机详细信息收集完毕");
