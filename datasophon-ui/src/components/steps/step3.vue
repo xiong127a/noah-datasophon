@@ -89,11 +89,30 @@ export default {
             );
           },
         },
-        { title: "主机", key: "hostname", dataIndex: "hostname", width: 200 },
+        { 
+          title: "主机名", 
+          key: "hostInfo", 
+          dataIndex: "hostname", 
+          width: 150,
+          customRender: (text, row, index) => {
+            const h = this.$createElement;
+            
+            return h('div', { class: 'host-info' }, [
+              h('div', { class: 'hostname' }, [text || '未知主机名'])
+            ]);
+          } 
+        },
+        {
+          title: "IP地址",
+          key: "ip",
+          dataIndex: "ip",
+          width: 160
+        },
         {
           title: "进度",
           key: "progress",
           dataIndex: "progress",
+          width: 300,
           customRender: (text, row, index) => {
             const h = this.$createElement;
             
@@ -101,25 +120,38 @@ export default {
             const status = row.installStateCode === 1 ? "active" : 
                            row.installStateCode === 2 ? "success" : "exception";
             
-            // 自定义进度条样式
+            // 修复进度条显示问题
             return h('div', { class: 'progress-container' }, [
               h('a-progress', {
-                class: `apple-progress apple-progress-${status}`,
                 props: {
                   percent: text,
-                  status: status,
+                  status: status === "active" ? "active" : 
+                          status === "success" ? "success" : "exception",
                   strokeWidth: 6,
-                  showInfo: true
+                  showInfo: false
+                },
+                style: {
+                  width: '80%',
+                  marginRight: '12px'
                 }
-              })
+              }),
+              h('div', { class: 'progress-info' }, [
+                h('span', { class: `progress-percent progress-percent-${status}` }, [
+                  `${text}%`
+                ]),
+                h('span', { class: `progress-icon progress-icon-${status}` }, [
+                  status === "active" ? h('a-icon', { props: { type: 'loading' } }) :
+                  status === "success" ? h('a-icon', { props: { type: 'check-circle', theme: 'filled' } }) :
+                  h('a-icon', { props: { type: 'close-circle', theme: 'filled' } })
+                ])
+              ])
             ]);
           },
         },
         { 
-          title: "进度信息", 
+          title: "状态信息", 
           key: "message", 
           dataIndex: "message", 
-          width: 180,
           customRender: (text, row, index) => {
             const h = this.$createElement;
             
@@ -203,7 +235,7 @@ export default {
     },
     // 重试
     retryHost(row) {
-      let hostnames = "";
+      let ips = "";
       if (row === "all") {
         if (this.selectedRowKeys.length < 1) {
           this.$message.warning("请至少选择一台主机！");
@@ -213,12 +245,16 @@ export default {
           this.$message.warning("目前只支持失败的主机进行重试操作！");
           return false;
         }
-        hostnames = this.selectedRowKeys.join(",");
+        // 获取选中行的IP地址
+        const selectedIPs = this.dataSource
+          .filter(item => this.selectedRowKeys.includes(item.hostname))
+          .map(item => item.ip);
+        ips = selectedIPs.join(",");
       } else {
-        hostnames = row.hostname;
+        ips = row.ip;
       }
       const params = {
-        hostnames,
+        ips,
         clusterId: this.clusterId,
       };
       this.$axiosPost(global.API.reStartDispatcherHostAgent, params).then(
@@ -385,52 +421,102 @@ export default {
   // 进度条容器样式
   .progress-container {
     width: 100%;
-    padding: 4px 0;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
     
-    :deep(.apple-progress) {
+    .progress-info {
       display: flex;
       align-items: center;
+      white-space: nowrap;
+      min-width: 60px;
       
-      .ant-progress-inner {
-        background-color: rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      
-      .ant-progress-bg {
-        border-radius: 8px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      
-      // 活动中的进度条
-      &.apple-progress-active {
-        .ant-progress-bg {
-          background-color: @apple-blue;
-        }
-      }
-      
-      // 成功的进度条
-      &.apple-progress-success {
-        .ant-progress-bg {
-          background-color: @apple-green;
-        }
-      }
-      
-      // 异常的进度条
-      &.apple-progress-exception {
-        .ant-progress-bg {
-          background-color: @apple-red;
-        }
-      }
-      
-      // 进度条文本
-      .ant-progress-text {
-        color: @apple-black;
-        .apple-font();
-        font-size: 14px;
+      .progress-percent {
+        font-size: 13px;
         font-weight: 500;
-        margin-left: 12px;
+        margin-right: 6px;
+        
+        &.progress-percent-active {
+          color: @apple-blue;
+        }
+        
+        &.progress-percent-success {
+          color: @apple-green;
+        }
+        
+        &.progress-percent-exception {
+          color: @apple-red;
+        }
       }
+      
+      .progress-icon {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        
+        &.progress-icon-active {
+          color: @apple-blue;
+        }
+        
+        &.progress-icon-success {
+          color: @apple-green;
+        }
+        
+        &.progress-icon-exception {
+          color: @apple-red;
+        }
+      }
+    }
+  }
+  
+  // 覆盖ant-design原生进度条样式
+  :deep(.ant-progress) {
+    .ant-progress-outer {
+      padding-right: 0;
+    }
+    
+    .ant-progress-inner {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    .ant-progress-bg {
+      height: 6px !important;
+      
+      &::after {
+        height: 6px !important;
+      }
+    }
+    
+    &.ant-progress-status-active {
+      .ant-progress-bg {
+        background-color: @apple-blue;
+        animation: progressPulse 2s infinite;
+      }
+    }
+    
+    &.ant-progress-status-success {
+      .ant-progress-bg {
+        background-color: @apple-green;
+      }
+    }
+    
+    &.ant-progress-status-exception {
+      .ant-progress-bg {
+        background-color: @apple-red;
+      }
+    }
+  }
+  
+  // 进度条脉动动画
+  @keyframes progressPulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 1;
     }
   }
   
@@ -440,6 +526,16 @@ export default {
     font-size: 14px;
     display: block;
     line-height: 1.4;
+  }
+  
+  // 主机信息样式
+  .host-info {
+    display: flex;
+    
+    .hostname {
+      font-weight: 500;
+      color: @apple-black;
+    }
   }
   
   // 操作按钮样式
