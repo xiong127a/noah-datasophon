@@ -91,6 +91,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
+    public ClusterHostDO getClusterHostByIp(String ip) {
+        return hostMapper.selectOne(new QueryWrapper<ClusterHostDO>().eq(IP, ip));
+    }
+
+
+    @Override
     public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
             String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();

@@ -1,4 +1,5 @@
 <!--
+/*
  *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -18,130 +19,88 @@
  */
 
 
- * @describe: step8-安装并启动服务 
+ * @describe: step8-安装并启动服务
  * @Date: 2022-06-13 16:35:02
  * @LastEditTime: 2023-03-15 10:37:53
  * @FilePath: \ddh-ui\src\components\steps\step8.vue
 -->
 <template>
-  <div class="steps8">
-    <div class="hero-section">
-      <h1 class="hero-title">部署完成</h1>
-      <p class="hero-subtitle">您的集群已成功部署，可以开始使用了</p>
+  <div class="steps8 steps apple-style-container">
+    <div class="steps-header">
+      <div class="header-content">
+        <div class="back-button" v-if="currentPage !== 1" @click="goBack">
+          <a-icon type="left" />
+          <span>返回</span>
+        </div>
+        <div class="title-section">
+          <h1 class="page-title">{{title}}</h1>
+          <p class="page-subtitle" v-if="currentPage === 1">监控服务安装和启动进度</p>
+        </div>
+      </div>
+      
+      <a-button 
+        @click="handleCancel" 
+        class="apple-button close-button"
+      >
+        <a-icon type="close" />
+      </a-button>
     </div>
-    
-    <div class="completion-container">
-      <div class="success-animation">
-        <div class="check-container">
-          <a-icon type="check" class="check-icon" />
-        </div>
-      </div>
+
+    <div class="content-container">
+      <!-- 命令列表表格 -->
+      <a-table 
+        v-if="currentPage === 1" 
+        @change="tableChange" 
+        :columns="columns" 
+        :loading="loading" 
+        :dataSource="dataSource" 
+        :scroll="{y: 500}" 
+        :rowSelection="{
+          selectedRowKeys: selectedRowKeys, 
+          onChange: onSelectChange
+        }" 
+        rowKey="commandId" 
+        :pagination="pagination"
+        class="apple-table"
+      />
       
-      <div class="service-summary">
-        <h2 class="summary-title">部署摘要</h2>
-        <div class="summary-content">
-          <div class="summary-row">
-            <span class="label">集群名称:</span>
-            <span class="value">{{ clusterInfo.clusterName || '-' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">集群ID:</span>
-            <span class="value">{{ clusterInfo.id || '-' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">集群框架:</span>
-            <span class="value">{{ clusterInfo.frameType || '-' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">部署模式:</span>
-            <span class="value">{{ clusterInfo.deployType || '-' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">服务数量:</span>
-            <span class="value">{{ serviceList.length || '0' }}</span>
-          </div>
-          <div class="summary-row">
-            <span class="label">主机数量:</span>
-            <span class="value">{{ clusterInfo.hostNum || '0' }}</span>
-          </div>
-        </div>
-      </div>
+      <!-- 主机列表表格 -->
+      <a-table 
+        v-if="[2,3].includes(currentPage)" 
+        @change="tableChange" 
+        :columns="columns" 
+        :loading="loading" 
+        :dataSource="dataSource" 
+        :scroll="{y: 500}" 
+        rowKey="hostCommandId" 
+        :pagination="pagination"
+        class="apple-table"
+      />
       
-      <div class="service-list">
-        <h2 class="list-title">已安装服务</h2>
-        
-        <a-table
-          class="apple-table"
-          :columns="columns"
-          :data-source="serviceList"
-          :pagination="false"
-          :loading="loading"
-          rowKey="id"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'status'">
-              <div class="status-cell">
-                <span class="status-dot" :class="getStatusClass(record.status)"></span>
-                <span class="status-text">{{ getStatusText(record.status) }}</span>
-              </div>
-            </template>
-            
-            <template v-if="column.dataIndex === 'action'">
-              <div class="action-cell">
-                <a-button 
-                  class="apple-button view" 
-                  @click="viewDetail(record)"
-                  size="small"
-                >
-                  <a-icon type="eye" />
-                  查看详情
-                </a-button>
-                
-                <a-button 
-                  class="apple-button manage" 
-                  @click="manageService(record)"
-                  size="small"
-                >
-                  <a-icon type="setting" />
-                  管理服务
-                </a-button>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </div>
-      
-      <div class="completion-actions">
-        <a-button 
-          class="apple-button primary"
-          @click="goToOverview"
-          size="large"
-        >
-          前往监控概览
-        </a-button>
-        
-        <a-button 
-          class="apple-button secondary"
-          @click="goToServiceManage"
-          size="large"
-        >
-          服务管理中心
-        </a-button>
-      </div>
+      <!-- 日志查看组件 -->
+      <LOGS 
+        v-if="currentPage === 4" 
+        :logData="logData" 
+        :hideCancel="true"
+        class="apple-logs" 
+      />
     </div>
   </div>
 </template>
+
 <script>
 import { mapActions, mapState } from "vuex";
+import LOGS from "@/components/logs";
 
 export default {
-  inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
+  inject: ["clusterId", "handleCancel"],
   props: {
     stepsType: {
       type: String,
       default: "cluster",
     },
   },
+  components: { LOGS },
   data() {
     return {
       hostType: "all",
@@ -166,39 +125,6 @@ export default {
       commandHostId: "", // 第三个列表请求页面需要的参数
       commandName: "",
       logData: "",
-      clusterInfo: {},
-      serviceList: [],
-      columns: [
-        {
-          title: "序号",
-          key: "index",
-          width: 80,
-          customRender: (text, row, index) => {
-            return index + 1;
-          },
-        },
-        {
-          title: "服务名称",
-          dataIndex: "serviceName",
-          key: "serviceName",
-        },
-        {
-          title: "版本",
-          dataIndex: "serviceVersion",
-          key: "serviceVersion",
-        },
-        {
-          title: "状态",
-          dataIndex: "status",
-          key: "status",
-        },
-        {
-          title: "操作",
-          dataIndex: "action",
-          key: "action",
-          width: 220,
-        },
-      ],
     };
   },
   watch: {
@@ -219,6 +145,111 @@ export default {
       steps: (state) => state.steps, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
       setting: (state) => state.setting
     }),
+    columns() {
+      let arr = [
+        {
+          title: "序号",
+          key: "index",
+          width: 120,
+          customRender: (text, row, index) => {
+            return (
+                <span>
+                {parseInt(
+                    this.pagination.current === 1
+                        ? index + 1
+                        : index +
+                        1 +
+                        this.pagination.pageSize * (this.pagination.current - 1)
+                )}
+              </span>
+            );
+          },
+        },
+        {
+          title:
+              this.currentPage === 1
+                  ? "命令"
+                  : this.currentPage === 2
+                      ? "主机"
+                      : "指令名称",
+          key: this.currentPage === 2 ? "hostname" : "commandName",
+          dataIndex: this.currentPage === 2 ? "hostname" : "commandName",
+          width: 300,
+          customRender: (text, row, index) => {
+            return this.currentPage !== 3 ? (
+                <span class={"command-name"} onClick={() => this.seeDetail(row)}>
+                {text}
+              </span>
+            ) : (
+                <span>{text}</span>
+            );
+          },
+        },
+        {
+          title: "状态",
+          key: "commandProgress",
+          dataIndex: "commandProgress",
+          customRender: (text, row, index) => {
+            return (
+                <span>
+                {row.commandStateCode === 1 ? (
+                    <a-progress
+                        class="progress-warp"
+                        percent={text}
+                        status="active"
+                    />
+                ) : row.commandStateCode === 2 ? (
+                    <a-progress class="progress-warp" percent={text} />
+                ) : row.commandStateCode === 4 ? (
+                    <a-progress class="progress-warp" strokeColor='#FFA53D' format={()=><a-icon style="color:#FFA53D" type="exclamation-circle" />} percent={text} />
+                ) : (
+                    <a-progress
+                        class="progress-warp"
+                        percent={text}
+                        status="exception"
+                    />
+                )}
+              </span>
+            );
+          },
+        },
+      ];
+      if (this.currentPage === 1) {
+        arr.push(
+            {
+              title: "开始时间",
+              key: "createTime",
+              dataIndex: "createTime",
+              width: 180,
+            },
+            {
+              title: "持续时间",
+              key: "durationTime",
+              dataIndex: "durationTime",
+              width: 160,
+            }
+        );
+      }
+      if (this.currentPage === 3) {
+        arr.push({
+          title: "日志信息",
+          key: "resultMsg",
+          dataIndex: "resultMsg",
+          // width: 140,
+          customRender: (text, row, index) => {
+            return (
+                <span
+                    class="flex-container command-name"
+                    onClick={() => this.seeDetail(row)}
+                >
+                查看日志
+              </span>
+            );
+          },
+        });
+      }
+      return arr;
+    },
   },
   methods: {
     changeType(type) {
@@ -242,11 +273,11 @@ export default {
         params.commandHostId = this.commandHostId;
       }
       const ajaxApi =
-        this.currentPage === 1
-          ? global.API.getServiceCommandlist
-          : this.currentPage === 2
-            ? global.API.getServiceHostList
-            : global.API.getServiceRoleOrderList;
+          this.currentPage === 1
+              ? global.API.getServiceCommandlist
+              : this.currentPage === 2
+                  ? global.API.getServiceHostList
+                  : global.API.getServiceRoleOrderList;
       // todo：这个接口地址需要替换
       this.$axiosPost(ajaxApi, params).then((res) => {
         this.loading = false;
@@ -365,81 +396,17 @@ export default {
       };
       // 等待网络请求结束
       let flag = await this.$axiosPost(
-        global.API.dispatcherHostAgentCompleted,
-        params
+          global.API.dispatcherHostAgentCompleted,
+          params
       );
       // 网络请求结束后才执行下边的语句  如果传入的callback方法为空或者没传内容也不会去执行，这样也不会影响此方法在别处的调用
       if (callback) {
         callback(flag);
       }
     },
-    routerTo() {
-      // 实现路由到集群管理页面的逻辑
-    },
-    getClusterInfo() {
-      this.loading = true;
-      const params = {
-        clusterId: this.clusterId,
-      };
-      
-      this.$axiosPost(global.API.getClusterInfo, params).then((res) => {
-        if (res.code === 200) {
-          this.clusterInfo = res.data || {};
-        }
-        this.loading = false;
-      });
-    },
-    getStatusClass(status) {
-      switch (status) {
-        case 'NORMAL':
-          return 'running';
-        case 'STOPPED':
-          return 'stopped';
-        case 'STARTING':
-          return 'starting';
-        case 'ERROR':
-          return 'error';
-        default:
-          return 'unknown';
-      }
-    },
-    getStatusText(status) {
-      switch (status) {
-        case 'NORMAL':
-          return '运行中';
-        case 'STOPPED':
-          return '已停止';
-        case 'STARTING':
-          return '启动中';
-        case 'ERROR':
-          return '异常';
-        default:
-          return '未知';
-      }
-    },
-    viewDetail(record) {
-      this.$router.push({
-        path: `/service-manage/service-list/${record.id}`,
-      });
-    },
-    manageService(record) {
-      this.$router.push({
-        path: `/service-manage/service-list/${record.id}`,
-      });
-    },
-    goToOverview() {
-      this.handleCancel();
-      this.$router.push('/overview');
-    },
-    goToServiceManage() {
-      this.handleCancel();
-      this.$router.push('/service-manage');
-    },
   },
   mounted() {
     this.pollingSearch();
-    this.getClusterInfo();
-    this.getServiceList();
   },
   beforeDestroy() {
     clearInterval(this.timer1);
@@ -448,321 +415,289 @@ export default {
   },
 };
 </script>
-<style lang="less" scoped>
-// 苹果设计系统颜色
-@apple-white: #ffffff;
-@apple-black: #1d1d1f;
-@apple-gray-light: #f5f5f7;
-@apple-gray: #86868b;
-@apple-blue: #0071e3;
-@apple-blue-hover: #147CE5;
-@apple-red: #ff453a;
-@apple-green: #34c759;
-@apple-yellow: #ffd60a;
-@apple-orange: #ff9f0a;
 
-// 苹果设计系统字体
-.apple-font() {
-  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+<style lang="less" scoped>
+// 苹果设计风格颜色变量
+@apple-white: #ffffff;
+@apple-blue: #0071e3;
+@apple-blue-light: rgba(0, 113, 227, 0.1);
+@apple-gray-100: #f5f5f7;
+@apple-gray-200: #e5e5ea;
+@apple-gray-300: #d2d2d7;
+@apple-gray-400: #86868b;
+@apple-gray-500: #6e6e73;
+@apple-text: #1d1d1f;
+@apple-border: rgba(0, 0, 0, 0.1);
+@apple-success: #34c759;
+@apple-warning: #ff9f0a;
+@apple-error: #ff3b30;
+
+.apple-style-container {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+  color: @apple-text;
+  margin: 0;
+  padding: 0;
+  background-color: @apple-white;
+  min-height: 100%;
+  position: relative;
 }
 
-.steps8 {
-  margin: 0;
-  max-width: 100%;
-  background-color: @apple-white;
-  overflow: hidden;
-  animation: fadeIn 0.8s ease-out;
+.steps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 24px 0;
+  border-bottom: 1px solid @apple-border;
+  margin-bottom: 24px;
   
-  .hero-section {
-    text-align: center;
-    margin-bottom: 2.5rem;
-    position: relative;
-
-    .hero-title {
-      .apple-font();
-      font-size: 2.5rem;
-      font-weight: 600;
-      line-height: 1.1;
-      letter-spacing: -0.022em;
-      color: @apple-black;
-      margin-bottom: 0.8rem;
-      background: linear-gradient(120deg, @apple-black, #505050);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+  .header-content {
+    display: flex;
+    align-items: center;
+    
+    .back-button {
+      display: flex;
+      align-items: center;
+      color: @apple-blue;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 16px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      
+      &:hover {
+        background-color: @apple-blue-light;
+      }
+      
+      .anticon {
+        margin-right: 4px;
+      }
     }
-
-    .hero-subtitle {
-      .apple-font();
-      font-size: 1.2rem;
-      line-height: 1.4;
-      letter-spacing: 0;
-      font-weight: 400;
-      color: @apple-gray;
-      margin: 0 auto 1.5rem;
-      max-width: 600px;
+    
+    .title-section {
+      .page-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: @apple-text;
+        background: linear-gradient(120deg, @apple-text, #505050);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      
+      .page-subtitle {
+        font-size: 14px;
+        color: @apple-gray-500;
+        margin: 0;
+      }
     }
   }
   
-  .completion-container {
-    max-width: 1000px;
-    margin: 0 auto;
-    animation: slideUp 0.6s ease-out;
-    animation-fill-mode: both;
-    animation-delay: 0.2s;
-    
-    // 成功动画
-    .success-animation {
+  .apple-button {
+    &.close-button {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 16px;
       display: flex;
+      align-items: center;
       justify-content: center;
-      margin-bottom: 2rem;
+      background: @apple-gray-100;
+      transition: all 0.2s;
       
-      .check-container {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background-color: fadeout(@apple-green, 90%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: pulse 2s infinite;
-        
-        .check-icon {
-          font-size: 42px;
-          color: @apple-green;
-          animation: bounceIn 0.6s;
-        }
+      &:hover {
+        background: @apple-gray-200;
+      }
+      
+      .anticon {
+        color: @apple-gray-500;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.content-container {
+  .apple-table {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    
+    :deep(.ant-table-thead > tr > th) {
+      background-color: @apple-gray-100;
+      color: @apple-text;
+      font-weight: 500;
+      border-bottom: 1px solid @apple-border;
+      padding: 16px;
+      
+      &:first-child {
+        border-top-left-radius: 12px;
+      }
+      
+      &:last-child {
+        border-top-right-radius: 12px;
       }
     }
     
-    // 服务摘要
-    .service-summary {
-      background-color: @apple-white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      margin-bottom: 2rem;
-      padding: 1.5rem 2rem;
+    :deep(.ant-table-tbody > tr > td) {
+      border-bottom: 1px solid @apple-border;
+      padding: 16px;
+      transition: all 0.3s;
       
-      .summary-title {
-        .apple-font();
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: @apple-black;
-        margin-bottom: 1.5rem;
-      }
-      
-      .summary-content {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
+      .command-name {
+        color: @apple-blue;
+        cursor: pointer;
+        transition: all 0.2s;
         
-        .summary-row {
-          display: flex;
-          align-items: center;
-          
-          .label {
-            color: @apple-gray;
-            font-size: 0.95rem;
-            width: 100px;
-            flex-shrink: 0;
-          }
-          
-          .value {
-            color: @apple-black;
-            font-weight: 500;
-            font-size: 1rem;
-          }
-        }
-      }
-    }
-    
-    // 服务列表
-    .service-list {
-      background-color: @apple-white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      margin-bottom: 2rem;
-      padding: 1.5rem 2rem;
-      
-      .list-title {
-        .apple-font();
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: @apple-black;
-        margin-bottom: 1.5rem;
-      }
-      
-      // 表格样式
-      :deep(.apple-table) {
-        .apple-font();
-        
-        .ant-table-thead > tr > th {
-          background-color: @apple-gray-light;
-          font-weight: 600;
-          font-size: 0.95rem;
-          color: @apple-black;
-          padding: 16px 20px;
-          border-bottom: 1px solid rgba(0,0,0,0.05);
-          white-space: nowrap;
-        }
-        
-        .ant-table-tbody > tr > td {
-          padding: 14px 20px;
-          border-bottom: 1px solid rgba(0,0,0,0.03);
-          transition: background-color 0.3s;
-        }
-        
-        .ant-table-tbody > tr:hover:not(.ant-table-expanded-row) > td {
-          background-color: fadeout(@apple-gray-light, 50%);
+        &:hover {
+          color: darken(@apple-blue, 10%);
+          text-decoration: none;
         }
       }
       
-      // 状态单元格样式
-      .status-cell {
-        display: flex;
-        align-items: center;
+      .progress-warp {
+        margin: 8px 0;
         
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          margin-right: 8px;
-          
-          &.running {
-            background-color: @apple-green;
-            box-shadow: 0 0 6px @apple-green;
-          }
-          
-          &.stopped {
-            background-color: @apple-gray;
-          }
-          
-          &.starting {
-            background-color: @apple-blue;
-            animation: pulse 1.5s infinite;
-          }
-          
-          &.error {
-            background-color: @apple-red;
-          }
-          
-          &.unknown {
-            background-color: @apple-yellow;
-          }
+        :deep(.ant-progress-bg) {
+          background-color: @apple-blue;
         }
         
-        .status-text {
-          font-size: 14px;
+        :deep(.ant-progress-status-success .ant-progress-bg) {
+          background-color: @apple-success;
         }
-      }
-      
-      // 操作单元格样式
-      .action-cell {
-        display: flex;
-        gap: 8px;
         
-        .apple-button {
-          border-radius: 15px;
-          font-size: 13px;
+        :deep(.ant-progress-status-exception .ant-progress-bg) {
+          background-color: @apple-error;
+        }
+        
+        :deep(.ant-progress-text) {
+          color: @apple-text;
           font-weight: 500;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          height: 30px;
-          padding: 0 12px;
+        }
+      }
+    }
+    
+    :deep(.ant-table-tbody > tr) {
+      &:hover > td {
+        background-color: @apple-gray-100;
+      }
+      
+      &:last-child > td {
+        border-bottom: none;
+        
+        &:first-child {
+          border-bottom-left-radius: 12px;
+        }
+        
+        &:last-child {
+          border-bottom-right-radius: 12px;
+        }
+      }
+    }
+    
+    // 选择框样式
+    :deep(.ant-checkbox-wrapper) {
+      .ant-checkbox {
+        .ant-checkbox-inner {
+          border-radius: 4px;
+          border-color: @apple-gray-300;
           transition: all 0.3s;
           
-          .anticon {
-            margin-right: 4px;
-            font-size: 14px;
+          &:hover {
+            border-color: @apple-blue;
           }
+        }
+        
+        &.ant-checkbox-checked .ant-checkbox-inner {
+          background-color: @apple-blue;
+          border-color: @apple-blue;
+        }
+      }
+    }
+  }
+  
+  // 分页器样式
+  :deep(.ant-pagination) {
+    margin-top: 20px;
+    
+    .ant-pagination-item {
+      border-radius: 6px;
+      border-color: @apple-gray-300;
+      transition: all 0.3s;
+      
+      &:hover {
+        border-color: @apple-blue;
+        
+        a {
+          color: @apple-blue;
+        }
+      }
+      
+      &-active {
+        border-color: @apple-blue;
+        background-color: @apple-blue;
+        
+        a {
+          color: white;
+        }
+        
+        &:hover {
+          border-color: darken(@apple-blue, 10%);
+          background-color: darken(@apple-blue, 10%);
           
-          &.view {
-            background-color: fadeout(@apple-blue, 90%);
-            color: @apple-blue;
-            border: 1px solid fadeout(@apple-blue, 70%);
-            
-            &:hover {
-              background-color: fadeout(@apple-blue, 80%);
-            }
-          }
-          
-          &.manage {
-            background-color: fadeout(@apple-gray, 90%);
-            color: @apple-black;
-            border: 1px solid fadeout(@apple-gray, 70%);
-            
-            &:hover {
-              background-color: fadeout(@apple-gray, 80%);
-            }
+          a {
+            color: white;
           }
         }
       }
     }
     
-    // 完成后操作
-    .completion-actions {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      margin-top: 3rem;
-      margin-bottom: 2rem;
-      
-      .apple-button {
-        height: 48px;
-        min-width: 180px;
-        border-radius: 24px;
-        font-size: 16px;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .ant-pagination-prev,
+    .ant-pagination-next {
+      .ant-pagination-item-link {
+        border-radius: 6px;
         transition: all 0.3s;
         
-        &.primary {
-          background-color: @apple-blue;
-          border: none;
-          color: white;
-          
-          &:hover {
-            background-color: @apple-blue-hover;
-          }
-        }
-        
-        &.secondary {
-          background-color: @apple-gray-light;
-          border: none;
-          color: @apple-black;
-          
-          &:hover {
-            background-color: darken(@apple-gray-light, 5%);
-          }
+        &:hover {
+          border-color: @apple-blue;
+          color: @apple-blue;
         }
       }
     }
   }
+  
+  // 加载状态
+  :deep(.ant-spin) {
+    .ant-spin-dot {
+      .ant-spin-dot-item {
+        background-color: @apple-blue;
+      }
+    }
+    
+    .ant-spin-text {
+      color: @apple-blue;
+    }
+  }
+}
+
+// 日志组件样式
+.apple-logs {
+  background: @apple-white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  margin-top: 20px;
 }
 
 // 动画
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes bounceIn {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

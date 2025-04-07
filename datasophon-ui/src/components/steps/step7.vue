@@ -25,173 +25,80 @@
  * @FilePath: \ddh-ui\src\components\steps\step7.vue
 -->
 <template>
-  <div class="steps7">
-    <div class="hero-section">
-      <h1 class="hero-title">服务部署</h1>
-      <p class="hero-subtitle">启动和部署所选服务，监控安装进度</p>
-    </div>
-    
-    <div class="service-install-container">
-      <div class="progress-overview">
-        <div class="progress-cards">
-          <div class="progress-card total">
-            <div class="card-icon">
-              <a-icon type="appstore" />
-            </div>
-            <div class="card-content">
-              <div class="card-title">总服务数</div>
-              <div class="card-value">{{ serviceTotal }}</div>
-            </div>
-          </div>
-          
-          <div class="progress-card success">
-            <div class="card-icon">
-              <a-icon type="check-circle" />
-            </div>
-            <div class="card-content">
-              <div class="card-title">已安装</div>
-              <div class="card-value">{{ successCount }}</div>
-            </div>
-          </div>
-          
-          <div class="progress-card pending">
-            <div class="card-icon">
-              <a-icon type="loading" />
-            </div>
-            <div class="card-content">
-              <div class="card-title">安装中</div>
-              <div class="card-value">{{ installingCount }}</div>
-            </div>
-          </div>
-          
-          <div class="progress-card failed">
-            <div class="card-icon">
-              <a-icon type="close-circle" />
-            </div>
-            <div class="card-content">
-              <div class="card-title">安装失败</div>
-              <div class="card-value">{{ failedCount }}</div>
-            </div>
-          </div>
+  <div class="steps7 steps apple-style-container">
+    <div class="steps-header">
+      <div class="header-content">
+        <div class="steps-title">
+          <span>服务配置</span>
+        </div>
+        <div class="steps-subtitle">
+          <span>配置各个服务组件的运行参数</span>
         </div>
       </div>
-      
-      <div class="service-list">
-        <a-table
-          :columns="columns"
-          :data-source="dataSource"
-          :pagination="false"
-          rowKey="id"
-          :loading="loading"
-          class="apple-table"
-        >
-          <template #bodyCell="{ column, text, record }">
-            <template v-if="column.dataIndex === 'status'">
-              <span class="status-tag" :class="getStatusClass(record.status)">
-                <a-icon :type="getStatusIcon(record.status)" />
-                {{ getStatusText(record.status) }}
-              </span>
-            </template>
-            
-            <template v-if="column.dataIndex === 'progress'">
-              <a-progress 
-                :percent="record.progress" 
-                :status="getProgressStatus(record.status)" 
-                :stroke-color="getProgressColor(record.status)"
-                class="apple-progress"
-              />
-            </template>
-            
-            <template v-if="column.dataIndex === 'action'">
-              <a-button 
-                v-if="record.status === 'FAILED'" 
-                @click="retryService(record)"
-                class="apple-button retry"
-                size="small"
-              >
-                <a-icon type="redo" />
-                重试
-              </a-button>
-              <a-button 
-                v-if="record.status === 'FAILED'" 
-                @click="showLog(record)"
-                class="apple-button view-log"
-                size="small"
-              >
-                <a-icon type="file-text" />
-                查看日志
-              </a-button>
-            </template>
-          </template>
-        </a-table>
-      </div>
+      <a-button class="apple-button save-button" type="primary" @click="handleSubmit">
+        <a-icon type="save" />
+        保存配置
+      </a-button>
     </div>
     
-    <!-- 日志查看弹窗 -->
-    <a-modal
-      v-model="logVisible"
-      title="安装日志"
-      width="800px"
-      :footer="null"
-      class="apple-modal"
-    >
-      <div class="log-content" v-if="serviceLog">
-        <pre>{{ serviceLog }}</pre>
-      </div>
-    </a-modal>
+    <div class="content-container">
+      <a-spin :spinning="loading" class="apple-spin">
+        <a-tabs 
+          v-model="serviceNameKey" 
+          @change="callback" 
+          class="apple-tabs"
+        >
+          <a-tab-pane 
+            v-for="item in SERVICENAMES" 
+            :key="item" 
+            :tab="item" 
+            :forceRender="true"
+          />
+        </a-tabs>
+        
+        <div 
+          v-for="item in SERVICENAMES" 
+          :key="item"
+          :class="[
+            'service-config-container',
+            serviceNameKey === item ? 'active-container' : 'inactive-container',
+            item + 'warp'
+          ]"
+        >
+          <CommonTemplate 
+            :ref="'CommonTemplateRef'+item" 
+            :steps4Data="steps4Data" 
+            :templateData="templateProps(item)"
+            class="apple-template" 
+          />
+        </div>
+      </a-spin>
+    </div>
   </div>
 </template>
 <script>
+import CommonTemplate from "@/components/commonTemplate/index";
 import { mapActions, mapState } from "vuex";
 import { de } from "date-fns/locale";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
+  components: { CommonTemplate },
   props: {
     steps4Data: Object,
   },
   data() {
     return {
       loading: false,
-      timer: null,
-      dataSource: [],
-      serviceTotal: 0,
-      successCount: 0,
-      installingCount: 0,
-      failedCount: 0,
-      logVisible: false,
-      serviceLog: "",
-      columns: [
-        {
-          title: "序号",
-          key: "index",
-          width: 80,
-          customRender: (text, row, index) => {
-            return index + 1;
-          },
-        },
-        {
-          title: "服务名称",
-          dataIndex: "serviceName",
-          key: "serviceName",
-        },
-        {
-          title: "状态",
-          dataIndex: "status",
-          key: "status",
-        },
-        {
-          title: "进度",
-          dataIndex: "progress",
-          key: "progress",
-        },
-        {
-          title: "操作",
-          dataIndex: "action",
-          key: "action",
-          width: 200,
-        },
-      ],
+      templateData: [],
+      // "ZOOKEEPER": [], "HDFS": [], "YARN": []
+      templateObj: {},
+      saveData: [],
+      hostList: [],
+      serviceNameKey: "",
+      SERVICENAMES: [],
+      selectKeys: [],
+      // serviceContainerHeight: 0,
     };
   },
   watch: {
@@ -302,8 +209,8 @@ export default {
     handleSubmit() {
       this.templateData = this.templateObj[`${this.serviceNameKey}`];
       this.$refs[
-        `CommonTemplateRef${this.serviceNameKey}`
-      ][0].form.validateFields(async (err, values) => {
+          `CommonTemplateRef${this.serviceNameKey}`
+          ][0].form.validateFields(async (err, values) => {
         if (!err) {
           let param = _.cloneDeep(this.templateData);
           const arrayWithData = this.handlearrayWithData(values);
@@ -320,7 +227,7 @@ export default {
             item.name = item.name.replaceAll("!", ".");
           });
           let filterParam = param.filter(
-            (item) => !(!item.required && item.hidden)
+              (item) => !(!item.required && item.hidden)
           );
           // 处理表单数据 将相同的key处理成数组
           let saveParam = {
@@ -330,8 +237,8 @@ export default {
           };
           // // 等待网络请求结束
           let res = await this.$axiosPost(
-            global.API.saveServiceConfig,
-            saveParam
+              global.API.saveServiceConfig,
+              saveParam
           );
           if (res.code === 200) {
             this.$message.success("保存成功");
@@ -348,13 +255,13 @@ export default {
           serviceName: item,
         };
         this.$axiosPost(global.API.getServiceConfigOption, params).then(
-          (res) => {
-            if (res.code === 200) {
-              self.templateObj[item] = self.handlerTemplate(res.data);
-              self.loading = false;
+            (res) => {
+              if (res.code === 200) {
+                self.templateObj[item] = self.handlerTemplate(res.data);
+                self.loading = false;
+              }
+              // self.templateData = this.handlerTemplate(res.data);
             }
-            // self.templateData = this.handlerTemplate(res.data);
-          }
         );
       });
     },
@@ -370,12 +277,12 @@ export default {
       for (let i = 0; i < self.SERVICENAMES.length; i++) {
         const item = self.SERVICENAMES[i];
         self.$refs[`CommonTemplateRef${item}`][0].form.validateFields(
-          (err, values) => {
-            if (err) {
-              self.serviceNameKey = item;
-              num++;
+            (err, values) => {
+              if (err) {
+                self.serviceNameKey = item;
+                num++;
+              }
             }
-          }
         );
         if (num > 0) break;
       }
@@ -390,8 +297,8 @@ export default {
           let serviceNameKey = item;
           this.templateData = this.templateObj[`${serviceNameKey}`];
           this.$refs[
-            `CommonTemplateRef${serviceNameKey}`
-          ][0].form.validateFields(async (err, values) => {
+              `CommonTemplateRef${serviceNameKey}`
+              ][0].form.validateFields(async (err, values) => {
             if (!err) {
               let param = _.cloneDeep(this.templateData);
               const arrayWithData = this.handlearrayWithData(values);
@@ -408,7 +315,7 @@ export default {
                 item.name = item.name.replaceAll("!", ".");
               });
               let filterParam = param.filter(
-                (item) => !(!item.required && item.hidden)
+                  (item) => !(!item.required && item.hidden)
               );
               // 处理表单数据 将相同的key处理成数组
               let saveParam = {
@@ -418,8 +325,8 @@ export default {
               };
               // // 等待网络请求结束
               let res = await this.$axiosPost(
-                global.API.saveServiceConfig,
-                saveParam
+                  global.API.saveServiceConfig,
+                  saveParam
               );
               resolve({ ...res, name: serviceNameKey });
             }
@@ -478,142 +385,10 @@ export default {
       // 如果所有的表单校验成功了 那么就把所有的tab页去保存一下
       this.submitAllServices(callback);
     },
-    getStatusClass(status) {
-      const statusMap = {
-        'INSTALLING': 'installing',
-        'SUCCESS': 'success',
-        'FAILED': 'failed',
-        'WAITING': 'waiting'
-      };
-      return statusMap[status] || 'default';
-    },
-    
-    getStatusIcon(status) {
-      const iconMap = {
-        'INSTALLING': 'loading',
-        'SUCCESS': 'check-circle',
-        'FAILED': 'close-circle',
-        'WAITING': 'clock-circle'
-      };
-      return iconMap[status] || 'question-circle';
-    },
-    
-    getStatusText(status) {
-      const textMap = {
-        'INSTALLING': '安装中',
-        'SUCCESS': '已安装',
-        'FAILED': '安装失败',
-        'WAITING': '等待安装'
-      };
-      return textMap[status] || '未知';
-    },
-    
-    getProgressStatus(status) {
-      const statusMap = {
-        'INSTALLING': 'active',
-        'SUCCESS': 'success',
-        'FAILED': 'exception',
-        'WAITING': 'normal'
-      };
-      return statusMap[status] || 'normal';
-    },
-    
-    getProgressColor(status) {
-      const colorMap = {
-        'INSTALLING': '#0071e3',
-        'SUCCESS': '#34c759',
-        'FAILED': '#ff453a',
-        'WAITING': '#86868b'
-      };
-      return colorMap[status] || '#86868b';
-    },
-    
-    getInstallProgressList() {
-      this.loading = true;
-      const params = {
-        clusterId: this.clusterId,
-      };
-      
-      this.$axiosPost(global.API.getInstallProgressList, params).then((res) => {
-        this.loading = false;
-        if (res.code === 200) {
-          this.dataSource = res.data;
-          this.serviceTotal = this.dataSource.length;
-          this.updateServiceCounts();
-        }
-      });
-    },
-    
-    updateServiceCounts() {
-      this.successCount = this.dataSource.filter(item => item.status === 'SUCCESS').length;
-      this.failedCount = this.dataSource.filter(item => item.status === 'FAILED').length;
-      this.installingCount = this.dataSource.filter(item => item.status === 'INSTALLING').length;
-    },
-    
-    // 启动轮询
-    startPolling() {
-      this.getInstallProgressList();
-      
-      if (this.timer) {
-        clearInterval(this.timer);
-      }
-      
-      this.timer = setInterval(() => {
-        this.getInstallProgressList();
-        
-        // 如果所有服务都已经完成安装（成功或失败），停止轮询
-        if (this.installingCount === 0 && this.dataSource.length > 0) {
-          this.stopPolling();
-        }
-      }, 5000);
-    },
-    
-    stopPolling() {
-      if (this.timer) {
-        clearInterval(this.timer);
-        this.timer = null;
-      }
-    },
-    
-    retryService(record) {
-      const params = {
-        clusterId: this.clusterId,
-        serviceId: record.id,
-      };
-      
-      this.loading = true;
-      this.$axiosPost(global.API.retryServiceInstall, params).then((res) => {
-        this.loading = false;
-        if (res.code === 200) {
-          this.$message.success('重试安装任务已提交');
-          this.startPolling(); // 重新开始轮询
-        } else {
-          this.$message.error(res.msg || '重试失败');
-        }
-      });
-    },
-    
-    showLog(record) {
-      const params = {
-        clusterId: this.clusterId,
-        serviceId: record.id,
-      };
-      
-      this.logVisible = true;
-      this.serviceLog = "加载日志中...";
-      
-      this.$axiosPost(global.API.getServiceInstallLog, params).then((res) => {
-        if (res.code === 200) {
-          this.serviceLog = res.data || "没有找到安装日志";
-        } else {
-          this.serviceLog = "获取日志失败: " + (res.msg || "未知错误");
-        }
-      });
-    },
   },
   created() {
     this.SERVICENAMES = this.steps4Data.serviceNames.map(
-      (item) => item.serviceName
+        (item) => item.serviceName
     );
     this.serviceNameKey = this.SERVICENAMES[0];
     this.selectKeys.push(this.serviceNameKey);
@@ -622,365 +397,259 @@ export default {
     });
   },
   mounted() {
-    this.startPolling();
-  },
-  beforeDestroy() {
-    this.stopPolling();
+    this.getServiceConfigOption();
   },
 };
 </script>
 <style lang="less" scoped>
-// 苹果设计系统颜色
+// 苹果设计风格颜色变量
 @apple-white: #ffffff;
-@apple-black: #1d1d1f;
-@apple-gray-light: #f5f5f7;
-@apple-gray: #86868b;
 @apple-blue: #0071e3;
-@apple-blue-hover: #147CE5;
-@apple-red: #ff453a;
-@apple-green: #34c759;
-@apple-yellow: #ffd60a;
-@apple-orange: #ff9f0a;
+@apple-blue-light: rgba(0, 113, 227, 0.1);
+@apple-gray-100: #f5f5f7;
+@apple-gray-200: #e5e5ea;
+@apple-gray-300: #d2d2d7;
+@apple-gray-400: #86868b;
+@apple-gray-500: #6e6e73;
+@apple-text: #1d1d1f;
+@apple-border: rgba(0, 0, 0, 0.1);
 
-// 苹果设计系统字体
-.apple-font() {
-  font-family: "SF Pro Display", "SF Pro Icons", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+.apple-style-container {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+  color: @apple-text;
+  margin: 0;
+  padding: 0;
+  background-color: @apple-white;
+  min-height: 100%;
+  position: relative;
 }
 
-.steps7 {
-  margin: 0;
-  max-width: 100%;
-  background-color: @apple-white;
-  overflow: hidden;
-  animation: fadeIn 0.8s ease-out;
+.steps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 24px 0;
+  border-bottom: 1px solid @apple-border;
+  margin-bottom: 24px;
   
-  .hero-section {
-    text-align: center;
-    margin-bottom: 2.5rem;
-    position: relative;
-
-    .hero-title {
-      .apple-font();
-      font-size: 2.5rem;
+  .header-content {
+    .steps-title {
+      font-size: 24px;
       font-weight: 600;
-      line-height: 1.1;
-      letter-spacing: -0.022em;
-      color: @apple-black;
-      margin-bottom: 0.8rem;
-      background: linear-gradient(120deg, @apple-black, #505050);
+      margin-bottom: 8px;
+      color: @apple-text;
+      background: linear-gradient(120deg, @apple-text, #505050);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-
-    .hero-subtitle {
-      .apple-font();
-      font-size: 1.2rem;
-      line-height: 1.4;
-      letter-spacing: 0;
-      font-weight: 400;
-      color: @apple-gray;
-      margin: 0 auto 1.5rem;
-      max-width: 600px;
+    
+    .steps-subtitle {
+      font-size: 16px;
+      color: @apple-gray-500;
     }
   }
   
-  .service-install-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    animation: slideUp 0.6s ease-out;
-    animation-fill-mode: both;
-    animation-delay: 0.2s;
+  .apple-button {
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
-    // 进度概览样式
-    .progress-overview {
-      margin-bottom: 2rem;
+    &.save-button {
+      background: @apple-blue;
+      border: none;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0, 113, 227, 0.2);
       
-      .progress-cards {
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-        flex-wrap: wrap;
-        
-        .progress-card {
-          flex: 1;
-          min-width: 220px;
-          background-color: @apple-white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-          padding: 20px;
-          display: flex;
-          align-items: center;
-          transition: transform 0.3s, box-shadow 0.3s;
-          
-          &:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-          }
-          
-          .card-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            margin-right: 16px;
-            
-            .anticon {
-              font-size: 24px;
-            }
-          }
-          
-          .card-content {
-            .card-title {
-              font-size: 14px;
-              color: @apple-gray;
-              margin-bottom: 6px;
-            }
-            
-            .card-value {
-              font-size: 28px;
-              font-weight: 600;
-              line-height: 1;
-            }
-          }
-          
-          &.total {
-            .card-icon {
-              background-color: fadeout(@apple-blue, 90%);
-              color: @apple-blue;
-            }
-            
-            .card-value {
-              color: @apple-blue;
-            }
-          }
-          
-          &.success {
-            .card-icon {
-              background-color: fadeout(@apple-green, 90%);
-              color: @apple-green;
-            }
-            
-            .card-value {
-              color: @apple-green;
-            }
-          }
-          
-          &.pending {
-            .card-icon {
-              background-color: fadeout(@apple-orange, 90%);
-              color: @apple-orange;
-              
-              .anticon {
-                animation: spin 1.2s infinite linear;
-              }
-            }
-            
-            .card-value {
-              color: @apple-orange;
-            }
-          }
-          
-          &.failed {
-            .card-icon {
-              background-color: fadeout(@apple-red, 90%);
-              color: @apple-red;
-            }
-            
-            .card-value {
-              color: @apple-red;
-            }
-          }
-        }
+      &:hover {
+        background: darken(@apple-blue, 5%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
       }
-    }
-    
-    // 服务列表样式
-    .service-list {
-      background-color: @apple-white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
       
-      // 表格样式
-      :deep(.apple-table) {
-        .apple-font();
-        
-        .ant-table-thead > tr > th {
-          background-color: @apple-gray-light;
-          font-weight: 600;
-          font-size: 0.95rem;
-          color: @apple-black;
-          padding: 16px 20px;
-          border-bottom: 1px solid rgba(0,0,0,0.05);
-          white-space: nowrap;
-        }
-        
-        .ant-table-tbody > tr > td {
-          padding: 14px 20px;
-          border-bottom: 1px solid rgba(0,0,0,0.03);
-          transition: background-color 0.3s;
-        }
-        
-        .ant-table-tbody > tr:hover:not(.ant-table-expanded-row) > td {
-          background-color: fadeout(@apple-gray-light, 50%);
-        }
+      &:active {
+        transform: translateY(0);
       }
-    }
-    
-    // 状态标签样式
-    .status-tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 500;
       
       .anticon {
         margin-right: 6px;
         font-size: 14px;
       }
-      
-      &.installing {
-        background-color: fadeout(@apple-blue, 90%);
-        color: @apple-blue;
-        
-        .anticon {
-          animation: spin 1.2s infinite linear;
-        }
-      }
-      
-      &.success {
-        background-color: fadeout(@apple-green, 90%);
-        color: @apple-green;
-      }
-      
-      &.failed {
-        background-color: fadeout(@apple-red, 90%);
-        color: @apple-red;
-      }
-      
-      &.waiting {
-        background-color: fadeout(@apple-gray, 90%);
-        color: @apple-gray;
+    }
+  }
+}
+
+.content-container {
+  position: relative;
+  margin-top: 20px;
+  
+  .apple-spin {
+    :deep(.ant-spin-dot) {
+      .ant-spin-dot-item {
+        background-color: @apple-blue;
       }
     }
     
-    // 进度条样式
-    :deep(.apple-progress) {
-      .ant-progress-inner {
-        background-color: @apple-gray-light;
+    :deep(.ant-spin-text) {
+      color: @apple-blue;
+    }
+  }
+  
+  .apple-tabs {
+    :deep(.ant-tabs-bar) {
+      border-bottom: none;
+      margin: 0 0 24px 0;
+      
+      .ant-tabs-nav-container {
+        font-size: 15px;
       }
       
-      .ant-progress-bg {
-        transition: all 0.3s;
-      }
-      
-      .ant-progress-text {
-        color: @apple-black;
+      .ant-tabs-tab {
+        padding: 12px 20px;
+        margin: 0 8px 0 0;
+        color: @apple-gray-500;
         font-weight: 500;
-      }
-    }
-    
-    // 按钮样式
-    .apple-button {
-      margin-right: 8px;
-      border-radius: 15px;
-      font-size: 13px;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 30px;
-      padding: 0 12px;
-      transition: all 0.3s;
-      
-      .anticon {
-        margin-right: 4px;
-        font-size: 14px;
-      }
-      
-      &.retry {
-        background-color: fadeout(@apple-blue, 90%);
-        color: @apple-blue;
-        border: 1px solid fadeout(@apple-blue, 70%);
+        transition: all 0.3s;
+        border-radius: 8px;
         
         &:hover {
-          background-color: fadeout(@apple-blue, 80%);
+          color: @apple-blue;
+        }
+        
+        &.ant-tabs-tab-active {
+          color: @apple-blue;
+          font-weight: 600;
+          background: @apple-blue-light;
         }
       }
       
-      &.view-log {
-        background-color: fadeout(@apple-gray, 90%);
-        color: @apple-black;
-        border: 1px solid fadeout(@apple-gray, 70%);
-        
-        &:hover {
-          background-color: fadeout(@apple-gray, 80%);
-        }
+      .ant-tabs-ink-bar {
+        display: none;
       }
     }
   }
   
-  // 日志弹窗样式
-  :deep(.apple-modal) {
-    .ant-modal-content {
-      border-radius: 12px;
-      overflow: hidden;
+  .service-config-container {
+    background: @apple-white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 24px;
+    margin-bottom: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    &.active-container {
+      opacity: 1;
+      transform: translateY(0);
     }
     
-    .ant-modal-header {
-      background-color: @apple-gray-light;
-      border-bottom: none;
-      padding: 16px 24px;
-      
-      .ant-modal-title {
-        .apple-font();
-        font-weight: 600;
-        color: @apple-black;
-      }
+    &.inactive-container {
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
     }
     
-    .ant-modal-body {
-      padding: 24px;
-      
-      .log-content {
-        max-height: 400px;
-        overflow-y: auto;
-        background-color: #f8f8f8;
-        border-radius: 8px;
-        padding: 16px;
+    .apple-template {
+      :deep(.ant-form-item) {
+        margin-bottom: 24px;
         
-        pre {
-          margin: 0;
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          font-family: monospace;
-          font-size: 13px;
+        .ant-form-item-label {
           line-height: 1.5;
-          color: @apple-black;
+          
+          label {
+            color: @apple-text;
+            font-weight: 500;
+            font-size: 14px;
+          }
+        }
+        
+        .ant-form-item-control {
+          line-height: 1.5;
+          
+          .ant-input {
+            border-radius: 8px;
+            border-color: @apple-gray-300;
+            transition: all 0.3s;
+            padding: 8px 12px;
+            
+            &:hover {
+              border-color: @apple-blue;
+            }
+            
+            &:focus {
+              border-color: @apple-blue;
+              box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+            }
+          }
+          
+          .ant-select {
+            .ant-select-selection {
+              border-radius: 8px;
+              border-color: @apple-gray-300;
+              transition: all 0.3s;
+              
+              &:hover {
+                border-color: @apple-blue;
+              }
+            }
+            
+            &.ant-select-focused .ant-select-selection {
+              border-color: @apple-blue;
+              box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+            }
+          }
+          
+          .ant-checkbox-wrapper {
+            .ant-checkbox {
+              .ant-checkbox-inner {
+                border-radius: 4px;
+                border-color: @apple-gray-300;
+                transition: all 0.3s;
+                
+                &:hover {
+                  border-color: @apple-blue;
+                }
+              }
+              
+              &.ant-checkbox-checked .ant-checkbox-inner {
+                background-color: @apple-blue;
+                border-color: @apple-blue;
+              }
+            }
+          }
         }
       }
     }
   }
 }
 
-// 动画
+// 动画效果
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
 }
 </style> 

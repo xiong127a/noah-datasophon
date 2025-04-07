@@ -65,4 +65,5 @@ export default {
   fixAllFailedItems: path + '/host/check/fixAllFailedItems', // 一键修复所有失败项
   skipAllFailedItems: path + '/host/check/skipAllFailedItems', // 一键跳过所有失败项
   getWorkerLog: path + '/host/install/getWorkerLog', // 获取主机最近日志
+  listServiceTab: path + '/service/install/listServiceTab', // 获取安装服务选项卡列表
 }
