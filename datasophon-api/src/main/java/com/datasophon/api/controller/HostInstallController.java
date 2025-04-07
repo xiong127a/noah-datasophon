@@ -178,4 +178,19 @@ public class HostInstallController {
         return hostCheckService.startHostCheck(clusterId);
     }
 
+    /**
+     * 获取主机最近日志
+     * 当鼠标悬浮在主机状态信息上时调用此接口
+     * 
+     * @param ip        主机IP
+     * @param clusterId 集群ID
+     * @return 主机最近日志内容
+     */
+    @GetMapping("/getWorkerLog")
+    @UserPermission
+    public Result getWorkerLog(@RequestParam("ip") String ip,
+            @RequestParam("clusterId") Integer clusterId) {
+        return installService.getWorkerLog(ip, clusterId);
+    }
+
 }

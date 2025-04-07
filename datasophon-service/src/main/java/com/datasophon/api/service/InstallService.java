@@ -47,6 +47,7 @@ public interface InstallService {
 
     /**
      * 清理主机环境校验缓存
+     * 
      * @return 清理结果
      */
     Result clearHostEnvCheckCache();
@@ -96,5 +97,14 @@ public interface InstallService {
      * @throws Exception
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
+
+    /**
+     * 获取主机最近日志
+     * 
+     * @param ip        主机IP
+     * @param clusterId 集群ID
+     * @return 主机最近日志内容
+     */
+    Result getWorkerLog(String ip, Integer clusterId);
 
 }

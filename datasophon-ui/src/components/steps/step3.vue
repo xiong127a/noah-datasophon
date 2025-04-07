@@ -50,6 +50,26 @@
         class="apple-table"
       ></a-table>
     </div>
+    
+    <!-- 日志悬浮卡片 -->
+    <div 
+      v-show="showLogCard" 
+      class="log-card"
+      :style="{
+        left: logCardPosition.x + 'px',
+        top: logCardPosition.y + 'px'
+      }"
+      @mouseenter="clearHideLogTimer"
+      @mouseleave="handleMouseLeave"
+    >
+      <div class="log-card-header">
+        <span class="log-card-title">{{ currentLogHost }} 最近日志</span>
+        <a-icon type="close" @click="hideLog" />
+      </div>
+      <div class="log-card-body">
+        <pre class="log-card-text">{{ currentLog || '暂无日志' }}</pre>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -70,6 +90,12 @@ export default {
       dataSource: [],
       timer: null,
       loading: false,
+      // 日志卡片相关数据
+      currentLog: '',
+      currentLogHost: null,
+      hideLogTimer: null,
+      showLogCard: false,
+      logCardPosition: { x: 0, y: 0 },
       columns: [
         {
           title: "序号",
@@ -155,13 +181,21 @@ export default {
           customRender: (text, row, index) => {
             const h = this.$createElement;
             
-            return h('span', { 
-              class: 'message-text',
-              style: {
-                color: row.installStateCode === 3 ? '#FF453A' : 
-                       row.installStateCode === 2 ? '#34C759' : '#007AFF'
+            return h('div', { 
+              class: 'message-container',
+              on: {
+                mouseenter: (event) => this.handleMouseEnter(event, row),
+                mouseleave: () => this.handleMouseLeave()
               }
-            }, [text || '']);
+            }, [
+              h('span', { 
+                class: 'message-text',
+                style: {
+                  color: row.installStateCode === 3 ? '#FF453A' : 
+                         row.installStateCode === 2 ? '#34C759' : '#007AFF'
+                }
+              }, [text || ''])
+            ]);
           } 
         },
         {
@@ -265,8 +299,102 @@ export default {
         }
       );
     },
-    // 取消
-    cancelHost(row) {},
+    
+    // 处理鼠标进入
+    async handleMouseEnter(event, row) {
+      // 清除之前的定时器
+      this.clearHideLogTimer();
+      
+      // 设置卡片位置
+      this.updateCardPosition(event);
+      
+      // 如果已经在显示这个主机的日志，就不需要重新加载
+      if (this.currentLogHost === row.hostname && this.showLogCard) {
+        return;
+      }
+      
+      this.currentLogHost = row.hostname;
+      this.currentLog = '加载中...';
+      this.showLogCard = true;
+      
+      try {
+        const params = {
+          ip: row.ip,
+          clusterId: this.clusterId
+        };
+        
+        const res = await this.$axiosGet(global.API.getWorkerLog, params);
+        if (res && res.data) {
+          this.currentLog = res.data;
+        } else {
+          this.currentLog = '获取日志失败';
+        }
+      } catch (error) {
+        this.currentLog = '获取日志失败: ' + error.message;
+      }
+    },
+    
+    // 更新卡片位置
+    updateCardPosition(event) {
+      // 获取视窗宽度和高度
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      // 获取事件触发位置
+      const x = event.clientX;
+      const y = event.clientY;
+      
+      // 设置卡片宽高，用于计算溢出
+      const cardWidth = 600;
+      const cardHeight = 400;
+      
+      // 计算卡片位置，避免超出视窗
+      let posX = x + 20; // 默认在鼠标右侧20px处
+      let posY = y;
+      
+      // 如果卡片会超出右侧边界，则显示在左侧
+      if (posX + cardWidth > windowWidth) {
+        posX = x - cardWidth - 20;
+      }
+      
+      // 如果卡片会超出底部边界，则向上调整
+      if (posY + cardHeight > windowHeight) {
+        posY = windowHeight - cardHeight - 10;
+      }
+      
+      // 确保卡片不会超出顶部
+      if (posY < 10) {
+        posY = 10;
+      }
+      
+      this.logCardPosition = { x: posX, y: posY };
+    },
+    
+    // 清除隐藏定时器
+    clearHideLogTimer() {
+      if (this.hideLogTimer) {
+        clearTimeout(this.hideLogTimer);
+        this.hideLogTimer = null;
+      }
+    },
+    
+    // 处理鼠标离开
+    handleMouseLeave() {
+      // 清除之前的定时器
+      this.clearHideLogTimer();
+      
+      // 设置1秒后隐藏日志
+      this.hideLogTimer = setTimeout(() => {
+        this.hideLog();
+      }, 1000);
+    },
+    
+    // 隐藏日志
+    hideLog() {
+      this.showLogCard = false;
+      this.clearHideLogTimer();
+    },
+    
     // 主机环境校验是否完成 是否可以进入下一步
     async dispatcherHostAgentCompleted(callback) {
       const params = {
@@ -288,6 +416,7 @@ export default {
   },
   beforeDestroy() {
     clearInterval(this.timer);
+    this.clearHideLogTimer();
   },
 };
 </script>
@@ -583,6 +712,93 @@ export default {
             background-color: rgba(0, 0, 0, 0.05);
           }
         }
+      }
+    }
+  }
+  
+  // 日志悬浮样式
+  .message-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    
+    &:hover {
+      .message-text {
+        text-decoration: underline;
+      }
+    }
+  }
+  
+  // 日志悬浮卡片样式
+  .log-card {
+    position: fixed;
+    z-index: 1000;
+    width: 600px;
+    max-height: 400px;
+    background-color: @apple-white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+    
+    .log-card-header {
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: @apple-gray-light;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      
+      .log-card-title {
+        .apple-font();
+        font-weight: 500;
+        font-size: 15px;
+        color: @apple-black;
+      }
+      
+      .anticon {
+        cursor: pointer;
+        color: @apple-gray;
+        transition: color 0.2s;
+        font-size: 14px;
+        
+        &:hover {
+          color: @apple-black;
+        }
+      }
+    }
+    
+    .log-card-body {
+      padding: 16px;
+      max-height: 350px;
+      overflow-y: auto;
+      
+      &::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: @apple-gray-light;
+        border-radius: 3px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: @apple-gray;
+        border-radius: 3px;
+        
+        &:hover {
+          background: darken(@apple-gray, 10%);
+        }
+      }
+      
+      .log-card-text {
+        margin: 0;
+        font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        color: @apple-black;
+        white-space: pre-wrap;
+        word-break: break-all;
       }
     }
   }

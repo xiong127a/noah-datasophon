@@ -1581,4 +1581,49 @@ public class InstallServiceImpl implements InstallService {
             return Result.error("清理主机环境校验缓存失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 获取主机最近日志
+     * 
+     * @param ip        主机IP
+     * @param clusterId 集群ID
+     * @return 主机最近日志内容
+     */
+    @Override
+    public Result getWorkerLog(String ip, Integer clusterId) {
+        try {
+            // 1. 从缓存中获取主机信息
+            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+            if (hostMap == null) {
+                return Result.error("未找到集群主机信息");
+            }
+
+            // 2. 查找指定IP的主机信息
+            HostInfo hostInfo = hostMap.get(ip);
+            if (hostInfo == null) {
+                return Result.error("未找到主机信息");
+            }
+
+            // 3. 建立SSH连接
+            ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo);
+            if (session == null) {
+                return Result.error("SSH连接失败: " + hostInfo.getSshErrorMsg());
+            }
+
+            try {
+                // 4. 执行tail命令查看运行日志
+                String command = "tail -n 100 /opt/datasophon/datasophon-worker/logs/datasophon-worker.log";
+                String result = MinaUtils.execCmdWithResult(session, command);
+
+                // 5. 返回日志内容
+                return Result.success(result);
+            } finally {
+                // 6. 关闭SSH连接
+                MinaUtils.closeConnection(session);
+            }
+        } catch (Exception e) {
+            logger.error("获取主机日志失败", e);
+            return Result.error("获取主机日志失败: " + e.getMessage());
+        }
+    }
 }
