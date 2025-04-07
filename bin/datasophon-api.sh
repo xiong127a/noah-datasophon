@@ -16,7 +16,7 @@
 #  limitations under the License.
 #
 
-usage="Usage: start.sh (start|stop|restart) <command> "
+usage="Usage: start.sh (start|stop|restart|log) <command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -137,6 +137,7 @@ case $startStop in
       fi
       ;;
   (restart)
+      # 先停止
       if [ -f $pid ]; then
         TARGET_PID=`cat $pid`
         if kill -0 $TARGET_PID > /dev/null 2>&1; then
@@ -154,7 +155,11 @@ case $startStop in
       else
         echo no $command to stop
       fi
+      
+      # 等待2秒
       sleep 2s
+      
+      # 再启动
       [ -w "$DDH_PID_DIR" ] ||  mkdir -p "$DDH_PID_DIR"
       if [ -f $pid ]; then
           if kill -0 `cat $pid` > /dev/null 2>&1; then
@@ -166,9 +171,17 @@ case $startStop in
 
       exec_command="$DDH_OPTS -Dspring.config.location=$DDH_CONF_DIR/application.yml -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-      echo "nohup $JAVA  $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &"
+      echo "nohup $JAVA $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &"
       nohup $JAVA $JAVA_DEBUG_OPTS $exec_command  > $log 2>&1 &
       echo $! > $pid
+      ;;
+  (log)
+      if [ -f $log ]; then
+        # 实时查看最后100行日志
+        tail -n 100 -f $log
+      else
+        echo "日志文件不存在: $log"
+      fi
       ;;
   (*)
     echo $usage

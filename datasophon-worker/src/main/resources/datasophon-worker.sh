@@ -186,15 +186,8 @@ case $startStop in
         echo $command not found
       fi
       ;;
-  (log)
-      if [ -f $log ]; then
-        # 显示最后100行日志
-        tail -n 100 $log
-      else
-        echo "日志文件不存在: $log"
-      fi
-      ;;
   (restart)
+      # 先停止
       if [ -f $pid ]; then
         TARGET_PID=`cat $pid`
         if kill -0 $TARGET_PID > /dev/null 2>&1; then
@@ -212,7 +205,11 @@ case $startStop in
       else
         echo no $command to stop
       fi
+      
+      # 等待2秒
       sleep 2s
+      
+      # 再启动
       [ -w "$DDH_PID_DIR" ] ||  mkdir -p "$DDH_PID_DIR"
       if [ -f $pid ]; then
           if kill -0 `cat $pid` > /dev/null 2>&1; then
@@ -227,6 +224,14 @@ case $startStop in
       echo "nohup $JAVA $exec_command > $log 2>&1 &"
       nohup $JAVA $exec_command > $log 2>&1 &
       echo $! > $pid
+      ;;
+  (log)
+      if [ -f $log ]; then
+        # 实时查看最后100行日志
+        tail -n 100 -f $log
+      else
+        echo "日志文件不存在: $log"
+      fi
       ;;
   (*)
     echo $usage
