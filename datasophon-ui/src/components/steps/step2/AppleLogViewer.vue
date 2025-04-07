@@ -101,6 +101,36 @@
                 <span class="status-value" v-else>全部</span>
               </span>
             </div>
+            
+            <div class="flex-spacer"></div>
+            
+            <!-- 日志统计信息 -->
+            <div class="log-stats">
+              <div class="status-pill">
+                <a-icon type="file-text" />
+                <span>共 <span class="status-value">{{ totalLogCount }}</span> 条日志</span>
+              </div>
+              
+              <div class="status-pill" v-if="errorLogCount > 0">
+                <a-icon type="warning" style="color: #ff3b30;" />
+                <span><span class="status-value">{{ errorLogCount }}</span> 条错误</span>
+              </div>
+              
+              <div class="status-pill" v-if="warnCount > 0">
+                <a-icon type="exclamation-circle" style="color: #ff9500;" />
+                <span><span class="status-value">{{ warnCount }}</span> 条警告</span>
+              </div>
+              
+              <div class="status-pill" v-if="infoLogCount > 0">
+                <a-icon type="info-circle" style="color: #0071e3;" />
+                <span><span class="status-value">{{ infoLogCount }}</span> 条信息</span>
+              </div>
+              
+              <div class="status-pill" v-if="debugCount > 0">
+                <a-icon type="bug" style="color: #5856d6;" />
+                <span><span class="status-value">{{ debugCount }}</span> 条调试</span>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -164,7 +194,12 @@ export default {
       checkItem: null,
       currentLogIp: '',
       currentLogItemId: null,
-      currentLogItemName: ''
+      currentLogItemName: '',
+      totalLogCount: 0,
+      errorLogCount: 0,
+      infoLogCount: 0,
+      warnCount: 0,
+      debugCount: 0
     };
   },
   watch: {
@@ -287,8 +322,32 @@ export default {
             ) < 10
           );
           
-          // 更新日志内容
-          this.logContent = res.data || '暂无日志数据';
+          // 响应中可能包含data和logStats两个字段
+          if (res.data && typeof res.data === 'object') {
+            // 新的接口结构：res.data包含logContent和logStats字段
+            this.logContent = res.data.logContent || '暂无日志数据';
+            
+            // 使用后端返回的统计数据更新日志统计信息
+            if (res.data.logStats) {
+              this.totalLogCount = res.data.logStats.total || 0;
+              this.errorLogCount = res.data.logStats.error || 0;
+              this.infoLogCount = res.data.logStats.info || 0;
+              this.warnCount = res.data.logStats.warn || 0;
+              this.debugCount = res.data.logStats.debug || 0;
+            } else {
+              // 如果没有logStats字段，通过内容计算
+              this.calculateLogStats(this.logContent);
+            }
+          } else {
+            // 旧接口结构：res.data直接是HTML内容
+            this.logContent = res.data || '暂无日志数据';
+            
+            // 移除后端返回的日志统计区域（兼容旧版本）
+            this.logContent = this.removeLogSummary(this.logContent);
+            
+            // 计算日志统计信息
+            this.calculateLogStats(this.logContent);
+          }
           
           // 在内容更新后，如果之前是在底部，则滚动到底部
           this.$nextTick(() => {
@@ -313,6 +372,66 @@ export default {
       } finally {
         this.logLoading = false;
       }
+    },
+
+    // 计算日志统计信息
+    calculateLogStats(logContent) {
+      if (!logContent || logContent === '暂无日志数据') {
+        this.totalLogCount = 0;
+        this.errorLogCount = 0;
+        this.infoLogCount = 0;
+        this.warnCount = 0;
+        this.debugCount = 0;
+        return;
+      }
+      
+      // 将HTML转为纯文本
+      const div = document.createElement('div');
+      div.innerHTML = logContent;
+      const plainText = div.textContent || div.innerText || '';
+      
+      // 按行分割，忽略空行
+      const lines = plainText.split('\n').filter(line => line.trim());
+      this.totalLogCount = lines.length;
+      
+      // 重置计数
+      this.errorLogCount = 0;
+      this.infoLogCount = 0;
+      this.warnCount = 0;
+      this.debugCount = 0;
+      
+      // 统计不同级别的日志
+      lines.forEach(line => {
+        const lowerLine = line.toLowerCase();
+        // 尝试匹配常见的错误日志模式
+        if (
+          lowerLine.includes('error') || 
+          lowerLine.includes('exception') || 
+          lowerLine.includes('fatal') || 
+          lowerLine.includes('failure') || 
+          lowerLine.includes('failed')
+        ) {
+          this.errorLogCount++;
+        } 
+        // 尝试匹配信息日志模式
+        else if (
+          lowerLine.includes('info') || 
+          lowerLine.includes('information') ||
+          (!lowerLine.includes('warn') && !lowerLine.includes('debug'))
+        ) {
+          this.infoLogCount++;
+        }
+        else if (
+          lowerLine.includes('warn')
+        ) {
+          this.warnCount++;
+        }
+        else if (
+          lowerLine.includes('debug')
+        ) {
+          this.debugCount++;
+        }
+      });
     },
 
     // 手动刷新日志
@@ -386,6 +505,16 @@ export default {
       if (logContent) {
         logContent.scrollTop = logContent.scrollHeight;
       }
+    },
+
+    // 移除后端返回的日志统计区域
+    removeLogSummary(logContent) {
+      if (!logContent || logContent === '暂无日志数据') {
+        return logContent;
+      }
+      
+      // 移除log-summary div
+      return logContent.replace(/<div class="log-summary"[^>]*>[\s\S]*?<\/div>/, '');
     }
   },
   beforeDestroy() {
@@ -679,6 +808,16 @@ export default {
       font-weight: 600;
       color: @apple-text;
     }
+  }
+  
+  .flex-spacer {
+    flex-grow: 1;
+  }
+  
+  .log-stats {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
   }
 }
 
