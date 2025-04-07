@@ -15,9 +15,14 @@
           <!-- 顶部工具栏 -->
           <div class="apple-toolbar">
             <div class="toolbar-left">
-              <a-button @click="refreshLog" :loading="logLoading" class="apple-button refresh-button">
-                <a-icon type="reload" />
-                <span>刷新</span>
+              <a-button @click="refreshLog" class="apple-button refresh-button">
+                <div class="button-content">
+                  <div class="icon-container">
+                    <a-icon type="reload" :style="{opacity: logLoading ? 0 : 1}" />
+                    <div class="mini-loader" :style="{opacity: logLoading ? 1 : 0}"></div>
+                  </div>
+                  <span>刷新</span>
+                </div>
               </a-button>
               
               <a-dropdown>
@@ -152,7 +157,7 @@ export default {
       logModalTitle: '',
       logContent: '',
       logLoading: false,
-      autoRefreshInterval: 0,
+      autoRefreshInterval: 1,
       refreshTimer: null,
       currentLogType: 'all',
       showLogFilterOptions: true,
@@ -221,6 +226,9 @@ export default {
         }
         // 获取日志数据
         this.fetchItemLog();
+        
+        // 启动自动刷新
+        this.startAutoRefresh();
       });
     },
     
@@ -271,7 +279,23 @@ export default {
         const res = await this.$axiosPost(apiUrl, params);
 
         if (res.code === 200) {
+          const logContentEl = this.$el.querySelector('.apple-log-content');
+          const wasScrolledToBottom = logContentEl && (
+            Math.abs(
+              (logContentEl.scrollHeight - logContentEl.scrollTop) - 
+              logContentEl.clientHeight
+            ) < 10
+          );
+          
+          // 更新日志内容
           this.logContent = res.data || '暂无日志数据';
+          
+          // 在内容更新后，如果之前是在底部，则滚动到底部
+          this.$nextTick(() => {
+            if (wasScrolledToBottom) {
+              this.scrollToBottom();
+            }
+          });
         } else {
           this.logContent = `获取日志失败: ${res.msg || '未知错误'}`;
           if (this.autoRefreshInterval > 0) {
@@ -354,6 +378,14 @@ export default {
       this.stopAutoRefresh();
       this.logVisible = false;
       this.$emit('close');
+    },
+
+    // 滚动到日志底部
+    scrollToBottom() {
+      const logContent = this.$el.querySelector('.apple-log-content');
+      if (logContent) {
+        logContent.scrollTop = logContent.scrollHeight;
+      }
     }
   },
   beforeDestroy() {
@@ -432,6 +464,7 @@ export default {
   .toolbar-left {
     display: flex;
     gap: 8px;
+    min-width: 240px;  /* 添加最小宽度，防止按钮移动 */
   }
 }
 
@@ -448,9 +481,67 @@ export default {
   border: none;
   transition: @apple-transition;
   
+  .button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+  
+  .icon-container {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .anticon {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .mini-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transition: opacity 0.3s;
+    }
+  }
+  
+  .mini-loader {
+    width: 14px;
+    height: 14px;
+    border: 2px solid transparent;
+    border-top-color: @apple-text;
+    border-left-color: @apple-text;
+    border-radius: 50%;
+    animation: apple-spin 0.8s linear infinite;
+  }
+  
   &.refresh-button {
+    width: 90px !important;  /* 设置固定宽度 */
     background: @apple-bg-secondary;
     color: @apple-text;
+    position: relative !important; /* 添加相对定位 */
+    box-sizing: border-box !important; /* 确保宽度包含padding和border */
+    
+    /* 确保按钮内容水平居中 */
+    span {
+      position: relative;
+      display: inline-block;
+      min-width: 36px; /* 给文字设置最小宽度 */
+      text-align: center;
+    }
+    
+    /* 加载状态时的样式 */
+    :deep(.ant-btn-loading-icon) {
+      position: absolute !important;
+      left: 16px !important;
+    }
     
     &:hover {
       background: darken(@apple-bg-secondary, 3%);
@@ -462,6 +553,7 @@ export default {
   }
   
   &.refresh-interval-button {
+    width: 130px;  /* 设置固定宽度 */
     background: @apple-bg-secondary;
     color: @apple-text;
     
@@ -597,6 +689,8 @@ export default {
   padding: 20px;
   background: @apple-bg;
   position: relative;
+  min-height: 300px; /* 设置最小高度 */
+  will-change: transform; /* 提示浏览器这个元素会有变化，优化渲染 */
   
   &.apple-loading {
     opacity: 0.7;
@@ -611,6 +705,8 @@ export default {
   color: @apple-text;
   white-space: pre-wrap;
   word-break: break-word;
+  position: relative; /* 添加相对定位 */
+  z-index: 1; /* 确保在加载指示器上方 */
   
   :deep(.log-info) {
     color: @apple-text;
