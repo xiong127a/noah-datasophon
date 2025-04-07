@@ -97,8 +97,11 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             logger.info("准备安装和启动Worker服务: {}", hostInfo.getIp());
 
             // Initialize environment
-            MinaUtils.safeExecCommand(session, "ulimit -n 102400");
+            // MinaUtils.safeExecCommand(session, "ulimit -n 102400");
+            MinaUtils.safeExecCommand(session, "ulimit -n 65535");
             MinaUtils.safeExecCommand(session, "sysctl -w vm.max_map_count=2000000");
+
+            // 设置文件数量限制
 
             // Set startup and self start
             logger.info("配置Worker服务自启动");
@@ -161,15 +164,15 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             logger.info("启动Worker服务: {}", hostInfo.getIp());
             if (useSystemd) {
                 result = MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
-                // 使用直接调用脚本的方式启动，确保参数正确
+                // 使用restart替代start命令启动
                 result = MinaUtils.safeExecCommand(session,
-                        installPath + "/datasophon-worker/bin/datasophon-worker.sh start worker");
-                // 如果直接调用成功，再通过systemd启动确保服务被正确管理
+                        installPath + "/datasophon-worker/bin/datasophon-worker.sh restart worker");
+                // 如果直接调用成功，再通过systemd重启确保服务被正确管理
                 if (result != null && !result.startsWith("ERROR:")) {
                     result = MinaUtils.safeExecCommand(session, "systemctl restart datasophon-worker");
                 }
             } else {
-                result = MinaUtils.safeExecCommand(session, "service datasophon-worker start");
+                result = MinaUtils.safeExecCommand(session, "service datasophon-worker restart");
             }
             success &= (result != null && !result.startsWith("ERROR:"));
 
