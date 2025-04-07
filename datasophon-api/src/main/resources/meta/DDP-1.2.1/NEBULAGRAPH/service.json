@@ -136,7 +136,7 @@
       "externalLink": {
         "name": "NebulaGraph Studio UI",
         "label": "Studio UI",
-        "url": "http://${host}:7001"
+        "url": "http://${host}:7002"
       }
     }
   ],

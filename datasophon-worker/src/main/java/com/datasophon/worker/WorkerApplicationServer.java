@@ -75,7 +75,7 @@ public class WorkerApplicationServer {
     private static final String HADOOP = "hadoop";
 
     public static void main(String[] args) throws UnknownHostException {
-        checkStopDate();
+        //checkStopDate();
         String hostname = InetAddress.getLocalHost().getHostName();
         String workDir = System.getProperty(USER_DIR);
         String masterHost = PropertyUtils.getString(MASTER_HOST);
@@ -99,12 +99,12 @@ public class WorkerApplicationServer {
         logger.info("start worker");
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-        scheduler.scheduleAtFixedRate(
+        /*scheduler.scheduleAtFixedRate(
                 () -> checkStopDate(),
                 0, // Delay before the first execution
                 24 * 60 * 60, // Period: 24 hours in seconds
                 TimeUnit.SECONDS
-        );
+        );*/
 
         /*
          * registry hooks, which are called before the process exits

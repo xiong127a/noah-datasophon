@@ -55,14 +55,14 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
 
     @PostConstruct
     public void run() throws UnknownHostException, NoSuchAlgorithmException {
-        checkStopDate();
+        //checkStopDate();
         String hostName = InetAddress.getLocalHost().getHostName();
         CacheUtils.put(Constants.HOSTNAME, hostName);
         ActorUtils.init(); // 静态初始化方法
 
         // Schedule tasks
-        scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(this::checkStopDate, 0, 24 * 60 * 60,TimeUnit.SECONDS);
+        //scheduler = Executors.newScheduledThreadPool(1);
+        //scheduler.scheduleAtFixedRate(this::checkStopDate, 0, 24 * 60 * 60,TimeUnit.SECONDS);
     }
 
 
