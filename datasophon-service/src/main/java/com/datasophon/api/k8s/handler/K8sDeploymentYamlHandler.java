@@ -13,7 +13,6 @@ import com.datasophon.common.command.K8sGenerateDeploymentYamlCommand;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.k8s.actor.K8sYamlDeploymentActor;
 import org.springframework.util.ObjectUtils;
 import scala.concurrent.Await;
@@ -54,10 +53,10 @@ public class K8sDeploymentYamlHandler extends ServiceHandler {
             k8SGenerateDeploymentYamlCommand.setRunAs(runAs);
         }
 
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
+//        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
         String hostMapKey =
-                clusterInfo.getClusterCode()
+                serviceRoleInfo.getClusterId()
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);

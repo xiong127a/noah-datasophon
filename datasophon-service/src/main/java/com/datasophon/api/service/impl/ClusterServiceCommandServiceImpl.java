@@ -117,7 +117,7 @@ public class ClusterServiceCommandServiceImpl
         List<String> commandIds = new ArrayList<String>();
 
         Map<String, List<String>> serviceRoleHostMap = (Map<String, List<String>>) CacheOperateUtils
-                .get(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING);
+                .get(clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING);
 
         for (String serviceName : serviceNames) {
             // 1、生成操作指令

@@ -21,9 +21,9 @@ public class MinioHandlerStrategy extends ServiceHandlerAbstract implements Serv
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
-        String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
+        String hostMapKey = clusterId + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
 
         if (Objects.nonNull(hostMap)) {

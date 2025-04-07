@@ -288,9 +288,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         checkOnSameNode(clusterId, list);
 
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         String hostMapKey =
-                clusterInfo.getClusterCode()
+                clusterId
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = new HashMap<>();
@@ -312,7 +312,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         CacheUtils.put(
-                clusterInfo.getClusterCode()
+                clusterId
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING,
                 map);
@@ -339,7 +339,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map =
                 (HashMap<String, List<String>>) CacheOperateUtils.get(
-                        clusterInfo.getClusterCode()
+                        clusterInfo.getId()
                                 + Constants.UNDERLINE
                                 + Constants.SERVICE_ROLE_HOST_MAPPING);
         return Result.success(map);

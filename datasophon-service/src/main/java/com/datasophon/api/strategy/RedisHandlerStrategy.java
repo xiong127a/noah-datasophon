@@ -28,9 +28,9 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
         // 直接从 Map 中提取 masterPort 和 slavePort
         String masterPort = (String) portConfigValues.get("redisMasterPort");
         String slavePort = (String) portConfigValues.get("redisSlavePort");
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
+//        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
         String hostMapKey =
-                clusterInfo.getClusterCode()
+                clusterId
                         + Constants.UNDERLINE
                         + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
