@@ -47,15 +47,6 @@ public class OsInfo implements Serializable {
      */
     private String kernelVersion;
 
-    /**
-     * 主机名
-     */
-    private String hostname;
-
-    /**
-     * 主机完全限定域名(FQDN)
-     */
-    private String fqdn;
 
     /**
      * CPU信息

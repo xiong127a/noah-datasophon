@@ -263,11 +263,11 @@ export default {
                   }, [record.hostname || '未获取到主机名']) :
                   h('span', { 
                     class: 'hostname-text', 
-                    title: record.fqdn || record.hostname || (record.osInfo && record.osInfo.fqdn) || (record.osInfo && record.osInfo.hostname) || '主机名加载中' 
+                    title: record.fqdn || record.hostname || '主机名加载中'
                   }, [
                     // 如果有主机名且状态不是loading或相关状态才显示主机名，否则显示加载动画
                     this.shouldShowHostname(record) ? 
-                    (record.hostname || (record.osInfo && record.osInfo.hostname)) : 
+                    record.hostname : 
                     h('div', { class: 'hostname-loading-container' }, [
                       h('div', { class: 'hostname-loading-dots' }, [
                         h('span', { class: 'hostname-loading-dot' }),
@@ -533,6 +533,7 @@ export default {
                   h(OsFloatingCard, {
                     props: {
                       osInfo: row.osInfo,
+                      hostInfo: row,
                       cpuStatus: row.cpuStatus || 'pending',
                       memoryStatus: row.memoryStatus || 'pending',
                       diskStatus: row.diskStatus || 'pending',
@@ -2144,7 +2145,7 @@ export default {
     // 判断是否应该显示主机名而不是加载动画
     shouldShowHostname(record) {
       // 如果没有主机名，则显示加载动画
-      if (!record.hostname && !(record.osInfo && record.osInfo.hostname)) {
+      if (!record.hostname) {
         return false;
       }
       

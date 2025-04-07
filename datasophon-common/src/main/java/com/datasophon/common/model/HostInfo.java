@@ -17,7 +17,6 @@
 
 package com.datasophon.common.model;
 
-import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -40,20 +39,13 @@ public class HostInfo implements Serializable {
 
     private String ip;
 
+    @Setter
     private String hostname;
-
-    public void setHostname(String hostname) {
-        if (StrUtil.isBlank(hostname)) {
-            if (osInfo != null) {
-                hostname = osInfo.getHostname();
-            }
-        }
-        this.hostname = hostname;
-    }
 
     /**
      * 完全限定域名(FQDN)
      */
+    @Setter
     private String fqdn;
 
     /**

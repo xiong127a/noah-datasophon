@@ -666,8 +666,8 @@ public class OsInfoServiceImpl implements OsInfoService {
                     hostInfo.setOsInfo(osInfo);
                 }
 
-                osInfo.setHostname(hostname);
-                osInfo.setFqdn(fqdn);
+                hostInfo.setHostname(hostname);
+                hostInfo.setFqdn(fqdn);
 
                 // 更新状态
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
@@ -1257,8 +1257,8 @@ public class OsInfoServiceImpl implements OsInfoService {
                     hostInfo.setOsInfo(osInfo);
                 }
 
-                osInfo.setHostname(hostname);
-                osInfo.setFqdn(fqdn);
+                hostInfo.setHostname(hostname);
+                hostInfo.setFqdn(fqdn);
 
                 // 设置状态为成功
                 hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);

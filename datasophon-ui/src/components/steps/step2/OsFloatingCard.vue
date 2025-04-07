@@ -49,7 +49,7 @@
               <!-- 主机名 -->
               <div class="os-meta-item">
                 <span class="meta-label">主机名</span>
-                <span v-if="osInfo && osInfo.hostname" class="meta-value">{{ osInfo.hostname }}</span>
+                <span v-if="hostInfo && hostInfo.hostname" class="meta-value">{{ hostInfo.hostname }}</span>
                 <div v-else class="meta-loading-pulse"></div>
               </div>
             </div>
@@ -462,6 +462,10 @@ export default {
     osInfo: {
       type: Object,
       required: true
+    },
+    hostInfo: {
+      type: Object,
+      default: () => ({})
     },
     cpuStatus: {
       type: String,

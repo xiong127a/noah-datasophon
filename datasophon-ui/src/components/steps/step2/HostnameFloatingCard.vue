@@ -39,7 +39,7 @@
                 </div>
                 <!-- 主机名已加载 -->
                 <span v-else class="hostname-name">
-                  {{ hostInfo.hostname || (hostInfo.osInfo && hostInfo.osInfo.hostname) || '未知主机名' }}
+                  {{ hostInfo.hostname || '未知主机名' }}
                 </span>
                 <span class="hostname-ip">{{ hostInfo.ip }}</span>
               </div>
@@ -55,7 +55,7 @@
                 </div>
                 <!-- FQDN已加载 -->
                 <span v-else class="meta-value">
-                  {{ hostInfo.fqdn || (hostInfo.osInfo && hostInfo.osInfo.fqdn) || '无FQDN' }}
+                  {{ hostInfo.fqdn || '无FQDN' }}
                 </span>
               </div>
               <!-- 集群信息 -->
@@ -512,7 +512,13 @@ export default {
         // 如果明确指定了loading状态，则显示loading
         return this.checkStatus(this.hostInfo.hostnameStatus, 'loading');
       } else if (type === 'fqdn') {
-        // 判断fqdn是否在加载中 - 类似hostname的逻辑
+        // 判断fqdn是否在加载中
+        // 如果fqdn字段已经有值，则直接返回false（不显示加载状态）
+        if (this.hostInfo.fqdn && this.hostInfo.fqdn.trim() !== '') {
+          return false;
+        }
+        
+        // 只有当fqdn为空且没有明确错误状态时才显示加载中
         const isFqdnEmpty = !this.hostInfo.fqdn || this.hostInfo.fqdn.trim() === '';
         const hasNonLoadingStatus = this.hostInfo.fqdnStatus && 
                                    !this.checkStatus(this.hostInfo.fqdnStatus, 'loading') && 
@@ -522,7 +528,9 @@ export default {
         if (isFqdnEmpty && !this.checkStatus(this.hostInfo.fqdnStatus, 'error') && !hasNonLoadingStatus) {
           return true;
         }
-        return this.checkStatus(this.hostInfo.fqdnStatus, 'loading');
+        
+        // 只有当明确指定loading状态时才显示loading
+        return this.hostInfo.fqdnStatus ? this.checkStatus(this.hostInfo.fqdnStatus, 'loading') : false;
       } else if (type === 'dns') {
         // 判断dns服务器是否在加载中
         // 1. 如果没有dns服务器数据，默认认为是加载中，除非明确指定了error状态

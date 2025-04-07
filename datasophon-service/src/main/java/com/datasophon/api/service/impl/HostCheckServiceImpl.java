@@ -3041,7 +3041,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     String hostname = null;
                     // 添加空判断，避免空指针异常
                     if (hostInfo.getOsInfo() != null) {
-                        hostname = StrUtil.blankToDefault(hostInfo.getOsInfo().getHostname(), hostInfo.getHostname());
+                        hostname = hostInfo.getHostname();
                     }
 
                     // 添加逻辑：如果hostname为空，则生成error-xxx格式的默认名称
