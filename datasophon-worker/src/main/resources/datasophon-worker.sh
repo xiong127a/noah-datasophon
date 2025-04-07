@@ -52,31 +52,58 @@ while [ -h "$SCRIPT" ] ; do
   fi
 done
 
-# 设置基础目录
-BIN_DIR=`dirname "$SCRIPT"`/..
+# 获取脚本的绝对路径
+BIN_DIR=`dirname "$SCRIPT"`
 BIN_DIR=`cd "$BIN_DIR"; pwd`
-export DDH_HOME=$BIN_DIR
+export DDH_HOME=$BIN_DIR/..
+echo "脚本所在目录: $BIN_DIR"
+echo "DDH_HOME: $DDH_HOME"
 
-# 使用本地JDK，不再依赖系统环境变量
-export JAVA_HOME=$DDH_HOME/jdk/current
-export PATH=$JAVA_HOME/bin:$PATH
-JAVA=$JAVA_HOME/bin/java
-
-# 检查本地JDK是否存在
-if [ ! -d "$JAVA_HOME" ]; then
-  echo "警告: 本地JDK未找到: $JAVA_HOME"
-  # 尝试使用系统JDK
-  JAVA=`which java 2>/dev/null`
-  if [[ -z "$JAVA" && -n "$JAVA_HOME" ]]; then
-    JAVA=$JAVA_HOME/bin/java
-  fi
-  if [[ -z "$JAVA" ]]; then
-    echo "错误: 未找到可用的Java! 请设置JAVA_HOME环境变量或安装JDK到本地目录。"
-    exit 1
-  fi
-  echo "使用系统JDK: $JAVA"
+# 查找Java环境
+# 1. 首先尝试使用 ../java 目录的JDK
+RELATIVE_JAVA_HOME="$DDH_HOME/java"
+if [ -d "$RELATIVE_JAVA_HOME" ]; then
+  export JAVA_HOME=$RELATIVE_JAVA_HOME
+  export PATH=$JAVA_HOME/bin:$PATH
+  JAVA=$JAVA_HOME/bin/java
+  echo "使用相对路径Java: $JAVA_HOME"
 else
-  echo "使用本地JDK: $JAVA_HOME"
+  # 2. 尝试使用 /usr/local/jdk1.8.0_333
+  SYSTEM_JAVA="/usr/local/jdk1.8.0_333"
+  if [ -d "$SYSTEM_JAVA" ]; then
+    # 创建软链接到 ../java
+    echo "创建软链接: $SYSTEM_JAVA -> $RELATIVE_JAVA_HOME"
+    mkdir -p `dirname $RELATIVE_JAVA_HOME` 2>/dev/null
+    ln -sf $SYSTEM_JAVA $RELATIVE_JAVA_HOME 2>/dev/null
+    
+    export JAVA_HOME=$SYSTEM_JAVA
+    export PATH=$JAVA_HOME/bin:$PATH
+    JAVA=$JAVA_HOME/bin/java
+    echo "使用系统Java并创建软链接: $JAVA_HOME"
+  else
+    # 3. 尝试使用 JAVA_HOME 环境变量
+    if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME" ]; then
+      export PATH=$JAVA_HOME/bin:$PATH
+      JAVA=$JAVA_HOME/bin/java
+      echo "使用JAVA_HOME环境变量: $JAVA_HOME"
+    else
+      # 4. 尝试直接使用java命令
+      JAVA=`which java 2>/dev/null`
+      if [ -n "$JAVA" ]; then
+        echo "使用系统PATH中的Java: $JAVA"
+      else
+        # 5. 如果都失败，报错退出
+        echo "错误: 未找到可用的Java环境! 请安装JDK或设置JAVA_HOME环境变量。"
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+# 测试Java是否可用
+if ! "$JAVA" -version >/dev/null 2>&1; then
+  echo "错误: Java命令无法执行! 请检查Java安装或权限。"
+  exit 1
 fi
 
 export HOSTNAME=`hostname`
