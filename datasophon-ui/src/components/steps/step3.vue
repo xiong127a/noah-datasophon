@@ -25,18 +25,30 @@
  * @FilePath: \ddh-ui\src\components\steps\step3.vue
 -->
 <template>
-  <div class="steps3 steps">
+  <div class="steps3">
     <div class="hero-section">
       <h1 class="hero-title">主机Agent分发</h1>
       <p class="hero-subtitle">确保所有主机成功安装必要的Agent程序，以便执行后续操作</p>
     </div>
     
-    <div class="table-info mgt16 steps-body pdr30">
-      <div class="flex-bewteen-container action-bar">
+    <div class="table-container">
+      <div class="action-bar">
         <div></div>
-        <a-button type="primary" @click="retryHost('all')">全部重试</a-button>
+        <a-button type="primary" class="apple-button primary" @click="retryHost('all')">
+          <a-icon type="redo" />
+          全部重试
+        </a-button>
       </div>
-      <a-table @change="tableChange" :columns="columns" :loading="loading" :dataSource="dataSource" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" rowKey="hostname" :pagination="pagination"></a-table>
+      <a-table 
+        @change="tableChange" 
+        :columns="columns" 
+        :loading="loading" 
+        :dataSource="dataSource" 
+        :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" 
+        rowKey="hostname" 
+        :pagination="pagination"
+        class="apple-table"
+      ></a-table>
     </div>
   </div>
 </template>
@@ -62,7 +74,7 @@ export default {
         {
           title: "序号",
           key: "index",
-          width: 120,
+          width: 80,
           customRender: (text, row, index) => {
             return (
               <span>
@@ -77,51 +89,73 @@ export default {
             );
           },
         },
-        { title: "主机", key: "hostname", dataIndex: "hostname", width: 300 },
+        { title: "主机", key: "hostname", dataIndex: "hostname", width: 200 },
         {
           title: "进度",
           key: "progress",
           dataIndex: "progress",
           customRender: (text, row, index) => {
-            return (
-              <span>
-                {row.installStateCode === 1 ? (
-                  <a-progress class="progress-warp" percent={text} status="active" />
-                ) : row.installStateCode === 2 ? (
-                  <a-progress class="progress-warp" percent={text} />
-                ) : (
-                  <a-progress class="progress-warp" percent={text} status="exception" />
-                )}
-              </span>
-            );
+            const h = this.$createElement;
+            
+            // 根据安装状态设置不同的进度条样式
+            const status = row.installStateCode === 1 ? "active" : 
+                           row.installStateCode === 2 ? "success" : "exception";
+            
+            // 自定义进度条样式
+            return h('div', { class: 'progress-container' }, [
+              h('a-progress', {
+                class: `apple-progress apple-progress-${status}`,
+                props: {
+                  percent: text,
+                  status: status,
+                  strokeWidth: 6,
+                  showInfo: true
+                }
+              })
+            ]);
           },
         },
-        { title: "进度信息", key: "message", dataIndex: "message", width: 120,
+        { 
+          title: "进度信息", 
+          key: "message", 
+          dataIndex: "message", 
+          width: 180,
           customRender: (text, row, index) => {
-            return (
-              <span>
-                {text || ''}
-              </span>
-            );
-          } },
+            const h = this.$createElement;
+            
+            return h('span', { 
+              class: 'message-text',
+              style: {
+                color: row.installStateCode === 3 ? '#FF453A' : 
+                       row.installStateCode === 2 ? '#34C759' : '#007AFF'
+              }
+            }, [text || '']);
+          } 
+        },
         {
           title: "操作",
           key: "action",
-          width: 140,
+          width: 120,
           customRender: (text, row, index) => {
-            return (
-              <span class="flex-container">
-                {row.installStateCode === 3 ? (
-                  <a class="btn-opt" onClick={() => this.retryHost(row)}>
-                    重试
-                  </a>
-                ) : (
-                  <a class="btn-opt" style="color: #bbb">
-                    重试
-                  </a>
-                )}
-              </span>
-            );
+            const h = this.$createElement;
+            
+            // 创建重试按钮
+            const retryButton = h('button', {
+              class: row.installStateCode === 3 ? 
+                    'apple-action-button retry-button' : 
+                    'apple-action-button retry-button disabled',
+              attrs: {
+                disabled: row.installStateCode !== 3
+              },
+              on: {
+                click: () => this.retryHost(row)
+              }
+            }, [
+              h('a-icon', { props: { type: 'redo' } }),
+              h('span', ['重试'])
+            ]);
+            
+            return h('div', { class: 'action-buttons' }, [retryButton]);
           },
         },
       ],
@@ -222,13 +256,17 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-// 添加苹果设计系统颜色和字体定义
+// 苹果设计系统颜色
 @apple-white: #ffffff;
 @apple-black: #1d1d1f;
 @apple-gray-light: #f5f5f7;
 @apple-gray: #86868b;
 @apple-blue: #0071e3;
 @apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #34c759;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
 
 // 苹果设计系统字体
 .apple-font() {
@@ -245,11 +283,12 @@ export default {
   
   .hero-section {
     text-align: center;
-    margin-bottom: 3.5rem;
-    
+    margin-bottom: 2.5rem;
+    position: relative;
+
     .hero-title {
       .apple-font();
-      font-size: 2.8rem;
+      font-size: 2.5rem;
       font-weight: 600;
       line-height: 1.1;
       letter-spacing: -0.022em;
@@ -259,47 +298,207 @@ export default {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .hero-subtitle {
       .apple-font();
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       line-height: 1.4;
       letter-spacing: 0;
       font-weight: 400;
       color: @apple-gray;
-      margin: 0;
-      max-width: 760px;
-      margin: 0 auto;
+      margin: 0 auto 1.5rem;
+      max-width: 600px;
     }
   }
   
-  .action-bar {
-    margin-bottom: 16px;
+  .table-container {
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    animation-fill-mode: both;
+    animation-delay: 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   }
-
-  .status-num {
-    span {
-      margin: 0 4px;
+  
+  .action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 16px;
+    
+    .apple-button {
+      height: 38px;
+      padding: 0 18px;
       font-size: 14px;
-      color: #555555;
-      letter-spacing: 0;
-      font-weight: 400;
-      cursor: pointer;
-    }
-    span.host-selected {
-      color: @primary-color;
-      span {
-        color: @primary-color;
+      font-weight: 500;
+      border-radius: 19px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      .anticon {
+        margin-right: 6px;
+        font-size: 14px;
+      }
+      
+      &.primary {
+        background: @apple-blue;
+        border: none;
+        color: white;
+        
+        &:hover {
+          background: @apple-blue-hover;
+        }
       }
     }
   }
-  .progress-warp {
-    width: 70%;
+  
+  // 自定义表格样式
+  :deep(.apple-table) {
+    .apple-font();
+    
+    .ant-table-thead > tr > th {
+      background-color: @apple-gray-light;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: @apple-black;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      white-space: nowrap;
+    }
+    
+    .ant-table-tbody > tr > td {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.03);
+      transition: background-color 0.3s;
+    }
+    
+    .ant-table-tbody > tr:hover:not(.ant-table-expanded-row) > td {
+      background-color: fadeout(@apple-gray-light, 50%);
+    }
+  }
+  
+  // 进度条容器样式
+  .progress-container {
+    width: 100%;
+    padding: 4px 0;
+    
+    :deep(.apple-progress) {
+      display: flex;
+      align-items: center;
+      
+      .ant-progress-inner {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      
+      .ant-progress-bg {
+        border-radius: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      // 活动中的进度条
+      &.apple-progress-active {
+        .ant-progress-bg {
+          background-color: @apple-blue;
+        }
+      }
+      
+      // 成功的进度条
+      &.apple-progress-success {
+        .ant-progress-bg {
+          background-color: @apple-green;
+        }
+      }
+      
+      // 异常的进度条
+      &.apple-progress-exception {
+        .ant-progress-bg {
+          background-color: @apple-red;
+        }
+      }
+      
+      // 进度条文本
+      .ant-progress-text {
+        color: @apple-black;
+        .apple-font();
+        font-size: 14px;
+        font-weight: 500;
+        margin-left: 12px;
+      }
+    }
+  }
+  
+  // 消息文本样式
+  .message-text {
+    .apple-font();
+    font-size: 14px;
+    display: block;
+    line-height: 1.4;
+  }
+  
+  // 操作按钮样式
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    
+    .apple-action-button {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 15px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background-color: rgba(0, 0, 0, 0.05);
+      color: @apple-black;
+      
+      .anticon {
+        margin-right: 4px;
+        font-size: 12px;
+      }
+      
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+      
+      &.retry-button {
+        background-color: rgba(255, 69, 58, 0.1);
+        color: @apple-red;
+        
+        &:hover {
+          background-color: rgba(255, 69, 58, 0.2);
+        }
+        
+        &.disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          
+          &:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+          }
+        }
+      }
+    }
   }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>

@@ -25,24 +25,35 @@
  * @FilePath: \ddh-ui\src\components\steps\step4.vue 
 -->
 <template>
-  <div class="steps4 steps">
+  <div class="steps4">
     <div class="hero-section">
       <h1 class="hero-title">选择服务</h1>
-      <p class="hero-subtitle">选择需要部署的大数据组件服务和版本</p>
+      <p class="hero-subtitle">请选择需要部署的服务组件</p>
     </div>
     
-    <!-- 只有从集群进入(stepsType:cluster) step4才会有选择服务下拉框 同时table数据也变 -->
-    <div class="select-section" v-if="stepsType == 'cluster'">
-      <a-select allowClear showSearch placeholder="请选择服务类型" class="service-select" v-model="params.type"
-        @change="(value) => getVal(value, 'type')">
-        <a-select-option v-for="(item, index) in serveList" :key="index" :value="item">{{ item }}</a-select-option>
-      </a-select>
-    </div>
-    
-    <div class="table-info mgt16 steps-body pdr30">
-      <a-table @change="tableChange" :columns="columns" :loading="loading" :pagination="false" :dataSource="dataSource"
-        :rowSelection="{ selectedRowKeys: stepsType == 'cluster' ? selectedRowKeysArr : selectedRowKeys, onChange: onSelectChange, getCheckboxProps: getCheckboxProps }"
-        rowKey="id"></a-table>
+    <div class="service-table-container">
+      <a-table
+        :rowSelection="{
+          selectedRowKeys: selectedRowKeys,
+          onChange: onSelectChange,
+          getCheckboxProps: getCheckboxProps,
+        }"
+        :columns="columns"
+        :dataSource="dataSource"
+        :rowKey="depType=='K8S'? 'name': 'id'"
+        :pagination="false"
+        class="apple-table"
+      >
+        <template #bodyCell="{ column, text, record }">
+          <div v-if="column.dataIndex === 'action'">
+            <a
+              v-if="record.installStatus !== 1"
+              class="service-action-link"
+              @click="showDetail(record)"
+            >查看详情</a>
+          </div>
+        </template>
+      </a-table>
     </div>
   </div>
 </template>
@@ -50,187 +61,185 @@
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
   props: {
-    steps4Data: Object,
-    stepsType: String,
-    depType:String,
+    steps2Data: {
+      type: Object,
+      default: () => {},
+    },
+    steps1Data: {
+      type: Object,
+      default: () => {},
+    },
+    depType: {
+      type: String,
+      default: '',
+    },
   },
-  data () {
+  data() {
     return {
-      params: { type: '' },
       selectedRowKeys: [],
       selectedRowKeysArr: [],
       selectedRowNames: [],
       selectedRowNamesArr: [],
-      pagination: {
-        total: 0,
-        pageSize: 10,
-        current: 1,
-        showSizeChanger: true,
-        pageSizeOptions: ["10", "20", "50", "100"],
-        showTotal: (total) => `共 ${total} 条`,
-      },
-      dataSource: [],
-      serveList: ['custom', 'datalake'],
-      loading: false,
       columns: [
         {
-          title: "序号",
-          key: "index",
-          width: 70,
-          customRender: (text, row, index) => {
-            return (
-              <span>
-                {parseInt(
-                  this.pagination.current === 1
-                    ? index + 1
-                    : index +
-                    1 +
-                    this.pagination.pageSize * (this.pagination.current - 1)
-                )}
-              </span>
-            );
-          },
-        },
-        { title: "服务", key: "label", dataIndex: "label" },
-        {
-          title: "描述",
-          key: "serviceDesc",
-          dataIndex: "serviceDesc",
+          title: "服务名称",
+          dataIndex: "serviceName",
+          key: "serviceName",
+          width: "15%",
         },
         {
           title: "版本",
-          key: "serviceVersion",
-          dataIndex: "serviceVersion",
+          dataIndex: "version",
+          key: "version",
+          width: "15%",
+        },
+        {
+          title: "应用场景",
+          dataIndex: "scene",
+          key: "scene",
+          width: "25%",
+        },
+        {
+          title: "已安装",
+          dataIndex: "installed",
+          key: "installed",
+          width: "15%",
+          customRender: (text, row) => {
+            const h = this.$createElement;
+            
+            return h('div', { class: 'installed-status' }, [
+              h('span', { 
+                class: text ? 'status-badge installed' : 'status-badge not-installed'
+              }),
+              h('span', { class: 'status-text' }, [text ? '是' : '否'])
+            ]);
+          },
+        },
+        {
+          title: "操作",
+          dataIndex: "action",
+          key: "action",
+          width: "15%",
         },
       ],
+      tableHeight: 0,
+      tableMarginTop: 0,
+      dataSource: [],
     };
   },
   methods: {
-    getVal (val, filed) {
-      this.params[`${filed}`] = val
-      this.getListWithRequired()
-    },
-    tableChange (pagination) {
-      this.pagination.current = pagination.current;
-      this.pagination.pageSize = pagination.pageSize
-      if (this.stepsType == 'cluster') {
-        this.getListWithRequired()
+    async loadServiceTable() {
+      let data={
+        clusterId: this.clusterId
+      }
+      if (this.depType == 'K8S') {
+        data.depType = this.depType
+        const response = await this.$axiosPost(
+          'ddh/k8snamespace/list/service',
+          data
+        );
+
+        if (response.code === 200) {
+          this.dataSource = response.data.list;
+          if (this.dataSource.length > 0) {
+            this.dataSource = this.dataSource.map(item => {
+              let obj = {};
+              obj.id = item.name;
+              obj.key = item.name;
+              obj.version = item.tag;
+              obj.serviceName = item.name;
+              return obj;
+            })
+          }
+
+        } else {
+          this.$message.error('无法获取K8S服务列表。请稍后再试。');
+        }
       } else {
-        this.getServiceList();
+        this.$axiosPost(
+          'ddh/service/install/listServiceTab',
+          data
+        ).then((res) => {
+          const response = res;
+          if (response.code === 200) {
+            const serviceList = response.data || [];
+            this.dataSource = serviceList;
+            // 检查是否有已安装服务
+            const installedServices = serviceList.filter(
+              (service) => service.installed
+            );
+            if (installedServices.length > 0) {
+              // 预选已安装服务
+              this.selectedRowKeys = installedServices.map(
+                (service) => service.id
+              );
+              this.selectedRowKeysArr=installedServices.map(
+                (service) => service.id
+              );;
+              this.selectedRowNames = installedServices.map((service) => ({
+                serviceId: service.id,
+                serviceName: service.serviceName,
+              }));
+              this.selectedRowNamesArr=installedServices.map((service) => ({
+                serviceId: service.id,
+                serviceName: service.serviceName,
+              }));
+            }
+          } else {
+            this.$message.error('无法获取服务列表。请稍后再试。');
+          }
+        });
       }
     },
-    getServiceList () {
-      this.loading = true;
-      const params = {
-        clusterId: this.clusterId,
-      };
-      const self = this;
-      // todo：这个接口地址需要替换
-      this.$axiosPost(global.API.getServiceList, params).then((res) => {
-        this.loading = false;
-        this.dataSource = res.data;
-        let arr = this.dataSource.filter(item => item.installed)
-        if (arr.length > 0) {
-          arr.map(childItem => {
-            this.selectedRowKeys.push(childItem.id)
-            this.selectedRowNames.push({
-              serviceId: childItem.id,
-              serviceName: childItem.serviceName
-            })
-          })
+    showDetail(record) {
+      if (this.depType !== 'K8S') {
+        if (record.installed) {
+          this.$router.push({
+            path: `/service-manage/service-list/${record.id}`,
+          });
+        } else {
+          this.$message.info("该服务尚未安装");
         }
-        self.steps4Data.serviceIds.map(item => {
-          this.selectedRowKeys.push(item)
-        })
-        self.steps4Data.serviceNames.map(item => {
-          this.selectedRowNames.push({
-            serviceId: item.id,
-            serviceName: item.serviceName
-          })
-        })
-      });
+      }
     },
-    getCheckboxProps (record) {
+    onSelectChange(selectedRowKeys, selectedRows) {
+      this.selectedRowKeys = selectedRowKeys;
+      if (this.depType == 'K8S') {
+        this.selectedRowNames = selectedRows;
+      } else {
+        this.selectedRowNames = selectedRows.map((row) => ({
+          serviceId: row.id,
+          serviceName: row.serviceName,
+        }));
+      }
+    },
+    getCheckboxProps(record) {
       return {
         props: {
-          disabled: this.depType == 'K8S' ? false : record.installed || record.isRequired //临时
-        }
-      }
-    },
-    //表格选择
-    onSelectChange (selectedRowKeys, row) {
-      this.selectedRowNamesArr = [] 
-      this.selectedRowKeys = selectedRowKeys
-      this.selectedRowKeysArr = selectedRowKeys
-      // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
-      // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
-      let arr = [];
-      row.map((item) => {
-        arr.push({
-          serviceName: item.serviceName,
-          serviceId: item.id
-        });
-      });
-      this.selectedRowNames = arr;
-      if (this.depType == 'K8S') { //k8s模式下 配置服务只传重新勾选的serviceName
-        row.forEach(e => {
-          this.selectedRowNamesArr.push({
-            serviceId: e.id,
-            serviceName: e.serviceName
-          })
-        });
-      }
-    },
-    getListWithRequired () {
-      const self = this;
-      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
-        this.dataSource = res.data;
-        let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
-        if (arr.length > 0) {
-          arr.map(childItem => {
-            if (this.depType !== 'K8S') {
-              this.selectedRowKeysArr.push(childItem.id)
-              this.selectedRowNamesArr.push({
-                serviceId: childItem.id,
-                serviceName: childItem.serviceName
-              })
-            }
-          })
-        }
-        self.steps4Data.serviceIds.map(item => {
-          if (this.depType !== 'K8S') {
-            this.selectedRowKeysArr.push(item)
-          }
-        })
-
-        self.steps4Data.serviceNames.map(item => {
-          if (this.depType !== 'K8S') {
-          this.selectedRowNamesArr.push({
-            serviceId: item.id,
-            serviceName: item.serviceName
-          })
-        }
-        })
-      });
+          defaultValue: record.installed,
+          disabled: this.depType === 'K8S' ? false : record.installed,
+        },
+      };
     },
   },
-  mounted () {
-    if (this.stepsType == 'cluster') {
-      this.getListWithRequired()
-    } else {
-      this.getServiceList();
-    }
+  mounted() {
+    // 加载服务表格数据
+    this.loadServiceTable();
   },
 };
 </script>
 <style lang="less" scoped>
-// 添加苹果设计系统颜色和字体定义
+// 苹果设计系统颜色
 @apple-white: #ffffff;
 @apple-black: #1d1d1f;
 @apple-gray-light: #f5f5f7;
 @apple-gray: #86868b;
 @apple-blue: #0071e3;
 @apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #34c759;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
 
 // 苹果设计系统字体
 .apple-font() {
@@ -247,11 +256,12 @@ export default {
   
   .hero-section {
     text-align: center;
-    margin-bottom: 3.5rem;
-    
+    margin-bottom: 2.5rem;
+    position: relative;
+
     .hero-title {
       .apple-font();
-      font-size: 2.8rem;
+      font-size: 2.5rem;
       font-weight: 600;
       line-height: 1.1;
       letter-spacing: -0.022em;
@@ -261,34 +271,126 @@ export default {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .hero-subtitle {
       .apple-font();
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       line-height: 1.4;
       letter-spacing: 0;
       font-weight: 400;
       color: @apple-gray;
-      margin: 0;
-      max-width: 760px;
-      margin: 0 auto;
+      margin: 0 auto 1.5rem;
+      max-width: 600px;
     }
   }
   
-  .select-section {
-    margin-bottom: 24px;
-    padding: 0 30px;
+  .service-table-container {
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    animation-fill-mode: both;
+    animation-delay: 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     
-    .service-select {
-      width: 252px;
+    // 自定义表格样式
+    :deep(.apple-table) {
+      .apple-font();
+      
+      .ant-table-thead > tr > th {
+        background-color: @apple-gray-light;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: @apple-black;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        white-space: nowrap;
+      }
+      
+      .ant-table-tbody > tr > td {
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        transition: background-color 0.3s;
+      }
+      
+      .ant-table-tbody > tr:hover:not(.ant-table-expanded-row) > td {
+        background-color: fadeout(@apple-gray-light, 50%);
+      }
+      
+      // 自定义复选框样式
+      .ant-checkbox-wrapper {
+        .ant-checkbox {
+          .ant-checkbox-inner {
+            border-radius: 4px;
+            border-color: #d9d9d9;
+            transition: all 0.2s;
+            
+            &:after {
+              transition: all 0.2s;
+            }
+          }
+          
+          &.ant-checkbox-checked {
+            .ant-checkbox-inner {
+              background-color: @apple-blue;
+              border-color: @apple-blue;
+            }
+          }
+        }
+      }
+    }
+    
+    // 已安装状态样式
+    .installed-status {
+      display: flex;
+      align-items: center;
+      
+      .status-badge {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+        
+        &.installed {
+          background-color: @apple-green;
+        }
+        
+        &.not-installed {
+          background-color: @apple-gray;
+        }
+      }
+      
+      .status-text {
+        font-size: 14px;
+        color: @apple-black;
+      }
+    }
+    
+    // 服务操作链接样式
+    .service-action-link {
+      color: @apple-blue;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+      
+      &:hover {
+        color: @apple-blue-hover;
+        text-decoration: none;
+      }
     }
   }
 }
 
+// 动画
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-// 保留原有样式
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 </style>

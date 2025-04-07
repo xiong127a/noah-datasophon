@@ -156,7 +156,13 @@ export default {
           
           // 主机检查完成后，直接分析主机列表
           this.$axiosPost(global.API.analysisHostList, {
-            clusterId: this.clusterId
+            clusterId: this.clusterId,
+            ips: this.steps1Data.hosts,
+            sshUser: this.steps1Data.sshUser,
+            sshPort: this.steps1Data.sshPort,
+            sshPassword: this.steps1Data.sshPassword,
+            page: 1,
+            pageSize: 10 // 使用与第三步相同的默认pageSize
           }).then((analysisRes) => {
             if (analysisRes.code !== 200) {
               console.warn("分析主机列表失败:", analysisRes.msg);

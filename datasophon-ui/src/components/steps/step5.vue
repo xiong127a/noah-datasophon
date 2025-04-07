@@ -25,158 +25,160 @@
  * @FilePath: \ddh-ui\src\components\steps\step5.vue
 -->
 <template>
-  <div class="steps5 steps">
+  <div class="steps5">
     <div class="hero-section">
-      <h1 class="hero-title">分配主机</h1>
-      <p class="hero-subtitle">为不同组件选择合适的主机，优化资源分配和集群性能</p>
+      <h1 class="hero-title">服务部署</h1>
+      <p class="hero-subtitle">配置服务部署方案，为每个服务角色选择合适的主机</p>
     </div>
     
-    <div class="mgt16 steps-body scroll-limit pdr30">
-      <!-- 服务关系引用 -->
-      <a-tabs v-if="activeKey.length > 0" v-model="tabActive">
-        <a-tab-pane :tab="item.serviceName" v-for="item in activeKey" :key="item.serviceId">
-          <div class="table-up-info" v-if="tabActive === item.serviceId">
-            <CommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
-          </div>
+    <div class="service-config-container">
+      <a-tabs v-model="activeKey" @change="callback" animated class="apple-tabs">
+        <a-tab-pane :key="item.serviceName" v-for="(item) in serviceNames">
+          <span slot="tab" class="tab-title">{{ item.serviceName }}</span>
+          <a-form-model
+            ref="ruleForm"
+            :model="formState"
+            :rules="rules"
+            v-bind="layout"
+          >
+            <a-form-model-item>
+              <div class="role-host-container">
+                <a-table
+                  :columns="columns"
+                  :data-source="tableData"
+                  :pagination="false"
+                  class="apple-table"
+                >
+                  <template #bodyCell="{ column, text, record }">
+                    <template v-if="column.dataIndex === 'action'">
+                      <a-select
+                        class="apple-select"
+                        style="width: 100%"
+                        mode="multiple"
+                        placeholder="请选择主机"
+                        option-filter-prop="children"
+                        @change="e => handleChange(e, record.id)"
+                        :value="record.hostname ? record.hostname.split(',') : []"
+                      >
+                        <a-select-option
+                          v-for="item in hostList"
+                          :key="item.hostname"
+                          :value="item.hostname"
+                        >
+                          {{ item.hostname }}({{ item.ip }})
+                        </a-select-option>
+                      </a-select>
+                    </template>
+                  </template>
+                </a-table>
+              </div>
+            </a-form-model-item>
+          </a-form-model>
         </a-tab-pane>
       </a-tabs>
     </div>
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
-
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: { CommonTemplate },
   props: {
     steps4Data: Object,
   },
   data() {
     return {
-      loading: false,
-      templateData: [],
-      saveData: [],
+      activeKey: "",
+      serviceNames: [],
+      tableData: [],
+      formState: {},
+      layout: {
+        labelCol: { span: 4 },
+        wrapperCol: { span: 14 },
+      },
+      rules: {},
+      columns: [
+        {
+          title: "角色",
+          dataIndex: "name",
+          key: "name",
+        },
+        {
+          title: "描述",
+          dataIndex: "desc",
+          key: "desc",
+        },
+        {
+          title: "主机",
+          dataIndex: "action",
+          key: "action",
+        },
+      ],
       hostList: [],
-      activeKey: [],
-      tabActive: null,
     };
   },
   methods: {
-    // 去除字符串里面的数字
-    deleteNum(str, key) {
-      let reg = /[0-9]+/g;
-      let str1 = str.replace(reg, "");
-      let str2 = str1.replace(key, "");
-      return str2;
+    callback(key) {
+      this.getRoleHostList(key);
     },
-    handleSubmit(callback) {
-      this.$refs.commonTemplateRef.form.validateFields(async (err, values) => {
-        if (!err) {
-          // 处理表单数据 将相同的key处理成数组
-          let formData = {};
-          let saveParam = [];
-          for (var k in values) {
-            const key = this.deleteNum(k, "multipleSelect");
-            if (k.includes("multipleSelect")) {
-              if (Object.prototype.hasOwnProperty.call(formData, key)) {
-                formData[`${key}`].push(values[k]);
-              } else {
-                formData[`${key}`] = [values[k]];
-              }
-            } else {
-              if (
-                Object.prototype.toString.call(values[k]) === "[object Array]"
-              ) {
-                formData[`${k}`] = values[k];
-              } else {
-                formData[`${k}`] = [values[k]];
-              }
-            }
-          }
-          for (var label in formData) {
-            saveParam.push({
-              serviceRole: label,
-              hosts: formData[label],
-            });
-            this.templateData.forEach((item) => {
-              if (item.label === label) {
-                item.value = formData[label];
-              }
-            });
-          }
-          // 等待网络请求结束
-          let res = await this.$axiosJsonPost(
-            global.API.saveServiceRoleHostMapping + `/${this.clusterId}`,
-            saveParam
-          );
-          // 网络请求结束后才执行下边的语句  如果传入的callback方法为空或者没传内容也不会去执行，这样也不会影响此方法在别处的调用
-          if (callback) {
-            callback(res);
-          }
-        } else {
-          if (callback) {
-            callback({ code: 0 });
-          }
+    getRoleHostList(serviceName) {
+      const params = {
+        clusterId: this.clusterId,
+        serviceId: this.serviceNames.filter(
+          (item) => item.serviceName === serviceName
+        )[0].serviceId,
+      };
+      this.$axiosPost(global.API.getRoleHostList, params).then((res) => {
+        if (res.code === 200) {
+          this.tableData = res.data;
         }
       });
     },
-    getServiceRoleList() {
-      const self = this;
-      const params = {
-        clusterId: this.clusterId,
-        serviceIds: this.steps4Data.serviceIds.join(",") || "",
-        serviceRoleType: 1, // 传1查的是Master角色
-      };
-      this.$axiosPost(global.API.getServiceRoleList, params).then((res) => {
-        self.templateData = self.handlerData(res.data);
-        self.loading = false;
-      });
-    },
-    getAllHost() {
-      this.loading = true;
+    getHostList() {
       const params = {
         clusterId: this.clusterId,
       };
-      this.$axiosPost(global.API.getAllHost, params).then((res) => {
-        let arr = [];
-        res.data.map((item) => {
-          arr.push(item.hostname);
-        });
-        this.hostList = arr;
-        this.getServiceRoleList();
+      this.$axiosPost(global.API.getHostListByCluster, params).then((res) => {
+        this.hostList = res.data;
       });
     },
-    handlerData(data) {
-      let arr = [];
-      data.map((item) => {
-        arr.push({
-          label: item.serviceRoleName,
-          name: item.serviceRoleName,
-          value: item.hosts ? item.hosts : this.hostList.length > 1 ? this.hostList[0] : undefined,
-          defaultValue: item.hosts ? item.hosts : this.hostList.length > 1 ? this.hostList[0] : undefined,
-          selectValue: this.hostList,
-          type: item.cardinality === "1" ? "select" : "multipleSelect",
-          isHidden: false,
-          required: item.serviceRoleType === "master",
-        });
+    handleChange(e, id) {
+      let obj = this.tableData.filter((item) => item.id === id)[0];
+      obj.hostname = e.join(",");
+    },
+    handleSubmit(callback) {
+      const params = {
+        clusterId: this.clusterId,
+        roleHostList: this.tableData,
+      };
+      this.$axiosPost(global.API.updateRoleHost, params).then((res) => {
+        if (callback) {
+          callback(res);
+        }
       });
-      return arr;
     },
   },
   mounted() {
-    this.getAllHost();
+    this.serviceNames = this.steps4Data.serviceNames;
+    if (this.serviceNames[0]) {
+      this.activeKey = this.serviceNames[0].serviceName;
+      this.getRoleHostList(this.activeKey);
+    }
+    this.getHostList();
   },
 };
 </script>
 <style lang="less" scoped>
-// 添加苹果设计系统颜色和字体定义
+// 苹果设计系统颜色
 @apple-white: #ffffff;
 @apple-black: #1d1d1f;
 @apple-gray-light: #f5f5f7;
 @apple-gray: #86868b;
 @apple-blue: #0071e3;
 @apple-blue-hover: #147CE5;
+@apple-red: #ff453a;
+@apple-green: #34c759;
+@apple-yellow: #ffd60a;
+@apple-orange: #ff9f0a;
 
 // 苹果设计系统字体
 .apple-font() {
@@ -193,11 +195,12 @@ export default {
   
   .hero-section {
     text-align: center;
-    margin-bottom: 3.5rem;
-    
+    margin-bottom: 2.5rem;
+    position: relative;
+
     .hero-title {
       .apple-font();
-      font-size: 2.8rem;
+      font-size: 2.5rem;
       font-weight: 600;
       line-height: 1.1;
       letter-spacing: -0.022em;
@@ -207,25 +210,159 @@ export default {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .hero-subtitle {
       .apple-font();
-      font-size: 1.4rem;
+      font-size: 1.2rem;
       line-height: 1.4;
       letter-spacing: 0;
       font-weight: 400;
       color: @apple-gray;
-      margin: 0;
-      max-width: 760px;
-      margin: 0 auto;
+      margin: 0 auto 1.5rem;
+      max-width: 600px;
     }
   }
-
-  // 保留原有样式...
+  
+  .service-config-container {
+    border-radius: 12px;
+    margin: 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    animation-fill-mode: both;
+    animation-delay: 0.2s;
+    
+    // 自定义标签页样式
+    :deep(.apple-tabs) {
+      .apple-font();
+      
+      .ant-tabs-bar {
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 24px;
+      }
+      
+      .ant-tabs-nav {
+        margin-bottom: 20px;
+        
+        .ant-tabs-tab {
+          padding: 12px 16px;
+          margin-right: 24px;
+          transition: all 0.3s;
+          
+          .tab-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: @apple-gray;
+            transition: color 0.3s;
+          }
+          
+          &:hover {
+            .tab-title {
+              color: darken(@apple-gray, 15%);
+            }
+          }
+          
+          &.ant-tabs-tab-active {
+            .tab-title {
+              color: @apple-blue;
+              font-weight: 600;
+            }
+          }
+        }
+        
+        .ant-tabs-ink-bar {
+          background-color: @apple-blue;
+          height: 3px;
+          border-radius: 3px;
+        }
+      }
+      
+      .ant-tabs-content {
+        padding: 0 16px;
+      }
+    }
+    
+    // 角色主机容器样式
+    .role-host-container {
+      background-color: @apple-white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+    
+    // 表格样式
+    :deep(.apple-table) {
+      .apple-font();
+      
+      .ant-table-thead > tr > th {
+        background-color: @apple-gray-light;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: @apple-black;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        white-space: nowrap;
+      }
+      
+      .ant-table-tbody > tr > td {
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+        transition: background-color 0.3s;
+      }
+      
+      .ant-table-tbody > tr:hover:not(.ant-table-expanded-row) > td {
+        background-color: fadeout(@apple-gray-light, 50%);
+      }
+    }
+    
+    // 下拉选择框样式
+    :deep(.apple-select) {
+      .apple-font();
+      
+      .ant-select-selection {
+        border-radius: 8px;
+        border: 1px solid #d9d9d9;
+        transition: all 0.3s;
+        
+        &:hover {
+          border-color: @apple-blue-hover;
+        }
+        
+        &:focus,
+        &.ant-select-focused {
+          border-color: @apple-blue;
+          box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+        }
+      }
+      
+      .ant-select-selection__choice {
+        background-color: fadeout(@apple-blue, 90%);
+        border: 1px solid fadeout(@apple-blue, 70%);
+        border-radius: 4px;
+        color: @apple-blue;
+        margin-top: 4px;
+        margin-bottom: 4px;
+        
+        .ant-select-selection__choice__remove {
+          color: @apple-blue;
+          
+          &:hover {
+            color: darken(@apple-blue, 10%);
+          }
+        }
+      }
+    }
+  }
 }
 
+// 动画
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>

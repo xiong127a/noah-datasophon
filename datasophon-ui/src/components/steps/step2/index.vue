@@ -2322,7 +2322,9 @@ export default {
     }
 
     // 清理日志刷新定时器
-    this.stopAutoRefresh();
+    if (this.stopAutoRefresh && typeof this.stopAutoRefresh === 'function') {
+      this.stopAutoRefresh();
+    }
 
     // 清理window对象上的方法
     window.copyToClipboard = undefined;
