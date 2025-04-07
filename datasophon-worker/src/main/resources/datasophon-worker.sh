@@ -16,7 +16,7 @@
 #  limitations under the License.
 #
 
-usage="Usage: datasophon-worker.sh (start|stop|restart) <command> "
+usage="Usage: datasophon-worker.sh (start|stop|restart|log) <command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -184,6 +184,14 @@ case $startStop in
         fi
       else
         echo $command not found
+      fi
+      ;;
+  (log)
+      if [ -f $log ]; then
+        # 显示最后100行日志
+        tail -n 100 $log
+      else
+        echo "日志文件不存在: $log"
       fi
       ;;
   (restart)
