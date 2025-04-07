@@ -142,31 +142,31 @@ public class ProcessUtils {
                 SpringTool.getApplicationContext().getBean(ClusterServiceInstanceConfigService.class);
         ClusterServiceRoleInstanceService serviceRoleInstanceService =
                 SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+//        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         ClusterServiceRoleInstanceWebuisService webuisService =
                 SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceWebuisService.class);
         ClusterServiceInstanceRoleGroupService roleGroupService =
                 SpringTool.getApplicationContext().getBean(ClusterServiceInstanceRoleGroupService.class);
-
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
+        Integer clusterId = serviceRoleInfo.getClusterId();
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         ClusterServiceInstanceEntity clusterServiceInstance =
-                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(serviceRoleInfo.getClusterId(),
+                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(clusterId,
                         serviceRoleInfo.getParentName());
         if (Objects.isNull(clusterServiceInstance)) {
             clusterServiceInstance = new ClusterServiceInstanceEntity();
-            clusterServiceInstance.setClusterId(serviceRoleInfo.getClusterId());
+            clusterServiceInstance.setClusterId(clusterId);
             clusterServiceInstance.setServiceName(serviceRoleInfo.getParentName());
             clusterServiceInstance.setServiceState(ServiceState.RUNNING);
             clusterServiceInstance.setCreateTime(new Date());
             clusterServiceInstance.setUpdateTime(new Date());
             serviceInstanceService.save(clusterServiceInstance);
             // save config
-            List<ServiceConfig> list = ServiceConfigMap.get(clusterInfo.getClusterCode() + Constants.UNDERLINE
+            List<ServiceConfig> list = ServiceConfigMap.get(clusterId + Constants.UNDERLINE
                     + serviceRoleInfo.getParentName() + Constants.CONFIG);
             String config = JSON.toJSONString(list);
             ClusterServiceInstanceConfigEntity clusterServiceInstanceConfig = new ClusterServiceInstanceConfigEntity();
-            clusterServiceInstanceConfig.setClusterId(serviceRoleInfo.getClusterId());
+            clusterServiceInstanceConfig.setClusterId(clusterId);
             clusterServiceInstanceConfig.setServiceId(clusterServiceInstance.getId());
             clusterServiceInstanceConfig.setConfigJson(config);
             clusterServiceInstanceConfig.setConfigJsonMd5(SecureUtil.md5(config));
@@ -184,14 +184,14 @@ public class ProcessUtils {
 
         // save role instance
         ClusterServiceRoleInstanceEntity roleInstanceEntity = serviceRoleInstanceService
-                .getOneServiceRole(serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), clusterInfo.getId());
+                .getOneServiceRole(serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), clusterId);
         if (Objects.isNull(roleInstanceEntity)) {
             ClusterServiceRoleInstanceEntity roleInstance = new ClusterServiceRoleInstanceEntity();
             roleInstance.setServiceId(clusterServiceInstance.getId());
             roleInstance.setRoleType(CommonUtils.convertRoleType(serviceRoleInfo.getRoleType().getName()));
             roleInstance.setCreateTime(new Date());
             roleInstance.setHostname(serviceRoleInfo.getHostname());
-            roleInstance.setClusterId(serviceRoleInfo.getClusterId());
+            roleInstance.setClusterId(clusterId);
             roleInstance.setServiceRoleName(serviceRoleInfo.getName());
             roleInstance.setServiceRoleState(ServiceRoleState.RUNNING);
             roleInstance.setUpdateTime(new Date());
@@ -203,7 +203,7 @@ public class ProcessUtils {
                 ClusterZkService clusterZkService = SpringTool.getApplicationContext().getBean(ClusterZkService.class);
                 ClusterZk clusterZk = new ClusterZk();
                 clusterZk.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
-                clusterZk.setClusterId(serviceRoleInfo.getClusterId());
+                clusterZk.setClusterId(clusterId);
                 clusterZk.setZkServer(roleInstance.getHostname());
                 clusterZkService.save(clusterZk);
             }
@@ -214,7 +214,7 @@ public class ProcessUtils {
                 if (Objects.nonNull(webui)) {
                     logger.info("web ui already exists");
                 } else {
-                    Map<String, String> globalVariables = GlobalVariables.get(clusterInfo.getId());
+                    Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                     globalVariables.put("${host}", serviceRoleInfo.getHostname());
                     String url = PlaceholderUtils.replacePlaceholders(externalLink.getUrl(), globalVariables,
                             Constants.REGEX_VARIABLE);
@@ -517,10 +517,10 @@ public class ProcessUtils {
         for (FrameServiceEntity frameServiceEntity : frameServiceList) {
             // create service actor
             logger.info("create {} actor",
-                    clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
+                    clusterInfo.getId() + "-serviceActor-" + frameServiceEntity.getServiceName());
             ActorUtils.actorSystem.actorOf(Props.create(MasterServiceActor.class)
                             .withDispatcher("my-forkjoin-dispatcher"),
-                    clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
+                    clusterInfo.getId() + "-serviceActor-" + frameServiceEntity.getServiceName());
         }
     }
 

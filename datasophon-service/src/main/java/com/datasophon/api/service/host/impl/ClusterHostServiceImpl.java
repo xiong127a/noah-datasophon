@@ -40,7 +40,6 @@ import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterRack;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.RoleType;
@@ -116,9 +115,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 .collect(Collectors.toMap(obj -> obj.getId() + "", ClusterRack::getRack));
 
         // 获取集群代码，用于查询主机信息缓存
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String clusterCode = clusterInfo.getClusterCode();
-        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//        String clusterCode = clusterInfo.getClusterCode();
+        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
 
         for (ClusterHostDO clusterHostDO : list) {
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
@@ -192,9 +191,10 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         for (String hostId : ids) {
             ClusterHostDO host = this.getById(hostId);
             // 获取主机上安装的服务
+            Integer clusterId = host.getClusterId();
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
                     .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                            .eq(Constants.CLUSTER_ID, host.getClusterId())
+                            .eq(Constants.CLUSTER_ID, clusterId)
                             .eq(Constants.HOSTNAME, host.getHostname())
                             .eq(Constants.SERVICE_ROLE_STATE, ServiceRoleState.RUNNING)
                             .ne(Constants.ROLE_TYPE, RoleType.CLIENT));
@@ -203,9 +203,10 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             if (!list.isEmpty()) {
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(host.getClusterId());
-            String clusterCode = clusterInfo.getClusterCode();
-            String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
+
+//            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+//            String clusterCode = clusterInfo.getClusterCode();
+            String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
             if (CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
                 CacheUtils.removeKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname());
             }
@@ -230,7 +231,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
             // Prometheus 移除 hosts 信息
             GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
-            prometheusConfigCommand.setClusterId(clusterInfo.getId());
+            prometheusConfigCommand.setClusterId(clusterId);
 
             ActorUtils.actorSystem.scheduler().scheduleOnce(
                     FiniteDuration.apply(3L, TimeUnit.SECONDS),
@@ -240,7 +241,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorRef.noSender());
 
             // remove the host from the cache
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
             }
