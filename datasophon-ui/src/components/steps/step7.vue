@@ -123,10 +123,10 @@ export default {
     },
     ...mapActions("steps", ["setCommandType", "setCommandIds"]),
     callback(key) {
+      console.log('Tab changed to:', key);
       this.serviceNameKey = key;
-      if (this.selectKeys.includes(key)) return false;
-      this.selectKeys.push(key);
-      // this.getServiceConfigOption();
+      // 移除缓存检查,每次切换都获取配置
+      this.getServiceConfigOption();
     },
     // 去除字符串里面的数字
     deleteNum(str, key) {
@@ -247,23 +247,42 @@ export default {
       });
     },
     getServiceConfigOption() {
+      if (!this.SERVICENAMES || this.SERVICENAMES.length === 0) {
+        console.warn('No services to get config for');
+        return;
+      }
+
       this.loading = true;
       const self = this;
-      this.SERVICENAMES.map((item) => {
-        const params = {
-          clusterId: this.setting.clusterId ? this.setting.clusterId : this.clusterId,
-          serviceName: item,
-        };
-        this.$axiosPost(global.API.getServiceConfigOption, params).then(
-            (res) => {
-              if (res.code === 200) {
-                self.templateObj[item] = self.handlerTemplate(res.data);
-                self.loading = false;
-              }
-              // self.templateData = this.handlerTemplate(res.data);
-            }
-        );
-      });
+      console.log('Getting config for services:', this.SERVICENAMES);
+      
+      // 获取当前选中服务的配置
+      const currentService = this.serviceNameKey;
+      if (!currentService) {
+        console.warn('No service selected');
+        return;
+      }
+
+      console.log('Getting config for service:', currentService);
+      const params = {
+        clusterId: this.setting.clusterId ? this.setting.clusterId : this.clusterId,
+        serviceName: currentService,
+      };
+      
+      this.$axiosPost(global.API.getServiceConfigOption, params)
+        .then((res) => {
+          console.log('Response for service', currentService, ':', res);
+          if (res.code === 200) {
+            self.templateObj[currentService] = self.handlerTemplate(res.data);
+          } else {
+            console.error('Failed to get config for service', currentService, ':', res);
+          }
+          self.loading = false;
+        })
+        .catch(err => {
+          console.error('Error getting config for service', currentService, ':', err);
+          self.loading = false;
+        });
     },
     handlerTemplate(data) {
       data.forEach((item) => {
@@ -387,17 +406,31 @@ export default {
     },
   },
   created() {
-    this.SERVICENAMES = this.steps4Data.serviceNames.map(
+    console.log('Step7 created with steps4Data:', this.steps4Data);
+    // 确保serviceNames存在且不为空
+    if (this.steps4Data && this.steps4Data.serviceNames && this.steps4Data.serviceNames.length > 0) {
+      this.SERVICENAMES = this.steps4Data.serviceNames.map(
         (item) => item.serviceName
-    );
-    this.serviceNameKey = this.SERVICENAMES[0];
-    this.selectKeys.push(this.serviceNameKey);
-    this.SERVICENAMES.map((item) => {
-      this.templateObj[`${item}`] = [];
-    });
+      );
+      console.log('Initialized SERVICENAMES:', this.SERVICENAMES);
+      this.serviceNameKey = this.SERVICENAMES[0];
+      this.SERVICENAMES.map((item) => {
+        this.templateObj[`${item}`] = [];
+      });
+    } else {
+      console.warn('No services selected in steps4Data');
+      this.SERVICENAMES = [];
+      this.serviceNameKey = '';
+    }
   },
   mounted() {
-    this.getServiceConfigOption();
+    console.log('Step7 mounted, calling getServiceConfigOption');
+    // 只要有选中的服务就获取配置
+    if (this.SERVICENAMES && this.SERVICENAMES.length > 0) {
+      this.getServiceConfigOption();
+    } else {
+      console.warn('No services to get config for');
+    }
   },
 };
 </script>

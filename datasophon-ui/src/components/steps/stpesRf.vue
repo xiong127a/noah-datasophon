@@ -194,8 +194,18 @@ export default {
       }
       if (this.stepsNumber === 4) {
         //  这个地方过滤掉已经回显的服务 只传递给下一步新选的服务
+        console.log('Step 4 data before processing:', {
+          selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeysArr,
+          selectedRowKeys: this.$refs.steps4Ref.selectedRowKeys,
+          selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNamesArr,
+          selectedRowNames: this.$refs.steps4Ref.selectedRowNames
+        });
+
         this.steps4Data.serviceIds = _.cloneDeep(this.stepsType=='cluster'?this.$refs.steps4Ref.selectedRowKeysArr: this.$refs.steps4Ref.selectedRowKeys);
         this.steps4Data.serviceNames = _.cloneDeep(this.stepsType == 'cluster' ? this.$refs.steps4Ref.selectedRowNamesArr: this.$refs.steps4Ref.selectedRowNames);
+        
+        console.log('Step 4 data after processing:', this.steps4Data);
+        
         let arr = this.$refs.steps4Ref.dataSource.filter(item => item.installed)
         if (this.depType!=='K8S'){
           arr.map((item, index) => {
@@ -208,20 +218,15 @@ export default {
             }
           })
         }
-        // && arr.length < 1
-        if (this.steps4Data.serviceIds.length < 1) {
+
+        // 确保数据不为空
+        if (!this.steps4Data.serviceIds.length || !this.steps4Data.serviceNames.length) {
           this.$message.warning("请至少选择一个服务");
           flag = false;
+          return;
         }
-        this.steps4Data.serviceIds=[...new Set(this.steps4Data.serviceIds)]
-        await this.$axiosPost('/ddh/service/install/checkServiceDependency', {
-          clusterId: this.clusterId,
-          serviceIds:this.steps4Data.serviceIds.join(',')
-        }).then((res) => { 
-          flag = res.code == 200
-          // flag = res.code == 500//暂时的
-          if(res.code != 200)return true
-        })
+
+        console.log('Final Step 4 data:', this.steps4Data);
       }
       if (this.stepsNumber === 5) {
         // flag = this.$refs.steps5Ref.handleSubmit();

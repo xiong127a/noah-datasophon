@@ -132,6 +132,7 @@ export default {
   },
   methods: {
     getVal (val, filed) {
+      console.log('Service type selected:', val);
       this.params[`${filed}`] = val
       this.getListWithRequired()
     },
@@ -184,11 +185,10 @@ export default {
     },
     //表格选择
     onSelectChange (selectedRowKeys, row) {
+      console.log('Selected rows:', row);
       this.selectedRowNamesArr = []
       this.selectedRowKeys = selectedRowKeys
       this.selectedRowKeysArr = selectedRowKeys
-      // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
-      // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
       let arr = [];
       row.map((item) => {
         arr.push({
@@ -204,11 +204,28 @@ export default {
             serviceName: e.serviceName
           })
         });
+      } else {
+        // 非K8S模式下,确保选中的服务被正确记录
+        this.selectedRowNamesArr = arr;
       }
+      
+      // 同步到steps4Data
+      this.steps4Data.serviceIds = [...new Set(this.selectedRowKeysArr)];
+      this.steps4Data.serviceNames = this.selectedRowNamesArr;
+      
+      console.log('Updated steps4Data:', {
+        serviceIds: this.steps4Data.serviceIds,
+        serviceNames: this.steps4Data.serviceNames
+      });
     },
     getListWithRequired () {
       const self = this;
-      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
+      console.log('Getting service list with type:', this.params.type);
+      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { 
+        type: this.params.type || '', 
+        clusterId: this.clusterId 
+      }).then((res) => {
+        console.log('Service list response:', res);
         this.dataSource = res.data;
         let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
         if (arr.length > 0) {
@@ -222,20 +239,32 @@ export default {
             }
           })
         }
+
+        // 确保之前选中的服务保持选中状态
         self.steps4Data.serviceIds.map(item => {
-          if (this.depType !== 'K8S') {
+          if (this.depType !== 'K8S' && !this.selectedRowKeysArr.includes(item)) {
             this.selectedRowKeysArr.push(item)
           }
         })
 
         self.steps4Data.serviceNames.map(item => {
-          if (this.depType !== 'K8S') {
+          if (this.depType !== 'K8S' && !this.selectedRowNamesArr.some(x => x.serviceId === item.serviceId)) {
             this.selectedRowNamesArr.push({
-              serviceId: item.id,
+              serviceId: item.serviceId,
               serviceName: item.serviceName
             })
           }
         })
+
+        // 更新steps4Data以确保数据同步
+        self.steps4Data.serviceIds = [...new Set(this.selectedRowKeysArr)];
+        self.steps4Data.serviceNames = this.selectedRowNamesArr;
+        
+        // 打印最终的数据
+        console.log('Final steps4Data:', {
+          serviceIds: self.steps4Data.serviceIds,
+          serviceNames: self.steps4Data.serviceNames
+        });
       });
     },
   },
