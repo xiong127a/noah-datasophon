@@ -24,6 +24,10 @@ coreNum=`cat /proc/cpuinfo| grep "processor"| wc -l`
  
 # 总内存大小GB
 totalMem=`free -m | grep Mem | awk '{print $2/1024}'`
+# 确保totalMem有值，如果为空设置为0
+if [ -z "$totalMem" ]; then
+  totalMem="0"
+fi
 
 #内存使用量GB
 #usedMem=`free -m | grep Mem | awk '{print $3/1024}'`
@@ -34,6 +38,10 @@ totalMem=`free -m | grep Mem | awk '{print $2/1024}'`
  
 # 磁盘大小GB，排除tmpfs类型
 totalDisk=`df -k | grep -v "tmpfs" | egrep -A 1 "mapper|sd" | awk 'NF>1{print $(NF-4)}' | awk -v used=0 '{used+=$1}END{printf "%.2f\n",used/1048576}'`
+# 确保totalDisk有值，如果为空设置为0
+if [ -z "$totalDisk" ]; then
+  totalDisk="0.00"
+fi
  
 #usedDisk=`df -k | grep -v "tmpfs" | egrep -A 1 "mapper|sd" | awk 'NF>1{print $(NF-3)}' | awk -v used=0 '{used+=$1}END{printf "%.2f\n",used/1048576}'`
  
@@ -42,6 +50,6 @@ totalDisk=`df -k | grep -v "tmpfs" | egrep -A 1 "mapper|sd" | awk 'NF>1{print $(
 #diskUsedPersent=`awk 'BEGIN{printf "%.1f\n",('$usedDisk'/'$totalDisk')*100}'`
 
 
-
-echo {"coreNum": $coreNum, "totalMem": $totalMem, "totalDisk": $totalDisk}
+# 确保输出有效的JSON格式，即使变量为空
+echo "{\"coreNum\": $coreNum, \"totalMem\": \"$totalMem\", \"totalDisk\": $totalDisk}"
 
