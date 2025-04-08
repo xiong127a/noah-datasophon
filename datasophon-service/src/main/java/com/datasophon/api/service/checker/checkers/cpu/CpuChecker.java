@@ -37,7 +37,7 @@ public class CpuChecker extends AbstractItemChecker {
 
             // 检查CPU核心数
             cacheLog.info("检查CPU核心数...");
-            CommandResult cpuResult = execCommand(session, "nproc");
+            CommandResult cpuResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "nproc");
 
             if (!cpuResult.isSuccess()) {
                 cacheLog.error("获取CPU核心数失败: %s", cpuResult.getErrorOrOutput());
@@ -54,7 +54,7 @@ public class CpuChecker extends AbstractItemChecker {
 
             // 检查CPU负载
             cacheLog.info("检查CPU负载...");
-            CommandResult loadResult = execCommand(session, "cat /proc/loadavg");
+            CommandResult loadResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "cat /proc/loadavg");
 
             if (!loadResult.isSuccess()) {
                 cacheLog.error("获取CPU负载失败: %s", loadResult.getErrorOrOutput());
@@ -79,7 +79,7 @@ public class CpuChecker extends AbstractItemChecker {
 
             // 使用更可靠的方式获取CPU使用率
             String cpuUsageCommand = "top -b -n 1 | grep '%Cpu' | awk '{print $2+$4}'";
-            CommandResult cpuUsageResult = execCommand(session, cpuUsageCommand);
+            CommandResult cpuUsageResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), cpuUsageCommand);
 
             double cpuUsage = 0.0;
             boolean usageDetected = false;
@@ -114,7 +114,7 @@ public class CpuChecker extends AbstractItemChecker {
             if (!usageDetected) {
                 cacheLog.info("尝试使用Ubuntu/Debian系统的专用命令获取CPU使用率");
                 cpuUsageCommand = "top -b -n 1 | grep 'Cpu(s)' | awk '{print $2+$4}'";
-                cpuUsageResult = execCommand(session, cpuUsageCommand);
+                cpuUsageResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), cpuUsageCommand);
 
                 if (cpuUsageResult.isSuccess() && !cpuUsageResult.getOutput().trim().isEmpty()) {
                     try {
@@ -138,9 +138,9 @@ public class CpuChecker extends AbstractItemChecker {
             // 如果上述方法都失败，尝试使用mpstat命令
             if (!usageDetected) {
                 cacheLog.info("尝试使用mpstat命令获取CPU使用率");
-                CommandResult mpstatResult = execCommand(session, "command -v mpstat || echo 'not_found'");
+                CommandResult mpstatResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "command -v mpstat || echo 'not_found'");
                 if (mpstatResult.isSuccess() && !mpstatResult.getOutput().trim().contains("not_found")) {
-                    CommandResult mpstatUsageResult = execCommand(session,
+                    CommandResult mpstatUsageResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                             "mpstat | tail -n 1 | awk '{print 100-$NF}'");
                     if (mpstatUsageResult.isSuccess() && !mpstatUsageResult.getOutput().trim().isEmpty()) {
                         try {
@@ -167,7 +167,7 @@ public class CpuChecker extends AbstractItemChecker {
             if (!usageDetected) {
                 cacheLog.info("尝试使用vmstat命令获取CPU使用率");
                 try {
-                    CommandResult vmstatResult = execCommand(session, "vmstat 1 2 | tail -n 1");
+                    CommandResult vmstatResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "vmstat 1 2 | tail -n 1");
                     if (vmstatResult.isSuccess() && !vmstatResult.getOutput().trim().isEmpty()) {
                         String vmstatOutput = vmstatResult.getOutput().trim();
                         cacheLog.info("vmstat输出: %s", vmstatOutput);

@@ -37,7 +37,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             // 执行ulimit命令获取当前最大文件句柄数（仅供参考）
             cacheLog.debug("执行命令: ulimit -n（仅供参考）");
             cacheLog.info("执行命令: ulimit -n 获取当前会话文件句柄数（仅供参考）...");
-            CommandResult result = execCommand(session, "ulimit -n");
+            CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "ulimit -n");
 
             int currentFileHandles = 0;
             if (result.isSuccess()) {
@@ -53,7 +53,7 @@ public class FileHandleChecker extends AbstractItemChecker {
 
             // 检查/etc/security/limits.conf配置是否已设置
             cacheLog.info("检查系统配置文件是否已正确设置...");
-            CommandResult limitsConfResult = execCommand(session,
+            CommandResult limitsConfResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                     "grep -E '\\* (soft|hard) nofile' /etc/security/limits.conf");
             boolean limitsConfSet = false;
 
@@ -211,7 +211,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             setCheckItemMessage(hostInfo, checkItem, "正在修改系统文件句柄限制配置...");
 
             // 先获取当前文件句柄数（仅供参考）
-            CommandResult currentLimitResult = execCommand(session, "ulimit -n");
+            CommandResult currentLimitResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "ulimit -n");
             int currentLimit = 0;
             if (currentLimitResult.isSuccess()) {
                 try {
@@ -230,7 +230,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                     minFileHandles, minFileHandles, minFileHandles, minFileHandles);
 
             cacheLog.debug("执行修复命令: %s", cmd);
-            CommandResult result = execCommand(session, cmd);
+            CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), cmd);
 
             if (!result.isSuccess()) {
                 cacheLog.debug("修改limits.conf文件失败: %s", result.getErrorOrOutput());
@@ -245,7 +245,7 @@ public class FileHandleChecker extends AbstractItemChecker {
 
             // 检查是否存在systemd
             cacheLog.debug("检查主机是否使用systemd...");
-            boolean hasSystemd = isSystemdExists(session);
+            boolean hasSystemd = isSystemdExists(sshConnectionPoolManager.getOrCreateConnection(hostInfo));
             cacheLog.debug("systemd检查结果: %s", hasSystemd ? "存在" : "不存在");
 
             // 如果是CentOS/RHEL,还需要通过systemd配置
@@ -257,7 +257,7 @@ public class FileHandleChecker extends AbstractItemChecker {
 
                 // 创建systemd配置目录
                 cacheLog.debug("创建目录: /etc/systemd/system.conf.d");
-                CommandResult mkdirResult = execCommand(session, "mkdir -p /etc/systemd/system.conf.d");
+                CommandResult mkdirResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "mkdir -p /etc/systemd/system.conf.d");
                 if (!mkdirResult.isSuccess()) {
                     cacheLog.warn("创建systemd配置目录失败: %s", mkdirResult.getErrorOrOutput());
                 }
@@ -266,7 +266,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                 String systemdConfig = "echo -e '[Manager]\\nDefaultLimitNOFILE=" + minFileHandles
                         + "' > /etc/systemd/system.conf.d/limits.conf";
                 cacheLog.debug("配置systemd文件句柄限制: %s", systemdConfig);
-                CommandResult systemdResult = execCommand(session, systemdConfig);
+                CommandResult systemdResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), systemdConfig);
 
                 if (!systemdResult.isSuccess()) {
                     cacheLog.debug("配置systemd文件句柄限制失败: %s", systemdResult.getErrorOrOutput());
@@ -280,7 +280,7 @@ public class FileHandleChecker extends AbstractItemChecker {
 
                 // 重新加载systemd配置
                 cacheLog.debug("重新加载systemd配置");
-                CommandResult reloadResult = execCommand(session, "systemctl daemon-reload");
+                CommandResult reloadResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "systemctl daemon-reload");
                 cacheLog.debug("systemctl daemon-reload结果: %s",
                         reloadResult.getOutput().isEmpty() ? "成功" : reloadResult.getOutput());
             }
@@ -335,7 +335,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             verificationCmd.append("grep '\\* soft nofile' /etc/security/limits.conf | tail -n 1 && ");
             verificationCmd.append("grep '\\* hard nofile' /etc/security/limits.conf | tail -n 1");
 
-            CommandResult verifyResult = execCommand(session, verificationCmd.toString());
+            CommandResult verifyResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), verificationCmd.toString());
             if (verifyResult.isSuccess() && !verifyResult.getOutput().isEmpty()) {
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append("<p><strong>配置验证:</strong></p>");

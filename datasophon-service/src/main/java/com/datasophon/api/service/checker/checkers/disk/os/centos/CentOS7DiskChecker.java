@@ -21,6 +21,7 @@ public class CentOS7DiskChecker extends CentOSDiskChecker {
         cacheLog.warn("3. 清理临时文件: sudo rm -rf /tmp/* /var/tmp/*");
         cacheLog.warn("4. 移除旧内核: sudo package-cleanup --oldkernels --count=2");
         cacheLog.warn("5. 清理journal日志: sudo journalctl --vacuum-time=7d");
-        cacheLog.warn("6. 考虑使用LVM扩展" + DiskChecker.TARGET_DIR + "分区或挂载新磁盘");
+        cacheLog.warn("6. 清理Docker镜像和容器(如果安装了Docker): sudo docker system prune -a");
+        cacheLog.warn("7. 考虑扩展磁盘分区或挂载新磁盘");
     }
 }

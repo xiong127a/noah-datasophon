@@ -1,12 +1,9 @@
 package com.datasophon.api.service.checker.queue;
 
 import com.datasophon.api.service.checker.AsyncCheckService;
-import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.common.enums.ScopeCode;
 import com.datasophon.common.model.AsyncServiceStatus;
-import com.datasophon.common.model.CheckItem;
-import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OperationResult;
 import com.datasophon.common.model.QueueManagerStatus;
 import com.datasophon.common.model.QueueSystemStatus;
@@ -14,15 +11,12 @@ import com.datasophon.common.model.QueueTaskDetailResult;
 import com.datasophon.common.model.QueueTaskInfo;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.client.session.ClientSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -184,7 +178,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
             hostCheckQueueManager.pauseQueueProcessing();
             if (scopeCode == ScopeCode.QUEUE) {
                 messageBuilder.append("队列处理");
-            } else if (scopeCode == ScopeCode.ALL) {
+            } else {
                 messageBuilder.append("队列处理和定时任务");
             }
         }
@@ -250,7 +244,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
             hostCheckQueueManager.resumeQueueProcessing();
             if (scopeCode == ScopeCode.QUEUE) {
                 messageBuilder.append("队列处理");
-            } else if (scopeCode == ScopeCode.ALL) {
+            } else {
                 messageBuilder.append("队列处理和定时任务");
             }
         }
@@ -459,7 +453,6 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                 break;
             default:
                 message = "无效的任务ID: " + taskId;
-                success = false;
         }
 
         // 如果任务ID无效直接返回错误
@@ -546,7 +539,6 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                 break;
             default:
                 message = "无效的任务ID: " + taskId;
-                success = false;
         }
 
         // 如果任务ID无效直接返回错误
@@ -755,11 +747,9 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                             success = true;
                         } catch (Exception e) {
                             message = "无法更新队列健康监控间隔: " + e.getMessage();
-                            success = false;
                         }
                     } else {
                         message = "队列管理器不可用";
-                        success = false;
                     }
                     break;
                 case "taskTimeoutMonitor":
@@ -772,20 +762,16 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                             success = true;
                         } catch (Exception e) {
                             message = "无法更新任务超时监控间隔: " + e.getMessage();
-                            success = false;
                         }
                     } else {
                         message = "队列管理器不可用";
-                        success = false;
                     }
                     break;
                 default:
                     message = "无效的任务ID: " + taskId;
-                    success = false;
             }
         } catch (Exception e) {
             message = "更新任务间隔时发生错误: " + e.getMessage();
-            success = false;
         }
 
         // 如果任务ID无效直接返回错误
@@ -816,159 +802,4 @@ public class QueueManagerServiceImpl implements QueueManagerService {
         return result;
     }
 
-    /**
-     * 执行检查任务
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     * @param checkItem 检查项
-     * @return 任务ID
-     */
-    public String executeCheckTask(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        return asyncCheckService.executeCheckItemAsync(clusterId, hostInfo, checkItem);
-    }
-
-    /**
-     * 执行修复任务
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     * @param fixItem   修复项
-     * @return 任务ID
-     */
-    public String executeFixTask(Integer clusterId, HostInfo hostInfo, CheckItem fixItem) {
-        return asyncCheckService.executeFixItemAsync(clusterId, hostInfo, fixItem);
-    }
-
-    /**
-     * 批量检查主机
-     * 
-     * @param clusterId  集群ID
-     * @param hostInfo   主机信息
-     * @param checkItems 检查项列表
-     * @return 检查结果
-     */
-    public List<CheckItem> batchCheckHost(Integer clusterId, HostInfo hostInfo, List<CheckItem> checkItems) {
-        // 获取SSH连接
-        ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-
-        if (session == null) {
-            // 无法创建连接，标记所有检查项为失败
-            for (CheckItem item : checkItems) {
-                item.setStatus(CheckItem.Status.FAILED);
-                item.setMessage("无法创建SSH连接");
-            }
-            return checkItems;
-        }
-
-        // 设置使用现有会话
-        hostInfo.setUseExistingSession(true);
-        hostInfo.setExternalSession(session);
-
-        try {
-            // 执行批量检查
-            return asyncCheckService.batchExecuteCheck(clusterId, hostInfo, checkItems);
-        } finally {
-            // 清理，但不关闭连接
-            hostInfo.setUseExistingSession(false);
-            hostInfo.setExternalSession(null);
-        }
-    }
-
-    /**
-     * 批量修复主机
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     * @param fixItems  修复项列表
-     * @return 修复结果
-     */
-    public List<CheckItem> batchFixHost(Integer clusterId, HostInfo hostInfo, List<CheckItem> fixItems) {
-        // 检查是否包含免密登录检查项
-        boolean containsPasswordFreeChecker = fixItems.stream()
-                .anyMatch(item -> "PASSWORD_FREE".equals(item.getItemCode()));
-
-        ClientSession session = null;
-
-        // 如果不是免密修复，则获取连接
-        if (!containsPasswordFreeChecker) {
-            session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-
-            if (session == null) {
-                // 无法创建连接，标记所有修复项为失败
-                for (CheckItem item : fixItems) {
-                    item.setStatus(CheckItem.Status.FAILED);
-                    item.setMessage("无法创建SSH连接");
-                }
-                return fixItems;
-            }
-
-            // 设置使用现有会话
-            hostInfo.setUseExistingSession(true);
-            hostInfo.setExternalSession(session);
-        }
-
-        try {
-            // 执行批量修复
-            return asyncCheckService.batchExecuteFix(clusterId, hostInfo, fixItems);
-        } finally {
-            if (session != null) {
-                // 清理，但不关闭连接
-                hostInfo.setUseExistingSession(false);
-                hostInfo.setExternalSession(null);
-            }
-        }
-    }
-
-    /**
-     * 执行命令
-     * 
-     * @param hostInfo 主机信息
-     * @param command  命令
-     * @return 命令执行结果
-     */
-    public CompletableFuture<CommandResult> executeCommand(HostInfo hostInfo, String command) {
-        // 获取SSH连接
-        ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-
-        if (session == null) {
-            CompletableFuture<CommandResult> future = new CompletableFuture<>();
-            future.complete(new CommandResult("", "无法创建SSH连接", -1));
-            return future;
-        }
-
-        // 根据命令类型选择合适的执行器执行命令
-        return sshConnectionPoolManager.execCommandByType(
-                session,
-                command,
-                hardwareInfoExecutor,
-                osInfoExecutor,
-                checkExecutor);
-    }
-
-    /**
-     * 同步主机文件
-     * 
-     * @param taskId           任务ID
-     * @param clusterId        集群ID
-     * @param hostMap          主机映射
-     * @param hostsFilePreview 主机文件预览
-     */
-    public void syncHostsFileTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
-            Object hostsFilePreview) {
-        asyncCheckService.syncHostsFileTask(taskId, clusterId, hostMap, hostsFilePreview);
-    }
-
-    /**
-     * 批量设置主机名
-     * 
-     * @param taskId          任务ID
-     * @param clusterId       集群ID
-     * @param hostMap         主机映射
-     * @param hostnamePreview 主机名预览
-     */
-    public void batchSetHostnameTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
-            List<Map<String, String>> hostnamePreview) {
-        asyncCheckService.batchSetHostnameTask(taskId, clusterId, hostMap, hostnamePreview);
-    }
 }

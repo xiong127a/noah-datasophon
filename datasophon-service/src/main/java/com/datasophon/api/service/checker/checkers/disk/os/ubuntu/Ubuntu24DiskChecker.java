@@ -1,6 +1,5 @@
 package com.datasophon.api.service.checker.checkers.disk.os.ubuntu;
 
-import com.datasophon.api.service.checker.checkers.disk.DiskChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +23,7 @@ public class Ubuntu24DiskChecker extends UbuntuDiskChecker {
         cacheLog.warn("6. 清理快照: sudo snap set system refresh.retain=2");
         cacheLog.warn("7. 清理journal日志: sudo journalctl --vacuum-time=7d");
         cacheLog.warn("8. 使用磁盘分析工具: sudo apt install ncdu && sudo ncdu /");
-        cacheLog.warn("9. 考虑扩展" + DiskChecker.TARGET_DIR + "分区或挂载新磁盘");
+        cacheLog.warn("9. 清理Docker镜像和容器(如果安装了Docker): sudo docker system prune -a");
+        cacheLog.warn("10. 考虑扩展磁盘分区或挂载新磁盘");
     }
 }

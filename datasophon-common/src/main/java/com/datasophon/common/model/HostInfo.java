@@ -19,11 +19,9 @@ package com.datasophon.common.model;
 
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.sshd.client.session.ClientSession;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -99,12 +97,16 @@ public class HostInfo implements Serializable {
      * 操作系统信息收集状态
      * 可能的值: LOADING, SUCCESS, ERROR
      */
+    @Setter
+    @Getter
     private OsInfoStatusEnum osInfoStatus;
 
     /**
      * SSH连接状态
      * 可能的值: SUCCESS, ERROR, LOADING
      */
+    @Setter
+    @Getter
     private OsInfoStatusEnum sshConnectStatus;
 
     /**
@@ -129,42 +131,16 @@ public class HostInfo implements Serializable {
      * 硬件信息收集状态
      * 可能的值: LOADING, SUCCESS, ERROR
      */
-    private OsInfoStatusEnum hardwareStatus;
+    private OsInfoStatusEnum hardwareCollectionStatus;
 
     /**
      * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
+     * -- SETTER --
+     * 设置主机整体状态 - 枚举类型
+     * 
      */
+    @Setter
     private CheckItem.Status status;
-
-    /**
-     * 状态缓存是否失效 - 不序列化此字段
-     */
-    private transient boolean statusCacheDirty = true;
-
-    /**
-     * -- GETTER --
-     * 是否使用已存在的会话（用于连接复用）
-     * -- SETTER --
-     * 设置是否使用已存在的会话
-     *
-     */
-    // 添加连接复用相关属性
-    @Setter
-    @Getter
-    @JsonIgnore
-    private transient boolean useExistingSession = false;
-
-    /**
-     * -- GETTER --
-     * 获取外部会话
-     * -- SETTER --
-     * 设置外部会话
-     *
-     */
-    @Setter
-    @Getter
-    @JsonIgnore
-    private transient ClientSession externalSession = null;
 
     public HostInfo(String ip, int sshPort, String sshUser) {
         this.ip = ip;
@@ -176,29 +152,11 @@ public class HostInfo implements Serializable {
     }
 
     /**
-     * 会话是否准备就绪
-     */
-    public boolean isSessionReady() {
-        return externalSession != null && externalSession.isOpen();
-    }
-
-    /**
      * 获取主机整体状态 - 枚举类型
      */
     public CheckItem.Status getStatus() {
-        if (statusCacheDirty) {
-            calculateStatus();
-        }
+        calculateStatus();
         return status;
-    }
-
-    /**
-     * 设置主机整体状态 - 枚举类型
-     */
-    public void setStatus(CheckItem.Status status) {
-        this.status = status;
-        // 当状态被手动设置时，缓存被视为有效
-        this.statusCacheDirty = false;
     }
 
     /**
@@ -242,7 +200,6 @@ public class HostInfo implements Serializable {
      */
     public void setCheckItems(List<CheckItem> checkItems) {
         this.checkItems = checkItems;
-        this.statusCacheDirty = true;
     }
 
     /**
@@ -274,7 +231,6 @@ public class HostInfo implements Serializable {
         }
 
         if (statusChanged) {
-            statusCacheDirty = true;
             calculateStatus();
         }
 
@@ -305,7 +261,6 @@ public class HostInfo implements Serializable {
         }
 
         if (anyChange) {
-            statusCacheDirty = true;
             calculateStatus();
         }
 
@@ -331,12 +286,10 @@ public class HostInfo implements Serializable {
             if (this.status == CheckItem.Status.WAITING_FIX) {
                 // 如果是等待修复状态，更新checkResult以反映等待修复
                 this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
-                this.statusCacheDirty = false;
                 return;
-            } else if (this.status == CheckItem.Status.FIXING) {
+            } else {
                 // 如果是修复中状态，更新checkResult以反映正在修复
                 this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
-                this.statusCacheDirty = false;
                 return;
             }
         }
@@ -345,7 +298,6 @@ public class HostInfo implements Serializable {
             this.status = CheckItem.Status.WAITING;
             // 没有检查项或检查项为空时，设置为等待检查
             this.checkResult = new CheckResult(9999, "等待主机校验");
-            this.statusCacheDirty = false;
             return;
         }
 
@@ -421,7 +373,7 @@ public class HostInfo implements Serializable {
             this.status = CheckItem.Status.SKIPPED;
             // 全部检查项都已跳过
             this.checkResult = new CheckResult(10044, "主机校验已跳过：所有检查项已跳过");
-        } else if (hasSuccess && hasSkipped && !hasFailed) {
+        } else if (hasSuccess) {
             // 添加新条件：部分检查项通过，部分跳过，没有失败项
             this.status = CheckItem.Status.SUCCESS; // 仍然使用SUCCESS状态
             this.checkResult = new CheckResult(10001,
@@ -434,9 +386,6 @@ public class HostInfo implements Serializable {
                     String.format("主机校验不完整：已通过(%d)，已失败(%d)，已跳过(%d)",
                             successCount, failedCount, skippedCount));
         }
-
-        // 状态计算完成，标记缓存为有效
-        this.statusCacheDirty = false;
     }
 
     /**
@@ -673,19 +622,4 @@ public class HostInfo implements Serializable {
         }
     }
 
-    public OsInfoStatusEnum getOsInfoStatus() {
-        return osInfoStatus;
-    }
-
-    public void setOsInfoStatus(OsInfoStatusEnum status) {
-        this.osInfoStatus = status;
-    }
-
-    public OsInfoStatusEnum getSshConnectStatus() {
-        return sshConnectStatus;
-    }
-
-    public void setSshConnectStatus(OsInfoStatusEnum status) {
-        this.sshConnectStatus = status;
-    }
 }

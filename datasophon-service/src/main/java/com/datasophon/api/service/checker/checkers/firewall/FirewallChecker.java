@@ -5,13 +5,13 @@ import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,6 +22,9 @@ import org.springframework.stereotype.Component;
 public class FirewallChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(FirewallChecker.class);
+
+    @Autowired
+    private FirewallCheckerFactory firewallCheckerFactory;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
@@ -35,18 +38,13 @@ public class FirewallChecker extends AbstractItemChecker {
             checkItem.setMessage("正在检查防火墙状态...");
 
             // 检查会话是否准备就绪
-            if (session == null) {
-                // 检查hostInfo中是否有可用的会话
-                if (!hostInfo.isSessionReady()) {
-                    String errorMsg = "SSH会话未就绪，无法执行防火墙检查: " + hostInfo.getIp();
-                    log.error(errorMsg);
-                    cacheLog.error(errorMsg);
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage(errorMsg);
-                    return checkItem;
-                }
-                // 使用hostInfo的会话
-                session = hostInfo.getExternalSession();
+            if (sshConnectionPoolManager.getOrCreateConnection(hostInfo) == null) {
+                String errorMsg = "SSH会话未就绪，无法执行防火墙检查: " + hostInfo.getIp();
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage(errorMsg);
+                return checkItem;
             }
 
             // 获取操作系统信息
@@ -61,7 +59,6 @@ public class FirewallChecker extends AbstractItemChecker {
                     checkItem.setMessage(errorMsg);
                     return checkItem;
                 }
-                hostInfo.setExternalSession(session);
             } catch (InterruptedException e) {
                 String errorMsg = "获取操作系统信息过程被中断";
                 log.error(errorMsg, e);
@@ -75,7 +72,7 @@ public class FirewallChecker extends AbstractItemChecker {
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
-            FirewallCheckerStrategy strategy = FirewallCheckerFactory.getChecker(osInfo);
+            FirewallCheckerStrategy strategy = firewallCheckerFactory.getChecker(osInfo);
 
             // 执行检查
             CheckItem result = strategy.check(hostInfo, checkItem, cacheLog);
@@ -110,7 +107,8 @@ public class FirewallChecker extends AbstractItemChecker {
 
                     // 执行额外检查命令
                     if (!checkCommand.isEmpty()) {
-                        CommandResult statusResult = execCommand(session, checkCommand);
+                        CommandResult statusResult = execCommand(
+                                sshConnectionPoolManager.getOrCreateConnection(hostInfo), checkCommand);
                         String output = statusResult.getOutput().trim();
 
                         if (statusResult.isSuccess()) {
@@ -194,18 +192,14 @@ public class FirewallChecker extends AbstractItemChecker {
             checkItem.setMessage("正在修复防火墙配置...");
 
             // 检查会话是否准备就绪
-            if (session == null) {
-                // 检查hostInfo中是否有可用的会话
-                if (!hostInfo.isSessionReady()) {
-                    String errorMsg = "SSH会话未就绪，无法执行防火墙修复: " + hostInfo.getIp();
-                    log.error(errorMsg);
-                    cacheLog.error(errorMsg);
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage(errorMsg);
-                    return false;
-                }
-                // 使用hostInfo的会话
-                session = hostInfo.getExternalSession();
+            if (sshConnectionPoolManager.getOrCreateConnection(hostInfo) == null) {
+                // 无法执行修复
+                String errorMsg = "SSH会话未就绪，无法执行防火墙修复: " + hostInfo.getIp();
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                checkItem.setMessage(errorMsg);
+                return false;
             }
 
             // 获取操作系统信息
@@ -231,7 +225,7 @@ public class FirewallChecker extends AbstractItemChecker {
             cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
             // 通过工厂获取对应的防火墙检查器策略
-            FirewallCheckerStrategy strategy = FirewallCheckerFactory.getChecker(osInfo);
+            FirewallCheckerStrategy strategy = firewallCheckerFactory.getChecker(osInfo);
 
             // 执行修复
             boolean result = false;

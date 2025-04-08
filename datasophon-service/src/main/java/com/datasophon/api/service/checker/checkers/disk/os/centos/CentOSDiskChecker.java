@@ -20,7 +20,8 @@ public class CentOSDiskChecker extends GenericDiskChecker {
         cacheLog.warn("1. 清理YUM缓存: sudo yum clean all");
         cacheLog.warn("2. 删除旧日志文件: sudo find /var/log -type f -name \"*.gz\" -delete");
         cacheLog.warn("3. 清理临时文件: sudo rm -rf /tmp/* /var/tmp/*");
-        cacheLog.warn("4. 移除旧内核: sudo package-cleanup --oldkernels --count=2");
-        cacheLog.warn("5. 考虑扩展" + DiskChecker.TARGET_DIR + "分区或挂载新磁盘");
+        cacheLog.warn("4. 清理journal日志: sudo journalctl --vacuum-time=7d");
+        cacheLog.warn("5. 清理Docker镜像和容器(如果安装了Docker): sudo docker system prune -a");
+        cacheLog.warn("6. 考虑扩展磁盘分区或挂载新磁盘");
     }
 }

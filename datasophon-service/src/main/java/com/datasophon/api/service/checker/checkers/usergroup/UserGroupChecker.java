@@ -92,7 +92,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 检查组是否存在
             cacheLog.info("\n正在检查组是否存在...");
             for (String group : groups) {
-                boolean exists = checkGroupExists(group);
+                boolean exists = checkGroupExists(hostInfo, group);
                 cacheLog.info("组 " + group + ": " + (exists ? "存在" : "不存在"));
                 if (!exists) {
                     groupsToCreate.add(group);
@@ -103,7 +103,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 检查用户是否存在
             cacheLog.info("\n正在检查用户是否存在...");
             for (String user : users) {
-                boolean exists = checkUserExists(user);
+                boolean exists = checkUserExists(hostInfo, user);
                 cacheLog.info("用户 " + user + ": " + (exists ? "存在" : "不存在"));
                 if (!exists) {
                     usersToCreate.add(user);
@@ -114,7 +114,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 设置检查状态和消息
             if (checkFailed) {
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                StringBuilder detailsBuilder = createFailureDetails();
+                StringBuilder detailsBuilder = createFailDetails(users, groups);
                 setStyledHtmlMessage(hostInfo, checkItem, false, "用户和组检查未通过", detailsBuilder);
             } else {
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
@@ -157,7 +157,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             cacheLog.info("\n创建缺少的组...");
             for (String group : groupsToCreate) {
                 cacheLog.info("创建组: " + group);
-                boolean success = createGroup(group);
+                boolean success = createGroup(hostInfo, group);
                 if (success) {
                     cacheLog.info("组 " + group + " 创建成功");
                 } else {
@@ -172,9 +172,9 @@ public class UserGroupChecker extends AbstractItemChecker {
             cacheLog.info("\n创建缺少的用户...");
             for (String user : usersToCreate) {
                 // 为用户找到对应的组
-                String group = findGroupForUser(user);
+                String group = findGroupForUser(hostInfo, user);
                 cacheLog.info("创建用户: " + user + " (组: " + group + ")");
-                boolean success = createUser(user, group);
+                boolean success = createUser(hostInfo, user, group);
                 if (success) {
                     cacheLog.info("用户 " + user + " 创建成功");
                 } else {
@@ -316,25 +316,25 @@ public class UserGroupChecker extends AbstractItemChecker {
     /**
      * 检查用户是否存在
      */
-    private boolean checkUserExists(String username) throws InterruptedException {
+    private boolean checkUserExists(HostInfo hostInfo, String username) throws InterruptedException {
         String command = "id -u " + username + " >/dev/null 2>&1 && echo 'EXISTS' || echo 'NOT_EXISTS'";
-        CommandResult result = execCommand(session, command);
+        CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
         return result.isSuccess() && "EXISTS".equals(result.getOutput().trim());
     }
 
     /**
      * 检查组是否存在
      */
-    private boolean checkGroupExists(String groupname) throws InterruptedException {
+    private boolean checkGroupExists(HostInfo hostInfo, String groupname) throws InterruptedException {
         String command = "getent group " + groupname + " >/dev/null 2>&1 && echo 'EXISTS' || echo 'NOT_EXISTS'";
-        CommandResult result = execCommand(session, command);
+        CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
         return result.isSuccess() && "EXISTS".equals(result.getOutput().trim());
     }
 
     /**
      * 创建用户
      */
-    private boolean createUser(String username, String groupname) {
+    private boolean createUser(HostInfo hostInfo, String username, String groupname) {
         try {
             String command;
             if (StringUtils.isNotBlank(groupname)) {
@@ -342,7 +342,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             } else {
                 command = "useradd -m " + username;
             }
-            CommandResult result = execCommand(session, command);
+            CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
             return result.isSuccess();
         } catch (Exception e) {
             logger.error("创建用户时发生错误: " + username, e);
@@ -354,10 +354,10 @@ public class UserGroupChecker extends AbstractItemChecker {
     /**
      * 创建组
      */
-    private boolean createGroup(String groupname) {
+    private boolean createGroup(HostInfo hostInfo, String groupname) {
         try {
             String command = "groupadd " + groupname;
-            CommandResult result = execCommand(session, command);
+            CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
             return result.isSuccess();
         } catch (Exception e) {
             logger.error("创建组时发生错误: " + groupname, e);
@@ -369,7 +369,7 @@ public class UserGroupChecker extends AbstractItemChecker {
     /**
      * 为用户找到对应的组
      */
-    private String findGroupForUser(String username) {
+    private String findGroupForUser(HostInfo hostInfo, String username) {
         // 从缓存获取默认用户组映射
         Map<String, String> mappings = getDefaultGroupMappings();
 
@@ -385,248 +385,201 @@ public class UserGroupChecker extends AbstractItemChecker {
     /**
      * 创建失败详情消息
      */
-    private StringBuilder createFailureDetails() {
-        StringBuilder detailsBuilder = new StringBuilder();
+    private StringBuilder createFailDetails(Set<String> existingUsers, Set<String> existingGroups) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(
+                "<div style=\"font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif; ");
+        sb.append("background: linear-gradient(to bottom, rgba(249, 249, 249, 0.95), rgba(244, 244, 244, 0.95)); ");
+        sb.append("border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); ");
+        sb.append("overflow: hidden; max-width: 100%; padding: 20px;\">");
 
-        // 使用警告样式
-        detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                "发现缺少的用户或组",
-                "系统检测到某些服务所需的用户或组不存在"));
+        // 标题区域
+        sb.append("<div style=\"display: flex; align-items: center; margin-bottom: 16px;\">");
+        sb.append(
+                "<div style=\"width: 12px; height: 12px; border-radius: 50%; background-color: #ff3b30; margin-right: 10px;\"></div>");
+        sb.append("<div style=\"font-size: 18px; font-weight: 600; color: #1d1d1f; line-height: 1.4;\">用户和组检查失败</div>");
+        sb.append("</div>");
 
-        // 添加缺少的用户和组信息
-        detailsBuilder.append(HtmlStyleHelper.beginGroup());
+        // 统计区域
+        sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;\">");
 
-        // 添加用户和组状态概览
-        detailsBuilder.append("<div style='margin-bottom: 20px;'>");
-        detailsBuilder.append("<p style='font-weight: 500; margin-bottom: 10px;'>用户和组状态概览:</p>");
+        // 用户统计
+        int totalUsers = existingUsers.size() + usersToCreate.size();
+        int userPercent = totalUsers > 0 ? existingUsers.size() * 100 / totalUsers : 0;
 
-        // 计算用户和组的通过率
-        int totalUsers = usersToCreate.size();
-        int totalGroups = groupsToCreate.size();
-        int totalItems = totalUsers + totalGroups;
-        int failedItems = totalItems;
-        int passRate = 0;
+        sb.append("<div style=\"flex: 1; min-width: 200px;\">");
+        sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + existingUsers.size() + "/"
+                + totalUsers + "</div>");
+        sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
+        sb.append("<div style=\"height: 6px; width: " + userPercent
+                + "%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("</div>");
+        sb.append("</div>");
 
-        if (totalItems > 0) {
-            passRate = (totalItems - failedItems) * 100 / totalItems;
-        }
+        // 组统计
+        int totalGroups = existingGroups.size() + groupsToCreate.size();
+        int groupPercent = totalGroups > 0 ? existingGroups.size() * 100 / totalGroups : 0;
 
-        // 添加进度条
-        String progressColor = passRate >= 80 ? HtmlStyleHelper.Colors.SUCCESS
-                : passRate >= 50 ? HtmlStyleHelper.Colors.WARNING : HtmlStyleHelper.Colors.ERROR;
+        sb.append("<div style=\"flex: 1; min-width: 200px;\">");
+        sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + existingGroups.size() + "/"
+                + totalGroups + "</div>");
+        sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
+        sb.append("<div style=\"height: 6px; width: " + groupPercent
+                + "%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("</div>");
+        sb.append("</div>");
+        sb.append("</div>");
 
-        detailsBuilder.append(HtmlStyleHelper.generateProgressBar(passRate, progressColor,
-                String.format("通过率: %d%%", passRate)));
-        detailsBuilder.append("</div>");
+        // 详细信息区域
+        sb.append("<div style=\"margin-top: 12px;\">");
 
-        // 添加组信息
-        detailsBuilder.append("<div style='margin-bottom: 15px;'>");
-        detailsBuilder.append("<p style='font-weight: 500; margin-bottom: 8px;'>组状态详情:</p>");
-
-        // 去除可能的重复项
-        List<String> uniqueGroupsToCreate = new ArrayList<>(new HashSet<>(groupsToCreate));
-
-        // 添加缺少的组信息
-        if (!uniqueGroupsToCreate.isEmpty()) {
-            detailsBuilder.append("<div style='margin-bottom: 10px;'>");
-            detailsBuilder.append("<p style='font-weight: 500; color: #FF3B30; margin-bottom: 8px;'>");
-            detailsBuilder.append("<a-icon type='close-circle' style='margin-right: 5px;'/>");
-            detailsBuilder.append("缺少的组 (").append(uniqueGroupsToCreate.size()).append("):</p>");
-            detailsBuilder.append("<ul style='padding-left: 20px; margin-bottom: 10px; list-style-type: none;'>");
-            for (String group : uniqueGroupsToCreate) {
-                detailsBuilder.append(
-                        "<li style='margin-bottom: 5px; padding: 5px 10px; background-color: rgba(255, 59, 48, 0.1); border-radius: 6px;'>");
-                detailsBuilder.append("<a-icon type='close-circle' style='margin-right: 5px; color: #FF3B30;'/>");
-                detailsBuilder.append(group);
-                detailsBuilder.append("</li>");
-            }
-            detailsBuilder.append("</ul>");
-            detailsBuilder.append("</div>");
-        }
-
-        // 添加已存在的组信息
-        Set<String> existingGroups = new HashSet<>();
-
-        // 不要重复检查已经确定不存在的组
-        for (String group : new HashSet<>(groupsToCreate)) {
-            try {
-                if (checkGroupExists(group)) {
-                    existingGroups.add(group);
-                }
-            } catch (InterruptedException e) {
-                logger.error("检查组是否存在时发生错误", e);
-            }
-        }
-
-        if (!existingGroups.isEmpty()) {
-            detailsBuilder.append("<div style='margin-bottom: 10px;'>");
-            detailsBuilder.append("<p style='font-weight: 500; color: #34C759; margin-bottom: 8px;'>");
-            detailsBuilder.append("<a-icon type='check-circle' style='margin-right: 5px;'/>");
-            detailsBuilder.append("已存在的组 (").append(existingGroups.size()).append("):</p>");
-            detailsBuilder.append("<ul style='padding-left: 20px; margin-bottom: 10px; list-style-type: none;'>");
-            for (String group : existingGroups) {
-                detailsBuilder.append(
-                        "<li style='margin-bottom: 5px; padding: 5px 10px; background-color: rgba(52, 199, 89, 0.1); border-radius: 6px;'>");
-                detailsBuilder.append("<a-icon type='check-circle' style='margin-right: 5px; color: #34C759;'/>");
-                detailsBuilder.append(group);
-                detailsBuilder.append("</li>");
-            }
-            detailsBuilder.append("</ul>");
-            detailsBuilder.append("</div>");
-        }
-
-        detailsBuilder.append("</div>");
-
-        // 添加用户信息
-        detailsBuilder.append("<div style='margin-bottom: 15px;'>");
-        detailsBuilder.append("<p style='font-weight: 500; margin-bottom: 8px;'>用户状态详情:</p>");
-
-        // 去除可能的重复项
-        List<String> uniqueUsersToCreate = new ArrayList<>(new HashSet<>(usersToCreate));
-
-        // 添加缺少的用户信息
-        if (!uniqueUsersToCreate.isEmpty()) {
-            detailsBuilder.append("<div style='margin-bottom: 10px;'>");
-            detailsBuilder.append("<p style='font-weight: 500; color: #FF3B30; margin-bottom: 8px;'>");
-            detailsBuilder.append("<a-icon type='close-circle' style='margin-right: 5px;'/>");
-            detailsBuilder.append("缺少的用户 (").append(uniqueUsersToCreate.size()).append("):</p>");
-            detailsBuilder.append("<ul style='padding-left: 20px; margin-bottom: 10px; list-style-type: none;'>");
-            for (String user : uniqueUsersToCreate) {
-                detailsBuilder.append(
-                        "<li style='margin-bottom: 5px; padding: 5px 10px; background-color: rgba(255, 59, 48, 0.1); border-radius: 6px;'>");
-                detailsBuilder.append("<a-icon type='close-circle' style='margin-right: 5px; color: #FF3B30;'/>");
-                detailsBuilder.append(user);
-                detailsBuilder.append("</li>");
-            }
-            detailsBuilder.append("</ul>");
-            detailsBuilder.append("</div>");
-        }
-
-        // 添加已存在的用户信息
-        Set<String> existingUsers = new HashSet<>();
-
-        // 不要重复检查已经确定不存在的用户
-        for (String user : new HashSet<>(usersToCreate)) {
-            try {
-                if (checkUserExists(user)) {
-                    existingUsers.add(user);
-                }
-            } catch (InterruptedException e) {
-                logger.error("检查用户是否存在时发生错误", e);
-            }
-        }
-
+        // 已存在用户列表
         if (!existingUsers.isEmpty()) {
-            detailsBuilder.append("<div style='margin-bottom: 10px;'>");
-            detailsBuilder.append("<p style='font-weight: 500; color: #34C759; margin-bottom: 8px;'>");
-            detailsBuilder.append("<a-icon type='check-circle' style='margin-right: 5px;'/>");
-            detailsBuilder.append("已存在的用户 (").append(existingUsers.size()).append("):</p>");
-            detailsBuilder.append("<ul style='padding-left: 20px; margin-bottom: 10px; list-style-type: none;'>");
+            sb.append("<div style=\"margin-bottom: 16px;\">");
+            sb.append(
+                    "<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">已存在的用户</div>");
+            sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String user : existingUsers) {
-                detailsBuilder.append(
-                        "<li style='margin-bottom: 5px; padding: 5px 10px; background-color: rgba(52, 199, 89, 0.1); border-radius: 6px;'>");
-                detailsBuilder.append("<a-icon type='check-circle' style='margin-right: 5px; color: #34C759;'/>");
-                detailsBuilder.append(user);
-                detailsBuilder.append("</li>");
+                sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
             }
-            detailsBuilder.append("</ul>");
-            detailsBuilder.append("</div>");
+            sb.append("</div>");
+            sb.append("</div>");
         }
 
-        detailsBuilder.append("</div>");
+        // 缺失用户列表
+        if (!usersToCreate.isEmpty()) {
+            sb.append("<div style=\"margin-bottom: 16px;\">");
+            sb.append(
+                    "<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">缺失的用户</div>");
+            sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
+            for (String user : usersToCreate) {
+                sb.append("<div style=\"font-size: 13px; background: rgba(255, 59, 48, 0.15); color: #ff3b30; ");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
+            }
+            sb.append("</div>");
+            sb.append("</div>");
+        }
 
-        detailsBuilder.append(HtmlStyleHelper.endGroup());
+        // 已存在组列表
+        if (!existingGroups.isEmpty()) {
+            sb.append("<div style=\"margin-bottom: 16px;\">");
+            sb.append(
+                    "<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">已存在的组</div>");
+            sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
+            for (String group : existingGroups) {
+                sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+            }
+            sb.append("</div>");
+            sb.append("</div>");
+        }
 
-        // 添加修复建议
-        detailsBuilder.append(HtmlStyleHelper.beginGroup());
-        detailsBuilder.append("<p style='font-weight: 500; margin-bottom: 8px;'>修复建议:</p>");
-        detailsBuilder.append("<ol style='padding-left: 20px; margin-bottom: 15px;'>");
-        detailsBuilder.append("<li style='margin-bottom: 5px;'>点击本检查项的修复按钮，系统将自动创建所需的用户和组</li>");
-        detailsBuilder.append("<li style='margin-bottom: 5px;'>或手动在系统中创建上述缺少的用户和组</li>");
-        detailsBuilder.append("</ol>");
-        detailsBuilder.append(HtmlStyleHelper.endGroup());
+        // 缺失组列表
+        if (!groupsToCreate.isEmpty()) {
+            sb.append("<div>");
+            sb.append(
+                    "<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">缺失的组</div>");
+            sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
+            for (String group : groupsToCreate) {
+                sb.append("<div style=\"font-size: 13px; background: rgba(255, 59, 48, 0.15); color: #ff3b30; ");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+            }
+            sb.append("</div>");
+            sb.append("</div>");
+        }
 
-        return detailsBuilder;
+        sb.append("</div>");
+
+        // 底部提示
+        sb.append("<div style=\"margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0, 0, 0, 0.1);\">");
+        sb.append("<div style=\"font-size: 13px; color: #86868b; line-height: 1.5;\">");
+        sb.append("需要创建缺失的用户和组才能继续。点击\"修复\"按钮自动创建必要的用户和组。");
+        sb.append("</div>");
+        sb.append("</div>");
+
+        sb.append("</div>");
+        return sb;
     }
 
     /**
      * 创建成功详情消息
      */
     private StringBuilder createSuccessDetails(Set<String> users, Set<String> groups) {
-        StringBuilder detailsBuilder = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
+        sb.append(
+                "<div style=\"font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif; ");
+        sb.append("background: linear-gradient(to bottom, rgba(249, 249, 249, 0.95), rgba(244, 244, 244, 0.95)); ");
+        sb.append("border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); ");
+        sb.append("overflow: hidden; max-width: 100%; padding: 20px;\">");
 
-        // 主容器
-        detailsBuilder.append(
-                "<div style='background: linear-gradient(to bottom, #ffffff, #f8f8f8); border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 24px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;'>");
+        // 标题区域
+        sb.append("<div style=\"display: flex; align-items: center; margin-bottom: 16px;\">");
+        sb.append(
+                "<div style=\"width: 12px; height: 12px; border-radius: 50%; background-color: #34c759; margin-right: 10px;\"></div>");
+        sb.append("<div style=\"font-size: 18px; font-weight: 600; color: #1d1d1f; line-height: 1.4;\">用户和组检查状态</div>");
+        sb.append("</div>");
 
-        // 顶部状态区域
-        detailsBuilder.append("<div style='display: flex; align-items: center; margin-bottom: 24px;'>");
-        detailsBuilder.append(
-                "<div style='background-color: rgba(52, 199, 89, 0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin-right: 16px;'>");
-        detailsBuilder.append("<a-icon type='check-circle' style='color: #34C759; font-size: 24px;'/>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("<div>");
-        detailsBuilder
-                .append("<h3 style='margin: 0; font-size: 20px; font-weight: 600; color: #1d1d1f;'>用户和组检查通过</h3>");
-        detailsBuilder.append("<p style='margin: 4px 0 0; font-size: 14px; color: #86868b;'>所有服务所需的用户和组都已存在</p>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("</div>");
+        // 统计区域
+        sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;\">");
 
-        // 进度概览卡片
-        detailsBuilder.append(
-                "<div style='background-color: #f5f5f7; border-radius: 12px; padding: 20px; margin-bottom: 24px;'>");
-        detailsBuilder.append(
-                "<div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;'>");
-        detailsBuilder.append("<span style='font-size: 15px; font-weight: 500; color: #1d1d1f;'>检查完成度</span>");
-        detailsBuilder.append("<span style='font-size: 15px; font-weight: 500; color: #34C759;'>100%</span>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append(
-                "<div style='background-color: rgba(52, 199, 89, 0.2); height: 6px; border-radius: 3px; overflow: hidden;'>");
-        detailsBuilder.append(
-                "<div style='width: 100%; height: 100%; background-color: #34C759; border-radius: 3px;'></div>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("</div>");
+        // 用户统计
+        sb.append("<div style=\"flex: 1; min-width: 200px;\">");
+        sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + users.size() + "</div>");
+        sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
+        sb.append("<div style=\"height: 6px; width: 100%; background: #34c759; border-radius: 3px;\"></div>");
+        sb.append("</div>");
+        sb.append("</div>");
 
-        // 组状态卡片
-        detailsBuilder.append(
-                "<div style='background-color: #f5f5f7; border-radius: 12px; padding: 20px; margin-bottom: 16px;'>");
-        detailsBuilder.append("<div style='display: flex; align-items: center; margin-bottom: 16px;'>");
-        detailsBuilder.append("<a-icon type='team' style='color: #34C759; font-size: 18px; margin-right: 8px;'/>");
-        detailsBuilder.append("<span style='font-size: 15px; font-weight: 500; color: #1d1d1f;'>组状态详情</span>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("<div style='display: flex; flex-wrap: wrap; gap: 8px;'>");
-        for (String group : groups) {
-            detailsBuilder.append(
-                    "<div style='background-color: #ffffff; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
-            detailsBuilder.append(
-                    "<a-icon type='check-circle' style='color: #34C759; margin-right: 6px; font-size: 14px;'/>");
-            detailsBuilder.append("<span style='font-size: 14px; color: #1d1d1f;'>").append(group).append("</span>");
-            detailsBuilder.append("</div>");
-        }
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("</div>");
+        // 组统计
+        sb.append("<div style=\"flex: 1; min-width: 200px;\">");
+        sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + groups.size() + "</div>");
+        sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
+        sb.append("<div style=\"height: 6px; width: 100%; background: #5ac8fa; border-radius: 3px;\"></div>");
+        sb.append("</div>");
+        sb.append("</div>");
+        sb.append("</div>");
 
-        // 用户状态卡片
-        detailsBuilder.append("<div style='background-color: #f5f5f7; border-radius: 12px; padding: 20px;'>");
-        detailsBuilder.append("<div style='display: flex; align-items: center; margin-bottom: 16px;'>");
-        detailsBuilder.append("<a-icon type='user' style='color: #34C759; font-size: 18px; margin-right: 8px;'/>");
-        detailsBuilder.append("<span style='font-size: 15px; font-weight: 500; color: #1d1d1f;'>用户状态详情</span>");
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("<div style='display: flex; flex-wrap: wrap; gap: 8px;'>");
+        // 详细信息区域
+        sb.append("<div style=\"margin-top: 12px;\">");
+
+        // 用户列表
+        sb.append("<div style=\"margin-bottom: 16px;\">");
+        sb.append("<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">已存在的用户</div>");
+        sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
         for (String user : users) {
-            detailsBuilder.append(
-                    "<div style='background-color: #ffffff; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
-            detailsBuilder.append(
-                    "<a-icon type='check-circle' style='color: #34C759; margin-right: 6px; font-size: 14px;'/>");
-            detailsBuilder.append("<span style='font-size: 14px; color: #1d1d1f;'>").append(user).append("</span>");
-            detailsBuilder.append("</div>");
+            sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
+            sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
         }
-        detailsBuilder.append("</div>");
-        detailsBuilder.append("</div>");
+        sb.append("</div>");
+        sb.append("</div>");
 
-        detailsBuilder.append("</div>");
+        // 组列表
+        sb.append("<div>");
+        sb.append("<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">已存在的组</div>");
+        sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
+        for (String group : groups) {
+            sb.append("<div style=\"font-size: 13px; background: rgba(90, 200, 250, 0.15); color: #5ac8fa; ");
+            sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+        }
+        sb.append("</div>");
+        sb.append("</div>");
 
-        return detailsBuilder;
+        sb.append("</div>");
+
+        // 底部提示
+        sb.append("<div style=\"margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0, 0, 0, 0.1);\">");
+        sb.append("<div style=\"font-size: 13px; color: #86868b; line-height: 1.5;\">");
+        sb.append("所有必要的用户和组已经准备就绪，服务可以正常启动。");
+        sb.append("</div>");
+        sb.append("</div>");
+
+        sb.append("</div>");
+        return sb;
     }
 
     @Override

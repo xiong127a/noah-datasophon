@@ -43,16 +43,16 @@ public class MemoryChecker extends AbstractItemChecker {
                         // 执行free命令获取内存信息
                         cacheLog.debug("执行free命令获取内存信息");
                         cacheLog.info("正在获取内存信息...");
-                        CommandResult result = execCommand(session, "free -m | grep -E 'Mem|内存'");
+                        CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "free -m | grep -E 'Mem|内存'");
 
                         if (!result.isSuccess() || result.getOutput().trim().isEmpty()) {
                                 cacheLog.warn("free命令失败或输出为空，尝试使用另一种格式...");
                                 // 尝试只运行free命令，然后处理第二行（通常是内存行）
-                                result = execCommand(session, "free -m | sed -n '2p'");
+                                result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "free -m | sed -n '2p'");
 
                                 if (!result.isSuccess() || result.getOutput().trim().isEmpty()) {
                                         cacheLog.warn("free命令失败，尝试使用/proc/meminfo获取内存信息...");
-                                        CommandResult meminfoResult = execCommand(session,
+                                        CommandResult meminfoResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                                                         "cat /proc/meminfo | grep -E 'MemTotal|MemFree|MemAvailable'");
 
                                         if (meminfoResult.isSuccess() && !meminfoResult.getOutput().trim().isEmpty()) {
@@ -200,7 +200,7 @@ public class MemoryChecker extends AbstractItemChecker {
                         // 如果上面的解析失败，尝试其他方法
                         if (!memoryParsed) {
                                 cacheLog.warn("尝试使用/proc/meminfo获取内存信息...");
-                                CommandResult meminfoResult = execCommand(session,
+                                CommandResult meminfoResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                                                 "cat /proc/meminfo | grep -E 'MemTotal|MemFree|MemAvailable'");
 
                                 if (meminfoResult.isSuccess()
@@ -362,7 +362,7 @@ public class MemoryChecker extends AbstractItemChecker {
         protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
                 try {
                         // 获取当前内存状态
-                        CommandResult memResult = execCommand(session, "free -h | grep -E 'Mem:|Swap:'");
+                        CommandResult memResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "free -h | grep -E 'Mem:|Swap:'");
 
                         cacheLog.info("==== 内存问题说明 ====");
                         cacheLog.info("当前内存情况:");

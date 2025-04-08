@@ -24,7 +24,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
         checkItem.setMessage("正在检查CentOS系统防火墙状态...");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);
@@ -59,7 +59,7 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
         checkItem.setMessage("正在修复CentOS系统防火墙配置...");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);
@@ -122,60 +122,174 @@ public class CentOSFirewallChecker extends GenericFirewallChecker {
             cacheLog.info("无法确定系统类型，使用默认系统名称");
         }
 
+        // 创建HTML格式的消息
+        StringBuilder message = new StringBuilder();
+        message.append("<div style='line-height:1.6'>");
+
+        // 添加命令执行信息
+        message.append("<div style='margin-bottom:15px'>");
+        message.append("<p><strong>执行命令:</strong></p>");
+        message.append("<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+        message.append("$ systemctl status firewalld");
+        message.append("</pre>");
+        message.append("<p><strong>命令输出:</strong></p>");
+        message.append("<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+        message.append(result.getOutput().isEmpty() ? result.getError() : result.getOutput());
+        message.append("</pre>");
+        message.append("</div>");
+
         switch (result.getExitCode()) {
             case 0:
                 // 服务正在运行
                 cacheLog.info(osName + " firewalld状态: 正在运行");
+                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>" + osName + " 防火墙状态: 正在运行</h3>");
 
                 // 获取防火墙详细配置
+                message.append("<div style='margin-bottom:15px'>");
+                message.append("<p><strong>执行命令:</strong></p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ firewall-cmd --get-active-zones");
+                message.append("</pre>");
+
                 CommandResult zoneResult = execCommand(session, "firewall-cmd --get-active-zones", cacheLog);
                 if (zoneResult.isSuccess()) {
-                    cacheLog.info("当前活动区域信息:");
-                    cacheLog.info(zoneResult.getOutput());
+                    message.append("<p><strong>活动区域:</strong></p>");
+                    message.append(
+                            "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                    message.append(zoneResult.getOutput());
+                    message.append("</pre>");
                 }
+
+                message.append("<p><strong>执行命令:</strong></p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ firewall-cmd --list-all");
+                message.append("</pre>");
 
                 CommandResult configResult = execCommand(session, "firewall-cmd --list-all", cacheLog);
                 if (configResult.isSuccess()) {
-                    cacheLog.info("当前防火墙配置:");
-                    cacheLog.info(configResult.getOutput());
+                    message.append("<p><strong>防火墙配置:</strong></p>");
+                    message.append(
+                            "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                    message.append(configResult.getOutput());
+                    message.append("</pre>");
                 }
+                message.append("</div>");
+
+                // 检查防火墙版本
+                message.append("<div style='margin-bottom:15px'>");
+                message.append("<p><strong>执行命令:</strong></p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ firewall-cmd --version");
+                message.append("</pre>");
+
+                CommandResult versionResult = execCommand(session, "firewall-cmd --version", cacheLog);
+                if (versionResult.isSuccess()) {
+                    message.append("<p><strong>防火墙版本:</strong></p>");
+                    message.append(
+                            "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                    message.append(versionResult.getOutput());
+                    message.append("</pre>");
+                }
+                message.append("</div>");
+
+                // 添加警告信息
+                message.append(
+                        "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                message.append("<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 防火墙正在运行</p>");
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>建议关闭防火墙以确保集群节点之间的正常通信。</p>");
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>可以执行以下命令关闭防火墙：</p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ systemctl stop firewalld\n");
+                message.append("$ systemctl disable firewalld");
+                message.append("</pre>");
+                message.append("</div>");
 
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage(osName + "系统firewalld防火墙正在运行，建议关闭");
                 break;
 
             case 3:
                 // 服务已停止
                 cacheLog.info(osName + " firewalld状态: 已停止");
+                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>" + osName + " 防火墙状态: 已停止</h3>");
 
                 // 检查自启动状态
+                message.append("<div style='margin-bottom:15px'>");
+                message.append("<p><strong>执行命令:</strong></p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ systemctl is-enabled firewalld");
+                message.append("</pre>");
+
                 CommandResult enabledResult = execCommand(session,
                         "systemctl is-enabled firewalld 2>/dev/null || echo 'Unknown'", cacheLog);
+                message.append("<p><strong>自启动状态:</strong></p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append(enabledResult.getOutput());
+                message.append("</pre>");
+                message.append("</div>");
+
                 if (enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled")) {
                     cacheLog.info(osName + " firewalld自启动状态: 已启用");
+                    message.append(
+                            "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                    message.append("<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 防火墙已配置为自启动</p>");
+                    message.append("<p style='margin-top:5px;margin-bottom:0;'>建议禁用防火墙自启动，以防止系统重启后防火墙自动启动。</p>");
+                    message.append("<p style='margin-top:5px;margin-bottom:0;'>可以执行以下命令禁用自启动：</p>");
+                    message.append(
+                            "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                    message.append("$ systemctl disable firewalld");
+                    message.append("</pre>");
+                    message.append("</div>");
                     checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage(osName + "系统firewalld防火墙已配置为自启动，建议禁用");
                 } else {
+                    message.append(
+                            "<div style='background:#f6ffed;border-left:4px solid #52c41a;padding:10px;border-radius:0 4px 4px 0;'>");
+                    message.append("<p style='margin:0;color:#52c41a;font-weight:bold'>防火墙检查通过</p>");
+                    message.append("<p style='margin-top:5px;margin-bottom:0;'>防火墙已关闭且未配置自启动，符合集群要求。</p>");
+                    message.append("</div>");
                     checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage(osName + "系统firewalld防火墙已关闭");
                 }
                 break;
 
             case 4:
                 // 服务不存在
                 cacheLog.info(osName + " firewalld状态: 服务不存在");
+                message.append("<h3 style='color:#52c41a;margin-bottom:10px'>" + osName + " 防火墙状态: 未安装</h3>");
+                message.append(
+                        "<div style='background:#f6ffed;border-left:4px solid #52c41a;padding:10px;border-radius:0 4px 4px 0;'>");
+                message.append("<p style='margin:0;color:#52c41a;font-weight:bold'>防火墙检查通过</p>");
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>系统未安装防火墙服务，符合集群要求。</p>");
+                message.append("</div>");
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage(osName + "系统firewalld防火墙服务未安装");
                 break;
 
             default:
                 // 其他状态，可能是命令执行出错
                 cacheLog.warn("获取" + osName + " firewalld防火墙状态失败，退出状态码: %d", result.getExitCode());
+                message.append("<h3 style='color:#f5222d;margin-bottom:10px'>" + osName + " 防火墙检查失败</h3>");
+                message.append(
+                        "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                message.append("<p style='margin:0;color:#f5222d;font-weight:bold'>错误: 无法获取防火墙状态</p>");
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>请手动检查防火墙状态。</p>");
+                message.append("<p style='margin-top:5px;margin-bottom:0;'>可以尝试执行以下命令：</p>");
+                message.append(
+                        "<pre style='background:#002b36;color:#839496;padding:10px;border-radius:4px;margin:5px 0'>");
+                message.append("$ systemctl status firewalld\n");
+                message.append("$ firewall-cmd --state\n");
+                message.append("$ firewall-cmd --list-all");
+                message.append("</pre>");
+                message.append("</div>");
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取" + osName + "系统firewalld防火墙状态失败: " + result.getErrorOrOutput());
                 break;
         }
 
+        message.append("</div>");
+        checkItem.setMessage(message.toString());
         return checkItem;
     }
 

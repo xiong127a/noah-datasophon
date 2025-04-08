@@ -1,72 +1,80 @@
 package com.datasophon.api.service.checker.checkers.disk.generic;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.checkers.disk.DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.DiskCheckerStrategy;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 通用磁盘检查器实现
- * 适用于未指定具体Linux发行版的情况
+ * 适用于所有Linux发行版的基本磁盘检查
  */
+
 public class GenericDiskChecker implements DiskCheckerStrategy {
 
         private static final Logger log = LoggerFactory.getLogger(GenericDiskChecker.class);
 
+        // 注入SSH连接池管理器
+        @Autowired
+        protected SshConnectionPoolManager sshConnectionPoolManager;
+
         // 磁盘检查器实例，用于执行命令
+        @Autowired
         protected DiskChecker diskChecker;
 
-        // 磁盘空间要求配置，从配置文件中获取
-        protected int minDiskSpaceGB;
-
-        // 目标检查目录
-        protected String targetDir;
+        /**
+         * 支持的操作系统类型
+         */
+        @Getter
+        @Setter
+        private OsDistribution supportedOs;
 
         public GenericDiskChecker() {
-                // 创建DiskChecker实例
-                this.diskChecker = new DiskChecker();
                 // 初始化磁盘空间要求配置
-                this.updateConfigValues();
-        }
-
-        /**
-         * 更新配置值
-         */
-        protected void updateConfigValues() {
-                this.targetDir = getTargetDir();
-                this.minDiskSpaceGB = getMinAvailableSpace();
-        }
-
-        /**
-         * 获取目标目录
-         */
-        protected String getTargetDir() {
-                return diskChecker.getTargetDir();
         }
 
         @Override
         public CheckItem check(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog)
                         throws InterruptedException {
-                // 更新配置值
-                this.updateConfigValues();
+                cacheLog.info("==== 通用磁盘检查开始 ====");
 
-                cacheLog.info("检查" + targetDir + "目录磁盘使用情况，最小可用空间要求: " + minDiskSpaceGB + " GB...");
+                List<CheckerProperties.DiskDirectoryConfig> directories = diskChecker.getCheckDirectories();
+                if (directories == null || directories.isEmpty()) {
+                        cacheLog.warn("未配置检查目录，磁盘检查将跳过");
+                        checkItem.setStatus(CheckItem.Status.SUCCESS);
+                        checkItem.setMessage("未配置检查目录，磁盘检查跳过");
+                        return checkItem;
+                }
 
-                // 设置检查项消息
-                checkItem.setMessage("正在检查" + targetDir + "目录磁盘使用情况...");
+                // 记录检查结果
+                List<String> failedDirectories = new ArrayList<>();
+                StringBuilder resultMessage = new StringBuilder();
+                resultMessage.append("<div style='line-height:1.6'>");
 
-                // 执行df命令查看磁盘使用情况
-                CommandResult dfResult;
-                try {
-                        // 获取SSH会话
-                        ClientSession session = hostInfo.getExternalSession();
-                        if (session == null || !session.isOpen()) {
-                                String errorMsg = "SSH会话为空或已关闭，无法执行命令";
+                for (CheckerProperties.DiskDirectoryConfig dirConfig : directories) {
+                        String dir = dirConfig.getPath();
+                        int minDiskSpaceGB = dirConfig.getMinAvailableGb();
+
+                        cacheLog.info("检查目录: {}, 最小所需空间: {}GB", dir, minDiskSpaceGB);
+
+                        // 打开SSH会话
+                        ClientSession session = openSession(hostInfo);
+                        if (session == null) {
+                                String errorMsg = "无法连接到主机: " + hostInfo.getHostname();
                                 log.error(errorMsg);
                                 cacheLog.error(errorMsg);
                                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -74,99 +82,39 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 return checkItem;
                         }
 
-                        // 执行df命令
-                        dfResult = execCommand(session, "df -h " + targetDir);
+                        // 获取磁盘信息
+                        String command = "df -h " + dir;
+                        CommandResult dfResult = execCommand(session, command);
 
-                        // 如果第一个命令失败，尝试备用命令
-                        if (dfResult.getExitCode() != 0 || dfResult.getOutput().trim().isEmpty()) {
-                                log.info("使用标准df命令失败，尝试使用awk提取...");
-                                cacheLog.info("使用标准df命令失败，尝试使用awk提取...");
+                        // 处理检查结果
+                        CheckItem dirCheckResult = processDfResult(hostInfo, new CheckItem(), dfResult,
+                                        cacheLog, dir, minDiskSpaceGB);
 
-                                dfResult = execCommand(session,
-                                                "df -BG " + targetDir + " | awk 'NR>1{print; exit}'");
+                        if (dirCheckResult.getStatus() == CheckItem.Status.FAILED) {
+                                failedDirectories.add(dir);
+                                resultMessage.append(dirCheckResult.getMessage());
+                                resultMessage.append(
+                                                "<hr style='border:none;height:1px;background-color:#f0f0f0;margin:20px 0'>");
+                        } else {
+                                resultMessage.append(dirCheckResult.getMessage());
+                                resultMessage.append(
+                                                "<hr style='border:none;height:1px;background-color:#f0f0f0;margin:20px 0'>");
                         }
-
-                        // 处理df命令结果
-                        CheckItem result = processDfResult(hostInfo, checkItem, dfResult, cacheLog);
-
-                        // 确保状态已更新，但不应该强制设置为成功
-                        if (result.getStatus() == CheckItem.Status.CHECKING) {
-                                // 尝试从命令结果中判断磁盘状态
-                                if (dfResult.isSuccess()) {
-                                        // 分析磁盘使用情况
-                                        try {
-                                                String output = dfResult.getOutput();
-                                                if (output.contains(targetDir)) {
-                                                        // 尝试提取使用率
-                                                        String[] lines = output.split("\n");
-                                                        for (String line : lines) {
-                                                                if (line.contains(targetDir)) {
-                                                                        String[] parts = line.split("\\s+");
-                                                                        if (parts.length >= 5) {
-                                                                                String usageStr = parts[4].replace("%",
-                                                                                                "");
-                                                                                int usage = Integer.parseInt(usageStr);
-
-                                                                                if (usage > DiskChecker.WARNING_DISK_USAGE_THRESHOLD) {
-                                                                                        // 使用率过高
-                                                                                        log.warn("磁盘检查完成但状态未更新，分析发现磁盘使用率{}%超过阈值{}%",
-                                                                                                        usage,
-                                                                                                        DiskChecker.WARNING_DISK_USAGE_THRESHOLD);
-                                                                                        cacheLog.warn("根据分析，磁盘使用率{}%超过阈值{}%",
-                                                                                                        usage,
-                                                                                                        DiskChecker.WARNING_DISK_USAGE_THRESHOLD);
-                                                                                        result.setStatus(
-                                                                                                        CheckItem.Status.FAILED);
-                                                                                        result.setMessage(String.format(
-                                                                                                        "%s 分区使用率过高: %d%% > %d%%",
-                                                                                                        targetDir,
-                                                                                                        usage,
-                                                                                                        DiskChecker.WARNING_DISK_USAGE_THRESHOLD));
-                                                                                        return result;
-                                                                                } else {
-                                                                                        // 使用率正常
-                                                                                        log.info("磁盘检查完成但状态未更新，分析发现磁盘使用率{}%在正常范围内",
-                                                                                                        usage);
-                                                                                        cacheLog.info("根据分析，磁盘使用率{}%在正常范围内",
-                                                                                                        usage);
-                                                                                        result.setStatus(
-                                                                                                        CheckItem.Status.SUCCESS);
-                                                                                        result.setMessage(
-                                                                                                        targetDir
-                                                                                                                        + " 目录磁盘空间充足");
-                                                                                        return result;
-                                                                                }
-                                                                        }
-                                                                }
-                                                        }
-                                                }
-                                        } catch (Exception e) {
-                                                log.error("分析磁盘使用率时出错: ", e);
-                                        }
-
-                                        // 如果无法精确分析，但命令执行成功，可能磁盘状态正常
-                                        log.warn("磁盘检查完成但状态未更新，命令执行成功但无法精确分析结果");
-                                        cacheLog.warn("磁盘检查完成但无法精确分析结果，命令执行成功，可能磁盘状态正常");
-                                        result.setStatus(CheckItem.Status.SUCCESS);
-                                        result.setMessage("无法精确分析磁盘状态，但命令执行成功，可能磁盘状态正常");
-                                } else {
-                                        // 命令执行失败
-                                        log.warn("磁盘检查完成但状态未更新，且命令执行失败");
-                                        cacheLog.warn("磁盘检查完成但状态未更新，命令执行失败");
-                                        result.setStatus(CheckItem.Status.FAILED);
-                                        result.setMessage("检查磁盘状态时命令执行失败: " + dfResult.getError());
-                                }
-                        }
-
-                        return result;
-
-                } catch (Exception e) {
-                        log.error("执行磁盘检查命令时出错: ", e);
-                        cacheLog.error("执行磁盘检查命令时出错: " + e.getMessage());
-                        checkItem.setStatus(CheckItem.Status.FAILED);
-                        checkItem.setMessage("执行磁盘检查命令时出错: " + e.getMessage());
-                        return checkItem;
                 }
+
+                resultMessage.append("</div>");
+
+                // 设置最终结果
+                if (!failedDirectories.isEmpty()) {
+                        checkItem.setStatus(CheckItem.Status.FAILED);
+                        cacheLog.error("磁盘检查失败，以下目录空间不足: {}", String.join(", ", failedDirectories));
+                } else {
+                        checkItem.setStatus(CheckItem.Status.SUCCESS);
+                        cacheLog.info("所有目录磁盘空间检查通过");
+                }
+
+                checkItem.setMessage(resultMessage.toString());
+                return checkItem;
         }
 
         /**
@@ -192,7 +140,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
          * 处理df命令结果的辅助方法
          */
         protected CheckItem processDfResult(HostInfo hostInfo, CheckItem checkItem, CommandResult dfResult,
-                        CheckLogger cacheLog) throws InterruptedException {
+                        CheckLogger cacheLog, String targetDir, int minDiskSpaceGB) throws InterruptedException {
                 if (dfResult.getExitCode() != 0) {
                         String errorMsg = "获取磁盘信息失败: " + dfResult.getError();
                         log.error(errorMsg);
@@ -354,6 +302,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 return checkItem;
                         }
 
+                        // 获取全局最小可用空间百分比
+                        int minAvailablePercent = getMinAvailablePercent();
+
                         if (availableGB < minDiskSpaceGB) {
                                 // 创建带HTML样式的消息
                                 StringBuilder message = new StringBuilder();
@@ -420,6 +371,86 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 return checkItem;
                         }
 
+                        // 检查可用空间百分比
+                        // 获取总空间大小
+                        float totalGB;
+                        size = size.toUpperCase();
+                        if (size.endsWith("G")) {
+                                totalGB = Float.parseFloat(size.substring(0, size.length() - 1));
+                        } else if (size.endsWith("T")) {
+                                totalGB = Float.parseFloat(size.substring(0, size.length() - 1)) * 1024;
+                        } else if (size.endsWith("M")) {
+                                totalGB = Float.parseFloat(size.substring(0, size.length() - 1)) / 1024;
+                        } else {
+                                totalGB = Float.parseFloat(size);
+                        }
+
+                        float availablePercent = (availableGB / totalGB) * 100;
+                        if (availablePercent < minAvailablePercent) {
+                                // 创建带HTML样式的消息
+                                StringBuilder message = new StringBuilder();
+                                message.append("<div style='line-height:1.6'>");
+
+                                // 状态标题
+                                message.append(String.format(
+                                                "<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘可用空间百分比不足</h3>",
+                                                targetDir));
+
+                                // 磁盘详情
+                                message.append("<div style='margin-bottom:15px'>");
+                                message.append(String.format(
+                                                "<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>",
+                                                mountPoint));
+                                message.append(
+                                                String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>",
+                                                                device));
+                                message.append(String.format(
+                                                "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>",
+                                                size));
+                                message.append(String.format(
+                                                "<p><strong>可用空间:</strong> <span style='color:#f5222d;font-weight:bold'>%s</span> (%.2f%%)</p>",
+                                                available, availablePercent));
+                                message.append(String.format(
+                                                "<p><strong>最小可用空间百分比:</strong> <span style='color:#722ed1;font-weight:bold'>%d%%</span></p>",
+                                                minAvailablePercent));
+                                message.append("</div>");
+
+                                // 磁盘空间可视化
+                                message.append("<div style='margin-bottom:15px'>");
+                                message.append("<p><strong>磁盘可用空间百分比:</strong></p>");
+
+                                message.append(
+                                                "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
+                                message.append(String.format(
+                                                "<div style='background:#f5222d;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                                                Math.round(availablePercent)));
+                                message.append(String.format(
+                                                "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f%% / %d%%</div>",
+                                                availablePercent > 70 ? "white" : "#333", availablePercent,
+                                                minAvailablePercent));
+                                message.append("</div>");
+                                message.append("</div>");
+
+                                // 警告信息
+                                message.append(
+                                                "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
+                                message.append(String.format(
+                                                "<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 磁盘可用空间百分比(%.2f%%)小于最低要求(%d%%)</p>",
+                                                availablePercent, minAvailablePercent));
+                                message.append("<p style='margin-top:5px;margin-bottom:0;'>建议清理磁盘空间或扩展存储容量，以确保系统正常运行。</p>");
+                                message.append("</div>");
+
+                                message.append("</div>");
+
+                                String errorMsg = String.format("磁盘可用空间百分比不足: %.2f%% < %d%%", availablePercent,
+                                                minAvailablePercent);
+                                log.error(errorMsg);
+                                cacheLog.error(errorMsg);
+                                checkItem.setStatus(CheckItem.Status.FAILED);
+                                checkItem.setMessage(message.toString());
+                                return checkItem;
+                        }
+
                         // 如果检查通过，设置为成功
                         checkItem.setStatus(CheckItem.Status.SUCCESS);
 
@@ -444,6 +475,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         message.append(String.format(
                                         "<p><strong>可用空间:</strong> <span style='color:#52c41a;font-weight:bold'>%s</span> (阈值: <span style='color:#722ed1;font-weight:bold'>%dGB</span>)</p>",
                                         available, minDiskSpaceGB));
+                        message.append(String.format(
+                                        "<p><strong>可用空间百分比:</strong> <span style='color:#52c41a;font-weight:bold'>%.2f%%</span> (阈值: <span style='color:#722ed1;font-weight:bold'>%d%%</span>)</p>",
+                                        availablePercent, minAvailablePercent));
                         message.append("</div>");
 
                         // 磁盘使用率可视化
@@ -469,22 +503,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         message.append("<p><strong>磁盘可用空间:</strong></p>");
 
                         // 计算可用空间百分比
-                        // 提取数值并处理单位
-                        available = available.toUpperCase();
-                        float availableFloat;
-                        if (available.endsWith("G")) {
-                                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1));
-                        } else if (available.endsWith("T")) {
-                                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1))
-                                                * 1024;
-                        } else if (available.endsWith("M")) {
-                                availableFloat = Float.parseFloat(available.substring(0, available.length() - 1))
-                                                / 1024;
-                        } else {
-                                availableFloat = Float.parseFloat(available);
-                        }
-
-                        float percentAvailable = (availableFloat / minDiskSpaceGB) * 100;
+                        float percentAvailable = (availableGB / minDiskSpaceGB) * 100;
                         if (percentAvailable > 100)
                                 percentAvailable = 100;
 
@@ -495,7 +514,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                                         Math.round(percentAvailable)));
                         message.append(String.format(
                                         "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f GB / %d GB</div>",
-                                        percentAvailable > 70 ? "white" : "#333", availableFloat, minDiskSpaceGB));
+                                        percentAvailable > 70 ? "white" : "#333", availableGB, minDiskSpaceGB));
                         message.append("</div>");
                         message.append("</div>");
 
@@ -523,107 +542,51 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 return checkItem;
         }
 
-        @Override
-        public void provideCleanupSuggestions(CheckLogger cacheLog) {
-                // 获取配置中的最小可用空间要求
-                int minDiskSpaceGB = getMinAvailableSpace();
-                int minAvailablePercent = getMinAvailablePercent();
-
-                cacheLog.info("生成清理建议 - 目标目录: " + targetDir);
-                cacheLog.info("最小可用空间要求: " + minDiskSpaceGB + " GB");
-                cacheLog.info("最小可用空间百分比: " + minAvailablePercent + "%");
-
-                StringBuilder html = new StringBuilder();
-                html.append("<div style='line-height:1.6'>");
-                html.append("<h3 style='color:#f5222d;margin-bottom:10px'>磁盘空间问题清理建议</h3>");
-
-                html.append("<p style='color:#333;margin-bottom:8px'>检测到<span style='color:#1890ff;font-weight:bold'>");
-                html.append(targetDir);
-                html.append("</span>目录所在分区空间不足，建议采取以下措施：</p>");
-
-                html.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>清理日志文件：</span>");
-                html.append(
-                                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + targetDir + " -name \"*.log*\" -type f -size +100M | xargs ls -lh");
-                html.append("</pre>");
-                html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并列出大于100MB的日志文件，可以删除或压缩这些文件</p>");
-                html.append("</li>");
-
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>清理临时文件：</span>");
-                html.append(
-                                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + targetDir
-                                + " -name \"tmp*\" -o -name \"temp*\" -type d | xargs du -sh");
-                html.append("</pre>");
-                html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并显示临时目录的大小，可以删除不需要的临时文件</p>");
-                html.append("</li>");
-
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>清理过期数据文件：</span>");
-                html.append(
-                                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + targetDir
-                                + " -type f -name \"*.old\" -o -name \"*.bak\" -o -name \"*~\" | xargs ls -lh");
-                html.append("</pre>");
-                html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找备份和临时文件，可以删除过期的备份</p>");
-                html.append("</li>");
-
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>查找大文件：</span>");
-                html.append(
-                                "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + targetDir + " -type f -size +500M -exec ls -lh {} \\;");
-                html.append("</pre>");
-                html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找大于500MB的文件，评估是否需要保留</p>");
-                html.append("</li>");
-
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>清理软件包缓存：</span>");
-                html.append("<p style='margin-top:5px'>根据不同的Linux发行版，可以使用不同的命令清理包缓存：</p>");
-                html.append("<ul style='padding-left:20px;margin-top:5px'>");
-                html.append(
-                                "<li style='color:#333'>CentOS/RHEL: <code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>yum clean all</code></li>");
-                html.append(
-                                "<li style='color:#333'>Ubuntu/Debian: <code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>apt-get clean</code></li>");
-                html.append("</ul>");
-                html.append("</li>");
-
-                html.append("<li style='margin-bottom:8px'>");
-                html.append("<span style='color:#1890ff;font-weight:bold'>增加磁盘空间：</span>");
-                html.append("<p style='margin-top:5px'>如果清理后仍不足，可以考虑：</p>");
-                html.append("<ul style='padding-left:20px;margin-top:5px'>");
-                html.append("<li style='color:#333'>扩展现有磁盘分区</li>");
-                html.append(
-                                "<li style='color:#333'>添加新磁盘并挂载到<code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>"
-                                                + targetDir + "</code></li>");
-                html.append("<li style='color:#333'>将数据迁移到更大的存储设备</li>");
-                html.append("</ul>");
-                html.append("</li>");
-
-                html.append("</ol>");
-
-                html.append(
-                                "<div style='background:#fffbe6;border-left:4px solid #faad14;padding:10px;margin-top:15px;border-radius:0 4px 4px 0'>");
-                html.append("<p style='margin:0;font-weight:bold;color:#d48806'>注意事项：</p>");
-                html.append("<p style='margin-top:5px;margin-bottom:0;color:#666'>在删除文件前，请确保这些文件不再需要。建议先备份重要数据，再进行清理操作。</p>");
-                html.append("</div>");
-
-                html.append("</div>");
-
-                // 输出HTML格式的建议到日志
-                cacheLog.info(html.toString());
+        // 打开SSH会话
+        protected ClientSession openSession(HostInfo hostInfo) {
+                try {
+                        return sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+                } catch (Exception e) {
+                        log.error("无法创建SSH会话", e);
+                        return null;
+                }
         }
 
-        // 更改磁盘空间检查逻辑，使用磁盘检查器中的配置值
-        protected int getMinAvailableSpace() {
-                return diskChecker.getMinAvailableSpace(targetDir);
+        @Override
+        public void provideCleanupSuggestions(CheckLogger cacheLog) {
+                cacheLog.warn("磁盘空间不足，建议以下通用清理措施:");
+                cacheLog.warn("1. 删除临时文件: rm -rf /tmp/* /var/tmp/*");
+                cacheLog.warn("2. 删除旧日志文件: find /var/log -type f -name \"*.gz\" -delete");
+                cacheLog.warn("3. 清理软件包缓存");
+                cacheLog.warn("4. 移除不需要的大文件: du -sh /* | sort -hr");
+                cacheLog.warn("5. 考虑扩展磁盘分区或挂载新磁盘");
         }
 
         // 获取全局最小可用空间百分比
         protected int getMinAvailablePercent() {
-                return diskChecker.getMinAvailablePercent();
+                if (diskChecker != null) {
+                        return diskChecker.getMinAvailablePercent();
+                }
+                return 20; // 默认值
+        }
+
+        @Override
+        public OsDistribution getSupportedOs() {
+                return OsDistribution.OTHER;
+        }
+
+        @Override
+        public CheckItem fix(HostInfo hostInfo, CheckItem checkItem) {
+                // 通用磁盘检查器不执行自动修复，只提供清理建议
+                log.info("通用磁盘检查器不执行自动修复，只提供清理建议");
+
+                // 创建日志记录器
+                CheckLogger cacheLog = CheckLogger.createLogger(null, this.getClass().getSimpleName());
+
+                // 提供清理建议
+                provideCleanupSuggestions(cacheLog);
+
+                // 返回检查项，状态保持不变
+                return checkItem;
         }
 }

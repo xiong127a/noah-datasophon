@@ -3,13 +3,18 @@ package com.datasophon.api.service.checker.checkers.selinux.generic;
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxChecker;
 import com.datasophon.api.service.checker.checkers.selinux.SELinuxCheckerStrategy;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 通用SELinux检查器实现
@@ -19,7 +24,24 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(GenericSELinuxChecker.class);
 
+    /**
+     * -- SETTER --
+     * 设置SSH连接池管理器
+     *
+     * @param sshConnectionPoolManager SSH连接池管理器实例
+     */
+    @Setter
+    @Autowired
+    protected SshConnectionPoolManager sshConnectionPoolManager;
     protected SELinuxChecker selinuxChecker;
+
+    @Getter
+    @Setter
+    private OsDistribution supportedOs;
+
+    @Getter
+    @Setter
+    private String versionPrefix;
 
     public GenericSELinuxChecker() {
         // 创建SELinuxChecker实例
@@ -36,7 +58,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             checkItem.setMessage("正在检查SELinux状态...");
 
             // 获取会话
-            ClientSession session = hostInfo.getExternalSession();
+            ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
             if (session == null) {
                 String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
                 log.error(errorMsg);
@@ -297,7 +319,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             checkItem.setMessage("正在设置SELinux为宽容模式...");
 
             // 获取会话
-            ClientSession session = hostInfo.getExternalSession();
+            ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
             if (session == null) {
                 String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
                 log.error(errorMsg);

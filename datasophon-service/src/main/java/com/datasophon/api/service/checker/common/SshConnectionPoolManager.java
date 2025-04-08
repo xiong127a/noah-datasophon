@@ -3,8 +3,6 @@ package com.datasophon.api.service.checker.common;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.common.model.HostInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.sshd.client.channel.ClientChannel;
-import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,11 +12,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -516,12 +511,12 @@ public class SshConnectionPoolManager {
      */
     @Scheduled(fixedDelay = 60000) // 每分钟执行一次
     public void cleanupConnections() {
-        if (scheduledTasksEnabled == null || !scheduledTasksEnabled.get()) {
+        if (!scheduledTasksEnabled.get()) {
             log.debug("定时任务已禁用，跳过执行cleanupConnections()");
             return;
         }
 
-        if (hostConnectionPool == null || hostConnectionPool.isEmpty()) {
+        if (hostConnectionPool.isEmpty()) {
             log.debug("连接池为空，跳过清理");
             return;
         }
@@ -555,7 +550,7 @@ public class SshConnectionPoolManager {
                         }
 
                         // 检查连接是否空闲超时
-                        Long lastAccess = connectionLastAccessTime != null ? connectionLastAccessTime.get(key) : null;
+                        Long lastAccess = connectionLastAccessTime.get(key);
                         if (lastAccess != null && (currentTime - lastAccess) > idleTimeout) {
                             try {
                                 log.info("关闭空闲超时的连接: {}, 空闲时长: {}分钟",
@@ -577,9 +572,7 @@ public class SshConnectionPoolManager {
                     if (key != null) {
                         hostConnectionPool.remove(key);
                         // 同时也要移除对应的访问时间记录
-                        if (connectionLastAccessTime != null) {
-                            connectionLastAccessTime.remove(key);
-                        }
+                        connectionLastAccessTime.remove(key);
                     }
                 }
 
@@ -606,9 +599,6 @@ public class SshConnectionPoolManager {
      * @return 缓存命中百分比
      */
     public int calculateSessionCacheHitRate() {
-        if (hostCacheRequests == null || hostCacheHits == null) {
-            return 0;
-        }
 
         long totalHits = 0;
         long totalRequests = 0;

@@ -24,7 +24,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
 
         try {
             // 获取会话
-            ClientSession session = hostInfo.getExternalSession();
+            ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
             if (session == null) {
                 String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
                 log.error(errorMsg);
@@ -348,7 +348,7 @@ public class KylinSELinuxChecker extends GenericSELinuxChecker {
 
         try {
             // 获取会话
-            ClientSession session = hostInfo.getExternalSession();
+            ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
             if (session == null) {
                 String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
                 log.error(errorMsg);

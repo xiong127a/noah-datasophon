@@ -6,6 +6,8 @@ import com.datasophon.api.service.checker.checkers.firewall.generic.GenericFirew
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS7FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS8FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOSFirewallChecker;
+import com.datasophon.api.service.checker.checkers.firewall.os.kylin.KylinV4FirewallChecker;
+import com.datasophon.api.service.checker.checkers.firewall.os.kylin.KylinV10FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.UbuntuFirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.Ubuntu22FirewallChecker;
 import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.Ubuntu24FirewallChecker;
@@ -93,6 +95,28 @@ public class FirewallCheckerConfig {
         Ubuntu24FirewallChecker checker = new Ubuntu24FirewallChecker();
         checker.setSupportedOs(OsDistribution.UBUNTU);
         checker.setVersionPrefix("24");
+        return checker;
+    }
+
+    /**
+     * Kylin V4防火墙检查器
+     */
+    @Bean
+    public KylinV4FirewallChecker kylinV4FirewallChecker() {
+        KylinV4FirewallChecker checker = new KylinV4FirewallChecker();
+        checker.setSupportedOs(OsDistribution.KYLIN);
+        checker.setVersionPrefix("4");
+        return checker;
+    }
+
+    /**
+     * Kylin V10防火墙检查器
+     */
+    @Bean
+    public KylinV10FirewallChecker kylinV10FirewallChecker() {
+        KylinV10FirewallChecker checker = new KylinV10FirewallChecker();
+        checker.setSupportedOs(OsDistribution.KYLIN);
+        checker.setVersionPrefix("10");
         return checker;
     }
 

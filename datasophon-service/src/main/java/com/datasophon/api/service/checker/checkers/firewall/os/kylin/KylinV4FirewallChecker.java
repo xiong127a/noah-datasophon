@@ -23,7 +23,7 @@ public class KylinV4FirewallChecker extends CentOSFirewallChecker {
         cacheLog.info("==== 麒麟V4防火墙检查开始 ====");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);
@@ -33,10 +33,18 @@ public class KylinV4FirewallChecker extends CentOSFirewallChecker {
             return checkItem;
         }
 
+        // 创建HTML输出
+        StringBuilder htmlOutput = new StringBuilder();
+        htmlOutput.append("<div class='firewall-check'>");
+        htmlOutput.append("<h3>麒麟V4防火墙检查结果</h3>");
+
         // 检查麒麟系统版本信息
         CommandResult versionResult = execCommand(session, "cat /etc/*-release", cacheLog);
         if (versionResult.isSuccess()) {
-            cacheLog.info("系统版本信息: %s", versionResult.getOutput().trim());
+            htmlOutput.append("<div class='section'>");
+            htmlOutput.append("<h4>系统版本信息</h4>");
+            htmlOutput.append("<pre class='command-output'>").append(versionResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
         }
 
         // 麒麟V4特有的检查
@@ -44,22 +52,129 @@ public class KylinV4FirewallChecker extends CentOSFirewallChecker {
 
         // 确定防火墙类型
         FirewallType firewallType = detectFirewallType(session, cacheLog);
-        cacheLog.info("检测到麒麟V4防火墙类型: %s", firewallType.name());
+        htmlOutput.append("<div class='section'>");
+        htmlOutput.append("<h4>防火墙类型检测</h4>");
+        htmlOutput.append("<p>检测到防火墙类型: <span class='firewall-type'>").append(firewallType.name())
+                .append("</span></p>");
+        htmlOutput.append("</div>");
 
         // 执行具体的防火墙检查
         if (firewallType == FirewallType.FIREWALLD) {
             // 麒麟V4默认使用firewalld
             cacheLog.info("检测到麒麟V4使用firewalld防火墙(默认)");
-            return checkFirewalld(session, checkItem, cacheLog);
+            htmlOutput.append("<div class='section'>");
+            htmlOutput.append("<h4>firewalld防火墙检查</h4>");
+
+            // 检查firewalld服务状态
+            CommandResult statusResult = execCommand(session, "systemctl status firewalld", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>服务状态</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(statusResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 检查firewalld版本
+            CommandResult versionCmdResult = execCommand(session, "firewall-cmd --version", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>版本信息</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(versionCmdResult.getOutput().trim())
+                    .append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 检查活动区域
+            CommandResult zonesResult = execCommand(session, "firewall-cmd --get-active-zones", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>活动区域</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(zonesResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 检查所有规则
+            CommandResult rulesResult = execCommand(session, "firewall-cmd --list-all", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>防火墙规则</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(rulesResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 检查开机自启状态
+            CommandResult enabledResult = execCommand(session, "systemctl is-enabled firewalld", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>开机自启状态</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(enabledResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 分析结果
+            htmlOutput.append("<div class='analysis'>");
+            htmlOutput.append("<h4>分析结果</h4>");
+            boolean isRunning = statusResult.getOutput().contains("active (running)");
+            boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
+
+            if (isRunning || isEnabled) {
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                htmlOutput.append("<p class='warning'>警告：防火墙服务正在运行或已启用开机自启，建议关闭</p>");
+                htmlOutput.append("<div class='suggestions'>");
+                htmlOutput.append("<h5>修复建议</h5>");
+                htmlOutput.append("<ol>");
+                htmlOutput.append("<li>停止防火墙服务：<code>systemctl stop firewalld</code></li>");
+                htmlOutput.append("<li>禁用开机自启：<code>systemctl disable firewalld</code></li>");
+                htmlOutput.append("</ol>");
+                htmlOutput.append("</div>");
+            } else {
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                htmlOutput.append("<p class='success'>防火墙服务已停止且未启用开机自启</p>");
+            }
+            htmlOutput.append("</div>");
+            htmlOutput.append("</div>");
         } else if (firewallType == FirewallType.IPTABLES) {
-            cacheLog.info("检测到麒麟V4使用iptables防火墙");
-            return checkIptables(session, checkItem, cacheLog);
+            // 处理iptables检查
+            htmlOutput.append("<div class='section'>");
+            htmlOutput.append("<h4>iptables防火墙检查</h4>");
+
+            // 检查iptables服务状态
+            CommandResult statusResult = execCommand(session, "systemctl status iptables", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>服务状态</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(statusResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 检查iptables规则
+            CommandResult rulesResult = execCommand(session, "iptables -L -n", cacheLog);
+            htmlOutput.append("<div class='subsection'>");
+            htmlOutput.append("<h5>防火墙规则</h5>");
+            htmlOutput.append("<pre class='command-output'>").append(rulesResult.getOutput().trim()).append("</pre>");
+            htmlOutput.append("</div>");
+
+            // 分析结果
+            htmlOutput.append("<div class='analysis'>");
+            htmlOutput.append("<h4>分析结果</h4>");
+            boolean hasRules = rulesResult.getOutput().contains("REJECT") || rulesResult.getOutput().contains("DROP");
+
+            if (hasRules) {
+                checkItem.setStatus(CheckItem.Status.FAILED);
+                htmlOutput.append("<p class='warning'>警告：检测到iptables限制规则，建议清除</p>");
+                htmlOutput.append("<div class='suggestions'>");
+                htmlOutput.append("<h5>修复建议</h5>");
+                htmlOutput.append("<ol>");
+                htmlOutput.append("<li>清空所有规则：<code>iptables -F</code></li>");
+                htmlOutput.append("<li>停止iptables服务：<code>systemctl stop iptables</code></li>");
+                htmlOutput.append("<li>禁用开机自启：<code>systemctl disable iptables</code></li>");
+                htmlOutput.append("</ol>");
+                htmlOutput.append("</div>");
+            } else {
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                htmlOutput.append("<p class='success'>未检测到限制性iptables规则</p>");
+            }
+            htmlOutput.append("</div>");
+            htmlOutput.append("</div>");
         } else {
-            cacheLog.info("未检测到防火墙服务");
             checkItem.setStatus(CheckItem.Status.SUCCESS);
-            checkItem.setMessage("未检测到防火墙服务");
-            return checkItem;
+            htmlOutput.append("<div class='section'>");
+            htmlOutput.append("<h4>分析结果</h4>");
+            htmlOutput.append("<p class='success'>未检测到防火墙服务</p>");
+            htmlOutput.append("</div>");
         }
+
+        htmlOutput.append("</div>");
+        checkItem.setMessage(htmlOutput.toString());
+        return checkItem;
     }
 
     @Override
@@ -67,7 +182,7 @@ public class KylinV4FirewallChecker extends CentOSFirewallChecker {
         cacheLog.info("==== 麒麟V4防火墙修复开始 ====");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);

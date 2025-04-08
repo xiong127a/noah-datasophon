@@ -1739,8 +1739,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
         try {
             // 标记状态已更新，以便前端能察觉到变化
-            hostInfo.setStatusCacheDirty(true);
-
             // 更新缓存
             CacheUtils.putHostInfo(hostInfo.getClusterId(), hostInfo.getIp(), hostInfo);
             logger.debug("已更新主机缓存: {}", hostInfo.getIp());

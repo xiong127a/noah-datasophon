@@ -22,7 +22,7 @@ public class CentOS8FirewallChecker extends CentOSFirewallChecker {
         cacheLog.info("==== CentOS 8防火墙检查开始 ====");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);
@@ -66,7 +66,7 @@ public class CentOS8FirewallChecker extends CentOSFirewallChecker {
         cacheLog.info("==== CentOS 8防火墙修复开始 ====");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null) {
             String errorMsg = "SSH会话为空，无法执行命令";
             log.error(errorMsg);

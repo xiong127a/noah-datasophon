@@ -7,9 +7,12 @@ import com.datasophon.common.model.OsInfo;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,9 +21,13 @@ import org.springframework.stereotype.Component;
  * 支持多种Linux发行版，包括CentOS、Ubuntu和Kylin
  */
 @Component
+@Slf4j
 public class SELinuxChecker extends AbstractItemChecker {
 
         private static final Logger logger = LoggerFactory.getLogger(SELinuxChecker.class);
+
+        @Autowired
+        private SELinuxCheckerFactory selinuxCheckerFactory;
 
         @Override
         protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
@@ -31,19 +38,15 @@ public class SELinuxChecker extends AbstractItemChecker {
                         // 更新检查项状态
                         checkItem.setMessage("正在检查SELinux状态...");
 
-                        // 检查会话是否准备就绪
+                        // 获取SSH会话
+                        ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
                         if (session == null) {
-                                // 检查hostInfo中是否有可用的会话
-                                if (!hostInfo.isSessionReady()) {
-                                        String errorMsg = "SSH会话未就绪，无法执行SELinux检查: " + hostInfo.getIp();
-                                        logger.error(errorMsg);
-                                        cacheLog.error(errorMsg);
-                                        checkItem.setStatus(CheckItem.Status.FAILED);
-                                        checkItem.setMessage(errorMsg);
-                                        return checkItem;
-                                }
-                                // 使用hostInfo的会话
-                                session = hostInfo.getExternalSession();
+                                String errorMsg = "SSH会话为空，无法执行命令";
+                                log.error(errorMsg);
+                                cacheLog.error(errorMsg);
+                                checkItem.setStatus(CheckItem.Status.FAILED);
+                                checkItem.setMessage(errorMsg);
+                                return checkItem;
                         }
 
                         // 获取操作系统信息
@@ -58,7 +61,6 @@ public class SELinuxChecker extends AbstractItemChecker {
                                         checkItem.setMessage(errorMsg);
                                         return checkItem;
                                 }
-                                hostInfo.setExternalSession(session);
                         } catch (InterruptedException e) {
                                 String errorMsg = "获取操作系统信息过程被中断";
                                 logger.error(errorMsg, e);
@@ -72,7 +74,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
                         // 通过工厂获取对应的SELinux检查器策略
-                        SELinuxCheckerStrategy strategy = SELinuxCheckerFactory.getChecker(osInfo);
+                        SELinuxCheckerStrategy strategy = selinuxCheckerFactory.getChecker(osInfo);
 
                         // 执行检查
                         CheckItem result = strategy.check(hostInfo, checkItem, cacheLog);
@@ -106,18 +108,14 @@ public class SELinuxChecker extends AbstractItemChecker {
                         checkItem.setMessage("正在修复SELinux配置...");
 
                         // 检查会话是否准备就绪
-                        if (session == null) {
+                        if (sshConnectionPoolManager.getOrCreateConnection(hostInfo) == null) {
                                 // 检查hostInfo中是否有可用的会话
-                                if (!hostInfo.isSessionReady()) {
-                                        String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
-                                        logger.error(errorMsg);
-                                        cacheLog.error(errorMsg);
-                                        checkItem.setStatus(CheckItem.Status.FAILED);
-                                        checkItem.setMessage(errorMsg);
-                                        return false;
-                                }
-                                // 使用hostInfo的会话
-                                session = hostInfo.getExternalSession();
+                                String errorMsg = "SSH会话未就绪，无法执行SELinux修复: " + hostInfo.getIp();
+                                logger.error(errorMsg);
+                                cacheLog.error(errorMsg);
+                                checkItem.setStatus(CheckItem.Status.FAILED);
+                                checkItem.setMessage(errorMsg);
+                                return false;
                         }
 
                         // 获取操作系统信息
@@ -143,7 +141,7 @@ public class SELinuxChecker extends AbstractItemChecker {
                         cacheLog.info("操作系统信息: {}", osInfo.getFullName());
 
                         // 通过工厂获取对应的SELinux检查器策略
-                        SELinuxCheckerStrategy strategy = SELinuxCheckerFactory.getChecker(osInfo);
+                        SELinuxCheckerStrategy strategy = selinuxCheckerFactory.getChecker(osInfo);
 
                         // 执行修复
                         boolean result = false;
@@ -187,7 +185,7 @@ public class SELinuxChecker extends AbstractItemChecker {
         /**
          * 设置日志键
          * 公开的方法，用于子类设置日志键
-         * 
+         *
          * @param clusterId 集群ID
          * @param hostname  主机名
          * @param itemId    检查项ID
@@ -198,7 +196,7 @@ public class SELinuxChecker extends AbstractItemChecker {
 
         /**
          * 执行命令并获取结果
-         * 
+         *
          * @param session SSH会话
          * @param command 要执行的命令
          * @return 命令执行结果

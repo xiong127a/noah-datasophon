@@ -23,6 +23,7 @@ public class Ubuntu22DiskChecker extends UbuntuDiskChecker {
         cacheLog.warn("5. 清理旧内核: sudo purge-old-kernels --keep 2");
         cacheLog.warn("6. 清理快照: sudo snap set system refresh.retain=2");
         cacheLog.warn("7. 清理journal日志: sudo journalctl --vacuum-time=7d");
-        cacheLog.warn("8. 考虑扩展" + DiskChecker.TARGET_DIR + "分区或挂载新磁盘");
+        cacheLog.warn("8. 清理Docker镜像和容器(如果安装了Docker): sudo docker system prune -a");
+        cacheLog.warn("9. 考虑扩展磁盘分区或挂载新磁盘");
     }
 }

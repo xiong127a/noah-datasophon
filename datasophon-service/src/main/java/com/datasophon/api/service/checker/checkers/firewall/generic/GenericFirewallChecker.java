@@ -2,12 +2,15 @@ package com.datasophon.api.service.checker.checkers.firewall.generic;
 
 import com.datasophon.api.service.checker.checkers.firewall.FirewallCheckerStrategy;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
+import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 通用防火墙检查器
@@ -16,6 +19,16 @@ import org.slf4j.LoggerFactory;
 public class GenericFirewallChecker implements FirewallCheckerStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(GenericFirewallChecker.class);
+
+    // 注入SSH连接池管理器
+    @Autowired
+    protected SshConnectionPoolManager sshConnectionPoolManager;
+
+    // 支持的操作系统类型
+    private OsDistribution supportedOs;
+
+    // 版本前缀（可选）
+    private String versionPrefix;
 
     /**
      * 防火墙类型枚举
@@ -27,6 +40,73 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
         NONE // 未检测到防火墙
     }
 
+    /**
+     * 获取支持的操作系统类型
+     */
+    @Override
+    public OsDistribution getSupportedOs() {
+        return supportedOs;
+    }
+
+    /**
+     * 设置支持的操作系统类型
+     */
+    @Override
+    public void setSupportedOs(OsDistribution osDistribution) {
+        this.supportedOs = osDistribution;
+    }
+
+    /**
+     * 获取版本前缀
+     */
+    @Override
+    public String getVersionPrefix() {
+        return versionPrefix;
+    }
+
+    /**
+     * 设置版本前缀
+     */
+    @Override
+    public void setVersionPrefix(String versionPrefix) {
+        this.versionPrefix = versionPrefix;
+    }
+
+    /**
+     * 获取SSH会话
+     * 使用连接池管理器获取SSH会话
+     * 
+     * @param hostInfo 主机信息
+     * @param cacheLog 日志记录器
+     * @return SSH会话
+     */
+    protected ClientSession getSession(HostInfo hostInfo, CheckLogger cacheLog) {
+        try {
+            if (sshConnectionPoolManager == null) {
+                String errorMsg = "SSH连接池管理器未注入，无法获取SSH会话";
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
+                return null;
+            }
+
+            // 使用连接池管理器获取SSH会话
+            ClientSession session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
+            if (session == null) {
+                String errorMsg = "无法获取SSH会话：主机 " + hostInfo.getIp();
+                log.error(errorMsg);
+                cacheLog.error(errorMsg);
+                return null;
+            }
+
+            return session;
+        } catch (Exception e) {
+            String errorMsg = "获取SSH会话时发生异常: " + e.getMessage();
+            log.error(errorMsg, e);
+            cacheLog.error(errorMsg);
+            return null;
+        }
+    }
+
     @Override
     public CheckItem check(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog) throws InterruptedException {
         cacheLog.info("==== 通用防火墙检查开始 ====");
@@ -34,7 +114,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
         checkItem.setMessage("正在检查防火墙状态...");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null || !session.isOpen()) {
             String errorMsg = "SSH会话为空或已关闭，无法执行命令";
             log.error(errorMsg);
@@ -159,7 +239,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
         checkItem.setMessage("正在修复防火墙配置...");
 
         // 获取SSH会话
-        ClientSession session = hostInfo.getExternalSession();
+        ClientSession session = getSession(hostInfo, cacheLog);
         if (session == null || !session.isOpen()) {
             String errorMsg = "SSH会话为空或已关闭，无法执行命令";
             log.error(errorMsg);
@@ -255,62 +335,86 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
      */
     protected CheckItem checkFirewalld(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
             throws InterruptedException {
-        cacheLog.info("执行检查命令: systemctl status firewalld");
-        CommandResult result = execCommand(session, "systemctl status firewalld", cacheLog);
+        StringBuilder htmlOutput = new StringBuilder();
+        htmlOutput.append("<div class='firewall-check'>");
+        htmlOutput.append("<h3>Firewalld 防火墙检查</h3>");
 
-        switch (result.getExitCode()) {
-            case 0:
-                // 服务正在运行
-                cacheLog.info("firewalld状态: 正在运行");
+        // 检查firewalld服务状态
+        CommandResult statusResult = execCommand(session, "systemctl status firewalld", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>1. 检查firewalld服务状态</h4>");
+        htmlOutput.append("<pre class='command'>$ systemctl status firewalld</pre>");
+        htmlOutput.append("<pre class='output'>").append(statusResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                // 获取防火墙详细配置
-                CommandResult zoneResult = execCommand(session, "firewall-cmd --get-active-zones", cacheLog);
-                if (zoneResult.isSuccess()) {
-                    cacheLog.info("当前活动区域信息:");
-                    cacheLog.info(zoneResult.getOutput());
-                }
+        // 检查firewalld版本
+        CommandResult versionResult = execCommand(session, "firewall-cmd --version", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>2. 检查firewalld版本</h4>");
+        htmlOutput.append("<pre class='command'>$ firewall-cmd --version</pre>");
+        htmlOutput.append("<pre class='output'>").append(versionResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                CommandResult configResult = execCommand(session, "firewall-cmd --list-all", cacheLog);
-                if (configResult.isSuccess()) {
-                    cacheLog.info("当前防火墙配置:");
-                    cacheLog.info(configResult.getOutput());
-                }
+        // 检查活动区域
+        CommandResult zonesResult = execCommand(session, "firewall-cmd --get-active-zones", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>3. 检查活动区域</h4>");
+        htmlOutput.append("<pre class='command'>$ firewall-cmd --get-active-zones</pre>");
+        htmlOutput.append("<pre class='output'>").append(zonesResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("firewalld防火墙正在运行，建议关闭");
-                break;
+        // 检查所有规则
+        CommandResult listAllResult = execCommand(session, "firewall-cmd --list-all", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>4. 检查所有规则</h4>");
+        htmlOutput.append("<pre class='command'>$ firewall-cmd --list-all</pre>");
+        htmlOutput.append("<pre class='output'>").append(listAllResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-            case 3:
-                // 服务已停止
-                cacheLog.info("firewalld状态: 已停止");
+        // 检查服务是否开机自启
+        CommandResult enabledResult = execCommand(session, "systemctl is-enabled firewalld", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>5. 检查开机自启状态</h4>");
+        htmlOutput.append("<pre class='command'>$ systemctl is-enabled firewalld</pre>");
+        htmlOutput.append("<pre class='output'>").append(enabledResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                // 检查自启动状态
-                CommandResult enabledResult = execCommand(session,
-                        "systemctl is-enabled firewalld 2>/dev/null || echo 'Unknown'", cacheLog);
-                if (enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled")) {
-                    cacheLog.info("firewalld自启动状态: 已启用");
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("firewalld防火墙已配置为自启动，建议禁用");
-                } else {
-                    checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("firewalld防火墙已关闭");
-                }
-                break;
+        // 分析结果
+        boolean isRunning = statusResult.getOutput().contains("active (running)");
+        boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
 
-            case 4:
-                // 服务不存在
-                cacheLog.info("firewalld状态: 服务不存在");
-                checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage("firewalld防火墙服务未安装");
-                break;
+        htmlOutput.append("<div class='analysis'>");
+        htmlOutput.append("<h4>分析结果</h4>");
+        htmlOutput.append("<ul>");
+        htmlOutput.append("<li>服务状态: ").append(
+                isRunning ? "<span class='status-running'>运行中</span>" : "<span class='status-stopped'>已停止</span>")
+                .append("</li>");
+        htmlOutput.append("<li>开机自启: ").append(
+                isEnabled ? "<span class='status-enabled'>已启用</span>" : "<span class='status-disabled'>未启用</span>")
+                .append("</li>");
+        htmlOutput.append("</ul>");
+        htmlOutput.append("</div>");
 
-            default:
-                // 其他状态，可能是命令执行出错
-                cacheLog.warn("获取firewalld防火墙状态失败，退出状态码: %d", result.getExitCode());
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("获取firewalld防火墙状态失败: " + result.getErrorOrOutput());
-                break;
+        // 添加修复建议
+        htmlOutput.append("<div class='recommendations'>");
+        htmlOutput.append("<h4>修复建议</h4>");
+        if (isRunning || isEnabled) {
+            htmlOutput.append("<p class='warning'>检测到防火墙正在运行或已启用开机自启，建议执行以下操作：</p>");
+            htmlOutput.append("<ol>");
+            htmlOutput.append("<li>停止防火墙服务：<code>systemctl stop firewalld</code></li>");
+            htmlOutput.append("<li>禁用开机自启：<code>systemctl disable firewalld</code></li>");
+            htmlOutput.append("<li>确认服务状态：<code>systemctl status firewalld</code></li>");
+            htmlOutput.append("</ol>");
+        } else {
+            htmlOutput.append("<p class='success'>防火墙已停止且未启用开机自启，无需修复。</p>");
         }
+        htmlOutput.append("</div>");
+
+        htmlOutput.append("</div>");
+
+        // 设置检查结果
+        checkItem.setMessage(htmlOutput.toString());
+        checkItem.setStatus(isRunning || isEnabled ? CheckItem.Status.FAILED : CheckItem.Status.SUCCESS);
 
         return checkItem;
     }
@@ -320,48 +424,78 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
      */
     protected CheckItem checkUfw(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
             throws InterruptedException {
-        cacheLog.info("执行检查命令: ufw status");
-        CommandResult result = execCommand(session, "ufw status", cacheLog);
+        StringBuilder htmlOutput = new StringBuilder();
+        htmlOutput.append("<div class='firewall-check'>");
+        htmlOutput.append("<h3>UFW 防火墙检查</h3>");
 
-        if (result.isSuccess()) {
-            String output = result.getOutput().toLowerCase();
+        // 检查ufw服务状态
+        CommandResult statusResult = execCommand(session, "ufw status", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>1. 检查UFW服务状态</h4>");
+        htmlOutput.append("<pre class='command'>$ ufw status</pre>");
+        htmlOutput.append("<pre class='output'>").append(statusResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-            if (output.contains("inactive") || output.contains("disabled") ||
-                    output.contains("状态：不活动") || output.contains("status: inactive")) {
-                // 检查是否设置为自启动
-                CommandResult enabledResult = execCommand(session,
-                        "grep -q 'ENABLED=yes' /etc/ufw/ufw.conf && echo 'enabled' || echo 'disabled'", cacheLog);
-                if (enabledResult.isSuccess() && enabledResult.getOutput().trim().equals("enabled")) {
-                    cacheLog.info("ufw状态: 已停止但设置为自启动");
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("ufw防火墙已配置为自启动，建议禁用");
-                } else {
-                    cacheLog.info("ufw状态: 已停止且未设置自启动");
-                    checkItem.setStatus(CheckItem.Status.SUCCESS);
-                    checkItem.setMessage("ufw防火墙已关闭");
-                }
-            } else if (output.contains("active") || output.contains("enabled") ||
-                    output.contains("状态：活动") || output.contains("status: active")) {
-                cacheLog.info("ufw状态: 正在运行");
+        // 检查ufw版本
+        CommandResult versionResult = execCommand(session, "ufw --version", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>2. 检查UFW版本</h4>");
+        htmlOutput.append("<pre class='command'>$ ufw --version</pre>");
+        htmlOutput.append("<pre class='output'>").append(versionResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                // 获取ufw规则
-                cacheLog.info("当前ufw规则:");
-                cacheLog.info(output);
+        // 检查详细规则
+        CommandResult rulesResult = execCommand(session, "ufw status verbose", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>3. 检查详细规则</h4>");
+        htmlOutput.append("<pre class='command'>$ ufw status verbose</pre>");
+        htmlOutput.append("<pre class='output'>").append(rulesResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
 
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("ufw防火墙正在运行，建议关闭");
-            } else {
-                // 状态不明但假定未启用（通常防火墙不活动的情况下，ufw状态信息可能多样化）
-                cacheLog.warn("无法明确确定ufw状态，但结果中未发现活动指示: %s", output);
-                checkItem.setStatus(CheckItem.Status.SUCCESS);
-                checkItem.setMessage("ufw防火墙状态检测到模糊输出，假定为未启用状态");
-            }
+        // 检查开机自启状态
+        CommandResult enabledResult = execCommand(session, "systemctl is-enabled ufw", cacheLog);
+        htmlOutput.append("<div class='command-block'>");
+        htmlOutput.append("<h4>4. 检查开机自启状态</h4>");
+        htmlOutput.append("<pre class='command'>$ systemctl is-enabled ufw</pre>");
+        htmlOutput.append("<pre class='output'>").append(enabledResult.getOutput()).append("</pre>");
+        htmlOutput.append("</div>");
+
+        // 分析结果
+        boolean isActive = statusResult.getOutput().contains("Status: active");
+        boolean isEnabled = enabledResult.getOutput().trim().equals("enabled");
+
+        htmlOutput.append("<div class='analysis'>");
+        htmlOutput.append("<h4>分析结果</h4>");
+        htmlOutput.append("<ul>");
+        htmlOutput.append("<li>服务状态: ").append(
+                isActive ? "<span class='status-running'>运行中</span>" : "<span class='status-stopped'>已停止</span>")
+                .append("</li>");
+        htmlOutput.append("<li>开机自启: ").append(
+                isEnabled ? "<span class='status-enabled'>已启用</span>" : "<span class='status-disabled'>未启用</span>")
+                .append("</li>");
+        htmlOutput.append("</ul>");
+        htmlOutput.append("</div>");
+
+        // 添加修复建议
+        htmlOutput.append("<div class='recommendations'>");
+        htmlOutput.append("<h4>修复建议</h4>");
+        if (isActive || isEnabled) {
+            htmlOutput.append("<p class='warning'>检测到UFW防火墙正在运行或已启用开机自启，建议执行以下操作：</p>");
+            htmlOutput.append("<ol>");
+            htmlOutput.append("<li>停止防火墙服务：<code>ufw disable</code></li>");
+            htmlOutput.append("<li>禁用开机自启：<code>systemctl disable ufw</code></li>");
+            htmlOutput.append("<li>确认服务状态：<code>ufw status</code></li>");
+            htmlOutput.append("</ol>");
         } else {
-            // 命令执行失败，可能是ufw未安装
-            cacheLog.info("ufw命令执行失败，可能未安装: %s", result.getErrorOrOutput());
-            checkItem.setStatus(CheckItem.Status.SUCCESS);
-            checkItem.setMessage("ufw防火墙未安装");
+            htmlOutput.append("<p class='success'>UFW防火墙已停止且未启用开机自启，无需修复。</p>");
         }
+        htmlOutput.append("</div>");
+
+        htmlOutput.append("</div>");
+
+        // 设置检查结果
+        checkItem.setMessage(htmlOutput.toString());
+        checkItem.setStatus(isActive || isEnabled ? CheckItem.Status.FAILED : CheckItem.Status.SUCCESS);
 
         return checkItem;
     }
@@ -635,67 +769,30 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     }
 
     /**
-     * 执行命令
-     *
-     * @param session  SSH会话
-     * @param command  要执行的命令
-     * @param cacheLog 日志记录器
-     * @return 命令执行结果
+     * 执行SSH命令
      */
-    protected CommandResult execCommand(ClientSession session, String command, CheckLogger cacheLog)
-            throws InterruptedException {
-        if (session == null || !session.isOpen()) {
-            String errorMsg = "SSH会话为空或已关闭，无法执行命令";
-            log.error(errorMsg);
-            cacheLog.error(errorMsg);
-            return new CommandResult("", errorMsg, -1);
+    protected CommandResult execCommand(ClientSession session, String command, CheckLogger cacheLog) {
+        if (session == null) {
+            log.error("SSH会话为空，无法执行命令");
+            cacheLog.error("SSH会话为空，无法执行命令");
+            return new CommandResult("", "SSH会话为空", -1);
         }
 
         try {
-            // 记录执行的命令
+            log.debug("执行命令: {}", command);
             cacheLog.debug("执行命令: %s", command);
 
-            // 创建输出流
-            java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
-            java.io.ByteArrayOutputStream errorStream = new java.io.ByteArrayOutputStream();
-
-            // 创建通道
-            org.apache.sshd.client.channel.ClientChannel channel = session.createExecChannel(command);
-            channel.setOut(outputStream);
-            channel.setErr(errorStream);
-
-            // 打开通道
-            channel.open().verify(30, java.util.concurrent.TimeUnit.SECONDS);
-
-            // 等待命令完成
-            channel.waitFor(java.util.EnumSet.of(
-                    org.apache.sshd.client.channel.ClientChannelEvent.CLOSED), 30000);
-
-            // 获取退出状态
-            Integer exitStatus = channel.getExitStatus();
-            String output = outputStream.toString();
-            String error = errorStream.toString();
-
-            // 关闭通道
-            channel.close();
-
-            // 创建结果
-            CommandResult result = new CommandResult(output, error, exitStatus != null ? exitStatus : -1);
-
-            // 记录执行结果
-            if (result.isSuccess()) {
-                cacheLog.debug("命令执行成功，退出状态码: %d", result.getExitCode());
+            // 使用SshConnectionPoolManager执行命令
+            if (sshConnectionPoolManager != null) {
+                return sshConnectionPoolManager.execCommand(session, command);
             } else {
-                cacheLog.debug("命令执行失败，退出状态码: %d, 错误信息: %s", result.getExitCode(), result.getError());
+                cacheLog.error("SSH连接池管理器未注入，无法执行命令");
+                return new CommandResult("", "SSH连接池管理器未注入", -1);
             }
-
-            return result;
-
         } catch (Exception e) {
-            String errorMsg = "执行命令异常: " + e.getMessage();
-            log.error(errorMsg, e);
-            cacheLog.error(errorMsg);
-            return new CommandResult("", errorMsg, -1);
+            log.error("执行命令失败: {}", e.getMessage(), e);
+            cacheLog.error("执行命令失败: %s", e.getMessage());
+            return new CommandResult("", e.getMessage(), -1);
         }
     }
 }

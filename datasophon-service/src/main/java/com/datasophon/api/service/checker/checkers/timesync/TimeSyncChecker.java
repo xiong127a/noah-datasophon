@@ -38,7 +38,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
             setCheckItemMessage(hostInfo, checkItem, "正在获取远程服务器时间...");
 
             // 1. 首先获取远程服务器的时间
-            CommandResult remoteTimeResult = execCommand(session, "date '+%Y-%m-%d %H:%M:%S'");
+            CommandResult remoteTimeResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "date '+%Y-%m-%d %H:%M:%S'");
             if (!remoteTimeResult.isSuccess()) {
                 cacheLog.error("获取远程服务器时间失败: %s", remoteTimeResult.getErrorOrOutput());
                 checkItem.setStatus(CheckItem.Status.FAILED);
@@ -53,7 +53,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
             setCheckItemMessage(hostInfo, checkItem, "正在获取远程服务器时区...");
 
             // 2. 获取远程服务器时区
-            CommandResult remoteTzResult = execCommand(session, "date '+%Z'");
+            CommandResult remoteTzResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "date '+%Z'");
             if (!remoteTzResult.isSuccess()) {
                 cacheLog.warn("获取远程服务器时区失败: %s", remoteTzResult.getErrorOrOutput());
             }
@@ -228,7 +228,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
             boolean tzSetSuccess = false;
             if (tzFile != null && !tzFile.isEmpty()) {
                 cacheLog.info("设置远程服务器时区...");
-                CommandResult tzResult = execCommand(session, "ln -sf " + tzFile + " /etc/localtime");
+                CommandResult tzResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "ln -sf " + tzFile + " /etc/localtime");
                 tzSetSuccess = tzResult.isSuccess();
                 if (!tzSetSuccess) {
                     cacheLog.warn("设置时区失败: %s", tzResult.getErrorOrOutput());
@@ -243,7 +243,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
             // 4. 设置远程服务器日期和时间
             cacheLog.info("设置远程服务器日期和时间...");
             String dateCmd = "date -s \"" + localDateStr + " " + localTimeStr + "\"";
-            CommandResult dateResult = execCommand(session, dateCmd);
+            CommandResult dateResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), dateCmd);
             boolean dateSetSuccess = dateResult.isSuccess();
 
             if (!dateSetSuccess) {
@@ -288,7 +288,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
 
             // 5. 将时间写入硬件时钟
             cacheLog.info("将时间同步到硬件时钟...");
-            CommandResult hwClockResult = execCommand(session, "hwclock --systohc");
+            CommandResult hwClockResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "hwclock --systohc");
             boolean hwClockSetSuccess = hwClockResult.isSuccess();
             if (!hwClockSetSuccess) {
                 cacheLog.warn("硬件时钟同步失败: %s", hwClockResult.getErrorOrOutput());
@@ -301,7 +301,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
 
             // 6. 验证时间同步结果
             cacheLog.info("验证时间同步结果...");
-            CommandResult verifyResult = execCommand(session, "date '+%Y-%m-%d %H:%M:%S'");
+            CommandResult verifyResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "date '+%Y-%m-%d %H:%M:%S'");
             boolean verifySuccess = verifyResult.isSuccess();
             String remoteTimeAfterSync = verifySuccess ? verifyResult.getOutput().trim() : "未知";
 

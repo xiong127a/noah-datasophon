@@ -1668,10 +1668,6 @@ public class HostCheckQueueManager {
                             return;
                         }
 
-                        // 确保不使用连接池
-                        hostInfo.setUseExistingSession(false);
-                        hostInfo.setExternalSession(null);
-
                         LogEntry connLogEntry = createLogEntry(LogEntry.Level.INFO,
                                 "正在建立独立SSH连接进行免密登录配置", LogEntry.Type.FIX);
                         LogEntryManager.addLogEntry(logKey, connLogEntry);

@@ -58,7 +58,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             String jdkPathExistsCmd = "[ -d " + defaultJdkPath + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
             cacheLog.info("执行检查命令: " + jdkPathExistsCmd);
 
-            CommandResult jdkPathResult = execCommand(session, jdkPathExistsCmd);
+            CommandResult jdkPathResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), jdkPathExistsCmd);
             boolean jdkPathExists = jdkPathResult.isSuccess() && "EXISTS".equals(jdkPathResult.getOutput().trim());
             cacheLog.info("专用JDK路径检查结果: " + (jdkPathExists ? "存在" : "不存在"));
 
@@ -98,7 +98,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                     + "/bin/java ] && echo 'EXECUTABLE' || echo 'NOT_EXECUTABLE'";
             cacheLog.info("执行检查命令: " + javaExecutableCmd);
 
-            CommandResult javaExecutableResult = execCommand(session, javaExecutableCmd);
+            CommandResult javaExecutableResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), javaExecutableCmd);
             boolean javaExecutable = javaExecutableResult.isSuccess()
                     && javaExecutableResult.getOutput().contains("EXECUTABLE");
             cacheLog.info("专用JDK Java可执行性检查结果: " + (javaExecutable ? "可执行" : "不可执行"));
@@ -146,7 +146,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             String javaVersionCmd = defaultJdkPath + "/bin/java -version 2>&1";
             cacheLog.info("执行检查命令: " + javaVersionCmd);
 
-            CommandResult javaVersionResult = execCommand(session, javaVersionCmd);
+            CommandResult javaVersionResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), javaVersionCmd);
             if (!javaVersionResult.isSuccess()) {
                 // 获取版本失败
                 cacheLog.info("\n==== 专用Java环境检查未通过 ====");
@@ -302,13 +302,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("目标JDK路径: " + checkerProperties.getJava().getDefaultPath());
 
             // 检查系统架构
-            CommandResult archResult = execCommand(session, "arch");
+            CommandResult archResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "arch");
             String arch = archResult.getOutput().trim();
             logger.info("主机 {} 的架构为 {}", hostInfo.getIp(), arch);
             cacheLog.info("系统架构: " + arch);
 
             // 检查JDK目录是否存在
-            CommandResult testResult = execCommand(session,
+            CommandResult testResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                     "test -d " + checkerProperties.getJava().getDefaultPath() + " && echo 'success' || echo 'failed'");
             boolean exists = testResult.isSuccess() && "success".equals(testResult.getOutput().trim());
 
@@ -317,7 +317,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 cacheLog.info("专用JDK目录已存在: " + checkerProperties.getJava().getDefaultPath());
                 cacheLog.info("检查Java可执行性");
 
-                CommandResult executableTest = execCommand(session,
+                CommandResult executableTest = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         "test -f " + checkerProperties.getJava().getDefaultPath() + "/bin/java && "
                                 + checkerProperties.getJava().getDefaultPath()
                                 + "/bin/java -version 2>/dev/null && echo 'success' || echo 'failed'");
@@ -344,7 +344,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 cacheLog.info("专用JDK目录存在但Java不可执行，将重新安装");
 
                 // 删除旧目录
-                CommandResult rmResult = execCommand(session, "rm -rf " + checkerProperties.getJava().getDefaultPath());
+                CommandResult rmResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "rm -rf " + checkerProperties.getJava().getDefaultPath());
                 if (!rmResult.isSuccess()) {
                     logger.error("删除旧JDK目录失败: {}", rmResult.getErrorOrOutput());
                     cacheLog.error("删除旧JDK目录失败: " + rmResult.getErrorOrOutput());
@@ -372,12 +372,12 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 // 上传JDK安装包
                 cacheLog.info("上传JDK安装包");
-                uploadFile(session, "/usr/local",
+                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "/usr/local",
                         Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.X86JDK);
 
                 // 解压JDK安装包
                 cacheLog.info("解压JDK安装包");
-                CommandResult unzipResult = execCommand(session,
+                CommandResult unzipResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         "tar -zxvf /usr/local/jdk-8u333-linux-x64.tar.gz -C /usr/local/");
                 if (!unzipResult.isSuccess()) {
                     logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
@@ -404,12 +404,12 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
                 // 上传JDK安装包
                 cacheLog.info("上传JDK安装包");
-                uploadFile(session, "/usr/local",
+                uploadFile(sshConnectionPoolManager.getOrCreateConnection(hostInfo), "/usr/local",
                         Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.ARMJDK);
 
                 // 解压JDK安装包
                 cacheLog.info("解压JDK安装包");
-                CommandResult unzipResult = execCommand(session,
+                CommandResult unzipResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         "tar -zxvf /usr/local/jdk-8u333-linux-aarch64.tar.gz -C /usr/local/");
                 if (!unzipResult.isSuccess()) {
                     logger.error("解压JDK安装包失败: {}", unzipResult.getErrorOrOutput());
@@ -447,7 +447,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             }
 
             // 验证JDK安装是否成功
-            CommandResult verifyResult = execCommand(session,
+            CommandResult verifyResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                     "test -d " + checkerProperties.getJava().getDefaultPath() + " && test -f "
                             + checkerProperties.getJava().getDefaultPath()
                             + "/bin/java && echo 'success' || echo 'failed'");

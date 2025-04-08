@@ -1,8 +1,9 @@
 package com.datasophon.api.service.checker;
 
-import com.datasophon.api.service.checker.config.TaskManager;
 import com.datasophon.api.service.checker.common.CommandResult;
+import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.common.LogEntryManager;
+import com.datasophon.api.service.checker.config.TaskManager;
 import com.datasophon.api.service.checker.core.ItemChecker;
 import com.datasophon.api.service.checker.core.ItemCheckerFactory;
 import com.datasophon.api.utils.MinaUtils;
@@ -11,7 +12,6 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.model.AsyncServiceStatus;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.common.model.ScheduledTasksStatus;
 import org.apache.sshd.client.channel.ClientChannel;
 import org.apache.sshd.client.channel.ClientChannelEvent;
@@ -40,7 +40,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.HashMap;
 
 /**
  * 异步检查服务
@@ -123,9 +122,6 @@ public class AsyncCheckService {
     private final Map<String, Long> hostCacheHits = new ConcurrentHashMap<>();
     private final Map<String, Long> hostCacheRequests = new ConcurrentHashMap<>();
 
-    @Autowired
-    private com.datasophon.api.service.checker.common.SshConnectionPoolManager sshConnectionPoolManager;
-
     @PostConstruct
     public void init() {
         logger.info("初始化异步检查服务...");
@@ -186,16 +182,6 @@ public class AsyncCheckService {
 
         // 设置定时任务标志为已停用
         scheduledTasksEnabled.set(false);
-    }
-
-    /**
-     * 启用定时任务
-     */
-    public void enableScheduledTasks() {
-        if (!scheduledTasksEnabled.get()) {
-            startScheduledTasks();
-            logger.info("AsyncCheckService定时任务已启用");
-        }
     }
 
     /**
@@ -1308,22 +1294,6 @@ public class AsyncCheckService {
                 return results;
             }
 
-            // 标记使用现有会话并设置外部会话 - 这里是关键
-            hostInfo.setUseExistingSession(true);
-            hostInfo.setExternalSession(session);
-
-            logger.debug("批量执行检查 - 已设置SSH会话: session.isOpen={}, hostInfo.useExistingSession={}",
-                    session.isOpen(), hostInfo.isUseExistingSession());
-
-            // 验证会话设置是否正确
-            if (!hostInfo.isSessionReady()) {
-                logger.error("会话设置后未就绪: externalSession={}, useExistingSession={}",
-                        hostInfo.getExternalSession() != null, hostInfo.isUseExistingSession());
-            }
-
-            // 更新最后访问时间
-            connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
-
             // 执行每个检查项
             for (CheckItem item : checkItems) {
                 try {
@@ -1362,31 +1332,7 @@ public class AsyncCheckService {
                             com.datasophon.common.model.LogEntry.Type.CHECK);
                     LogEntryManager.addLogEntry(logKey, startLogEntry);
 
-                    logger.debug("开始执行检查项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
-
-                    // 确保每个检查项都使用同一个会话 - 确保这个标志设置正确
-                    hostInfo.setUseExistingSession(true);
-                    hostInfo.setExternalSession(session);
-
-                    // 再次验证会话是否就绪
-                    if (!hostInfo.isSessionReady()) {
-                        logger.error("执行检查前会话未就绪: {}", item.getItemName());
-                        item.setStatus(CheckItem.Status.FAILED);
-                        item.setMessage("SSH会话未就绪");
-
-                        // 记录失败日志到缓存日志
-                        com.datasophon.common.model.LogEntry errorLogEntry = new com.datasophon.common.model.LogEntry(
-                                new Date(),
-                                com.datasophon.common.model.LogEntry.Level.ERROR,
-                                Thread.currentThread().getName(),
-                                this.getClass().getSimpleName(),
-                                "执行检查前会话未就绪: " + item.getItemName(),
-                                com.datasophon.common.model.LogEntry.Type.CHECK);
-                        LogEntryManager.addLogEntry(logKey, errorLogEntry);
-
-                        results.add(item);
-                        continue;
-                    }
+                    logger.debug("开始执行检查项 {}, 使用现有SSH连接: {}", item.getItemName(), session != null);
 
                     // 执行检查
                     CheckItem result = checker.check(clusterId, hostInfo, item);
@@ -1445,11 +1391,6 @@ public class AsyncCheckService {
                     results.add(item);
                 }
             }
-        } finally {
-            // 执行完毕后清理，但不关闭会话
-            logger.debug("批量检查执行完毕，清理hostInfo引用，但不关闭会话");
-            hostInfo.setExternalSession(null);
-            hostInfo.setUseExistingSession(false);
         }
 
         return results;
@@ -1502,24 +1443,12 @@ public class AsyncCheckService {
                 }
 
                 // 标记使用现有会话并设置外部会话 - 这里是关键
-                hostInfo.setUseExistingSession(true);
-                hostInfo.setExternalSession(session);
-
-                logger.debug("批量执行修复 - 已设置SSH会话: session.isOpen={}, hostInfo.useExistingSession={}",
-                        session.isOpen(), hostInfo.isUseExistingSession());
-
-                // 验证会话设置是否正确
-                if (!hostInfo.isSessionReady()) {
-                    logger.error("会话设置后未就绪: externalSession={}, useExistingSession={}",
-                            hostInfo.getExternalSession() != null, hostInfo.isUseExistingSession());
-                }
+                logger.debug("批量执行修复 - 已设置SSH会话: session.isOpen={}", session.isOpen());
 
                 // 更新最后访问时间
                 connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
             } else {
                 logger.info("检测到免密登录修复项，将跳过连接池直接执行修复");
-                hostInfo.setUseExistingSession(false);
-                hostInfo.setExternalSession(null);
             }
 
             // 执行每个修复项
@@ -1564,8 +1493,6 @@ public class AsyncCheckService {
                     boolean isPasswordFreeItem = ItemCode.PASSWORD_FREE.toString().equals(item.getItemCode());
                     if (isPasswordFreeItem) {
                         // 免密检查项总是使用独立会话，不使用共享连接池
-                        hostInfo.setUseExistingSession(false);
-                        hostInfo.setExternalSession(null);
                         logger.info("执行免密登录修复项，使用独立SSH连接");
 
                         // 记录使用独立连接的日志
@@ -1579,31 +1506,7 @@ public class AsyncCheckService {
                         LogEntryManager.addLogEntry(logKey, connLogEntry);
                     } else if (session != null) {
                         // 非免密检查项继续使用共享会话
-                        logger.debug("开始执行修复项 {}, 使用现有SSH连接: {}", item.getItemName(), hostInfo.isUseExistingSession());
-
-                        // 确保每个修复项都使用同一个会话 - 确保这个标志设置正确
-                        hostInfo.setUseExistingSession(true);
-                        hostInfo.setExternalSession(session);
-
-                        // 再次验证会话是否就绪
-                        if (!hostInfo.isSessionReady()) {
-                            logger.error("执行修复前会话未就绪: {}", item.getItemName());
-                            item.setStatus(CheckItem.Status.FAILED);
-                            item.setMessage("SSH会话未就绪");
-
-                            // 记录失败日志到缓存日志
-                            com.datasophon.common.model.LogEntry errorLogEntry = new com.datasophon.common.model.LogEntry(
-                                    new Date(),
-                                    com.datasophon.common.model.LogEntry.Level.ERROR,
-                                    Thread.currentThread().getName(),
-                                    this.getClass().getSimpleName(),
-                                    "执行修复前会话未就绪: " + item.getItemName(),
-                                    com.datasophon.common.model.LogEntry.Type.FIX);
-                            LogEntryManager.addLogEntry(logKey, errorLogEntry);
-
-                            results.add(item);
-                            continue;
-                        }
+                        logger.debug("开始执行修复项 {}, 使用现有SSH连接", item.getItemName());
                     }
 
                     // 执行修复
@@ -1688,11 +1591,6 @@ public class AsyncCheckService {
                     results.add(item);
                 }
             }
-        } finally {
-            // 执行完毕后清理，但不关闭会话
-            logger.debug("批量修复执行完毕，清理hostInfo引用，但不关闭会话");
-            hostInfo.setExternalSession(null);
-            hostInfo.setUseExistingSession(false);
         }
 
         return results;
@@ -1738,11 +1636,6 @@ public class AsyncCheckService {
                 // 从Spring容器获取HostCheckService
                 com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
                         .getBean(com.datasophon.api.service.HostCheckService.class);
-
-                if (hostCheckService == null) {
-                    logger.error("无法获取HostCheckService服务实例");
-                    return;
-                }
 
                 // 批量并行处理主机（每批10个）
                 final int batchSize = 10;
@@ -1845,437 +1738,4 @@ public class AsyncCheckService {
         });
     }
 
-    /**
-     * 异步执行批量设置主机名任务
-     *
-     * @param taskId          任务ID
-     * @param clusterId       集群ID
-     * @param hostMap         主机信息映射
-     * @param hostnamePreview 主机名预览列表
-     */
-    public void batchSetHostnameTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
-            List<Map<String, String>> hostnamePreview) {
-        // 参数校验
-        if (taskId == null || clusterId == null || hostMap == null || hostnamePreview == null) {
-            logger.error("批量设置主机名任务参数异常: taskId={}, clusterId={}, hostMap={}, hostnamePreview={}",
-                    taskId, clusterId, hostMap != null ? "非空" : "空",
-                    hostnamePreview != null ? "非空" : "空");
-            return;
-        }
-
-        logger.info("开始异步执行批量设置主机名任务，集群ID: {}, 任务ID: {}", clusterId, taskId);
-
-        // 将任务注册到任务管理器并使用hostnameExecutor执行
-        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            try {
-                // 检查Spring上下文是否可用
-                if (taskManager == null || taskManager.getApplicationContext() == null) {
-                    logger.error("任务管理器或Spring上下文为空，无法获取HostCheckService");
-                    return;
-                }
-
-                // 获取HostCheckService
-                com.datasophon.api.service.HostCheckService hostCheckService = taskManager.getApplicationContext()
-                        .getBean(com.datasophon.api.service.HostCheckService.class);
-
-                if (hostCheckService == null) {
-                    logger.error("无法获取HostCheckService服务实例");
-                    return;
-                }
-
-                // 创建主机IP与预览信息的映射，便于查找
-                Map<String, Map<String, String>> ipToPreviewMap = new HashMap<>();
-                for (Map<String, String> hostItem : hostnamePreview) {
-                    String ip = hostItem.get("ip");
-                    if (ip != null && !ip.isEmpty()) {
-                        ipToPreviewMap.put(ip, hostItem);
-                    }
-                }
-
-                // 获取待处理主机的IP列表
-                List<String> ips = new ArrayList<>(ipToPreviewMap.keySet());
-
-                // 批量并行处理主机（每批10个）
-                final int batchSize = 10;
-                for (int i = 0; i < ips.size(); i += batchSize) {
-                    // 获取当前批次的主机IP
-                    int endIndex = Math.min(i + batchSize, ips.size());
-                    List<String> batchIps = ips.subList(i, endIndex);
-
-                    logger.info("开始并行处理第{}批主机名设置，数量: {}", (i / batchSize) + 1, batchIps.size());
-
-                    // 创建当前批次的任务列表
-                    List<CompletableFuture<Void>> batchTasks = new ArrayList<>();
-
-                    // 为每个主机创建异步任务
-                    for (String ip : batchIps) {
-                        CompletableFuture<Void> task = CompletableFuture.runAsync(() -> {
-                            try {
-                                Map<String, String> hostItem = ipToPreviewMap.get(ip);
-                                String newHostname = hostItem.get("newHostname");
-
-                                if (newHostname == null || newHostname.isEmpty()) {
-                                    logger.warn("主机信息不完整，跳过该主机: {}", hostItem);
-                                    return;
-                                }
-
-                                // 获取主机信息
-                                HostInfo hostInfo = hostMap.get(ip);
-                                if (hostInfo == null) {
-                                    throw new Exception("未找到主机信息");
-                                }
-
-                                logger.info("为主机 {} 设置新主机名：{}", ip, newHostname);
-
-                                // 获取SSH连接信息
-                                String username = hostInfo.getSshUser();
-                                Integer port = hostInfo.getSshPort();
-
-                                // 获取或创建SSH连接
-                                ClientSession session = getOrCreateConnection(hostInfo);
-                                if (session == null || !session.isOpen()) {
-                                    throw new Exception("无法创建SSH连接");
-                                }
-
-                                // 先检查系统是否有sudo命令
-                                com.datasophon.api.service.checker.common.CommandResult checkSudoResult = execCommand(
-                                        session,
-                                        "which sudo || echo 'nosudo'");
-                                boolean hasSudo = !checkSudoResult.getOutput().trim().contains("nosudo");
-                                String sudoPrefix = hasSudo ? "sudo " : "";
-
-                                // 再检查系统是否有hostnamectl命令
-                                com.datasophon.api.service.checker.common.CommandResult checkHostnamectlResult = execCommand(
-                                        session,
-                                        "which hostnamectl || echo 'nohostnamectl'");
-                                boolean hasHostnamectl = !checkHostnamectlResult.getOutput().trim()
-                                        .contains("nohostnamectl");
-
-                                // 根据命令可用性决定使用哪种方式设置主机名
-                                String command;
-                                if (hasHostnamectl) {
-                                    // 使用hostnamectl命令设置主机名
-                                    logger.info("使用hostnamectl命令设置主机名: {}", newHostname);
-                                    command = sudoPrefix + "hostnamectl set-hostname " + newHostname;
-                                } else {
-                                    // 使用hostname命令并直接修改/etc/hostname文件
-                                    logger.info("使用hostname命令设置主机名: {}", newHostname);
-                                    command = sudoPrefix + "hostname " + newHostname + " && " +
-                                            sudoPrefix + "sh -c 'echo \"" + newHostname + "\" > /etc/hostname'";
-                                }
-
-                                // 执行命令
-                                com.datasophon.api.service.checker.common.CommandResult result = execCommand(session,
-                                        command);
-
-                                // 更新/etc/hostname文件 (确保hostname文件存在)
-                                String updateHostnameCmd = sudoPrefix + "sh -c 'echo \"" + newHostname
-                                        + "\" > /etc/hostname'";
-                                execCommand(session, updateHostnameCmd);
-
-                                // 兼容旧版本的CentOS/RHEL，更新/etc/sysconfig/network文件
-                                String updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME="
-                                        + newHostname
-                                        + "/' /etc/sysconfig/network 2>/dev/null || true";
-                                execCommand(session, updateSysConfigCmd);
-
-                                // 验证主机名是否设置成功
-                                com.datasophon.api.service.checker.common.CommandResult verifyResult = execCommand(
-                                        session,
-                                        "hostname");
-                                String currentHostname = verifyResult.getOutput().trim();
-
-                                boolean hostnameSetSuccess = false; // 标记主机名是否设置成功
-
-                                if (!currentHostname.equals(newHostname)) {
-                                    logger.warn("主机名未成功设置，期望: {}，实际: {}", newHostname, currentHostname);
-
-                                    // 如果第一次设置失败，尝试使用更直接的方式
-                                    logger.info("尝试使用直接方式设置主机名: {}", newHostname);
-                                    String directCommand = sudoPrefix + "hostname " + newHostname;
-
-                                    com.datasophon.api.service.checker.common.CommandResult retryResult = execCommand(
-                                            session, directCommand);
-
-                                    // 再次验证
-                                    verifyResult = execCommand(session, "hostname");
-                                    currentHostname = verifyResult.getOutput().trim();
-
-                                    if (!currentHostname.equals(newHostname)) {
-                                        logger.error("重试后设置主机名仍然失败，期望: {}, 实际: {}", newHostname, currentHostname);
-                                        // 不抛出异常，而是标记设置失败
-                                        hostnameSetSuccess = false;
-                                    } else {
-                                        logger.info("重试设置主机名成功: {}", newHostname);
-                                        hostnameSetSuccess = true; // 重试成功
-                                    }
-                                } else {
-                                    logger.info("主机名成功设置为: {}", newHostname);
-                                    hostnameSetSuccess = true; // 首次设置成功
-                                }
-
-                                // 只有当主机名设置成功时才更新缓存
-                                if (hostnameSetSuccess) {
-                                    // 更新缓存中的主机名
-                                    hostInfo.setHostname(newHostname);
-                                    hostCheckService.updateHostInfoCache(clusterId, hostInfo);
-
-                                    // 更新任务进度为成功
-                                    try {
-                                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                                taskId, ip, true, null);
-                                    } catch (Exception e) {
-                                        logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
-                                    }
-                                } else {
-                                    logger.warn("主机 {} 设置主机名失败，不更新缓存", ip);
-
-                                    // 更新任务进度为失败
-                                    try {
-                                        String errorMsg = "设置主机名失败，期望主机名: " + newHostname + "，实际主机名: "
-                                                + currentHostname;
-                                        com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                                taskId, ip, false, errorMsg);
-                                    } catch (Exception e) {
-                                        logger.error("更新任务进度状态失败: {}", e.getMessage(), e);
-                                    }
-                                }
-                            } catch (Exception e) {
-                                logger.error("为主机 {} 设置主机名时出错", ip, e);
-                                // 更新任务进度
-                                try {
-                                    com.datasophon.api.service.impl.TaskProgressHelper.updateHostProcessStatus(
-                                            taskId, ip, false, e.getMessage());
-                                } catch (Exception ex) {
-                                    logger.error("更新任务进度状态失败: {}", ex.getMessage(), ex);
-                                }
-                            }
-                        }, hostnameExecutor);
-
-                        batchTasks.add(task);
-                    }
-
-                    // 等待当前批次的所有任务完成
-                    try {
-                        CompletableFuture.allOf(batchTasks.toArray(new CompletableFuture[0])).get();
-                        logger.info("第{}批主机名设置完成", (i / batchSize) + 1);
-                    } catch (Exception e) {
-                        logger.error("等待批处理任务完成时发生错误", e);
-                    }
-                }
-
-                // 完成任务
-                try {
-                    com.datasophon.api.service.impl.TaskProgressHelper.completeTask(
-                            taskId,
-                            "所有主机名设置成功",
-                            "部分主机名设置失败，请检查详情");
-                } catch (Exception e) {
-                    logger.error("完成任务状态更新失败: {}", e.getMessage(), e);
-                }
-
-                // 更新主机信息缓存
-                try {
-                    hostCheckService.updateHostMapInCache(clusterId);
-                } catch (Exception e) {
-                    logger.error("更新主机信息缓存失败: {}", e.getMessage(), e);
-                }
-
-                logger.info("批量设置主机名任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
-
-            } catch (Exception e) {
-                logger.error("执行批量设置主机名任务时发生错误", e);
-            }
-        }, hostnameExecutor); // 使用专用的hostnameExecutor
-
-        // 注册任务
-        try {
-            taskManager.registerTask("set_hostname", "批量设置主机名 - 集群ID: " + clusterId, future);
-        } catch (Exception e) {
-            logger.error("注册任务时发生错误: {}", e.getMessage(), e);
-        }
-
-        // 任务完成后保留一段时间进度信息，然后移除
-        future.thenRun(() -> {
-            try {
-                Thread.sleep(TimeUnit.MINUTES.toMillis(30));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                // 移除任务进度
-                try {
-                    com.datasophon.api.service.impl.TaskProgressHelper.removeTaskProgress(taskId);
-                } catch (Exception e) {
-                    logger.error("移除任务进度信息失败: {}", e.getMessage(), e);
-                }
-            }
-        });
-    }
-
-    /**
-     * 异步获取或创建SSH连接
-     * 
-     * @param hostInfo 主机信息
-     * @return 包含SSH会话的CompletableFuture，如果创建失败则返回包含null的CompletableFuture
-     */
-    public CompletableFuture<ClientSession> getOrCreateConnectionAsync(HostInfo hostInfo) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return getOrCreateConnection(hostInfo);
-            } catch (Exception e) {
-                logger.error("异步创建SSH连接时发生异常: {}", e.getMessage(), e);
-                return null;
-            }
-        }, checkExecutor);
-    }
-
-    /**
-     * 执行检查项
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     * @param checkItem 检查项信息
-     * @return 检查结果
-     */
-    public CheckItem executeCheck(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        logger.info("开始执行检查项: {} for {}", checkItem.getItemName(), hostInfo.getIp());
-
-        // 检查是否已经在使用会话，否则创建新会话
-        ClientSession session = null;
-        boolean shouldCloseSession = false;
-
-        try {
-            if (hostInfo.isUseExistingSession() && hostInfo.getExternalSession() != null) {
-                // 使用外部提供的会话
-                session = hostInfo.getExternalSession();
-                logger.debug("使用外部提供的会话");
-            } else {
-                // 从连接池获取连接
-                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-                shouldCloseSession = false; // 不关闭从连接池获取的连接
-
-                if (session == null) {
-                    checkItem.setStatus(CheckItem.Status.FAILED);
-                    checkItem.setMessage("无法建立SSH连接");
-                    return checkItem;
-                }
-            }
-
-            // 如果还未拿到会话，报告连接失败
-            if (session == null) {
-                logger.error("获取会话失败");
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("无法建立SSH连接");
-                return checkItem;
-            }
-
-            // 获取对应的检查器
-            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-
-            if (checker == null) {
-                logger.error("未找到对应的检查器: {}", checkItem.getItemCode());
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("未找到对应的检查器: " + checkItem.getItemCode());
-                return checkItem;
-            }
-
-            // 执行具体检查
-            return checker.check(clusterId, hostInfo, checkItem);
-
-        } catch (Exception e) {
-            logger.error("执行检查项时出错: {}", e.getMessage(), e);
-            checkItem.setStatus(CheckItem.Status.FAILED);
-            checkItem.setMessage("执行检查时发生错误: " + e.getMessage());
-            return checkItem;
-        } finally {
-            // 如果是我们自己创建的会话，并且需要关闭，则关闭它
-            // 连接池中的连接不关闭，而是放回池中
-            if (shouldCloseSession && session != null && !hostInfo.isUseExistingSession()) {
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    logger.warn("关闭SSH会话时出错", e);
-                }
-            }
-        }
-    }
-
-    /**
-     * 执行修复项
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     * @param fixItem   修复项信息
-     * @return 修复结果
-     */
-    public CheckItem executeFix(Integer clusterId, HostInfo hostInfo, CheckItem fixItem) {
-        logger.info("开始执行修复项: {} for {}", fixItem.getItemName(), hostInfo.getIp());
-
-        // 检查是否已经在使用会话，否则创建新会话
-        ClientSession session = null;
-        boolean shouldCloseSession = false;
-
-        try {
-            if (hostInfo.isUseExistingSession() && hostInfo.getExternalSession() != null) {
-                // 使用外部提供的会话
-                session = hostInfo.getExternalSession();
-                logger.debug("使用外部提供的会话");
-            } else {
-                // 从连接池获取连接
-                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-                shouldCloseSession = false; // 不关闭从连接池获取的连接
-
-                if (session == null) {
-                    fixItem.setStatus(CheckItem.Status.FAILED);
-                    fixItem.setMessage("无法建立SSH连接");
-                    return fixItem;
-                }
-            }
-
-            // 如果还未拿到会话，报告连接失败
-            if (session == null) {
-                logger.error("获取会话失败");
-                fixItem.setStatus(CheckItem.Status.FAILED);
-                fixItem.setMessage("无法建立SSH连接");
-                return fixItem;
-            }
-
-            // 获取对应的检查器
-            ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(fixItem.getItemCode()));
-
-            if (checker == null) {
-                logger.error("未找到对应的检查器: {}", fixItem.getItemCode());
-                fixItem.setStatus(CheckItem.Status.FAILED);
-                fixItem.setMessage("未找到对应的检查器: " + fixItem.getItemCode());
-                return fixItem;
-            }
-
-            // 执行具体修复
-            boolean fixResult = checker.fix(clusterId, hostInfo, fixItem);
-            if (fixResult) {
-                fixItem.setStatus(CheckItem.Status.SUCCESS);
-                fixItem.setMessage("修复成功");
-            } else {
-                fixItem.setStatus(CheckItem.Status.FAILED);
-                fixItem.setMessage("修复失败");
-            }
-            return fixItem;
-
-        } catch (Exception e) {
-            logger.error("执行修复项时出错: {}", e.getMessage(), e);
-            fixItem.setStatus(CheckItem.Status.FAILED);
-            fixItem.setMessage("执行修复时发生错误: " + e.getMessage());
-            return fixItem;
-        } finally {
-            // 如果是我们自己创建的会话，并且需要关闭，则关闭它
-            // 连接池中的连接不关闭，而是放回池中
-            if (shouldCloseSession && session != null && !hostInfo.isUseExistingSession()) {
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    logger.warn("关闭SSH会话时出错", e);
-                }
-            }
-        }
-    }
 }
