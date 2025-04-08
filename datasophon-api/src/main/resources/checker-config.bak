@@ -1,0 +1,74 @@
+# 检查项配置
+datasophon:
+  checker:
+    # 元数据路径配置
+    meta:
+      # 版本目录路径，可以配置为DDP-1.2.0,DDP-1.2.1等
+      versions: DDP-1.2.1
+      # 元数据基础目录
+      # 开发环境默认使用 classpath:meta
+      # 生产环境默认使用 ${user.dir}/conf/meta
+      base-dir: ${META_BASE_DIR:${user.dir}/conf/meta}
+    
+    # CPU检查配置
+    cpu:
+      # 最小核心数要求
+      min-cores: 4
+      # 建议核心数
+      recommended-cores: 8
+    
+    # 内存检查配置
+    memory:
+      # 最小内存要求(MB)
+      min-memory: 8192
+      # 建议内存(MB)
+      recommended-memory: 16384
+      # 交换区最小值(MB)
+      min-swap: 4096
+    
+    # Java环境检查配置
+    java:
+      # 最小版本要求
+      min-version: 1.8
+      # 默认JDK路径
+      default-path: /usr/local/jdk1.8.0_333
+      # 是否检查默认路径
+      check-default-path: true
+    
+    # 磁盘空间检查配置
+    disk:
+      # 目标检查目录
+      target-dir: /opt
+      # 检查目录列表
+      check-directories:
+        - path: /opt
+          min-available-gb: 100
+        - path: /var/log
+          min-available-gb: 50
+        - path: /tmp
+          min-available-gb: 30
+      # 全局最小可用空间百分比
+      min-available-percent: 20
+    
+    # 文件句柄数配置
+    file-handle:
+      min-limit: 65535
+    
+    # 时间同步配置
+    time-sync:
+      # 最大允许时间偏差(秒)
+      max-time-diff: 10
+    
+    # 用户和组检查配置
+    user-group:
+      # 是否自动创建不存在的用户和组
+      auto-create: true
+      # 默认用户组映射，当用户不存在时根据此映射创建
+      default-group-mappings:
+        hdfs: hadoop
+        yarn: hadoop
+        hbase: hadoop
+        hive: hadoop
+        spark: hadoop
+        kafka: hadoop
+        mapred: hadoop 
