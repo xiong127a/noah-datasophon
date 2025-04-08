@@ -7,8 +7,8 @@ datasophon:
       versions: DDP-1.2.1
       # 元数据基础目录
       # 开发环境默认使用 classpath:meta
-      # 生产环境默认使用 ${user.dir}/meta
-      base-dir: ${META_BASE_DIR:${user.dir}/meta}
+      # 生产环境默认使用 ${user.dir}/conf/meta
+      base-dir: ${META_BASE_DIR:${user.dir}/conf/meta}
     
     # CPU检查配置
     cpu:
