@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.memory;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
@@ -8,20 +9,33 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MemoryChecker extends AbstractItemChecker {
 
         private static final Logger logger = LoggerFactory.getLogger(MemoryChecker.class);
-        private static final int MIN_AVAILABLE_MEMORY_GB = 16; // 最小可用内存要求
+
+        @Autowired
+        private CheckerProperties checkerProperties;
 
         @Override
         protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
                 try {
+                        // 从配置中获取内存要求
+                        int minMemoryMB = checkerProperties.getMemory().getMinMemory();
+                        int recommendedMemoryMB = checkerProperties.getMemory().getRecommendedMemory();
+                        int minSwapMB = checkerProperties.getMemory().getMinSwap();
+
+                        // 转换为GB用于显示
+                        double minMemoryGB = minMemoryMB / 1024.0;
+
                         cacheLog.info("==== 内存检查开始 ====");
                         cacheLog.info("主机: " + hostInfo.getIp());
-                        cacheLog.info("最小可用内存要求: " + MIN_AVAILABLE_MEMORY_GB + "GB");
+                        cacheLog.info("最小可用内存要求: " + minMemoryGB + "GB (" + minMemoryMB + "MB)");
+                        cacheLog.info("建议内存: " + (recommendedMemoryMB / 1024.0) + "GB (" + recommendedMemoryMB + "MB)");
+                        cacheLog.info("最小交换区: " + (minSwapMB / 1024.0) + "GB (" + minSwapMB + "MB)");
 
                         // 更新状态为正在检查内存
                         setCheckItemMessage(hostInfo, checkItem, "正在检查内存情况...");
@@ -101,16 +115,17 @@ public class MemoryChecker extends AbstractItemChecker {
                                                                 totalGB, usedGB, freeGB, availableGB));
 
                                                 // 检查是否满足最低内存要求
-                                                boolean memoryCheckPassed = (availableGB >= MIN_AVAILABLE_MEMORY_GB);
+                                                boolean memoryCheckPassed = (availableKb / 1024.0 >= minMemoryMB);
                                                 cacheLog.info("可用内存检查 " + (memoryCheckPassed ? "通过" : "未通过") + ": "
-                                                                + availableGB + "GB >= " + MIN_AVAILABLE_MEMORY_GB
-                                                                + "GB: "
+                                                                + (availableKb / 1024.0) + "MB >= " + minMemoryMB
+                                                                + "MB: "
                                                                 + memoryCheckPassed);
 
                                                 // 构建HTML显示内容
                                                 StringBuilder htmlBuilder = buildMemoryHtml(hostInfo, checkItem,
                                                                 totalGB, usedGB, freeGB, availableGB,
-                                                                memoryCheckPassed);
+                                                                memoryCheckPassed, minMemoryGB,
+                                                                recommendedMemoryMB / 1024.0);
 
                                                 // 设置检查结果
                                                 if (memoryCheckPassed) {
@@ -241,121 +256,15 @@ public class MemoryChecker extends AbstractItemChecker {
                                 return checkItem;
                         }
 
-                        // 格式化为1位小数
-                        String totalMemGBStr = String.format("%.1f", totalGB);
-                        String usedMemGBStr = String.format("%.1f", usedGB);
-                        String freeMemGBStr = String.format("%.1f", freeGB);
-                        String availableMemGBStr = String.format("%.1f", availableGB);
+                        // 检查是否满足最低内存要求
+                        boolean memoryCheckPassed = (availableGB >= minMemoryGB);
+                        cacheLog.info("可用内存检查 " + (memoryCheckPassed ? "通过" : "未通过") + ": "
+                                        + availableGB + "GB >= " + minMemoryGB + "GB: " + memoryCheckPassed);
 
-                        // 计算内存使用率百分比
-                        int memUsagePercent = (int) Math.round((usedGB * 100.0) / totalGB);
-
-                        cacheLog.info(String.format("总内存: %.1fGB, 已用: %.1fGB, 空闲: %.1fGB, 可用: %.1fGB",
-                                        totalGB, usedGB, freeGB, availableGB));
-
-                        // 更新状态为正在检查swap使用情况
-                        setCheckItemMessage(hostInfo, checkItem, "正在检查swap使用情况...");
-
-                        // 获取swap使用情况
-                        cacheLog.info("检查swap使用情况...");
-                        CommandResult swapResult = execCommand(session, "free -m | grep -E 'Swap|交换'");
-
-                        double totalSwapGB = 0.0;
-                        double usedSwapGB = 0.0;
-                        boolean swapParsed = false;
-
-                        // 尝试处理Swap信息
-                        try {
-                                if (swapResult.isSuccess() && !swapResult.getOutput().trim().isEmpty()) {
-                                        String[] swapParts = swapResult.getOutput().trim().split("\\s+");
-
-                                        // 识别Swap行格式
-                                        int swapStartIdx = 0;
-                                        // 跳过非数字列，如"Swap:"或"交换："
-                                        while (swapStartIdx < swapParts.length && !isNumeric(swapParts[swapStartIdx])) {
-                                                swapStartIdx++;
-                                        }
-
-                                        if (swapStartIdx < swapParts.length && swapStartIdx + 2 < swapParts.length) {
-                                                int totalSwapMB = Integer.parseInt(swapParts[swapStartIdx]);
-                                                int usedSwapMB = Integer.parseInt(swapParts[swapStartIdx + 1]);
-
-                                                totalSwapGB = totalSwapMB / 1024.0;
-                                                usedSwapGB = usedSwapMB / 1024.0;
-                                                swapParsed = true;
-
-                                                cacheLog.info(String.format("成功解析Swap信息: 总Swap=%.2fGB, 已用=%.2fGB",
-                                                                totalSwapGB, usedSwapGB));
-                                        }
-                                }
-                        } catch (Exception e) {
-                                cacheLog.warn("解析Swap信息失败: " + e.getMessage());
-                        }
-
-                        // 如果Swap解析失败，尝试从/proc/swaps获取
-                        if (!swapParsed) {
-                                try {
-                                        CommandResult swapsResult = execCommand(session,
-                                                        "cat /proc/swaps | grep -v Filename");
-                                        if (swapsResult.isSuccess() && !swapsResult.getOutput().trim().isEmpty()) {
-                                                // 有swap分区
-                                                totalSwapGB = 0.0;
-                                                usedSwapGB = 0.0;
-
-                                                String[] swapLines = swapsResult.getOutput().trim().split("\n");
-                                                for (String line : swapLines) {
-                                                        String[] swapInfo = line.trim().split("\\s+");
-                                                        if (swapInfo.length >= 4) {
-                                                                try {
-                                                                        double swapSizeKB = Double
-                                                                                        .parseDouble(swapInfo[2]);
-                                                                        double swapUsedKB = Double
-                                                                                        .parseDouble(swapInfo[3]);
-
-                                                                        totalSwapGB += swapSizeKB / 1024.0 / 1024.0;
-                                                                        usedSwapGB += swapUsedKB / 1024.0 / 1024.0;
-                                                                } catch (NumberFormatException e) {
-                                                                        cacheLog.warn("解析/proc/swaps行失败: " + line);
-                                                                }
-                                                        }
-                                                }
-                                                swapParsed = true;
-                                                cacheLog.info(String.format("从/proc/swaps解析: 总Swap=%.2fGB, 已用=%.2fGB",
-                                                                totalSwapGB, usedSwapGB));
-                                        } else {
-                                                // 无swap分区
-                                                totalSwapGB = 0.0;
-                                                usedSwapGB = 0.0;
-                                                swapParsed = true;
-                                                cacheLog.info("系统未配置Swap分区");
-                                        }
-                                } catch (Exception e) {
-                                        cacheLog.warn("检查/proc/swaps失败: " + e.getMessage());
-                                }
-                        }
-
-                        String totalSwapGBStr = String.format("%.1f", totalSwapGB);
-                        String usedSwapGBStr = String.format("%.1f", usedSwapGB);
-
-                        // 计算Swap使用率百分比
-                        int swapUsagePercent = totalSwapGB > 0 ? (int) Math.round((usedSwapGB * 100.0) / totalSwapGB)
-                                        : 0;
-
-                        cacheLog.info(String.format("Swap总量: %.1fGB, 已用: %.1fGB", totalSwapGB, usedSwapGB));
-
-                        // 更新状态为正在分析内存状态
-                        setCheckItemMessage(hostInfo, checkItem, "正在分析内存状态...");
-
-                        // 检查结果 - 主要检查可用内存是否足够
-                        boolean availableMemorySufficient = availableGB >= MIN_AVAILABLE_MEMORY_GB;
-                        boolean swapUsageNormal = totalSwapGB == 0 || (usedSwapGB / totalSwapGB <= 0.5); // swap使用率阈值50%
-
-                        // 最终检查结果
-                        boolean memoryCheckPassed = availableMemorySufficient; // && swapUsageNormal;
-
-                        // 构建HTML显示
-                        StringBuilder htmlBuilder = buildMemoryHtml(hostInfo, checkItem, totalGB, usedGB, freeGB,
-                                        availableGB, memoryCheckPassed);
+                        // 构建HTML显示内容
+                        StringBuilder htmlBuilder = buildMemoryHtml(hostInfo, checkItem,
+                                        totalGB, usedGB, freeGB, availableGB, memoryCheckPassed,
+                                        minMemoryGB, recommendedMemoryMB / 1024.0);
 
                         // 设置检查结果
                         if (memoryCheckPassed) {
@@ -370,88 +279,77 @@ public class MemoryChecker extends AbstractItemChecker {
 
                         return checkItem;
                 } catch (Exception e) {
+                        logger.error("内存检查失败: " + e.getMessage(), e);
+                        cacheLog.error("内存检查失败: " + e.getMessage());
                         checkItem.setStatus(CheckItem.Status.FAILED);
-                        checkItem.setMessage("处理内存信息时出错: " + e.getMessage());
-                        cacheLog.error("处理内存信息时出错: %s", e.getMessage());
+                        checkItem.setMessage("内存检查失败: " + e.getMessage());
                         return checkItem;
                 }
         }
 
-        // 构建内存检查HTML显示
+        /**
+         * 构建内存HTML显示内容
+         */
         private StringBuilder buildMemoryHtml(HostInfo hostInfo, CheckItem checkItem, double totalGB, double usedGB,
-                        double freeGB, double availableGB, boolean memoryCheckPassed) {
+                        double freeGB, double availableGB, boolean memoryCheckPassed,
+                        double minMemoryGB, double recommendedMemoryGB) {
                 StringBuilder htmlBuilder = new StringBuilder();
-                htmlBuilder.append("<div style='line-height:1.6'>");
-
-                if (memoryCheckPassed) {
-                        htmlBuilder.append(
-                                        "<h3 style='color:#52c41a;margin-bottom:10px'>内存配置检查通过</h3>");
-                } else {
-                        htmlBuilder.append(
-                                        "<h3 style='color:#f5222d;margin-bottom:10px'>内存配置检查未通过</h3>");
-                }
-
-                // 主机信息部分
-                htmlBuilder.append("<div style='margin-bottom:15px'>");
-                htmlBuilder.append("<p><strong>主机:</strong> <span style='color:#1890ff;font-weight:bold'>"
-                                + hostInfo.getIp() + "</span></p>");
-                htmlBuilder.append("<p><strong>IP地址:</strong> <span style='color:#1890ff;font-weight:bold'>"
-                                + hostInfo.getIp() + "</span></p>");
-                htmlBuilder.append("<p><strong>检查时间:</strong> <span style='color:#8c8c8c;font-weight:bold'>"
-                                + getCurrentTime() + "</span></p>");
-                htmlBuilder.append("</div>");
 
                 // 内存详情部分
-                htmlBuilder.append("<div style='margin-bottom:15px'>");
-                htmlBuilder.append("<p><strong>总内存:</strong> <span style='color:#1890ff;font-weight:bold'>"
-                                + String.format("%.2f", totalGB) + "GB</span></p>");
-                htmlBuilder.append("<p><strong>已用内存:</strong> <span style='color:"
-                                + (usedGB / totalGB > 0.8 ? "#f5222d" : "#52c41a") + ";font-weight:bold'>"
-                                + String.format("%.2f", usedGB) + "GB ("
-                                + String.format("%.1f", (usedGB * 100.0 / totalGB)) + "%)</span></p>");
+                htmlBuilder.append(HtmlStyleHelper.beginGroup());
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("总内存", String.format("%.2f GB", totalGB),
+                                HtmlStyleHelper.Colors.INFO));
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("已用内存", String.format("%.2f GB", usedGB),
+                                HtmlStyleHelper.Colors.GRAY));
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("空闲内存", String.format("%.2f GB", freeGB),
+                                HtmlStyleHelper.Colors.GRAY));
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("可用内存", String.format("%.2f GB", availableGB),
+                                availableGB < minMemoryGB ? HtmlStyleHelper.Colors.ERROR
+                                                : availableGB < recommendedMemoryGB ? HtmlStyleHelper.Colors.WARNING
+                                                                : HtmlStyleHelper.Colors.SUCCESS));
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("最小要求", String.format("%.2f GB", minMemoryGB),
+                                HtmlStyleHelper.Colors.INFO));
+                htmlBuilder.append(HtmlStyleHelper.generatePropertyRow("建议配置",
+                                String.format("%.2f GB", recommendedMemoryGB),
+                                HtmlStyleHelper.Colors.INFO));
+                htmlBuilder.append(HtmlStyleHelper.endGroup());
 
-                htmlBuilder.append("<p><strong>可用内存:</strong> <span style='color:"
-                                + (availableGB >= MIN_AVAILABLE_MEMORY_GB ? "#52c41a" : "#f5222d")
-                                + ";font-weight:bold'>" + String.format("%.2f", availableGB)
-                                + "GB</span> (最低要求: <span style='color:#1890ff;font-weight:bold'>"
-                                + MIN_AVAILABLE_MEMORY_GB + "GB</span>)</p>");
+                // 使用率可视化
+                double memoryUsagePercent = (usedGB / totalGB) * 100;
+                htmlBuilder.append(HtmlStyleHelper.beginGroup());
+                htmlBuilder.append("<p><strong>内存使用率: </strong>"
+                                + String.format("%.1f%%", memoryUsagePercent) + "</p>");
+                htmlBuilder.append(HtmlStyleHelper.generateProgressBar((int) memoryUsagePercent,
+                                memoryUsagePercent > 80 ? "danger"
+                                                : memoryUsagePercent > 60 ? "warning" : "success",
+                                String.format("%.1f%%", memoryUsagePercent)));
+                htmlBuilder.append(HtmlStyleHelper.endGroup());
 
-                htmlBuilder.append("<p><strong>内存占用率:</strong></p>");
-                int memUsagePercent = (int) Math.round((usedGB * 100.0) / totalGB);
-                htmlBuilder.append(HtmlStyleHelper.createProgressBar(memUsagePercent, memUsagePercent > 80));
-                htmlBuilder.append("</div>");
-
-                // 结果总结部分
+                // 检查结论
                 if (memoryCheckPassed) {
-                        htmlBuilder.append(
-                                        "<div style='background:#f6ffed;border-left:4px solid #52c41a;padding:10px;border-radius:0 4px 4px 0;margin-top:10px'>");
-                        htmlBuilder.append(
-                                        "<p style='margin:0;color:#52c41a;font-weight:bold'>内存检查通过</p>");
-                        htmlBuilder.append(
-                                        "<p style='margin-top:5px;margin-bottom:0;'>内存配置充足，可以正常运行系统和应用程序。可用内存 "
-                                                        + String.format("%.2f", availableGB) + "GB 满足最低要求 "
-                                                        + MIN_AVAILABLE_MEMORY_GB + "GB。</p>");
+                        htmlBuilder.append(HtmlStyleHelper.generateSuccessAlert("内存检查通过",
+                                        "系统可用内存充足，可以满足正常运行需求"));
                 } else {
-                        htmlBuilder.append(
-                                        "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;margin-top:10px'>");
-                        htmlBuilder.append(
-                                        "<p style='margin:0;color:#f5222d;font-weight:bold'>内存检查未通过</p>");
-                        htmlBuilder.append("<p style='margin-top:5px;margin-bottom:0;'>可用内存不足。系统当前可用内存为 "
-                                        + String.format("%.2f", availableGB) + "GB，不满足最低要求 "
-                                        + MIN_AVAILABLE_MEMORY_GB + "GB。</p>");
-                }
-                htmlBuilder.append("</div>");
+                        StringBuilder warningMsg = new StringBuilder();
+                        warningMsg.append("系统可用内存为 ")
+                                        .append(String.format("%.2f GB", availableGB))
+                                        .append("，低于最低要求的 ")
+                                        .append(String.format("%.2f GB", minMemoryGB));
+                        warningMsg.append("，建议增加至少 ")
+                                        .append(String.format("%.2f GB", recommendedMemoryGB - availableGB))
+                                        .append(" 内存以确保系统正常运行。");
 
-                htmlBuilder.append("</div>");
+                        htmlBuilder.append(HtmlStyleHelper.generateWarningAlert("内存检查未通过", warningMsg.toString()));
+                }
 
                 return htmlBuilder;
         }
 
-        // 辅助方法：检查字符串是否可以解析为数字
         private boolean isNumeric(String str) {
                 if (str == null || str.isEmpty()) {
                         return false;
                 }
+
                 try {
                         Double.parseDouble(str);
                         return true;

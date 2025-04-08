@@ -9,6 +9,8 @@ security:
     type: PASSWORD
 # mysql
 spring:
+  config:
+    import: classpath:checker-config.yml
   datasource:
     driver-class-name: ${datasource.driver:com.mysql.cj.jdbc.Driver}
     type: com.alibaba.druid.pool.DruidDataSource

@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.disk;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.checkers.disk.factory.DiskCheckerFactory;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
@@ -13,12 +14,15 @@ import org.apache.sshd.client.channel.ClientChannelEvent;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.datasophon.common.enums.OsDistribution;
 
 import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 磁盘检查器
@@ -29,6 +33,9 @@ import java.util.concurrent.TimeUnit;
 public class DiskChecker extends AbstractItemChecker {
 
     private static final Logger log = LoggerFactory.getLogger(DiskChecker.class);
+
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     /** 要检查的目标目录 */
     public static final String TARGET_DIR = "/opt";
@@ -41,6 +48,31 @@ public class DiskChecker extends AbstractItemChecker {
 
     /** 最小所需磁盘空间（GB） */
     public static final long MIN_DISK_SPACE_GB = 100;
+
+    /**
+     * 获取目标目录的最小可用空间配置
+     * 
+     * @return 指定目录的最小可用空间GB
+     */
+    public int getMinAvailableSpace(String directory) {
+        List<CheckerProperties.DiskDirectoryConfig> checkDirectories = checkerProperties.getDisk()
+                .getCheckDirectories();
+
+        Optional<CheckerProperties.DiskDirectoryConfig> dirConfig = checkDirectories.stream()
+                .filter(config -> directory.equals(config.getPath()))
+                .findFirst();
+
+        return dirConfig.isPresent() ? dirConfig.get().getMinAvailableGb() : (int) MIN_DISK_SPACE_GB; // 如果配置不存在，使用默认值
+    }
+
+    /**
+     * 获取全局最小可用空间百分比
+     * 
+     * @return 全局最小可用空间百分比
+     */
+    public int getMinAvailablePercent() {
+        return checkerProperties.getDisk().getMinAvailablePercent();
+    }
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {

@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.cpu;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
@@ -8,20 +9,28 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CpuChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(CpuChecker.class);
-    private static final int MIN_CPU_CORES = 4;
+
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
+            // 从配置中获取CPU核心数要求
+            int minCpuCores = checkerProperties.getCpu().getMinCores();
+            int recommendedCpuCores = checkerProperties.getCpu().getRecommendedCores();
+
             cacheLog.info("==== CPU检查开始 ====");
             cacheLog.info("主机: " + hostInfo.getIp());
-            cacheLog.info("最小CPU核心数要求: " + MIN_CPU_CORES);
+            cacheLog.info("最小CPU核心数要求: " + minCpuCores);
+            cacheLog.info("建议CPU核心数: " + recommendedCpuCores);
 
             // 更新状态为正在检查CPU核心数
             setCheckItemMessage(hostInfo, checkItem, "正在检查CPU核心数...");
@@ -198,7 +207,7 @@ public class CpuChecker extends AbstractItemChecker {
             setCheckItemMessage(hostInfo, checkItem, "正在分析CPU状态...");
 
             // 检查结果
-            boolean cpuSufficient = cpuCores >= MIN_CPU_CORES;
+            boolean cpuSufficient = cpuCores >= minCpuCores;
             boolean loadNormal = load5 < cpuCores;
             boolean usageNormal = cpuUsage < 90.0;
 
@@ -243,7 +252,7 @@ public class CpuChecker extends AbstractItemChecker {
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 String coreColor = cpuSufficient ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRowWithThreshold(
-                        "CPU核心数", String.valueOf(cpuCores), coreColor, MIN_CPU_CORES, "核"));
+                        "CPU核心数", String.valueOf(cpuCores), coreColor, minCpuCores, "核"));
 
                 // 负载信息组
                 String loadColor = loadNormal ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR;
@@ -260,7 +269,7 @@ public class CpuChecker extends AbstractItemChecker {
                 // 添加警告信息
                 StringBuilder warningMsg = new StringBuilder();
                 if (!cpuSufficient) {
-                    warningMsg.append(String.format("CPU核心数(%d)小于最低要求(%d)<br>", cpuCores, MIN_CPU_CORES));
+                    warningMsg.append(String.format("CPU核心数(%d)小于最低要求(%d)<br>", cpuCores, minCpuCores));
                 }
                 if (!loadNormal) {
                     warningMsg.append(String.format("CPU负载(%.2f)高于核心数(%d)<br>", load5, cpuCores));

@@ -12,7 +12,8 @@ public enum ItemCode {
     FILE_HANDLE("FILE_HANDLE", "最大文件句柄数检查", 6, false, null),
     FIREWALL("FIREWALL", "防火墙检查", 7, false, null),
     SELINUX("SELINUX", "SELinux检查", 8, false, null),
-    TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null);
+    TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null),
+    USER_GROUP_CHECK("USER_GROUP_CHECK", "用户和组检查", 10, false, null);
 
     private final String code;
     private final String name;

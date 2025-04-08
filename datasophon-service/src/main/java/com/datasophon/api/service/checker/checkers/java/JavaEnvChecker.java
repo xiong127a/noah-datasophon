@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.java;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.Constants;
@@ -9,6 +10,7 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import com.datasophon.api.utils.MinaUtils;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
@@ -17,8 +19,9 @@ import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 public class JavaEnvChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaEnvChecker.class);
-    private static final String MIN_JAVA_VERSION = "1.8";
-    private static final String DEFAULT_JDK_PATH = "/usr/local/jdk1.8.0_333";
+
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     // 保存Java版本的原始输出
     private String javaVersionRawOutput = "";
@@ -26,15 +29,33 @@ public class JavaEnvChecker extends AbstractItemChecker {
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) throws InterruptedException {
         try {
+            // 从配置中获取Java版本和路径
+            String minJavaVersion = checkerProperties.getJava().getMinVersion();
+            String defaultJdkPath = checkerProperties.getJava().getDefaultPath();
+            boolean checkDefaultPath = checkerProperties.getJava().isCheckDefaultPath();
+
             cacheLog.info("==== 专用Java环境检查开始 ====");
             cacheLog.info("主机: " + hostInfo.getIp());
-            cacheLog.info("专用JDK路径: " + DEFAULT_JDK_PATH);
+            cacheLog.info("专用JDK路径: " + defaultJdkPath);
+            cacheLog.info("要求的最低Java版本: " + minJavaVersion);
+
+            // 如果配置不要求检查默认路径，则直接返回成功
+            if (!checkDefaultPath) {
+                cacheLog.info("配置设置不检查默认JDK路径，跳过此检查");
+                checkItem.setStatus(CheckItem.Status.SUCCESS);
+                StringBuilder detailsBuilder = new StringBuilder();
+                detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
+                        "已跳过专用Java环境检查",
+                        "根据配置，已跳过对默认JDK路径的检查"));
+                setStyledHtmlMessage(hostInfo, checkItem, true, "已跳过专用Java环境检查", detailsBuilder);
+                return checkItem;
+            }
 
             // 步骤1: 检查默认JDK路径是否存在
             cacheLog.info("\n步骤1: 检查专用JDK路径是否存在");
-            logger.info("检查主机 {} 的专用JDK路径 {}", hostInfo.getIp(), DEFAULT_JDK_PATH);
+            logger.info("检查主机 {} 的专用JDK路径 {}", hostInfo.getIp(), defaultJdkPath);
 
-            String jdkPathExistsCmd = "[ -d " + DEFAULT_JDK_PATH + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
+            String jdkPathExistsCmd = "[ -d " + defaultJdkPath + " ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
             cacheLog.info("执行检查命令: " + jdkPathExistsCmd);
 
             CommandResult jdkPathResult = execCommand(session, jdkPathExistsCmd);
@@ -44,7 +65,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             if (!jdkPathExists) {
                 // JDK路径不存在
                 cacheLog.info("\n==== 专用Java环境检查未通过 ====");
-                cacheLog.info("未找到专用JDK路径: " + DEFAULT_JDK_PATH);
+                cacheLog.info("未找到专用JDK路径: " + defaultJdkPath);
                 checkItem.setStatus(CheckItem.Status.FAILED);
 
                 // 创建HTML详细信息构建器
@@ -53,14 +74,14 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 添加错误信息
                 detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
                         "未检测到专用Java环境",
-                        "未找到指定的JDK路径: " + DEFAULT_JDK_PATH));
+                        "未找到指定的JDK路径: " + defaultJdkPath));
 
                 // 添加修复建议
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append("<p><strong>修复建议:</strong></p>");
                 detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
                 detailsBuilder.append("<li>点击本检查项的修复按钮，系统将自动安装专用JDK</li>");
-                detailsBuilder.append("<li>或手动安装JDK到指定路径: " + DEFAULT_JDK_PATH + "</li>");
+                detailsBuilder.append("<li>或手动安装JDK到指定路径: " + defaultJdkPath + "</li>");
                 detailsBuilder.append("</ol>");
                 detailsBuilder.append(HtmlStyleHelper.endGroup());
 
@@ -73,7 +94,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("\n步骤2: 检查专用JDK路径的Java可执行性");
             logger.info("主机 {} 存在专用JDK路径，检查Java可执行性", hostInfo.getIp());
 
-            String javaExecutableCmd = "[ -f " + DEFAULT_JDK_PATH
+            String javaExecutableCmd = "[ -f " + defaultJdkPath
                     + "/bin/java ] && echo 'EXECUTABLE' || echo 'NOT_EXECUTABLE'";
             cacheLog.info("执行检查命令: " + javaExecutableCmd);
 
@@ -85,7 +106,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             if (!javaExecutable) {
                 // Java可执行文件不存在
                 cacheLog.info("\n==== 专用Java环境检查未通过 ====");
-                cacheLog.info("专用JDK路径中未找到可执行的Java: " + DEFAULT_JDK_PATH + "/bin/java");
+                cacheLog.info("专用JDK路径中未找到可执行的Java: " + defaultJdkPath + "/bin/java");
                 checkItem.setStatus(CheckItem.Status.FAILED);
 
                 // 创建HTML详细信息构建器
@@ -99,8 +120,8 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 添加检查结果
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append(
-                        HtmlStyleHelper.generatePropertyRow("JDK路径", DEFAULT_JDK_PATH, HtmlStyleHelper.Colors.SUCCESS));
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("Java可执行文件", DEFAULT_JDK_PATH + "/bin/java",
+                        HtmlStyleHelper.generatePropertyRow("JDK路径", defaultJdkPath, HtmlStyleHelper.Colors.SUCCESS));
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("Java可执行文件", defaultJdkPath + "/bin/java",
                         HtmlStyleHelper.Colors.ERROR));
                 detailsBuilder.append(HtmlStyleHelper.endGroup());
 
@@ -122,7 +143,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("\n步骤3: 检查专用JDK的Java版本");
             logger.info("主机 {} 的专用JDK路径Java可执行，检查版本", hostInfo.getIp());
 
-            String javaVersionCmd = DEFAULT_JDK_PATH + "/bin/java -version 2>&1";
+            String javaVersionCmd = defaultJdkPath + "/bin/java -version 2>&1";
             cacheLog.info("执行检查命令: " + javaVersionCmd);
 
             CommandResult javaVersionResult = execCommand(session, javaVersionCmd);
@@ -168,13 +189,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
             cacheLog.info("专用JDK Java版本: " + version);
 
             // 检查版本是否符合要求
-            boolean versionMeetRequirement = isVersionMeetRequirement(version, MIN_JAVA_VERSION);
+            boolean versionMeetRequirement = isVersionMeetRequirement(version, minJavaVersion);
             cacheLog.info("版本检查结果: " + (versionMeetRequirement ? "符合要求" : "不符合要求"));
 
             if (!versionMeetRequirement) {
                 // 版本不符合要求
                 cacheLog.info("\n==== 专用Java环境检查未通过 ====");
-                cacheLog.info("专用Java版本不符合要求: " + version + " (需要 " + MIN_JAVA_VERSION + " 或更高版本)");
+                cacheLog.info("专用Java版本不符合要求: " + version + " (需要 " + minJavaVersion + " 或更高版本)");
                 checkItem.setStatus(CheckItem.Status.FAILED);
 
                 // 创建HTML详细信息构建器
@@ -192,13 +213,13 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 添加错误信息
                 detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
                         "Java版本不符合要求",
-                        "当前版本 " + shortVersion + " 低于要求的最低版本 " + MIN_JAVA_VERSION));
+                        "当前版本 " + shortVersion + " 低于要求的最低版本 " + minJavaVersion));
 
                 // 添加版本信息
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append(
                         HtmlStyleHelper.generatePropertyRow("当前版本", shortVersion, HtmlStyleHelper.Colors.ERROR));
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("要求版本", "≥ " + MIN_JAVA_VERSION,
+                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("要求版本", "≥ " + minJavaVersion,
                         HtmlStyleHelper.Colors.INFO));
                 detailsBuilder.append("<p><strong>版本详情:</strong></p>");
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(fullVersionDetails));
@@ -220,7 +241,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 所有检查通过
             cacheLog.info("\n==== 专用Java环境检查通过 ====");
-            cacheLog.info("专用JDK路径正常，版本: " + version + ", 路径: " + DEFAULT_JDK_PATH);
+            cacheLog.info("专用JDK路径正常，版本: " + version + ", 路径: " + defaultJdkPath);
             checkItem.setStatus(CheckItem.Status.SUCCESS);
 
             // 创建HTML详细信息构建器
@@ -229,7 +250,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             // 添加JDK路径信息
             detailsBuilder.append(HtmlStyleHelper.beginGroup());
             detailsBuilder.append(
-                    HtmlStyleHelper.generatePropertyRow("JDK路径", DEFAULT_JDK_PATH, HtmlStyleHelper.Colors.SUCCESS));
+                    HtmlStyleHelper.generatePropertyRow("JDK路径", defaultJdkPath, HtmlStyleHelper.Colors.SUCCESS));
 
             // 添加Java版本信息
             String shortVersion = version;
@@ -249,7 +270,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 添加版本兼容性信息
             detailsBuilder.append(
-                    HtmlStyleHelper.generatePropertyRow("版本要求", "≥ " + MIN_JAVA_VERSION, HtmlStyleHelper.Colors.INFO));
+                    HtmlStyleHelper.generatePropertyRow("版本要求", "≥ " + minJavaVersion, HtmlStyleHelper.Colors.INFO));
             detailsBuilder.append(HtmlStyleHelper.endGroup());
 
             // 添加成功信息
@@ -278,7 +299,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             hostInfo.setProgress(60);
             logger.info("开始修复主机 {} 的专用Java环境", hostInfo.getIp());
             cacheLog.info("==== 开始修复专用Java环境 ====");
-            cacheLog.info("目标JDK路径: " + DEFAULT_JDK_PATH);
+            cacheLog.info("目标JDK路径: " + checkerProperties.getJava().getDefaultPath());
 
             // 检查系统架构
             CommandResult archResult = execCommand(session, "arch");
@@ -288,16 +309,18 @@ public class JavaEnvChecker extends AbstractItemChecker {
 
             // 检查JDK目录是否存在
             CommandResult testResult = execCommand(session,
-                    "test -d " + DEFAULT_JDK_PATH + " && echo 'success' || echo 'failed'");
+                    "test -d " + checkerProperties.getJava().getDefaultPath() + " && echo 'success' || echo 'failed'");
             boolean exists = testResult.isSuccess() && "success".equals(testResult.getOutput().trim());
 
             if (exists) {
                 // 目录已存在，检查是否需要重新安装
-                cacheLog.info("专用JDK目录已存在: " + DEFAULT_JDK_PATH);
+                cacheLog.info("专用JDK目录已存在: " + checkerProperties.getJava().getDefaultPath());
                 cacheLog.info("检查Java可执行性");
 
-                CommandResult executableTest = execCommand(session, "test -f " + DEFAULT_JDK_PATH + "/bin/java && "
-                        + DEFAULT_JDK_PATH + "/bin/java -version 2>/dev/null && echo 'success' || echo 'failed'");
+                CommandResult executableTest = execCommand(session,
+                        "test -f " + checkerProperties.getJava().getDefaultPath() + "/bin/java && "
+                                + checkerProperties.getJava().getDefaultPath()
+                                + "/bin/java -version 2>/dev/null && echo 'success' || echo 'failed'");
                 boolean javaExecutable = executableTest.isSuccess()
                         && "success".equals(executableTest.getOutput().trim());
 
@@ -321,7 +344,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 cacheLog.info("专用JDK目录存在但Java不可执行，将重新安装");
 
                 // 删除旧目录
-                CommandResult rmResult = execCommand(session, "rm -rf " + DEFAULT_JDK_PATH);
+                CommandResult rmResult = execCommand(session, "rm -rf " + checkerProperties.getJava().getDefaultPath());
                 if (!rmResult.isSuccess()) {
                     logger.error("删除旧JDK目录失败: {}", rmResult.getErrorOrOutput());
                     cacheLog.error("删除旧JDK目录失败: " + rmResult.getErrorOrOutput());
@@ -424,8 +447,10 @@ public class JavaEnvChecker extends AbstractItemChecker {
             }
 
             // 验证JDK安装是否成功
-            CommandResult verifyResult = execCommand(session, "test -d " + DEFAULT_JDK_PATH + " && test -f "
-                    + DEFAULT_JDK_PATH + "/bin/java && echo 'success' || echo 'failed'");
+            CommandResult verifyResult = execCommand(session,
+                    "test -d " + checkerProperties.getJava().getDefaultPath() + " && test -f "
+                            + checkerProperties.getJava().getDefaultPath()
+                            + "/bin/java && echo 'success' || echo 'failed'");
             if (verifyResult.isSuccess() && "success".equals(verifyResult.getOutput().trim())) {
                 logger.info("主机 {} 的专用JDK安装验证成功", hostInfo.getIp());
                 cacheLog.info("专用JDK安装验证成功");
@@ -437,7 +462,8 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 添加安装信息
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append(
-                        HtmlStyleHelper.generatePropertyRow("安装路径", DEFAULT_JDK_PATH, HtmlStyleHelper.Colors.SUCCESS));
+                        HtmlStyleHelper.generatePropertyRow("安装路径", checkerProperties.getJava().getDefaultPath(),
+                                HtmlStyleHelper.Colors.SUCCESS));
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRow("架构", arch, HtmlStyleHelper.Colors.INFO));
                 detailsBuilder.append(
                         HtmlStyleHelper.generatePropertyRow("JDK版本", "Java 8u333", HtmlStyleHelper.Colors.SUCCESS));
@@ -456,7 +482,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 // 添加成功提示
                 detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
                         "专用Java环境安装成功",
-                        "专用JDK已成功安装到" + DEFAULT_JDK_PATH + "，系统已可以正常使用该环境"));
+                        "专用JDK已成功安装到" + checkerProperties.getJava().getDefaultPath() + "，系统已可以正常使用该环境"));
 
                 // 设置HTML格式化消息
                 setStyledHtmlMessage(hostInfo, checkItem, true, "专用Java环境修复成功", detailsBuilder);
@@ -524,7 +550,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
                 detailsBuilder.append(HtmlStyleHelper.beginGroup());
                 detailsBuilder.append("<p><strong>手动修复建议:</strong></p>");
                 detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                detailsBuilder.append("<li>确保目标路径可写入: " + DEFAULT_JDK_PATH + "</li>");
+                detailsBuilder.append("<li>确保目标路径可写入: " + checkerProperties.getJava().getDefaultPath() + "</li>");
                 detailsBuilder.append("<li>确保系统有足够的磁盘空间</li>");
                 detailsBuilder.append("<li>手动下载并安装JDK到指定路径</li>");
                 detailsBuilder.append("</ol>");
@@ -585,7 +611,7 @@ public class JavaEnvChecker extends AbstractItemChecker {
             detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
             detailsBuilder.append("<li>检查系统日志获取更多错误信息</li>");
             detailsBuilder.append("<li>确保网络连接正常</li>");
-            detailsBuilder.append("<li>尝试手动安装JDK到: " + DEFAULT_JDK_PATH + "</li>");
+            detailsBuilder.append("<li>尝试手动安装JDK到: " + checkerProperties.getJava().getDefaultPath() + "</li>");
             detailsBuilder.append("</ol>");
             detailsBuilder.append(HtmlStyleHelper.endGroup());
 

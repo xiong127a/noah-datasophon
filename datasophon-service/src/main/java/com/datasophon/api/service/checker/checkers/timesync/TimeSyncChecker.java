@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.timesync;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
@@ -8,6 +9,7 @@ import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
@@ -18,14 +20,19 @@ import java.util.TimeZone;
 public class TimeSyncChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(TimeSyncChecker.class);
-    private static final long MAX_TIME_DIFF_SECONDS = 10; // 最大允许的时间差为10秒
+
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
+            // 从配置中获取最大允许时间差
+            int maxTimeDiffSeconds = checkerProperties.getTimeSync().getMaxTimeDiff();
+
             cacheLog.info("==== 时间同步检查开始 ====");
             cacheLog.info("主机: " + hostInfo.getIp());
-            cacheLog.info("最大允许时间差: " + MAX_TIME_DIFF_SECONDS + "秒");
+            cacheLog.info("最大允许时间差: " + maxTimeDiffSeconds + "秒");
 
             // 更新状态为正在获取远程服务器时间
             setCheckItemMessage(hostInfo, checkItem, "正在获取远程服务器时间...");
@@ -74,7 +81,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
 
                 cacheLog.info("时间差: " + diffSeconds + "秒");
 
-                boolean isTimeSynced = diffSeconds <= MAX_TIME_DIFF_SECONDS;
+                boolean isTimeSynced = diffSeconds <= maxTimeDiffSeconds;
 
                 if (isTimeSynced) {
                     checkItem.setStatus(CheckItem.Status.SUCCESS);
@@ -100,10 +107,10 @@ public class TimeSyncChecker extends AbstractItemChecker {
                             : (diffSeconds <= 5 ? HtmlStyleHelper.Colors.CYAN : HtmlStyleHelper.Colors.WARNING);
                     detailsBuilder.append(HtmlStyleHelper.generatePropertyRowWithThreshold(
                             "时间差", diffSeconds + "秒", timeDiffColor,
-                            (int) MAX_TIME_DIFF_SECONDS, "秒"));
+                            maxTimeDiffSeconds, "秒"));
 
                     // 添加时间同步百分比
-                    int syncPercentage = 100 - (int) Math.min(100, (diffSeconds * 100) / MAX_TIME_DIFF_SECONDS);
+                    int syncPercentage = 100 - (int) Math.min(100, (diffSeconds * 100) / maxTimeDiffSeconds);
                     detailsBuilder.append("<p><strong>时间同步度:</strong></p>");
                     detailsBuilder.append(HtmlStyleHelper.generateProgressBar(
                             syncPercentage, HtmlStyleHelper.Colors.SUCCESS, syncPercentage + "%"));
@@ -114,7 +121,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
                             "时间同步检查通过",
                             String.format("服务器时间同步正常，时间差为 %d 秒，小于最大允许差值 %d 秒。",
-                                    diffSeconds, MAX_TIME_DIFF_SECONDS)));
+                                    diffSeconds, maxTimeDiffSeconds)));
 
                     // 设置格式化的HTML消息
                     setStyledHtmlMessage(hostInfo, checkItem, true, "服务器时间同步正常", detailsBuilder);
@@ -142,10 +149,10 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     // 添加时间差信息
                     detailsBuilder.append(HtmlStyleHelper.generatePropertyRowWithThreshold(
                             "时间差", diffSeconds + "秒", HtmlStyleHelper.Colors.ERROR,
-                            (int) MAX_TIME_DIFF_SECONDS, "秒"));
+                            maxTimeDiffSeconds, "秒"));
 
                     // 添加时间同步百分比
-                    int syncPercentage = Math.max(0, 100 - (int) ((diffSeconds * 100) / MAX_TIME_DIFF_SECONDS));
+                    int syncPercentage = Math.max(0, 100 - (int) ((diffSeconds * 100) / maxTimeDiffSeconds));
                     detailsBuilder.append("<p><strong>时间同步度:</strong></p>");
                     detailsBuilder.append(HtmlStyleHelper.generateProgressBar(
                             syncPercentage, HtmlStyleHelper.Colors.ERROR, syncPercentage + "%"));
@@ -156,7 +163,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
                             "时间同步检查未通过",
                             String.format("服务器时间不同步，时间差为 %d 秒，大于最大允许差值 %d 秒。请确保安装并配置NTP服务。",
-                                    diffSeconds, MAX_TIME_DIFF_SECONDS)));
+                                    diffSeconds, maxTimeDiffSeconds)));
 
                     // 设置格式化的HTML消息
                     setStyledHtmlMessage(hostInfo, checkItem, false, "服务器时间不同步", detailsBuilder);
@@ -184,6 +191,9 @@ public class TimeSyncChecker extends AbstractItemChecker {
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
         try {
+            // 从配置中获取最大允许时间差
+            int maxTimeDiffSeconds = checkerProperties.getTimeSync().getMaxTimeDiff();
+
             cacheLog.info("==== 开始修复服务器时间同步 ====");
 
             // 更新状态为正在获取本地时间
@@ -360,7 +370,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
                             "同步后时间差", diffSeconds + "秒", timeDiffColor));
 
                     // 添加同步结果百分比
-                    int syncPercentage = 100 - (int) Math.min(100, (diffSeconds * 100) / MAX_TIME_DIFF_SECONDS);
+                    int syncPercentage = 100 - (int) Math.min(100, (diffSeconds * 100) / maxTimeDiffSeconds);
                     detailsBuilder.append("<p><strong>时间同步度:</strong></p>");
                     detailsBuilder.append(HtmlStyleHelper.generateProgressBar(
                             syncPercentage, timeDiffColor, syncPercentage + "%"));
@@ -368,11 +378,11 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     detailsBuilder.append(HtmlStyleHelper.endGroup());
 
                     // 添加结果提示
-                    if (diffSeconds <= MAX_TIME_DIFF_SECONDS) {
+                    if (diffSeconds <= maxTimeDiffSeconds) {
                         detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
                                 "时间同步修复成功",
                                 String.format("服务器时间已成功同步，当前时间差为 %d 秒，小于最大允许差值 %d 秒。",
-                                        diffSeconds, MAX_TIME_DIFF_SECONDS)));
+                                        diffSeconds, maxTimeDiffSeconds)));
                     } else {
                         detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
                                 "时间同步部分成功",
@@ -392,7 +402,7 @@ public class TimeSyncChecker extends AbstractItemChecker {
                     // 设置格式化的HTML消息
                     setStyledHtmlMessage(hostInfo, checkItem, true, "服务器时间同步已修复", detailsBuilder);
 
-                    cacheLog.info("时间同步修复" + (diffSeconds <= MAX_TIME_DIFF_SECONDS ? "成功" : "部分成功"));
+                    cacheLog.info("时间同步修复" + (diffSeconds <= maxTimeDiffSeconds ? "成功" : "部分成功"));
                 } catch (Exception e) {
                     cacheLog.warn("验证时间同步结果时发生错误: %s", e.getMessage());
 

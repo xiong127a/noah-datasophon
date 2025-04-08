@@ -1,5 +1,6 @@
 package com.datasophon.api.service.checker.checkers.filehandle;
 
+import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.checker.core.AbstractItemChecker;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.common.model.CheckItem;
@@ -9,19 +10,25 @@ import com.datasophon.api.service.checker.helpers.HtmlStyleHelper;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class FileHandleChecker extends AbstractItemChecker {
 
     private static final Logger logger = LoggerFactory.getLogger(FileHandleChecker.class);
-    private static final int MIN_FILE_HANDLES = 65535;
+
+    @Autowired
+    private CheckerProperties checkerProperties;
 
     @Override
     protected CheckItem doCheck(HostInfo hostInfo, CheckItem checkItem) {
         try {
+            // 从配置中获取文件句柄数限制
+            int minFileHandles = checkerProperties.getFileHandle().getMinLimit();
+
             cacheLog.debug("开始检查文件句柄数 - 主机: %s", hostInfo.getIp());
-            cacheLog.debug("最小建议文件句柄数: %d", MIN_FILE_HANDLES);
+            cacheLog.debug("最小建议文件句柄数: %d", minFileHandles);
             cacheLog.info("正在检查系统文件句柄数限制配置...");
 
             // 更新状态为正在检查文件句柄数
@@ -71,7 +78,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                         if (parts.length >= 4) {
                             try {
                                 int softLimit = Integer.parseInt(parts[3]);
-                                softSet = softLimit >= MIN_FILE_HANDLES;
+                                softSet = softLimit >= minFileHandles;
                                 cacheLog.debug("发现soft配置: %d, 是否满足: %s", softLimit, softSet ? "是" : "否");
                             } catch (NumberFormatException e) {
                                 cacheLog.debug("无法解析soft配置: %s", line);
@@ -84,7 +91,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                         if (parts.length >= 4) {
                             try {
                                 int hardLimit = Integer.parseInt(parts[3]);
-                                hardSet = hardLimit >= MIN_FILE_HANDLES;
+                                hardSet = hardLimit >= minFileHandles;
                                 cacheLog.debug("发现hard配置: %d, 是否满足: %s", hardLimit, hardSet ? "是" : "否");
                             } catch (NumberFormatException e) {
                                 cacheLog.debug("无法解析hard配置: %s", line);
@@ -104,9 +111,9 @@ public class FileHandleChecker extends AbstractItemChecker {
 
             if (success) {
                 cacheLog.info("系统文件句柄配置已正确设置，检查通过");
-                if (currentFileHandles < MIN_FILE_HANDLES) {
+                if (currentFileHandles < minFileHandles) {
                     cacheLog.info("注意: 当前会话文件句柄数 %d 小于最小建议值 %d，但系统配置已正确设置，重新登录后将生效",
-                            currentFileHandles, MIN_FILE_HANDLES);
+                            currentFileHandles, minFileHandles);
                 }
             } else {
                 cacheLog.info("系统文件句柄配置未正确设置，检查未通过");
@@ -134,7 +141,7 @@ public class FileHandleChecker extends AbstractItemChecker {
             }
 
             detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                    "最小建议文件句柄数", String.valueOf(MIN_FILE_HANDLES), HtmlStyleHelper.Colors.INFO));
+                    "最小建议文件句柄数", String.valueOf(minFileHandles), HtmlStyleHelper.Colors.INFO));
 
             // 系统配置状态是主要检查项
             detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
@@ -169,12 +176,12 @@ public class FileHandleChecker extends AbstractItemChecker {
                 detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
                         "系统文件句柄配置检查通过",
                         String.format("系统文件句柄限制已正确配置为不小于 %d，满足系统运行要求。%s",
-                                MIN_FILE_HANDLES,
-                                currentFileHandles < MIN_FILE_HANDLES ? "当前会话值仍可能较小，重新登录后生效。" : "")));
+                                minFileHandles,
+                                currentFileHandles < minFileHandles ? "当前会话值仍可能较小，重新登录后生效。" : "")));
             } else {
                 detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
                         "系统文件句柄配置检查未通过",
-                        String.format("系统文件句柄限制未正确配置至少 %d，请点击修复按钮或手动修改系统配置。", MIN_FILE_HANDLES)));
+                        String.format("系统文件句柄限制未正确配置至少 %d，请点击修复按钮或手动修改系统配置。", minFileHandles)));
             }
 
             // 设置格式化的HTML消息
@@ -195,6 +202,9 @@ public class FileHandleChecker extends AbstractItemChecker {
     @Override
     protected boolean doFix(HostInfo hostInfo, CheckItem checkItem) {
         try {
+            // 从配置中获取文件句柄数限制
+            int minFileHandles = checkerProperties.getFileHandle().getMinLimit();
+
             cacheLog.debug("开始修复系统文件句柄配置 - 主机: %s", hostInfo.getIp());
 
             // 更新状态为正在修改limits.conf文件
@@ -217,7 +227,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                     "grep -q '* soft nofile %d' /etc/security/limits.conf || echo '* soft nofile %d' >> /etc/security/limits.conf && "
                             +
                             "grep -q '* hard nofile %d' /etc/security/limits.conf || echo '* hard nofile %d' >> /etc/security/limits.conf",
-                    MIN_FILE_HANDLES, MIN_FILE_HANDLES, MIN_FILE_HANDLES, MIN_FILE_HANDLES);
+                    minFileHandles, minFileHandles, minFileHandles, minFileHandles);
 
             cacheLog.debug("执行修复命令: %s", cmd);
             CommandResult result = execCommand(session, cmd);
@@ -253,7 +263,7 @@ public class FileHandleChecker extends AbstractItemChecker {
                 }
 
                 // 创建systemd配置文件
-                String systemdConfig = "echo -e '[Manager]\\nDefaultLimitNOFILE=" + MIN_FILE_HANDLES
+                String systemdConfig = "echo -e '[Manager]\\nDefaultLimitNOFILE=" + minFileHandles
                         + "' > /etc/systemd/system.conf.d/limits.conf";
                 cacheLog.debug("配置systemd文件句柄限制: %s", systemdConfig);
                 CommandResult systemdResult = execCommand(session, systemdConfig);
@@ -288,12 +298,12 @@ public class FileHandleChecker extends AbstractItemChecker {
                 detailsBuilder.append("<p><strong>当前状态（仅供参考）:</strong></p>");
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
                         "当前会话文件句柄数", String.valueOf(currentLimit),
-                        currentLimit >= MIN_FILE_HANDLES ? HtmlStyleHelper.Colors.SUCCESS
+                        currentLimit >= minFileHandles ? HtmlStyleHelper.Colors.SUCCESS
                                 : HtmlStyleHelper.Colors.GRAY));
             }
 
             detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                    "系统配置目标值", String.valueOf(MIN_FILE_HANDLES), HtmlStyleHelper.Colors.SUCCESS));
+                    "系统配置目标值", String.valueOf(minFileHandles), HtmlStyleHelper.Colors.SUCCESS));
 
             // 添加修复步骤说明
             detailsBuilder.append("<p><strong>已完成的修复操作:</strong></p>");
@@ -301,14 +311,17 @@ public class FileHandleChecker extends AbstractItemChecker {
             detailsBuilder.append("<li style='margin-bottom:5px'>已修改系统配置文件 " +
                     HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf") + " 添加以下配置:</li>");
 
+            // 获取配置值用于显示
+            int limitValue = checkerProperties.getFileHandle().getMinLimit();
+
             // 生成配置代码块
-            String configCode = String.format("* soft nofile %d\n* hard nofile %d", MIN_FILE_HANDLES, MIN_FILE_HANDLES);
+            String configCode = String.format("* soft nofile %d\n* hard nofile %d", limitValue, limitValue);
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(configCode));
 
             // 添加systemd配置信息(如果适用)
             if (hasSystemd) {
                 detailsBuilder.append("<li style='margin-bottom:5px'>检测到系统使用systemd，已添加systemd配置:</li>");
-                String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", MIN_FILE_HANDLES);
+                String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", limitValue);
                 detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(systemdConfigContent));
                 detailsBuilder.append("<li style='margin-bottom:5px'>已执行 " +
                         HtmlStyleHelper.generateInlineCode("systemctl daemon-reload") + " 重新加载配置</li>");
@@ -366,8 +379,11 @@ public class FileHandleChecker extends AbstractItemChecker {
             detailsBuilder.append("<li style='margin-bottom:5px'>编辑系统配置文件 " +
                     HtmlStyleHelper.generateInlineCode("/etc/security/limits.conf") + " 添加以下配置:</li>");
 
+            // 获取配置值用于显示
+            int limitValue = checkerProperties.getFileHandle().getMinLimit();
+
             // 生成配置代码块
-            String configCode = String.format("* soft nofile %d\n* hard nofile %d", MIN_FILE_HANDLES, MIN_FILE_HANDLES);
+            String configCode = String.format("* soft nofile %d\n* hard nofile %d", limitValue, limitValue);
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(configCode));
 
             detailsBuilder.append("<li style='margin-bottom:5px'>如果系统使用systemd，创建目录:</li>");
@@ -375,7 +391,7 @@ public class FileHandleChecker extends AbstractItemChecker {
 
             detailsBuilder.append("<li style='margin-bottom:5px'>创建文件 " +
                     HtmlStyleHelper.generateInlineCode("/etc/systemd/system.conf.d/limits.conf") + " 内容如下:</li>");
-            String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", MIN_FILE_HANDLES);
+            String systemdConfigContent = String.format("[Manager]\nDefaultLimitNOFILE=%d", limitValue);
             detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(systemdConfigContent));
 
             detailsBuilder.append("<li style='margin-bottom:5px'>重新加载systemd配置:</li>");
