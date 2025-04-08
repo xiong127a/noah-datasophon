@@ -2,13 +2,13 @@
   "name": "CLICKHOUSE",
   "label": "ClickHouse",
   "description": "联机分析(OLAP)列式数据库",
-  "version": "23.9.1.1854",
+  "version": "22.3.14.23",
   "sortNum": 29,
   "dependencies":[
     "ZOOKEEPER"
   ],
-  "packageName": "clickhouse-23.9.1.1854.tar.gz",
-  "decompressPackageName": "clickhouse-23.9.1.1854",
+  "packageName": "clickhouse-22.3.14.23.tar.gz",
+  "decompressPackageName": "clickhouse-22.3.14.23",
   "roles": [
     {
       "name": "ClickHouse",
