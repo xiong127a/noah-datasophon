@@ -24,23 +24,41 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
         // 磁盘空间要求配置，从配置文件中获取
         protected int minDiskSpaceGB;
 
+        // 目标检查目录
+        protected String targetDir;
+
         public GenericDiskChecker() {
                 // 创建DiskChecker实例
                 this.diskChecker = new DiskChecker();
                 // 初始化磁盘空间要求配置
+                this.updateConfigValues();
+        }
+
+        /**
+         * 更新配置值
+         */
+        protected void updateConfigValues() {
+                this.targetDir = getTargetDir();
                 this.minDiskSpaceGB = getMinAvailableSpace();
+        }
+
+        /**
+         * 获取目标目录
+         */
+        protected String getTargetDir() {
+                return diskChecker.getTargetDir();
         }
 
         @Override
         public CheckItem check(HostInfo hostInfo, CheckItem checkItem, CheckLogger cacheLog)
                         throws InterruptedException {
-                // 更新配置中的最小可用空间要求
-                this.minDiskSpaceGB = getMinAvailableSpace();
+                // 更新配置值
+                this.updateConfigValues();
 
-                cacheLog.info("检查" + DiskChecker.TARGET_DIR + "目录磁盘使用情况，最小可用空间要求: " + minDiskSpaceGB + " GB...");
+                cacheLog.info("检查" + targetDir + "目录磁盘使用情况，最小可用空间要求: " + minDiskSpaceGB + " GB...");
 
                 // 设置检查项消息
-                checkItem.setMessage("正在检查" + DiskChecker.TARGET_DIR + "目录磁盘使用情况...");
+                checkItem.setMessage("正在检查" + targetDir + "目录磁盘使用情况...");
 
                 // 执行df命令查看磁盘使用情况
                 CommandResult dfResult;
@@ -57,7 +75,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         }
 
                         // 执行df命令
-                        dfResult = execCommand(session, "df -h " + DiskChecker.TARGET_DIR);
+                        dfResult = execCommand(session, "df -h " + targetDir);
 
                         // 如果第一个命令失败，尝试备用命令
                         if (dfResult.getExitCode() != 0 || dfResult.getOutput().trim().isEmpty()) {
@@ -65,7 +83,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 cacheLog.info("使用标准df命令失败，尝试使用awk提取...");
 
                                 dfResult = execCommand(session,
-                                                "df -BG " + DiskChecker.TARGET_DIR + " | awk 'NR>1{print; exit}'");
+                                                "df -BG " + targetDir + " | awk 'NR>1{print; exit}'");
                         }
 
                         // 处理df命令结果
@@ -78,11 +96,11 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                         // 分析磁盘使用情况
                                         try {
                                                 String output = dfResult.getOutput();
-                                                if (output.contains(DiskChecker.TARGET_DIR)) {
+                                                if (output.contains(targetDir)) {
                                                         // 尝试提取使用率
                                                         String[] lines = output.split("\n");
                                                         for (String line : lines) {
-                                                                if (line.contains(DiskChecker.TARGET_DIR)) {
+                                                                if (line.contains(targetDir)) {
                                                                         String[] parts = line.split("\\s+");
                                                                         if (parts.length >= 5) {
                                                                                 String usageStr = parts[4].replace("%",
@@ -101,7 +119,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                                                                                         CheckItem.Status.FAILED);
                                                                                         result.setMessage(String.format(
                                                                                                         "%s 分区使用率过高: %d%% > %d%%",
-                                                                                                        DiskChecker.TARGET_DIR,
+                                                                                                        targetDir,
                                                                                                         usage,
                                                                                                         DiskChecker.WARNING_DISK_USAGE_THRESHOLD));
                                                                                         return result;
@@ -114,7 +132,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                                                                         result.setStatus(
                                                                                                         CheckItem.Status.SUCCESS);
                                                                                         result.setMessage(
-                                                                                                        DiskChecker.TARGET_DIR
+                                                                                                        targetDir
                                                                                                                         + " 目录磁盘空间充足");
                                                                                         return result;
                                                                                 }
@@ -211,8 +229,8 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         String mountPoint = parts[5];
 
                         // 检查是否为目标目录或其父目录
-                        if (DiskChecker.TARGET_DIR.equals(mountPoint) || // 直接匹配
-                                        DiskChecker.TARGET_DIR.startsWith(mountPoint + "/") || // 是父目录
+                        if (targetDir.equals(mountPoint) || // 直接匹配
+                                        targetDir.startsWith(mountPoint + "/") || // 是父目录
                                         mountPoint.equals("/")) { // 根目录是所有目录的父目录
 
                                 // 如果找到多个匹配，优先使用最具体的挂载点
@@ -224,7 +242,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
                 // 如果没有找到挂载点，报错
                 if (targetLine == null) {
-                        String errorMsg = "在df输出中未找到" + DiskChecker.TARGET_DIR + "目录所在的分区";
+                        String errorMsg = "在df输出中未找到" + targetDir + "目录所在的分区";
                         log.error(errorMsg);
                         cacheLog.error(errorMsg);
                         checkItem.setStatus(CheckItem.Status.FAILED);
@@ -244,9 +262,9 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         String available = parts[3];
 
                         log.info("检测到 {} 目录所在分区: 设备={}, 挂载点={}, 总大小={}, 可用空间={}, 使用率={}%",
-                                        DiskChecker.TARGET_DIR, device, mountPoint, size, available, usage);
+                                        targetDir, device, mountPoint, size, available, usage);
                         cacheLog.info(String.format("检测到 %s 目录所在分区: 设备=%s, 挂载点=%s, 总大小=%s, 可用空间=%s, 使用率=%d%%",
-                                        DiskChecker.TARGET_DIR, device, mountPoint, size, available, usage));
+                                        targetDir, device, mountPoint, size, available, usage));
 
                         // 检查磁盘使用率
                         if (usage > DiskChecker.WARNING_DISK_USAGE_THRESHOLD) {
@@ -257,7 +275,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 // 状态标题
                                 message.append(String.format(
                                                 "<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘空间不足</h3>",
-                                                DiskChecker.TARGET_DIR));
+                                                targetDir));
 
                                 // 磁盘详情
                                 message.append("<div style='margin-bottom:15px'>");
@@ -344,7 +362,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                                 // 状态标题
                                 message.append(String.format(
                                                 "<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘可用空间不足</h3>",
-                                                DiskChecker.TARGET_DIR));
+                                                targetDir));
 
                                 // 磁盘详情
                                 message.append("<div style='margin-bottom:15px'>");
@@ -411,7 +429,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
                         // 状态标题
                         message.append(String.format("<h3 style='color:#52c41a;margin-bottom:10px'>%s 目录磁盘空间充足</h3>",
-                                        DiskChecker.TARGET_DIR));
+                                        targetDir));
 
                         // 磁盘详情
                         message.append("<div style='margin-bottom:15px'>");
@@ -507,12 +525,20 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
         @Override
         public void provideCleanupSuggestions(CheckLogger cacheLog) {
+                // 获取配置中的最小可用空间要求
+                int minDiskSpaceGB = getMinAvailableSpace();
+                int minAvailablePercent = getMinAvailablePercent();
+
+                cacheLog.info("生成清理建议 - 目标目录: " + targetDir);
+                cacheLog.info("最小可用空间要求: " + minDiskSpaceGB + " GB");
+                cacheLog.info("最小可用空间百分比: " + minAvailablePercent + "%");
+
                 StringBuilder html = new StringBuilder();
                 html.append("<div style='line-height:1.6'>");
                 html.append("<h3 style='color:#f5222d;margin-bottom:10px'>磁盘空间问题清理建议</h3>");
 
                 html.append("<p style='color:#333;margin-bottom:8px'>检测到<span style='color:#1890ff;font-weight:bold'>");
-                html.append(DiskChecker.TARGET_DIR);
+                html.append(targetDir);
                 html.append("</span>目录所在分区空间不足，建议采取以下措施：</p>");
 
                 html.append("<ol style='padding-left:20px;margin-bottom:15px'>");
@@ -520,7 +546,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 html.append("<span style='color:#1890ff;font-weight:bold'>清理日志文件：</span>");
                 html.append(
                                 "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + DiskChecker.TARGET_DIR + " -name \"*.log*\" -type f -size +100M | xargs ls -lh");
+                html.append("find " + targetDir + " -name \"*.log*\" -type f -size +100M | xargs ls -lh");
                 html.append("</pre>");
                 html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并列出大于100MB的日志文件，可以删除或压缩这些文件</p>");
                 html.append("</li>");
@@ -529,7 +555,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 html.append("<span style='color:#1890ff;font-weight:bold'>清理临时文件：</span>");
                 html.append(
                                 "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + DiskChecker.TARGET_DIR
+                html.append("find " + targetDir
                                 + " -name \"tmp*\" -o -name \"temp*\" -type d | xargs du -sh");
                 html.append("</pre>");
                 html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找并显示临时目录的大小，可以删除不需要的临时文件</p>");
@@ -539,7 +565,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 html.append("<span style='color:#1890ff;font-weight:bold'>清理过期数据文件：</span>");
                 html.append(
                                 "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + DiskChecker.TARGET_DIR
+                html.append("find " + targetDir
                                 + " -type f -name \"*.old\" -o -name \"*.bak\" -o -name \"*~\" | xargs ls -lh");
                 html.append("</pre>");
                 html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找备份和临时文件，可以删除过期的备份</p>");
@@ -549,7 +575,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 html.append("<span style='color:#1890ff;font-weight:bold'>查找大文件：</span>");
                 html.append(
                                 "<pre style='background:#f0f2f5;padding:8px;border-radius:5px;overflow:auto;font-family:monospace;margin-top:5px'>");
-                html.append("find " + DiskChecker.TARGET_DIR + " -type f -size +500M -exec ls -lh {} \\;");
+                html.append("find " + targetDir + " -type f -size +500M -exec ls -lh {} \\;");
                 html.append("</pre>");
                 html.append("<p style='font-size:13px;color:#666;margin-top:5px'>查找大于500MB的文件，评估是否需要保留</p>");
                 html.append("</li>");
@@ -572,7 +598,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                 html.append("<li style='color:#333'>扩展现有磁盘分区</li>");
                 html.append(
                                 "<li style='color:#333'>添加新磁盘并挂载到<code style='background:#f5f5f5;padding:2px 4px;border-radius:3px'>"
-                                                + DiskChecker.TARGET_DIR + "</code></li>");
+                                                + targetDir + "</code></li>");
                 html.append("<li style='color:#333'>将数据迁移到更大的存储设备</li>");
                 html.append("</ul>");
                 html.append("</li>");
@@ -593,7 +619,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
 
         // 更改磁盘空间检查逻辑，使用磁盘检查器中的配置值
         protected int getMinAvailableSpace() {
-                return diskChecker.getMinAvailableSpace(DiskChecker.TARGET_DIR);
+                return diskChecker.getMinAvailableSpace(targetDir);
         }
 
         // 获取全局最小可用空间百分比

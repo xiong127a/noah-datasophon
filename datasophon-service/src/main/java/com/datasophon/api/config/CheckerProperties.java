@@ -138,6 +138,11 @@ public class CheckerProperties {
     @Data
     public static class DiskConfig {
         /**
+         * 目标检查目录
+         */
+        private String targetDir = "/opt";
+
+        /**
          * 检查目录列表
          */
         private List<DiskDirectoryConfig> checkDirectories = new ArrayList<>();

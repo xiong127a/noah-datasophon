@@ -3,10 +3,12 @@ datasophon:
   checker:
     # 元数据路径配置
     meta:
-      # 版本目录路径，支持多个版本，可以配置为DDP-1.2.0,DDP-1.2.1等
+      # 版本目录路径，可以配置为DDP-1.2.0,DDP-1.2.1等
       versions: DDP-1.2.1
       # 元数据基础目录
-      base-dir: ${user.dir}/datasophon-api/src/main/resources/meta
+      # 开发环境默认使用 classpath:meta
+      # 生产环境默认使用 ${user.dir}/meta
+      base-dir: ${META_BASE_DIR:${user.dir}/meta}
     
     # CPU检查配置
     cpu:
@@ -35,16 +37,16 @@ datasophon:
     
     # 磁盘空间检查配置
     disk:
+      # 目标检查目录
+      target-dir: /opt
       # 检查目录列表
       check-directories:
-        - path: /
-          min-available-gb: 10
         - path: /opt
-          min-available-gb: 20
-        - path: /var
-          min-available-gb: 15
+          min-available-gb: 100
+        - path: /var/log
+          min-available-gb: 50
         - path: /tmp
-          min-available-gb: 5
+          min-available-gb: 30
       # 全局最小可用空间百分比
       min-available-percent: 20
     

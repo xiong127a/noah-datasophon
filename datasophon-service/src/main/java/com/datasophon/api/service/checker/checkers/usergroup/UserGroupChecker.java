@@ -42,6 +42,9 @@ public class UserGroupChecker extends AbstractItemChecker {
     @Autowired
     private CheckerProperties checkerProperties;
 
+    @Autowired
+    private String metaBasePath;
+
     // 保存需要创建的用户和组
     private List<String> usersToCreate = new ArrayList<>();
     private List<String> groupsToCreate = new ArrayList<>();
@@ -175,13 +178,11 @@ public class UserGroupChecker extends AbstractItemChecker {
      */
     private void scanServiceConfigurations(Set<String> users, Set<String> groups) {
         try {
-            // 从配置获取元数据目录
-            String metaDir = checkerProperties.getMeta().getBaseDir();
             // 获取配置的版本，如DDP-1.2.1
             String versionDir = checkerProperties.getMeta().getVersions();
 
             // 构建完整的搜索路径
-            String searchDir = metaDir + File.separator + versionDir;
+            String searchDir = metaBasePath + File.separator + versionDir;
 
             cacheLog.info("扫描元数据目录: " + searchDir);
 

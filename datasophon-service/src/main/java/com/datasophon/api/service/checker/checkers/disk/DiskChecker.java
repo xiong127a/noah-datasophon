@@ -52,6 +52,7 @@ public class DiskChecker extends AbstractItemChecker {
     /**
      * 获取目标目录的最小可用空间配置
      * 
+     * @param directory 目录路径
      * @return 指定目录的最小可用空间GB
      */
     public int getMinAvailableSpace(String directory) {
@@ -62,7 +63,8 @@ public class DiskChecker extends AbstractItemChecker {
                 .filter(config -> directory.equals(config.getPath()))
                 .findFirst();
 
-        return dirConfig.isPresent() ? dirConfig.get().getMinAvailableGb() : (int) MIN_DISK_SPACE_GB; // 如果配置不存在，使用默认值
+        return dirConfig.map(CheckerProperties.DiskDirectoryConfig::getMinAvailableGb)
+                .orElseGet(() -> (int) MIN_DISK_SPACE_GB); // 如果配置不存在，使用默认值
     }
 
     /**
@@ -72,6 +74,16 @@ public class DiskChecker extends AbstractItemChecker {
      */
     public int getMinAvailablePercent() {
         return checkerProperties.getDisk().getMinAvailablePercent();
+    }
+
+    /**
+     * 获取目标检查目录
+     * 
+     * @return 目标检查目录
+     */
+    public String getTargetDir() {
+        String configDir = checkerProperties.getDisk().getTargetDir();
+        return configDir != null ? configDir : TARGET_DIR;
     }
 
     @Override
@@ -124,7 +136,8 @@ public class DiskChecker extends AbstractItemChecker {
                 // 额外检查磁盘状态
                 try {
                     // 执行简单的df命令检查磁盘状态
-                    CommandResult dfResult = execCommand(session, "df -h " + TARGET_DIR);
+                    String targetDir = getTargetDir();
+                    CommandResult dfResult = execCommand(session, "df -h " + targetDir);
                     if (dfResult.isSuccess()) {
                         String output = dfResult.getOutput();
                         log.info("额外检查df输出:\n{}", output);
@@ -152,8 +165,8 @@ public class DiskChecker extends AbstractItemChecker {
                             String mountPoint = parts[5];
 
                             // 检查是否为目标目录或其父目录
-                            if (TARGET_DIR.equals(mountPoint) || // 直接匹配
-                                    TARGET_DIR.startsWith(mountPoint + "/") || // 是父目录
+                            if (targetDir.equals(mountPoint) || // 直接匹配
+                                    targetDir.startsWith(mountPoint + "/") || // 是父目录
                                     mountPoint.equals("/")) { // 根目录是所有目录的父目录
 
                                 // 如果找到多个匹配，优先使用最具体的挂载点
@@ -169,39 +182,37 @@ public class DiskChecker extends AbstractItemChecker {
                             String device = parts[0];
                             String mountPoint = parts[5];
 
-                            if (parts.length >= 5) {
-                                String usageStr = parts[4].replace("%", "");
-                                try {
-                                    int usage = Integer.parseInt(usageStr);
-                                    String size = parts[1];
-                                    String available = parts[3];
+                            String usageStr = parts[4].replace("%", "");
+                            try {
+                                int usage = Integer.parseInt(usageStr);
+                                String size = parts[1];
+                                String available = parts[3];
 
-                                    log.info("额外检查发现{}目录所在分区: 设备={}, 挂载点={}, 总大小={}, 可用={}, 使用率={}%",
-                                            TARGET_DIR, device, mountPoint, size, available, usage);
-                                    cacheLog.info("额外检查发现%s目录所在分区: 设备=%s, 挂载点=%s, 总大小=%s, 可用=%s, 使用率=%d%%",
-                                            TARGET_DIR, device, mountPoint, size, available, usage);
+                                log.info("额外检查发现{}目录所在分区: 设备={}, 挂载点={}, 总大小={}, 可用={}, 使用率={}%",
+                                        targetDir, device, mountPoint, size, available, usage);
+                                cacheLog.info("额外检查发现%s目录所在分区: 设备=%s, 挂载点=%s, 总大小=%s, 可用=%s, 使用率=%d%%",
+                                        targetDir, device, mountPoint, size, available, usage);
 
-                                    if (usage > WARNING_DISK_USAGE_THRESHOLD) {
-                                        log.warn("磁盘使用率{}%超过警告阈值{}%", usage, WARNING_DISK_USAGE_THRESHOLD);
-                                        cacheLog.warn("额外检查发现磁盘使用率{}%超过阈值{}%", usage, WARNING_DISK_USAGE_THRESHOLD);
-                                        result.setStatus(CheckItem.Status.FAILED);
-                                        result.setMessage(String.format("%s 目录所在分区(%s, 挂载点: %s)使用率过高: %d%% > %d%%",
-                                                TARGET_DIR, device, mountPoint, usage, WARNING_DISK_USAGE_THRESHOLD));
-                                    } else {
-                                        log.info("磁盘使用率{}%在正常范围内", usage);
-                                        cacheLog.info("额外检查发现磁盘使用率{}%在正常范围内", usage);
-                                        result.setStatus(CheckItem.Status.SUCCESS);
-                                        result.setMessage(String.format("%s 目录所在分区(%s, 挂载点: %s)磁盘空间充足",
-                                                TARGET_DIR, device, mountPoint));
-                                    }
-                                    return result;
-                                } catch (NumberFormatException e) {
-                                    log.error("解析磁盘使用率失败: {}", usageStr, e);
+                                if (usage > WARNING_DISK_USAGE_THRESHOLD) {
+                                    log.warn("磁盘使用率{}%超过警告阈值{}%", usage, WARNING_DISK_USAGE_THRESHOLD);
+                                    cacheLog.warn("额外检查发现磁盘使用率{}%超过阈值{}%", usage, WARNING_DISK_USAGE_THRESHOLD);
+                                    result.setStatus(CheckItem.Status.FAILED);
+                                    result.setMessage(String.format("%s 目录所在分区(%s, 挂载点: %s)使用率过高: %d%% > %d%%",
+                                            targetDir, device, mountPoint, usage, WARNING_DISK_USAGE_THRESHOLD));
+                                } else {
+                                    log.info("磁盘使用率{}%在正常范围内", usage);
+                                    cacheLog.info("额外检查发现磁盘使用率{}%在正常范围内", usage);
+                                    result.setStatus(CheckItem.Status.SUCCESS);
+                                    result.setMessage(String.format("%s 目录所在分区(%s, 挂载点: %s)磁盘空间充足",
+                                            targetDir, device, mountPoint));
                                 }
+                                return result;
+                            } catch (NumberFormatException e) {
+                                log.error("解析磁盘使用率失败: {}", usageStr, e);
                             }
                         } else {
-                            log.error("在df输出中未找到{}目录所在的分区", TARGET_DIR);
-                            cacheLog.error("在df输出中未找到{}目录所在的分区", TARGET_DIR);
+                            log.error("在df输出中未找到{}目录所在的分区", targetDir);
+                            cacheLog.error("在df输出中未找到{}目录所在的分区", targetDir);
                         }
 
                         // 如果无法精确分析使用率，但命令执行成功
