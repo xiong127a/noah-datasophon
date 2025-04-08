@@ -74,7 +74,6 @@ public enum Status {
     ROLE_GROUP_HAS_NO_OUTDATED_SERVICE(10026, "this role group has no outdated service", "该角色组没有过时服务"),
     DUPLICATE_USER_NAME(10027, "duplicate user name", "用户名重复"),
     QUEUE_NAME_ALREADY_EXISTS(10028, "the queue name already exists", "队列名已存在"),
-    THREE_JOURNALNODE_DEPLOYMENTS_REQUIRED(10030, "three JournalNode deployments are required", "JournalNode需要部署三台"),
     TWO_NAMENODES_NEED_TO_BE_DEPLOYED(10031, "two Namenodes need to be deployed", "NameNode需要部署两台"),
     TWO_ZKFC_DEVICES_ARE_REQUIRED(10032, "two ZKFC devices are required", "ZKFC需要部署两台"),
     TWO_RESOURCEMANAGER_ARE_DEPLOYED(10033, "two ResourceManager are deployed", "ResourceManager需要部署两台"),
@@ -93,6 +92,8 @@ public enum Status {
     ODD_NUMBER_ARE_REQUIRED_FOR_DORISFE(10040, "The Number of DorisFE must be an odd number.", "DorisFE个数必须是奇数"),
     NO_SERVICE_ROLE_SELECTED(10041, "No service role selected", "未选择需要安装的服务实例"),
     TWO_KYUUBISERVERS_NEED_TO_BE_DEPLOYED(10042, "two kyuubiServer deployments are required", "KyuubiServer需要两个节点"),
+    JOURNALNODE_REQUIREMENTS(10043, "JournalNode requires at least 3 nodes and must be an odd number",
+            "JournalNode需要至少3台且必须是奇数"),
 
     K8S_NAMESPACE_NOT_EXIST(80001, "k8s namespace not exist", "k8s命令空间不存在");
 

@@ -756,10 +756,10 @@
       "required": true,
       "configType": "ha",
       "type": "input",
-      "value": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/meta",
+      "value": "${journalNodesUrl}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/meta"
+      "defaultValue": "${journalNodesUrl}"
     },
     {
       "name": "dfs.ha.fencing.methods",

@@ -271,7 +271,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         return Result.success();
     }
 
-    private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo, HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+    private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
+            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -280,11 +281,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         checkOnSameNode(clusterId, list);
 
-//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        String hostMapKey =
-                clusterId
-                        + Constants.UNDERLINE
-                        + Constants.SERVICE_ROLE_HOST_MAPPING;
+        // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        String hostMapKey = clusterId
+                + Constants.UNDERLINE
+                + Constants.SERVICE_ROLE_HOST_MAPPING;
         HashMap<String, List<String>> map = new HashMap<>();
         if (CacheOperateUtils.containsKey(hostMapKey)) {
             map = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
@@ -295,9 +295,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
             map.put(serviceRoleHostMapping.getServiceRole(), serviceRoleHostMapping.getHosts());
 
-            ServiceRoleStrategy serviceRoleHandler =
-                    ServiceRoleStrategyContext.getServiceRoleHandler(
-                            serviceRoleHostMapping.getServiceRole());
+            ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(
+                    serviceRoleHostMapping.getServiceRole());
             if (Objects.nonNull(serviceRoleHandler)) {
                 serviceRoleHandler.handler(clusterId, serviceRoleHostMapping.getHosts());
             }
@@ -313,7 +312,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public Result saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list) {
-//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         HashMap<String, List<String>> map = new HashMap<>();
         for (HostServiceRoleMapping hostServiceRoleMapping : list) {
             map.put(hostServiceRoleMapping.getHost(), hostServiceRoleMapping.getServiceRoles());
@@ -326,12 +325,11 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public Result getServiceRoleDeployOverview(Integer clusterId) {
-//        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        HashMap<String, List<String>> map =
-                (HashMap<String, List<String>>) CacheOperateUtils.get(
-                        clusterId
-                                + Constants.UNDERLINE
-                                + Constants.SERVICE_ROLE_HOST_MAPPING);
+        // ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        HashMap<String, List<String>> map = (HashMap<String, List<String>>) CacheOperateUtils.get(
+                clusterId
+                        + Constants.UNDERLINE
+                        + Constants.SERVICE_ROLE_HOST_MAPPING);
         return Result.success(map);
     }
 
@@ -685,8 +683,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         String serviceRole = serviceRoleHostMapping.getServiceRole();
         List<String> hosts = serviceRoleHostMapping.getHosts();
 
-        if ("JournalNode".equals(serviceRole) && hosts.size() != 3) {
-            throw new ServiceException(Status.THREE_JOURNALNODE_DEPLOYMENTS_REQUIRED.getMsg());
+        if ("JournalNode".equals(serviceRole) && (hosts.size() < 3 || (hosts.size() & 1) == 0)) {
+            throw new ServiceException(Status.JOURNALNODE_REQUIREMENTS.getMsg());
         }
         if ("NameNode".equals(serviceRole) && hosts.size() != 2) {
             throw new ServiceException(Status.TWO_NAMENODES_NEED_TO_BE_DEPLOYED.getMsg());
