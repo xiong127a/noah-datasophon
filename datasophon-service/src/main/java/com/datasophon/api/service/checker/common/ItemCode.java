@@ -24,7 +24,11 @@ public enum ItemCode {
     /**
      * 透明大页检查
      */
-    TRANSPARENT_HUGEPAGE_CHECK("TRANSPARENT_HUGEPAGE_CHECK", "透明大页检查", 14, false, "系统的透明大页功能未关闭，这可能会导致系统性能不稳定。确定要修复吗？");
+    TRANSPARENT_HUGEPAGE_CHECK("TRANSPARENT_HUGEPAGE_CHECK", "透明大页检查", 14, false, "系统的透明大页功能未关闭，这可能会导致系统性能不稳定。确定要修复吗？"),
+    /**
+     * 交换分区检查
+     */
+    SWAP_CHECK("SWAP_CHECK", "交换分区检查", 15, false, "系统的交换分区未关闭，这可能会导致大数据应用性能不稳定。确定要修复吗？");
 
     private final String code;
     private final String name;
