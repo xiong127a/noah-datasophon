@@ -90,6 +90,10 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 清空之前的检查结果
             usersToCreate.clear();
             groupsToCreate.clear();
+
+            // 新增：存储需要创建home目录的用户列表
+            List<String> usersNeedHomeDir = new ArrayList<>();
+
             boolean checkFailed = false;
 
             // 收集所有服务配置文件中的用户和组
@@ -121,21 +125,32 @@ public class UserGroupChecker extends AbstractItemChecker {
                 }
             }
 
-            // 检查用户是否存在
+            // 检查用户是否存在，以及用户home目录是否存在
             cacheLog.info("\n正在检查用户是否存在...");
             for (String user : users) {
-                boolean exists = checkUserExists(hostInfo, user);
-                cacheLog.info("用户 " + user + ": " + (exists ? "存在" : "不存在"));
-                if (!exists) {
+                boolean userExists = checkUserExists(hostInfo, user);
+                cacheLog.info("用户 " + user + ": " + (userExists ? "存在" : "不存在"));
+
+                if (!userExists) {
                     usersToCreate.add(user);
                     checkFailed = true;
+                } else {
+                    // 用户存在，检查home目录
+                    cacheLog.info("检查用户 " + user + " 的home目录...");
+                    boolean homeExists = checkUserHomeExists(hostInfo, user);
+
+                    if (!homeExists) {
+                        cacheLog.warn("用户 " + user + " 存在但home目录不存在");
+                        usersNeedHomeDir.add(user);
+                        checkFailed = true;
+                    }
                 }
             }
 
             // 设置检查状态和消息
             if (checkFailed) {
                 checkItem.setStatus(CheckItem.Status.FAILED);
-                StringBuilder detailsBuilder = createFailDetails(users, groups);
+                StringBuilder detailsBuilder = createFailDetails(users, groups, usersNeedHomeDir);
                 setStyledHtmlMessage(hostInfo, checkItem, false, "用户和组检查未通过", detailsBuilder);
             } else {
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
@@ -205,8 +220,88 @@ public class UserGroupChecker extends AbstractItemChecker {
             }
         }
 
+        // 修复缺失的home目录
+        List<String> usersNeedHomeDir = getUsersWithoutHomeDir(hostInfo);
+        if (!usersNeedHomeDir.isEmpty()) {
+            cacheLog.info("\n创建缺少的home目录...");
+            for (String user : usersNeedHomeDir) {
+                cacheLog.info("为用户 " + user + " 创建home目录");
+                boolean success = createHomeDirectory(hostInfo, user);
+                if (success) {
+                    cacheLog.info("用户 " + user + " 的home目录创建成功");
+                } else {
+                    cacheLog.error("用户 " + user + " 的home目录创建失败");
+                    allFixed = false;
+                }
+            }
+        }
+
         cacheLog.info("==== 用户和组修复结束 ====");
         return allFixed;
+    }
+
+    /**
+     * 获取所有存在但没有home目录的用户
+     */
+    private List<String> getUsersWithoutHomeDir(HostInfo hostInfo) {
+        List<String> usersNeedHomeDir = new ArrayList<>();
+        try {
+            // 从服务配置中获取所有需要检查的用户
+            Set<String> users = new HashSet<>();
+            Set<String> groups = new HashSet<>();
+            scanServiceConfigurations(users, groups);
+
+            // 检查每个用户的home目录
+            for (String user : users) {
+                // 只检查已存在的用户
+                if (checkUserExists(hostInfo, user)) {
+                    boolean homeExists = checkUserHomeExists(hostInfo, user);
+                    if (!homeExists) {
+                        usersNeedHomeDir.add(user);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("获取缺少home目录的用户列表时发生错误", e);
+            cacheLog.error("获取缺少home目录的用户列表时发生错误: " + e.getMessage());
+        }
+        return usersNeedHomeDir;
+    }
+
+    /**
+     * 为用户创建home目录
+     */
+    private boolean createHomeDirectory(HostInfo hostInfo, String username) {
+        try {
+            // 获取用户的home目录路径
+            String getHomeCommand = "getent passwd " + username + " | cut -d: -f6";
+            CommandResult homePathResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
+                    getHomeCommand);
+
+            if (!homePathResult.isSuccess() || StringUtils.isBlank(homePathResult.getOutput().trim())) {
+                cacheLog.error("无法获取用户 " + username + " 的home目录路径");
+                return false;
+            }
+
+            String homePath = homePathResult.getOutput().trim();
+
+            // 创建home目录
+            String createHomeCommand = "mkdir -p " + homePath + " && chown " + username + ": " + homePath;
+            CommandResult createResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
+                    createHomeCommand);
+
+            if (!createResult.isSuccess()) {
+                cacheLog.error("创建 " + username + " 的home目录失败: " + createResult.getErrorOrOutput());
+                return false;
+            }
+
+            // 验证home目录是否已成功创建
+            return checkUserHomeExists(hostInfo, username);
+        } catch (Exception e) {
+            logger.error("为用户 " + username + " 创建home目录时发生错误", e);
+            cacheLog.error("为用户 " + username + " 创建home目录时发生错误: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -681,6 +776,33 @@ public class UserGroupChecker extends AbstractItemChecker {
     }
 
     /**
+     * 检查用户的home目录是否存在
+     */
+    private boolean checkUserHomeExists(HostInfo hostInfo, String username) throws InterruptedException {
+        // 先获取用户的home目录路径
+        String getHomeCommand = "getent passwd " + username + " | cut -d: -f6";
+        CommandResult homePathResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
+                getHomeCommand);
+
+        if (!homePathResult.isSuccess() || StringUtils.isBlank(homePathResult.getOutput().trim())) {
+            cacheLog.warn("无法获取用户 " + username + " 的home目录路径");
+            return false;
+        }
+
+        String homePath = homePathResult.getOutput().trim();
+        cacheLog.info("用户 " + username + " 的home目录路径: " + homePath);
+
+        // 检查home目录是否存在
+        String checkHomeCommand = "[ -d \"" + homePath + "\" ] && echo 'EXISTS' || echo 'NOT_EXISTS'";
+        CommandResult homeExistsResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
+                checkHomeCommand);
+
+        boolean exists = homeExistsResult.isSuccess() && "EXISTS".equals(homeExistsResult.getOutput().trim());
+        cacheLog.info("用户 " + username + " 的home目录" + (exists ? "存在" : "不存在"));
+        return exists;
+    }
+
+    /**
      * 检查组是否存在
      */
     private boolean checkGroupExists(HostInfo hostInfo, String groupname) throws InterruptedException {
@@ -743,7 +865,8 @@ public class UserGroupChecker extends AbstractItemChecker {
     /**
      * 创建失败详情消息
      */
-    private StringBuilder createFailDetails(Set<String> existingUsers, Set<String> existingGroups) {
+    private StringBuilder createFailDetails(Set<String> existingUsers, Set<String> existingGroups,
+            List<String> usersNeedHomeDir) {
         StringBuilder sb = new StringBuilder();
         sb.append(
                 "<div style=\"font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif; ");
@@ -767,9 +890,11 @@ public class UserGroupChecker extends AbstractItemChecker {
 
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingUsers.size()).append("/").append(totalUsers).append("</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingUsers.size())
+                .append("/").append(totalUsers).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
-        sb.append("<div style=\"height: 6px; width: ").append(userPercent).append("%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("<div style=\"height: 6px; width: ").append(userPercent)
+                .append("%; background: #ff9500; border-radius: 3px;\"></div>");
         sb.append("</div>");
         sb.append("</div>");
 
@@ -779,9 +904,11 @@ public class UserGroupChecker extends AbstractItemChecker {
 
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingGroups.size()).append("/").append(totalGroups).append("</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingGroups.size())
+                .append("/").append(totalGroups).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
-        sb.append("<div style=\"height: 6px; width: ").append(groupPercent).append("%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("<div style=\"height: 6px; width: ").append(groupPercent)
+                .append("%; background: #ff9500; border-radius: 3px;\"></div>");
         sb.append("</div>");
         sb.append("</div>");
         sb.append("</div>");
@@ -796,8 +923,19 @@ public class UserGroupChecker extends AbstractItemChecker {
                     "<div style=\"font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px;\">已存在的用户</div>");
             sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String user : existingUsers) {
-                sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
-                sb.append("border-radius: 6px; padding: 4px 10px;\">").append(user).append("</div>");
+                // 检查用户是否需要home目录
+                boolean needsHome = usersNeedHomeDir.contains(user);
+                String color = needsHome ? "#ff9500" : "#34c759"; // 橙色表示需要创建home目录，绿色表示完全正常
+                String bgColor = needsHome ? "rgba(255, 149, 0, 0.15)" : "rgba(52, 199, 89, 0.15)";
+
+                sb.append("<div style=\"font-size: 13px; background: ").append(bgColor).append("; color: ")
+                        .append(color).append("; ");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">");
+                sb.append(user);
+                if (needsHome) {
+                    sb.append(" (缺少home目录)");
+                }
+                sb.append("</div>");
             }
             sb.append("</div>");
             sb.append("</div>");
@@ -850,7 +988,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         // 底部提示
         sb.append("<div style=\"margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(0, 0, 0, 0.1);\">");
         sb.append("<div style=\"font-size: 13px; color: #86868b; line-height: 1.5;\">");
-        sb.append("需要创建缺失的用户和组才能继续。点击\"修复\"按钮自动创建必要的用户和组。");
+        sb.append("需要创建缺失的用户、组和home目录才能继续。点击\"修复\"按钮自动创建必要的资源。");
         sb.append("</div>");
         sb.append("</div>");
 
@@ -882,7 +1020,8 @@ public class UserGroupChecker extends AbstractItemChecker {
         // 用户统计
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(users.size()).append("</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(users.size())
+                .append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
         sb.append("<div style=\"height: 6px; width: 100%; background: #34c759; border-radius: 3px;\"></div>");
         sb.append("</div>");
@@ -891,7 +1030,8 @@ public class UserGroupChecker extends AbstractItemChecker {
         // 组统计
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(groups.size()).append("</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(groups.size())
+                .append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
         sb.append("<div style=\"height: 6px; width: 100%; background: #5ac8fa; border-radius: 3px;\"></div>");
         sb.append("</div>");
