@@ -2,16 +2,12 @@ package com.datasophon.api.service.checker.checkers.disk.os.ubuntu;
 
 import com.datasophon.api.service.checker.checkers.disk.generic.GenericDiskChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Ubuntu磁盘检查器实现
  * 适用于Ubuntu Linux发行版
  */
 public class UbuntuDiskChecker extends GenericDiskChecker {
-
-    private static final Logger log = LoggerFactory.getLogger(UbuntuDiskChecker.class);
 
     @Override
     public void provideCleanupSuggestions(CheckLogger cacheLog) {

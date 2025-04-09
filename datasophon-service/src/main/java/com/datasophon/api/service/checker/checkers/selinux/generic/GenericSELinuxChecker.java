@@ -28,7 +28,6 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
      * -- SETTER --
      * 设置SSH连接池管理器
      *
-     * @param sshConnectionPoolManager SSH连接池管理器实例
      */
     @Setter
     @Autowired
@@ -107,7 +106,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             }
 
             // 增加sestatus命令检查以提高准确性
-            CommandResult sestatusResult = null;
+            CommandResult sestatusResult;
             try {
                 cacheLog.info("使用sestatus命令进一步验证SELinux状态...");
                 sestatusResult = execCommand(session, "sestatus 2>/dev/null || echo 'Command not found'");
@@ -334,7 +333,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             boolean hasSetenforce = checkCmd.isSuccess() && !checkCmd.getOutput().trim().isEmpty();
 
             // 先尝试临时设置为宽容模式
-            boolean tempFixSuccess = false;
+            boolean tempFixSuccess;
             CommandResult setenforceResult;
 
             if (hasSetenforce) {
@@ -354,36 +353,32 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                 cacheLog.error("设置SELinux临时状态失败: %s", setenforceResult.getErrorOrOutput());
 
                 // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
 
                 // 添加错误信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
+
+                String detailsBuilder = HtmlStyleHelper.generateWarningAlert(
                         "临时设置SELinux失败",
-                        "无法临时设置SELinux为宽容模式: " + setenforceResult.getErrorOrOutput()));
+                        "无法临时设置SELinux为宽容模式: " + setenforceResult.getErrorOrOutput()) +
 
-                // 添加手动修复指南
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>以root权限临时禁用SELinux (选择适合的方法):</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "# CentOS/RHEL/Kylin V4方法:\nsudo setenforce 0\n\n" +
-                                "# Ubuntu/Kylin V10方法:\n[ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo vi /etc/selinux/config\n\n" +
-                                "# 修改以下行\nSELINUX=disabled"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                        // 添加手动修复指南
+                        HtmlStyleHelper.beginGroup() +
+                        "<p><strong>手动修复步骤:</strong></p>" +
+                        "<ol style='padding-left:20px;margin-bottom:15px'>" +
+                        "<li style='margin-bottom:5px'>以root权限临时禁用SELinux (选择适合的方法):</li>" +
+                        HtmlStyleHelper.generateCodeBlock(
+                                "# CentOS/RHEL/Kylin V4方法:\nsudo setenforce 0\n\n" +
+                                        "# Ubuntu/Kylin V10方法:\n[ -f /sys/fs/selinux/enforce ] && echo 0 | sudo tee /sys/fs/selinux/enforce") +
+                        "<li style='margin-bottom:5px'>修改配置文件永久禁用SELinux:</li>" +
+                        HtmlStyleHelper.generateCodeBlock(
+                                "sudo vi /etc/selinux/config\n\n" +
+                                        "# 修改以下行\nSELINUX=disabled") +
+                        "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
+                        HtmlStyleHelper.generateCodeBlock("sudo reboot") +
+                        "</ol>" +
+                        HtmlStyleHelper.endGroup();
 
                 // 设置消息
-                checkItem.setMessage(detailsBuilder.toString());
+                checkItem.setMessage(detailsBuilder);
                 return false;
             }
             cacheLog.info("已临时设置SELinux为宽容模式");
@@ -395,7 +390,7 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
             CommandResult configCheck = execCommand(session, "[ -f /etc/selinux/config ] && echo 'exists'");
             boolean configExists = configCheck.isSuccess() && configCheck.getOutput().trim().equals("exists");
 
-            boolean configFixSuccess = false;
+            boolean configFixSuccess;
             CommandResult sedResult;
 
             if (configExists) {
@@ -429,39 +424,38 @@ public class GenericSELinuxChecker implements SELinuxCheckerStrategy {
                 cacheLog.error("修改SELinux配置文件失败: %s", sedResult.getErrorOrOutput());
 
                 // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
 
                 // 添加错误和部分成功信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
+
+                String detailsBuilder = HtmlStyleHelper.generateWarningAlert(
                         "SELinux配置文件修改失败",
-                        "SELinux已临时设置为宽容模式，但无法修改配置文件进行永久设置: " + sedResult.getErrorOrOutput()));
+                        "SELinux已临时设置为宽容模式，但无法修改配置文件进行永久设置: " + sedResult.getErrorOrOutput()) +
 
-                // 添加当前状态说明
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>当前SELinux状态:</strong></p>");
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS));
-                detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                        "永久状态", "未修改", HtmlStyleHelper.Colors.WARNING));
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                        // 添加当前状态说明
+                        HtmlStyleHelper.beginGroup() +
+                        "<p><strong>当前SELinux状态:</strong></p>" +
+                        HtmlStyleHelper.generatePropertyRow(
+                                "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                        HtmlStyleHelper.generatePropertyRow(
+                                "永久状态", "未修改", HtmlStyleHelper.Colors.WARNING) +
+                        HtmlStyleHelper.endGroup() +
 
-                // 添加手动修复指南
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                detailsBuilder.append("<li style='margin-bottom:5px'>以root权限修改配置文件:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock(
-                        "sudo mkdir -p /etc/selinux\n" +
-                                "sudo vi /etc/selinux/config\n\n" +
-                                "# 添加以下行\nSELINUX=disabled\nSELINUXTYPE=targeted"));
-
-                detailsBuilder.append("<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                        // 添加手动修复指南
+                        HtmlStyleHelper.beginGroup() +
+                        "<p><strong>手动修复步骤:</strong></p>" +
+                        "<ol style='padding-left:20px;margin-bottom:15px'>" +
+                        "<li style='margin-bottom:5px'>以root权限修改配置文件:</li>" +
+                        HtmlStyleHelper.generateCodeBlock(
+                                "sudo mkdir -p /etc/selinux\n" +
+                                        "sudo vi /etc/selinux/config\n\n" +
+                                        "# 添加以下行\nSELINUX=disabled\nSELINUXTYPE=targeted") +
+                        "<li style='margin-bottom:5px'>重启系统使永久设置生效:</li>" +
+                        HtmlStyleHelper.generateCodeBlock("sudo reboot") +
+                        "</ol>" +
+                        HtmlStyleHelper.endGroup();
 
                 // 设置消息
-                checkItem.setMessage(detailsBuilder.toString());
+                checkItem.setMessage(detailsBuilder);
                 return false;
             }
             cacheLog.info("已修改SELinux配置文件，设置为disabled");

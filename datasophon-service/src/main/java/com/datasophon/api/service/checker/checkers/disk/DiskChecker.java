@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayOutputStream;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,30 +39,6 @@ public class DiskChecker extends AbstractItemChecker {
 
     /** 警告磁盘使用率阈值 */
     public static final int WARNING_DISK_USAGE_THRESHOLD = 80;
-
-    /** 警告inode使用率阈值 */
-    public static final int WARNING_INODE_USAGE_THRESHOLD = 80;
-
-    /** 最小所需磁盘空间（GB） */
-    public static final long MIN_DISK_SPACE_GB = 100;
-
-    /**
-     * 获取目标目录的最小可用空间配置
-     * 
-     * @param directory 目录路径
-     * @return 指定目录的最小可用空间GB
-     */
-    public int getMinAvailableSpace(String directory) {
-        List<CheckerProperties.DiskDirectoryConfig> checkDirectories = checkerProperties.getDisk()
-                .getCheckDirectories();
-
-        Optional<CheckerProperties.DiskDirectoryConfig> dirConfig = checkDirectories.stream()
-                .filter(config -> directory.equals(config.getPath()))
-                .findFirst();
-
-        return dirConfig.map(CheckerProperties.DiskDirectoryConfig::getMinAvailableGb)
-                .orElseGet(() -> (int) MIN_DISK_SPACE_GB); // 如果配置不存在，使用默认值
-    }
 
     /**
      * 获取全局最小可用空间百分比

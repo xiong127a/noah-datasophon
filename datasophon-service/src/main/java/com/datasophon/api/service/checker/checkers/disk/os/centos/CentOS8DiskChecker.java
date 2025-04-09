@@ -1,9 +1,6 @@
 package com.datasophon.api.service.checker.checkers.disk.os.centos;
 
-import com.datasophon.api.service.checker.checkers.disk.DiskChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * CentOS 8磁盘检查器实现
@@ -11,7 +8,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CentOS8DiskChecker extends CentOSDiskChecker {
 
-    private static final Logger log = LoggerFactory.getLogger(CentOS8DiskChecker.class);
+
 
     @Override
     public void provideCleanupSuggestions(CheckLogger cacheLog) {

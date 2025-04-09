@@ -9,7 +9,6 @@ import com.datasophon.api.service.checker.helpers.CheckLogger;
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.HostInfo;
-import lombok.Getter;
 import lombok.Setter;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -39,7 +38,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
         /**
          * 支持的操作系统类型
          */
-        @Getter
+
         @Setter
         private OsDistribution supportedOs;
 
@@ -140,7 +139,7 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
          * 处理df命令结果的辅助方法
          */
         protected CheckItem processDfResult(HostInfo hostInfo, CheckItem checkItem, CommandResult dfResult,
-                        CheckLogger cacheLog, String targetDir, int minDiskSpaceGB) throws InterruptedException {
+                        CheckLogger cacheLog, String targetDir, int minDiskSpaceGB) {
                 if (dfResult.getExitCode() != 0) {
                         String errorMsg = "获取磁盘信息失败: " + dfResult.getError();
                         log.error(errorMsg);
@@ -388,66 +387,61 @@ public class GenericDiskChecker implements DiskCheckerStrategy {
                         float availablePercent = (availableGB / totalGB) * 100;
                         if (availablePercent < minAvailablePercent) {
                                 // 创建带HTML样式的消息
-                                StringBuilder message = new StringBuilder();
-                                message.append("<div style='line-height:1.6'>");
 
-                                // 状态标题
-                                message.append(String.format(
-                                                "<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘可用空间百分比不足</h3>",
-                                                targetDir));
+                            String message = "<div style='line-height:1.6'>" +
 
-                                // 磁盘详情
-                                message.append("<div style='margin-bottom:15px'>");
-                                message.append(String.format(
-                                                "<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>",
-                                                mountPoint));
-                                message.append(
-                                                String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>",
-                                                                device));
-                                message.append(String.format(
-                                                "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>",
-                                                size));
-                                message.append(String.format(
-                                                "<p><strong>可用空间:</strong> <span style='color:#f5222d;font-weight:bold'>%s</span> (%.2f%%)</p>",
-                                                available, availablePercent));
-                                message.append(String.format(
-                                                "<p><strong>最小可用空间百分比:</strong> <span style='color:#722ed1;font-weight:bold'>%d%%</span></p>",
-                                                minAvailablePercent));
-                                message.append("</div>");
+                                    // 状态标题
+                                    String.format(
+                                            "<h3 style='color:#f5222d;margin-bottom:10px'>%s 目录磁盘可用空间百分比不足</h3>",
+                                            targetDir) +
 
-                                // 磁盘空间可视化
-                                message.append("<div style='margin-bottom:15px'>");
-                                message.append("<p><strong>磁盘可用空间百分比:</strong></p>");
+                                    // 磁盘详情
+                                    "<div style='margin-bottom:15px'>" +
+                                    String.format(
+                                            "<p><strong>挂载点:</strong> <span style='color:#1890ff'>%s</span></p>",
+                                            mountPoint) +
+                                    String.format("<p><strong>设备:</strong> <span style='color:#722ed1'>%s</span></p>",
+                                            device) +
+                                    String.format(
+                                            "<p><strong>总空间:</strong> <span style='color:#1890ff;font-weight:bold'>%s</span></p>",
+                                            size) +
+                                    String.format(
+                                            "<p><strong>可用空间:</strong> <span style='color:#f5222d;font-weight:bold'>%s</span> (%.2f%%)</p>",
+                                            available, availablePercent) +
+                                    String.format(
+                                            "<p><strong>最小可用空间百分比:</strong> <span style='color:#722ed1;font-weight:bold'>%d%%</span></p>",
+                                            minAvailablePercent) +
+                                    "</div>" +
 
-                                message.append(
-                                                "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>");
-                                message.append(String.format(
-                                                "<div style='background:#f5222d;height:100%%;width:%d%%;border-radius:8px;'></div>",
-                                                Math.round(availablePercent)));
-                                message.append(String.format(
-                                                "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f%% / %d%%</div>",
-                                                availablePercent > 70 ? "white" : "#333", availablePercent,
-                                                minAvailablePercent));
-                                message.append("</div>");
-                                message.append("</div>");
+                                    // 磁盘空间可视化
+                                    "<div style='margin-bottom:15px'>" +
+                                    "<p><strong>磁盘可用空间百分比:</strong></p>" +
+                                    "<div style='background:#f0f0f0;border-radius:8px;height:20px;width:100%;position:relative;overflow:hidden;'>" +
+                                    String.format(
+                                            "<div style='background:#f5222d;height:100%%;width:%d%%;border-radius:8px;'></div>",
+                                            Math.round(availablePercent)) +
+                                    String.format(
+                                            "<div style='position:absolute;top:0;left:0;right:0;bottom:0;text-align:center;color:%s;line-height:20px;font-weight:bold;'>%.2f%% / %d%%</div>",
+                                            availablePercent > 70 ? "white" : "#333", availablePercent,
+                                            minAvailablePercent) +
+                                    "</div>" +
+                                    "</div>" +
 
-                                // 警告信息
-                                message.append(
-                                                "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>");
-                                message.append(String.format(
-                                                "<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 磁盘可用空间百分比(%.2f%%)小于最低要求(%d%%)</p>",
-                                                availablePercent, minAvailablePercent));
-                                message.append("<p style='margin-top:5px;margin-bottom:0;'>建议清理磁盘空间或扩展存储容量，以确保系统正常运行。</p>");
-                                message.append("</div>");
-
-                                message.append("</div>");
+                                    // 警告信息
+                                    "<div style='background:#fff2f0;border-left:4px solid #f5222d;padding:10px;border-radius:0 4px 4px 0;'>" +
+                                    String.format(
+                                            "<p style='margin:0;color:#f5222d;font-weight:bold'>警告: 磁盘可用空间百分比(%.2f%%)小于最低要求(%d%%)</p>",
+                                            availablePercent, minAvailablePercent) +
+                                    "<p style='margin-top:5px;margin-bottom:0;'>建议清理磁盘空间或扩展存储容量，以确保系统正常运行。</p>" +
+                                    "</div>" +
+                                    "</div>";
 
                                 String errorMsg = String.format("磁盘可用空间百分比不足: %.2f%% < %d%%", availablePercent,
                                                 minAvailablePercent);
                                 log.error(errorMsg);
                                 cacheLog.error(errorMsg);
                                 checkItem.setStatus(CheckItem.Status.FAILED);
-                                checkItem.setMessage(message.toString());
+                                checkItem.setMessage(message);
                                 return checkItem;
                         }
 

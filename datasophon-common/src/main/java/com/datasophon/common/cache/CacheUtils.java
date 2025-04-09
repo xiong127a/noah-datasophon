@@ -19,13 +19,14 @@ package com.datasophon.common.cache;
 
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.datasophon.common.Constants;
+import com.datasophon.common.model.HostInfo;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.commons.lang.StringUtils;
-import com.datasophon.common.Constants;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,27 +38,6 @@ public class CacheUtils {
     private static final Logger logger = LoggerFactory.getLogger(CacheUtils.class);
     private static final String CHECK_ITEM_LOG_PREFIX = "CHECK_ITEM_LOG_";
 
-    // 添加更多已知的缓存键前缀，用于缓存查询
-    private static final String[] KNOWN_PREFIXES = {
-            CHECK_ITEM_LOG_PREFIX, // 检查项日志前缀
-            "HOST_MAP", // 主机映射
-            "CLUSTER_", // 集群相关
-            "SERVICE_", // 服务相关
-            "CONFIG_", // 配置相关
-            "TASK_", // 任务相关
-            "USER_", // 用户相关
-            "SESSION_", // 会话相关
-            "AUTH_", // 认证相关
-            "ROLE_", // 角色相关
-            "PERM_", // 权限相关
-            "MENU_", // 菜单相关
-            "DASHBOARD_", // 仪表盘相关
-            "ALERT_", // 告警相关
-            "JOB_", // 作业相关
-            "LOG_", // 日志相关
-            "STAT_" // 统计相关
-    };
-
     // 默认缓存过期时间为1小时
     private static final long DEFAULT_TIMEOUT = 3600000;
 
@@ -65,7 +45,7 @@ public class CacheUtils {
     private static final long LOG_TIMEOUT = 24 * 3600000;
 
     // 使用定时缓存替代LRU缓存
-    private static Cache<String, Object> cache = CacheUtil.newTimedCache(DEFAULT_TIMEOUT);
+    private static final Cache<String, Object> cache = CacheUtil.newTimedCache(DEFAULT_TIMEOUT);
 
     // 用于记录所有添加到缓存中的键
     private static final Set<String> cacheKeys = ConcurrentHashMap.newKeySet();
@@ -76,6 +56,43 @@ public class CacheUtils {
             logger.debug("获取日志缓存: {}, 是否存在: {}", key, value != null);
         }
         return value;
+    }
+
+    /**
+     * 获取指定复杂类型的缓存数据
+     * 
+     * @param <T>           返回的数据类型
+     * @param key           缓存键
+     * @param typeReference 复杂类型的TypeReference
+     * @return 指定类型的缓存数据，如果类型不匹配或缓存不存在则返回null
+     */
+    public static <T> T getGeneric(String key, TypeReference<T> typeReference) {
+        Object value = get(key);
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            // 通过JSON序列化和反序列化进行转换
+            String jsonString = JSON.toJSONString(value);
+            return JSON.parseObject(jsonString, typeReference);
+        } catch (Exception e) {
+            logger.error("缓存数据类型转换错误，键: {}, 类型: {}, 错误: {}", key, typeReference.getType(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 获取主机信息映射
+     * 
+     * @param key 缓存键
+     * @return 主机信息映射
+     */
+    public static Map<String, HostInfo> getHostMap(String key) {
+        // 使用TypeReference获取泛型类型
+        Map<String, HostInfo> result = getGeneric(key, new TypeReference<Map<String, HostInfo>>() {
+        });
+        return result != null ? result : new ConcurrentHashMap<>();
     }
 
     public static void put(String key, Object value) {
@@ -128,63 +145,13 @@ public class CacheUtils {
     }
 
     /**
-     * 获取所有缓存键列表
-     * 
-     * @return 缓存键列表
-     */
-    public static String[] getCacheKeys() {
-        // 直接返回记录的键集合
-        return cacheKeys.toArray(new String[0]);
-    }
-
-    /**
-     * 获取所有缓存内容
-     * 
-     * @return 包含所有缓存键值对的Map
-     */
-    public static Map<String, Object> getAllCache() {
-        Map<String, Object> result = new HashMap<>();
-
-        // 遍历记录的所有键，获取对应的值
-        for (String key : cacheKeys) {
-            if (cache.containsKey(key)) {
-                result.put(key, cache.get(key));
-            }
-        }
-
-        logger.debug("获取所有缓存，共{}个项目", result.size());
-        return result;
-    }
-
-    /**
-     * 获取指定前缀的所有缓存键
-     * 
-     * @param prefix 前缀
-     * @return 匹配前缀的缓存键数组
-     */
-    public static String[] getKeysByPrefix(String prefix) {
-        if (prefix == null) {
-            return new String[0];
-        }
-
-        Set<String> matchedKeys = new HashSet<>();
-        for (String key : cacheKeys) {
-            if (key.startsWith(prefix)) {
-                matchedKeys.add(key);
-            }
-        }
-
-        return matchedKeys.toArray(new String[0]);
-    }
-
-    /**
      * 更新主机信息缓存
      * 
      * @param clusterId 集群ID
      * @param ip        主机IP
      * @param hostInfo  主机信息对象
      */
-    public static void putHostInfo(Integer clusterId, String ip, Object hostInfo) {
+    public static void putHostInfo(Integer clusterId, String ip, HostInfo hostInfo) {
         if (clusterId == null || StringUtils.isBlank(ip) || hostInfo == null) {
             logger.warn("更新主机缓存参数无效: clusterId={}, ip={}", clusterId, ip);
             return;
@@ -194,11 +161,7 @@ public class CacheUtils {
 
         try {
             // 获取当前缓存
-            Map<String, Object> hostMap = (Map<String, Object>) get(cacheKey);
-            if (hostMap == null) {
-                // 如果缓存不存在，创建新的Map
-                hostMap = new ConcurrentHashMap<>();
-            }
+            Map<String, HostInfo> hostMap = getHostMap(cacheKey);
 
             // 更新特定主机信息
             hostMap.put(ip, hostInfo);
@@ -213,10 +176,7 @@ public class CacheUtils {
             // 重试一次
             try {
                 Thread.sleep(50);
-                Map<String, Object> hostMap = (Map<String, Object>) get(cacheKey);
-                if (hostMap == null) {
-                    hostMap = new ConcurrentHashMap<>();
-                }
+                Map<String, HostInfo> hostMap = getHostMap(cacheKey);
                 hostMap.put(ip, hostInfo);
                 put(cacheKey, hostMap);
                 logger.info("重试更新主机缓存成功: clusterId={}, ip={}", clusterId, ip);

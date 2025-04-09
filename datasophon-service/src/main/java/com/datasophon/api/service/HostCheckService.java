@@ -158,16 +158,6 @@ public interface HostCheckService {
         Result retryCheckItems(Integer clusterId, String ip, List<String> itemNames);
 
         /**
-         * 批量修复检查项
-         * 
-         * @param clusterId 集群ID
-         * @param ip        主机IP
-         * @param itemIds   检查项ID列表
-         * @return 修复结果
-         */
-        Result batchFixCheckItem(Integer clusterId, String ip, List<Integer> itemIds);
-
-        /**
          * 获取格式化后的HTML日志
          * 
          * @param clusterId  集群ID
@@ -299,21 +289,6 @@ public interface HostCheckService {
          * @return 任务进度信息
          */
         Result getTaskProgress(String taskId);
-
-        /**
-         * 更新主机信息缓存
-         * 
-         * @param clusterId 集群ID
-         * @param hostInfo  主机信息
-         */
-        void updateHostInfoCache(Integer clusterId, com.datasophon.common.model.HostInfo hostInfo);
-
-        /**
-         * 更新主机映射缓存
-         * 
-         * @param clusterId 集群ID
-         */
-        void updateHostMapInCache(Integer clusterId);
 
         /**
          * 修复集群中所有主机的所有失败项

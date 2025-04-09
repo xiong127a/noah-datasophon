@@ -1,7 +1,6 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.checker.AsyncCheckService;
 import com.datasophon.api.service.checker.common.ItemCode;
@@ -21,14 +20,18 @@ import com.datasophon.common.model.LogEntry;
 import com.datasophon.common.model.LogResponse;
 import com.datasophon.common.model.LogStats;
 import com.datasophon.common.model.OsInfo;
+import com.datasophon.common.model.hardware.DnsInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.Result;
+import lombok.Data;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,9 +64,6 @@ public class HostCheckServiceImpl implements HostCheckService {
     private ItemCheckerFactory itemCheckerFactory;
 
     @Autowired
-    private ClusterInfoService clusterInfoService;
-
-    @Autowired
     private HostCheckQueueManager hostCheckQueueManager;
 
     @Autowired
@@ -80,40 +80,68 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 任务执行状态枚举
      */
     public enum TaskStatus {
-        /** 进行中 */
+        /**
+         * 进行中
+         */
         IN_PROGRESS,
-        /** 已完成 */
+        /**
+         * 已完成
+         */
         COMPLETED,
-        /** 失败 */
+        /**
+         * 失败
+         */
         FAILED
     }
 
     /**
      * 任务进度信息
      */
-    @lombok.Data
+    @Data
     public static class TaskProgress {
-        /** 任务ID */
+        /**
+         * 任务ID
+         */
         private String taskId;
-        /** 任务状态 */
+        /**
+         * 任务状态
+         */
         private TaskStatus status;
-        /** 已完成主机IP列表 */
+        /**
+         * 已完成主机IP列表
+         */
         private List<String> completedHosts;
-        /** 处理中的主机IP */
+        /**
+         * 处理中的主机IP
+         */
         private String currentHost;
-        /** 失败主机信息，IP -> 错误信息 */
+        /**
+         * 失败主机信息，IP -> 错误信息
+         */
         private Map<String, String> failedHosts;
-        /** 待处理主机IP列表 */
+        /**
+         * 待处理主机IP列表
+         */
         private List<String> pendingHosts;
-        /** 总主机数 */
+        /**
+         * 总主机数
+         */
         private int totalHosts;
-        /** 已完成数量 */
+        /**
+         * 已完成数量
+         */
         private int completedCount;
-        /** 失败数量 */
+        /**
+         * 失败数量
+         */
         private int failedCount;
-        /** 完成百分比 */
+        /**
+         * 完成百分比
+         */
         private int percentage;
-        /** 任务消息 */
+        /**
+         * 任务消息
+         */
         private String message;
     }
 
@@ -130,7 +158,7 @@ public class HostCheckServiceImpl implements HostCheckService {
          * 创建检查项日志记录器
          */
         public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
-                Integer itemId) {
+                                            Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, service.getClass().getSimpleName());
         }
@@ -139,7 +167,7 @@ public class HostCheckServiceImpl implements HostCheckService {
          * 创建检查项日志记录器，使用自定义类名
          */
         public static CheckLogger getLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
-                Integer itemId, String className) {
+                                            Integer itemId, String className) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, className);
         }
@@ -148,18 +176,9 @@ public class HostCheckServiceImpl implements HostCheckService {
          * 创建检查日志记录器
          */
         public static CheckLogger getCheckLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
-                Integer itemId) {
+                                                 Integer itemId) {
             String logKey = service.getLogKey(clusterId, hostname, itemId);
             return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.CHECK);
-        }
-
-        /**
-         * 创建修复日志记录器
-         */
-        public static CheckLogger getFixLogger(HostCheckServiceImpl service, Integer clusterId, String hostname,
-                Integer itemId) {
-            String logKey = service.getLogKey(clusterId, hostname, itemId);
-            return CheckLogger.createLogger(logKey, service.getClass().getSimpleName(), LogEntry.Type.FIX);
         }
     }
 
@@ -205,9 +224,6 @@ public class HostCheckServiceImpl implements HostCheckService {
             if (checkItem.getStatus() == CheckItem.Status.FIXING) {
                 return Result.error("检查项正在修复中，请稍后重试");
             }
-
-            // 创建日志记录器
-            String logKey = getLogKey(clusterId, hostname, itemId);
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
             cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
             cacheLog.info("时间: " + formatDateToChinese(new Date()));
@@ -222,7 +238,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 更新主机状态
                 hostInfo.calculateStatus();
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                 cacheLog.info("修复任务已提交到队列，任务ID: " + taskId);
 
@@ -239,7 +255,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 修复指定主机上的选中检查项（重载方法）
-     * 
+     *
      * @param clusterId  集群ID
      * @param hostInfo   主机信息对象
      * @param itemIdList 需要修复的检查项ID列表
@@ -271,14 +287,14 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 立即更新缓存，使前端能看到状态变化
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             // 使用doHostFix进行批量修复，实现SSH连接复用
             boolean success = doHostFix(clusterId, hostInfo, itemsToFix);
 
             // 修复完成后根据结果重新计算主机状态
             hostInfo.calculateStatus();
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             if (success) {
                 retriggerHostCheck(hostInfo, clusterId);
@@ -291,7 +307,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             // 发生异常时，重新计算主机状态
             hostInfo.calculateStatus();
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             return Result.error("修复失败: " + e.getMessage());
         }
@@ -299,7 +315,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 修复指定主机列表的指定检查项
-     * 
+     *
      * @param clusterId    集群ID
      * @param hostInfoList 主机信息列表
      * @param itemIdList   需要修复的检查项ID列表
@@ -354,12 +370,12 @@ public class HostCheckServiceImpl implements HostCheckService {
                     }
 
                     // 立即更新缓存，确保前端能立即看到状态变化
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 }
             }
 
             // 立即更新主机映射缓存以确保前端能显示新状态
-            updateHostMapInCache(clusterId);
+            asyncCheckService.updateHostMapInCache(clusterId);
         } catch (Exception e) {
             logger.error("预设置主机修复状态时出错", e);
         }
@@ -385,8 +401,8 @@ public class HostCheckServiceImpl implements HostCheckService {
                     }
 
                     // 立即更新缓存，确保前端能立即看到状态变化
-                    updateHostInfoCache(clusterId, hostInfo);
-                    updateHostMapInCache(clusterId);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostMapInCache(clusterId);
 
                     // 更新之后的主机状态为等待修复
                     if (processedHostCount < hostInfoList.size() - 1) {
@@ -411,12 +427,12 @@ public class HostCheckServiceImpl implements HostCheckService {
                                 }
 
                                 // 立即更新单个主机的缓存
-                                updateHostInfoCache(clusterId, nextHost);
+                                asyncCheckService.updateHostInfoCache(clusterId, nextHost);
                             }
                         }
 
                         // 更新完所有主机后，更新整个主机映射缓存
-                        updateHostMapInCache(clusterId);
+                        asyncCheckService.updateHostMapInCache(clusterId);
                     }
                 }
 
@@ -442,8 +458,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 确保主机状态与检查项状态一致
                 hostInfo.calculateStatus();
-                updateHostInfoCache(clusterId, hostInfo);
-                updateHostMapInCache(clusterId);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostMapInCache(clusterId);
 
             } catch (Exception e) {
                 hasErrors = true;
@@ -456,16 +472,16 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 错误情况下，重新计算主机状态并更新缓存
                 hostInfo.calculateStatus();
-                updateHostInfoCache(clusterId, hostInfo);
-                updateHostMapInCache(clusterId);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostMapInCache(clusterId);
             }
         }
 
         // 最终更新主机映射缓存
-        updateHostMapInCache(clusterId);
+        asyncCheckService.updateHostMapInCache(clusterId);
 
         if (hasErrors) {
-            return Result.error("部分修复失败: " + resultMessage.toString() + "已修复 " + totalFixedItems + " 个项目");
+            return Result.error("部分修复失败: " + resultMessage + "已修复 " + totalFixedItems + " 个项目");
         } else if (totalFixedItems == 0) {
             return Result.success("没有找到需要修复的失败项");
         } else {
@@ -478,8 +494,8 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Result fixAllFailedItems(Integer clusterId) {
-        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostMap == null || hostMap.isEmpty()) {
+        Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+        if (hostMap.isEmpty()) {
             return Result.error("集群未找到或无主机信息");
         }
 
@@ -533,21 +549,21 @@ public class HostCheckServiceImpl implements HostCheckService {
                     }
                 }
                 // 更新缓存 - 立即更新每个主机的缓存状态
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             }
         }
 
         // 立即更新主机映射缓存确保前端能够显示修复状态
-        updateHostMapInCache(clusterId);
+        asyncCheckService.updateHostMapInCache(clusterId);
 
         if (allFailedItemIds.isEmpty()) {
             // 如果没有失败项，确保主机状态正确
             for (HostInfo hostInfo : hostInfoList) {
                 hostInfo.calculateStatus(); // 重新计算主机状态
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             }
             // 更新主机映射缓存
-            updateHostMapInCache(clusterId);
+            asyncCheckService.updateHostMapInCache(clusterId);
             return Result.success("没有发现需要修复的失败项");
         }
 
@@ -557,17 +573,17 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 修复完成后，重新计算每个主机的状态
         for (HostInfo hostInfo : hostInfoList) {
             hostInfo.calculateStatus();
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
         }
         // 最终更新主机映射缓存
-        updateHostMapInCache(clusterId);
+        asyncCheckService.updateHostMapInCache(clusterId);
 
         return result;
     }
 
     @Override
     public Result fixAllCheckItems(Integer clusterId, String hostname) {
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
         HostInfo hostInfo = map.get(hostname);
         if (Objects.isNull(hostInfo)) {
@@ -605,8 +621,8 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public void checkSingleHost(Integer clusterId, String hostname) {
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (Objects.isNull(map) || !map.containsKey(hostname)) {
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+        if (!map.containsKey(hostname)) {
             logger.error("找不到主机: {}", hostname);
             return;
         }
@@ -680,7 +696,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
             if (itemsToCheck.isEmpty()) {
                 logger.info("主机 {} 没有需要执行的检查项，检查提前结束", hostInfo.getIp());
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 return;
             }
 
@@ -690,7 +706,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             firstItem.setMessage("正在检查中");
 
             // 立即更新缓存，使前端能看到状态变化
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             // 使用新增的doHostCheck方法进行批量检查，实现SSH连接复用
             doHostCheck(clusterId, hostInfo, itemsToCheck);
@@ -707,7 +723,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                                 "检查过程中发生错误: " + e.getMessage());
                     }
                 }
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             }
         }
     }
@@ -723,7 +739,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     Thread.currentThread().getName());
 
             // 确保状态更新已发送到前端
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             // 初始化日志
             String logKey = getLogKey(clusterId, hostInfo.getIp(), checkItem.getId());
@@ -750,7 +766,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             // 从工厂获取检查器实例
             try {
                 // 注意检查ItemCode的转换过程
-                ItemCode itemCodeEnum = null;
+                ItemCode itemCodeEnum;
                 try {
                     itemCodeEnum = ItemCode.valueOf(checkItem.getItemCode());
                 } catch (IllegalArgumentException e) {
@@ -759,7 +775,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     cacheLog.error(errorMsg);
                     cacheLog.error("详细错误: " + e.getMessage());
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                     return false;
                 }
 
@@ -773,7 +789,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     logger.error(errorMsg);
                     cacheLog.error(errorMsg);
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, errorMsg);
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                     return false;
                 }
 
@@ -814,7 +830,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     }
 
                     // 更新缓存，确保前端能看到最新状态
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                     return result;
                 } catch (Exception e) {
@@ -825,7 +841,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                     hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED,
                             "执行检查时发生异常: " + e.getMessage());
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                     return false;
                 }
             } catch (Exception e) {
@@ -835,14 +851,14 @@ public class HostCheckServiceImpl implements HostCheckService {
                 cacheLog.error("异常堆栈: " + getStackTraceAsString(e));
 
                 hostInfo.updateCheckItemStatus(checkItem.getId(), CheckItem.Status.FAILED, "系统错误: " + e.getMessage());
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
         } catch (Exception e) {
             logger.error("执行检查失败: " + e.getMessage(), e);
 
             checkItem.setMessage("检查失败: " + e.getMessage());
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             // 记录异常信息
             CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostInfo.getIp(), checkItem.getId());
@@ -858,10 +874,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     public Result stopHostCheck(Integer clusterId, String hostname) {
         try {
             // 获取主机信息
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (Objects.isNull(map)) {
-                return Result.error("主机信息不存在");
-            }
+            Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
             HostInfo hostInfo = map.get(hostname);
             if (Objects.isNull(hostInfo)) {
@@ -900,10 +913,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     public Result stopItemCheck(Integer clusterId, String hostname, Integer itemId) {
         try {
             // 获取主机信息
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (Objects.isNull(map)) {
-                return Result.error("主机信息不存在");
-            }
+            Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
             HostInfo hostInfo = map.get(hostname);
             if (Objects.isNull(hostInfo)) {
@@ -968,20 +978,10 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
     }
 
-    private boolean isCheckTaskRunning(Integer clusterId) {
-        Boolean status = (Boolean) CacheUtils.get(CHECK_TASK_STATUS_PREFIX + clusterId);
-        return status != null && status;
-    }
 
     private boolean doFix(Integer clusterId, HostInfo hostInfo, CheckItem checkItem) {
-        ClientSession session = null;
+
         try {
-            session = MinaUtils.openConnectionWithPassword(hostInfo);
-
-            if (session == null) {
-                return true;
-            }
-
             ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
             if (checker == null) {
                 return true;
@@ -991,10 +991,6 @@ public class HostCheckServiceImpl implements HostCheckService {
         } catch (Exception e) {
             logger.error("执行修复失败", e);
             return true;
-        } finally {
-            if (session != null) {
-                MinaUtils.closeConnection(session);
-            }
         }
     }
 
@@ -1022,7 +1018,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     hostInfo.calculateStatus();
 
                     // 更新缓存
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 }
 
                 // 执行检查
@@ -1040,7 +1036,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     hostInfo.calculateStatus();
 
                     // 捕获到异常后更新缓存
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                 }
             }
@@ -1051,10 +1047,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      * 获取主机信息
      */
     private HostInfo getHostInfo(Integer clusterId, String hostname) {
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map == null) {
-            return null;
-        }
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
         return map.get(hostname);
     }
 
@@ -1072,81 +1065,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                 .orElse(null);
     }
 
-    /**
-     * 更新主机信息到缓存
-     * 
-     * @param clusterId 集群ID
-     * @param hostInfo  主机信息
-     */
-    @Override
-    public void updateHostInfoCache(Integer clusterId, HostInfo hostInfo) {
-        if (clusterId == null || hostInfo == null) {
-            return;
-        }
-
-        // 获取当前缓存中的主机信息
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map != null) {
-            // 检查是否是修复状态的变化，如果是则记录详细日志
-            HostInfo oldHostInfo = map.get(hostInfo.getIp());
-            if (oldHostInfo != null) {
-                CheckItem.Status oldStatus = oldHostInfo.getStatus();
-                CheckItem.Status newStatus = hostInfo.getStatus();
-
-                if (oldStatus != newStatus) {
-                    if (newStatus == CheckItem.Status.FIXING || newStatus == CheckItem.Status.WAITING_FIX) {
-                        logger.info("主机状态变化 - clusterId: {}, 主机: {}, 状态: {} -> {}, 消息: {}",
-                                clusterId, hostInfo.getIp(),
-                                oldStatus != null ? oldStatus.name() : "null",
-                                newStatus != null ? newStatus.name() : "null",
-                                hostInfo.getMessage());
-                    } else if (oldStatus == CheckItem.Status.FIXING || oldStatus == CheckItem.Status.WAITING_FIX) {
-                        logger.info("主机修复状态结束 - clusterId: {}, 主机: {}, 状态: {} -> {}, 消息: {}",
-                                clusterId, hostInfo.getIp(),
-                                oldStatus != null ? oldStatus.name() : "null",
-                                newStatus != null ? newStatus.name() : "null",
-                                hostInfo.getMessage());
-                    }
-                }
-
-                // 检查检查项状态变化
-                if (oldHostInfo.getCheckItems() != null && hostInfo.getCheckItems() != null) {
-                    Map<Integer, CheckItem.Status> oldItemStatusMap = new HashMap<>();
-                    for (CheckItem oldItem : oldHostInfo.getCheckItems()) {
-                        oldItemStatusMap.put(oldItem.getId(), oldItem.getStatus());
-                    }
-
-                    for (CheckItem newItem : hostInfo.getCheckItems()) {
-                        CheckItem.Status oldItemStatus = oldItemStatusMap.get(newItem.getId());
-                        if (oldItemStatus != null && oldItemStatus != newItem.getStatus()) {
-                            // 记录检查项状态变化，特别是与修复相关的状态
-                            if (newItem.getStatus() == CheckItem.Status.FIXING ||
-                                    newItem.getStatus() == CheckItem.Status.WAITING_FIX) {
-                                logger.info("检查项状态变化 - clusterId: {}, 主机: {}, 检查项ID: {}, 检查项: {}, 状态: {} -> {}, 消息: {}",
-                                        clusterId, hostInfo.getIp(), newItem.getId(), newItem.getItemName(),
-                                        oldItemStatus.name(), newItem.getStatus().name(),
-                                        newItem.getMessage());
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 更新缓存中的主机信息
-            map.put(hostInfo.getIp(), hostInfo);
-            CacheUtils.put(clusterId + Constants.HOST_MAP, map);
-
-            if (hostInfo.getStatus() == CheckItem.Status.FIXING ||
-                    hostInfo.getStatus() == CheckItem.Status.WAITING_FIX) {
-                logger.info("已更新集群{}中主机{}的修复状态信息到缓存, 状态: {}, 消息: {}",
-                        clusterId, hostInfo.getIp(),
-                        hostInfo.getStatus() != null ? hostInfo.getStatus().name() : "null",
-                        hostInfo.getMessage());
-            } else {
-                logger.debug("已更新集群{}中主机{}的信息到缓存", clusterId, hostInfo.getIp());
-            }
-        }
-    }
 
     /**
      * 批量检查多个主机
@@ -1184,10 +1102,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 ips.isEmpty() ? "无" : ips.get(0),
                 ips.isEmpty() ? "无" : ips.get(ips.size() - 1));
 
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map == null) {
-            return Result.error("找不到集群的主机信息");
-        }
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
         List<String> successHosts = new ArrayList<>();
         List<String> failedHosts = new ArrayList<>();
@@ -1259,13 +1174,6 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     private String getCheckLogKey(Integer clusterId, String hostname, Integer itemId) {
         return "CHECK_LOG_" + clusterId + "_" + hostname + "_" + itemId;
-    }
-
-    /**
-     * 获取修复日志的缓存键
-     */
-    private String getFixLogKey(Integer clusterId, String hostname, Integer itemId) {
-        return "FIX_LOG_" + clusterId + "_" + hostname + "_" + itemId;
     }
 
     @Override
@@ -1343,8 +1251,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         logger.info("收到重试检查项请求：主机 {}, 检查项 {}", hostname, itemNames);
 
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map == null || !map.containsKey(hostname)) {
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+        if (!map.containsKey(hostname)) {
             return Result.error("找不到主机：" + hostname);
         }
 
@@ -1437,13 +1345,13 @@ public class HostCheckServiceImpl implements HostCheckService {
                     item.setMessage("正在检查中");
 
                     // 立即更新缓存，使前端能看到状态变化
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                     // 执行检查
                     executeHostCheck(clusterId, hostInfo, item);
 
                     // 检查完成后再次更新缓存
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                     logger.info("检查项 {} 重试完成", item.getItemName());
                 } catch (Exception e) {
@@ -1451,7 +1359,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     // 设置状态为失败
                     item.setStatus(CheckItem.Status.FAILED);
                     item.setMessage("检查失败: " + e.getMessage());
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 } finally {
                     // 恢复线程名
                     Thread.currentThread().setName(originalThreadName);
@@ -1486,10 +1394,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         if (throwable == null) {
             return "";
         }
-
-        StringBuilder sb = new StringBuilder();
-        try (java.io.StringWriter sw = new java.io.StringWriter();
-                java.io.PrintWriter pw = new java.io.PrintWriter(sw)) {
+        try (StringWriter sw = new StringWriter();
+             PrintWriter pw = new PrintWriter(sw)) {
             throwable.printStackTrace(pw);
             return sw.toString();
         } catch (Exception e) {
@@ -1572,109 +1478,10 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
     }
 
-    @Override
-    public Result batchFixCheckItem(Integer clusterId, String hostname, List<Integer> itemIds) {
-        try {
-            if (itemIds == null || itemIds.isEmpty()) {
-                return Result.error("未选择需要修复的检查项");
-            }
-
-            HostInfo hostInfo = getHostInfo(clusterId, hostname);
-            if (hostInfo == null) {
-                return Result.error("未找到主机信息");
-            }
-
-            int fixCount = 0;
-            for (Integer itemId : itemIds) {
-                CheckItem checkItem = findCheckItemById(hostInfo, itemId);
-                if (checkItem == null) {
-                    continue;
-                }
-
-                // 创建日志记录器
-                String logKey = getLogKey(clusterId, hostname, itemId);
-                CheckLogger cacheLog = LoggerFactory.getLogger(this, clusterId, hostname, itemId);
-
-                // 记录日志
-                cacheLog.info("==== 开始修复: " + checkItem.getItemName() + " ====");
-                cacheLog.info("时间: " + formatDateToChinese(new Date()));
-
-                // 获取Checker
-                ItemChecker checker = itemCheckerFactory.getChecker(ItemCode.valueOf(checkItem.getItemCode()));
-                if (checker == null) {
-                    cacheLog.error("修复失败: 未找到对应的检查器");
-                    continue;
-                }
-
-                // 执行修复
-                cacheLog.info("正在执行修复...");
-                boolean success = checker.fix(clusterId, hostInfo, checkItem);
-
-                if (success) {
-                    cacheLog.info("修复成功，将重新检查项目状态");
-
-                    // 修改状态为待检查，等待下次检查
-                    checkItem.setStatus(CheckItem.Status.WAITING);
-                    checkItem.setMessage("等待重新检查");
-
-                    // 添加到成功计数
-                    fixCount += 1;
-
-                    // 执行异步检查
-                    final Integer checkedItemId = itemId;
-                    CompletableFuture.runAsync(() -> {
-                        try {
-                            // 暂停一小段时间，让修改生效
-                            Thread.sleep(1000);
-
-                            // 获取最新的主机信息
-                            HostInfo latestHostInfo = getHostInfo(clusterId, hostname);
-                            if (latestHostInfo == null) {
-                                cacheLog.error("重新检查失败: 未找到主机信息");
-                                return;
-                            }
-
-                            // 获取最新的检查项
-                            CheckItem latestCheckItem = findCheckItemById(latestHostInfo, checkedItemId);
-                            if (latestCheckItem == null) {
-                                cacheLog.error("重新检查失败: 未找到检查项");
-                                return;
-                            }
-
-                            // 重新执行检查
-                            cacheLog.info("正在重新检查...");
-                            executeCheckItem(latestHostInfo, latestCheckItem, clusterId);
-
-                            // 更新缓存
-                            updateHostInfoCache(clusterId, latestHostInfo);
-                        } catch (Exception e) {
-                            cacheLog.error("重新检查失败: " + e.getMessage());
-                            logger.error("修复后重新检查失败: {}", e.getMessage(), e);
-                        }
-                    }, checkExecutor);
-                } else {
-                    cacheLog.error("修复失败");
-                }
-            }
-
-            // 更新缓存
-            updateHostInfoCache(clusterId, hostInfo);
-
-            if (fixCount > 0) {
-                return Result.success("已发送" + fixCount + "条修复指令，请稍后查看结果");
-            } else {
-                return Result.error("所有修复任务均执行失败");
-            }
-        } catch (Exception e) {
-            logger.error("批量修复检查项失败: {}", e.getMessage(), e);
-            return Result.error("批量修复失败: " + e.getMessage());
-        }
-    }
-
     /**
      * 获取检查项日志（统一接口）
      * 整合了所有日志筛选功能
-     * 
+     *
      * @param clusterId  集群ID
      * @param hostname   主机名
      * @param itemId     检查项ID
@@ -1685,7 +1492,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public List<LogEntry> getLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel,
-            String filterMode) {
+                                 String filterMode) {
         if (clusterId == null) {
             logger.error("获取日志失败：集群ID不能为空");
             return Collections.emptyList();
@@ -1782,7 +1589,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Result getFormattedLog(Integer clusterId, String hostname, Integer itemId, String logType, String logLevel,
-            String filterMode) {
+                                  String filterMode) {
         if (clusterId == null || hostname == null || itemId == null) {
             return Result.error("参数不能为空");
         }
@@ -1857,7 +1664,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     // 新增方法：格式化日志为HTML，但不包含统计信息部分
     private String formatFilteredLogsToColoredHtmlWithoutStats(List<LogEntry> logEntries,
-            LogEntry.Type type, LogEntry.Level level, String filterMode) {
+                                                               LogEntry.Type type, LogEntry.Level level, String filterMode) {
 
         StringBuilder html = new StringBuilder();
 
@@ -1879,7 +1686,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     // 过滤日志条目
     private List<LogEntry> filterLogEntries(List<LogEntry> entries, LogEntry.Type type, LogEntry.Level level,
-            String filterMode) {
+                                            String filterMode) {
         // 检查是否需要过滤
         if ((type == null || type.name().equals("ALL")) &&
                 (filterMode.equals("all") || level == null || level.name().equals("ALL"))) {
@@ -1910,10 +1717,9 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     // 格式化单个日志条目为HTML
     private String formatLogEntryToHtml(LogEntry entry) {
-        String levelStyle = "";
-        String borderColor = "";
-        String bgColor = "";
-        String levelColor = "";
+        String borderColor;
+        String bgColor;
+        String levelColor;
 
         // 根据日志级别设置样式
         switch (entry.getLevel()) {
@@ -2012,130 +1818,6 @@ public class HostCheckServiceImpl implements HostCheckService {
         return entryHtml.toString();
     }
 
-    private String formatFilteredLogsToColoredHtml(List<LogEntry> logEntries,
-            LogEntry.Type type, LogEntry.Level level, String filterMode) {
-        // 构建包含统计摘要的老方法
-        StringBuilder sb = new StringBuilder();
-        sb.append(
-                "<div class=\"colored-log-container\" style=\"font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5; padding: 16px; background-color: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);\">");
-
-        // 过滤日志
-        List<LogEntry> filteredEntries = filterLogEntries(logEntries, type, level, filterMode);
-
-        // 统计各级别日志数量
-        int totalCount = filteredEntries.size();
-        int errorCount = 0;
-        int infoCount = 0;
-        int warnCount = 0;
-        int debugCount = 0;
-
-        for (LogEntry entry : filteredEntries) {
-            switch (entry.getLevel()) {
-                case ERROR:
-                    errorCount++;
-                    break;
-                case INFO:
-                    infoCount++;
-                    break;
-                case WARN:
-                    warnCount++;
-                    break;
-                case DEBUG:
-                    debugCount++;
-                    break;
-            }
-        }
-
-        // 添加日志统计摘要
-        sb.append(
-                "<div class=\"log-summary\" style=\"margin-bottom: 16px; padding: 8px; background-color: #f5f5f5; border-radius: 4px; display: flex; flex-wrap: wrap; gap: 12px;\">");
-        sb.append("<span style=\"font-weight: bold;\">共 ").append(totalCount).append(" 条日志:</span>");
-
-        if (errorCount > 0) {
-            sb.append("<span style=\"color: #FF5252;\">")
-                    .append("<span style=\"font-weight: bold;\">").append(errorCount).append("</span> 条错误")
-                    .append("</span>");
-        }
-
-        if (warnCount > 0) {
-            sb.append("<span style=\"color: #FFD740;\">")
-                    .append("<span style=\"font-weight: bold;\">").append(warnCount).append("</span> 条警告")
-                    .append("</span>");
-        }
-
-        if (infoCount > 0) {
-            sb.append("<span style=\"color: #4CAF50;\">")
-                    .append("<span style=\"font-weight: bold;\">").append(infoCount).append("</span> 条信息")
-                    .append("</span>");
-        }
-
-        if (debugCount > 0) {
-            sb.append("<span style=\"color: #2196F3;\">")
-                    .append("<span style=\"font-weight: bold;\">").append(debugCount).append("</span> 条调试")
-                    .append("</span>");
-        }
-
-        sb.append("</div>");
-
-        // 添加日志条目
-        for (LogEntry entry : filteredEntries) {
-            sb.append(formatLogEntryToHtml(entry));
-        }
-
-        sb.append("</div>");
-        return sb.toString();
-    }
-
-    /**
-     * 格式化堆栈跟踪行
-     */
-    private String formatStackTraceLines(String stackTrace) {
-        if (stackTrace == null || stackTrace.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder formatted = new StringBuilder();
-        formatted.append(
-                "<div class=\"stack-trace\" style=\"margin: 8px 0; padding: 12px; background-color: #FFF1F0; border-left: 4px solid #FF5252; border-radius: 4px;\">");
-
-        String[] lines = stackTrace.split("\n");
-        for (int i = 0; i < lines.length; i++) {
-            String line = escapeHtml(lines[i].trim());
-
-            if (i == 0) {
-                // 异常标题
-                formatted.append(
-                        "<div style=\"color: #FF5252; font-weight: bold; font-size: 14px; margin-bottom: 8px;\">")
-                        .append(line)
-                        .append("</div>");
-            } else if (line.contains("at com.datasophon")) {
-                // 项目相关行
-                formatted.append("<div style=\"color: #FF5252; padding-left: 20px; margin-bottom: 2px;\">")
-                        .append(line)
-                        .append("</div>");
-            } else if (line.contains("at ")) {
-                // 普通堆栈行
-                formatted.append("<div style=\"color: #777; padding-left: 20px; margin-bottom: 2px;\">")
-                        .append(line)
-                        .append("</div>");
-            } else if (line.contains("Caused by:")) {
-                // 内部异常
-                formatted.append(
-                        "<div style=\"color: #FF9800; font-weight: bold; margin-top: 8px; margin-bottom: 4px;\">")
-                        .append(line)
-                        .append("</div>");
-            } else if (!line.trim().isEmpty()) {
-                // 其他非空行
-                formatted.append("<div style=\"margin-bottom: 2px;\">")
-                        .append(line)
-                        .append("</div>");
-            }
-        }
-
-        formatted.append("</div>");
-        return formatted.toString();
-    }
-
     /**
      * HTML特殊字符转义
      */
@@ -2154,7 +1836,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 获取可用的日志级别
-     * 
+     *
      * @return 日志级别数组
      */
     @Override
@@ -2164,7 +1846,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 获取可用的日志类型
-     * 
+     *
      * @return 日志类型映射，key为类型编码，value为显示名称
      */
     @Override
@@ -2177,7 +1859,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 跳过指定检查项
-     * 
+     *
      * @param clusterId 集群ID
      * @param hostname  主机名
      * @param itemId    检查项ID
@@ -2205,7 +1887,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             hostInfo.updateCheckItemStatus(itemId, CheckItem.Status.SKIPPED, "用户已跳过该检查项");
 
             // 更新缓存
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
             // 记录日志
             LoggerFactory.getCheckLogger(this, clusterId, hostname, itemId)
@@ -2220,22 +1902,28 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Override
     public Result getCheckItemConfirmInfo(Integer clusterId, String hostname, Integer itemId) {
+        String message = "";
         try {
+
             ItemCode itemCode = ItemCode.getBySequence(itemId);
             // 封装结果返回
-            return Result.success()
-                    .put("needConfirm", itemCode.isNeedConfirm())
-                    .put("confirmMessage", itemCode.isNeedConfirm() ? itemCode.getConfirmMessage() : "确定要修复该检查项吗？")
-                    .put("itemName", itemCode.getName());
+            if (itemCode != null) {
+                return Objects.requireNonNull(Objects.requireNonNull(Result.success()
+                                        .put("needConfirm", itemCode.isNeedConfirm()))
+                                .put("confirmMessage", itemCode.isNeedConfirm() ? itemCode.getConfirmMessage() : "确定要修复该检查项吗？"))
+                        .put("itemName", itemCode.getName());
+            }
         } catch (Exception e) {
-            logger.error("获取检查项确认信息失败: {}", e.getMessage(), e);
-            return Result.error("获取确认信息失败: " + e.getMessage());
+            message = e.getMessage();
+            logger.error("获取检查项确认信息失败: {}", message, e);
+
         }
+        return Result.error("获取确认信息失败: " + message);
     }
 
     /**
      * 获取指定主机的检查项列表
-     * 
+     *
      * @param ip        主机IP
      * @param clusterId 集群ID
      * @return 指定主机的检查项列表
@@ -2243,10 +1931,7 @@ public class HostCheckServiceImpl implements HostCheckService {
     @Override
     public Result getHostCheckItems(String ip, Integer clusterId) {
         // 从缓存中获取指定主机的检查项
-        Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostInfoMap == null) {
-            return Result.error("找不到集群主机信息缓存");
-        }
+        Map<String, HostInfo> hostInfoMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
         // 根据IP查找主机信息
         HostInfo targetHost = null;
@@ -2278,8 +1963,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
 
         // 从缓存中获取主机列表
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (map == null || map.isEmpty()) {
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+        if (map.isEmpty()) {
             return Result.error("找不到集群的主机信息，请先解析主机列表");
         }
 
@@ -2342,7 +2027,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 }
 
                 // 更新缓存
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 logger.info("所有修复项执行完成，结果: {}", allSuccess ? "全部成功" : "部分失败");
 
                 return allSuccess;
@@ -2354,7 +2039,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     item.setMessage("执行修复时发生内部错误");
                 }
                 // 更新缓存
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 return false;
             }
         } catch (Exception e) {
@@ -2365,7 +2050,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 item.setMessage("执行修复时发生错误: " + e.getMessage());
             }
             // 更新缓存
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             return false;
         }
     }
@@ -2408,7 +2093,7 @@ public class HostCheckServiceImpl implements HostCheckService {
             }
 
             // 更新缓存
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
             logger.info("所有检查项执行完成");
 
         } catch (Exception e) {
@@ -2419,7 +2104,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 item.setMessage("执行检查时发生错误: " + e.getMessage());
             }
             // 更新缓存
-            updateHostInfoCache(clusterId, hostInfo);
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
         }
     }
 
@@ -2434,7 +2119,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 更新主机名 - 支持可选的hosts文件同步
-     * 
+     *
      * @param clusterId   集群ID
      * @param ip          主机IP地址
      * @param newHostname 新主机名
@@ -2442,267 +2127,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      * @return 操作结果
      */
     public Result updateHostname(Integer clusterId, String ip, String newHostname, boolean syncHosts) {
-        logger.info("更新主机名: clusterId={}, ip={}, newHostname={}, syncHosts={}", clusterId, ip, newHostname, syncHosts);
-
-        // 校验主机名格式
-        if (StrUtil.isBlank(newHostname)) {
-            return Result.error("主机名不能为空");
-        }
-
-        // 主机名格式检查 - 只允许字母、数字、短横线和下划线，不允许特殊字符
-        if (!newHostname.matches("^[a-zA-Z0-9_.-]+$")) {
-            return Result.error("主机名格式无效，只允许字母、数字、短横线和下划线");
-        }
-
-        try {
-            // 获取存储在缓存中的主机信息
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || !hostMap.containsKey(ip)) {
-                return Result.error("主机不存在");
-            }
-
-            HostInfo hostInfo = hostMap.get(ip);
-            String currentHostname = hostInfo.getHostname();
-
-            // 如果新旧主机名相同，则无需修改
-            if (newHostname.equals(currentHostname)) {
-                logger.info("主机名未发生变化，无需更新: {}", currentHostname);
-                return Result.success("主机名未发生变化，无需更新");
-            }
-
-            // 建立SSH连接
-            ClientSession session = null;
-            try {
-                session = MinaUtils.openConnectionWithPassword(hostInfo);
-                if (session == null) {
-                    return Result.error("无法连接到主机");
-                }
-
-                // 1. 检查系统是否有sudo命令
-                String checkSudoCmd = "which sudo || echo 'nosudo'";
-                String checkSudoResult = MinaUtils.execCmdWithResult(session, checkSudoCmd);
-                boolean hasSudo = !checkSudoResult.trim().contains("nosudo");
-                logger.info("检查主机是否有sudo命令: {}", hasSudo ? "有" : "没有");
-
-                // 2. 检查系统是否有hostnamectl命令
-                String checkHostnamectlCmd = "which hostnamectl || echo 'nohostnamectl'";
-                String checkHostnamectlResult = MinaUtils.execCmdWithResult(session, checkHostnamectlCmd);
-                boolean hasHostnamectl = !checkHostnamectlResult.trim().contains("nohostnamectl");
-                logger.info("检查主机是否有hostnamectl命令: {}", hasHostnamectl ? "有" : "没有");
-
-                // 根据命令可用性决定使用哪种方式设置主机名
-                String sudoPrefix = hasSudo ? "sudo " : "";
-                String setHostnameCmd;
-
-                if (hasHostnamectl) {
-                    // 使用hostnamectl命令设置主机名
-                    logger.info("使用hostnamectl命令设置主机名: {}", newHostname);
-                    setHostnameCmd = sudoPrefix + "hostnamectl set-hostname " + newHostname;
-                } else {
-                    // 使用hostname命令设置主机名
-                    logger.info("使用hostname命令设置主机名: {}", newHostname);
-                    setHostnameCmd = sudoPrefix + "hostname " + newHostname;
-                }
-
-                String result = MinaUtils.execCmdWithResult(session, setHostnameCmd);
-                logger.info("设置主机名执行结果: {}", result);
-
-                // 更新/etc/hostname文件
-                String updateHostnameFileCmd;
-                if (hasSudo) {
-                    updateHostnameFileCmd = "echo '" + newHostname + "' | " + sudoPrefix + "tee /etc/hostname";
-                } else {
-                    updateHostnameFileCmd = "echo '" + newHostname + "' > /etc/hostname";
-                }
-                MinaUtils.execCmdWithResult(session, updateHostnameFileCmd);
-
-                // 兼容旧版本的CentOS/RHEL
-                String updateSysConfigCmd = sudoPrefix + "sed -i 's/^HOSTNAME=.*/HOSTNAME=" + newHostname
-                        + "/' /etc/sysconfig/network 2>/dev/null || true";
-                MinaUtils.execCmdWithResult(session, updateSysConfigCmd);
-
-                // 3. 根据syncHosts参数决定是否更新/etc/hosts文件
-                if (syncHosts) {
-                    logger.info("同步更新hosts文件中本机的主机名记录: {} -> {}", currentHostname, newHostname);
-
-                    // 先获取当前hosts文件
-                    String getHostsCmd = "cat /etc/hosts";
-                    String currentHostsContent = MinaUtils.execCmdWithResult(session, getHostsCmd);
-
-                    // 定义标记，用于标识由系统管理的部分
-                    String startMark = "### BEGIN DATASOPHON MANAGED HOSTS ###";
-                    String endMark = "### END DATASOPHON MANAGED HOSTS ###";
-
-                    // 准备新的hosts文件内容
-                    StringBuilder newHostsContent = new StringBuilder();
-
-                    // 检查当前文件是否已经包含系统标记
-                    if (currentHostsContent.contains(startMark) && currentHostsContent.contains(endMark)) {
-                        // 文件已经包含系统标记，只更新标记内的主机名
-                        int startIndex = currentHostsContent.indexOf(startMark);
-                        int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
-
-                        // 获取标记内的内容
-                        String managedContent = currentHostsContent.substring(
-                                startIndex + startMark.length(),
-                                currentHostsContent.indexOf(endMark));
-
-                        // 在标记内的内容中，只修改当前IP对应的主机名
-                        String updatedManagedContent = "";
-                        String[] lines = managedContent.split("\n");
-                        for (String line : lines) {
-                            line = line.trim();
-                            if (line.isEmpty() || line.startsWith("#")) {
-                                // 保持注释和空行不变
-                                updatedManagedContent += line + "\n";
-                            } else if (line.contains(ip)) {
-                                // 这一行包含当前IP，需要修改主机名
-                                String[] parts = line.split("\\s+");
-                                if (parts.length >= 2) {
-                                    // 构建新行，保留IP和其他主机名，但将匹配当前主机名的替换为新主机名
-                                    StringBuilder newLine = new StringBuilder(parts[0]); // IP地址
-
-                                    for (int i = 1; i < parts.length; i++) {
-                                        if (parts[i].equals(currentHostname)) {
-                                            newLine.append(" ").append(newHostname);
-                                        } else {
-                                            newLine.append(" ").append(parts[i]);
-                                        }
-                                    }
-                                    updatedManagedContent += newLine.toString() + "\n";
-                                } else {
-                                    // 如果格式不正确，添加正确的格式
-                                    updatedManagedContent += ip + " " + newHostname + "\n";
-                                }
-                            } else {
-                                // 保持其他行不变
-                                updatedManagedContent += line + "\n";
-                            }
-                        }
-
-                        // 组合新的hosts文件内容
-                        newHostsContent.append(currentHostsContent.substring(0, startIndex));
-                        newHostsContent.append(startMark).append("\n");
-                        newHostsContent.append(updatedManagedContent);
-                        newHostsContent.append(endMark);
-
-                        // 如果标记后还有内容，也保留
-                        if (endIndex < currentHostsContent.length()) {
-                            newHostsContent.append(currentHostsContent.substring(endIndex));
-                        }
-                    } else {
-                        // 文件不包含系统标记，以原始方式更新主机名引用
-                        // 更新hosts文件中的本机记录，将旧主机名替换为新主机名
-                        String[] lines = currentHostsContent.split("\n");
-                        boolean foundEntry = false;
-
-                        for (String line : lines) {
-                            if (line.trim().isEmpty() || line.trim().startsWith("#")) {
-                                // 保持注释和空行不变
-                                newHostsContent.append(line).append("\n");
-                            } else if (line.contains(ip)
-                                    || (line.contains("127.0.1.1") && line.contains(currentHostname))) {
-                                // 这一行包含当前IP或者包含127.0.1.1和当前主机名，需要修改主机名
-                                String updatedLine = line.replace(currentHostname, newHostname);
-                                newHostsContent.append(updatedLine).append("\n");
-                                foundEntry = true;
-                            } else {
-                                // 保持其他行不变
-                                newHostsContent.append(line).append("\n");
-                            }
-                        }
-
-                        // 如果没有找到匹配的条目，添加一个新条目
-                        if (!foundEntry) {
-                            if (!newHostsContent.toString().endsWith("\n")) {
-                                newHostsContent.append("\n");
-                            }
-                            newHostsContent.append("\n# Added by Datasophon\n");
-                            newHostsContent.append(ip).append(" ").append(newHostname).append("\n");
-                        }
-                    }
-
-                    // 创建临时文件
-                    String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
-                    // 使用单引号包裹并转义内部的单引号
-                    String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
-                            newHostsContent.toString() +
-                            "\nEOL";
-                    MinaUtils.execCmdWithResult(session, createTempCommand);
-
-                    // 使用sudo将临时文件复制到/etc/hosts
-                    String updateCommand;
-                    if (hasSudo) {
-                        updateCommand = sudoPrefix + "cp " + tempFile + " /etc/hosts && " + sudoPrefix
-                                + "chmod 644 /etc/hosts && rm " + tempFile;
-                    } else {
-                        updateCommand = "cp " + tempFile + " /etc/hosts && chmod 644 /etc/hosts && rm " + tempFile;
-                    }
-                    String updateResult = MinaUtils.execCmdWithResult(session, updateCommand);
-                    logger.info("更新hosts文件结果: {}", updateResult);
-
-                    logger.info("hosts文件中的主机名记录已更新: {} -> {}", currentHostname, newHostname);
-                } else {
-                    logger.info("不更新hosts文件，仅设置主机名");
-                }
-
-                // 4. 获取更新后的主机名进行验证
-                String verifyCmd = "hostname";
-                String verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
-
-                boolean hostnameSetSuccess = true; // 默认认为设置成功
-
-                if (!verifyResult.equals(newHostname)) {
-                    logger.warn("主机名可能未成功更新，当前主机名为: {}, 期望主机名为: {}", verifyResult, newHostname);
-
-                    // 尝试再次使用直接方式设置主机名
-                    logger.info("尝试使用直接方式再次设置主机名: {}", newHostname);
-                    String directCmd = sudoPrefix + "hostname " + newHostname;
-                    MinaUtils.execCmdWithResult(session, directCmd);
-
-                    // 再次验证
-                    verifyResult = MinaUtils.execCmdWithResult(session, verifyCmd).trim();
-                    if (!verifyResult.equals(newHostname)) {
-                        logger.error("重试后主机名设置仍然失败，当前主机名: {}", verifyResult);
-                        hostnameSetSuccess = false;
-                    } else {
-                        logger.info("重试设置主机名成功: {}", newHostname);
-                    }
-                }
-
-                // 5. 只有当主机名设置成功或系统重启后会生效的情况下，才更新缓存
-                String oldHostname = hostInfo.getHostname();
-                hostInfo.setHostname(newHostname);
-
-                // 6. 更新缓存中的主机信息
-                hostMap.remove(ip); // 移除旧的记录
-                hostMap.put(ip, hostInfo); // 添加更新后的记录
-
-                // 7. 将更新后的主机映射放回缓存
-                CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-
-                // 8. 刷新单个主机信息缓存
-                updateHostInfoCache(clusterId, hostInfo);
-
-                // 9. 刷新全局主机信息缓存
-                updateHostMapInCache(clusterId);
-
-                if (hostnameSetSuccess) {
-                    logger.info("主机名已成功更新: {} -> {}", oldHostname, newHostname);
-                    return Result.success("主机名已成功更新为: " + newHostname);
-                } else {
-                    logger.warn("主机名设置未立即生效，可能需要重启系统: {} -> {}", oldHostname, newHostname);
-                    return Result.success("主机名已设置，但未立即生效，可能需要重启系统后生效: " + newHostname);
-                }
-            } finally {
-                if (session != null && session.isOpen()) {
-                    MinaUtils.closeConnection(session);
-                }
-            }
-        } catch (Exception e) {
-            logger.error("更新主机名时发生错误", e);
-            return Result.error("更新主机名失败: " + e.getMessage());
-        }
+        return asyncCheckService.updateHostname(clusterId, ip, newHostname, syncHosts);
     }
 
     @Override
@@ -2717,8 +2142,8 @@ public class HostCheckServiceImpl implements HostCheckService {
         // 获取主机信息和SSH连接
         try {
             // 获取存储在缓存中的主机信息
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || !hostMap.containsKey(ip)) {
+            Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            if (!hostMap.containsKey(ip)) {
                 return Result.error("主机不存在");
             }
 
@@ -2777,7 +2202,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                     int endIndex = currentHostsContent.indexOf(endMark) + endMark.length();
 
                     // 保留标记前的内容
-                    newHostsContent.append(currentHostsContent.substring(0, startIndex));
+                    newHostsContent.append(currentHostsContent, 0, startIndex);
 
                     // 添加我们的内容（包含标记）
                     newHostsContent.append(startMark).append("\n");
@@ -2810,7 +2235,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 String tempFile = "/tmp/hosts_" + System.currentTimeMillis();
                 // 这里需要注意特殊字符的处理，使用单引号包裹并转义内部的单引号
                 String createTempCommand = "cat > " + tempFile + " << 'EOL'\n" +
-                        newHostsContent.toString() +
+                        newHostsContent +
                         "\nEOL";
                 MinaUtils.execCmdWithResult(session, createTempCommand);
 
@@ -2831,7 +2256,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                 }
 
                 if (hostInfo.getOsInfo().getDnsInfo() == null) {
-                    hostInfo.getOsInfo().setDnsInfo(new com.datasophon.common.model.hardware.DnsInfo());
+                    hostInfo.getOsInfo().setDnsInfo(new DnsInfo());
                 }
 
                 // 设置hosts文件内容到DnsInfo对象 - 这里只保存我们添加的部分
@@ -2841,10 +2266,10 @@ public class HostCheckServiceImpl implements HostCheckService {
                 hostInfo.getOsInfo().setDnsStatus(OsInfoStatusEnum.SUCCESS);
 
                 // 更新主机信息缓存
-                updateHostInfoCache(clusterId, hostInfo);
+                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
 
                 // 立即刷新全局缓存
-                updateHostMapInCache(clusterId);
+                asyncCheckService.updateHostMapInCache(clusterId);
 
                 return Result.success("hosts文件已成功更新，备份文件: " + backupFileName);
             } finally {
@@ -2862,16 +2287,20 @@ public class HostCheckServiceImpl implements HostCheckService {
      * Hosts文件条目类型
      */
     public enum HostsEntryType {
-        /** 注释 */
+        /**
+         * 注释
+         */
         COMMENT,
-        /** IP映射 */
+        /**
+         * IP映射
+         */
         MAPPING
     }
 
     /**
      * Hosts文件条目
      */
-    @lombok.Data
+    @Data
     public static class HostsEntry {
         /**
          * 条目类型：COMMENT(注释)或MAPPING(IP映射)
@@ -2913,23 +2342,12 @@ public class HostCheckServiceImpl implements HostCheckService {
             entry.setHostnames(Arrays.asList(hostnames));
             return entry;
         }
-
-        /**
-         * 创建IP映射条目
-         */
-        public static HostsEntry createMapping(String ip, List<String> hostnames) {
-            HostsEntry entry = new HostsEntry();
-            entry.setType(HostsEntryType.MAPPING);
-            entry.setIp(ip);
-            entry.setHostnames(hostnames);
-            return entry;
-        }
     }
 
     /**
      * Hosts文件预览VO
      */
-    @lombok.Data
+    @Data
     public static class HostsFilePreviewVO {
         /**
          * hosts文件条目列表
@@ -2975,7 +2393,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 内部方法，直接返回VO对象，不包装Result
-     * 
+     *
      * @param clusterId 集群ID
      * @param page      当前页码，从1开始
      * @param pageSize  每页显示数量
@@ -2986,8 +2404,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
         try {
             // 获取存储在缓存中的主机信息
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || hostMap.isEmpty()) {
+            Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            if (hostMap.isEmpty()) {
                 return null;
             }
 
@@ -3080,7 +2498,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 生成hosts文件预览（带分页）
-     * 
+     *
      * @param clusterId 集群ID
      * @param page      当前页码，从1开始
      * @param pageSize  每页显示数量
@@ -3127,8 +2545,8 @@ public class HostCheckServiceImpl implements HostCheckService {
             logger.info("获取到预览内容，总主机数：{}", hostsFilePreview.getHostCount());
 
             // 获取集群主机信息
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || hostMap.isEmpty()) {
+            Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            if (hostMap.isEmpty()) {
                 return Result.error("未找到集群的主机信息");
             }
 
@@ -3148,7 +2566,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     /**
      * 获取任务进度
-     * 
+     *
      * @param taskId 任务ID
      * @return 任务进度信息
      */
@@ -3174,43 +2592,8 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
-     * 更新主机信息到缓存
-     * 
-     * @param clusterId 集群ID
-     */
-    @Override
-    public void updateHostMapInCache(Integer clusterId) {
-        try {
-            logger.info("更新集群{}的主机信息缓存", clusterId);
-
-            // 获取当前缓存中的主机信息
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (map == null || map.isEmpty()) {
-                logger.warn("缓存中未找到集群{}的主机信息", clusterId);
-                return;
-            }
-
-            // 遍历所有主机，确保主机信息是最新的
-            for (Map.Entry<String, HostInfo> entry : map.entrySet()) {
-                String ip = entry.getKey();
-                HostInfo hostInfo = entry.getValue();
-
-                // 更新每个主机的信息到缓存
-                updateHostInfoCache(clusterId, hostInfo);
-            }
-
-            // 将更新后的信息重新放入缓存
-            CacheUtils.put(clusterId + Constants.HOST_MAP, map);
-
-            logger.info("成功更新集群{}的主机信息缓存，共{}台主机", clusterId, map.size());
-        } catch (Exception e) {
-            logger.error("更新主机信息缓存时发生错误", e);
-        }
-    }
-
-    /**
      * 批量设置主机名
-     * 
+     *
      * @param clusterId 集群ID
      * @param prefix    主机名前缀
      * @param zeroCount 中间0的位数
@@ -3220,11 +2603,11 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Result batchSetHostname(Integer clusterId, String prefix, Integer zeroCount, String separator,
-            String suffix) {
+                                   String suffix) {
         try {
             // 获取存储在缓存中的主机信息
-            Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-            if (hostMap == null || hostMap.isEmpty()) {
+            Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+            if (hostMap.isEmpty()) {
                 return Result.error("未找到主机信息");
             }
 
@@ -3283,7 +2666,6 @@ public class HostCheckServiceImpl implements HostCheckService {
                     // 将主机列表分成10个一批的批次
                     int batchSize = 10; // 并发处理的主机数
                     int totalHosts = hostnamePreview.size();
-                    int batchCount = (totalHosts + batchSize - 1) / batchSize; // 向上取整计算批次数
 
                     for (int i = 0; i < totalHosts; i += batchSize) {
                         // 创建当前批次的任务列表
@@ -3346,7 +2728,7 @@ public class HostCheckServiceImpl implements HostCheckService {
                             "部分主机名设置失败，请检查详情");
 
                     // 更新主机信息缓存
-                    updateHostMapInCache(clusterId);
+                    asyncCheckService.updateHostMapInCache(clusterId);
 
                     logger.info("批量设置主机名任务完成，集群ID: {}, 任务ID: {}", clusterId, taskId);
 
@@ -3369,8 +2751,8 @@ public class HostCheckServiceImpl implements HostCheckService {
 
     @Override
     public Result skipAllFailedItems(Integer clusterId) {
-        Map<String, HostInfo> hostMap = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
-        if (hostMap == null || hostMap.isEmpty()) {
+        Map<String, HostInfo> hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
+        if (hostMap.isEmpty()) {
             return Result.error("集群未找到或无主机信息");
         }
 
@@ -3414,7 +2796,7 @@ public class HostCheckServiceImpl implements HostCheckService {
 
                 // 更新主机的缓存信息
                 if (hostSkippedItems > 0) {
-                    updateHostInfoCache(clusterId, hostInfo);
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
                 }
             } catch (Exception e) {
                 hasErrors = true;
@@ -3424,10 +2806,10 @@ public class HostCheckServiceImpl implements HostCheckService {
         }
 
         // 更新主机映射缓存
-        updateHostMapInCache(clusterId);
+        asyncCheckService.updateHostMapInCache(clusterId);
 
         if (hasErrors) {
-            return Result.error("部分跳过失败: " + resultMessage.toString() + "已跳过 " + totalSkippedItems + " 个项目");
+            return Result.error("部分跳过失败: " + resultMessage + "已跳过 " + totalSkippedItems + " 个项目");
         } else if (totalSkippedItems == 0) {
             return Result.success("没有发现需要跳过的失败项");
         } else {
@@ -3440,7 +2822,7 @@ public class HostCheckServiceImpl implements HostCheckService {
      */
     @Override
     public Result fixSelectedCheckItems(Integer clusterId, String hostname, String itemIds) {
-        Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterId + Constants.HOST_MAP);
+        Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
         HostInfo hostInfo = map.get(hostname);
         if (Objects.isNull(hostInfo)) {
@@ -3452,22 +2834,5 @@ public class HostCheckServiceImpl implements HostCheckService {
                 .collect(Collectors.toList());
 
         return fixSelectedCheckItems(clusterId, hostInfo, itemIdList);
-    }
-
-    /**
-     * 根据日志类型和级别筛选并格式化日志
-     * 
-     * @param logEntries 日志条目列表
-     * @param type       日志类型，可为null
-     * @param level      日志级别，可为null
-     * @param filterMode 筛选模式，"exact" - 精确匹配, "min" - 最低级别, "all" - 所有级别
-     * @return HTML格式的彩色日志内容
-     */
-    // 此处原有的formatFilteredLogsToColoredHtml方法已在第2011行定义
-    // 为防止重复定义，此处移除实现并修改方法名，调用第2011行的方法
-    private String formatFilteredLogsToColoredHtmlLegacy(List<LogEntry> logEntries,
-            LogEntry.Type type, LogEntry.Level level, String filterMode) {
-        // 直接调用已存在的方法，保持行为一致性
-        return formatFilteredLogsToColoredHtml(logEntries, type, level, filterMode);
     }
 }

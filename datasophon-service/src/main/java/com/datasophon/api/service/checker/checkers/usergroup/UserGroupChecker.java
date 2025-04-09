@@ -26,7 +26,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +49,6 @@ public class UserGroupChecker extends AbstractItemChecker {
     // 保存需要创建的用户和组
     private final List<String> usersToCreate = new ArrayList<>();
     private final List<String> groupsToCreate = new ArrayList<>();
-    private boolean checkFailed = false;
 
     // 创建定时缓存，默认过期时间5分钟
     private static final TimedCache<String, Object> META_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);
@@ -92,7 +90,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 清空之前的检查结果
             usersToCreate.clear();
             groupsToCreate.clear();
-            checkFailed = false;
+            boolean checkFailed = false;
 
             // 收集所有服务配置文件中的用户和组
             Set<String> users = new HashSet<>();
@@ -656,9 +654,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         Set<String> keysToRemove = new HashSet<>();
 
         // 获取所有缓存键
-        Iterator<String> keyIterator = META_CACHE.keySet().iterator();
-        while (keyIterator.hasNext()) {
-            String key = keyIterator.next();
+        for (String key : META_CACHE.keySet()) {
             if (key.contains(dirPath) ||
                     (key.startsWith(metaBasePath) &&
                             (key.endsWith(CACHE_KEY_USERS) ||
@@ -771,11 +767,9 @@ public class UserGroupChecker extends AbstractItemChecker {
 
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + existingUsers.size() + "/"
-                + totalUsers + "</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingUsers.size()).append("/").append(totalUsers).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
-        sb.append("<div style=\"height: 6px; width: " + userPercent
-                + "%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("<div style=\"height: 6px; width: ").append(userPercent).append("%; background: #ff9500; border-radius: 3px;\"></div>");
         sb.append("</div>");
         sb.append("</div>");
 
@@ -785,11 +779,9 @@ public class UserGroupChecker extends AbstractItemChecker {
 
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + existingGroups.size() + "/"
-                + totalGroups + "</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(existingGroups.size()).append("/").append(totalGroups).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
-        sb.append("<div style=\"height: 6px; width: " + groupPercent
-                + "%; background: #ff9500; border-radius: 3px;\"></div>");
+        sb.append("<div style=\"height: 6px; width: ").append(groupPercent).append("%; background: #ff9500; border-radius: 3px;\"></div>");
         sb.append("</div>");
         sb.append("</div>");
         sb.append("</div>");
@@ -805,7 +797,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String user : existingUsers) {
                 sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
-                sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">").append(user).append("</div>");
             }
             sb.append("</div>");
             sb.append("</div>");
@@ -819,7 +811,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String user : usersToCreate) {
                 sb.append("<div style=\"font-size: 13px; background: rgba(255, 59, 48, 0.15); color: #ff3b30; ");
-                sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">").append(user).append("</div>");
             }
             sb.append("</div>");
             sb.append("</div>");
@@ -833,7 +825,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String group : existingGroups) {
                 sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
-                sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">").append(group).append("</div>");
             }
             sb.append("</div>");
             sb.append("</div>");
@@ -847,7 +839,7 @@ public class UserGroupChecker extends AbstractItemChecker {
             sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
             for (String group : groupsToCreate) {
                 sb.append("<div style=\"font-size: 13px; background: rgba(255, 59, 48, 0.15); color: #ff3b30; ");
-                sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+                sb.append("border-radius: 6px; padding: 4px 10px;\">").append(group).append("</div>");
             }
             sb.append("</div>");
             sb.append("</div>");
@@ -890,7 +882,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         // 用户统计
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">用户</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + users.size() + "</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(users.size()).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
         sb.append("<div style=\"height: 6px; width: 100%; background: #34c759; border-radius: 3px;\"></div>");
         sb.append("</div>");
@@ -899,7 +891,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         // 组统计
         sb.append("<div style=\"flex: 1; min-width: 200px;\">");
         sb.append("<div style=\"font-size: 14px; color: #86868b; margin-bottom: 6px;\">组</div>");
-        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">" + groups.size() + "</div>");
+        sb.append("<div style=\"font-size: 28px; font-weight: 600; color: #1d1d1f;\">").append(groups.size()).append("</div>");
         sb.append("<div style=\"height: 6px; background: #e5e5e5; border-radius: 3px; margin-top: 10px;\">");
         sb.append("<div style=\"height: 6px; width: 100%; background: #5ac8fa; border-radius: 3px;\"></div>");
         sb.append("</div>");
@@ -915,7 +907,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
         for (String user : users) {
             sb.append("<div style=\"font-size: 13px; background: rgba(52, 199, 89, 0.15); color: #34c759; ");
-            sb.append("border-radius: 6px; padding: 4px 10px;\">" + user + "</div>");
+            sb.append("border-radius: 6px; padding: 4px 10px;\">").append(user).append("</div>");
         }
         sb.append("</div>");
         sb.append("</div>");
@@ -926,7 +918,7 @@ public class UserGroupChecker extends AbstractItemChecker {
         sb.append("<div style=\"display: flex; flex-wrap: wrap; gap: 8px;\">");
         for (String group : groups) {
             sb.append("<div style=\"font-size: 13px; background: rgba(90, 200, 250, 0.15); color: #5ac8fa; ");
-            sb.append("border-radius: 6px; padding: 4px 10px;\">" + group + "</div>");
+            sb.append("border-radius: 6px; padding: 4px 10px;\">").append(group).append("</div>");
         }
         sb.append("</div>");
         sb.append("</div>");
@@ -947,114 +939,5 @@ public class UserGroupChecker extends AbstractItemChecker {
     @Override
     public ItemCode getCheckerType() {
         return ItemCode.USER_GROUP_CHECK;
-    }
-
-    /**
-     * 清除缓存
-     */
-    public static void clearCache() {
-        META_CACHE.clear();
-        logger.info("已清除用户组检查器的元数据缓存");
-    }
-
-    /**
-     * 手动刷新缓存
-     * 可以在元数据更新后调用此方法强制重新扫描
-     */
-    public void refreshCache() {
-        int cacheSize = META_CACHE.size();
-        // 收集所有缓存键
-        Set<String> allKeys = new HashSet<>(META_CACHE.keySet());
-
-        // 分类统计
-        int userGroupKeys = 0;
-        int fileKeys = 0;
-        int expiryKeys = 0;
-
-        // 按类型分类
-        for (String key : allKeys) {
-            if (key.endsWith(CACHE_KEY_USERS) || key.endsWith(CACHE_KEY_GROUPS)) {
-                userGroupKeys++;
-            } else if (key.endsWith(CACHE_KEY_SERVICE_FILES)) {
-                fileKeys++;
-            } else if (key.startsWith(CACHE_KEY_EXPIRY_TIME)) {
-                expiryKeys++;
-            }
-        }
-
-        // 清除所有缓存
-        META_CACHE.clear();
-
-        logger.info("已手动刷新用户组检查器的元数据缓存：总计{}项 (用户组: {}, 文件: {}, 过期时间: {})",
-                cacheSize, userGroupKeys, fileKeys, expiryKeys);
-    }
-
-    /**
-     * 获取缓存统计信息
-     * 
-     * @return 缓存统计信息
-     */
-    public String getCacheStats() {
-        int totalItems = META_CACHE.size();
-        int fileHashItems = 0;
-        int dirMtimeItems = 0;
-        int configItems = 0;
-        int expiryTimeItems = 0;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("缓存统计 - 总项数: %d\n", totalItems));
-
-        // 获取当前时间
-        long now = System.currentTimeMillis();
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-
-        // 添加关键缓存项详细信息
-        sb.append("关键缓存项详情:\n");
-
-        List<String> keyPrefixes = new ArrayList<>();
-
-        for (String key : META_CACHE.keySet()) {
-            if (key.startsWith("filehash:")) {
-                fileHashItems++;
-            } else if (key.startsWith("dirmtime:")) {
-                dirMtimeItems++;
-            } else if (key.startsWith(CACHE_KEY_EXPIRY_TIME)) {
-                expiryTimeItems++;
-                // 提取缓存前缀
-                if (key.indexOf(":", CACHE_KEY_EXPIRY_TIME.length()) > 0) {
-                    String prefix = key.substring(CACHE_KEY_EXPIRY_TIME.length());
-                    if (!keyPrefixes.contains(prefix)) {
-                        keyPrefixes.add(prefix);
-                    }
-                }
-            } else if (key.endsWith(CACHE_KEY_USERS) ||
-                    key.endsWith(CACHE_KEY_GROUPS) ||
-                    key.endsWith(CACHE_KEY_SERVICE_FILES)) {
-                configItems++;
-            }
-        }
-
-        // 显示各类型缓存项数量
-        sb.append(String.format("  文件哈希: %d, 目录时间戳: %d, 配置项: %d, 过期时间: %d\n",
-                fileHashItems, dirMtimeItems, configItems, expiryTimeItems));
-
-        // 显示每个缓存前缀的详细信息
-        if (!keyPrefixes.isEmpty()) {
-            sb.append("缓存组详情:\n");
-            for (String prefix : keyPrefixes) {
-                Long expiryTime = (Long) META_CACHE.get(CACHE_KEY_EXPIRY_TIME + prefix);
-                if (expiryTime != null) {
-                    long remaining = (expiryTime - now) / 1000;
-                    if (remaining > 0) {
-                        sb.append(String.format("  %s - 剩余: %d分%d秒 (到期时间: %s)\n",
-                                prefix, remaining / 60, remaining % 60, sdf.format(new Date(expiryTime))));
-                    } else {
-                        sb.append(String.format("  %s - 已过期\n", prefix));
-                    }
-                }
-            }
-        }
-
-        return sb.toString();
     }
 }

@@ -11,25 +11,20 @@ import org.apache.sshd.sftp.client.SftpClientFactory;
 import org.apache.sshd.sftp.client.fs.SftpFileSystem;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -48,7 +43,7 @@ public class MinaUtils {
         sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
 
         sshClient.start();
-        ClientSession session = null;
+        ClientSession session;
 
         // 获取两种格式的私钥路径
         String privateKeyPathRSA = System.getProperty("user.home") + "/.ssh/id_rsa";
@@ -294,8 +289,8 @@ public class MinaUtils {
      */
     public static boolean uploadFile(ClientSession session, String remotePath, String inputFile) {
         File uploadFile = new File(inputFile);
-        InputStream input = null;
-        SftpFileSystem sftp = null;
+        InputStream input;
+        SftpFileSystem sftp;
         try {
             sftp = SftpClientFactory.instance().createSftpFileSystem(session);
             Path path = sftp.getDefaultDir().resolve(remotePath);
@@ -315,27 +310,6 @@ public class MinaUtils {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * 创建目录
-     *
-     * @param path
-     * @return
-     */
-    public static boolean createDir(ClientSession session, String path) {
-        SftpFileSystem sftp = null;
-        try {
-            sftp = SftpClientFactory.instance().createSftpFileSystem(session);
-            Path remoteRoot = sftp.getDefaultDir().resolve(path);
-            if (!Files.exists(remoteRoot)) {
-                Files.createDirectories(remoteRoot);
-                return true;
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return false;
     }
 
     /** 使用密码进行连接 */
@@ -368,7 +342,7 @@ public class MinaUtils {
         sshClient.setServerKeyVerifier(AcceptAllServerKeyVerifier.INSTANCE);
 
         sshClient.start();
-        ClientSession session = null;
+        ClientSession session;
         try {
             session = sshClient.connect(sshUser, sshIp, sshPort).verify().getClientSession();
             session.addPasswordIdentity(sshPassword);
@@ -413,274 +387,12 @@ public class MinaUtils {
                 for (int i = 0; i < Math.min(3, e.getStackTrace().length); i++) {
                     stackInfo.append(e.getStackTrace()[i].toString()).append("\n");
                 }
-                hostInfo.setOsErrorMsg("连接异常堆栈: " + stackInfo.toString());
+                hostInfo.setOsErrorMsg("连接异常堆栈: " + stackInfo);
             }
             return null;
         }
         LOG.info(sshIp + " 密码连接成功");
         return session;
-    }
-
-    /** 设置免密登录 */
-    public static boolean setupPasswordlessLogin(ClientSession session, String sshUser, String sshPassword) {
-        try {
-            // 检查必要的信息
-            if (session == null) {
-                LOG.error("SSH会话为空，无法设置免密登录");
-                return false;
-            }
-
-            // 获取用户主目录
-            String userHome = System.getProperty("user.home");
-            String sshDir = userHome + File.separator + ".ssh";
-            String publicKeyFile = sshDir + File.separator + "id_ed25519.pub";
-            String privateKeyFile = sshDir + File.separator + "id_ed25519";
-
-            // 1. 检查本地.ssh目录和密钥是否存在
-            File sshDirFile = new File(sshDir);
-            if (!sshDirFile.exists()) {
-                LOG.info("创建本地.ssh目录: {}", sshDir);
-                sshDirFile.mkdirs();
-                CommandResult chmodResult = execCmdWithResultObject(session, "chmod 700 " + sshDir);
-                LOG.info("设置本地.ssh目录权限结果: {}", chmodResult.isSuccess() ? "成功" : "失败");
-            }
-
-            // 2. 生成SSH密钥对
-            boolean keysExist = new File(publicKeyFile).exists() && new File(privateKeyFile).exists();
-            if (!keysExist) {
-                LOG.info("生成SSH密钥对");
-                generateSshKeyPair(sshDir);
-            }
-
-            if (!new File(publicKeyFile).exists()) {
-                LOG.error("公钥文件不存在: {}", publicKeyFile);
-                return false;
-            }
-
-            try {
-                // 1. 确保远程.ssh目录存在且权限正确
-                CommandResult mkdirResult = execCmdWithResultObject(session, "mkdir -p ~/.ssh && chmod 700 ~/.ssh");
-                LOG.info("创建远程.ssh目录结果: {}", mkdirResult.isSuccess() ? "成功" : "失败: " + mkdirResult.getError());
-
-                // 2. 检查远程authorized_keys文件
-                CommandResult touchResult = execCmdWithResultObject(session,
-                        "touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys");
-                LOG.info("创建/设置authorized_keys文件权限结果: {}",
-                        touchResult.isSuccess() ? "成功" : "失败: " + touchResult.getError());
-
-                // 3. 读取本地公钥
-                String publicKey = readPublicKeyFile(publicKeyFile);
-                if (publicKey == null || publicKey.isEmpty()) {
-                    LOG.error("无法读取公钥内容: {}", publicKeyFile);
-                    return false;
-                }
-
-                // 4. 将公钥写入临时文件
-                String tempFile = createTempPublicKeyFile(publicKey);
-                if (tempFile == null) {
-                    LOG.error("创建临时公钥文件失败");
-                    return false;
-                }
-
-                // 5. 上传公钥到远程服务器并添加到authorized_keys
-                String remoteKeyPath = "/tmp/id_ed25519.pub." + System.currentTimeMillis();
-                boolean uploadResult = uploadFile(session, remoteKeyPath, tempFile);
-                if (!uploadResult) {
-                    LOG.error("上传公钥到远程服务器失败");
-                    new File(tempFile).delete();
-                    return false;
-                }
-
-                String addKeyCmd = String.format(
-                        "cat %s >> ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys",
-                        remoteKeyPath);
-                CommandResult addKeyResult = execCmdWithResultObject(session, addKeyCmd);
-                LOG.info("添加公钥到authorized_keys结果: {}",
-                        addKeyResult.isSuccess() ? "成功" : "失败: " + addKeyResult.getError());
-
-                // 6. 清理临时文件
-                CommandResult cleanupResult = execCmdWithResultObject(session, "rm -f " + remoteKeyPath);
-                if (!cleanupResult.isSuccess()) {
-                    LOG.warn("清理远程临时文件失败: {}", cleanupResult.getError());
-                }
-                new File(tempFile).delete();
-
-                // 7. 检查远程SSH配置并尝试修复常见问题
-                // 检查SSH配置是否启用公钥认证
-                CommandResult grepResult = execCmdWithResultObject(session,
-                        "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
-                if (!grepResult.isSuccess() || grepResult.getOutput().isEmpty()) {
-                    LOG.warn("远程SSH服务器可能未明确启用公钥认证，尝试添加配置");
-                    // 尝试添加配置
-                    String backupCmd = "cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak_$(date +%Y%m%d%H%M%S)";
-                    CommandResult backupResult = execCmdWithResultObject(session, backupCmd);
-                    if (!backupResult.isSuccess()) {
-                        LOG.warn("备份SSH配置文件失败: {}", backupResult.getError());
-                    }
-
-                    // 添加或修改PubkeyAuthentication设置
-                    String fixCmd = "grep -q '^PubkeyAuthentication' /etc/ssh/sshd_config && " +
-                            "sed -i 's/^PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config || " +
-                            "echo 'PubkeyAuthentication yes' >> /etc/ssh/sshd_config";
-                    CommandResult fixResult = execCmdWithResultObject(session, fixCmd);
-                    if (!fixResult.isSuccess()) {
-                        LOG.warn("修复PubkeyAuthentication配置失败: {}", fixResult.getError());
-                    }
-
-                    // 确保支持Ed25519密钥
-                    String checkEd25519Cmd = "grep -q '^HostKey.*ssh_host_ed25519_key' /etc/ssh/sshd_config";
-                    CommandResult ed25519Result = execCmdWithResultObject(session, checkEd25519Cmd);
-
-                    if (!ed25519Result.isSuccess() || ed25519Result.getOutput().isEmpty()) {
-                        LOG.warn("远程SSH服务器可能未启用Ed25519密钥支持，尝试添加配置");
-                        String fixEd25519Cmd = "echo 'HostKey /etc/ssh/ssh_host_ed25519_key' >> /etc/ssh/sshd_config";
-                        CommandResult fixEd25519Result = execCmdWithResultObject(session, fixEd25519Cmd);
-                        if (!fixEd25519Result.isSuccess()) {
-                            LOG.warn("添加Ed25519密钥支持失败: {}", fixEd25519Result.getError());
-                        }
-                    }
-
-                    // 重启SSH服务
-                    LOG.info("尝试重启SSH服务以应用新配置");
-                    String restartCmd = "systemctl restart sshd || service sshd restart || service ssh restart";
-                    CommandResult restartResult = execCmdWithResultObject(session, restartCmd);
-                    if (!restartResult.isSuccess()) {
-                        LOG.warn("重启SSH服务失败: {}", restartResult.getError());
-                    }
-
-                    LOG.info("SSH配置已更新，请在服务器重启后再次尝试免密登录");
-                }
-
-                // 检查是否禁用密码认证(可选，通常不推荐自动设置)
-                CommandResult passwordAuthResult = execCmdWithResultObject(session,
-                        "grep -E '^PasswordAuthentication\\s+no' /etc/ssh/sshd_config");
-                if (passwordAuthResult.isSuccess() && !passwordAuthResult.getOutput().isEmpty()) {
-                    LOG.warn("远程SSH服务器已禁用密码认证，请确保公钥认证正常工作");
-                }
-
-                return true;
-            } catch (Exception e) {
-                LOG.error("设置免密登录过程发生异常", e);
-                return false;
-            }
-        } catch (Exception e) {
-            LOG.error("设置免密登录过程发生严重异常", e);
-            return false;
-        }
-    }
-
-    // 用于SSH密钥格式的辅助方法
-    private static void writeInt(OutputStream out, int v) throws IOException {
-        byte[] tmp = new byte[4];
-        tmp[0] = (byte) ((v >>> 24) & 0xff);
-        tmp[1] = (byte) ((v >>> 16) & 0xff);
-        tmp[2] = (byte) ((v >>> 8) & 0xff);
-        tmp[3] = (byte) (v & 0xff);
-        out.write(tmp);
-    }
-
-    /**
-     * 修复SSH密钥文件权限
-     * 将私钥权限设为0600，公钥权限设为0644，.ssh目录权限设为0700
-     * 
-     * @return 是否修复成功
-     */
-    public static boolean fixSshKeyPermissions() {
-        try {
-            String homeDir = System.getProperty("user.home");
-            String sshDir = homeDir + "/.ssh";
-            String privateKeyPathRSA = sshDir + "/id_rsa";
-            String publicKeyPathRSA = sshDir + "/id_rsa.pub";
-            String privateKeyPathED25519 = sshDir + "/id_ed25519";
-            String publicKeyPathED25519 = sshDir + "/id_ed25519.pub";
-
-            LOG.info("正在修复SSH密钥权限");
-            LOG.info("SSH目录: {}", sshDir);
-            LOG.info("RSA私钥路径: {}", privateKeyPathRSA);
-            LOG.info("RSA公钥路径: {}", publicKeyPathRSA);
-            LOG.info("ED25519私钥路径: {}", privateKeyPathED25519);
-            LOG.info("ED25519公钥路径: {}", publicKeyPathED25519);
-
-            File sshDirFile = new File(sshDir);
-            File privateKeyFileRSA = new File(privateKeyPathRSA);
-            File publicKeyFileRSA = new File(publicKeyPathRSA);
-            File privateKeyFileED25519 = new File(privateKeyPathED25519);
-            File publicKeyFileED25519 = new File(publicKeyPathED25519);
-
-            boolean success = false;
-
-            if (!sshDirFile.exists()) {
-                LOG.warn("SSH目录不存在: {}", sshDir);
-                // 创建SSH目录
-                sshDirFile.mkdirs();
-                success = true;
-            }
-
-            // 设置.ssh目录权限
-            Set<PosixFilePermission> sshDirPermissions = new HashSet<>();
-            sshDirPermissions.add(PosixFilePermission.OWNER_READ);
-            sshDirPermissions.add(PosixFilePermission.OWNER_WRITE);
-            sshDirPermissions.add(PosixFilePermission.OWNER_EXECUTE);
-            Files.setPosixFilePermissions(sshDirFile.toPath(), sshDirPermissions);
-            LOG.info("已设置SSH目录权限为0700");
-
-            // 设置RSA私钥文件权限
-            if (privateKeyFileRSA.exists()) {
-                Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
-                privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                Files.setPosixFilePermissions(privateKeyFileRSA.toPath(), privateKeyPermissions);
-                LOG.info("已设置RSA私钥文件权限为0600");
-                success = true;
-            } else {
-                LOG.warn("RSA私钥文件不存在: {}", privateKeyPathRSA);
-            }
-
-            // 设置RSA公钥文件权限
-            if (publicKeyFileRSA.exists()) {
-                Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
-                publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
-                publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
-                Files.setPosixFilePermissions(publicKeyFileRSA.toPath(), publicKeyPermissions);
-                LOG.info("已设置RSA公钥文件权限为0644");
-                success = true;
-            } else {
-                LOG.warn("RSA公钥文件不存在: {}", publicKeyPathRSA);
-            }
-
-            // 设置ED25519私钥文件权限
-            if (privateKeyFileED25519.exists()) {
-                Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
-                privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                Files.setPosixFilePermissions(privateKeyFileED25519.toPath(), privateKeyPermissions);
-                LOG.info("已设置ED25519私钥文件权限为0600");
-                success = true;
-            } else {
-                LOG.warn("ED25519私钥文件不存在: {}", privateKeyPathED25519);
-            }
-
-            // 设置ED25519公钥文件权限
-            if (publicKeyFileED25519.exists()) {
-                Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
-                publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
-                publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
-                Files.setPosixFilePermissions(publicKeyFileED25519.toPath(), publicKeyPermissions);
-                LOG.info("已设置ED25519公钥文件权限为0644");
-                success = true;
-            } else {
-                LOG.warn("ED25519公钥文件不存在: {}", publicKeyPathED25519);
-            }
-
-            return success;
-        } catch (Exception e) {
-            LOG.error("修复SSH密钥权限失败", e);
-            return false;
-        }
     }
 
     /**
@@ -727,9 +439,9 @@ public class MinaUtils {
             if (distro.contains("ubuntu") || distro.contains("debian")) {
                 // 对于Debian/Ubuntu, 先尝试systemctl, 如果不存在再用service命令
                 adaptedCommand = command.replace("service", "systemctl");
-                adaptedCommand = adaptedCommand.replace(" start ", " start ");
-                adaptedCommand = adaptedCommand.replace(" stop ", " stop ");
-                adaptedCommand = adaptedCommand.replace(" restart ", " restart ");
+//                adaptedCommand = adaptedCommand.replace(" start ", " start ");
+//                adaptedCommand = adaptedCommand.replace(" stop ", " stop ");
+//                adaptedCommand = adaptedCommand.replace(" restart ", " restart ");
             }
         } else if (command.contains("chkconfig")) {
             if (distro.contains("ubuntu") || distro.contains("debian")) {
@@ -785,8 +497,7 @@ public class MinaUtils {
         CommandResult result = execCmdWithResultObject(session, adaptedCommand);
 
         // 如果是启用服务失败，尝试修复LSB头信息后再重试
-        if (result != null && !result.isSuccess() && adaptedCommand.contains("update-rc.d")
-                && adaptedCommand.contains("enable")) {
+        if (!result.isSuccess() && adaptedCommand.contains("update-rc.d") && adaptedCommand.contains("enable")) {
             String scriptPath = adaptedCommand.replace("update-rc.d", "").replace("enable", "").trim();
             LOG.warn("启用服务失败，尝试添加LSB头信息: {}", scriptPath);
 
@@ -797,13 +508,11 @@ public class MinaUtils {
                     + "### END INIT INFO\\n' "
                     + scriptPath;
 
-            CommandResult fixResult = execCmdWithResultObject(session, fixCmd);
+            execCmdWithResultObject(session, fixCmd);
             LOG.info("已添加LSB头信息，重试启用服务...");
 
             // 重试启用服务
-            CommandResult retryResult = execCmdWithResultObject(session, adaptedCommand);
-            return retryResult.isSuccess() ? retryResult.getOutput()
-                    : "EXIT_CODE_" + retryResult.getExitCode() + ": " + retryResult.getError();
+            return execCmdWithResult(session, adaptedCommand);
         }
 
         // 如果执行失败，尝试添加sudo再次执行
@@ -898,265 +607,6 @@ public class MinaUtils {
     }
 
     /**
-     * 执行本地命令并返回结果
-     * 
-     * @param command 要执行的命令
-     * @return 命令执行结果
-     */
-    public static String execLocalCmdWithResult(String command) {
-        try {
-            Process process = Runtime.getRuntime().exec(command);
-            StringBuilder output = new StringBuilder();
-
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode == 0) {
-                return output.toString().trim();
-            } else {
-                LOG.error("命令执行失败，退出码: {}", exitCode);
-                return "EXIT_CODE_" + exitCode + ": 命令执行失败";
-            }
-        } catch (Exception e) {
-            LOG.error("执行本地命令失败: {}", e.getMessage());
-            return "EXIT_CODE_-1: " + e.getMessage();
-        }
-    }
-
-    /**
-     * 检查SSH免密配置状态
-     * 
-     * @param session SSH会话
-     * @return 检查结果，包含是否成功和详细消息
-     */
-    public static CheckResult checkPasswordlessStatus(ClientSession session) {
-        try {
-            // 1. 检查SSH服务状态
-            CommandResult sshResult = execCmdWithResultObject(session, "systemctl status sshd | grep Active");
-            if (!sshResult.isSuccess() || !sshResult.getOutput().contains("active")) {
-                return new CheckResult(false, "SSH服务未运行");
-            }
-
-            // 2. 检查.ssh目录权限
-            CommandResult dirResult = execCmdWithResultObject(session, "ls -ld ~/.ssh");
-            if (!dirResult.isSuccess() || !dirResult.getOutput().contains("drwx------")) {
-                return new CheckResult(false, "SSH目录权限不正确");
-            }
-
-            // 3. 检查authorized_keys文件权限
-            CommandResult keysResult = execCmdWithResultObject(session, "ls -l ~/.ssh/authorized_keys");
-            if (!keysResult.isSuccess() || !keysResult.getOutput().contains("-rw-------")) {
-                return new CheckResult(false, "authorized_keys文件权限不正确");
-            }
-
-            // 4. 检查SSH配置
-            CommandResult configResult = execCmdWithResultObject(session,
-                    "grep -E '^PubkeyAuthentication\\s+yes' /etc/ssh/sshd_config");
-            if (!configResult.isSuccess() || configResult.getOutput().isEmpty()) {
-                return new CheckResult(false, "SSH配置未启用公钥认证");
-            }
-
-            // 5. 测试免密登录
-            CommandResult testResult = execCmdWithResultObject(session,
-                    "ssh -o BatchMode=yes -o StrictHostKeyChecking=no localhost echo OK");
-            if (!testResult.isSuccess() || !"OK".equals(testResult.getOutput().trim())) {
-                return new CheckResult(false, "免密登录测试失败");
-            }
-
-            return new CheckResult(true, "免密登录配置正确");
-        } catch (Exception e) {
-            LOG.error("免密检查过程发生异常", e);
-            return new CheckResult(false, "免密检查过程发生异常: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 检查结果类
-     */
-    public static class CheckResult {
-        private final boolean success;
-        private final String message;
-
-        public CheckResult(boolean success, String message) {
-            this.success = success;
-            this.message = message;
-        }
-
-        public boolean isSuccess() {
-            return success;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-    }
-
-    /**
-     * 获取远程主机的实际主机名
-     *
-     * @param session SSH会话
-     * @return 实际主机名，如果获取失败则返回null
-     */
-    public static String getRemoteHostname(ClientSession session) {
-        if (session == null) {
-            LOG.error("SSH会话为空，无法获取远程主机名");
-            return null;
-        }
-
-        try {
-            // 尝试获取主机名
-            CommandResult hostnameResult = execCmdWithResultObject(session, "hostname -f 2>/dev/null || hostname");
-
-            // 如果成功获取到主机名
-            if (hostnameResult.isSuccess() && !hostnameResult.getOutput().trim().isEmpty()) {
-                String hostname = hostnameResult.getOutput().trim();
-                LOG.info("获取到远程主机名: {}", hostname);
-                return hostname;
-            } else {
-                // 如果hostname命令失败，尝试其他方式
-                CommandResult hostsResult = execCmdWithResultObject(session,
-                        "cat /etc/hosts | grep -v '^#' | grep -v '^127.0.0.1' | grep -v '^::1' | head -1");
-                if (hostsResult.isSuccess() && !hostsResult.getOutput().trim().isEmpty()) {
-                    // 解析/etc/hosts中的第一个非本地回环条目
-                    String[] parts = hostsResult.getOutput().trim().split("\\s+");
-                    if (parts.length >= 2) {
-                        String hostname = parts[1].trim();
-                        LOG.info("从/etc/hosts获取到主机名: {}", hostname);
-                        return hostname;
-                    }
-                }
-
-                // 再尝试一种方法
-                CommandResult hostnameFileResult = execCmdWithResultObject(session, "cat /etc/hostname 2>/dev/null");
-                if (hostnameFileResult.isSuccess() && !hostnameFileResult.getOutput().trim().isEmpty()) {
-                    String hostname = hostnameFileResult.getOutput().trim();
-                    LOG.info("从/etc/hostname获取到主机名: {}", hostname);
-                    return hostname;
-                }
-            }
-
-            LOG.warn("无法获取远程主机名，所有尝试均失败");
-            return null;
-        } catch (Exception e) {
-            LOG.error("获取远程主机名时发生异常: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * 生成SSH密钥对
-     * 
-     * @param sshDir .ssh目录路径
-     * @return 是否生成成功
-     */
-    private static boolean generateSshKeyPair(String sshDir) {
-        try {
-            String keyFile = sshDir + File.separator + "id_ed25519";
-
-            // 使用系统ssh-keygen命令生成ED25519密钥对
-            ProcessBuilder pb = new ProcessBuilder(
-                    "ssh-keygen",
-                    "-t", "ed25519",
-                    "-f", keyFile,
-                    "-N", "", // 空密码
-                    "-C", "datasophon-" + System.currentTimeMillis());
-
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            // 读取进程输出
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    LOG.info("ssh-keygen: {}", line);
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                LOG.error("生成SSH密钥对失败，退出码: {}", exitCode);
-                return false;
-            }
-
-            // 设置正确的密钥文件权限
-            File privateKey = new File(keyFile);
-            File publicKey = new File(keyFile + ".pub");
-
-            if (privateKey.exists()) {
-                try {
-                    Set<PosixFilePermission> privateKeyPermissions = new HashSet<>();
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    privateKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    Files.setPosixFilePermissions(privateKey.toPath(), privateKeyPermissions);
-                    LOG.info("已设置私钥权限为0600");
-                } catch (Exception e) {
-                    LOG.warn("设置私钥权限失败: {}", e.getMessage());
-                }
-            }
-
-            if (publicKey.exists()) {
-                try {
-                    Set<PosixFilePermission> publicKeyPermissions = new HashSet<>();
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OWNER_WRITE);
-                    publicKeyPermissions.add(PosixFilePermission.GROUP_READ);
-                    publicKeyPermissions.add(PosixFilePermission.OTHERS_READ);
-                    Files.setPosixFilePermissions(publicKey.toPath(), publicKeyPermissions);
-                    LOG.info("已设置公钥权限为0644");
-                } catch (Exception e) {
-                    LOG.warn("设置公钥权限失败: {}", e.getMessage());
-                }
-            }
-
-            LOG.info("SSH密钥对生成成功: {}", keyFile);
-            return true;
-        } catch (Exception e) {
-            LOG.error("生成SSH密钥对失败: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * 读取公钥文件内容
-     * 
-     * @param publicKeyFile 公钥文件路径
-     * @return 公钥内容
-     */
-    private static String readPublicKeyFile(String publicKeyFile) {
-        try {
-            return new String(Files.readAllBytes(Paths.get(publicKeyFile)), StandardCharsets.UTF_8).trim();
-        } catch (Exception e) {
-            LOG.error("读取公钥文件失败: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * 创建临时公钥文件
-     * 
-     * @param publicKey 公钥内容
-     * @return 临时文件路径
-     */
-    private static String createTempPublicKeyFile(String publicKey) {
-        try {
-            String tempFile = System.getProperty("java.io.tmpdir") + File.separator +
-                    "datasophon_pubkey_" + System.currentTimeMillis() + ".pub";
-            Files.write(Paths.get(tempFile), publicKey.getBytes(StandardCharsets.UTF_8));
-            LOG.info("创建临时公钥文件: {}", tempFile);
-            return tempFile;
-        } catch (Exception e) {
-            LOG.error("创建临时公钥文件失败: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
      * 同步执行命令并获取结果，兼容旧版接口
      *
      * @param session 连接会话
@@ -1188,7 +638,7 @@ public class MinaUtils {
 
         // 获取当前线程名称，用于日志
         String currentThreadName = Thread.currentThread().getName();
-        String hostAddress = "";
+        String hostAddress;
         try {
             // 尝试从会话中提取远程地址信息
             hostAddress = session.getIoSession().getRemoteAddress().toString();

@@ -2,10 +2,6 @@ package com.datasophon.api.service.checker.checkers.firewall.factory;
 
 import com.datasophon.api.service.checker.checkers.firewall.FirewallCheckerStrategy;
 import com.datasophon.api.service.checker.checkers.firewall.generic.GenericFirewallChecker;
-import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS7FirewallChecker;
-import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOS8FirewallChecker;
-import com.datasophon.api.service.checker.checkers.firewall.os.centos.CentOSFirewallChecker;
-import com.datasophon.api.service.checker.checkers.firewall.os.ubuntu.UbuntuFirewallChecker;
 import com.datasophon.common.enums.OsDistribution;
 import com.datasophon.common.model.OsInfo;
 import org.slf4j.Logger;
@@ -23,7 +19,7 @@ public class FirewallCheckerFactory {
     private static final Logger log = LoggerFactory.getLogger(FirewallCheckerFactory.class);
 
     private final List<FirewallCheckerStrategy> checkerStrategies;
-    private GenericFirewallChecker defaultChecker;
+    private final GenericFirewallChecker defaultChecker;
 
     /**
      * 通过Spring注入的构造函数
@@ -131,14 +127,11 @@ public class FirewallCheckerFactory {
                         OsDistribution supportedOs = (OsDistribution) getSupportedOsMethod.invoke(checker);
 
                         // 检查是否有getVersionPrefix方法，如果没有表示是通用检查器
-                        boolean hasVersionPrefix = false;
-                        try {
-                            java.lang.reflect.Method getVersionPrefixMethod = checker.getClass()
-                                    .getMethod("getVersionPrefix");
-                            hasVersionPrefix = getVersionPrefixMethod != null;
-                        } catch (NoSuchMethodException e) {
-                            hasVersionPrefix = false;
-                        }
+                        boolean hasVersionPrefix;
+
+
+                            hasVersionPrefix = true;
+
 
                         // 匹配操作系统类型且没有版本前缀（通用检查器）
                         return distribution.equals(supportedOs) && !hasVersionPrefix;

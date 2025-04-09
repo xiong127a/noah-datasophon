@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.HashMap;
 
 /**
  * SSH连接池管理器
@@ -49,7 +48,7 @@ public class SshConnectionPoolManager {
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
     // 定时任务执行间隔（默认值）
-    private long connectionCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
+    private final long connectionCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
 
     // 上次执行时间
     private volatile long lastConnectionCleanupTime = 0;
@@ -94,22 +93,6 @@ public class SshConnectionPoolManager {
         // 将定时任务标志设置为已停用
         scheduledTasksEnabled.set(false);
         log.info("SSH连接池管理器初始化完成，定时任务默认关闭");
-    }
-
-    /**
-     * 启动定时任务
-     */
-    public void startScheduledTasks() {
-        if (!scheduledTasksEnabled.get()) {
-            scheduledTasksEnabled.set(true);
-        }
-
-        // 启动连接清理定时任务
-        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, connectionCleanupIntervalMs);
-            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
-        }
     }
 
     /**
@@ -192,7 +175,7 @@ public class SshConnectionPoolManager {
         // 但不要让其他主机的连接请求被同一个锁阻塞
         Object lock = connectionLocks.computeIfAbsent(hostKey, k -> new Object());
 
-        ClientSession session = null;
+        ClientSession session;
         synchronized (lock) {
             session = hostConnectionPool.get(hostKey);
 
@@ -345,118 +328,6 @@ public class SshConnectionPoolManager {
         long elapsedTime = System.currentTimeMillis() - lastFailTime;
 
         return elapsedTime < waitTime;
-    }
-
-    /**
-     * 获取主机失败统计
-     */
-    public Map<String, Integer> getHostFailureStats() {
-        return new HashMap<>(hostConnectFailCount);
-    }
-
-    /**
-     * 异步获取或创建SSH连接
-     * 
-     * @param hostInfo 主机信息
-     * @return 包含SSH会话的CompletableFuture，如果创建失败则返回包含null的CompletableFuture
-     */
-    public CompletableFuture<ClientSession> getOrCreateConnectionAsync(HostInfo hostInfo) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return getOrCreateConnection(hostInfo);
-            } catch (Exception e) {
-                log.error("异步创建SSH连接时发生异常: {}", e.getMessage(), e);
-                return null;
-            }
-        }, checkExecutor);
-    }
-
-    /**
-     * 执行命令并按命令类型选择合适的执行器
-     *
-     * @param session              SSH会话
-     * @param command              要执行的命令
-     * @param hardwareInfoExecutor 硬件信息执行器
-     * @param osInfoExecutor       操作系统信息执行器
-     * @param defaultExecutor      默认执行器
-     * @return 命令执行结果的Future
-     */
-    public CompletableFuture<CommandResult> execCommandByType(ClientSession session, String command,
-            ExecutorService hardwareInfoExecutor,
-            ExecutorService osInfoExecutor,
-            ExecutorService defaultExecutor) {
-        // 根据命令内容选择合适的执行器
-        if (command.contains("dmidecode") || command.contains("lspci") ||
-                command.contains("lscpu") || command.contains("free") ||
-                command.contains("fdisk") || command.contains("df")) {
-            // 硬件信息相关命令
-            return execHardwareInfoCommandAsync(session, command, hardwareInfoExecutor);
-        } else if (command.contains("uname") || command.contains("cat /etc") ||
-                command.contains("cat /proc") || command.contains("hostname")) {
-            // 操作系统信息相关命令
-            return execOsInfoCommandAsync(session, command, osInfoExecutor);
-        } else {
-            // 默认命令
-            return execCommandAsync(session, command, defaultExecutor);
-        }
-    }
-
-    /**
-     * 异步执行硬件信息相关命令
-     *
-     * @param session  SSH会话
-     * @param command  要执行的命令
-     * @param executor 执行器
-     * @return 命令执行结果的Future
-     */
-    public CompletableFuture<CommandResult> execHardwareInfoCommandAsync(ClientSession session, String command,
-            ExecutorService executor) {
-        if (session == null) {
-            CompletableFuture<CommandResult> future = new CompletableFuture<>();
-            future.complete(new CommandResult("", "无法创建SSH连接", -1));
-            return future;
-        }
-
-        return execCommandAsync(session, command, executor);
-    }
-
-    /**
-     * 异步执行操作系统信息相关命令
-     *
-     * @param session  SSH会话
-     * @param command  要执行的命令
-     * @param executor 执行器
-     * @return 命令执行结果的Future
-     */
-    public CompletableFuture<CommandResult> execOsInfoCommandAsync(ClientSession session, String command,
-            ExecutorService executor) {
-        if (session == null) {
-            CompletableFuture<CommandResult> future = new CompletableFuture<>();
-            future.complete(new CommandResult("", "无法创建SSH连接", -1));
-            return future;
-        }
-
-        return execCommandAsync(session, command, executor);
-    }
-
-    /**
-     * 异步执行命令
-     *
-     * @param session  SSH会话
-     * @param command  要执行的命令
-     * @param executor 执行器
-     * @return 命令执行结果的Future
-     */
-    public CompletableFuture<CommandResult> execCommandAsync(ClientSession session, String command,
-            ExecutorService executor) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return execCommand(session, command);
-            } catch (Exception e) {
-                log.error("执行命令时出错: {}", command, e);
-                return new CommandResult("", e.getMessage(), -1);
-            }
-        }, executor);
     }
 
     /**
@@ -643,48 +514,6 @@ public class SshConnectionPoolManager {
      */
     public void manualCleanupConnections() {
         this.cleanupConnections();
-    }
-
-    /**
-     * 停止连接清理定时任务
-     */
-    public void stopConnectionCleanup() {
-        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask.cancel(false);
-            log.info("连接清理定时任务已停止");
-        }
-    }
-
-    /**
-     * 启动连接清理定时任务
-     */
-    public void startConnectionCleanup() {
-        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, connectionCleanupIntervalMs);
-            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
-        }
-    }
-
-    /**
-     * 更新连接清理定时任务执行间隔
-     * 
-     * @param intervalMs 执行间隔（毫秒）
-     */
-    public void updateConnectionCleanupInterval(long intervalMs) {
-        if (intervalMs < 1000) { // 最小1秒
-            log.warn("连接清理定时任务间隔不能小于1秒，忽略此次更新");
-            return;
-        }
-
-        this.connectionCleanupIntervalMs = intervalMs;
-
-        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
-            connectionCleanupTask.cancel(false);
-            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
-                    this::cleanupConnections, intervalMs);
-            log.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
-        }
     }
 
     /**

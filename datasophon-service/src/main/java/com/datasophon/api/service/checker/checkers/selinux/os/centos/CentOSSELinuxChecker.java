@@ -125,7 +125,7 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
                 if (!isDisabled) {
                     detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
                             "SELinux模式", selinuxMode,
-                            isPermissive ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.ERROR));
+                            HtmlStyleHelper.Colors.SUCCESS));
                 }
 
                 detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
@@ -212,9 +212,6 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
             String versionInfo = versionResult.isSuccess() ? versionResult.getOutput().trim() : "未知版本";
             cacheLog.info("系统版本信息: {}", versionInfo);
 
-            boolean isCentOS7 = versionInfo.contains("7.");
-            boolean isCentOS8 = versionInfo.contains("8.");
-
             // CentOS专用的修复方法
             cacheLog.info("使用CentOS专用方法修复SELinux...");
 
@@ -238,28 +235,28 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
                 cacheLog.error("修改SELinux配置文件失败: {}", sedResult.getErrorOrOutput());
 
                 // 创建HTML详细信息构建器
-                StringBuilder detailsBuilder = new StringBuilder();
 
                 // 添加警告信息
-                detailsBuilder.append(HtmlStyleHelper.generateWarningAlert(
-                        "SELinux配置修改失败",
-                        "无法修改SELinux配置文件，请手动修改。"));
 
-                // 添加手动修复指南
-                detailsBuilder.append(HtmlStyleHelper.beginGroup());
-                detailsBuilder.append("<p><strong>手动修复步骤:</strong></p>");
-                detailsBuilder.append("<ol style='padding-left:20px;margin-bottom:15px'>");
-                detailsBuilder.append("<li style='margin-bottom:5px'>编辑SELinux配置文件:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo vi /etc/selinux/config"));
-                detailsBuilder.append("<li style='margin-bottom:5px'>将SELINUX=行修改为:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("SELINUX=disabled"));
-                detailsBuilder.append("<li style='margin-bottom:5px'>保存并重启系统:</li>");
-                detailsBuilder.append(HtmlStyleHelper.generateCodeBlock("sudo reboot"));
-                detailsBuilder.append("</ol>");
-                detailsBuilder.append(HtmlStyleHelper.endGroup());
+                String detailsBuilder = HtmlStyleHelper.generateWarningAlert(
+                        "SELinux配置修改失败",
+                        "无法修改SELinux配置文件，请手动修改。") +
+
+                        // 添加手动修复指南
+                        HtmlStyleHelper.beginGroup() +
+                        "<p><strong>手动修复步骤:</strong></p>" +
+                        "<ol style='padding-left:20px;margin-bottom:15px'>" +
+                        "<li style='margin-bottom:5px'>编辑SELinux配置文件:</li>" +
+                        HtmlStyleHelper.generateCodeBlock("sudo vi /etc/selinux/config") +
+                        "<li style='margin-bottom:5px'>将SELINUX=行修改为:</li>" +
+                        HtmlStyleHelper.generateCodeBlock("SELINUX=disabled") +
+                        "<li style='margin-bottom:5px'>保存并重启系统:</li>" +
+                        HtmlStyleHelper.generateCodeBlock("sudo reboot") +
+                        "</ol>" +
+                        HtmlStyleHelper.endGroup();
 
                 // 设置消息
-                checkItem.setMessage(detailsBuilder.toString());
+                checkItem.setMessage(detailsBuilder);
                 return false;
             }
 
@@ -276,30 +273,30 @@ public class CentOSSELinuxChecker extends GenericSELinuxChecker {
             }
 
             // 创建HTML详细信息构建器
-            StringBuilder detailsBuilder = new StringBuilder();
 
             // 添加成功信息
-            detailsBuilder.append(HtmlStyleHelper.generateSuccessAlert(
+
+            String detailsBuilder = HtmlStyleHelper.generateSuccessAlert(
                     "SELinux修复完成",
-                    "SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。"));
+                    "SELinux已临时设置为宽容模式，并已将配置文件修改为禁用状态。") +
 
-            // 添加当前状态
-            detailsBuilder.append(HtmlStyleHelper.beginGroup());
-            detailsBuilder.append("<p><strong>当前SELinux状态:</strong></p>");
-            detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                    "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS));
-            detailsBuilder.append(HtmlStyleHelper.generatePropertyRow(
-                    "永久状态", configModified ? "已设置为禁用" : "配置修改未验证",
-                    configModified ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.WARNING));
-            detailsBuilder.append(HtmlStyleHelper.endGroup());
+                    // 添加当前状态
+                    HtmlStyleHelper.beginGroup() +
+                    "<p><strong>当前SELinux状态:</strong></p>" +
+                    HtmlStyleHelper.generatePropertyRow(
+                            "临时状态", "宽容模式(Permissive)", HtmlStyleHelper.Colors.SUCCESS) +
+                    HtmlStyleHelper.generatePropertyRow(
+                            "永久状态", configModified ? "已设置为禁用" : "配置修改未验证",
+                            configModified ? HtmlStyleHelper.Colors.SUCCESS : HtmlStyleHelper.Colors.WARNING) +
+                    HtmlStyleHelper.endGroup() +
 
-            // 添加重启通知
-            detailsBuilder.append(HtmlStyleHelper.generateNoteAlert(
-                    "重要提示",
-                    "SELinux配置修改需要重启系统后才能完全生效。在重启前，系统将以宽容模式(Permissive)运行SELinux。"));
+                    // 添加重启通知
+                    HtmlStyleHelper.generateNoteAlert(
+                            "重要提示",
+                            "SELinux配置修改需要重启系统后才能完全生效。在重启前，系统将以宽容模式(Permissive)运行SELinux。");
 
             // 设置消息
-            checkItem.setMessage(detailsBuilder.toString());
+            checkItem.setMessage(detailsBuilder);
 
             return true;
         } catch (Exception e) {

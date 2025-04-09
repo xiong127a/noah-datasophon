@@ -1,18 +1,13 @@
 package com.datasophon.api.service.checker.checkers.disk.os.alpine;
 
-import com.datasophon.api.service.checker.checkers.disk.DiskChecker;
 import com.datasophon.api.service.checker.checkers.disk.generic.GenericDiskChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Alpine磁盘检查器实现
  * 适用于Alpine Linux发行版
  */
 public class AlpineDiskChecker extends GenericDiskChecker {
-
-    private static final Logger log = LoggerFactory.getLogger(AlpineDiskChecker.class);
 
     @Override
     public void provideCleanupSuggestions(CheckLogger cacheLog) {

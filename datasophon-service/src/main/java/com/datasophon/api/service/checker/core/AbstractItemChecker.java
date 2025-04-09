@@ -1,6 +1,5 @@
 package com.datasophon.api.service.checker.core;
 
-import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.checker.common.CommandResult;
 import com.datasophon.api.service.checker.common.ItemCode;
 import com.datasophon.api.service.checker.common.SshConnectionPoolManager;
@@ -34,9 +33,6 @@ public abstract class AbstractItemChecker implements ItemChecker {
 
     // 主机操作系统信息缓存，用于避免重复检测
     private static final Map<String, OsInfo> hostOsInfoCache = new ConcurrentHashMap<>();
-
-    @Autowired
-    protected OsInfoService osInfoService;
 
     // 注入SSH连接池管理器
     @Autowired
@@ -541,25 +537,6 @@ public abstract class AbstractItemChecker implements ItemChecker {
             cacheLog.info("开始建立SSH连接到主机: %s, 端口: %d, 用户: %s",
                     hostInfo.getIp(), hostInfo.getSshPort(), hostInfo.getSshUser());
 
-            try {
-
-            } catch (Exception e) {
-                logger.error("SSH连接失败: {}", e.getMessage(), e);
-                cacheLog.error("SSH连接失败: %s", e.getMessage());
-
-                // 明确设置状态为失败
-                checkItem.setStatus(CheckItem.Status.FAILED);
-                checkItem.setMessage("无法建立SSH连接: " + e.getMessage());
-                updateCheckStatus(clusterId, hostInfo, checkItem);
-
-                // 记录详细的状态信息
-                logger.info("检查项 {} 状态已设置为FAILED, 消息: {}",
-                        checkItem.getItemName(), checkItem.getMessage());
-                cacheLog.info("检查项状态已设置为FAILED, 详细信息: %s", checkItem.getMessage());
-
-                return checkItem;
-            }
-
             // 明确检查session是否成功建立 - 增强处理
             if (sshConnectionPoolManager.getOrCreateConnection(hostInfo) == null) {
                 String errorMsg = "无法建立SSH连接到主机: " + hostInfo.getIp();
@@ -696,7 +673,7 @@ public abstract class AbstractItemChecker implements ItemChecker {
             cacheLog.info("SSH连接建立成功，开始执行修复操作");
 
             // 执行具体修复逻辑
-            boolean doFixResult = false;
+            boolean doFixResult;
             try {
                 cacheLog.info("正在执行修复逻辑...");
                 doFixResult = doFix(hostInfo, checkItem);
@@ -794,62 +771,43 @@ public abstract class AbstractItemChecker implements ItemChecker {
                     hostInfo.getIp(), checkItem.getItemName(),
                     "更新前", checkItem.getStatus());
 
-            Map<String, HostInfo> hostInfoMap = (Map<String, HostInfo>) CacheUtils.get(cacheKey);
-            if (hostInfoMap != null) {
-                HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getIp());
-                if (cachedHostInfo != null) {
-                    boolean updated = false;
-                    for (CheckItem item : cachedHostInfo.getCheckItems()) {
-                        if (item.getId().equals(checkItem.getId())) {
-                            // 记录状态变化
-                            logger.info("检查项状态变更: {} -> {}, 消息: {} -> {}",
-                                    item.getStatus(), checkItem.getStatus(),
-                                    item.getMessage(), checkItem.getMessage());
+            Map<String, HostInfo> hostInfoMap = CacheUtils.getHostMap(cacheKey);
+            HostInfo cachedHostInfo = hostInfoMap.get(hostInfo.getIp());
+            if (cachedHostInfo != null) {
+                boolean updated = false;
+                for (CheckItem item : cachedHostInfo.getCheckItems()) {
+                    if (item.getId().equals(checkItem.getId())) {
+                        // 记录状态变化
+                        logger.info("检查项状态变更: {} -> {}, 消息: {} -> {}",
+                                item.getStatus(), checkItem.getStatus(),
+                                item.getMessage(), checkItem.getMessage());
 
-                            item.setStatus(checkItem.getStatus());
-                            item.setMessage(checkItem.getMessage());
-                            updated = true;
-                            logger.debug("检查项状态已更新: ID={}, 新状态={}", item.getId(), item.getStatus());
-                            break;
-                        }
+                        item.setStatus(checkItem.getStatus());
+                        item.setMessage(checkItem.getMessage());
+                        updated = true;
+                        logger.debug("检查项状态已更新: ID={}, 新状态={}", item.getId(), item.getStatus());
+                        break;
                     }
+                }
 
-                    if (!updated) {
-                        logger.warn("未找到要更新的检查项: 主机={}, 检查项ID={}", hostInfo.getIp(), checkItem.getId());
-                    } else {
-                        // 更新主机的整体状态（根据检查项状态计算）
-                        cachedHostInfo.calculateStatus();
-                        hostInfoMap.put(hostInfo.getIp(), cachedHostInfo);
-                        CacheUtils.put(cacheKey, hostInfoMap);
-                        logger.debug("缓存已更新: cacheKey={}, 主机状态={}",
-                                cacheKey, cachedHostInfo.getStatus());
-                    }
+                if (!updated) {
+                    logger.warn("未找到要更新的检查项: 主机={}, 检查项ID={}", hostInfo.getIp(), checkItem.getId());
                 } else {
-                    logger.warn("缓存中未找到主机信息: hostname={}", hostInfo.getIp());
+                    // 更新主机的整体状态（根据检查项状态计算）
+                    cachedHostInfo.calculateStatus();
+                    hostInfoMap.put(hostInfo.getIp(), cachedHostInfo);
+                    CacheUtils.put(cacheKey, hostInfoMap);
+                    logger.debug("缓存已更新: cacheKey={}, 主机状态={}",
+                            cacheKey, cachedHostInfo.getStatus());
                 }
             } else {
-                logger.warn("缓存中未找到主机映射: cacheKey={}", cacheKey);
+                logger.warn("缓存中未找到主机信息: hostname={}", hostInfo.getIp());
             }
         } catch (Exception e) {
             logger.error("更新检查状态时发生异常: {}", e.getMessage(), e);
             // 记录更多异常信息
             cacheLog.error("更新检查状态失败，请检查系统日志: %s", e.getMessage());
         }
-    }
-
-    /**
-     * 创建日志记录器
-     * 
-     * @param clusterId     集群ID
-     * @param hostname      主机名
-     * @param itemId        检查项ID
-     * @param operationType 操作类型
-     * @return 日志记录器
-     */
-    protected CheckLogger createLogger(Integer clusterId, String hostname, Integer itemId,
-            LogEntry.Type operationType) {
-        String logKey = String.format("%s%d_%s_%d", CHECK_ITEM_LOG_PREFIX, clusterId, hostname, itemId);
-        return CheckLogger.createLogger(logKey, getClass().getSimpleName(), operationType);
     }
 
     // 设置当前主机信息
@@ -896,59 +854,28 @@ public abstract class AbstractItemChecker implements ItemChecker {
     protected void setStyledHtmlMessage(HostInfo hostInfo, CheckItem checkItem, boolean isSuccess,
             String titleText, StringBuilder detailsBuilder) {
 
-        StringBuilder html = new StringBuilder();
-
         // 开始HTML容器
-        html.append(HtmlStyleHelper.beginContainer());
 
-        // 添加标题
-        html.append(HtmlStyleHelper.generateTitle(titleText, isSuccess));
+        String html = HtmlStyleHelper.beginContainer() +
 
-        // 添加主机基本信息组
-        html.append(HtmlStyleHelper.beginGroup());
-        html.append(HtmlStyleHelper.generatePropertyRow("主机", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO));
-        html.append(HtmlStyleHelper.generatePropertyRow("IP地址", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO));
-        html.append(
-                HtmlStyleHelper.generatePropertyRow("检查时间", getCurrentTime(), HtmlStyleHelper.Colors.GRAY));
-        html.append(HtmlStyleHelper.endGroup());
+                // 添加标题
+                HtmlStyleHelper.generateTitle(titleText, isSuccess) +
 
-        // 添加详细内容
-        html.append(detailsBuilder.toString());
+                // 添加主机基本信息组
+                HtmlStyleHelper.beginGroup() +
+                HtmlStyleHelper.generatePropertyRow("主机", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO) +
+                HtmlStyleHelper.generatePropertyRow("IP地址", hostInfo.getIp(), HtmlStyleHelper.Colors.INFO) +
+                HtmlStyleHelper.generatePropertyRow("检查时间", getCurrentTime(), HtmlStyleHelper.Colors.GRAY) +
+                HtmlStyleHelper.endGroup() +
 
-        // 结束HTML容器
-        html.append(HtmlStyleHelper.endContainer());
+                // 添加详细内容
+                detailsBuilder.toString() +
+
+                // 结束HTML容器
+                HtmlStyleHelper.endContainer();
 
         // 设置检查项消息
-        setCheckItemMessage(hostInfo, checkItem, html.toString());
+        setCheckItemMessage(hostInfo, checkItem, html);
     }
 
-    /**
-     * 获取操作系统信息
-     */
-    protected boolean collectOsInfo(HostInfo hostInfo, ClientSession clientSession) {
-        try {
-            if (clientSession == null) {
-                logger.error("SSH会话为空，无法收集操作系统信息");
-                // 设置失败消息
-                hostInfo.setMessage("SSH会话为空，无法收集操作系统信息");
-                return false;
-            }
-
-            logger.info("开始收集主机 {} 的操作系统信息", hostInfo.getIp());
-
-            // 由于HostInfo已经包含了SSH会话信息，可以直接调用异步方法，让OsInfoService自己处理会话管理
-            // 将数据设置到HostInfo对象，并通过异步过程更新缓存
-            osInfoService.getHostOsInfoAsync(hostInfo);
-
-            // 设置成功消息
-            logger.info("主机 {} 操作系统信息收集请求已提交", hostInfo.getIp());
-            return true;
-        } catch (Exception e) {
-            logger.error("提交操作系统信息收集请求时出错: {}", e.getMessage(), e);
-
-            // 设置失败消息
-            hostInfo.setMessage("提交操作系统信息收集请求失败: " + e.getMessage());
-            return false;
-        }
-    }
 }

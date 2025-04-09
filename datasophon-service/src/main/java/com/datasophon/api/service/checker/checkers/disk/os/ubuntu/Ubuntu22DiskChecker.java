@@ -1,9 +1,6 @@
 package com.datasophon.api.service.checker.checkers.disk.os.ubuntu;
 
-import com.datasophon.api.service.checker.checkers.disk.DiskChecker;
 import com.datasophon.api.service.checker.helpers.CheckLogger;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Ubuntu 22磁盘检查器实现
@@ -11,7 +8,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Ubuntu22DiskChecker extends UbuntuDiskChecker {
 
-    private static final Logger log = LoggerFactory.getLogger(Ubuntu22DiskChecker.class);
+
 
     @Override
     public void provideCleanupSuggestions(CheckLogger cacheLog) {

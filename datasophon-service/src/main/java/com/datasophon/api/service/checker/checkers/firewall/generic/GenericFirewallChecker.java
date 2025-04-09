@@ -281,7 +281,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 检测防火墙类型
      */
-    protected FirewallType detectFirewallType(ClientSession session, CheckLogger cacheLog) throws InterruptedException {
+    protected FirewallType detectFirewallType(ClientSession session, CheckLogger cacheLog) {
         cacheLog.info("检测防火墙类型...");
 
         // 检查会话是否有效
@@ -422,8 +422,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 检查ufw防火墙
      */
-    protected CheckItem checkUfw(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected CheckItem checkUfw(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         StringBuilder htmlOutput = new StringBuilder();
         htmlOutput.append("<div class='firewall-check'>");
         htmlOutput.append("<h3>UFW 防火墙检查</h3>");
@@ -510,16 +509,13 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
 
         if (result.isSuccess()) {
             String output = result.getOutput();
-            boolean hasRules = false;
-
-            // 检查是否有非默认规则
-            if (!output.contains("Chain INPUT (policy ACCEPT)") ||
+            boolean hasRules = !output.contains("Chain INPUT (policy ACCEPT)") ||
                     !output.contains("Chain FORWARD (policy ACCEPT)") ||
                     !output.contains("Chain OUTPUT (policy ACCEPT)") ||
                     output.contains("REJECT") ||
-                    output.contains("DROP")) {
-                hasRules = true;
-            }
+                    output.contains("DROP");
+
+            // 检查是否有非默认规则
 
             if (hasRules) {
                 cacheLog.info("iptables状态: 有活动规则");
@@ -620,8 +616,7 @@ public class GenericFirewallChecker implements FirewallCheckerStrategy {
     /**
      * 修复ufw防火墙
      */
-    protected boolean fixUfw(ClientSession session, CheckItem checkItem, CheckLogger cacheLog)
-            throws InterruptedException {
+    protected boolean fixUfw(ClientSession session, CheckItem checkItem, CheckLogger cacheLog) {
         // 检查ufw状态
         cacheLog.info("检查ufw防火墙当前状态...");
         checkItem.setMessage("正在检查ufw防火墙当前状态...");

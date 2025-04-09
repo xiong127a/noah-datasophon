@@ -8,6 +8,8 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
 import org.slf4j.Logger;
@@ -91,15 +93,6 @@ public class OsInfoServiceImpl implements OsInfoService {
 
     // 每个主机的最大连接数
     private static final int MAX_CONNECTIONS_PER_HOST = 2;
-
-    // 最大同时处理的主机数量
-    private static final int MAX_CONCURRENT_HOSTS = 10;
-
-    // 主机超时设置 - 缩短到15秒
-    private static final long HOST_TIMEOUT = 15000L; // 15秒超时
-
-    // 慢速主机记录
-    private final Map<String, Integer> slowHostMap = new ConcurrentHashMap<>();
 
     // 初始化
     public OsInfoServiceImpl() {
@@ -316,36 +309,18 @@ public class OsInfoServiceImpl implements OsInfoService {
         /**
          * 包装HostInfo并添加优先级信息
          */
+        @Getter
         private class PriorityHostInfo implements Comparable<PriorityHostInfo> {
             private final HostInfo hostInfo;
             private final int priority; // 低数字 = 高优先级
             private final long addTime;
+            @Setter
             private long processStartTime = 0;
 
             public PriorityHostInfo(HostInfo hostInfo, int priority) {
                 this.hostInfo = hostInfo;
                 this.priority = priority;
                 this.addTime = System.currentTimeMillis();
-            }
-
-            public HostInfo getHostInfo() {
-                return hostInfo;
-            }
-
-            public int getPriority() {
-                return priority;
-            }
-
-            public long getAddTime() {
-                return addTime;
-            }
-
-            public void setProcessStartTime(long time) {
-                this.processStartTime = time;
-            }
-
-            public long getProcessStartTime() {
-                return processStartTime;
             }
 
             public boolean isTimeout() {
@@ -723,7 +698,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                 IOsInfoCollector linuxCollector = service.osInfoCollectorFactory.getCollector("linux");
                 if (linuxCollector != null) {
                     // 收集基本操作系统信息，设置回调更新缓存
-                    linuxCollector.collectOsInfo(hostInfo, session, osInfo, h -> service.updateHostInfoCache(h));
+                    linuxCollector.collectOsInfo(hostInfo, session, osInfo, service::updateHostInfoCache);
                 } else {
                     logger.warn("找不到Linux系统信息收集器");
                     osInfo.setDistribution("Linux");
@@ -793,7 +768,7 @@ public class OsInfoServiceImpl implements OsInfoService {
                     service.hardwareInfoExecutor.execute(() -> {
                         try {
                             logger.info("开始处理主机[{}]的第二阶段详细信息收集", hostInfo.getIp());
-                            processHostDetailInfo(hostInfo, false);
+                            processHostDetailInfo(hostInfo);
                         } catch (Exception e) {
                             logger.error("处理主机详细信息时发生异常: {}", e.getMessage(), e);
                         } finally {
@@ -809,9 +784,8 @@ public class OsInfoServiceImpl implements OsInfoService {
          * 处理主机详细信息（硬件信息）
          * 
          * @param hostInfo      主机信息
-         * @param isLongProcess 是否是长时间处理
          */
-        private void processHostDetailInfo(HostInfo hostInfo, boolean isLongProcess) {
+        private void processHostDetailInfo(HostInfo hostInfo) {
             if (hostInfo == null) {
                 return;
             }
@@ -875,17 +849,16 @@ public class OsInfoServiceImpl implements OsInfoService {
                 service.updateHostInfoCache(hostInfo);
 
                 // 获取或创建SSH连接
-                ClientSession session = null;
-                String lockKey = hostIp;
+                ClientSession session;
 
-                synchronized (connectionLocks.computeIfAbsent(lockKey, k -> new Object())) {
+                synchronized (connectionLocks.computeIfAbsent(hostIp, k -> new Object())) {
                     try {
                         logger.info("尝试获取主机 {} 的SSH连接，用于收集硬件信息", hostIp);
                         // 检查是否有现有的有效连接可用
                         session = sessionCache.get(hostIp);
 
                         // 验证连接是否有效
-                        if (session == null || !MinaUtils.isSessionValid(session)) {
+                        if (!MinaUtils.isSessionValid(session)) {
                             if (session != null) {
                                 // 如果连接无效，关闭它
                                 try {
@@ -1103,105 +1076,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             // 找不到可用会话，返回null
             return null;
         }
-
-        /**
-         * 更新主机信息缓存
-         */
-        public synchronized void updateHostInfoCache(HostInfo hostInfo) {
-            if (hostInfo == null) {
-                return;
-            }
-            service.updateHostInfoCache(hostInfo);
-        }
-
-        /**
-         * 收集GPU信息
-         */
-        public void collectGpuInfo(HostInfo hostInfo) {
-            if (hostInfo == null) {
-                logger.warn("collectGpuInfo: 主机信息为空");
-                return;
-            }
-
-            ClientSession session = null;
-            try {
-                // 使用SSH连接池管理器创建或获取连接
-                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-                if (session == null) {
-                    logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
-                    if (hostInfo.getOsInfo() != null) {
-                        hostInfo.getOsInfo().setGpuStatus(OsInfoStatusEnum.ERROR);
-                    }
-                    hostInfo.setMessage("无法建立SSH连接");
-                    service.updateHostInfoCache(hostInfo);
-                    return;
-                }
-
-                // 直接使用IOsInfoCollector接口收集GPU信息
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
-                if (collector != null) {
-                    collector.collectGpuInfo(hostInfo, session, hostInfo.getOsInfo(),
-                            h -> service.updateHostInfoCache(h));
-                }
-            } catch (Exception e) {
-                logger.error("收集GPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setGpuStatus(OsInfoStatusEnum.ERROR);
-                }
-                hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            } finally {
-                // 不再关闭连接，由连接池管理器管理连接的生命周期
-            }
-        }
-
-        /**
-         * 收集网络信息
-         */
-        public void collectNetworkInfo(HostInfo hostInfo) {
-            if (hostInfo == null) {
-                logger.warn("collectNetworkInfo: 主机信息为空");
-                return;
-            }
-
-            ClientSession session = null;
-            try {
-                // 使用SSH连接池管理器创建或获取连接
-                session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
-                if (session == null) {
-                    logger.error("无法为主机[{}]创建SSH会话", hostInfo.getIp());
-                    if (hostInfo.getOsInfo() != null) {
-                        hostInfo.getOsInfo().setNetworkStatus(OsInfoStatusEnum.ERROR);
-                    }
-                    hostInfo.setMessage("无法建立SSH连接");
-                    service.updateHostInfoCache(hostInfo);
-                    return;
-                }
-
-                // 直接使用IOsInfoCollector接口收集网络信息
-                IOsInfoCollector collector = service.osInfoCollectorFactory.getCollector("linux");
-                if (collector != null) {
-                    collector.collectNetworkInfo(hostInfo, session, hostInfo.getOsInfo(),
-                            h -> service.updateHostInfoCache(h));
-                }
-            } catch (Exception e) {
-                logger.error("收集网络信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
-                if (hostInfo.getOsInfo() != null) {
-                    hostInfo.getOsInfo().setNetworkStatus(OsInfoStatusEnum.ERROR);
-                }
-                hostInfo.setMessage("网络信息收集失败: " + e.getMessage());
-                service.updateHostInfoCache(hostInfo);
-            } finally {
-                // 不再关闭连接，由连接池管理器管理连接的生命周期
-            }
-        }
-
-        /**
-         * 启动详细信息收集流程
-         */
-        private void startDetailInfoCollection() {
-            // 实现代码...
-        }
     }
 
     @Override
@@ -1319,7 +1193,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             if (linuxCollector != null) {
                 // 收集基本操作系统信息
                 linuxCollector.collectOsInfo(hostInfo, session, osInfo,
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             } else {
                 logger.warn("找不到Linux系统信息收集器");
                 osInfo.setDistribution("Linux");
@@ -1373,7 +1247,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectDnsInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集DNS信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1412,7 +1286,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectHostsFileInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集hosts文件信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1433,7 +1307,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             return;
         }
 
-        ClientSession session = null;
+        ClientSession session;
         try {
             // 使用SSH连接池管理器创建或获取连接
             session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
@@ -1451,7 +1325,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectCpuInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集CPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1460,8 +1334,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
             hostInfo.setMessage("CPU信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
         }
     }
 
@@ -1472,7 +1344,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             return;
         }
 
-        ClientSession session = null;
+        ClientSession session;
         try {
             // 使用SSH连接池管理器创建或获取连接
             session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
@@ -1490,7 +1362,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectMemoryInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集内存信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1499,8 +1371,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
             hostInfo.setMessage("内存信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
         }
     }
 
@@ -1511,7 +1381,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             return;
         }
 
-        ClientSession session = null;
+        ClientSession session;
         try {
             // 使用SSH连接池管理器创建或获取连接
             session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
@@ -1529,7 +1399,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectGpuInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集GPU信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1538,8 +1408,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
             hostInfo.setMessage("GPU信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
         }
     }
 
@@ -1550,7 +1418,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             return;
         }
 
-        ClientSession session = null;
+        ClientSession session;
         try {
             // 使用SSH连接池管理器创建或获取连接
             session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
@@ -1568,7 +1436,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
             if (collector != null) {
                 collector.collectNetworkInfo(hostInfo, session, hostInfo.getOsInfo(),
-                        h -> updateHostInfoCache(h));
+                        this::updateHostInfoCache);
             }
         } catch (Exception e) {
             logger.error("收集网络信息时出错: {}, 错误: {}", hostInfo.getIp(), e.getMessage(), e);
@@ -1577,8 +1445,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
             hostInfo.setMessage("网络信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
         }
     }
 
@@ -1590,7 +1456,7 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
 
         logger.info("开始收集交换空间信息: {}", hostInfo.getIp());
-        ClientSession session = null;
+        ClientSession session;
 
         try {
             // 使用SSH连接池管理器创建或获取连接
@@ -1608,7 +1474,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             // 使用收集器收集交换空间信息
             OsInfo osInfo = hostInfo.getOsInfo();
             // 创建更新缓存的回调函数
-            IOsInfoCollector.CacheUpdater cacheUpdater = h -> updateHostInfoCache(h);
+            IOsInfoCollector.CacheUpdater cacheUpdater = this::updateHostInfoCache;
             // 使用linux收集器
             IOsInfoCollector collector = osInfoCollectorFactory.getCollector("linux");
 
@@ -1640,7 +1506,7 @@ public class OsInfoServiceImpl implements OsInfoService {
             return;
         }
 
-        ClientSession session = null;
+        ClientSession session;
         try {
             // 使用SSH连接池管理器创建或获取连接
             session = sshConnectionPoolManager.getOrCreateConnection(hostInfo);
@@ -1667,8 +1533,6 @@ public class OsInfoServiceImpl implements OsInfoService {
             }
             hostInfo.setMessage("磁盘信息收集失败: " + e.getMessage());
             updateHostInfoCache(hostInfo);
-        } finally {
-            // 不再关闭连接，由连接池管理器管理连接的生命周期
         }
     }
 
@@ -1771,21 +1635,5 @@ public class OsInfoServiceImpl implements OsInfoService {
         }
         logger.info("添加主机到收集队列: {}", hostInfo.getIp());
         queueManager.addHostToQueue(hostInfo, this::updateHostInfoCache);
-    }
-
-    /**
-     * 获取适用于特定操作系统的收集器
-     * 
-     * @param osInfo 操作系统信息
-     * @return 收集器实现
-     */
-    private IOsInfoCollector getOsInfoCollector(OsInfo osInfo) {
-        if (osInfo == null) {
-            logger.error("无法获取收集器: osInfo为空");
-            return null;
-        }
-
-        // 默认使用Linux收集器
-        return osInfoCollectorFactory.getCollector("linux");
     }
 }

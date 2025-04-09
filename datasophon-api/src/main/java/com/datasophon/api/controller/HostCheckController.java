@@ -87,7 +87,7 @@ public class HostCheckController {
     @PostMapping("/stopHostCheck")
     @UserPermission
     public Result stopHostCheck(
-            @RequestParam(name = "clusterId", required = true) Integer clusterId,
+            @RequestParam(name = "clusterId") Integer clusterId,
             @RequestParam(name = "ip", required = false, defaultValue = "-1") String ip) {
         log.info("收到终止主机检查请求，clusterId: {}, ip: {}", clusterId, ip);
 
@@ -336,8 +336,8 @@ public class HostCheckController {
             @RequestParam(name = "type") String type,
             @RequestParam(name = "intervalMs") long intervalMs) {
         try {
-            boolean success = false;
-            String message = "";
+            boolean success;
+            String message;
 
             if ("taskCleanup".equals(type)) {
                 success = asyncCheckService.setTaskCleanupInterval(intervalMs);
