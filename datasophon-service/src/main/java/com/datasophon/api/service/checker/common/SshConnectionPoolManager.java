@@ -105,8 +105,8 @@ public class SshConnectionPoolManager {
                 idleTimeoutMs, connectionCleanupIntervalMs, maxPoolSize);
 
         // 将定时任务标志设置为已停用
-        scheduledTasksEnabled.set(false);
-        log.info("SSH连接池管理器初始化完成，定时任务默认关闭");
+        scheduledTasksEnabled.set(true);
+        log.info("SSH连接池管理器初始化完成，定时任务默认开启");
     }
 
     /**
