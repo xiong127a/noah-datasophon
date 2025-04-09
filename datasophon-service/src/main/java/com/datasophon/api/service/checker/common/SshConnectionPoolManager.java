@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.sshd.client.session.ClientSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -47,8 +48,18 @@ public class SshConnectionPoolManager {
     // 定时任务启用标志
     private final AtomicBoolean scheduledTasksEnabled = new AtomicBoolean(true);
 
-    // 定时任务执行间隔（默认值）
-    private final long connectionCleanupIntervalMs = TimeUnit.SECONDS.toMillis(60); // 默认60秒
+    // 从配置文件读取配置，如果未配置则使用默认值
+    @Value("${datasophon.checker.ssh-connection-pool.idle-timeout-ms:30000}")
+    private long idleTimeoutMs;
+
+    @Value("${datasophon.checker.ssh-connection-pool.cleanup-interval-ms:30000}")
+    private long connectionCleanupIntervalMs;
+
+    @Value("${datasophon.checker.ssh-connection-pool.max-pool-size:100}")
+    private int maxPoolSize;
+
+    @Value("${datasophon.checker.ssh-connection-pool.health-check-command:echo connection_test}")
+    private String healthCheckCommand;
 
     // 上次执行时间
     private volatile long lastConnectionCleanupTime = 0;
@@ -90,6 +101,9 @@ public class SshConnectionPoolManager {
     @PostConstruct
     public void init() {
         log.info("初始化SSH连接池管理器...");
+        log.info("SSH连接池配置: 空闲超时={}毫秒, 清理间隔={}毫秒, 最大池大小={}",
+                idleTimeoutMs, connectionCleanupIntervalMs, maxPoolSize);
+
         // 将定时任务标志设置为已停用
         scheduledTasksEnabled.set(false);
         log.info("SSH连接池管理器初始化完成，定时任务默认关闭");
@@ -107,6 +121,22 @@ public class SshConnectionPoolManager {
 
         // 设置定时任务标志为已停用
         scheduledTasksEnabled.set(false);
+    }
+
+    /**
+     * 启动定时任务
+     */
+    public void startScheduledTasks() {
+        if (!scheduledTasksEnabled.get()) {
+            scheduledTasksEnabled.set(true);
+        }
+
+        // 启动连接清理定时任务
+        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                    this::cleanupConnections, connectionCleanupIntervalMs);
+            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
+        }
     }
 
     /**
@@ -255,7 +285,7 @@ public class SshConnectionPoolManager {
             // 检查连接是否仍然可用
             if (session.isOpen()) {
                 // 尝试发送一个无害的命令来验证连接是否真正有效
-                CommandResult testResult = execCommand(session, "echo connection_test");
+                CommandResult testResult = execCommand(session, healthCheckCommand);
                 if (testResult != null && testResult.isSuccess()
                         && testResult.getOutput().trim().contains("connection_test")) {
                     log.debug("复用主机 {} 的现有SSH连接 (健康检查通过)", hostInfo.getIp());
@@ -380,7 +410,7 @@ public class SshConnectionPoolManager {
     /**
      * 定期清理不活跃连接
      */
-    @Scheduled(fixedDelay = 60000) // 每分钟执行一次
+    @Scheduled(fixedDelayString = "${datasophon.checker.ssh-connection-pool.cleanup-interval-ms:30000}")
     public void cleanupConnections() {
         if (!scheduledTasksEnabled.get()) {
             log.debug("定时任务已禁用，跳过执行cleanupConnections()");
@@ -392,6 +422,12 @@ public class SshConnectionPoolManager {
             return;
         }
 
+        // 检查连接池是否超过最大大小
+        if (maxPoolSize > 0 && hostConnectionPool.size() > maxPoolSize) {
+            log.warn("连接池大小({})超过最大限制({}), 将进行额外清理",
+                    hostConnectionPool.size(), maxPoolSize);
+        }
+
         // 使用checkExecutor异步执行连接清理
         CompletableFuture.runAsync(() -> {
             try {
@@ -400,7 +436,8 @@ public class SshConnectionPoolManager {
                 log.info("开始清理不活跃SSH连接...");
 
                 long currentTime = System.currentTimeMillis();
-                long idleTimeout = TimeUnit.MINUTES.toMillis(1); // 1分钟没有使用的连接将被关闭
+                // 使用配置的空闲超时时间
+                long idleTimeout = idleTimeoutMs;
 
                 List<String> keysToRemove = new ArrayList<>();
 
@@ -424,8 +461,8 @@ public class SshConnectionPoolManager {
                         Long lastAccess = connectionLastAccessTime.get(key);
                         if (lastAccess != null && (currentTime - lastAccess) > idleTimeout) {
                             try {
-                                log.info("关闭空闲超时的连接: {}, 空闲时长: {}分钟",
-                                        key, (currentTime - lastAccess) / 60000);
+                                log.info("关闭空闲超时的连接: {}, 空闲时长: {}秒",
+                                        key, (currentTime - lastAccess) / 1000);
                                 session.close();
                                 keysToRemove.add(key);
                                 idleClosedCount++;
@@ -517,6 +554,84 @@ public class SshConnectionPoolManager {
     }
 
     /**
+     * 停止连接清理定时任务
+     */
+    public void stopConnectionCleanup() {
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            log.info("连接清理定时任务已停止");
+        }
+    }
+
+    /**
+     * 启动连接清理定时任务
+     */
+    public void startConnectionCleanup() {
+        if (connectionCleanupTask == null || connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                    this::cleanupConnections, connectionCleanupIntervalMs);
+            log.info("连接清理定时任务已启动，执行间隔: {}毫秒", connectionCleanupIntervalMs);
+        }
+    }
+
+    /**
+     * 更新连接清理定时任务执行间隔
+     * 
+     * @param intervalMs 执行间隔（毫秒）
+     */
+    public void updateConnectionCleanupInterval(long intervalMs) {
+        if (intervalMs < 1000) { // 最小1秒
+            log.warn("连接清理定时任务间隔不能小于1秒，忽略此次更新");
+            return;
+        }
+
+        this.connectionCleanupIntervalMs = intervalMs;
+
+        if (connectionCleanupTask != null && !connectionCleanupTask.isCancelled()) {
+            connectionCleanupTask.cancel(false);
+            connectionCleanupTask = taskScheduler.scheduleAtFixedRate(
+                    this::cleanupConnections, intervalMs);
+            log.info("连接清理定时任务已重新调度，新执行间隔: {}毫秒", intervalMs);
+        }
+    }
+
+    /**
+     * 更新空闲连接超时时间
+     * 
+     * @param timeoutMs 超时时间（毫秒）
+     */
+    public void updateIdleTimeout(long timeoutMs) {
+        if (timeoutMs < 1000) { // 最小1秒
+            log.warn("空闲连接超时时间不能小于1秒，忽略此次更新");
+            return;
+        }
+
+        this.idleTimeoutMs = timeoutMs;
+        log.info("已更新空闲连接超时时间: {}毫秒", timeoutMs);
+    }
+
+    /**
+     * 更新连接池最大大小
+     * 
+     * @param size 最大大小
+     */
+    public void updateMaxPoolSize(int size) {
+        if (size <= 0) {
+            log.warn("连接池最大大小必须大于0，忽略此次更新");
+            return;
+        }
+
+        this.maxPoolSize = size;
+        log.info("已更新连接池最大大小: {}", size);
+
+        // 如果当前连接池大小超过新的最大大小，触发清理
+        if (hostConnectionPool.size() > size) {
+            log.info("当前连接池大小({})超过新设置的最大大小({}), 触发清理", hostConnectionPool.size(), size);
+            manualCleanupConnections();
+        }
+    }
+
+    /**
      * 获取SSH连接池的状态信息
      * 
      * @return 连接池状态对象
@@ -531,6 +646,9 @@ public class SshConnectionPoolManager {
         status.setCleanupIntervalMs(this.connectionCleanupIntervalMs);
         status.setCleanupInterval(formatTimeInterval(this.connectionCleanupIntervalMs));
         status.setSessionCacheHitRate(calculateSessionCacheHitRate());
+        status.setIdleTimeoutMs(this.idleTimeoutMs);
+        status.setIdleTimeout(formatTimeInterval(this.idleTimeoutMs));
+        status.setMaxPoolSize(this.maxPoolSize);
 
         if (lastConnectionCleanupTime > 0) {
             status.setLastCleanupTime(dateFormat.format(new java.util.Date(lastConnectionCleanupTime)));

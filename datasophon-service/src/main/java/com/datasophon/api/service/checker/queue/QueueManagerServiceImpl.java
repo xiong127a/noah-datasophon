@@ -437,7 +437,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                 success = true;
                 break;
             case "connectionCleanup":
-                asyncCheckService.stopConnectionCleanup();
+//                asyncCheckService.stopConnectionCleanup();
                 message = "已暂停连接清理定时任务";
                 success = true;
                 break;
@@ -523,7 +523,7 @@ public class QueueManagerServiceImpl implements QueueManagerService {
                 success = true;
                 break;
             case "connectionCleanup":
-                asyncCheckService.startConnectionCleanup();
+//                asyncCheckService.startConnectionCleanup();
                 message = "已恢复连接清理定时任务";
                 success = true;
                 break;

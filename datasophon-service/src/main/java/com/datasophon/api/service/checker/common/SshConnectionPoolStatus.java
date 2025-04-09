@@ -19,6 +19,11 @@ public class SshConnectionPoolStatus {
     private int connectionPoolSize;
 
     /**
+     * 连接池最大大小
+     */
+    private int maxPoolSize;
+
+    /**
      * 清理任务是否活动
      */
     private boolean cleanupTaskActive;
@@ -37,6 +42,16 @@ public class SshConnectionPoolStatus {
      * 清理间隔（可读格式）
      */
     private String cleanupInterval;
+
+    /**
+     * 空闲连接超时时间（毫秒）
+     */
+    private long idleTimeoutMs;
+
+    /**
+     * 空闲连接超时时间（可读格式）
+     */
+    private String idleTimeout;
 
     /**
      * 缓存命中率

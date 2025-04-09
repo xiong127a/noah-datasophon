@@ -70,3 +70,14 @@ datasophon:
         spark: hadoop
         kafka: hadoop
         mapred: hadoop
+
+    # SSH连接池配置
+    ssh-connection-pool:
+      # 空闲连接超时时间(毫秒)，默认30秒
+      idle-timeout-ms: 30000
+      # 连接清理间隔(毫秒)，默认30秒
+      cleanup-interval-ms: 30000
+      # 连接池最大大小，默认100
+      max-pool-size: 10
+      # 健康检查的命令
+      health-check-command: "echo connection_test"
