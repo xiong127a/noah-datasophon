@@ -1391,8 +1391,7 @@ export default {
     async retrySelectedItems(ip) {
       const selectedItems = this.selectedCheckItems[ip] || [];
       if (selectedItems.length === 0) {
-        this.$message.warning('请选择要重试的检查项');
-        return;
+        return; // 不显示警告消息，因为按钮已被禁用
       }
 
       try {
@@ -1669,8 +1668,14 @@ export default {
     hasFixableSelectedItems(ip) {
       const selectedItems = this.selectedCheckItems[ip] || [];
       const items = this.checkItemsMap[ip] || [];
+
+      if (selectedItems.length === 0) {
+        return false;
+      }
+
       return selectedItems.some(itemId => {
         const item = items.find(i => i.id === itemId);
+        // 只有状态为FAILED的检查项才能修复
         return item && item.status === 'FAILED';
       });
     },

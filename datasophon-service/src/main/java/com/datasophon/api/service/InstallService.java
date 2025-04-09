@@ -59,42 +59,8 @@ public interface InstallService {
     Result generateHostAgentCommand(String clusterHostIds, String commandType) throws Exception;
 
     /**
-     * 修复单个检查项（支持跳过确认）
-     * 
-     * @param clusterId   集群ID
-     * @param ip          主机IP
-     * @param itemId      检查项ID
-     * @param skipConfirm 是否跳过确认提示
-     * @return 修复结果
-     */
-    Result fixCheckItem(Integer clusterId, String ip, Integer itemId, Boolean skipConfirm);
-
-    /**
-     * 修复选中的多个检查项
-     * 
-     * @param clusterId 集群ID
-     * @param ip        主机IP
-     * @param itemIds   检查项ID列表,逗号分隔
-     * @return 修复结果
-     */
-    Result fixSelectedCheckItems(Integer clusterId, String ip, String itemIds);
-
-    /**
-     * 修复主机上所有可自动修复的检查项
-     * 
-     * @param clusterId 集群ID
-     * @param ip        主机IP
-     * @return 修复结果
-     */
-    Result fixAllCheckItems(Integer clusterId, String ip);
-
-    /**
      * 启动/停止 主机上安装的服务启动
-     * 
-     * @param clusterHostIds
-     * @param commandType
-     * @return
-     * @throws Exception
+     *
      */
     Result generateHostServiceCommand(String clusterHostIds, String commandType) throws Exception;
 

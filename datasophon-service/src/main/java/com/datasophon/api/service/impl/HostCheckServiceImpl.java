@@ -39,13 +39,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -314,182 +312,6 @@ public class HostCheckServiceImpl implements HostCheckService {
     }
 
     /**
-     * 修复指定主机列表的指定检查项
-     *
-     * @param clusterId    集群ID
-     * @param hostInfoList 主机信息列表
-     * @param itemIdList   需要修复的检查项ID列表
-     * @return 操作结果
-     */
-    public Result fixSelectedCheckItems(Integer clusterId, List<HostInfo> hostInfoList, List<Integer> itemIdList) {
-        if (hostInfoList == null || hostInfoList.isEmpty()) {
-            return Result.error("主机列表为空");
-        }
-
-        if (itemIdList == null || itemIdList.isEmpty()) {
-            return Result.success("没有指定需要修复的检查项");
-        }
-
-        StringBuilder resultMessage = new StringBuilder();
-        boolean hasErrors = false;
-        int totalFixedItems = 0;
-
-        // 已处理的主机数量，用于更新后续主机状态
-        int processedHostCount = 0;
-
-        try {
-            // 第一轮：先将所有主机状态设置为等待修复（除了第一个设为修复中）
-            boolean isFirstHost = true;
-            for (HostInfo hostInfo : hostInfoList) {
-                List<CheckItem> itemsToFix = hostInfo.getCheckItems().stream()
-                        .filter(item -> itemIdList.contains(item.getId()) &&
-                                item.getStatus() == CheckItem.Status.FAILED)
-                        .collect(Collectors.toList());
-
-                if (!itemsToFix.isEmpty()) {
-                    // 第一台主机设为修复中，其他设为等待修复
-                    if (isFirstHost) {
-                        hostInfo.setStatus(CheckItem.Status.FIXING);
-                        hostInfo.setMessage("正在修复中");
-
-                        // 将该主机要修复的检查项状态设置为修复中
-                        for (CheckItem item : itemsToFix) {
-                            item.setStatus(CheckItem.Status.FIXING);
-                            item.setMessage("正在修复...");
-                        }
-                        isFirstHost = false;
-                    } else {
-                        hostInfo.setStatus(CheckItem.Status.WAITING_FIX);
-                        hostInfo.setMessage("等待修复");
-
-                        // 将该主机要修复的检查项状态设置为等待修复
-                        for (CheckItem item : itemsToFix) {
-                            item.setStatus(CheckItem.Status.WAITING_FIX);
-                            item.setMessage("等待修复...");
-                        }
-                    }
-
-                    // 立即更新缓存，确保前端能立即看到状态变化
-                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                }
-            }
-
-            // 立即更新主机映射缓存以确保前端能显示新状态
-            asyncCheckService.updateHostMapInCache(clusterId);
-        } catch (Exception e) {
-            logger.error("预设置主机修复状态时出错", e);
-        }
-
-        // 遍历所有主机，对每个主机执行修复操作
-        for (HostInfo hostInfo : hostInfoList) {
-            try {
-                // 如果不是第一个主机，前一个修复完成后更新当前主机状态为修复中
-                if (processedHostCount > 0) {
-                    hostInfo.setStatus(CheckItem.Status.FIXING);
-                    hostInfo.setMessage("正在修复中");
-
-                    // 将该主机要修复的检查项状态设置为修复中
-                    List<CheckItem> itemsToFix = hostInfo.getCheckItems().stream()
-                            .filter(item -> itemIdList.contains(item.getId()) &&
-                                    (item.getStatus() == CheckItem.Status.FAILED ||
-                                            item.getStatus() == CheckItem.Status.WAITING_FIX))
-                            .collect(Collectors.toList());
-
-                    for (CheckItem item : itemsToFix) {
-                        item.setStatus(CheckItem.Status.FIXING);
-                        item.setMessage("正在修复...");
-                    }
-
-                    // 立即更新缓存，确保前端能立即看到状态变化
-                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                    asyncCheckService.updateHostMapInCache(clusterId);
-
-                    // 更新之后的主机状态为等待修复
-                    if (processedHostCount < hostInfoList.size() - 1) {
-                        for (int i = processedHostCount + 1; i < hostInfoList.size(); i++) {
-                            HostInfo nextHost = hostInfoList.get(i);
-
-                            // 只更新需要修复的主机状态
-                            List<CheckItem> nextHostItemsToFix = nextHost.getCheckItems().stream()
-                                    .filter(item -> itemIdList.contains(item.getId()) &&
-                                            (item.getStatus() == CheckItem.Status.FAILED ||
-                                                    item.getStatus() == CheckItem.Status.WAITING_FIX))
-                                    .collect(Collectors.toList());
-
-                            if (!nextHostItemsToFix.isEmpty()) {
-                                nextHost.setStatus(CheckItem.Status.WAITING_FIX);
-                                nextHost.setMessage("等待修复");
-
-                                // 更新状态为等待修复
-                                for (CheckItem item : nextHostItemsToFix) {
-                                    item.setStatus(CheckItem.Status.WAITING_FIX);
-                                    item.setMessage("等待修复...");
-                                }
-
-                                // 立即更新单个主机的缓存
-                                asyncCheckService.updateHostInfoCache(clusterId, nextHost);
-                            }
-                        }
-
-                        // 更新完所有主机后，更新整个主机映射缓存
-                        asyncCheckService.updateHostMapInCache(clusterId);
-                    }
-                }
-
-                Result result = fixSelectedCheckItems(clusterId, hostInfo, itemIdList);
-
-                // 计算成功修复的项数
-                List<CheckItem> fixedItems = hostInfo.getCheckItems().stream()
-                        .filter(item -> itemIdList.contains(item.getId()) &&
-                                item.getStatus().equals(CheckItem.Status.SUCCESS))
-                        .collect(Collectors.toList());
-
-                totalFixedItems += fixedItems.size();
-
-                if (!result.isSuccess()) {
-                    hasErrors = true;
-                    resultMessage.append("主机 ").append(hostInfo.getHostname())
-                            .append(" 的部分检查项修复失败: ")
-                            .append(result.getMsg()).append("; ");
-                }
-
-                // 增加已处理主机计数
-                processedHostCount++;
-
-                // 确保主机状态与检查项状态一致
-                hostInfo.calculateStatus();
-                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                asyncCheckService.updateHostMapInCache(clusterId);
-
-            } catch (Exception e) {
-                hasErrors = true;
-                logger.error("修复主机 {} 的检查项时发生错误: {}", hostInfo.getHostname(), e.getMessage(), e);
-                resultMessage.append("主机 ").append(hostInfo.getHostname())
-                        .append(" 修复失败: ").append(e.getMessage()).append("; ");
-
-                // 增加已处理主机计数
-                processedHostCount++;
-
-                // 错误情况下，重新计算主机状态并更新缓存
-                hostInfo.calculateStatus();
-                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-                asyncCheckService.updateHostMapInCache(clusterId);
-            }
-        }
-
-        // 最终更新主机映射缓存
-        asyncCheckService.updateHostMapInCache(clusterId);
-
-        if (hasErrors) {
-            return Result.error("部分修复失败: " + resultMessage + "已修复 " + totalFixedItems + " 个项目");
-        } else if (totalFixedItems == 0) {
-            return Result.success("没有找到需要修复的失败项");
-        } else {
-            return Result.success("已成功修复选中的失败项，共 " + totalFixedItems + " 个");
-        }
-    }
-
-    /**
      * 一键修复所有失败项
      */
     @Override
@@ -499,93 +321,140 @@ public class HostCheckServiceImpl implements HostCheckService {
             return Result.error("集群未找到或无主机信息");
         }
 
-        // 使用项目统一的IP排序方法
-        List<String> sortedIps = HostUtils.sortIpAddresses(new ArrayList<>(hostMap.keySet()));
-        logger.info("按IP排序后的主机列表: {}", sortedIps);
-
-        // 根据排序后的IP地址获取主机列表
-        List<HostInfo> hostInfoList = new ArrayList<>();
-        for (String ip : sortedIps) {
-            hostInfoList.add(hostMap.get(ip));
-        }
-
-        // 收集所有失败项的ID
-        Set<Integer> allFailedItemIds = new HashSet<>();
-
-        // 第一轮遍历: 统计失败项并设置首个主机为修复中状态，其余为等待修复状态
-        boolean firstHost = true;
-        for (HostInfo hostInfo : hostInfoList) {
-            // 收集失败项ID
-            List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
-                    .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
-                    .collect(Collectors.toList());
-
-            for (CheckItem item : failedItems) {
-                allFailedItemIds.add(item.getId());
-            }
-
-            if (!failedItems.isEmpty()) {
-                if (firstHost) {
-                    // 第一个主机设为修复中
-                    hostInfo.setStatus(CheckItem.Status.FIXING);
-                    hostInfo.setMessage("正在修复中");
-
-                    // 将该主机的所有失败项设置为修复中
-                    for (CheckItem item : failedItems) {
-                        item.setStatus(CheckItem.Status.FIXING);
-                        item.setMessage("正在修复...");
-                    }
-
-                    firstHost = false;
-                } else {
-                    // 其他主机设为等待修复
-                    hostInfo.setStatus(CheckItem.Status.WAITING_FIX);
-                    hostInfo.setMessage("等待修复");
-
-                    // 将该主机的所有失败项设置为等待修复
-                    for (CheckItem item : failedItems) {
+        // 统计每个主机的失败检查项，同时更新状态为等待修复
+        Map<String, List<CheckItem>> failedItemsMap = new HashMap<>();
+        for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+            String ip = entry.getKey();
+            HostInfo hostInfo = entry.getValue();
+            
+            if (hostInfo.getCheckItems() != null) {
+                List<CheckItem> failedItems = new ArrayList<>();
+                
+                // 找出失败项并更新状态
+                for (CheckItem item : hostInfo.getCheckItems()) {
+                    if (item.getStatus() == CheckItem.Status.FAILED) {
+                        // 更新状态为等待修复
                         item.setStatus(CheckItem.Status.WAITING_FIX);
                         item.setMessage("等待修复...");
+                        failedItems.add(item);
                     }
                 }
-                // 更新缓存 - 立即更新每个主机的缓存状态
-                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+                
+                if (!failedItems.isEmpty()) {
+                    failedItemsMap.put(ip, failedItems);
+                    // 更新主机状态
+                    hostInfo.calculateStatus();
+                    // 立即更新缓存，使前端能看到状态变化
+                    asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+                }
             }
         }
 
-        // 立即更新主机映射缓存确保前端能够显示修复状态
-        asyncCheckService.updateHostMapInCache(clusterId);
-
-        if (allFailedItemIds.isEmpty()) {
-            // 如果没有失败项，确保主机状态正确
-            for (HostInfo hostInfo : hostInfoList) {
-                hostInfo.calculateStatus(); // 重新计算主机状态
-                asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
-            }
-            // 更新主机映射缓存
-            asyncCheckService.updateHostMapInCache(clusterId);
-            return Result.success("没有发现需要修复的失败项");
+        if (failedItemsMap.isEmpty()) {
+            return Result.success("没有需要修复的检查项");
+        }
+        if (hostMap.isEmpty()) {
+            return Result.error("集群未找到或无主机信息");
         }
 
-        // 调用公共方法进行批量修复
-        Result result = fixSelectedCheckItems(clusterId, hostInfoList, new ArrayList<>(allFailedItemIds));
+        for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
+            String ip = entry.getKey();
+            HostInfo hostInfo = entry.getValue();
+            
+            if (hostInfo.getCheckItems() != null) {
+                List<CheckItem> failedItems = hostInfo.getCheckItems().stream()
+                    .filter(item -> item.getStatus() == CheckItem.Status.FAILED)
+                    .collect(Collectors.toList());
+                
+                if (!failedItems.isEmpty()) {
+                    failedItemsMap.put(ip, failedItems);
+                }
+            }
+        }
 
-        // 修复完成后，重新计算每个主机的状态
-        for (HostInfo hostInfo : hostInfoList) {
+        if (failedItemsMap.isEmpty()) {
+            return Result.success("没有需要修复的检查项");
+        }
+
+        // 按IP排序
+        List<String> sortedIps = HostUtils.sortIpAddresses(new ArrayList<>(failedItemsMap.keySet()));
+        logger.info("需要修复的主机列表(已排序): {}", sortedIps);
+
+        // 修复每个主机的失败项
+        fixFailedItemsByHost(clusterId, hostMap, failedItemsMap, sortedIps);
+
+        return Result.success("已成功启动对" + sortedIps.size() + "个主机的修复任务");
+    }
+
+    /**
+     * 修复指定主机的失败检查项
+     */
+    private void fixFailedItemsByHost(Integer clusterId, Map<String, HostInfo> hostMap, 
+            Map<String, List<CheckItem>> failedItemsMap, List<String> sortedIps) {
+        for (String ip : sortedIps) {
+            HostInfo hostInfo = hostMap.get(ip);
+            List<CheckItem> failedItems = failedItemsMap.get(ip);
+
+            // 更新主机状态
+            hostInfo.calculateStatus();
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+            // 执行修复
+            fixWaitingItems(clusterId, ip, hostInfo, failedItems);
+        }
+    }
+    
+    /**
+     * 修复指定的等待修复状态的检查项
+     * 
+     * @param clusterId 集群ID
+     * @param ip 主机IP
+     * @param hostInfo 主机信息
+     * @param itemsToFix 需要修复的检查项列表
+     */
+    private void fixWaitingItems(Integer clusterId, String ip, HostInfo hostInfo, List<CheckItem> itemsToFix) {
+        try {
+            // 设置主机状态为"修复中"
+            hostInfo.setStatus(CheckItem.Status.FIXING);
+            hostInfo.setMessage("正在修复中");
+
+            // 将所有要修复的检查项状态设置为"修复中"
+            for (CheckItem item : itemsToFix) {
+                item.setStatus(CheckItem.Status.FIXING);
+                item.setMessage("正在修复...");
+            }
+
+            // 立即更新缓存，使前端能看到状态变化
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+            // 使用doHostFix进行批量修复，实现SSH连接复用
+            boolean success = doHostFix(clusterId, hostInfo, itemsToFix);
+
+            // 修复完成后根据结果重新计算主机状态
+            hostInfo.calculateStatus();
+            asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
+
+            if (success) {
+                // 修复成功后触发主机重新检查
+                retriggerHostCheck(hostInfo, clusterId);
+                logger.info("主机 {} 的检查项修复成功", ip);
+            } else {
+                logger.error("主机 {} 的部分检查项修复失败", ip);
+            }
+        } catch (Exception e) {
+            logger.error("修复主机 {} 的检查项失败: {}", ip, e.getMessage(), e);
+            
+            // 发生异常时，重新计算主机状态
             hostInfo.calculateStatus();
             asyncCheckService.updateHostInfoCache(clusterId, hostInfo);
         }
-        // 最终更新主机映射缓存
-        asyncCheckService.updateHostMapInCache(clusterId);
-
-        return result;
     }
 
     @Override
-    public Result fixAllCheckItems(Integer clusterId, String hostname) {
+    public Result fixAllCheckItems(Integer clusterId, String ip) {
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
 
-        HostInfo hostInfo = map.get(hostname);
+        HostInfo hostInfo = map.get(ip);
         if (Objects.isNull(hostInfo)) {
             return Result.error("主机不存在");
         }

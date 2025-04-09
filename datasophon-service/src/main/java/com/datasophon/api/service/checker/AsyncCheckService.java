@@ -102,7 +102,6 @@ public class AsyncCheckService {
     // 定时任务的Future
     private ScheduledFuture<?> taskCleanupTask;
 
-
     // 添加连接池清理改进
     private final Map<String, Long> connectionLastAccessTime = new ConcurrentHashMap<>();
 
@@ -172,7 +171,7 @@ public class AsyncCheckService {
 
     /**
      * 获取定时任务状态
-     *
+     * 
      * @return 定时任务状态对象
      */
     public ScheduledTasksStatus getScheduledTasksStatus() {
@@ -203,7 +202,7 @@ public class AsyncCheckService {
 
     /**
      * 设置任务清理定时任务执行间隔
-     *
+     * 
      * @param intervalMs 间隔时间（毫秒）
      * @return 是否设置成功
      */
@@ -228,7 +227,7 @@ public class AsyncCheckService {
 
     /**
      * 设置连接清理定时任务的执行间隔
-     *
+     * 
      * @param intervalMs 间隔时间（毫秒）
      * @return 是否设置成功
      */
@@ -245,7 +244,7 @@ public class AsyncCheckService {
 
     /**
      * 将毫秒时间格式化为人类可读的时间间隔
-     *
+     * 
      * @param ms 毫秒数
      * @return 格式化后的时间间隔
      */
@@ -563,9 +562,10 @@ public class AsyncCheckService {
             return Result.error("更新主机名失败: " + e.getMessage());
         }
     }
+
     /**
      * 计算SSH会话缓存命中率
-     *
+     * 
      * @return 缓存命中百分比
      */
     private int calculateSessionCacheHitRate() {
@@ -575,7 +575,7 @@ public class AsyncCheckService {
 
     /**
      * 获取异步服务状态（返回实体类）
-     *
+     * 
      * @return AsyncServiceStatus对象
      */
     public AsyncServiceStatus getAsyncServiceStatus() {
@@ -657,7 +657,7 @@ public class AsyncCheckService {
 
     /**
      * 更新任务清理定时任务执行间隔
-     *
+     * 
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateTaskCleanupInterval(long intervalMs) {
@@ -678,7 +678,7 @@ public class AsyncCheckService {
 
     /**
      * 更新连接清理定时任务执行间隔
-     *
+     * 
      * @param intervalMs 执行间隔（毫秒）
      */
     public void updateConnectionCleanupInterval(long intervalMs) {
@@ -690,10 +690,9 @@ public class AsyncCheckService {
         this.connectionCleanupIntervalMs = intervalMs;
     }
 
-
     /**
      * 批量执行检查项，复用SSH连接
-     *
+     * 
      * @param clusterId  集群ID
      * @param hostInfo   主机信息
      * @param checkItems 检查项列表
@@ -834,7 +833,7 @@ public class AsyncCheckService {
 
     /**
      * 批量执行修复项，复用SSH连接
-     *
+     * 
      * @param clusterId 集群ID
      * @param hostInfo  主机信息
      * @param fixItems  修复项列表
@@ -877,7 +876,6 @@ public class AsyncCheckService {
 
             // 更新最后访问时间
             connectionLastAccessTime.put(hostKey, System.currentTimeMillis());
-
 
             // 执行每个修复项
             for (CheckItem item : fixItems) {
@@ -1033,7 +1031,7 @@ public class AsyncCheckService {
      * @param hostsFilePreview hosts文件预览信息
      */
     public void syncHostsFileTask(String taskId, Integer clusterId, Map<String, HostInfo> hostMap,
-                                  Object hostsFilePreview) {
+            Object hostsFilePreview) {
         // 参数校验
         if (taskId == null || clusterId == null || hostMap == null || hostsFilePreview == null) {
             logger.error("同步hosts文件任务参数异常: taskId={}, clusterId={}, hostMap={}, hostsFilePreview={}",
