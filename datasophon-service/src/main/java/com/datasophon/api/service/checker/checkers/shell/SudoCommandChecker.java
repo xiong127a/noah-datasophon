@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Sudo命令检查器
- * 检查系统是否安装了sudo命令
+ * 检查系统是否安装了sudo命令且能正常执行
  */
 @Component
 @Slf4j
@@ -23,28 +23,35 @@ public class SudoCommandChecker extends AbstractItemChecker {
             cacheLog.info("==== 开始Sudo命令检查 ====");
             cacheLog.info("主机: " + hostInfo.getIp());
 
-            // 检查sudo命令是否存在
-            cacheLog.info("搜索sudo命令位置...");
-            String command = "which sudo || whereis sudo | awk '{print $2}'";
+            // 检查sudo命令是否存在且可执行
+            cacheLog.info("检查sudo命令是否可执行...");
+            String command = "sudo -V >/dev/null 2>&1 && echo 'SUDO_OK' || echo 'SUDO_FAIL'";
             CommandResult result = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo), command);
 
-            if (result.isSuccess() && !result.getOutput().trim().isEmpty()) {
-                String sudoPath = result.getOutput().trim();
-                cacheLog.info("找到sudo命令位置: " + sudoPath);
+            if (result.isSuccess() && "SUDO_OK".equals(result.getOutput().trim())) {
+                // 获取sudo命令路径
+                cacheLog.info("获取sudo命令路径...");
+                String pathCommand = "which sudo";
+                CommandResult pathResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
+                        pathCommand);
+                String sudoPath = pathResult.isSuccess() ? pathResult.getOutput().trim() : "未知";
 
                 // 检查sudo命令版本
                 cacheLog.info("检查sudo命令版本...");
                 String versionCommand = "sudo --version | head -n 1";
                 CommandResult versionResult = execCommand(sshConnectionPoolManager.getOrCreateConnection(hostInfo),
                         versionCommand);
-                if (versionResult.isSuccess()) {
-                    cacheLog.info("sudo版本信息: " + versionResult.getOutput().trim());
-                }
+                String versionInfo = versionResult.isSuccess() ? versionResult.getOutput().trim() : "未知";
+
+                cacheLog.info("sudo命令检查通过");
+                cacheLog.info("sudo路径: " + sudoPath);
+                cacheLog.info("sudo版本: " + versionInfo);
 
                 checkItem.setStatus(CheckItem.Status.SUCCESS);
-                setStyledHtmlMessage(hostInfo, checkItem, true, "Sudo命令检查通过", createSuccessDetails(sudoPath));
+                setStyledHtmlMessage(hostInfo, checkItem, true, "Sudo命令检查通过",
+                        createSuccessDetails(sudoPath, versionInfo));
             } else {
-                cacheLog.warn("未找到sudo命令");
+                cacheLog.warn("sudo命令不可用或未安装");
                 checkItem.setStatus(CheckItem.Status.FAILED);
                 setStyledHtmlMessage(hostInfo, checkItem, false, "Sudo命令检查未通过", createFailDetails());
             }
@@ -73,7 +80,7 @@ public class SudoCommandChecker extends AbstractItemChecker {
     /**
      * 创建成功详情消息
      */
-    private StringBuilder createSuccessDetails(String sudoPath) {
+    private StringBuilder createSuccessDetails(String sudoPath, String versionInfo) {
         StringBuilder sb = new StringBuilder();
         sb.append(
                 "<div style=\"font-family: SF Pro Text, -apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Arial, sans-serif; ");
@@ -92,8 +99,9 @@ public class SudoCommandChecker extends AbstractItemChecker {
         // 详细信息区域
         sb.append("<div style=\"margin-top: 12px;\">");
         sb.append("<div style=\"font-size: 15px; color: #1d1d1f; line-height: 1.5;\">");
-        sb.append("系统已安装sudo命令。<br>");
-        sb.append("sudo路径: ").append(sudoPath);
+        sb.append("系统已安装且可正常使用sudo命令。<br>");
+        sb.append("sudo路径: ").append(sudoPath).append("<br>");
+        sb.append("sudo版本: ").append(versionInfo);
         sb.append("</div>");
         sb.append("</div>");
 
@@ -123,7 +131,7 @@ public class SudoCommandChecker extends AbstractItemChecker {
         // 详细信息区域
         sb.append("<div style=\"margin-top: 12px;\">");
         sb.append("<div style=\"font-size: 15px; color: #1d1d1f; line-height: 1.5;\">");
-        sb.append("系统未安装sudo命令。");
+        sb.append("系统未安装sudo命令或sudo命令不可用。");
         sb.append("</div>");
         sb.append("</div>");
 

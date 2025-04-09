@@ -14,7 +14,7 @@ public enum ItemCode {
     SELINUX("SELINUX", "SELinux检查", 8, false, null),
     TIME_SYNC("TIME_SYNC", "时间同步检查", 9, false, null),
     USER_GROUP_CHECK("USER_GROUP_CHECK", "用户和组检查", 10, false, null),
-    BASH_SHELL_CHECK("bash_shell_check", "Bash Shell检查", 11, false, null),
+    BASH_SHELL_CHECK("BASH_SHELL_CHECK", "Bash Shell检查", 11, false, null),
     SUDO_COMMAND_CHECK("SUDO_COMMAND_CHECK", "Sudo命令检查", 12, false, "sudo命令未安装，需要手动安装。确定要继续尝试修复吗？");
 
     private final String code;
