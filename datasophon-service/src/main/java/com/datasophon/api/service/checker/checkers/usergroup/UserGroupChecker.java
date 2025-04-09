@@ -1,5 +1,7 @@
 package com.datasophon.api.service.checker.checkers.usergroup;
 
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.TimedCache;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -20,8 +22,11 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +51,24 @@ public class UserGroupChecker extends AbstractItemChecker {
     private final List<String> usersToCreate = new ArrayList<>();
     private final List<String> groupsToCreate = new ArrayList<>();
     private boolean checkFailed = false;
+
+    // 创建定时缓存，默认过期时间5分钟
+    private static final TimedCache<String, Object> META_CACHE = CacheUtil.newTimedCache(5 * 60 * 1000);
+
+    // 缓存键常量
+    private static final String CACHE_KEY_USERS = "usergroup:users";
+    private static final String CACHE_KEY_GROUPS = "usergroup:groups";
+    private static final String CACHE_KEY_SERVICE_FILES = "usergroup:service_files";
+    private static final String CACHE_KEY_EXPIRY_TIME = "expiry:";
+
+    // 创建缓存，启用时间统计，启用过期监听
+    static {
+        // 启动定时清理任务，每分钟执行一次
+        META_CACHE.schedulePrune(60 * 1000);
+
+        // 添加日志，方便排查问题
+        logger.info("初始化用户组检查器缓存，默认过期时间: 5分钟");
+    }
 
     // 缓存默认用户组映射
     private Map<String, String> defaultGroupMappings;
@@ -196,14 +219,115 @@ public class UserGroupChecker extends AbstractItemChecker {
             // 获取配置的版本，如DDP-1.2.1
             String versionDir = checkerProperties.getMeta().getVersions();
 
+            // 构建缓存键，基于版本和元数据路径
+            String cacheKeyPrefix = metaBasePath + ":" + versionDir + ":";
+            String cacheUserKey = cacheKeyPrefix + CACHE_KEY_USERS;
+            String cacheGroupKey = cacheKeyPrefix + CACHE_KEY_GROUPS;
+            String cacheExpiryKey = CACHE_KEY_EXPIRY_TIME + cacheKeyPrefix;
+
+            // 尝试从缓存获取用户和组信息
+            @SuppressWarnings("unchecked")
+            Set<String> cachedUsers = (Set<String>) META_CACHE.get(cacheUserKey);
+            @SuppressWarnings("unchecked")
+            Set<String> cachedGroups = (Set<String>) META_CACHE.get(cacheGroupKey);
+
+            // 调试信息，检查缓存状态
+            logger.debug("检查缓存状态 - 用户缓存: {}, 组缓存: {}",
+                    cachedUsers != null ? "存在" : "不存在",
+                    cachedGroups != null ? "存在" : "不存在");
+
+            // 获取过期时间信息
+            Long expiryTime = (Long) META_CACHE.get(cacheExpiryKey);
+            logger.debug("缓存过期时间键: {}, 值: {}", cacheExpiryKey, expiryTime);
+
+            if (cachedUsers != null && cachedGroups != null) {
+                // 计算剩余有效期（秒）
+                long currentTime = System.currentTimeMillis();
+                long remainingSeconds = 0;
+
+                if (expiryTime != null) {
+                    logger.debug("当前时间: {}, 过期时间: {}, 差值(ms): {}",
+                            currentTime, expiryTime, (expiryTime - currentTime));
+                    remainingSeconds = Math.max(0, (expiryTime - currentTime) / 1000);
+                } else {
+                    logger.debug("未找到缓存项的过期时间信息");
+                }
+
+                // 缓存命中，直接使用缓存数据
+                if (remainingSeconds > 0) {
+                    cacheLog.info("使用缓存的用户和组配置 (剩余有效期: %s分%s秒)",
+                            remainingSeconds / 60, remainingSeconds % 60);
+                } else {
+                    cacheLog.info("使用缓存的用户和组配置 (即将过期)");
+                    // 过期的缓存项应该被及时移除，但没有被移除，说明定时任务可能没有正常工作
+                    // 手动移除这些过期的缓存项
+                    if (expiryTime != null && expiryTime < currentTime) {
+                        logger.debug("手动移除过期的缓存项");
+                        META_CACHE.remove(cacheUserKey);
+                        META_CACHE.remove(cacheGroupKey);
+                        META_CACHE.remove(cacheExpiryKey);
+
+                        // 重新扫描
+                        cacheLog.info("缓存已过期，重新扫描元数据目录");
+                        scanServiceConfigurations(users, groups);
+                        return;
+                    }
+                }
+                users.addAll(cachedUsers);
+                groups.addAll(cachedGroups);
+                return;
+            }
+
+            cacheLog.info("缓存未命中或已过期，重新扫描元数据目录");
+
             // 构建完整的搜索路径
             String searchDir = metaBasePath + File.separator + versionDir;
 
             cacheLog.info("扫描元数据目录: " + searchDir);
 
+            // 检查路径是否为URI格式
+            if (metaBasePath.startsWith("file:") || metaBasePath.startsWith("classpath:")) {
+                try {
+                    // 尝试使用Spring Resource机制加载资源
+                    org.springframework.core.io.Resource resource = new org.springframework.core.io.FileSystemResource(
+                            searchDir);
+                    if (resource.exists()) {
+                        try {
+                            searchDir = resource.getFile().getAbsolutePath();
+                        } catch (Exception e) {
+                            // 无法转换为文件路径，可能是JAR包内资源
+                            cacheLog.warn("无法获取资源文件系统路径: " + e.getMessage());
+                            cacheLog.info("将使用默认用户组映射配置进行检查");
+                            addDefaultUserGroupMappings(users, groups);
+                            return;
+                        }
+                    } else {
+                        cacheLog.warn("元数据目录资源不存在: " + searchDir);
+                        cacheLog.info("将使用默认用户组映射配置进行检查");
+                        addDefaultUserGroupMappings(users, groups);
+                        return;
+                    }
+                } catch (Exception e) {
+                    cacheLog.warn("处理元数据目录资源时出错: " + e.getMessage());
+                    cacheLog.info("将使用默认用户组映射配置进行检查");
+                    addDefaultUserGroupMappings(users, groups);
+                    return;
+                }
+            }
+
             File dir = new File(searchDir);
             if (!dir.exists() || !dir.isDirectory()) {
                 cacheLog.warn("元数据目录不存在: " + searchDir);
+
+                // 检查IDEA开发环境的特殊路径
+                boolean foundInIdea = checkIdeaPaths(versionDir, users, groups);
+                if (foundInIdea) {
+                    // 缓存结果
+                    META_CACHE.put(cacheUserKey, new HashSet<>(users));
+                    META_CACHE.put(cacheGroupKey, new HashSet<>(groups));
+                    return;
+                }
+
                 cacheLog.info("将使用默认用户组映射配置进行检查");
                 addDefaultUserGroupMappings(users, groups);
                 return;
@@ -211,7 +335,88 @@ public class UserGroupChecker extends AbstractItemChecker {
 
             // 递归查找所有service_ddl.json文件
             List<File> serviceDdlFiles = new ArrayList<>();
-            findServiceDdlFiles(dir, serviceDdlFiles);
+
+            // 定义文件列表的缓存键
+            String cacheFilesKey = cacheKeyPrefix + CACHE_KEY_SERVICE_FILES;
+            String cacheFilesExpiryKey = CACHE_KEY_EXPIRY_TIME + cacheFilesKey;
+
+            // 尝试从缓存中获取服务配置文件列表
+            @SuppressWarnings("unchecked")
+            List<String> cachedFilePaths = (List<String>) META_CACHE.get(cacheFilesKey);
+            if (cachedFilePaths != null) {
+                // 获取文件列表缓存的过期时间
+                Long filesExpiryTime = (Long) META_CACHE.get(cacheFilesExpiryKey);
+
+                // 计算剩余有效期（秒）
+                long currentTime = System.currentTimeMillis();
+                long remainingSeconds = 0;
+                if (filesExpiryTime != null) {
+                    logger.debug("文件列表缓存 - 当前时间: {}, 过期时间: {}, 差值(ms): {}",
+                            currentTime, filesExpiryTime, (filesExpiryTime - currentTime));
+                    remainingSeconds = Math.max(0, (filesExpiryTime - currentTime) / 1000);
+                } else {
+                    logger.debug("未找到文件列表缓存的过期时间信息");
+                }
+
+                if (remainingSeconds > 0) {
+                    cacheLog.info("使用缓存的服务配置文件列表 (共 {} 个文件, 剩余有效期: {}分{}秒)",
+                            cachedFilePaths.size(), remainingSeconds / 60, remainingSeconds % 60);
+                } else {
+                    cacheLog.info("使用缓存的服务配置文件列表 (共 {} 个文件, 即将过期)", cachedFilePaths.size());
+
+                    // 手动移除过期的缓存项
+                    if (filesExpiryTime != null && filesExpiryTime < currentTime) {
+                        logger.debug("手动移除过期的文件列表缓存");
+                        META_CACHE.remove(cacheFilesKey);
+                        META_CACHE.remove(cacheFilesExpiryKey);
+
+                        // 重新扫描文件系统
+                        cacheLog.info("文件列表缓存已过期，重新扫描文件系统");
+                        findServiceDdlFiles(dir, serviceDdlFiles);
+
+                        // 缓存新的文件列表
+                        List<String> filePaths = new ArrayList<>(serviceDdlFiles.size());
+                        for (File file : serviceDdlFiles) {
+                            filePaths.add(file.getAbsolutePath());
+                        }
+
+                        // 设置新的缓存和过期时间
+                        long expiryTimeValue = System.currentTimeMillis() + (5 * 60 * 1000);
+                        META_CACHE.put(cacheFilesKey, filePaths);
+                        META_CACHE.put(cacheFilesExpiryKey, expiryTimeValue);
+
+                        cacheLog.info("已重新缓存 {} 个服务配置文件路径", filePaths.size());
+                        return;
+                    }
+                }
+
+                // 使用缓存中的文件路径
+                for (String path : cachedFilePaths) {
+                    File file = new File(path);
+                    if (file.exists() && file.isFile()) {
+                        serviceDdlFiles.add(file);
+                    }
+                }
+            } else {
+                // 缓存未命中，执行文件系统扫描
+                cacheLog.info("扫描文件系统查找服务配置文件...");
+                findServiceDdlFiles(dir, serviceDdlFiles);
+
+                // 缓存文件路径列表
+                List<String> filePaths = new ArrayList<>(serviceDdlFiles.size());
+                for (File file : serviceDdlFiles) {
+                    filePaths.add(file.getAbsolutePath());
+                }
+
+                // 设置新的缓存项
+                long expiryTimeValue = System.currentTimeMillis() + (5 * 60 * 1000);
+                META_CACHE.put(cacheFilesKey, filePaths);
+                META_CACHE.put(cacheFilesExpiryKey, expiryTimeValue);
+
+                // 验证缓存是否设置成功
+                Long setExpiry = (Long) META_CACHE.get(cacheFilesExpiryKey);
+                logger.debug("文件列表缓存 - 验证过期时间设置: {}", setExpiry);
+            }
 
             cacheLog.info("找到 " + serviceDdlFiles.size() + " 个服务配置文件");
 
@@ -231,6 +436,25 @@ public class UserGroupChecker extends AbstractItemChecker {
             if (users.isEmpty() && groups.isEmpty()) {
                 cacheLog.info("配置文件中未找到用户和组配置，将使用默认用户组映射配置进行检查");
                 addDefaultUserGroupMappings(users, groups);
+            } else {
+                // 计算过期时间点（当前时间 + 5分钟）
+                long currentTime = System.currentTimeMillis();
+                long expiryTimeValue = currentTime + (5 * 60 * 1000);
+
+                logger.debug("设置缓存过期时间: 当前时间: {}, 过期时间: {}", currentTime, expiryTimeValue);
+
+                // 缓存扫描结果
+                META_CACHE.put(cacheUserKey, new HashSet<>(users));
+                META_CACHE.put(cacheGroupKey, new HashSet<>(groups));
+                META_CACHE.put(cacheExpiryKey, expiryTimeValue);
+
+                // 验证缓存是否设置成功
+                Long setExpiry = (Long) META_CACHE.get(cacheExpiryKey);
+                logger.debug("验证过期时间设置: {}", setExpiry);
+
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+                cacheLog.info("已缓存扫描结果，有效期5分钟 (到期时间: {})",
+                        sdf.format(new Date(expiryTimeValue)));
             }
         } catch (Exception e) {
             logger.error("扫描服务配置文件时发生错误", e);
@@ -239,6 +463,79 @@ public class UserGroupChecker extends AbstractItemChecker {
             cacheLog.info("由于发生错误，将使用默认用户组映射配置进行检查");
             addDefaultUserGroupMappings(users, groups);
         }
+    }
+
+    /**
+     * 检查IDEA开发环境中可能的路径位置
+     * 
+     * @return 是否找到并处理了文件
+     */
+    private boolean checkIdeaPaths(String versionDir, Set<String> users, Set<String> groups) {
+        // 尝试几个IDEA开发环境中可能的路径
+        String projectRoot = System.getProperty("user.dir");
+
+        // 如果当前在子模块中，尝试找到项目根目录
+        if (projectRoot.contains("datasophon-") || projectRoot.contains("noah-bigdata-platform")) {
+            File parentDir = new File(projectRoot).getParentFile();
+            if (parentDir != null && parentDir.exists()) {
+                projectRoot = parentDir.getAbsolutePath();
+            }
+        }
+
+        String[] possiblePaths = {
+                projectRoot + "/datasophon-api/src/main/resources/meta/" + versionDir,
+                projectRoot + "/datasophon-service/src/main/resources/meta/" + versionDir,
+                projectRoot + "/src/main/resources/meta/" + versionDir,
+                projectRoot + "/conf/meta/" + versionDir,
+                projectRoot + "/meta/" + versionDir,
+                "E:/project-code/noah-bigdata-platform/datasophon-api/src/main/resources/meta/" + versionDir,
+                "E:/project-code/noah-bigdata-platform/datasophon-service/src/main/resources/meta/" + versionDir
+        };
+
+        for (String path : possiblePaths) {
+            cacheLog.info("尝试在IDEA环境中查找: " + path);
+            File dir = new File(path);
+            if (dir.exists() && dir.isDirectory()) {
+                cacheLog.info("在IDEA环境中找到元数据目录: " + path);
+
+                // 递归查找所有service_ddl.json文件
+                List<File> serviceDdlFiles = new ArrayList<>();
+                findServiceDdlFiles(dir, serviceDdlFiles);
+
+                cacheLog.info("找到 " + serviceDdlFiles.size() + " 个服务配置文件");
+
+                if (!serviceDdlFiles.isEmpty()) {
+                    // 解析每个文件
+                    for (File file : serviceDdlFiles) {
+                        parseServiceDdlFile(file, users, groups);
+                    }
+
+                    // 如果解析后没有找到任何用户和组，使用默认配置
+                    if (users.isEmpty() && groups.isEmpty()) {
+                        cacheLog.info("配置文件中未找到用户和组配置，将使用默认配置");
+                        addDefaultUserGroupMappings(users, groups);
+                    } else {
+                        // 为IDEA环境设置缓存
+                        String ideaCachePrefix = "idea:" + path + ":";
+                        String ideaUserKey = ideaCachePrefix + CACHE_KEY_USERS;
+                        String ideaGroupKey = ideaCachePrefix + CACHE_KEY_GROUPS;
+                        String ideaExpiryKey = CACHE_KEY_EXPIRY_TIME + ideaCachePrefix;
+
+                        // 设置缓存
+                        long expiryTimeValue = System.currentTimeMillis() + (5 * 60 * 1000);
+                        META_CACHE.put(ideaUserKey, new HashSet<>(users));
+                        META_CACHE.put(ideaGroupKey, new HashSet<>(groups));
+                        META_CACHE.put(ideaExpiryKey, expiryTimeValue);
+
+                        cacheLog.info("已为IDEA环境路径缓存用户组配置, 有效期5分钟");
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -264,6 +561,20 @@ public class UserGroupChecker extends AbstractItemChecker {
      */
     private void findServiceDdlFiles(File dir, List<File> result) {
         if (dir.isDirectory()) {
+            // 检查目录结构是否有变化（使用目录修改时间作为标记）
+            String cacheKey = "dirmtime:" + dir.getAbsolutePath();
+            Long cachedMtime = (Long) META_CACHE.get(cacheKey);
+            long currentMtime = dir.lastModified();
+
+            if (cachedMtime != null && cachedMtime != currentMtime) {
+                // 目录修改时间变化，清除相关缓存
+                logger.info("检测到目录结构变化，清除相关缓存: {}", dir.getAbsolutePath());
+                clearRelatedCache(dir);
+            }
+
+            // 更新目录修改时间缓存
+            META_CACHE.put(cacheKey, currentMtime);
+
             File[] files = dir.listFiles();
             if (files != null) {
                 for (File file : files) {
@@ -283,6 +594,22 @@ public class UserGroupChecker extends AbstractItemChecker {
     private void parseServiceDdlFile(File file, Set<String> users, Set<String> groups) {
         try {
             String content = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+
+            // 计算文件内容的哈希值用于检测变化
+            String cacheKey = "filehash:" + file.getAbsolutePath();
+            String contentHash = cn.hutool.crypto.SecureUtil.md5(content);
+            String cachedHash = (String) META_CACHE.get(cacheKey);
+
+            // 检查文件内容是否有变化
+            if (cachedHash != null && !cachedHash.equals(contentHash)) {
+                logger.info("检测到文件内容变化，清除相关缓存: {}", file.getAbsolutePath());
+                // 只清除相关缓存，保留其他缓存
+                clearRelatedCache(file.getParentFile());
+            }
+
+            // 更新缓存中的文件哈希值
+            META_CACHE.put(cacheKey, contentHash);
+
             JSONObject json = JSON.parseObject(content);
 
             // 检查roles数组
@@ -310,6 +637,41 @@ public class UserGroupChecker extends AbstractItemChecker {
         } catch (IOException e) {
             logger.error("解析服务配置文件时发生错误: " + file.getAbsolutePath(), e);
             cacheLog.error("解析文件 " + file.getAbsolutePath() + " 时发生错误: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 清除与指定目录相关的缓存
+     * 
+     * @param directory 目录
+     */
+    private void clearRelatedCache(File directory) {
+        if (directory == null) {
+            return;
+        }
+
+        String dirPath = directory.getAbsolutePath();
+
+        // 查找该目录相关的所有缓存键并清除
+        Set<String> keysToRemove = new HashSet<>();
+
+        // 获取所有缓存键
+        Iterator<String> keyIterator = META_CACHE.keySet().iterator();
+        while (keyIterator.hasNext()) {
+            String key = keyIterator.next();
+            if (key.contains(dirPath) ||
+                    (key.startsWith(metaBasePath) &&
+                            (key.endsWith(CACHE_KEY_USERS) ||
+                                    key.endsWith(CACHE_KEY_GROUPS) ||
+                                    key.endsWith(CACHE_KEY_SERVICE_FILES)))) {
+                keysToRemove.add(key);
+            }
+        }
+
+        // 删除匹配的缓存项
+        for (String key : keysToRemove) {
+            META_CACHE.remove(key);
+            logger.debug("已清除相关缓存: {}", key);
         }
     }
 
@@ -585,5 +947,114 @@ public class UserGroupChecker extends AbstractItemChecker {
     @Override
     public ItemCode getCheckerType() {
         return ItemCode.USER_GROUP_CHECK;
+    }
+
+    /**
+     * 清除缓存
+     */
+    public static void clearCache() {
+        META_CACHE.clear();
+        logger.info("已清除用户组检查器的元数据缓存");
+    }
+
+    /**
+     * 手动刷新缓存
+     * 可以在元数据更新后调用此方法强制重新扫描
+     */
+    public void refreshCache() {
+        int cacheSize = META_CACHE.size();
+        // 收集所有缓存键
+        Set<String> allKeys = new HashSet<>(META_CACHE.keySet());
+
+        // 分类统计
+        int userGroupKeys = 0;
+        int fileKeys = 0;
+        int expiryKeys = 0;
+
+        // 按类型分类
+        for (String key : allKeys) {
+            if (key.endsWith(CACHE_KEY_USERS) || key.endsWith(CACHE_KEY_GROUPS)) {
+                userGroupKeys++;
+            } else if (key.endsWith(CACHE_KEY_SERVICE_FILES)) {
+                fileKeys++;
+            } else if (key.startsWith(CACHE_KEY_EXPIRY_TIME)) {
+                expiryKeys++;
+            }
+        }
+
+        // 清除所有缓存
+        META_CACHE.clear();
+
+        logger.info("已手动刷新用户组检查器的元数据缓存：总计{}项 (用户组: {}, 文件: {}, 过期时间: {})",
+                cacheSize, userGroupKeys, fileKeys, expiryKeys);
+    }
+
+    /**
+     * 获取缓存统计信息
+     * 
+     * @return 缓存统计信息
+     */
+    public String getCacheStats() {
+        int totalItems = META_CACHE.size();
+        int fileHashItems = 0;
+        int dirMtimeItems = 0;
+        int configItems = 0;
+        int expiryTimeItems = 0;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("缓存统计 - 总项数: %d\n", totalItems));
+
+        // 获取当前时间
+        long now = System.currentTimeMillis();
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+
+        // 添加关键缓存项详细信息
+        sb.append("关键缓存项详情:\n");
+
+        List<String> keyPrefixes = new ArrayList<>();
+
+        for (String key : META_CACHE.keySet()) {
+            if (key.startsWith("filehash:")) {
+                fileHashItems++;
+            } else if (key.startsWith("dirmtime:")) {
+                dirMtimeItems++;
+            } else if (key.startsWith(CACHE_KEY_EXPIRY_TIME)) {
+                expiryTimeItems++;
+                // 提取缓存前缀
+                if (key.indexOf(":", CACHE_KEY_EXPIRY_TIME.length()) > 0) {
+                    String prefix = key.substring(CACHE_KEY_EXPIRY_TIME.length());
+                    if (!keyPrefixes.contains(prefix)) {
+                        keyPrefixes.add(prefix);
+                    }
+                }
+            } else if (key.endsWith(CACHE_KEY_USERS) ||
+                    key.endsWith(CACHE_KEY_GROUPS) ||
+                    key.endsWith(CACHE_KEY_SERVICE_FILES)) {
+                configItems++;
+            }
+        }
+
+        // 显示各类型缓存项数量
+        sb.append(String.format("  文件哈希: %d, 目录时间戳: %d, 配置项: %d, 过期时间: %d\n",
+                fileHashItems, dirMtimeItems, configItems, expiryTimeItems));
+
+        // 显示每个缓存前缀的详细信息
+        if (!keyPrefixes.isEmpty()) {
+            sb.append("缓存组详情:\n");
+            for (String prefix : keyPrefixes) {
+                Long expiryTime = (Long) META_CACHE.get(CACHE_KEY_EXPIRY_TIME + prefix);
+                if (expiryTime != null) {
+                    long remaining = (expiryTime - now) / 1000;
+                    if (remaining > 0) {
+                        sb.append(String.format("  %s - 剩余: %d分%d秒 (到期时间: %s)\n",
+                                prefix, remaining / 60, remaining % 60, sdf.format(new Date(expiryTime))));
+                    } else {
+                        sb.append(String.format("  %s - 已过期\n", prefix));
+                    }
+                }
+            }
+        }
+
+        return sb.toString();
     }
 }

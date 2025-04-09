@@ -4,34 +4,34 @@ datasophon:
     # 元数据路径配置
     meta:
       # 版本目录路径，可以配置为DDP-1.2.0,DDP-1.2.1等
-      versions: DDP-1.2.11
+      versions: DDP-1.2.1
       # 元数据基础目录
       # 开发环境默认使用 classpath:meta
       # 生产环境默认使用 ${user.dir}/conf/meta
-      base-dir: ${META_BASE_DIR:${user.dir}/conf/meta}
+      base-dir: ${META_BASE_DIR:classpath:meta}
     
     # CPU检查配置
     cpu:
       # 最小核心数要求
-      min-cores: 41
+      min-cores: 4
       # 建议核心数
-      recommended-cores: 81
+      recommended-cores: 8
     
     # 内存检查配置
     memory:
       # 最小内存要求(MB)
-      min-memory: 81921
+      min-memory: 8192
       # 建议内存(MB)
-      recommended-memory: 163841
+      recommended-memory: 16384
       # 交换区最小值(MB)
-      min-swap: 40961
+      min-swap: 4096
     
     # Java环境检查配置
     java:
       # 最小版本要求
-      min-version: 11.8
+      min-version: 1.8
       # 默认JDK路径
-      default-path: /usr/local/jdk1.8.0_3331
+      default-path: /usr/local/jdk1.8.0_333
       # 是否检查默认路径
       check-default-path: true
     
@@ -55,7 +55,7 @@ datasophon:
     # 时间同步配置
     time-sync:
       # 最大允许时间偏差(秒)
-      max-time-diff: 101
+      max-time-diff: 10
     
     # 用户和组检查配置
     user-group:
