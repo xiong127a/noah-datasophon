@@ -150,5 +150,12 @@
             <lineEnding>unix</lineEnding>
             <outputDirectory>/node/arm</outputDirectory>
         </fileSet>
+        <!-- 添加 arthas 目录打包配置 -->
+        <fileSet>
+            <directory>${basedir}/../arthas</directory>
+            <outputDirectory>arthas</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+        </fileSet>
     </fileSets>
 </assembly>

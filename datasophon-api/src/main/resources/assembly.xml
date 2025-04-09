@@ -202,6 +202,12 @@
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>
+            <directory>${basedir}/../arthas</directory>
+            <outputDirectory>arthas</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
             <directory>${basedir}/src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>
