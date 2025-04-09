@@ -10,11 +10,14 @@
       <a-tab-pane :key="3" tab="配置">
         <Setting />
       </a-tab-pane>
-      <a-tab-pane v-if="serviceName === 'YARN'" :key="4" tab="资源配置">
+      <a-tab-pane :key="4" tab="连接信息">
+        <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
+      </a-tab-pane>
+      <a-tab-pane v-if="serviceName === 'YARN'" :key="5" tab="资源配置">
         <Queue />
       </a-tab-pane>
     </a-tabs>
-    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ?'280px':'200px'}" v-if="webUis.length > 0">
+    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ?'350px':'280px'}" v-if="webUis.length > 0">
       <a-menu slot="overlay" @click="handleMenuClick">
         <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
       </a-menu>
@@ -36,16 +39,18 @@ import ExampleList from "./exampleList.vue";
 const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
+import ConnectInfo from './connectInfo.vue'
+
 export default {
   name: "ServiceList",
-  components: { ExampleList, Setting, OverViewPage, Queue },
+  components: { ExampleList, Setting, OverViewPage, Queue, ConnectInfo },
 
   data() {
     return {
       tabKey: 1,
       serviceName: '',
       loading: false,
-      tabList: ["总览", "实例", "配置"],
+      tabList: ["总览", "实例", "配置", "连接信息"],
       serviceId: "",
       webUis: [],
       pageOverview: true,
@@ -97,8 +102,22 @@ export default {
       window.open(url)
     },
     callback(key) {
-      console.log(key);
+      console.log("Tab changed to:", key, "类型:", typeof key);
       this.tabKey = key;
+      
+      // 如果切换到连接信息标签页，确保serviceId已设置并刷新连接信息
+      if (key === 4) {
+        console.log("连接信息标签页激活，serviceId:", this.$route.params.serviceId);
+        // 等待DOM更新后再调用方法
+        this.$nextTick(() => {
+          if (this.$refs.connectInfoRef) {
+            console.log("手动调用connectInfoRef.getConnectionInfo方法");
+            this.$refs.connectInfoRef.getConnectionInfo();
+          } else {
+            console.error("connectInfoRef不存在");
+          }
+        });
+      }
     },
     getWebUis() {
       this.$axiosPost(global.API.getWebUis, {

@@ -45,6 +45,16 @@ Vue.use(Plugins)
 
 bootstrap({router, store, i18n, message: Vue.prototype.$message})
 
+// 检查API是否正确注册
+setTimeout(() => {
+  console.log("检查API注册情况：", global.API);
+  if (global.API && global.API.getConnectionInfo) {
+    console.log("getConnectionInfo API已正确注册:", global.API.getConnectionInfo);
+  } else {
+    console.error("getConnectionInfo API未注册");
+  }
+}, 1000);
+
 new Vue({
   router,
   store,

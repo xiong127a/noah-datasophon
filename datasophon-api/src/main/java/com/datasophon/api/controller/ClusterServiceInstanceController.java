@@ -105,4 +105,12 @@ public class ClusterServiceInstanceController {
         return clusterServiceInstanceService.delServiceInstance(serviceInstanceId);
     }
 
+    /**
+     * 获取服务连接信息
+     */
+    @RequestMapping("/getConnectionInfo")
+    public Result getConnectionInfo(Integer serviceInstanceId) {
+        return clusterServiceInstanceService.getConnectionInfo(serviceInstanceId);
+    }
+
 }

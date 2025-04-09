@@ -45,5 +45,6 @@ export default {
   deleteQueue: path + '/cluster/yarn/queue/delete', // 队列删除
   updateQueue: path + '/cluster/yarn/queue/update', // 更新队列
   refreshQueues: path + '/cluster/yarn/queue/refreshQueues', // 刷新队列到Yarn
-  refreshQueuesYARN : path + '/cluster/queue/capacity/refreshToYarn'
+  refreshQueuesYARN : path + '/cluster/queue/capacity/refreshToYarn',
+  getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo' // 获取服务连接信息
 }

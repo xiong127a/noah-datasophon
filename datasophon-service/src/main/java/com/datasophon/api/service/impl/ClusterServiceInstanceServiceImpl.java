@@ -25,7 +25,10 @@ import com.datasophon.api.enums.Status;
 import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.*;
+import com.datasophon.api.strategy.ServiceRoleStrategy;
+import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.model.SimpleServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -84,7 +87,7 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId,
-                                                                                    String serviceName) {
+            String serviceName) {
         return this.getOne(new QueryWrapper<ClusterServiceInstanceEntity>()
                 .eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.SERVICE_NAME, serviceName));
@@ -160,8 +163,8 @@ public class ClusterServiceInstanceServiceImpl
             }
 
             // 查询是否进行了配置更新
-            List<ClusterServiceRoleInstanceEntity> obsoleteRoleList =
-                    roleInstanceService.getObsoleteService(serviceInstance.getId());
+            List<ClusterServiceRoleInstanceEntity> obsoleteRoleList = roleInstanceService
+                    .getObsoleteService(serviceInstance.getId());
             if (Objects.nonNull(obsoleteRoleList) && obsoleteRoleList.isEmpty()
                     && serviceInstance.getNeedRestart() == NeedRestart.YES) {
                 serviceInstance.setNeedRestart(NeedRestart.NO);
@@ -190,8 +193,8 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId) {
-        List<ClusterServiceRoleGroupConfig> list =
-                roleGroupConfigService.list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
+        List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
+                .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
                         .eq(Constants.ROLE_GROUP_ID, roleGroupId)
                         .orderByDesc(Constants.CONFIG_VERSION).last("limit 2"));
         HashMap<String, List<SimpleServiceConfig>> map = new HashMap<>();
@@ -199,20 +202,20 @@ public class ClusterServiceInstanceServiceImpl
             ClusterServiceRoleGroupConfig newConfig = list.get(0);
             ClusterServiceRoleGroupConfig oldConfig = list.get(1);
             String newConfigJson = newConfig.getConfigJson();
-            List<SimpleServiceConfig> newSimpleServiceConfigs =
-                    JSONArray.parseArray(newConfigJson, SimpleServiceConfig.class);
+            List<SimpleServiceConfig> newSimpleServiceConfigs = JSONArray.parseArray(newConfigJson,
+                    SimpleServiceConfig.class);
 
             String oldConfigJson = oldConfig.getConfigJson();
-            List<SimpleServiceConfig> oldSimpleServiceConfigs =
-                    JSONArray.parseArray(oldConfigJson, SimpleServiceConfig.class);
+            List<SimpleServiceConfig> oldSimpleServiceConfigs = JSONArray.parseArray(oldConfigJson,
+                    SimpleServiceConfig.class);
             map.put("newConfig", newSimpleServiceConfigs);
             map.put("oldConfig", oldSimpleServiceConfigs);
 
         } else if (list.size() == 1) {
             ClusterServiceRoleGroupConfig newConfig = list.get(0);
             String newConfigJson = newConfig.getConfigJson();
-            List<SimpleServiceConfig> newSimpleServiceConfigs =
-                    JSONArray.parseArray(newConfigJson, SimpleServiceConfig.class);
+            List<SimpleServiceConfig> newSimpleServiceConfigs = JSONArray.parseArray(newConfigJson,
+                    SimpleServiceConfig.class);
             map.put("newConfig", newSimpleServiceConfigs);
             map.put("oldConfig", newSimpleServiceConfigs);
         }
@@ -224,19 +227,20 @@ public class ClusterServiceInstanceServiceImpl
         if (hasRunningRoleInstance(serviceInstanceId)) {
             return Result.error(Status.EXIT_RUNNING_ROLE_INSTANCE.getMsg());
         }
-        List<ClusterServiceInstanceRoleGroup> roleGroups =
-                roleGroupService.listRoleGroupByServiceInstanceId(serviceInstanceId);
-        List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroup::getId).collect(Collectors.toList());
-        List<ClusterServiceRoleGroupConfig> roleGroupConfigList =
-                roleGroupConfigService.listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
-        List<ClusterServiceRoleInstanceEntity> roleInstanceList =
-                roleInstanceService.getServiceRoleInstanceListByServiceId(serviceInstanceId);
+        List<ClusterServiceInstanceRoleGroup> roleGroups = roleGroupService
+                .listRoleGroupByServiceInstanceId(serviceInstanceId);
+        List<Integer> roleGroupIds = roleGroups.stream().map(ClusterServiceInstanceRoleGroup::getId)
+                .collect(Collectors.toList());
+        List<ClusterServiceRoleGroupConfig> roleGroupConfigList = roleGroupConfigService
+                .listRoleGroupConfigsByRoleGroupIds(roleGroupIds);
+        List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
+                .getServiceRoleInstanceListByServiceId(serviceInstanceId);
         ClusterServiceInstanceEntity clusterServiceInstance = this.getById(serviceInstanceId);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
 
         if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
-            List<String> serviceRoleList =
-                    roleInstanceList.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().collect(Collectors.toList());
+            List<String> serviceRoleList = roleInstanceList.stream()
+                    .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().collect(Collectors.toList());
             for (String serviceRoleName : serviceRoleList) {
                 K8sServiceStopHandler k8sServiceStopHandler = new K8sServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
@@ -257,11 +261,12 @@ public class ClusterServiceInstanceServiceImpl
         roleGroupService.removeByIds(roleGroupIds);
         // del role group config
         roleGroupConfigService
-                .removeByIds(roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId).collect(Collectors.toList()));
+                .removeByIds(roleGroupConfigList.stream().map(ClusterServiceRoleGroupConfig::getId)
+                        .collect(Collectors.toList()));
         // del service role instance
         if (!roleInstanceList.isEmpty()) {
-            List<String> roleInsIds =
-                    roleInstanceList.stream().map(e -> e.getId().toString()).collect(Collectors.toList());
+            List<String> roleInsIds = roleInstanceList.stream().map(e -> e.getId().toString())
+                    .collect(Collectors.toList());
             roleInstanceService.deleteServiceRole(roleInsIds);
         }
         // del web uis
@@ -280,17 +285,49 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     public boolean hasRunningRoleInstance(Integer serviceInstanceId) {
-        List<ClusterServiceRoleInstanceEntity> list =
-                roleInstanceService.getRunningServiceRoleInstanceListByServiceId(serviceInstanceId);
+        List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                .getRunningServiceRoleInstanceListByServiceId(serviceInstanceId);
         return !list.isEmpty();
     }
 
     @Override
     public Boolean hasRoleInstance(Integer clusterId, String serviceName) {
-        List<ClusterServiceInstanceEntity> list = this.list(new QueryWrapper<ClusterServiceInstanceEntity>()
-                .eq(Constants.CLUSTER_ID, clusterId)
-                .eq(Constants.SERVICE_NAME, serviceName));
-        return CollUtil.isNotEmpty(list);
+        Integer count = roleInstanceService
+                .count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+                        .eq(Constants.CLUSTER_ID, clusterId)
+                        .eq(Constants.SERVICE_NAME, serviceName));
+        return count > 0;
+    }
+
+    @Override
+    public Result getConnectionInfo(Integer serviceInstanceId) {
+        // 获取服务实例信息
+        ClusterServiceInstanceEntity serviceInstance = this.getById(serviceInstanceId);
+        if (serviceInstance == null) {
+            return Result.error(Status.SERVICE_NOT_FOUND.getMsg());
+        }
+
+        // 获取集群ID
+        Integer clusterId = serviceInstance.getClusterId();
+
+        // 获取服务名称
+        String serviceName = serviceInstance.getServiceName();
+
+        // 使用策略模式获取对应服务的连接信息
+        ServiceRoleStrategy strategy = ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
+        if (strategy == null) {
+            log.warn("没有找到服务{}的连接信息处理策略", serviceName);
+            return Result.error("暂不支持该服务的连接信息");
+        }
+
+        // 获取连接信息
+        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId);
+        if (connectionInfo == null || connectionInfo.getBasicInfo() == null) {
+            log.warn("服务{}未提供连接信息", serviceName);
+            return Result.error("该服务未提供连接信息");
+        }
+
+        return Result.success(connectionInfo);
     }
 
 }

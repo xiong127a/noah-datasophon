@@ -24,8 +24,9 @@ import akka.dispatch.OnComplete;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.bean.BeanUtil;
-
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 
 import com.alibaba.fastjson.JSON;
@@ -79,22 +80,22 @@ public class ProcessUtils {
     private static final Logger logger = LoggerFactory.getLogger(ProcessUtils.class);
 
     public static void saveServiceInstallInfo(ServiceRoleInfo serviceRoleInfo) {
-        ClusterServiceInstanceService serviceInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
-        ClusterServiceInstanceConfigService serviceInstanceConfigService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceConfigService.class);
-        ClusterServiceRoleInstanceService serviceRoleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceInstanceService.class);
+        ClusterServiceInstanceConfigService serviceInstanceConfigService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceInstanceConfigService.class);
+        ClusterServiceRoleInstanceService serviceRoleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ClusterServiceRoleInstanceWebuisService webuisService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceWebuisService.class);
-        ClusterServiceInstanceRoleGroupService roleGroupService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceRoleGroupService.class);
+        ClusterServiceRoleInstanceWebuisService webuisService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceWebuisService.class);
+        ClusterServiceInstanceRoleGroupService roleGroupService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceInstanceRoleGroupService.class);
 
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(serviceRoleInfo.getClusterId());
 
-        ClusterServiceInstanceEntity clusterServiceInstance =
-                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(serviceRoleInfo.getClusterId(),
+        ClusterServiceInstanceEntity clusterServiceInstance = serviceInstanceService
+                .getServiceInstanceByClusterIdAndServiceName(serviceRoleInfo.getClusterId(),
                         serviceRoleInfo.getParentName());
         if (Objects.isNull(clusterServiceInstance)) {
             clusterServiceInstance = new ClusterServiceInstanceEntity();
@@ -176,7 +177,7 @@ public class ProcessUtils {
     }
 
     public static void saveHostInstallInfo(StartWorkerMessage message, String clusterCode,
-                                           ClusterHostService clusterHostService) {
+            ClusterHostService clusterHostService) {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         ClusterHostDO clusterHostDO = new ClusterHostDO();
         BeanUtil.copyProperties(message, clusterHostDO);
@@ -198,11 +199,11 @@ public class ProcessUtils {
         for (String commandId : commandIds) {
             logger.info("command id is {}", commandId);
             // cancel worker and sub node
-            ClusterServiceCommandHostCommandService service =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandHostCommandService.class);
+            ClusterServiceCommandHostCommandService service = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceCommandHostCommandService.class);
             ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
-            List<ClusterServiceCommandHostCommandEntity> hostCommandList =
-                    service.getHostCommandListByCommandId(commandId);
+            List<ClusterServiceCommandHostCommandEntity> hostCommandList = service
+                    .getHostCommandListByCommandId(commandId);
             for (ClusterServiceCommandHostCommandEntity hostCommandEntity : hostCommandList) {
                 if (hostCommandEntity.getCommandState() == CommandState.RUNNING) {
                     logger.info("{} host command  set to cancel", hostCommandEntity.getCommandName());
@@ -232,7 +233,7 @@ public class ProcessUtils {
     }
 
     public static void tellCommandActorResult(String serviceName, ExecuteServiceRoleCommand executeServiceRoleCommand,
-                                              ServiceExecuteState state) {
+            ServiceExecuteState state) {
         ActorRef serviceExecuteResultActor = ActorUtils.getLocalActor(ServiceExecuteResultActor.class,
                 ActorUtils.getActorRefName(ServiceExecuteResultActor.class));
 
@@ -254,9 +255,9 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandHostCommandEntity handleCommandResult(String hostCommandId, Boolean execResult,
-                                                                             String execOut) {
-        ClusterServiceCommandHostCommandService service =
-                SpringTool.getApplicationContext().getBean(ClusterServiceCommandHostCommandService.class);
+            String execOut) {
+        ClusterServiceCommandHostCommandService service = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceCommandHostCommandService.class);
 
         ClusterServiceCommandHostCommandEntity hostCommand = service.getByHostCommandId(hostCommandId);
         hostCommand.setCommandProgress(100);
@@ -285,7 +286,7 @@ public class ProcessUtils {
 
         ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
         ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                        1L, TimeUnit.SECONDS),
+                1L, TimeUnit.SECONDS),
                 commandActor, message,
                 ActorUtils.actorSystem.dispatcher(),
                 ActorRef.noSender());
@@ -307,8 +308,8 @@ public class ProcessUtils {
             ServiceRoleInfo workerRole,
             ActorRef serviceActor,
             ServiceRoleType serviceRoleType) {
-        ExecuteServiceRoleCommand executeServiceRoleCommand =
-                new ExecuteServiceRoleCommand(clusterId, node, masterRoles);
+        ExecuteServiceRoleCommand executeServiceRoleCommand = new ExecuteServiceRoleCommand(clusterId, node,
+                masterRoles);
         executeServiceRoleCommand.setServiceRoleType(serviceRoleType);
         executeServiceRoleCommand.setCommandType(commandType);
         executeServiceRoleCommand.setDag(dag);
@@ -323,7 +324,7 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandEntity generateCommandEntity(Integer clusterId, CommandType commandType,
-                                                                    String serviceName) {
+            String serviceName) {
         ClusterServiceCommandEntity commandEntity = new ClusterServiceCommandEntity();
         String commandId = IdUtil.simpleUUID();
         commandEntity.setCommandId(commandId);
@@ -353,10 +354,10 @@ public class ProcessUtils {
     }
 
     public static ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(CommandType commandType,
-                                                                                          String commandId,
-                                                                                          String serviceRoleName,
-                                                                                          RoleType serviceRoleType,
-                                                                                          ClusterServiceCommandHostEntity commandHost) {
+            String commandId,
+            String serviceRoleName,
+            RoleType serviceRoleType,
+            ClusterServiceCommandHostEntity commandHost) {
         ClusterServiceCommandHostCommandEntity hostCommand = new ClusterServiceCommandHostCommandEntity();
         String hostCommandId = IdUtil.simpleUUID();
         hostCommand.setHostCommandId(hostCommandId);
@@ -375,11 +376,11 @@ public class ProcessUtils {
     }
 
     public static void updateServiceRoleState(CommandType commandType, String serviceRoleName, String hostname,
-                                              Integer clusterId, ServiceRoleState serviceRoleState) {
-        ClusterServiceRoleInstanceService serviceRoleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceRoleInstanceEntity serviceRole =
-                serviceRoleInstanceService.getOneServiceRole(serviceRoleName, hostname, clusterId);
+            Integer clusterId, ServiceRoleState serviceRoleState) {
+        ClusterServiceRoleInstanceService serviceRoleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceRoleInstanceEntity serviceRole = serviceRoleInstanceService.getOneServiceRole(serviceRoleName,
+                hostname, clusterId);
         serviceRole.setServiceRoleState(serviceRoleState);
         serviceRole.setServiceRoleStateCode(serviceRoleState.getValue());
         if (commandType != CommandType.STOP_SERVICE) {
@@ -392,9 +393,9 @@ public class ProcessUtils {
      * 保存到变量表和全局变量缓存
      */
     public static void generateClusterVariable(Map<String, String> globalVariables, Integer clusterId,
-                                               String variableName, String value) {
-        ClusterVariableService variableService =
-                SpringTool.getApplicationContext().getBean(ClusterVariableService.class);
+            String variableName, String value) {
+        ClusterVariableService variableService = SpringTool.getApplicationContext()
+                .getBean(ClusterVariableService.class);
         ClusterVariable clusterVariable = variableService.getVariableByVariableName(variableName, clusterId);
         if (Objects.nonNull(clusterVariable)) {
             logger.info("update variable {} value {} to {}", variableName, clusterVariable.getVariableValue(), value);
@@ -412,7 +413,7 @@ public class ProcessUtils {
     }
 
     public static void hdfsEcMethond(Integer serviceInstanceId, ClusterServiceRoleInstanceService roleInstanceService,
-                                     TreeSet<String> list, String type, String roleName) throws Exception {
+            TreeSet<String> list, String type, String roleName) throws Exception {
 
         List<ClusterServiceRoleInstanceEntity> namenodes = roleInstanceService.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
@@ -455,14 +456,14 @@ public class ProcessUtils {
     public static void createServiceActor(ClusterInfoEntity clusterInfo) {
         FrameServiceService frameServiceService = SpringTool.getApplicationContext().getBean(FrameServiceService.class);
 
-        List<FrameServiceEntity> frameServiceList =
-                frameServiceService.getAllFrameServiceByFrameCode(clusterInfo.getClusterFrame());
+        List<FrameServiceEntity> frameServiceList = frameServiceService
+                .getAllFrameServiceByFrameCode(clusterInfo.getClusterFrame());
         for (FrameServiceEntity frameServiceEntity : frameServiceList) {
             // create service actor
             logger.info("create {} actor",
                     clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
             ActorUtils.actorSystem.actorOf(Props.create(MasterServiceActor.class)
-                            .withDispatcher("my-forkjoin-dispatcher"),
+                    .withDispatcher("my-forkjoin-dispatcher"),
                     clusterInfo.getClusterCode() + "-serviceActor-" + frameServiceEntity.getServiceName());
         }
     }
@@ -599,27 +600,29 @@ public class ProcessUtils {
     }
 
     public static ExecResult configServiceRoleInstance(ClusterInfoEntity clusterInfo,
-                                                       Map<Generators, List<ServiceConfig>> configFileMap,
-                                                       ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
+            Map<Generators, List<ServiceConfig>> configFileMap,
+            ClusterServiceRoleInstanceEntity roleInstanceEntity) throws Exception {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(roleInstanceEntity.getServiceRoleName());
         serviceRoleInfo.setParentName(roleInstanceEntity.getServiceName());
         serviceRoleInfo.setConfigFileMap(configFileMap);
-        serviceRoleInfo.setDecompressPackageName(PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN"));
+        serviceRoleInfo
+                .setDecompressPackageName(PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN"));
         serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
         ServiceConfigureHandler configureHandler = new ServiceConfigureHandler();
         return configureHandler.handlerRequest(serviceRoleInfo);
     }
 
     public static void asyncConfigServiceRoleInstance(ClusterInfoEntity clusterInfo,
-                                                      Map<Generators, List<ServiceConfig>> configFileMap,
-                                                      ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                                      OnComplete<Object> onComplete) {
+            Map<Generators, List<ServiceConfig>> configFileMap,
+            ClusterServiceRoleInstanceEntity roleInstanceEntity,
+            OnComplete<Object> onComplete) {
         ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
         serviceRoleInfo.setName(roleInstanceEntity.getServiceRoleName());
         serviceRoleInfo.setParentName(roleInstanceEntity.getServiceName());
         serviceRoleInfo.setConfigFileMap(configFileMap);
-        serviceRoleInfo.setDecompressPackageName(PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN"));
+        serviceRoleInfo
+                .setDecompressPackageName(PackageUtils.getServiceDcPackageName(clusterInfo.getClusterFrame(), "YARN"));
         serviceRoleInfo.setHostname(roleInstanceEntity.getHostname());
         ServiceConfigureAsyncHandler configureAsyncHandler = new ServiceConfigureAsyncHandler(onComplete);
         configureAsyncHandler.handlerRequest(serviceRoleInfo);
@@ -631,13 +634,14 @@ public class ProcessUtils {
      * @Description: 生成configFileMap
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
-        Map<JSONObject, JSONArray> map =
-        JSONObject.parseObject(config.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>(){}, Feature.SupportAutoType);
+            ClusterServiceRoleGroupConfig config, Integer clusterId) {
+        Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(),
+                new TypeReference<Map<JSONObject, JSONArray>>() {
+                }, Feature.SupportAutoType);
         for (JSONObject fileJson : map.keySet()) {
             Generators generators = fileJson.toJavaObject(Generators.class);
             List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
-            //replace variable
+            // replace variable
             replaceVariable(serviceConfigs, clusterId);
             configFileMap.put(generators, serviceConfigs);
         }
@@ -680,7 +684,8 @@ public class ProcessUtils {
 
     public static Map<Integer, String> getAllClusterIdAndType() {
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        return clusterInfoService.list().stream().collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
+        return clusterInfoService.list().stream()
+                .collect(Collectors.toMap(ClusterInfoEntity::getId, ClusterInfoEntity::getDepType));
     }
 
     /**
@@ -732,7 +737,7 @@ public class ProcessUtils {
     }
 
     public static void syncUserToHosts(List<ClusterHostDO> hostList, String username, String mainGroup,
-                                       String otherGroup, String operate) {
+            String otherGroup, String operate) {
         for (ClusterHostDO hostEntity : hostList) {
             ActorRef execCmdActor = ActorUtils.getRemoteActor(hostEntity.getHostname(), "executeCmdActor");
             ExecuteCmdCommand command = new ExecuteCmdCommand();
@@ -753,10 +758,10 @@ public class ProcessUtils {
     }
 
     public static void recoverAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterAlertHistoryService alertHistoryService =
-                SpringTool.getApplicationContext().getBean(ClusterAlertHistoryService.class);
+        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterAlertHistoryService alertHistoryService = SpringTool.getApplicationContext()
+                .getBean(ClusterAlertHistoryService.class);
         ClusterAlertHistory clusterAlertHistory = alertHistoryService.getOne(new QueryWrapper<ClusterAlertHistory>()
                 .eq(Constants.ALERT_TARGET_NAME, roleInstanceEntity.getServiceRoleName() + " Survive")
                 .eq(Constants.CLUSTER_ID, roleInstanceEntity.getClusterId())
@@ -774,21 +779,21 @@ public class ProcessUtils {
     }
 
     public static void saveAlert(ClusterServiceRoleInstanceEntity roleInstanceEntity, String alertTargetName,
-                                 AlertLevel alertLevel, String alertAdvice) {
-        ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterAlertHistoryService alertHistoryService =
-                SpringTool.getApplicationContext().getBean(ClusterAlertHistoryService.class);
-        ClusterServiceInstanceService serviceInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
+            AlertLevel alertLevel, String alertAdvice) {
+        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterAlertHistoryService alertHistoryService = SpringTool.getApplicationContext()
+                .getBean(ClusterAlertHistoryService.class);
+        ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceInstanceService.class);
         ClusterAlertHistory clusterAlertHistory = alertHistoryService.getOne(new QueryWrapper<ClusterAlertHistory>()
                 .eq(Constants.ALERT_TARGET_NAME, alertTargetName)
                 .eq(Constants.CLUSTER_ID, roleInstanceEntity.getClusterId())
                 .eq(Constants.HOSTNAME, roleInstanceEntity.getHostname())
                 .eq(Constants.IS_ENABLED, 1));
 
-        ClusterServiceInstanceEntity serviceInstanceEntity =
-                serviceInstanceService.getById(roleInstanceEntity.getServiceId());
+        ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
+                .getById(roleInstanceEntity.getServiceId());
         if (Objects.isNull(clusterAlertHistory)) {
             clusterAlertHistory = ClusterAlertHistory.builder()
                     .clusterId(roleInstanceEntity.getClusterId())
@@ -833,5 +838,35 @@ public class ProcessUtils {
     public static boolean enableRangerPlugin(Integer clusterId, String serviceParentName) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         return Boolean.parseBoolean(globalVariables.get("${enable" + serviceParentName + "Plugin}"));
+    }
+
+    /**
+     * 获取指定服务角色的主机名
+     * 如果有多个实例，返回第一个运行中的实例
+     */
+    public static String getServiceRoleHostname(Integer clusterId, String serviceName, String servicRoleName) {
+        ClusterServiceRoleInstanceService serviceRoleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+
+        // 查询指定服务角色的实例
+        QueryWrapper<ClusterServiceRoleInstanceEntity> wrapper = new QueryWrapper<>();
+        wrapper.eq("cluster_id", clusterId);
+        wrapper.eq("service_name", serviceName);
+        wrapper.eq("service_role_name", servicRoleName);
+        wrapper.eq("service_role_state", ServiceRoleState.RUNNING);
+
+        try {
+            // 尝试获取单个结果（可能会有多个实例）
+            List<ClusterServiceRoleInstanceEntity> roleInstances = serviceRoleInstanceService.list(wrapper);
+
+            if (CollUtil.isNotEmpty(roleInstances)) {
+                // 存在多个实例时返回第一个
+                return roleInstances.get(0).getHostname();
+            }
+        } catch (Exception e) {
+            logger.error("获取服务角色主机名出错: {}", e.getMessage());
+        }
+
+        return "";
     }
 }

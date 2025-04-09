@@ -30,6 +30,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -45,59 +46,74 @@ import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-
 public interface ServiceRoleStrategy {
 
     Logger log = LoggerFactory.getLogger(ServiceRoleStrategy.class);
-
 
     String ACTIVE = "active";
 
     /**
      * 保存角色host映射关系时根据roleName调用
      */
-    default void handler(Integer clusterId, List<String> hosts){}
+    default void handler(Integer clusterId, List<String> hosts) {
+    }
 
     /**
      * 保存服务配置时根据ServiceName调用
      */
-    default void handlerConfig(Integer clusterId, List<ServiceConfig> list){}
+    default void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    }
 
     /**
      * 获取服务配置时修改配置，根据ServiceName调用
      * handler之后handlerConfig之前调用
      * 提取角色本身配置和handler中自定义的变量
      */
-    default void getConfig(Integer clusterId, List<ServiceConfig> list){}
+    default void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    }
 
     /**
      * 构建DAG时处理角色关系，例如设置主从角色，设置搭建顺序等。
      * <p>
      * 可以将自定义角色配置传递给worker
      */
-    default void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname){}
+    default void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+    }
 
     /**
      * 定期检查角色处理
      */
     default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                 Map<String, ClusterServiceRoleInstanceEntity> map){}
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    }
+
+    /**
+     * 获取组件的连接信息，包括连接地址、JDBC URL和示例代码等
+     * 
+     * @param clusterId         集群ID
+     * @param serviceInstanceId 服务实例ID
+     * @return 连接信息对象
+     */
+    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
+        // 默认返回空对象，具体组件在各自实现中提供连接信息
+        return ConnectionInfo.builder().build();
+    }
 
     /**
      * 定期检查角色处理（K8S）
      */
     default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                            Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
     default String getKubeConfig(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         return clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
     }
 
@@ -108,8 +124,8 @@ public interface ServiceRoleStrategy {
         String key = frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName() + Constants.UNDERLINE
                 + roleInstanceEntity.getServiceRoleName();
         ServiceRoleInfo serviceRoleInfo = ServiceRoleMap.get(key);
-        ServiceInfo serviceInfo =
-                ServiceInfoMap.get(frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName());
+        ServiceInfo serviceInfo = ServiceInfoMap
+                .get(frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName());
         ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
         ArrayList<String> commandList = new ArrayList<>();
         commandList.add(serviceInfo.getDecompressPackageName() + Constants.SLASH
@@ -134,11 +150,9 @@ public interface ServiceRoleStrategy {
     default void handleExecResult(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecResult execResult) {
         if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
                 "NameNode",
-                "ResourceManager"
-        )) {
-            ClusterServiceRoleInstanceWebuisService webuisService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceWebuisService.class);
+                "ResourceManager")) {
+            ClusterServiceRoleInstanceWebuisService webuisService = SpringTool.getApplicationContext()
+                    .getBean(ClusterServiceRoleInstanceWebuisService.class);
             if (execResult.getExecResult()) {
                 if (execResult.getExecOut().contains(ACTIVE)) {
                     webuisService.updateWebUiToActive(roleInstanceEntity.getId());
@@ -153,8 +167,7 @@ public interface ServiceRoleStrategy {
         if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
                 "Krb5Kdc",
                 "KAdmin",
-                "Prometheus"
-        )) {
+                "Prometheus")) {
             if (execResult.getExecResult()) {
                 ProcessUtils.recoverAlert(roleInstanceEntity);
             } else {
@@ -164,7 +177,8 @@ public interface ServiceRoleStrategy {
         }
     }
 
-    default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand, String actorName) {
+    default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand,
+            String actorName) {
         ExecResult execResult = new ExecResult();
 
         try {
