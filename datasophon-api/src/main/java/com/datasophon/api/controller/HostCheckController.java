@@ -95,12 +95,6 @@ public class HostCheckController {
             return Result.error("集群ID不能为空");
         }
 
-        // 当ip为"-1"或null或空字符串时，终止所有主机的检查
-        if ("-1".equals(ip) || ip == null || ip.trim().isEmpty()) {
-            log.info("终止所有主机检查，集群ID: {}", clusterId);
-            return hostCheckService.cancelAllCheckTasks();
-        }
-
         return hostCheckService.stopHostCheck(clusterId, ip);
     }
 
