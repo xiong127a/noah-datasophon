@@ -10,14 +10,14 @@
       <a-tab-pane :key="3" tab="配置">
         <Setting />
       </a-tab-pane>
-      <a-tab-pane :key="4" tab="连接信息">
+      <a-tab-pane :key="4" tab="连接信息" v-if="hasConnectionInfo && isServiceConnectionAvailable">
         <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
       </a-tab-pane>
       <a-tab-pane v-if="serviceName === 'YARN'" :key="5" tab="资源配置">
         <Queue />
       </a-tab-pane>
     </a-tabs>
-    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ?'350px':'280px'}" v-if="webUis.length > 0">
+    <a-dropdown class="webui" :style="{left: getWebUILeftPosition()}" v-if="webUis.length > 0">
       <a-menu slot="overlay" @click="handleMenuClick">
         <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
       </a-menu>
@@ -26,7 +26,7 @@
         <a-icon type="down" />
       </div>
     </a-dropdown>
-    <div v-else class="webui" :style="{left: getWebUIWidth(serviceName)}">
+    <div v-else class="webui" :style="{left: getWebUILeftPosition()}">
       WebUI
       <a-icon type="down" />
     </div>
@@ -39,7 +39,10 @@ import ExampleList from "./exampleList.vue";
 const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
-import ConnectInfo from './connectInfo.vue'
+import ConnectInfo from './connectInfo/index.vue'
+
+// 导入连接信息服务检测工具
+import { checkServiceSupport } from './connectInfo/serviceSupport'
 
 export default {
   name: "ServiceList",
@@ -54,6 +57,8 @@ export default {
       serviceId: "",
       webUis: [],
       pageOverview: true,
+      hasConnectionInfo: false, // 是否显示连接信息标签
+      isServiceConnectionAvailable: false, // 服务是否有可用的连接信息内容
       tableColumns: [
         { title: "序号", key: "index" },
         { title: "角色类型", key: "serviceName" },
@@ -90,12 +95,22 @@ export default {
   },
 
   methods: {
-    getWebUIWidth (serviceName) {
-      if (serviceName === 'KRBCLIENT') {
-        return '136px'
-      } else {
-        return  serviceName==='YARN' ? '280px':'200px'
-      }
+    getWebUILeftPosition() {
+      let visibleTabs = 0;
+      
+      if (this.pageOverview) visibleTabs++;
+      visibleTabs++; // 实例页签总是显示
+      visibleTabs++; // 配置页签总是显示
+      if (this.hasConnectionInfo && this.isServiceConnectionAvailable) visibleTabs++;
+      if (this.serviceName === 'YARN') visibleTabs++;
+      
+      if (this.serviceName === 'KRBCLIENT') return '136px';
+      if (this.serviceName === 'YARN') return visibleTabs >= 4 ? '350px' : '280px';
+      return visibleTabs >= 4 ? '280px' : '200px';
+    },
+    
+    getWebUIWidth(serviceName) {
+      return this.getWebUILeftPosition();
     },
     handleMenuClick(item) {
       let url = this.webUis[item.key].webUrl
@@ -105,14 +120,20 @@ export default {
       console.log("Tab changed to:", key, "类型:", typeof key);
       this.tabKey = key;
       
-      // 如果切换到连接信息标签页，确保serviceId已设置并刷新连接信息
       if (key === 4) {
         console.log("连接信息标签页激活，serviceId:", this.$route.params.serviceId);
-        // 等待DOM更新后再调用方法
         this.$nextTick(() => {
           if (this.$refs.connectInfoRef) {
             console.log("手动调用connectInfoRef.getConnectionInfo方法");
-            this.$refs.connectInfoRef.getConnectionInfo();
+            try {
+              if (typeof this.$refs.connectInfoRef.getConnectionInfo === 'function') {
+                this.$refs.connectInfoRef.getConnectionInfo();
+              } else if (typeof this.$refs.connectInfoRef.fetchServiceInfo === 'function') {
+                this.$refs.connectInfoRef.fetchServiceInfo();
+              }
+            } catch (error) {
+              console.error("调用连接信息刷新方法失败:", error);
+            }
           } else {
             console.error("connectInfoRef不存在");
           }
@@ -138,14 +159,51 @@ export default {
           arr[0].children.map(item => {
             if (item.meta.params.serviceId == serviceId) {
               name = item.name
-              // console.log("grafana url: " + item.meta.obj.dashboardUrl)
               this.pageOverview = (item.meta.obj.dashboardUrl != undefined && item.meta.obj.dashboardUrl != "")
-              this.tabKey = (this.pageOverview ? 1 : 2); // 如果没有总览，则显示实例为第二个页签
+              this.tabKey = (this.pageOverview ? 1 : 2);
             }
           })
           this.serviceName = name
+          
+          this.checkConnectionInfoSupport(name);
         }
       }
+    },
+    
+    checkConnectionInfoSupport(serviceName) {
+      this.hasConnectionInfo = checkServiceSupport(serviceName);
+      
+      if (this.hasConnectionInfo) {
+        this.checkServiceConnectionAvailability();
+      } else {
+        this.isServiceConnectionAvailable = false;
+      }
+    },
+    
+    checkServiceConnectionAvailability() {
+      if (!this.$route.params.serviceId) {
+        this.isServiceConnectionAvailable = false;
+        return;
+      }
+      
+      this.$axiosPost(global.API.getConnectionInfo, {
+        serviceInstanceId: this.$route.params.serviceId
+      })
+      .then(res => {
+        if (res.code === 200 && res.data) {
+          const hasBasicInfo = res.data.basicInfo && Object.keys(res.data.basicInfo).length > 0;
+          const hasJdbcUrl = res.data.jdbcUrl || (res.data.jdbcUrls && res.data.jdbcUrls.length > 0);
+          const hasCode = res.data.javaCode || res.data.pythonCode;
+          const hasCommands = res.data.beelineCommand || res.data.cliCommand;
+          
+          this.isServiceConnectionAvailable = hasBasicInfo || hasJdbcUrl || hasCode || hasCommands;
+        } else {
+          this.isServiceConnectionAvailable = false;
+        }
+      })
+      .catch(() => {
+        this.isServiceConnectionAvailable = false;
+      });
     }
   }
 };
