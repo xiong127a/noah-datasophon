@@ -485,6 +485,6 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
         commandLines.add(lastCmd);
 
         // 添加通用命令
-        return addFinalPrompt(commandLines, hostname);
+        return addFinalPrompt(commandLines, hbaseHome,hostname);
     }
 }

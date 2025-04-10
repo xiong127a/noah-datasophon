@@ -734,7 +734,6 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 .build();
                 commandLines.add(quitCmd);
 
-
-                return addFinalPrompt(commandLines,hostname);
+                return addFinalPrompt(commandLines, zkHome, hostname);
         }
 }

@@ -614,6 +614,6 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                                 .build();
                 commandLines.add(apiVersionsCmd);
 
-                return addFinalPrompt(commandLines,hostname);
+                return addFinalPrompt(commandLines,kafka_home,hostname);
         }
 }

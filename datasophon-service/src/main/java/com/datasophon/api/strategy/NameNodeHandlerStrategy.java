@@ -622,6 +622,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                 .build();
         commandLines.add(rmdirCmd);
 
-        return addFinalPrompt(commandLines, hostName);
+        return addFinalPrompt(commandLines, hadoopHome, hostName);
     }
 }

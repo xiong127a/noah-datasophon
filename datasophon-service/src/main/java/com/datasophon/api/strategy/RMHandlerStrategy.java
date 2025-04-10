@@ -731,7 +731,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                                 .build();
                 commandLines.add(checkServiceCmd);
 
-                return addFinalPrompt(commandLines, hostname);
+                return addFinalPrompt(commandLines, hadoopHome, hostname);
         }
 
 }

@@ -670,7 +670,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         exitCmd.setCommandResult("Closing: 0: jdbc:hive2://...");
         commandLines.add(exitCmd);
 
-        return addFinalPrompt(commandLines,hostname);
+        return addFinalPrompt(commandLines,serviceHome,hostname);
     }
 
 
