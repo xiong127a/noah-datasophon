@@ -24,15 +24,6 @@
     <template v-else>
       <div class="connection-header">
         <h1 class="title">连接信息</h1>
-        <a-tooltip title="刷新">
-          <a-button 
-            type="primary" 
-            shape="circle" 
-            icon="sync"
-            :loading="refreshing"
-            @click="refreshConnectionInfo"
-          />
-        </a-tooltip>
       </div>
 
       <!-- 标签页导航 -->
@@ -144,7 +135,6 @@ export default {
   data() {
     return {
       loading: false,
-      refreshing: false,
       activeTab: 0,
       tabs: [
         { title: '基本信息' },
@@ -365,22 +355,6 @@ export default {
       } finally {
         this.loading = false;
         this.$emit('loading-change', false);
-      }
-    },
-    
-    // 刷新连接信息
-    async refreshConnectionInfo() {
-      if (this.refreshing) return;
-      
-      this.refreshing = true;
-      
-      try {
-        await this.getConnectionInfo();
-        this.$message.success('连接信息已更新');
-      } catch (error) {
-        // 错误已在getConnectionInfo中处理
-      } finally {
-        this.refreshing = false;
       }
     }
   }
