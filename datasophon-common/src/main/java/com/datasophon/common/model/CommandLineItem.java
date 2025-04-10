@@ -23,63 +23,40 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
 
 /**
- * 连接信息实体类
- * 用于展示服务的连接信息，包括基本信息、JDBC URL、代码示例等
+ * 命令行项实体类
+ * 用于在前端显示命令行示例和命令执行结果
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConnectionInfo implements Serializable {
+public class CommandLineItem implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     /**
-     * 基本连接信息Map，已弃用，请使用basicInfoList
+     * 标签/描述
+     * 命令的描述信息，用于前端展示
      */
-    private Map<String, String> basicInfo;
+    private String label;
 
     /**
-     * JDBC URL
+     * 值/命令
+     * 实际执行的命令内容
      */
-    private String jdbcUrl;
+    private String value;
 
     /**
-     * Java代码示例
+     * 命令执行结果
+     * 存储命令执行后的预览输出内容
      */
-    private String javaCode;
-
+    private String commandResult;
+    
     /**
-     * Python代码示例
+     * 命令提示符
+     * 用于显示不同类型的命令提示符，如beeline、shell等
      */
-    private String pythonCode;
-
-    /**
-     * 命令行示例列表
-     */
-    private List<CommandLineItem> commandLines;
-
-    /**
-     * 有序的基本信息列表
-     */
-    private List<Map<String, String>> basicInfoList;
-
-    /**
-     * 多个JDBC URL列表
-     */
-    private List<Map<String, String>> jdbcUrls;
-
-    /**
-     * 服务主目录
-     */
-    private String serviceHome;
-
-    /**
-     * 主机名
-     */
-    private String hostName;
+    private String commandPrompt;
 }

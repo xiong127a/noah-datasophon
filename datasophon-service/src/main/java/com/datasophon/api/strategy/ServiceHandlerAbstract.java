@@ -16,11 +16,18 @@
  */
 
 package com.datasophon.api.strategy;
-
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import com.alibaba.fastjson.JSONArray;
+import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
@@ -30,6 +37,24 @@ import java.util.Map;
 public abstract class ServiceHandlerAbstract {
 
     public ClusterServiceRoleInstanceEntity roleInstanceEntity;
+
+    public List<ServiceConfig> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+        ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
+                .getBean(ClusterServiceInstanceRoleGroupService.class);
+        ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
+                .getBean(ClusterServiceRoleGroupConfigService.class);
+        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
+        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
+    }
+
+    public static List<String> getRoleHosts(Integer clusterId, String roleName) {
+        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
+                .getBean(ClusterServiceRoleInstanceService.class);
+        List<ClusterServiceRoleInstanceEntity> hiveServer2 = clusterServiceRoleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, roleName);
+        return CollUtil.map(hiveServer2, ClusterServiceRoleInstanceEntity::getHostname, true);
+    }
 
     public void removeConfigWithKerberos(List<ServiceConfig> list, Map<String, ServiceConfig> map,
                                          List<ServiceConfig> configs) {

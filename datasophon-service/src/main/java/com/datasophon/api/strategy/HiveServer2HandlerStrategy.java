@@ -19,14 +19,9 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.druid.util.JdbcUtils;
-import com.alibaba.fastjson.JSONArray;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -34,9 +29,8 @@ import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.common.model.CommandLineItem;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -119,26 +113,11 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
-    private List<ServiceConfig> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
-                .getBean(ClusterServiceInstanceRoleGroupService.class);
-        ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
-                .getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
-        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-        return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
-    }
-
     @Override
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
         List<ServiceConfig> serviceConfigs = listServiceConfigByServiceInstance(serviceInstanceId);
 
-        ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
-                .getBean(ClusterServiceRoleInstanceService.class);
-        List<ClusterServiceRoleInstanceEntity> hiveServer2 = clusterServiceRoleInstanceService
-                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, "HiveServer2");
-
-        List<String> hiveServer2Hosts = CollUtil.map(hiveServer2, ClusterServiceRoleInstanceEntity::getHostname, true);
+        List<String> hiveServer2Hosts = getRoleHosts(clusterId, "HiveServer2");
         // 获取所有HiveServer2节点的主机名
 
         try {
@@ -491,23 +470,23 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
 
-            // 生成Java示例代码
-            String javaCode = generateJavaCode(jdbcUrl, enableKerberos);
+            // 获取HIVE_HOME环境变量
+            String hive_home = globalVariables.get("${HIVE_HOME}");
 
-            // 生成Python示例代码
-            String pythonCode = generatePythonCode(hiveServer2Host, hiveServer2Port, enableKerberos);
-
-            // 生成Beeline命令行连接示例
-            String beelineCommand = "beeline -u \"" + jdbcUrl + "\"";
-            if (!enableKerberos) {
-                beelineCommand += " -n <username> -p <password>";
+            // 获取principal值
+            String principal = "";
+            if (enableKerberos) {
+                principal = String.valueOf(configMap.getOrDefault(
+                        "hive.server2.authentication.kerberos.principal",
+                        "hive/" + hiveServer2Host + "@HADOOP.COM"));
+                // 替换principal中的${host}为实际主机名
+                if (principal.contains("${host}")) {
+                    principal = principal.replace("${host}", hiveServer2Host);
+                }
             }
 
-            List<Map<String, String>> commandLines = new ArrayList<>();
-            Map<String, String> beelineItem = new HashMap<>(2);
-            beelineItem.put("label", "Beeline命令");
-            beelineItem.put("value", beelineCommand);
-            commandLines.add(beelineItem);
+            // 生成命令行示例 - 使用实际的HiveServer2主机作为主机名
+            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, "hive", "hive", principal, hive_home);
 
             // 构建并返回ConnectionInfo对象
             return ConnectionInfo.builder()
@@ -515,10 +494,11 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                     .basicInfoList(basicInfoList)
                     .jdbcUrl(jdbcUrl)
                     .jdbcUrls(jdbcUrls)
-                    .javaCode(javaCode)
-                    .pythonCode(pythonCode)
-                    .beelineCommand(beelineCommand)
+                    .javaCode(generateJavaCode(jdbcUrl, enableKerberos))
+                    .pythonCode(generatePythonCode(hiveServer2Host, hiveServer2Port, enableKerberos))
                     .commandLines(commandLines)
+                    .serviceHome(hive_home)
+                    .hostName(hiveServer2Host) // 添加主机名到ConnectionInfo
                     .build();
         } catch (Exception e) {
             log.error("获取Hive连接信息出错: {}", e.getMessage(), e);
@@ -588,6 +568,138 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 "# 关闭连接\n" +
                 "cursor.close()\n" +
                 "conn.close()";
+    }
+
+    /**
+     * 生成命令行示例
+     */
+    private List<CommandLineItem> generateCommandLines(String jdbcUrl, String username, String password,
+            String principal, String serviceHome) {
+        List<CommandLineItem> commandLines = new ArrayList<>();
+
+        // 获取beeline命令路径 - 使用相对路径
+        String beelineCommand = "beeline";
+        if (StringUtils.isNotEmpty(serviceHome)) {
+            // 只使用bin目录下的beeline，而不是完整路径
+            beelineCommand = "bin/beeline";
+        }
+
+        // 1. 直接执行SQL命令（使用-e参数）
+        CommandLineItem directSqlCmd = new CommandLineItem();
+        directSqlCmd.setLabel("直接执行SQL命令");
+        directSqlCmd.setValue(String.format("%s -u '%s' -n %s -p %s -e 'SHOW DATABASES;'",
+                beelineCommand, jdbcUrl, username, password));
+        directSqlCmd.setCommandResult(
+                "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+");
+        commandLines.add(directSqlCmd);
+
+        // 2. 进入beeline交互界面
+        CommandLineItem interactiveCmd = new CommandLineItem();
+        interactiveCmd.setLabel("进入beeline交互界面");
+        interactiveCmd.setValue(String.format("%s -u '%s' -n %s -p %s",
+                beelineCommand, jdbcUrl, username, password));
+        interactiveCmd.setCommandResult(
+                "Connecting to jdbc:hive2://...\nConnected to: Apache Hive (version 3.1.0)\nDriver: Hive JDBC (version 3.1.0)\nTransaction isolation: TRANSACTION_REPEATABLE_READ\nBeeline version 3.1.0 by Apache Hive\n0: jdbc:hive2://...");
+        commandLines.add(interactiveCmd);
+
+        // beeline提示符 - 用于后续命令
+        String beelinePrompt = "0: jdbc:hive2://...> ";
+
+        // 3. 常用Hive命令（在beeline交互界面中执行）
+        // 3.1 列出所有数据库
+        CommandLineItem showDatabasesCmd = new CommandLineItem();
+        showDatabasesCmd.setLabel("列出所有数据库");
+        showDatabasesCmd.setValue("SHOW DATABASES;");
+        showDatabasesCmd.setCommandPrompt(beelinePrompt);
+        showDatabasesCmd.setCommandResult(
+                "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+\n3 rows selected (0.056 seconds)");
+        commandLines.add(showDatabasesCmd);
+
+        // 3.2 使用指定数据库
+        CommandLineItem useDatabaseCmd = new CommandLineItem();
+        useDatabaseCmd.setLabel("使用指定数据库");
+        useDatabaseCmd.setValue("USE default;");
+        useDatabaseCmd.setCommandPrompt(beelinePrompt);
+        useDatabaseCmd.setCommandResult("No rows affected (0.023 seconds)");
+        commandLines.add(useDatabaseCmd);
+
+        // 3.3 列出当前数据库中的所有表
+        CommandLineItem showTablesCmd = new CommandLineItem();
+        showTablesCmd.setLabel("列出当前数据库中的所有表");
+        showTablesCmd.setValue("SHOW TABLES;");
+        showTablesCmd.setCommandPrompt(beelinePrompt);
+        showTablesCmd.setCommandResult(
+                "+-----------+\n| tab_name  |\n+-----------+\n| customers |\n| orders    |\n| products  |\n+-----------+\n3 rows selected (0.045 seconds)");
+        commandLines.add(showTablesCmd);
+
+        // 3.4 查看表结构
+        CommandLineItem descTableCmd = new CommandLineItem();
+        descTableCmd.setLabel("查看表结构");
+        descTableCmd.setValue("DESC customers;");
+        descTableCmd.setCommandPrompt(beelinePrompt);
+        descTableCmd.setCommandResult(
+                "+--------------+------------+----------+\n|   col_name    | data_type  | comment  |\n+--------------+------------+----------+\n| id           | int        |          |\n| name         | string     |          |\n| address      | string     |          |\n| create_time  | timestamp  |          |\n+--------------+------------+----------+\n4 rows selected (0.058 seconds)");
+        commandLines.add(descTableCmd);
+
+        // 3.5 查看表分区
+        CommandLineItem showPartitionsCmd = new CommandLineItem();
+        showPartitionsCmd.setLabel("查看表分区");
+        showPartitionsCmd.setValue("SHOW PARTITIONS orders;");
+        showPartitionsCmd.setCommandPrompt(beelinePrompt);
+        showPartitionsCmd.setCommandResult(
+                "+---------------+\n| partition     |\n+---------------+\n| dt=2023-01-01 |\n| dt=2023-01-02 |\n| dt=2023-01-03 |\n+---------------+\n3 rows selected (0.037 seconds)");
+        commandLines.add(showPartitionsCmd);
+
+        // 3.6 执行查询
+        CommandLineItem selectCmd = new CommandLineItem();
+        selectCmd.setLabel("执行查询");
+        selectCmd.setValue("SELECT * FROM customers LIMIT 3;");
+        selectCmd.setCommandPrompt(beelinePrompt);
+        selectCmd.setCommandResult(
+                "+-------+----------+-------------------+-------------------------+\n| id    | name     | address           | create_time             |\n+-------+----------+-------------------+-------------------------+\n| 1     | 张三      | 北京市朝阳区       | 2023-01-01 10:00:00.0   |\n| 2     | 李四      | 上海市浦东新区     | 2023-01-02 14:30:00.0   |\n| 3     | 王五      | 广州市天河区       | 2023-01-03 09:15:00.0   |\n+-------+----------+-------------------+-------------------------+\n3 rows selected (0.127 seconds)");
+        commandLines.add(selectCmd);
+
+        // 3.7 创建表
+        CommandLineItem createTableCmd = new CommandLineItem();
+        createTableCmd.setLabel("创建表");
+        createTableCmd.setValue("CREATE TABLE test_table (id INT, name STRING);");
+        createTableCmd.setCommandPrompt(beelinePrompt);
+        createTableCmd.setCommandResult("No rows affected (0.523 seconds)");
+        commandLines.add(createTableCmd);
+
+        // 3.8 加载数据
+        CommandLineItem loadDataCmd = new CommandLineItem();
+        loadDataCmd.setLabel("加载数据");
+        loadDataCmd.setValue("LOAD DATA LOCAL INPATH '/path/to/data.csv' INTO TABLE test_table;");
+        loadDataCmd.setCommandPrompt(beelinePrompt);
+        loadDataCmd.setCommandResult("No rows affected (0.689 seconds)");
+        commandLines.add(loadDataCmd);
+
+        // 3.9 添加分区
+        CommandLineItem addPartitionCmd = new CommandLineItem();
+        addPartitionCmd.setLabel("添加分区");
+        addPartitionCmd.setValue("ALTER TABLE orders ADD PARTITION (dt='2023-01-04');");
+        addPartitionCmd.setCommandPrompt(beelinePrompt);
+        addPartitionCmd.setCommandResult("No rows affected (0.387 seconds)");
+        commandLines.add(addPartitionCmd);
+
+        // 3.10 删除表
+        CommandLineItem dropTableCmd = new CommandLineItem();
+        dropTableCmd.setLabel("删除表");
+        dropTableCmd.setValue("DROP TABLE test_table;");
+        dropTableCmd.setCommandPrompt(beelinePrompt);
+        dropTableCmd.setCommandResult("No rows affected (0.256 seconds)");
+        commandLines.add(dropTableCmd);
+
+        // 3.11 退出beeline
+        CommandLineItem exitCmd = new CommandLineItem();
+        exitCmd.setLabel("退出beeline");
+        exitCmd.setValue("!quit");
+        exitCmd.setCommandPrompt(beelinePrompt);
+        exitCmd.setCommandResult("Closing: 0: jdbc:hive2://...");
+        commandLines.add(exitCmd);
+
+        return commandLines;
     }
 
 }

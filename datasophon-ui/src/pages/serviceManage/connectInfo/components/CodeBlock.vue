@@ -145,7 +145,9 @@ export default {
         gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
         // 缩进使用空格
         indentWithTabs: false,
-        // 自动调整高度
+        // 简单滚动条配置
+        scrollbarStyle: 'null',
+        // 启用自动高度
         viewportMargin: Infinity
       }
     };
@@ -161,6 +163,13 @@ export default {
           this.editorContent = this.originalCode;
         }
         this.updateLanguageMode();
+        
+        // 延迟刷新以确保编辑器正确初始化
+        this.$nextTick(() => {
+          if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+            this.$refs.cmEditor.codemirror.refresh();
+          }
+        });
       }
     },
     // 当语言改变时更新编辑器配置
@@ -198,6 +207,35 @@ export default {
     
     // 设置语言模式
     this.updateLanguageMode();
+    
+    // 确保编辑器正确渲染
+    this.$nextTick(() => {
+      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+        const cm = this.$refs.cmEditor.codemirror;
+        
+        // 设置固定高度而不是最小/最大高度
+        const windowHeight = window.innerHeight;
+        // 计算适合屏幕的高度，保证足够大的垂直空间
+        const editorPosition = cm.getWrapperElement().getBoundingClientRect();
+        const availableHeight = windowHeight - editorPosition.top - 80;
+        
+        // 确保高度不小于500px
+        const editorHeight = Math.max(500, availableHeight);
+        
+        // 直接设置固定高度
+        cm.getWrapperElement().style.height = `${editorHeight}px`;
+        
+        // 强制刷新确保渲染正确
+        setTimeout(() => {
+          cm.refresh();
+        }, 100);
+      }
+    });
+  },
+  created() {
+    // 在实例创建时导入CodeMirror滚动条样式扩展，使用简约滚动条
+    require('codemirror/addon/scroll/simplescrollbars.js');
+    require('codemirror/addon/scroll/simplescrollbars.css');
   },
   methods: {
     // 复制代码
@@ -277,6 +315,7 @@ export default {
       // 如果编辑器已实例化，直接设置模式
       if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
         this.$refs.cmEditor.codemirror.setOption('mode', mode);
+        this.$refs.cmEditor.codemirror.refresh();
       }
     }
   }
@@ -427,9 +466,8 @@ export default {
         
         /* 编辑器根容器 */
         .CodeMirror {
-          height: auto;
-          min-height: 200px;
-          max-height: 600px;
+          /* 使用固定高度替代min/max-height */
+          height: 600px !important;
           font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
           line-height: 1.5;
           font-size: 13px;
@@ -437,6 +475,13 @@ export default {
           background: var(--editor-bg);
           border: none;
           border-radius: 0;
+          
+          /* 编辑器滚动容器 */
+          .CodeMirror-scroll {
+            /* 只保留垂直滚动 */
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+          }
           
           /* 编辑器内容区域 */
           .CodeMirror-lines {
@@ -487,21 +532,6 @@ export default {
           
           .CodeMirror-foldgutter-folded:after {
             content: "▸";
-          }
-          
-          /* 滚动条样式 */
-          &::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-          }
-          
-          &::-webkit-scrollbar-track {
-            background: var(--editor-scrollbar-track);
-          }
-          
-          &::-webkit-scrollbar-thumb {
-            background: var(--editor-scrollbar-thumb);
-            border-radius: 4px;
           }
         }
       }

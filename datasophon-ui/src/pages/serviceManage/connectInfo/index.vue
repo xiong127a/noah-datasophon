@@ -187,6 +187,16 @@ export default {
           if (res.code === 200) {
             this.connectionInfo = res.data || {};
             
+            // 打印收到的数据，用于调试
+            console.log("收到的连接信息数据:", JSON.stringify(this.connectionInfo));
+            
+            // 检查是否包含commandLines
+            if (this.connectionInfo && this.connectionInfo.commandLines) {
+              console.log("命令行信息:", this.connectionInfo.commandLines.length, "条");
+            } else {
+              console.warn("未找到命令行信息");
+            }
+            
             // 获取到数据后设置服务类型（如果还没有）
             if (this.connectionInfo) {
               // 尝试从连接信息中提取服务类型

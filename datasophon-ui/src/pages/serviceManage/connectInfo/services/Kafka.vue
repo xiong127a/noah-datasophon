@@ -1,5 +1,5 @@
 <!--
- * @describe: Hive连接信息组件
+ * @describe: Kafka连接信息组件
 -->
 <template>
   <ConnectionInfoPanel
@@ -7,13 +7,13 @@
     :service-name="serviceName"
     :connection-info="connectionInfo"
     :titles="{
-      javaTitle: 'Hive JDBC连接示例',
-      pythonTitle: 'Hive PyHive连接示例',
-      commandTitle: 'Hive常用命令'
+      javaTitle: 'Kafka Java客户端示例',
+      pythonTitle: 'Kafka Python客户端示例',
+      commandTitle: 'Kafka常用命令'
     }"
     :file-names="{
-      javaFileName: 'HiveJdbcClient.java',
-      pythonFileName: 'hive_example.py'
+      javaFileName: 'KafkaProducerConsumer.java',
+      pythonFileName: 'kafka_example.py'
     }"
     @loading-change="handleLoadingChange"
     @connection-loaded="handleConnectionLoaded"
@@ -24,7 +24,7 @@
 import ConnectionInfoPanel from '../components/ConnectionInfoPanel';
 
 export default {
-  name: "HiveConnectInfo",
+  name: "KafkaConnectInfo",
   components: {
     ConnectionInfoPanel
   },
@@ -51,7 +51,7 @@ export default {
     
     // 处理连接信息加载完成
     handleConnectionLoaded(data) {
-      console.log('Hive连接信息加载完成:', data);
+      console.log('Kafka连接信息加载完成:', data);
     }
   }
 };
