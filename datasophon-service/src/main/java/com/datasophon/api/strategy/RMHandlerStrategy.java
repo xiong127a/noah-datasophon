@@ -497,7 +497,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                 java.time.LocalDateTime time3 = now.minusMinutes(25);
                 java.time.LocalDateTime time4 = now.minusMinutes(20);
                 java.time.LocalDateTime time5 = now.minusMinutes(18);
-            java.time.LocalDateTime time7 = now.minusMinutes(10);
+                java.time.LocalDateTime time7 = now.minusMinutes(10);
                 java.time.LocalDateTime time8 = now.minusMinutes(8);
                 java.time.LocalDateTime time9 = now.minusMinutes(5);
                 java.time.LocalDateTime time10 = now.minusMinutes(2);
@@ -731,7 +731,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                                 .build();
                 commandLines.add(checkServiceCmd);
 
-                return addFinalPrompt(commandLines,hostname);
+                return addFinalPrompt(commandLines, hostname);
         }
 
 }

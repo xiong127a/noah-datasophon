@@ -433,12 +433,12 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     /**
      * 生成命令行示例
      *
-     * @param hadoopHome     Hadoop安装目录
-     * @param hostName       主机名
+     * @param hadoopHome Hadoop安装目录
+     * @param hostName   主机名
      * @return 命令行示例列表
      */
     private List<CommandLineItem> generateCommandLines(String hadoopHome,
-                                                       String hostName) {
+            String hostName) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 命令提示符
@@ -622,6 +622,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                 .build();
         commandLines.add(rmdirCmd);
 
-        return addFinalPrompt(commandLines,hostName);
+        return addFinalPrompt(commandLines, hostName);
     }
 }
