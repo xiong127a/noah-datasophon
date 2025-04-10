@@ -149,7 +149,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             String nn2 = globalVariables.get("${nn2}");
 
             // 6. 获取服务角色主机列表
-            List<String> nameNodeList = getRoleHosts(clusterId, "NameNode");
+            List<String> nameNodeList = getRoleHosts(clusterId, serviceInstanceId,"NameNode");
 
             // 7. 判断是否启用了HA
             boolean enableHA = nameNodeList.size() > 1;

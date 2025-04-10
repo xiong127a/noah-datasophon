@@ -437,4 +437,13 @@ public class ClusterServiceRoleInstanceServiceImpl
                 .eq(ClusterServiceRoleInstanceEntity::getHostname, hostname)
                 .eq(ClusterServiceRoleInstanceEntity::getServiceName, serviceName).list();
     }
+
+    @Override
+    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,Integer serviceInstanceId, String roleName) {
+        return this.lambdaQuery()
+                .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
+                .eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, roleName)
+                .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
+                .list();
+    }
 }

@@ -170,8 +170,8 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         }
 
                         // 3. 获取Kafka Broker和Zookeeper节点列表
-                        List<String> brokerList = getRoleHosts(clusterId, "KafkaBroker");
-                        List<String> zkList = getRoleHosts(clusterId, "ZkServer");
+                        List<String> brokerList = getRoleHosts(clusterId, serviceInstanceId,"KafkaBroker");
+                        List<String> zkList = getRoleHosts(clusterId, serviceInstanceId,"ZkServer");
 
                         // 如果没有找到Broker或ZooKeeper节点，返回空信息
                         if (CollectionUtils.isEmpty(brokerList) || CollectionUtils.isEmpty(zkList)) {

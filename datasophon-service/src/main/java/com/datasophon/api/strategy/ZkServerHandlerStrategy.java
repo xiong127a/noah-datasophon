@@ -211,7 +211,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                         // }
 
                         // 3. 获取ZooKeeper节点列表
-                        List<String> zkServerList = getRoleHosts(clusterId, "ZkServer");
+                        List<String> zkServerList = getRoleHosts(clusterId, serviceInstanceId,"ZkServer");
                         if (zkServerList == null || zkServerList.isEmpty()) {
                                 logger.warn("未找到ZooKeeper节点，集群ID: {}", clusterId);
                                 return ConnectionInfo.builder().build();

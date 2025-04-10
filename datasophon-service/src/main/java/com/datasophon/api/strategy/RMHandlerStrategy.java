@@ -142,7 +142,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                         String rm2 = globalVariables.get("${rm2}");
 
                         // 5. 获取服务角色主机列表
-                        List<String> rmList = getRoleHosts(clusterId, "ResourceManager");
+                        List<String> rmList = getRoleHosts(clusterId, serviceInstanceId,"ResourceManager");
 
                         // 6. 判断是否启用了HA
                         boolean enableHA = rmList.size() > 1;

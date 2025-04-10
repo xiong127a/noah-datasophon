@@ -75,7 +75,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
             }
 
             // 3. 获取HBase Master和RegionServer节点列表
-            List<String> masterList = getRoleHosts(clusterId, "HbaseMaster");
+            List<String> masterList = getRoleHosts(clusterId, serviceInstanceId,"HbaseMaster");
 
             // 如果没有找到Master节点，返回空信息
             if (CollUtil.isEmpty(masterList)) {

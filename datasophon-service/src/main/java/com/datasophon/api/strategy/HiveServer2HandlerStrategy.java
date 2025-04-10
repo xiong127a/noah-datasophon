@@ -118,7 +118,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
         List<ServiceConfig> serviceConfigs = listServiceConfigByServiceInstance(serviceInstanceId);
 
-        List<String> hiveServer2Hosts = getRoleHosts(clusterId, "HiveServer2");
+        List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId,"HiveServer2");
         // 获取所有HiveServer2节点的主机名
 
         try {
