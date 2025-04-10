@@ -34,16 +34,16 @@
         </div>
         
         <!-- 命令列表 -->
-        <div v-for="(cmd, index) in commands" :key="index" class="terminal-line-wrapper">
+        <div v-for="(cmd, index) in commandsToShow" :key="index" class="terminal-line-wrapper">
           <!-- 命令注释 -->
-          <div class="terminal-line">
+          <div class="terminal-line" v-if="cmd.label !== '#'">
             <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
             <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
             <span class="command-comment">#{{ cmd.label }}</span>
           </div>
           
           <!-- 命令内容 -->
-          <div class="terminal-line">
+          <div class="terminal-line" v-if="cmd.value">
             <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
             <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
             <span class="command" @click="copySingleCommand(cmd.value)">{{ getCommandDisplay(cmd.value) }}</span>
@@ -56,19 +56,6 @@
           <div v-if="cmd.commandResult" class="terminal-line result-line">
             <span class="command-result">{{ cmd.commandResult }}</span>
           </div>
-        </div>
-        
-        <!-- 最后的命令提示符行 -->
-        <div class="terminal-line terminal-prompt-line">
-          <span class="prompt" v-if="commands.length > 0 && commands[commands.length-1].commandPrompt && isLastCommandNotQuit">
-            {{ commands[commands.length-1].commandPrompt }}
-          </span>
-          <span class="prompt" v-else>
-            [root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#
-          </span>
-          <span class="cursor-wrapper">
-            <span class="terminal-cursor"></span>
-          </span>
         </div>
       </div>
       <div class="status-bar">
@@ -111,18 +98,17 @@ export default {
     }
   },
   computed: {
-    // 判断最后一个命令是否为退出命令
-    isLastCommandNotQuit() {
-      if (!this.commands || this.commands.length === 0) return true;
-      const lastCommand = this.commands[this.commands.length - 1];
-      return !(lastCommand.value === '!quit' || lastCommand.label === '退出beeline');
+    // 添加一个空的计算属性以保持结构完整
+    commandsToShow() {
+      return this.commands || [];
     }
   },
   methods: {
     // 获取命令显示（去掉前缀路径，显示更简洁）
     getCommandDisplay(command) {
+      if (!command) return '';
       // 如果命令带有绝对路径的bin目录，简化显示
-      if (this.serviceHome && command.includes(this.serviceHome + '/bin/')) {
+      if (this.serviceHome && command && command.includes(this.serviceHome + '/bin/')) {
         return command.replace(this.serviceHome + '/bin/', 'bin/');
       }
       return command;
