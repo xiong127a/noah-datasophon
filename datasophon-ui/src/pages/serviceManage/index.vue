@@ -104,9 +104,16 @@ export default {
       if (this.hasConnectionInfo && this.isServiceConnectionAvailable) visibleTabs++;
       if (this.serviceName === 'YARN') visibleTabs++;
       
-      if (this.serviceName === 'KRBCLIENT') return '136px';
-      if (this.serviceName === 'YARN') return visibleTabs >= 4 ? '350px' : '280px';
-      return visibleTabs >= 4 ? '280px' : '200px';
+      // 为每个标签分配更合理的空间
+      const baseWidth = 60;   // 每个标签的基础宽度(减小)
+      const tabSpacing = 16;  // 标签之间的间距(减小到16px，与CSS一致)
+      const totalWidth = visibleTabs * baseWidth + (visibleTabs - 1) * tabSpacing;
+      
+      // 特殊处理某些服务
+      if (this.serviceName === 'KRBCLIENT') return '140px';
+      
+      // 添加标准的16px间距，使WebUI与最后一个标签的间距与标签之间的间距一致
+      return (totalWidth + tabSpacing) + 'px';
     },
     
     getWebUIWidth(serviceName) {
