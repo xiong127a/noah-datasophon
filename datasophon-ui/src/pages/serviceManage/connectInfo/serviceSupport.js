@@ -36,7 +36,9 @@ export const HA_MODE = {
   STANDALONE: 'standalone',
   ZOOKEEPER: 'zookeeper',  // 动态服务发现(负载均衡)
   ZOOKEEPER_HA: 'zooKeeperHA', // 主备切换
-  HTTP: 'httpHA' // HTTP负载均衡
+  HTTP: 'httpHA', // HTTP负载均衡
+  SENTINEL: 'sentinel', // Redis哨兵模式
+  CLUSTER: 'cluster'  // Redis集群模式
 };
 
 // 不同服务支持的高可用模式
@@ -44,7 +46,9 @@ export const SERVICE_HA_MODES = {
   'HIVE': [HA_MODE.STANDALONE, HA_MODE.ZOOKEEPER, HA_MODE.ZOOKEEPER_HA, HA_MODE.HTTP],
   'SPARK': [HA_MODE.STANDALONE, HA_MODE.ZOOKEEPER],
   'HDFS': [HA_MODE.STANDALONE, HA_MODE.ZOOKEEPER_HA],
-  'HBASE': [HA_MODE.STANDALONE, HA_MODE.ZOOKEEPER_HA]
+  'HBASE': [HA_MODE.STANDALONE, HA_MODE.ZOOKEEPER_HA],
+  'REDIS': [HA_MODE.STANDALONE, HA_MODE.SENTINEL, HA_MODE.CLUSTER],
+  'REDISSENTINEL': [HA_MODE.SENTINEL]  // Redis哨兵专用组件
   // 可以继续添加其他服务支持的高可用模式
 };
 
@@ -88,6 +92,10 @@ export function getHAModeDisplayName(haMode) {
       return 'ZooKeeper主备切换(Active-Passive)';
     case HA_MODE.HTTP:
       return 'HTTP负载均衡';
+    case HA_MODE.SENTINEL:
+      return 'Redis哨兵模式';
+    case HA_MODE.CLUSTER:
+      return 'Redis集群模式';
     case HA_MODE.STANDALONE:
     default:
       return '单实例模式';

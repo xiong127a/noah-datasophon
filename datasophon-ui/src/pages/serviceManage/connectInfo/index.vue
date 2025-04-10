@@ -156,6 +156,10 @@ export default {
         return this.serviceType;
       } else if (this.serviceName) {
         // 从服务名称中提取类型
+        // 特殊处理RedisSentinel服务，其他服务直接返回名称
+        if (this.serviceName.toLowerCase() === 'redissentinel') {
+          return 'REDISSENTINEL';
+        }
         return this.serviceName;
       } else if (this.serviceData && this.serviceData.type) {
         // 从服务数据中提取类型
