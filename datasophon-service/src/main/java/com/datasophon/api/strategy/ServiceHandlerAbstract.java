@@ -16,6 +16,7 @@
  */
 
 package com.datasophon.api.strategy;
+
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
@@ -24,6 +25,7 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
@@ -37,6 +39,41 @@ import java.util.Map;
 public abstract class ServiceHandlerAbstract {
 
     public ClusterServiceRoleInstanceEntity roleInstanceEntity;
+
+    /**
+     * 添加通用命令到命令行列表中
+     * 
+     * @param commandLines 命令行列表
+     * @param hostName     主机名
+     * @return 更新后的命令行列表
+     */
+    public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines, String hostName) {
+        // 如果列表为空，创建一个新列表
+        if (commandLines == null) {
+            commandLines = new ArrayList<>();
+        }
+
+        // 添加一个date命令，显示当前日期时间
+        CommandLineItem dateCommand = new CommandLineItem();
+        dateCommand.setLabel("显示当前日期时间");
+        dateCommand.setValue("date");
+        // 获取当前日期时间
+        String currentDateTime = new java.util.Date().toString();
+        dateCommand.setCommandResult(currentDateTime);
+        dateCommand.setCommandPrompt("[root@" + hostName + " ~]# ");
+
+
+        // 添加一个date命令，显示当前日期时间
+        CommandLineItem command = new CommandLineItem();
+        command.setLabel("");
+        command.setValue("");
+        command.setCommandPrompt("[root@" + hostName + " ~]# ");
+        // 将date命令添加到列表中
+        commandLines.add(dateCommand);
+        commandLines.add(command);
+
+        return commandLines;
+    }
 
     public List<ServiceConfig> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
         ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
@@ -57,7 +94,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithKerberos(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                         List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -66,8 +103,9 @@ public abstract class ServiceHandlerAbstract {
             }
         }
     }
+
     public void removeConfigWithHA(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                   List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -78,7 +116,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithRack(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                     List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -91,13 +129,14 @@ public abstract class ServiceHandlerAbstract {
     /**
      * 将所有service_ddl.json中configType是kb的配置项加入到当前配置列表
      * isConfigWithKerberos判定条件在 service_ddl.json 中设置 configWithKerberos = true
+     * 
      * @param globalVariables 全局变量
      * @param map             当前前端传入的配置项
      * @param configs         所有service_ddl.json中设置的所有配置项
      * @param kbConfigs       需要添加到当前的配置项
      */
     public void addConfigWithKerberos(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                      List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -106,7 +145,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithHA(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -115,7 +154,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithRack(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                  List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
+            List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 addConfig(globalVariables, map, rackConfigs, serviceConfig);
@@ -124,7 +163,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfig(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                           List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
+            List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
         if (map.containsKey(serviceConfig.getName())) {
             ServiceConfig config = map.get(serviceConfig.getName());
             config.setRequired(true);
@@ -147,7 +186,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableKerberos(Integer clusterId, Map<String, String> globalVariables, boolean enableKerberos,
-                                    ServiceConfig config, String serviceName) {
+            ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableKerberos = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
@@ -160,7 +199,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableHA(Integer clusterId, Map<String, String> globalVariables, boolean enableHA,
-                              ServiceConfig config, String serviceName) {
+            ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableHA = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "true");
