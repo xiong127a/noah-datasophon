@@ -25,11 +25,11 @@ import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.common.model.CommandLineItem;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
+
 
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
@@ -263,27 +264,9 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                         }
                         break;
 
-                    case Constants.HA_MODE_HTTP:
-                        // HTTP负载均衡模式
-                        String loadBalancer = String
-                                .valueOf(configMap.getOrDefault("hiveserver2.http.loadbalancer.hosts", ""));
-                        String loadBalancerPort = String
-                                .valueOf(configMap.getOrDefault("hiveserver2.http.loadbalancer.port", "10000"));
-
-                        if (StrUtil.isNotBlank(loadBalancer)) {
-                            jdbcUrl = "jdbc:hive2://" + loadBalancer + ":" + loadBalancerPort;
-
-                            // 高可用信息添加到基本信息中
-                            basicInfo.put("HiveServer2高可用", "true");
-                            basicInfo.put("高可用模式", "HTTP负载均衡");
-                            basicInfo.put("负载均衡地址", loadBalancer + ":" + loadBalancerPort);
-                        } else {
-                            // 回退到单实例模式
-                            jdbcUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-                            basicInfo.put("HiveServer2高可用", "false");
-                            basicInfo.put("高可用模式", "HTTP负载均衡(配置不完整)");
-                        }
-                        break;
+                    // HTTP负载均衡模式
+                    // 高可用信息添加到基本信息中
+                    // 回退到单实例模式
 
                     default:
                         // 默认模式，直接使用HiveServer2
@@ -352,7 +335,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             }
 
             // 确保按照数字顺序排序（HiveServer2从节点1, HiveServer2从节点2, ...）
-            Collections.sort(slaveKeys, (a, b) -> {
+            slaveKeys.sort((a, b) -> {
                 // 提取数字部分并比较
                 try {
                     int numA = Integer.parseInt(a.substring("HiveServer2从节点".length()));
@@ -473,20 +456,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             // 获取HIVE_HOME环境变量
             String hive_home = globalVariables.get("${HIVE_HOME}");
 
-            // 获取principal值
-            String principal = "";
-            if (enableKerberos) {
-                principal = String.valueOf(configMap.getOrDefault(
-                        "hive.server2.authentication.kerberos.principal",
-                        "hive/" + hiveServer2Host + "@HADOOP.COM"));
-                // 替换principal中的${host}为实际主机名
-                if (principal.contains("${host}")) {
-                    principal = principal.replace("${host}", hiveServer2Host);
-                }
-            }
-
             // 生成命令行示例 - 使用实际的HiveServer2主机作为主机名
-            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, "hive", "hive", principal, hive_home);
+            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, hive_home,hiveServer2Host);
 
             // 构建并返回ConnectionInfo对象
             return ConnectionInfo.builder()
@@ -573,8 +544,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     /**
      * 生成命令行示例
      */
-    private List<CommandLineItem> generateCommandLines(String jdbcUrl, String username, String password,
-            String principal, String serviceHome) {
+    private List<CommandLineItem> generateCommandLines(String jdbcUrl,
+                                                       String serviceHome,String hostname) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 获取beeline命令路径 - 使用相对路径
@@ -588,7 +559,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         CommandLineItem directSqlCmd = new CommandLineItem();
         directSqlCmd.setLabel("直接执行SQL命令");
         directSqlCmd.setValue(String.format("%s -u '%s' -n %s -p %s -e 'SHOW DATABASES;'",
-                beelineCommand, jdbcUrl, username, password));
+                beelineCommand, jdbcUrl, "hive", "hive"));
         directSqlCmd.setCommandResult(
                 "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+");
         commandLines.add(directSqlCmd);
@@ -597,7 +568,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         CommandLineItem interactiveCmd = new CommandLineItem();
         interactiveCmd.setLabel("进入beeline交互界面");
         interactiveCmd.setValue(String.format("%s -u '%s' -n %s -p %s",
-                beelineCommand, jdbcUrl, username, password));
+                beelineCommand, jdbcUrl, "hive", "hive"));
         interactiveCmd.setCommandResult(
                 "Connecting to jdbc:hive2://...\nConnected to: Apache Hive (version 3.1.0)\nDriver: Hive JDBC (version 3.1.0)\nTransaction isolation: TRANSACTION_REPEATABLE_READ\nBeeline version 3.1.0 by Apache Hive\n0: jdbc:hive2://...");
         commandLines.add(interactiveCmd);
@@ -699,7 +670,9 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         exitCmd.setCommandResult("Closing: 0: jdbc:hive2://...");
         commandLines.add(exitCmd);
 
-        return commandLines;
+        return addFinalPrompt(commandLines,hostname);
     }
+
+
 
 }
