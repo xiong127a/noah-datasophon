@@ -19,6 +19,7 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.lang.Pair;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
@@ -113,7 +114,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
     @Override
     public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+                                           Map<String, ClusterServiceRoleInstanceEntity> map) {
         performServiceRoleCheck(roleInstanceEntity, "");
     }
 
@@ -133,8 +134,8 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
         try {
             // 1. 获取服务配置
-            List<ServiceConfig> serviceConfigs = listServiceConfigByServiceInstance(serviceInstanceId);
-
+            Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
+            List<ServiceConfig> serviceConfigs = pair.getValue();
             // 2. 从配置中解析配置到map，方便快速查询
             Map<String, Object> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
@@ -149,7 +150,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             String nn2 = globalVariables.get("${nn2}");
 
             // 6. 获取服务角色主机列表
-            List<String> nameNodeList = getRoleHosts(clusterId, serviceInstanceId,"NameNode");
+            List<String> nameNodeList = getRoleHosts(clusterId, serviceInstanceId, "NameNode");
 
             // 7. 判断是否启用了HA
             boolean enableHA = nameNodeList.size() > 1;
@@ -246,7 +247,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             String hadoopHome = globalVariables.get("${HADOOP_HOME}");
 
             // 18. 生成命令行示例
-            List<CommandLineItem> commandLines = generateCommandLines(hadoopHome, nn1);
+            List<CommandLineItem> commandLines = generateCommandLines(pair.getKey(), nn1);
 
             // 19. 返回构建好的连接信息
             return ConnectionInfo.builder()
@@ -255,7 +256,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                     .javaCode(javaCode)
                     .pythonCode(pythonCode)
                     .commandLines(commandLines)
-                    .serviceHome(hadoopHome)
                     .hostName(nn1)
                     .build();
         } catch (Exception e) {
@@ -433,16 +433,14 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     /**
      * 生成命令行示例
      *
-     * @param hadoopHome Hadoop安装目录
-     * @param hostName   主机名
+     * @param hostName 主机名
      * @return 命令行示例列表
      */
-    private List<CommandLineItem> generateCommandLines(String hadoopHome,
-            String hostName) {
+    private List<CommandLineItem> generateCommandLines(String serviceName,
+                                                       String hostName) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 命令提示符
-        String serviceName = hadoopHome != null ? hadoopHome.substring(hadoopHome.lastIndexOf('/') + 1) : "hadoop";
         String shellPrompt = "[root@" + hostName + " " + serviceName + "]# ";
 
         // Kerberos参数
@@ -622,6 +620,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                 .build();
         commandLines.add(rmdirCmd);
 
-        return addFinalPrompt(commandLines, hadoopHome, hostName);
+        return addFinalPrompt(commandLines, serviceName, hostName);
     }
 }

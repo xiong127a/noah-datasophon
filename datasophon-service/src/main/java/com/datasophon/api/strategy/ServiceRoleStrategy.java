@@ -20,11 +20,16 @@ package com.datasophon.api.strategy;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import com.alibaba.fastjson.JSONArray;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
@@ -36,6 +41,8 @@ import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.k8s.util.K8sUtil;
@@ -88,12 +95,12 @@ public interface ServiceRoleStrategy {
      * 定期检查角色处理
      */
     default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+                                         Map<String, ClusterServiceRoleInstanceEntity> map) {
     }
 
     /**
      * 获取组件的连接信息，包括连接地址、JDBC URL和示例代码等
-     * 
+     *
      * @param clusterId         集群ID
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息对象
@@ -107,7 +114,7 @@ public interface ServiceRoleStrategy {
      * 定期检查角色处理（K8S）
      */
     default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
+                                            Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
@@ -177,7 +184,7 @@ public interface ServiceRoleStrategy {
     }
 
     default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand,
-            String actorName) {
+                                      String actorName) {
         ExecResult execResult = new ExecResult();
 
         try {
@@ -197,4 +204,23 @@ public interface ServiceRoleStrategy {
         return execResult;
     }
 
+    default Pair<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+        ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
+                .getBean(ClusterServiceInstanceRoleGroupService.class);
+        ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
+                .getBean(ClusterServiceRoleGroupConfigService.class);
+        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
+        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+
+        ServiceInfo serviceInfo = ServiceInfoMap.get("DDP-1.2.1_" + roleGroup.getServiceName());
+        String serviceHome = "";
+        if (serviceInfo != null) {
+            serviceHome = serviceInfo.getDecompressPackageName();
+        }
+        return Pair.of(serviceHome, JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
+    }
+
+    default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String redisMaster) {
+        return null;
+    }
 }

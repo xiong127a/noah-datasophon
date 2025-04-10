@@ -18,6 +18,7 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.Pair;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
@@ -64,8 +65,8 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
         try {
             // 1. 获取服务配置
-            List<ServiceConfig> serviceConfigs = listServiceConfigByServiceInstance(serviceInstanceId);
-
+            Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
+            List<ServiceConfig> serviceConfigs = pair.getValue();
             // 2. 从配置中解析配置到map，方便快速查询
             Map<String, String> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
@@ -75,7 +76,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
             }
 
             // 3. 获取HBase Master和RegionServer节点列表
-            List<String> masterList = getRoleHosts(clusterId, serviceInstanceId,"HbaseMaster");
+            List<String> masterList = getRoleHosts(clusterId, serviceInstanceId, "HbaseMaster");
 
             // 如果没有找到Master节点，返回空信息
             if (CollUtil.isEmpty(masterList)) {
@@ -168,17 +169,13 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 }
             }
 
-            // 9. 获取服务主目录
-            String hbaseHome = GlobalVariables.get(clusterId).getOrDefault("HBASE_HOME", "/opt/datasophon/hbase");
-
             // 10. 返回构建好的连接信息
             return ConnectionInfo.builder()
                     .basicInfo(basicInfo)
                     .basicInfoList(basicInfoList)
                     .javaCode(generateJavaCode(zkQuorum, zkPort, zkRootNode, enableKerberos))
                     .pythonCode(generatePythonCode(zkQuorum, zkPort, zkRootNode, enableKerberos))
-                    .commandLines(generateCommandLines(hbaseHome, enableKerberos, masterNode))
-                    .serviceHome(hbaseHome)
+                    .commandLines(generateCommandLines(pair.getKey(), enableKerberos, masterNode))
                     .hostName(masterNode)
                     .build();
 
@@ -485,6 +482,6 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
         commandLines.add(lastCmd);
 
         // 添加通用命令
-        return addFinalPrompt(commandLines, hbaseHome,hostname);
+        return addFinalPrompt(commandLines, hbaseHome, hostname);
     }
 }

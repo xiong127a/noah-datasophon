@@ -18,6 +18,7 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.druid.util.JdbcUtils;
 import com.datasophon.api.load.GlobalVariables;
@@ -116,9 +117,9 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
 
     @Override
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
-        List<ServiceConfig> serviceConfigs = listServiceConfigByServiceInstance(serviceInstanceId);
-
-        List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId,"HiveServer2");
+        Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
+        List<ServiceConfig> serviceConfigs = pair.getValue();
+        List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
         // 获取所有HiveServer2节点的主机名
 
         try {
@@ -453,11 +454,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
 
-            // 获取HIVE_HOME环境变量
-            String hive_home = globalVariables.get("${HIVE_HOME}");
-
             // 生成命令行示例 - 使用实际的HiveServer2主机作为主机名
-            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, hive_home,hiveServer2Host);
+            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, pair.getKey(), hiveServer2Host);
 
             // 构建并返回ConnectionInfo对象
             return ConnectionInfo.builder()
@@ -468,7 +466,6 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                     .javaCode(generateJavaCode(jdbcUrl, enableKerberos))
                     .pythonCode(generatePythonCode(hiveServer2Host, hiveServer2Port, enableKerberos))
                     .commandLines(commandLines)
-                    .serviceHome(hive_home)
                     .hostName(hiveServer2Host) // 添加主机名到ConnectionInfo
                     .build();
         } catch (Exception e) {
@@ -545,11 +542,12 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
      * 生成命令行示例
      */
     private List<CommandLineItem> generateCommandLines(String jdbcUrl,
-                                                       String serviceHome,String hostname) {
+                                                       String serviceHome, String hostname) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 获取beeline命令路径 - 使用相对路径
         String beelineCommand = "beeline";
+        String shellPrompt = "[root@" + hostname + " " + serviceHome + "]# ";
         if (StringUtils.isNotEmpty(serviceHome)) {
             // 只使用bin目录下的beeline，而不是完整路径
             beelineCommand = "bin/beeline";
@@ -562,6 +560,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 beelineCommand, jdbcUrl, "hive", "hive"));
         directSqlCmd.setCommandResult(
                 "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+");
+        directSqlCmd.setCommandPrompt(shellPrompt);
         commandLines.add(directSqlCmd);
 
         // 2. 进入beeline交互界面
@@ -569,6 +568,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         interactiveCmd.setLabel("进入beeline交互界面");
         interactiveCmd.setValue(String.format("%s -u '%s' -n %s -p %s",
                 beelineCommand, jdbcUrl, "hive", "hive"));
+        interactiveCmd.setCommandPrompt(shellPrompt);
         interactiveCmd.setCommandResult(
                 "Connecting to jdbc:hive2://...\nConnected to: Apache Hive (version 3.1.0)\nDriver: Hive JDBC (version 3.1.0)\nTransaction isolation: TRANSACTION_REPEATABLE_READ\nBeeline version 3.1.0 by Apache Hive\n0: jdbc:hive2://...");
         commandLines.add(interactiveCmd);
@@ -670,9 +670,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         exitCmd.setCommandResult("Closing: 0: jdbc:hive2://...");
         commandLines.add(exitCmd);
 
-        return addFinalPrompt(commandLines,serviceHome,hostname);
+        return addFinalPrompt(commandLines, serviceHome, hostname);
     }
-
 
 
 }

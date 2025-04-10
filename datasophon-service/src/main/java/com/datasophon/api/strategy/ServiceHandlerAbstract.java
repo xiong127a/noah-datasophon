@@ -19,17 +19,12 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.fastjson.JSONArray;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
 import java.util.ArrayList;
@@ -54,10 +49,10 @@ public abstract class ServiceHandlerAbstract {
         }
 
         // 添加root命令提示符
-        String rootPrompt = "[root@" + hostname + " ~]# ";
+        String serviceHomePrompt = "[root@" + hostname + " "+serviceHome+"]# ";
 
         // 获取服务目录名称（去掉路径和版本号）
-        CommandLineItem cdCommand = getCommandLineItem(serviceHome, rootPrompt);
+        CommandLineItem cdCommand = getCommandLineItem(serviceHome, serviceHomePrompt);
         commandLines.add(0, cdCommand);
 
 
@@ -68,14 +63,14 @@ public abstract class ServiceHandlerAbstract {
         // 获取当前日期时间
         String currentDateTime = new java.util.Date().toString();
         dateCommand.setCommandResult(currentDateTime);
-        dateCommand.setCommandPrompt(rootPrompt);
+        dateCommand.setCommandPrompt(serviceHomePrompt);
 
 
         // 添加一个date命令，显示当前日期时间
         CommandLineItem command = new CommandLineItem();
         command.setLabel("");
         command.setValue("");
-        command.setCommandPrompt(rootPrompt);
+        command.setCommandPrompt(serviceHomePrompt);
         // 将date命令添加到列表中
         commandLines.add(dateCommand);
         commandLines.add(command);
@@ -100,21 +95,11 @@ public abstract class ServiceHandlerAbstract {
         return cdCommand;
     }
 
-    public List<ServiceConfig> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
-                .getBean(ClusterServiceInstanceRoleGroupService.class);
-        ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
-                .getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
-        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-        return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
-    }
-
-    public static List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId,String roleName) {
+    public List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
         List<ClusterServiceRoleInstanceEntity> roleInstances = clusterServiceRoleInstanceService
-                .getServiceRoleInstanceListByServiceInstanceIdAndRoleName(clusterId,serviceInstanceId, roleName);
+                .getServiceRoleInstanceListByServiceInstanceIdAndRoleName(clusterId, serviceInstanceId, roleName);
         return CollUtil.map(roleInstances, ClusterServiceRoleInstanceEntity::getHostname, true);
     }
 

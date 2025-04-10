@@ -443,7 +443,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         return this.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
                 .eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, roleName)
-                .eq(ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
+                .eq(serviceInstanceId != null, ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
                 .list();
     }
 }

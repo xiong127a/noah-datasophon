@@ -72,12 +72,6 @@ public class ConnectionInfo implements Serializable {
      * 多个JDBC URL列表
      */
     private List<Map<String, String>> jdbcUrls;
-
-    /**
-     * 服务主目录
-     */
-    private String serviceHome;
-
     /**
      * 主机名
      */
