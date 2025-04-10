@@ -430,9 +430,9 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 String serviceName = kafka_home != null ? kafka_home.substring(kafka_home.lastIndexOf('/') + 1)
                                 : "kafka";
                 // 生成节点名称 - 假设第一个broker就是运行命令的节点
-                String nodeName = kafkaConnectString.split(",")[0].split(":")[0];
+                String hostname = kafkaConnectString.split(",")[0].split(":")[0];
                 // 命令提示符
-                String shellPrompt = "[root@" + nodeName + " " + serviceName + "]# ";
+                String shellPrompt = "[root@" + hostname + " " + serviceName + "]# ";
 
                 // 添加Kerberos参数（如果启用）
                 String kerberosParams = "";
@@ -605,7 +605,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                                 .value("bin/kafka-broker-api-versions.sh --bootstrap-server " + kafkaConnectString
                                                 + kerberosParams)
                                 .commandPrompt(shellPrompt)
-                                .commandResult("" + nodeName + ":9092 (id: 1 rack: null) -> \n" +
+                                .commandResult(hostname + ":9092 (id: 1 rack: null) -> \n" +
                                                 "  Produce(0): 0 to 8 [usable: 8]\n" +
                                                 "  Fetch(1): 0 to 11 [usable: 11]\n" +
                                                 "  ListOffsets(2): 0 to 5 [usable: 5]\n" +
@@ -614,6 +614,6 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                                 .build();
                 commandLines.add(apiVersionsCmd);
 
-                return commandLines;
+                return addFinalPrompt(commandLines,hostname);
         }
 }
