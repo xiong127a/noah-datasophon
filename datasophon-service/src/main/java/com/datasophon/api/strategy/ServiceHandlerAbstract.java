@@ -44,14 +44,22 @@ public abstract class ServiceHandlerAbstract {
      * 添加通用命令到命令行列表中
      * 
      * @param commandLines 命令行列表
-     * @param hostName     主机名
+     * @param hostname     主机名
      * @return 更新后的命令行列表
      */
-    public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines, String hostName) {
+    public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines,String serviceHome, String hostname) {
         // 如果列表为空，创建一个新列表
         if (commandLines == null) {
             commandLines = new ArrayList<>();
         }
+
+        // 添加root命令提示符
+        String rootPrompt = "[root@" + hostname + " ~]# ";
+
+        // 获取服务目录名称（去掉路径和版本号）
+        CommandLineItem cdCommand = getCommandLineItem(serviceHome, rootPrompt);
+        commandLines.add(0, cdCommand);
+
 
         // 添加一个date命令，显示当前日期时间
         CommandLineItem dateCommand = new CommandLineItem();
@@ -60,19 +68,36 @@ public abstract class ServiceHandlerAbstract {
         // 获取当前日期时间
         String currentDateTime = new java.util.Date().toString();
         dateCommand.setCommandResult(currentDateTime);
-        dateCommand.setCommandPrompt("[root@" + hostName + " ~]# ");
+        dateCommand.setCommandPrompt(rootPrompt);
 
 
         // 添加一个date命令，显示当前日期时间
         CommandLineItem command = new CommandLineItem();
         command.setLabel("");
         command.setValue("");
-        command.setCommandPrompt("[root@" + hostName + " ~]# ");
+        command.setCommandPrompt(rootPrompt);
         // 将date命令添加到列表中
         commandLines.add(dateCommand);
         commandLines.add(command);
 
         return commandLines;
+    }
+
+    private static CommandLineItem getCommandLineItem(String serviceHome, String rootPrompt) {
+        String serviceDirName = "";
+        if (serviceHome != null && !serviceHome.isEmpty()) {
+            // 获取路径的最后一部分
+            String lastPathPart = serviceHome.substring(serviceHome.lastIndexOf('/') + 1);
+            // 去掉版本号（假设版本号格式为数字和点，如 hadoop-3.2.1 -> hadoop）
+            serviceDirName = lastPathPart.replaceAll("-[0-9]+(\\.[0-9]+)*", "");
+        }
+
+        // 进入服务目录
+        CommandLineItem cdCommand = new CommandLineItem();
+        cdCommand.setLabel("进入" + serviceDirName + "服务目录");
+        cdCommand.setValue("cd " + serviceHome);
+        cdCommand.setCommandPrompt(rootPrompt);
+        return cdCommand;
     }
 
     public List<ServiceConfig> listServiceConfigByServiceInstance(Integer serviceInstanceId) {

@@ -18,21 +18,6 @@
         <div class="file-name">Terminal</div>
       </div>
       <div class="terminal-content bash-terminal">
-        <!-- 如果提供了服务Home目录，显示进入目录的命令 -->
-        <div v-if="serviceHome" class="terminal-line-wrapper">
-          <div class="terminal-line">
-            <span class="prompt">[root@{{ hostName }} ~]#</span>
-            <span class="command-comment">#进入服务目录</span>
-          </div>
-          <div class="terminal-line">
-            <span class="prompt">[root@{{ hostName }} ~]#</span>
-            <span class="command" @click="copySingleCommand('cd ' + serviceHome)">cd {{ serviceHome }}</span>
-            <a-tooltip title="复制命令" placement="left">
-              <a-icon type="copy" class="copy-icon" @click.stop="copySingleCommand('cd ' + serviceHome)" />
-            </a-tooltip>
-          </div>
-        </div>
-        
         <!-- 命令列表 -->
         <div v-for="(cmd, index) in commandsToShow" :key="index" class="terminal-line-wrapper">
           <!-- 命令注释 -->
@@ -121,16 +106,12 @@ export default {
       // 构建包含所有命令和注释的文本
       let allCommands = '';
       
-      // 如果有服务目录，先添加cd命令
-      if (this.serviceHome) {
-        allCommands += `# 进入服务目录\n`;
-        allCommands += `cd ${this.serviceHome}\n\n`;
-      }
-      
       // 添加所有命令
       this.commands.forEach(cmd => {
-        allCommands += `# ${cmd.label}\n`;
-        allCommands += `${cmd.value}\n\n`;
+        if (cmd.label && cmd.value) {
+          allCommands += `# ${cmd.label}\n`;
+          allCommands += `${cmd.value}\n\n`;
+        }
       });
       
       // 复制到剪贴板
