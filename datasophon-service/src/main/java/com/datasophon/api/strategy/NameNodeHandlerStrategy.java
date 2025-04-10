@@ -165,7 +165,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
             // 9. 获取HDFS端口，默认为8020 (RPC端口)，9870 (HTTP端口)
             String rpcPort = "8020";
-            String httpPort = "9870";
 
             // 10. 构建HDFS URI
             String hdfsUri = "hdfs://" + nn1 + ":" + rpcPort;
@@ -186,10 +185,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             }
 
             // 12. WebHDFS URI（但不在界面显示）
-            String webhdfsUri = "http://" + nn1 + ":" + httpPort + "/webhdfs/v1";
-            if (enableHA && nameservice != null) {
-                webhdfsUri = "http://" + nn1 + ":" + httpPort + "/webhdfs/v1";
-            }
 
             // 13. 构建基本连接信息
             Map<String, String> basicInfo = new HashMap<>();
@@ -251,7 +246,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             String hadoopHome = globalVariables.get("${HADOOP_HOME}");
 
             // 18. 生成命令行示例
-            List<CommandLineItem> commandLines = generateCommandLines(hdfsUri, hadoopHome, enableKerberos, nn1);
+            List<CommandLineItem> commandLines = generateCommandLines(hadoopHome, nn1);
 
             // 19. 返回构建好的连接信息
             return ConnectionInfo.builder()
@@ -438,14 +433,12 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     /**
      * 生成命令行示例
      *
-     * @param hdfsUri        HDFS URI
      * @param hadoopHome     Hadoop安装目录
-     * @param enableKerberos 是否启用Kerberos
      * @param hostName       主机名
      * @return 命令行示例列表
      */
-    private List<CommandLineItem> generateCommandLines(String hdfsUri, String hadoopHome,
-            boolean enableKerberos, String hostName) {
+    private List<CommandLineItem> generateCommandLines(String hadoopHome,
+                                                       String hostName) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 命令提示符
@@ -453,10 +446,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
         String shellPrompt = "[root@" + hostName + " " + serviceName + "]# ";
 
         // Kerberos参数
-        String kerberosParams = "";
-        if (enableKerberos) {
-            kerberosParams = " -D \"hadoop.security.authentication=kerberos\"";
-        }
 
         // 1. 查看HDFS状态
         CommandLineItem statusCmd = CommandLineItem.builder()
@@ -633,6 +622,6 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
                 .build();
         commandLines.add(rmdirCmd);
 
-        return commandLines;
+        return addFinalPrompt(commandLines,hostName);
     }
 }
