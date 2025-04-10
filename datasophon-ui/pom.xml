@@ -27,8 +27,10 @@
     <artifactId>datasophon-ui</artifactId>
 
     <properties>
-        <build.node.version>v12.16.3</build.node.version>
-        <build.npm.version>6.14.4</build.npm.version>
+        <!--        <build.node.version>v12.16.3</build.node.version>-->
+        <!--        <build.npm.version>6.14.4</build.npm.version>-->
+        <build.node.version>v22.14.0</build.node.version>
+        <build.npm.version>10.9.2</build.npm.version>
         <deployed.dir>.deployed</deployed.dir>
         <dist.dir>dist</dist.dir>
         <nodemodules.dir>node_modules</nodemodules.dir>
@@ -85,7 +87,9 @@
                         </goals>
                         <phase>generate-resources</phase>
                         <configuration>
-                            <arguments>install --registry=https://registry.npmmirror.com --sass-binary-site=https://repo.huaweicloud.com/node-sass/</arguments>
+                            <arguments>install --registry=https://registry.npmmirror.com
+                                --sass-binary-site=https://repo.huaweicloud.com/node-sass/
+                            </arguments>
                         </configuration>
                     </execution>
                     <execution>
@@ -146,11 +150,11 @@
                 </os>
             </activation>
             <properties>
-                <args.brunch />
-                <args.mkdir />
-                <args.npm />
+                <args.brunch/>
+                <args.mkdir/>
+                <args.npm/>
                 <args.rm.clean>-rf</args.rm.clean>
-                <args.shell />
+                <args.shell/>
                 <dirsep>/</dirsep>
                 <envClassifier>linux</envClassifier>
                 <executable.brunch>brunch</executable.brunch>
