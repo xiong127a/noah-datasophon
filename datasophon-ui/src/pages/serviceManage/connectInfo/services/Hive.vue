@@ -90,7 +90,7 @@
               </div>
               <div class="terminal-content bash-terminal">
                 <div class="terminal-line">
-                  <span class="prompt">[root@bdp1 ~]#</span>
+                  <span class="prompt">[root@{{ getHiveServer2Host() }} ~]#</span>
                   <span class="command">{{ cmd.value }}</span>
                 </div>
                 <div class="terminal-cursor"></div>
@@ -159,13 +159,22 @@ export default {
              !beelineCommand && !cliCommand;
     },
     basicInfoArray() {
-      if (!this.connectionInfo || !this.connectionInfo.basicInfo) return [];
+      if (!this.connectionInfo) return [];
       
-      // 将basicInfo对象转换为数组格式，适配列表展示
-      return Object.entries(this.connectionInfo.basicInfo).map(([label, value]) => ({
-        label,
-        value: value || '-'
-      }));
+      // 优先使用后端提供的有序basicInfoList
+      if (this.connectionInfo.basicInfoList && this.connectionInfo.basicInfoList.length > 0) {
+        return this.connectionInfo.basicInfoList;
+      }
+      
+      // 兼容处理：如果没有basicInfoList，则从basicInfo对象转换
+      if (this.connectionInfo.basicInfo) {
+        return Object.entries(this.connectionInfo.basicInfo).map(([label, value]) => ({
+          label,
+          value: value || '-'
+        }));
+      }
+      
+      return [];
     },
     jdbcUrlArray() {
       if (!this.connectionInfo) return [];
@@ -221,6 +230,21 @@ export default {
     }
   },
   methods: {
+    // 获取HiveServer2主机名
+    getHiveServer2Host() {
+      if (!this.connectionInfo || !this.connectionInfo.basicInfo) return 'localhost';
+      
+      // 尝试获取HiveServer2主节点
+      const mainNode = this.connectionInfo.basicInfo['HiveServer2主节点'];
+      if (mainNode) {
+        // 提取主机名部分（去掉端口）
+        const hostPart = mainNode.split(':')[0];
+        return hostPart || 'localhost';
+      }
+      
+      return 'localhost'; // 默认值
+    },
+    
     // 获取连接信息
     async getConnectionInfo() {
       if (!this.serviceId) return;
