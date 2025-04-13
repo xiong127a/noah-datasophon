@@ -49,10 +49,11 @@ public abstract class ServiceHandlerAbstract {
         }
 
         // 添加root命令提示符
+        String rootPrompt = "[root@" + hostname+"~]# ";
         String serviceHomePrompt = "[root@" + hostname + " "+serviceHome+"]# ";
 
         // 获取服务目录名称（去掉路径和版本号）
-        CommandLineItem cdCommand = getCommandLineItem(serviceHome, serviceHomePrompt);
+        CommandLineItem cdCommand = getCommandLineItem(serviceHome, rootPrompt);
         commandLines.add(0, cdCommand);
 
 
