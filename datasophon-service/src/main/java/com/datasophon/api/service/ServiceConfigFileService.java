@@ -45,12 +45,13 @@ public interface ServiceConfigFileService {
     byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName);
 
     /**
-     * 获取所有配置文件并打包成zip
+     * 获取所有配置文件并根据指定格式打包
      * 
      * @param serviceInstanceId 服务实例ID
-     * @return zip文件内容
+     * @param format            压缩格式（zip, tar.gz, 7z）
+     * @return 压缩文件内容
      */
-    byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId);
+    byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format);
 
     /**
      * 获取服务名称

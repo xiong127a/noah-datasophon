@@ -226,7 +226,7 @@ public interface ServiceRoleStrategy {
     }
 
     default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
-        return  CollUtil.empty(List.class);
+        return CollUtil.empty(List.class);
     }
 
     /**
@@ -253,9 +253,15 @@ public interface ServiceRoleStrategy {
         return new AbstractMap.SimpleEntry<>(serviceHome, configMap);
     }
 
-    default byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName){return null;}
+    default byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName) {
+        return null;
+    }
 
-    default byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId){return null;}
+    default byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId) {
+        return null;
+    }
 
-    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId){return null;}
+    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
+        return null;
+    }
 }

@@ -97,25 +97,56 @@ public class ServiceConfigController {
     @GetMapping("/downloadAllFiles")
     public ResponseEntity<InputStreamResource> downloadAllServiceConfigFiles(
             @RequestParam("serviceInstanceId") Integer serviceInstanceId,
+            @RequestParam(value = "format", defaultValue = "zip") String format,
             HttpServletResponse response) {
         try {
-            byte[] zipContent = serviceConfigFileService.getAllServiceConfigFilesAsZip(serviceInstanceId);
+            // 验证格式参数
+            if (!isValidFormat(format)) {
+                log.warn("不支持的压缩格式: {}", format);
+                format = "zip"; // 默认使用zip格式
+            }
 
+            // 根据格式获取对应的压缩文件内容
+            byte[] compressedContent = serviceConfigFileService.getAllServiceConfigFiles(serviceInstanceId, format);
+
+            // 获取服务名称
             String serviceName = serviceConfigFileService.getServiceName(serviceInstanceId);
-            String fileName = serviceName + "_configs.zip";
 
+            // 根据不同格式设置不同的文件扩展名
+            String fileExtension = format.equals("tar.gz") ? ".tar.gz" : "." + format;
+            String fileName = serviceName + "_configs" + fileExtension;
+
+            // 设置响应头
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
 
-            InputStream inputStream = new ByteArrayInputStream(zipContent);
+            // 根据不同格式设置不同的媒体类型
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (format.equals("zip")) {
+                mediaType = MediaType.parseMediaType("application/zip");
+            } else if (format.equals("tar.gz")) {
+                mediaType = MediaType.parseMediaType("application/gzip");
+            } else if (format.equals("7z")) {
+                mediaType = MediaType.parseMediaType("application/x-7z-compressed");
+            }
+
+            // 返回文件流
+            InputStream inputStream = new ByteArrayInputStream(compressedContent);
             return ResponseEntity.ok()
                     .headers(headers)
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentType(mediaType)
                     .body(new InputStreamResource(inputStream));
         } catch (Exception e) {
             log.error("打包下载配置文件失败", e);
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * 验证压缩格式是否支持
+     */
+    private boolean isValidFormat(String format) {
+        return "zip".equals(format) || "tar.gz".equals(format) || "7z".equals(format);
     }
 
     /**
