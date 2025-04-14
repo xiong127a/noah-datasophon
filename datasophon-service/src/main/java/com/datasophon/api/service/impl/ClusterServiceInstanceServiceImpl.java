@@ -17,14 +17,21 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.service.*;
+import com.datasophon.api.service.ClusterAlertHistoryService;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceDashboardService;
+import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.api.service.ClusterServiceInstanceService;
+import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
+import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.common.Constants;
@@ -33,7 +40,14 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.model.SimpleServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.*;
+import com.datasophon.dao.entity.ClusterAlertHistory;
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceDashboard;
+import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.enums.ServiceState;
@@ -321,7 +335,10 @@ public class ClusterServiceInstanceServiceImpl
         }
 
         // 获取连接信息
-        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId);
+        Map.Entry<String, Map<String, String>> serviceConfigMap = strategy.getServiceConfigMap(serviceInstanceId);
+        Map<String, String> configMap = serviceConfigMap.getValue();
+        String serviceHome = serviceConfigMap.getKey();
+        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId,serviceHome,configMap);
         if (connectionInfo == null || connectionInfo.getBasicInfo() == null) {
             log.warn("服务{}未提供连接信息", serviceName);
             return Result.error("该服务未提供连接信息");

@@ -19,7 +19,6 @@
 
 package com.datasophon.api.strategy;
 
-import cn.hutool.core.lang.Pair;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
@@ -114,7 +113,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
     @Override
     public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                           Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         performServiceRoleCheck(roleInstanceEntity, "");
     }
 
@@ -131,20 +130,9 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
         try {
             // 1. 获取服务配置
-            Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
-            List<ServiceConfig> serviceConfigs = pair.getValue();
-            String serviceHome = pair.getKey();
-
-            // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, String> configMap = new HashMap<>();
-            for (ServiceConfig config : serviceConfigs) {
-                if (config.getValue() != null) {
-                    configMap.put(config.getName(), String.valueOf(config.getValue()));
-                }
-            }
 
             // 4. 获取全局变量
             Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -161,11 +149,9 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
 
             // 8. 判断是否启用了Kerberos
             boolean enableKerberos = false;
-            for (ServiceConfig config : serviceConfigs) {
-                if ("enableKerberos".equals(config.getName())) {
-                    enableKerberos = Boolean.parseBoolean(config.getValue().toString());
-                    break;
-                }
+            // 从configMap中获取Kerberos配置
+            if (configMap.containsKey(ENABLE_KERBEROS)) {
+                enableKerberos = Boolean.parseBoolean(configMap.get(ENABLE_KERBEROS));
             }
 
             // 9. 获取HDFS端口，默认为8020 (RPC端口)，9870 (HTTP端口)
@@ -441,7 +427,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
      * @return 命令行示例列表
      */
     private List<CommandLineItem> generateCommandLines(String serviceName,
-                                                       String hostName) {
+            String hostName) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 命令提示符

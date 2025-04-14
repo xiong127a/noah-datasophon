@@ -20,7 +20,6 @@ package com.datasophon.api.strategy;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
-import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
@@ -52,7 +51,9 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +96,7 @@ public interface ServiceRoleStrategy {
      * 定期检查角色处理
      */
     default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                         Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
     }
 
     /**
@@ -105,7 +106,7 @@ public interface ServiceRoleStrategy {
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息对象
      */
-    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
+    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
         // 默认返回空对象，具体组件在各自实现中提供连接信息
         return ConnectionInfo.builder().build();
     }
@@ -114,7 +115,7 @@ public interface ServiceRoleStrategy {
      * 定期检查角色处理（K8S）
      */
     default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                            Map<String, ClusterServiceRoleInstanceEntity> map) {
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
@@ -184,7 +185,7 @@ public interface ServiceRoleStrategy {
     }
 
     default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand,
-                                      String actorName) {
+            String actorName) {
         ExecResult execResult = new ExecResult();
 
         try {
@@ -204,7 +205,7 @@ public interface ServiceRoleStrategy {
         return execResult;
     }
 
-    default Pair<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+    default Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
         ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
                 .getBean(ClusterServiceInstanceRoleGroupService.class);
         ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
@@ -217,10 +218,34 @@ public interface ServiceRoleStrategy {
         if (serviceInfo != null) {
             serviceHome = serviceInfo.getDecompressPackageName();
         }
-        return Pair.of(serviceHome, JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
+        return new AbstractMap.SimpleEntry<>(serviceHome, JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
     }
 
     default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String redisMaster) {
         return null;
+    }
+
+    /**
+     * 获取服务配置并解析为Map
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 包含服务主目录和配置Map的对象
+     */
+    default Map.Entry<String, Map<String, String>> getServiceConfigMap(Integer serviceInstanceId) {
+        // 1. 获取服务配置
+        Map.Entry<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
+        List<ServiceConfig> serviceConfigs = pair.getValue();
+        String serviceHome = pair.getKey();
+
+        // 2. 从配置中解析配置到map，方便快速查询
+        Map<String, String> configMap = new HashMap<>();
+        for (ServiceConfig config : serviceConfigs) {
+            if (config.getValue() != null) {
+                configMap.put(config.getName(), String.valueOf(config.getValue()));
+            }
+        }
+
+        // 返回包含serviceHome和configMap的Entry
+        return new AbstractMap.SimpleEntry<>(serviceHome, configMap);
     }
 }

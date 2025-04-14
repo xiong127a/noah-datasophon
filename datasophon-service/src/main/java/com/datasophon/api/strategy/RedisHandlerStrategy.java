@@ -73,7 +73,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
-        return SpringUtil.getBean(RedisConnectionInfoHelper.class).getRedisConnectionInfo(clusterId, serviceInstanceId, this);
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
+        return SpringUtil.getBean(RedisConnectionInfoHelper.class).getRedisConnectionInfo(clusterId, serviceInstanceId, serviceHome,configMap,this);
     }
 }

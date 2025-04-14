@@ -116,35 +116,24 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
-        Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
-        List<ServiceConfig> serviceConfigs = pair.getValue();
-        String serviceHome = pair.getKey();
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
+
+
+
         List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
         // 获取所有HiveServer2节点的主机名
 
         try {
-            // 从serviceConfigs中解析配置到map，方便快速查询
-            Map<String, Object> configMap = new HashMap<>();
-            for (ServiceConfig config : serviceConfigs) {
-                // 如果配置值包含${host}占位符，并且有HiveServer2实例，则替换为实际主机名
-                if (config.getValue() != null && config.getValue().toString().contains("${host}")
-                        && CollUtil.isNotEmpty(hiveServer2Hosts)) {
-                    String value = config.getValue().toString().replace("${host}", hiveServer2Hosts.get(0));
-                    config.setValue(value);
-                }
-                configMap.put(config.getName(), config.getValue());
-            }
-
             // 获取globalVariables用于isEnableKerberos方法
             Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
             // 判断是否启用了Kerberos
             boolean enableKerberos = false;
-            for (ServiceConfig config : serviceConfigs) {
-                if ("enableKerberos".equals(config.getName())) {
-                    enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, config, "HIVE");
-                    break;
+            if (configMap.containsKey("enableKerberos")) {
+                enableKerberos = Boolean.parseBoolean(String.valueOf(configMap.get("enableKerberos")));
+                // 如果配置中有Kerberos相关设置，进一步处理
+                if (enableKerberos) {
+                    enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, null, "HIVE");
                 }
             }
 

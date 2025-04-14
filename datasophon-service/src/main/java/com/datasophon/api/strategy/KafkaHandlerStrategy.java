@@ -18,7 +18,6 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.convert.Convert;
-import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
@@ -159,21 +158,9 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
         try {
             // 1. 获取服务配置
-            Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
-            List<ServiceConfig> serviceConfigs = pair.getValue();
-            String serviceHome = pair.getKey();
-
-            // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, String> configMap = new HashMap<>();
-            for (ServiceConfig config : serviceConfigs) {
-                if (config.getValue() != null) {
-                    configMap.put(config.getName(), String.valueOf(config.getValue()));
-                }
-            }
-
             // 3. 获取Kafka Broker和Zookeeper节点列表
             List<String> brokerList = getRoleHosts(clusterId, serviceInstanceId, "KafkaBroker");
             List<String> zkList = getRoleHosts(clusterId,null, "ZkServer");
@@ -186,11 +173,9 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
             // 5. 判断是否启用了Kerberos
             boolean enableKerberos = false;
-            for (ServiceConfig config : serviceConfigs) {
-                if ("enableKerberos".equals(config.getName())) {
-                    enableKerberos = isEnableConfig(config);
-                    break;
-                }
+            // 从配置映射中获取Kerberos启用状态
+            if (configMap.containsKey("enableKerberos")) {
+                enableKerberos = Boolean.parseBoolean(configMap.get("enableKerberos"));
             }
 
             // 6. 获取Kafka端口，默认为9092

@@ -1,13 +1,11 @@
 package com.datasophon.api.helper;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.strategy.ServiceHandlerAbstract;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ConnectionInfo;
-import com.datasophon.common.model.ServiceConfig;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,22 +33,10 @@ public class RedisConnectionInfoHelper extends ServiceHandlerAbstract {
      * @param strategy          Redis相关策略类实例
      * @return Redis连接信息
      */
-    public ConnectionInfo getRedisConnectionInfo(Integer clusterId, Integer serviceInstanceId,
+    public ConnectionInfo getRedisConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap,
                                                  ServiceRoleStrategy strategy) {
         try {
             // 1. 获取服务配置
-            // 1. 获取服务配置
-            Pair<String, List<ServiceConfig>> pair = strategy.listServiceConfigByServiceInstance(serviceInstanceId);
-            List<ServiceConfig> serviceConfigs = pair.getValue();
-            String serviceHome = pair.getKey();
-
-            // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, String> configMap = new HashMap<>();
-            for (ServiceConfig config : serviceConfigs) {
-                if (config.getValue() != null) {
-                    configMap.put(config.getName(), String.valueOf(config.getValue()));
-                }
-            }
 
             // 3. 确定服务类型，以便获取正确的角色列表
             boolean isRedisSentinel = strategy.getClass().getSimpleName().contains("Sentinel");
