@@ -122,7 +122,8 @@ export default {
       this.serviceNameKey = key;
       if (this.selectKeys.includes(key)) return false;
       this.selectKeys.push(key);
-      // this.getServiceConfigOption();
+      // 切换标签页时获取配置
+      this.getServiceConfigOption();
     },
     // 去除字符串里面的数字
     deleteNum(str, key) {
@@ -265,42 +266,58 @@ export default {
       }
     },
     async getServiceConfigOption() {
+      if (!this.SERVICENAMES || this.SERVICENAMES.length === 0) {
+        this.$message.warning("未选择任何服务，无法获取配置");
+        this.loading = false;
+        return;
+      }
+
       this.loading = true;
-      this.SERVICENAMES.forEach(serviceName => {
+      
+      // 获取当前选中服务的配置
+      const currentService = this.serviceNameKey;
+      if (!currentService) {
+        this.$message.warning("当前未选择服务");
+        this.loading = false;
+        return;
+      }
+
+      try {
         const params = {
           clusterId: this.setting.clusterId || this.clusterId,
-          serviceName: serviceName,
+          serviceName: currentService,
         };
 
-        this.$axiosPost(global.API.getServiceConfigOption, params).then(res => {
-          if (res.code === 200) {
-            // 处理对象结构数据
-            const configGroups = res.data || {};
+        const res = await this.$axiosPost(global.API.getServiceConfigOption, params);
+        
+        if (res.code === 200) {
+          // 处理对象结构数据
+          const configGroups = res.data || {};
 
-            // 将对象转换为配置项数组
-            const allConfigs = [];
-            Object.keys(configGroups).forEach(groupName => {
-              const groupConfigs = Array.isArray(configGroups[groupName])
-                  ? configGroups[groupName]
-                  : [];
-              allConfigs.push(...groupConfigs.map(item => ({
-                ...item,
-                configGroup: groupName // 保留分组信息
-              })));
-            });
+          // 将对象转换为配置项数组
+          const allConfigs = [];
+          Object.keys(configGroups).forEach(groupName => {
+            const groupConfigs = Array.isArray(configGroups[groupName])
+                ? configGroups[groupName]
+                : [];
+            allConfigs.push(...groupConfigs.map(item => ({
+              ...item,
+              configGroup: groupName // 保留分组信息
+            })));
+          });
 
-
-            this.$set(this.groupedTemplateData, serviceName,
-                this.handlerTemplate(serviceName, allConfigs)
-            );
-            this.templateObj[serviceName] = allConfigs;
-          }
-          this.loading = false;
-        }).catch(error => {
-          console.error('API请求失败:', error);
-          this.loading = false;
-        });
-      });
+          this.$set(this.groupedTemplateData, currentService,
+              this.handlerTemplate(currentService, allConfigs)
+          );
+          this.templateObj[currentService] = allConfigs;
+        } else {
+          this.$message.error(`获取服务 ${currentService} 配置失败: ${res.msg}`);
+        }
+      } catch (error) {
+        this.$message.error(`获取服务配置异常: ${error.message}`);
+      } finally {
+        this.loading = false;
+      }
     },
     handlerTemplate(serviceName, data) {
       const validData = (Array.isArray(data) ? data : [])
@@ -410,7 +427,7 @@ export default {
                   await formRef.form.validateFields();  // 表单验证
                   const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
 
-                  // 处理字段名（替换“.”为“!”）
+                  // 处理字段名（替换"."为"!"）
                   const convertedData = Object.keys(rawData).reduce((acc, key) => {
                     const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
                     acc[newKey] = rawData[key];
@@ -521,14 +538,22 @@ export default {
     },
   },
   created() {
-    this.SERVICENAMES = this.steps4Data.serviceNames.map(
-        (item) => item.serviceName
-    );
-    this.serviceNameKey = this.SERVICENAMES[0];
-    this.selectKeys.push(this.serviceNameKey);
-    this.SERVICENAMES.map((item) => {
-      this.templateObj[`${item}`] = [];
-    });
+    if (this.steps4Data && this.steps4Data.serviceNames && this.steps4Data.serviceNames.length > 0) {
+      this.SERVICENAMES = this.steps4Data.serviceNames.map(
+          (item) => item.serviceName
+      );
+      this.serviceNameKey = this.SERVICENAMES[0];
+      this.selectKeys.push(this.serviceNameKey);
+      this.SERVICENAMES.forEach((item) => {
+        this.templateObj[`${item}`] = [];
+        // 初始化分组展开状态对象
+        this.$set(this.isGroupExpanded, item, {});
+      });
+    } else {
+      this.$message.warning("未选择任何服务，请返回步骤4选择服务");
+      this.SERVICENAMES = [];
+      this.serviceNameKey = '';
+    }
   },
   mounted() {
     this.getServiceConfigOption();
