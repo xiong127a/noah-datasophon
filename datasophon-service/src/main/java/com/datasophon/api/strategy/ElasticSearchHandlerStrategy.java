@@ -80,7 +80,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
-            String esHome = pair.getKey();
+            String serviceHome = pair.getKey();
 
             // 2. 从配置中解析配置到map，方便快速查询
             Map<String, String> configMap = new HashMap<>();
@@ -151,7 +151,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
                             securityPassword))
                     .pythonCode(generatePythonCode(httpAddresses, enableSecurity, securityUser, securityPassword))
                     .commandLines(
-                            generateCommandLines(esHome, httpAddresses, enableSecurity, securityUser, securityPassword))
+                            generateCommandLines(serviceHome, httpAddresses, enableSecurity, securityUser, securityPassword))
                     .hostName(esNodes.get(0))
                     .build();
 

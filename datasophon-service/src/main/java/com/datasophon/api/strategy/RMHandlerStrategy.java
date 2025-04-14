@@ -129,10 +129,14 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
+
             // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, Object> configMap = new HashMap<>();
+            Map<String, String> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
-                configMap.put(config.getName(), config.getValue());
+                if (config.getValue() != null) {
+                    configMap.put(config.getName(), String.valueOf(config.getValue()));
+                }
             }
 
             // 3. 获取全局变量
@@ -249,7 +253,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
             String pythonCode = generatePythonCode(rmWebAddress, enableKerberos);
 
             // 17. 生成命令行示例
-            List<CommandLineItem> commandLines = generateCommandLines(pair.getKey(), enableKerberos, rm1);
+            List<CommandLineItem> commandLines = generateCommandLines(serviceHome, enableKerberos, rm1);
 
             // 18. 返回构建好的连接信息
             return ConnectionInfo.builder()

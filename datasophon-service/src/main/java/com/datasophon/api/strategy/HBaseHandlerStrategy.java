@@ -67,6 +67,8 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
+
             // 2. 从配置中解析配置到map，方便快速查询
             Map<String, String> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
@@ -175,7 +177,7 @@ public class HBaseHandlerStrategy extends ServiceHandlerAbstract implements Serv
                     .basicInfoList(basicInfoList)
                     .javaCode(generateJavaCode(zkQuorum, zkPort, zkRootNode, enableKerberos))
                     .pythonCode(generatePythonCode(zkQuorum, zkPort, zkRootNode, enableKerberos))
-                    .commandLines(generateCommandLines(pair.getKey(), enableKerberos, masterNode))
+                    .commandLines(generateCommandLines(serviceHome, enableKerberos, masterNode))
                     .hostName(masterNode)
                     .build();
 

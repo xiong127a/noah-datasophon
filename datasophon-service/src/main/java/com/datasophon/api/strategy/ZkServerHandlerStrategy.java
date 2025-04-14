@@ -205,12 +205,15 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
 
             // 2. 从配置中解析配置到map，方便快速查询
-            // Map<String, Object> configMap = new HashMap<>();
-            // for (ServiceConfig config : serviceConfigs) {
-            // configMap.put(config.getName(), config.getValue());
-            // }
+            Map<String, String> configMap = new HashMap<>();
+            for (ServiceConfig config : serviceConfigs) {
+                if (config.getValue() != null) {
+                    configMap.put(config.getName(), String.valueOf(config.getValue()));
+                }
+            }
 
             // 3. 获取ZooKeeper节点列表
             List<String> zkServerList = getRoleHosts(clusterId, serviceInstanceId, "ZkServer");
@@ -288,7 +291,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
             String zkHome = globalVariables.get("${ZOOKEEPER_HOME}");
 
             // 13. 生成命令行示例
-            List<CommandLineItem> commandLines = generateCommandLines(pair.getKey(), zkConnectString.toString(),
+            List<CommandLineItem> commandLines = generateCommandLines(serviceHome, zkConnectString.toString(),
                     zkServerList.get(0), enableKerberos);
 
             // 14. 返回构建好的连接信息

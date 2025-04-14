@@ -49,8 +49,8 @@ public abstract class ServiceHandlerAbstract {
         }
 
         // 添加root命令提示符
-        String rootPrompt = "[root@" + hostname+"~]# ";
-        String serviceHomePrompt = "[root@" + hostname + " "+serviceHome+"]# ";
+        String rootPrompt = "[root@" + hostname + "~]# ";
+        String serviceHomePrompt = "[root@" + hostname + " " + serviceHome + "]# ";
 
         // 获取服务目录名称（去掉路径和版本号）
         CommandLineItem cdCommand = getCommandLineItem(serviceHome, rootPrompt);
@@ -91,7 +91,7 @@ public abstract class ServiceHandlerAbstract {
         // 进入服务目录
         CommandLineItem cdCommand = new CommandLineItem();
         cdCommand.setLabel("进入" + serviceDirName + "服务目录");
-        cdCommand.setValue("cd " + serviceHome);
+        cdCommand.setValue("cd " + (Constants.INSTALL_PATH.endsWith("/") ? Constants.INSTALL_PATH : Constants.INSTALL_PATH + "/") + serviceHome);
         cdCommand.setCommandPrompt(rootPrompt);
         return cdCommand;
     }

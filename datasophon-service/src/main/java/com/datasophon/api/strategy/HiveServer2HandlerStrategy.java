@@ -119,6 +119,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId) {
         Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
         List<ServiceConfig> serviceConfigs = pair.getValue();
+        String serviceHome = pair.getKey();
         List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
         // 获取所有HiveServer2节点的主机名
 
@@ -455,7 +456,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
             }
 
             // 生成命令行示例 - 使用实际的HiveServer2主机作为主机名
-            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, pair.getKey(), hiveServer2Host);
+            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, serviceHome, hiveServer2Host);
 
             // 构建并返回ConnectionInfo对象
             return ConnectionInfo.builder()

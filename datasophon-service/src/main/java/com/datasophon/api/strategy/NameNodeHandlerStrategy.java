@@ -136,10 +136,14 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
+
             // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, Object> configMap = new HashMap<>();
+            Map<String, String> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
-                configMap.put(config.getName(), config.getValue());
+                if (config.getValue() != null) {
+                    configMap.put(config.getName(), String.valueOf(config.getValue()));
+                }
             }
 
             // 4. 获取全局变量
@@ -247,7 +251,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
             String hadoopHome = globalVariables.get("${HADOOP_HOME}");
 
             // 18. 生成命令行示例
-            List<CommandLineItem> commandLines = generateCommandLines(pair.getKey(), nn1);
+            List<CommandLineItem> commandLines = generateCommandLines(serviceHome, nn1);
 
             // 19. 返回构建好的连接信息
             return ConnectionInfo.builder()

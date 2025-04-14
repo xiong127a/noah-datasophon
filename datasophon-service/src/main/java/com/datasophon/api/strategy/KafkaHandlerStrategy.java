@@ -164,10 +164,14 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
             // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
+
             // 2. 从配置中解析配置到map，方便快速查询
-            Map<String, Object> configMap = new HashMap<>();
+            Map<String, String> configMap = new HashMap<>();
             for (ServiceConfig config : serviceConfigs) {
-                configMap.put(config.getName(), config.getValue());
+                if (config.getValue() != null) {
+                    configMap.put(config.getName(), String.valueOf(config.getValue()));
+                }
             }
 
             // 3. 获取Kafka Broker和Zookeeper节点列表
@@ -269,7 +273,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
             // 14. 构建命令行示例
             List<CommandLineItem> commandLines = generateCommandLines(
                     kafkaConnectString.toString(),
-                    pair.getKey());
+                    serviceHome);
 
             // 获取第一个Kafka节点作为主机名
             String primaryHostName = brokerList.isEmpty() ? "localhost" : brokerList.get(0);

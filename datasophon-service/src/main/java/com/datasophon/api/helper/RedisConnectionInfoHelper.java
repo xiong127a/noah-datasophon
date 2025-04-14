@@ -39,8 +39,10 @@ public class RedisConnectionInfoHelper extends ServiceHandlerAbstract {
                                                  ServiceRoleStrategy strategy) {
         try {
             // 1. 获取服务配置
+            // 1. 获取服务配置
             Pair<String, List<ServiceConfig>> pair = strategy.listServiceConfigByServiceInstance(serviceInstanceId);
             List<ServiceConfig> serviceConfigs = pair.getValue();
+            String serviceHome = pair.getKey();
 
             // 2. 从配置中解析配置到map，方便快速查询
             Map<String, String> configMap = new HashMap<>();
@@ -119,7 +121,7 @@ public class RedisConnectionInfoHelper extends ServiceHandlerAbstract {
                     .basicInfoList(basicInfoList)
                     .javaCode(generateJavaCode(deploymentInfo))
                     .pythonCode(generatePythonCode(deploymentInfo))
-                    .commandLines(generateCommandLines(pair.getKey(), deploymentInfo))
+                    .commandLines(generateCommandLines(serviceHome, deploymentInfo))
                     .hostName(deploymentInfo.masterNode)
                     .build();
 
