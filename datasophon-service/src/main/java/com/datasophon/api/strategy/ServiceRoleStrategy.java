@@ -20,6 +20,7 @@ package com.datasophon.api.strategy;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
@@ -224,8 +225,8 @@ public interface ServiceRoleStrategy {
                 JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
     }
 
-    default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String redisMaster) {
-        return null;
+    default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
+        return  CollUtil.empty(List.class);
     }
 
     /**
