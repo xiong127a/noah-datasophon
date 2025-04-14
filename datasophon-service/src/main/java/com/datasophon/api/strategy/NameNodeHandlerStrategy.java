@@ -130,7 +130,8 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+            Map<String, String> configMap) {
         try {
             // 1. 获取服务配置
 

@@ -106,7 +106,8 @@ public interface ServiceRoleStrategy {
      * @param serviceInstanceId 服务实例ID
      * @return 连接信息对象
      */
-    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
+    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+            Map<String, String> configMap) {
         // 默认返回空对象，具体组件在各自实现中提供连接信息
         return ConnectionInfo.builder().build();
     }
@@ -218,7 +219,8 @@ public interface ServiceRoleStrategy {
         if (serviceInfo != null) {
             serviceHome = serviceInfo.getDecompressPackageName();
         }
-        return new AbstractMap.SimpleEntry<>(serviceHome, JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
+        return new AbstractMap.SimpleEntry<>(serviceHome,
+                JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
     }
 
     default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String redisMaster) {

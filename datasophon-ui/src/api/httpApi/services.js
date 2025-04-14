@@ -46,5 +46,9 @@ export default {
   updateQueue: path + '/cluster/yarn/queue/update', // 更新队列
   refreshQueues: path + '/cluster/yarn/queue/refreshQueues', // 刷新队列到Yarn
   refreshQueuesYARN : path + '/cluster/queue/capacity/refreshToYarn',
-  getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo' // 获取服务连接信息
+  getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo', // 获取服务连接信息
+  getServiceConfigFiles: path + '/api/service/config/getConfigFiles', // 获取服务配置文件列表
+  downloadServiceConfigFile: path + '/api/service/config/downloadFile', // 下载单个配置文件
+  downloadAllServiceConfigFiles: path + '/api/service/config/downloadAllFiles', // 打包下载所有配置文件
+  previewServiceConfigFile: path + '/api/service/config/previewFile' // 预览配置文件内容
 }

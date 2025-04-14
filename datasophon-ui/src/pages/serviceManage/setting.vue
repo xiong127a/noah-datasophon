@@ -35,51 +35,65 @@
         </a-select>
       </div>
     </div>
-    <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
-      <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
-        <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
-          <a-radio-button :value="item.id" v-for="(item, childIndex) in GroupList" :key="childIndex" :style="radioStyle" >
-           {{item.roleGroupName}}
-           </a-radio-button>
-        </a-radio-group> -->
-        <div v-for="(item, childIndex) in GroupList" :key="childIndex" @click="handlerClick(item,childIndex)"
-             :class="[currentId==item.id ? 'active':'','system']">
-          <div :class="[currentId==item.id ? 'active':'','system']">
-            {{ item.roleGroupName }}
-            <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
-            <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index"
-                       :content="()=> getMoreMenu(item)">
-              <a-icon type="more" class="fr"/>
-            </a-popover>
-          </div>
-        </div>
-      </a-spin>
-      <a-spin :spinning="loading" class="steps-body" style="position: relative; flex:1; margin:0 20px">
-        <!-- 调整模板中的配置组部分 -->
-        <div v-for="(group, groupName) in templateData"
-             :key="groupName"
-             class="config-group">
-          <!-- 配置组标题 -->
-          <h3 class="group-title" @click="toggleGroup(groupName)">
-            {{ groupName }}
-            <span class="arrow" :class="{ 'arrow-up': isGroupExpanded[groupName] }">▶</span>
-          </h3>
+    
+    <!-- 添加Tab页签 -->
+    <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
+      <a-tab-pane key="service-config" tab="服务配置" :forceRender="true">
+        <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
+          <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
+            <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
+              <a-radio-button :value="item.id" v-for="(item, childIndex) in GroupList" :key="childIndex" :style="radioStyle" >
+               {{item.roleGroupName}}
+               </a-radio-button>
+            </a-radio-group> -->
+            <div v-for="(item, childIndex) in GroupList" :key="childIndex" @click="handlerClick(item,childIndex)"
+                 :class="[currentId==item.id ? 'active':'','system']">
+              <div :class="[currentId==item.id ? 'active':'','system']">
+                {{ item.roleGroupName }}
+                <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
+                <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index"
+                           :content="()=> getMoreMenu(item)">
+                  <a-icon type="more" class="fr"/>
+                </a-popover>
+              </div>
+            </div>
+          </a-spin>
+          <a-spin :spinning="loading" class="steps-body" style="position: relative; flex:1; margin:0 20px">
+            <!-- 调整模板中的配置组部分 -->
+            <div v-for="(group, groupName) in templateData"
+                 :key="groupName"
+                 class="config-group">
+              <!-- 配置组标题 -->
+              <h3 class="group-title" @click="toggleGroup(groupName)">
+                {{ groupName }}
+                <span class="arrow" :class="{ 'arrow-up': isGroupExpanded[groupName] }">▶</span>
+              </h3>
 
-          <!-- 配置内容（默认收起） -->
-          <div v-show="isGroupExpanded[groupName]">
-            <CommonTemplate
-                :ref="`template_${groupName}`"
-                :steps4Data="steps4Data"
-                :templateData="group"
-            />
-          </div>
-        </div>
-        <div class="footer">
-          <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
-        </div>
-      </a-spin>
+              <!-- 配置内容（默认收起） -->
+              <div v-show="isGroupExpanded[groupName]">
+                <CommonTemplate
+                    :ref="`template_${groupName}`"
+                    :steps4Data="steps4Data"
+                    :templateData="group"
+                />
+              </div>
+            </div>
+            <div class="footer">
+              <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
+            </div>
+          </a-spin>
 
-    </div>
+        </div>
+      </a-tab-pane>
+      
+      <a-tab-pane key="k8s-config" tab="K8s配置" :forceRender="true">
+        <K8sConfig :serviceId="serviceId" :serviceName="serviceName" />
+      </a-tab-pane>
+      
+      <a-tab-pane key="config-download" tab="配置文件下载" :forceRender="true">
+        <ConfigDownload :serviceId="serviceId" :serviceName="serviceName" />
+      </a-tab-pane>
+    </a-tabs>
 
   </div>
 </template>
@@ -88,9 +102,11 @@ import CommonTemplate from "@/components/commonTemplate/index";
 import {mapActions, mapState} from "vuex";
 import RenameGroup from "./renameGroup.vue";
 import {getServiceName} from "@/utils/util";
+import ConfigDownload from "./config/components/ConfigDownload.vue";
+import K8sConfig from "./config/components/K8sConfig.vue";
 
 export default {
-  components: {CommonTemplate},
+  components: {CommonTemplate, ConfigDownload, K8sConfig},
   props: {
     steps4Data: Object,
   },
@@ -118,7 +134,10 @@ export default {
         lineHeight: '30px',
         marginTop: '5px',
       },
-      value: 0
+      value: 0,
+      activeTabKey: 'service-config',
+      serviceId: '',
+      serviceName: ''
     };
   },
   computed: {
@@ -498,14 +517,78 @@ export default {
 
       return result;
     },
+    handleTabChange(key) {
+      this.activeTabKey = key;
+      
+      // 确保serviceName有值
+      if (!this.serviceName && this.$route.params.serviceId) {
+        // 从菜单数据中获取服务名称
+        const serviceId = this.$route.params.serviceId;
+        const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+        const arr = menuData.filter(item => item.path === 'service-manage');
+        if (arr.length > 0) {
+          arr[0].children.forEach(item => {
+            if (item.meta.params.serviceId == serviceId) {
+              this.serviceName = item.name;
+            }
+          });
+        }
+        
+        // 如果还是没有找到，则使用默认值
+        if (!this.serviceName) {
+          this.serviceName = "未知服务";
+          console.warn('无法获取服务名称，使用默认值');
+        }
+      }
+    },
   },
   created() {
-    // 如果templateData有初始值需要处理
-    this.$nextTick(() => {
-      Object.keys(this.templateData).forEach(name => {
-        this.$set(this.isGroupExpanded, name, false)
-      })
-    })
+    // 从query和params中获取参数
+    const queryParams = this.$route.query;
+    const routeParams = this.$route.params;
+    
+    console.log('setting.vue创建, 查询参数:', queryParams);
+    console.log('路由参数:', routeParams);
+    
+    // 优先使用query中的参数，如果没有则使用params中的
+    const serviceInstanceId = queryParams.serviceInstanceId || routeParams.serviceId;
+    const serviceName = queryParams.serviceName;
+    const serviceType = queryParams.serviceType;
+    
+    console.log('合并后serviceInstanceId:', serviceInstanceId);
+    console.log('serviceName:', serviceName);
+    console.log('serviceType:', serviceType);
+    
+    this.serviceId = serviceInstanceId;
+    
+    // 设置serviceName
+    if (serviceName) {
+      this.serviceName = serviceName;
+    } else if (serviceType) {
+      this.serviceName = getServiceName(serviceType);
+    } else {
+      // 从菜单数据中获取服务名称
+      const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+      const arr = menuData.filter(item => item.path === 'service-manage');
+      if (arr.length > 0 && arr[0].children) {
+        arr[0].children.forEach(item => {
+          if (item.meta && item.meta.params && item.meta.params.serviceId == serviceInstanceId) {
+            this.serviceName = item.name;
+          }
+        });
+      }
+      
+      // 如果还是没有找到，使用默认值
+      if (!this.serviceName) {
+        this.serviceName = "未知服务";
+        console.warn('无法获取服务名称，使用默认值');
+      }
+    }
+    
+    console.log('设置后的serviceId:', this.serviceId);
+    console.log('设置后的serviceName:', this.serviceName);
+    
+    this.getServiceRoleType();
   },
   mounted() {
     this.getServiceRoleType()

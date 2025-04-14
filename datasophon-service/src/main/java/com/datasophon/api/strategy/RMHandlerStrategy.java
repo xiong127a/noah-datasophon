@@ -40,8 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
-
 public class RMHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
         private static final Logger logger = LoggerFactory.getLogger(RMHandlerStrategy.class);
@@ -125,7 +123,8 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         }
 
         @Override
-        public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
+        public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+                        Map<String, String> configMap) {
                 try {
                         // 1. 获取服务配置
 
@@ -146,7 +145,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                         boolean enableKerberos = false;
                         // 从configMap中获取Kerberos配置
                         if (configMap.containsKey("enableKerberos")) {
-                            enableKerberos = Boolean.parseBoolean(configMap.get("enableKerberos"));
+                                enableKerberos = Boolean.parseBoolean(configMap.get("enableKerberos"));
                         }
 
                         // 8. 获取YARN端口，默认为8088(Web UI), 8032(应用程序提交)
