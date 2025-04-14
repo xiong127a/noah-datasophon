@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #  Licensed to the Apache Software Foundation (ASF) under one or more
 #  contributor license agreements.  See the NOTICE file distributed with
@@ -16,7 +16,7 @@
 #  limitations under the License.
 #
 
-usage="Usage: start.sh (start|stop|restart) <command> "
+usage="Usage: datasophon-worker.sh (start|stop|restart|log) <command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -24,17 +24,25 @@ if [ $# -le 1 ]; then
   exit 1
 fi
 
-startStop=$1
-shift
-command=$1
-shift
+# 系统资源限制设置
+# 设置文件描述符上限
+ulimit -n 65536 > /dev/null 2>&1
+# 设置用户进程数上限
+ulimit -u 65536 > /dev/null 2>&1
+# 关闭core文件生成
+ulimit -c 0 > /dev/null 2>&1
 
+startStop=$1
+if [ $# -gt 0 ]; then shift; fi
+
+command=$1
+if [ $# -gt 0 ]; then shift; fi
 
 JAVA_DEBUG_OPTS=""
 if [ "$1" = "debug" ]; then
     JAVA_DEBUG_OPTS=" -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,address=8001,server=y,suspend=n "
+    if [ $# -gt 0 ]; then shift; fi
 fi
-shift
 
 echo "Begin $startStop $command......"
 source /etc/profile
@@ -52,22 +60,60 @@ while [ -h "$SCRIPT" ] ; do
   fi
 done
 
-# some Java parameters
-JAVA=`which java 2>/dev/null`
-if [[ $JAVA_HOME != "" ]]; then
-    JAVA=$JAVA_HOME/bin/java
-fi
-if test -z "$JAVA"; then
-    echo "No java found in the PATH. Please set JAVA_HOME."
-    exit 1
-fi
-
-BIN_DIR=`dirname "$SCRIPT"`/..
+# 获取脚本的绝对路径
+BIN_DIR=`dirname "$SCRIPT"`
 BIN_DIR=`cd "$BIN_DIR"; pwd`
-export DDH_HOME=$BIN_DIR
+export DDH_HOME=$BIN_DIR/..
+echo "脚本所在目录: $BIN_DIR"
+echo "DDH_HOME: $DDH_HOME"
 
-# export JAVA_HOME=$JAVA_HOME
-#export JAVA_HOME=/opt/soft/jdk
+# 查找Java环境
+# 1. 首先尝试使用 ../java 目录的JDK
+RELATIVE_JAVA_HOME="$DDH_HOME/java"
+if [ -d "$RELATIVE_JAVA_HOME" ]; then
+  export JAVA_HOME=$RELATIVE_JAVA_HOME
+  export PATH=$JAVA_HOME/bin:$PATH
+  JAVA=$JAVA_HOME/bin/java
+  echo "使用相对路径Java: $JAVA_HOME"
+else
+  # 2. 尝试使用 /usr/local/jdk1.8.0_333
+  SYSTEM_JAVA="/usr/local/jdk1.8.0_333"
+  if [ -d "$SYSTEM_JAVA" ]; then
+    # 创建软链接到 ../java
+    echo "创建软链接: $SYSTEM_JAVA -> $RELATIVE_JAVA_HOME"
+    mkdir -p `dirname $RELATIVE_JAVA_HOME` 2>/dev/null
+    ln -sf $SYSTEM_JAVA $RELATIVE_JAVA_HOME 2>/dev/null
+
+    export JAVA_HOME=$SYSTEM_JAVA
+    export PATH=$JAVA_HOME/bin:$PATH
+    JAVA=$JAVA_HOME/bin/java
+    echo "使用系统Java并创建软链接: $JAVA_HOME"
+  else
+    # 3. 尝试使用 JAVA_HOME 环境变量
+    if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME" ]; then
+      export PATH=$JAVA_HOME/bin:$PATH
+      JAVA=$JAVA_HOME/bin/java
+      echo "使用JAVA_HOME环境变量: $JAVA_HOME"
+    else
+      # 4. 尝试直接使用java命令
+      JAVA=`which java 2>/dev/null`
+      if [ -n "$JAVA" ]; then
+        echo "使用系统PATH中的Java: $JAVA"
+      else
+        # 5. 如果都失败，报错退出
+        echo "错误: 未找到可用的Java环境! 请安装JDK或设置JAVA_HOME环境变量。"
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+# 测试Java是否可用
+if ! "$JAVA" -version >/dev/null 2>&1; then
+  echo "错误: Java命令无法执行! 请检查Java安装或权限。"
+  exit 1
+fi
+
 export HOSTNAME=`hostname`
 
 export DDH_PID_DIR=$DDH_HOME/pid
@@ -112,8 +158,8 @@ case $startStop in
 
     exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-    echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
-    nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &
+    echo "nohup $JAVA $exec_command > $log 2>&1 &"
+    nohup $JAVA $exec_command > $log 2>&1 &
     echo $! > $pid
     ;;
 
@@ -166,7 +212,11 @@ case $startStop in
       else
         echo no $command to stop
       fi
+
+      # 等待2秒
       sleep 2s
+
+      # 再启动
       [ -w "$DDH_PID_DIR" ] ||  mkdir -p "$DDH_PID_DIR"
       if [ -f $pid ]; then
           if kill -0 `cat $pid` > /dev/null 2>&1; then
@@ -178,9 +228,17 @@ case $startStop in
 
       exec_command="$DDH_OPTS $LOG_FILE $JMX $JAVA_DEBUG_OPTS -classpath $DDH_CONF_DIR:$DDH_LIB_JARS $CLASS"
 
-      echo "nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &"
-      nohup $JAVA_HOME/bin/java $exec_command > $log 2>&1 &
+      echo "nohup $JAVA $exec_command > $log 2>&1 &"
+      nohup $JAVA $exec_command > $log 2>&1 &
       echo $! > $pid
+      ;;
+  (log)
+      if [ -f $log ]; then
+        # 实时查看最后100行日志
+        tail -n 100 -f $log
+      else
+        echo "日志文件不存在: $log"
+      fi
       ;;
   (*)
     echo $usage
