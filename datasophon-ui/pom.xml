@@ -60,63 +60,75 @@
                     </filesets>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>com.github.eirslett</groupId>
-                <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.10.3</version>
-                <configuration>
-                    <nodeVersion>${build.node.version}</nodeVersion>
-                    <npmVersion>${build.npm.version}</npmVersion>
-
-                    <nodeDownloadRoot>https://nodejs.org/dist/</nodeDownloadRoot>
-                    <npmDownloadRoot>https://registry.npmjs.org/npm/-/</npmDownloadRoot>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>install node and npm</id>
-                        <goals>
-                            <goal>install-node-and-npm</goal>
-                        </goals>
-                        <phase>generate-resources</phase>
-                    </execution>
-                    <execution>
-                        <id>npm install</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>generate-resources</phase>
-                        <configuration>
-                            <arguments>install --registry=https://registry.npmmirror.com
-                                --sass-binary-site=https://repo.huaweicloud.com/node-sass/
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>npm run build</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <arguments>run build</arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>npm run deploy</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>install</phase>
-                        <configuration>
-                            <arguments>run deploy</arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
     <profiles>
+        <!-- 前端构建 profile -->
+        <profile>
+            <id>frontend-build</id>
+            <activation>
+                <!-- 使用�?pom 中定义的属性来控制是否激活此 profile -->
+                <property>
+                    <name>skip.frontend.build</name>
+                    <value>false</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.10.3</version>
+                        <configuration>
+                            <nodeVersion>${build.node.version}</nodeVersion>
+                            <npmVersion>${build.npm.version}</npmVersion>
+
+                            <nodeDownloadRoot>https://nodejs.org/dist/</nodeDownloadRoot>
+                            <npmDownloadRoot>https://registry.npmjs.org/npm/-/</npmDownloadRoot>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install node and npm</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                            </execution>
+                            <execution>
+                                <id>npm install</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>install --registry=https://registry.npmmirror.com --sass-binary-site=https://repo.huaweicloud.com/node-sass/</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm run build</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>package</phase>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm run deploy</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>install</phase>
+                                <configuration>
+                                    <arguments>run deploy</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>windows</id>
             <activation>
