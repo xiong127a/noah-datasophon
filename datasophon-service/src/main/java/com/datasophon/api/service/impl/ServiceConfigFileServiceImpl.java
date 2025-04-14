@@ -41,6 +41,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -100,9 +101,10 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 serviceInstanceId);
         ServiceRoleStrategy strategy = instanceId.getValue();
 
-        // 先获取所有配置文件
-        List<ConfigFile> configFiles = strategy.getServiceConfigFiles(serviceInstanceId);
-        if (configFiles == null || configFiles.isEmpty()) {
+        // 直接获取文件名和内容的映射
+        Map<String, byte[]> configFilesWithContent = strategy.getServiceConfigFilesWithContent(serviceInstanceId);
+
+        if (configFilesWithContent == null || configFilesWithContent.isEmpty()) {
             log.warn("服务实例{}没有配置文件", serviceInstanceId);
             return new byte[0];
         }
@@ -111,16 +113,18 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
             // 创建临时目录存放配置文件
             Path tempDir = Files.createTempDirectory("service_configs_");
 
-            // 遍历所有配置文件并写入临时目录
-            for (ConfigFile configFile : configFiles) {
+            // 将文件内容写入临时目录
+            for (Map.Entry<String, byte[]> entry : configFilesWithContent.entrySet()) {
                 try {
-                    byte[] content = strategy.getServiceConfigFileContent(serviceInstanceId, configFile.getFileName());
+                    String fileName = entry.getKey();
+                    byte[] content = entry.getValue();
+
                     if (content != null && content.length > 0) {
-                        Path filePath = tempDir.resolve(configFile.getFileName());
+                        Path filePath = tempDir.resolve(fileName);
                         Files.write(filePath, content);
                     }
                 } catch (Exception e) {
-                    log.error("写入配置文件失败: {}", configFile.getFileName(), e);
+                    log.error("写入配置文件失败: {}", entry.getKey(), e);
                 }
             }
 

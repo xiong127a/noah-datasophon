@@ -257,11 +257,19 @@ public interface ServiceRoleStrategy {
         return null;
     }
 
-    default byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId) {
+    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
         return null;
     }
 
-    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
-        return null;
+    /**
+     * 获取所有配置文件名称和内容的映射关系
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 配置文件名和内容的映射
+     */
+    default Map<String, byte[]> getServiceConfigFilesWithContent(Integer serviceInstanceId) {
+        // 默认实现：基于已有方法逐个获取
+
+        return new HashMap<>();
     }
 }
