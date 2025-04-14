@@ -19,22 +19,18 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.ZipUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ServiceConfigFileService;
+import com.datasophon.api.strategy.ServiceRoleStrategy;
+import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.common.model.ConfigFile;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.AbstractMap;
 import java.util.List;
 
 /**
@@ -56,36 +52,10 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     @Override
     public List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
         // 获取服务实例信息
-        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
-        if (serviceInstance == null) {
-            log.error("服务实例不存在：{}", serviceInstanceId);
-            return new ArrayList<>();
-        }
+        AbstractMap.SimpleEntry<ClusterServiceInstanceEntity, ServiceRoleStrategy> instanceId = getServiceRoleStrategyByInstanceId(serviceInstanceId);
+        ServiceRoleStrategy strategy = instanceId.getValue();
 
-        // TODO: 根据服务类型和实例ID获取配置文件列表
-        // 这里只是实现骨架，具体实现逻辑由您完成
-        List<ConfigFile> configFiles = new ArrayList<>();
-
-        // 模拟数据，实际实现中请替换为真实逻辑
-        configFiles.add(ConfigFile.builder()
-                .fileName("core-site.xml")
-                .description("Hadoop核心配置文件")
-                .fileSize("5.2 KB")
-                .filePath("/etc/hadoop/conf/core-site.xml")
-                .lastModified("2023-05-20 10:30:00")
-                .build());
-
-        if ("HDFS".equals(serviceInstance.getServiceName())) {
-            configFiles.add(ConfigFile.builder()
-                    .fileName("hdfs-site.xml")
-                    .description("HDFS配置文件")
-                    .fileSize("8.7 KB")
-                    .filePath("/etc/hadoop/conf/hdfs-site.xml")
-                    .lastModified("2023-05-20 10:30:00")
-                    .build());
-        }
-
-        return configFiles;
+        return strategy.getServiceConfigFiles(serviceInstanceId);
     }
 
     /**
@@ -98,10 +68,10 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     @Override
     public byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName) {
         // TODO: 实现获取配置文件内容的逻辑
-        // 这里只是返回模拟数据，实际实现中请替换为真实逻辑
+        AbstractMap.SimpleEntry<ClusterServiceInstanceEntity, ServiceRoleStrategy> instanceId = getServiceRoleStrategyByInstanceId(serviceInstanceId);
+        ServiceRoleStrategy strategy = instanceId.getValue();
 
-
-        return new byte[0];
+        return strategy.getServiceConfigFileContent(serviceInstanceId,fileName);
     }
 
     /**
@@ -114,40 +84,9 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     public byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId) {
         // TODO: 实现获取所有配置文件并打包成zip的逻辑
         // 这里只是骨架代码，具体实现由您完成
-
-        try {
-            // 创建临时目录
-            Path tempDir = Files.createTempDirectory("service_configs");
-
-            // 获取所有配置文件
-            List<ConfigFile> configFiles = getServiceConfigFiles(serviceInstanceId);
-
-            // 写入文件到临时目录
-            for (ConfigFile configFile : configFiles) {
-                byte[] content = getServiceConfigFileContent(serviceInstanceId, configFile.getFileName());
-                if (content != null && content.length > 0) {
-                    Path filePath = tempDir.resolve(configFile.getFileName());
-                    Files.write(filePath, content);
-                }
-            }
-
-            // 打包成zip
-            Path zipFile = Paths.get(tempDir.toString() + ".zip");
-            // 使用hutool的zip方法
-            File zip = ZipUtil.zip(tempDir.toFile());
-
-            // 读取zip文件内容
-            byte[] zipContent = Files.readAllBytes(zip.toPath());
-
-            // 清理临时文件
-            FileUtil.del(tempDir);
-            FileUtil.del(zipFile);
-
-            return zipContent;
-        } catch (IOException e) {
-            log.error("打包配置文件失败", e);
-            return new byte[0];
-        }
+        AbstractMap.SimpleEntry<ClusterServiceInstanceEntity, ServiceRoleStrategy> instanceId = getServiceRoleStrategyByInstanceId(serviceInstanceId);
+        ServiceRoleStrategy strategy = instanceId.getValue();
+        return strategy.getAllServiceConfigFilesAsZip(serviceInstanceId);
     }
 
     /**
@@ -160,5 +99,33 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     public String getServiceName(Integer serviceInstanceId) {
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
         return serviceInstance != null ? serviceInstance.getServiceName() : "unknown";
+    }
+
+
+
+    /**
+     * 根据服务实例ID获取服务角色策略
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 服务角色策略
+     */
+    public AbstractMap.SimpleEntry<ClusterServiceInstanceEntity, ServiceRoleStrategy> getServiceRoleStrategyByInstanceId(Integer serviceInstanceId){
+        // 获取服务实例信息
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
+        if (serviceInstance == null) {
+            throw new RuntimeException("服务实例不存在，serviceInstanceId: " + serviceInstanceId);
+        }
+        // 获取服务名称
+        String serviceName = serviceInstance.getServiceName();
+        if (StrUtil.isBlank(serviceName)) {
+            throw new RuntimeException("服务名称不能为空，serviceInstanceId: " + serviceInstanceId);
+        }
+
+        // 使用策略模式获取对应服务的连接信息
+        ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
+        if (serviceRoleHandler == null) {
+            throw new RuntimeException("未找到服务角色策略，serviceName: " + serviceName);
+        }
+        return new AbstractMap.SimpleEntry<>(serviceInstance, serviceRoleHandler);
     }
 }

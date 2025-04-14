@@ -34,6 +34,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.model.ConfigFile;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
@@ -250,4 +251,10 @@ public interface ServiceRoleStrategy {
         // 返回包含serviceHome和configMap的Entry
         return new AbstractMap.SimpleEntry<>(serviceHome, configMap);
     }
+
+    default byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName){return null;}
+
+    default byte[] getAllServiceConfigFilesAsZip(Integer serviceInstanceId){return null;}
+
+    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId){return null;}
 }
