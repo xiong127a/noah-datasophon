@@ -17,19 +17,23 @@
 
 package com.datasophon.worker.utils;
 
+import akka.actor.ActorSystem;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.utils.PropertyUtils;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.FileTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
+import freemarker.cache.StringTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +52,19 @@ public class FreemakerUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(FreemakerUtils.class);
 
+    // Master主机地址
+    private static final String MASTER_HOST = PropertyUtils.getString("masterHost", "localhost");
+
+    /**
+     * -- SETTER --
+     * 设置ActorSystem实例，在Worker启动时调用
+     *
+     * @param system ActorSystem实例
+     */
+    // 当前ActorSystem，由Worker初始化时设置
+    @Setter
+    private static ActorSystem actorSystem;
+
     public static void generateConfigFile(Generators generators,
                                           List<ServiceConfig> configs,
                                           String decompressPackageName) throws IOException, TemplateException {
@@ -56,13 +73,6 @@ public class FreemakerUtils {
 
     /**
      * 支持 从附加的目录加载 模版
-     *
-     * @param generators
-     * @param configs
-     * @param decompressPackageName
-     * @param extPath
-     * @throws IOException
-     * @throws TemplateException
      */
     public static void generateConfigFile(Generators generators,
                                           List<ServiceConfig> configs,
@@ -71,6 +81,7 @@ public class FreemakerUtils {
         // 1.加载模板
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
+
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
         loaderList.add(new ClassTemplateLoader(FreemakerUtils.class, "/templates"));
@@ -103,7 +114,8 @@ public class FreemakerUtils {
             template = config.getTemplate(generators.getTemplateName());
             Map<Boolean, List<ServiceConfig>> partitionedConfigs = configs.stream()
                     .collect(Collectors.partitioningBy(e -> "map".equals(e.getConfigType())));
-            data = partitionedConfigs.get(true).stream().collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue));
+            data = partitionedConfigs.get(true).stream()
+                    .collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue));
             configs = partitionedConfigs.get(false);
         }
         logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
@@ -112,43 +124,90 @@ public class FreemakerUtils {
         processOut(generators, template, data, decompressPackageName);
     }
 
+    /**
+     * 从Akka加载模板到Freemarker配置
+     *
+     * @param config     Freemarker配置
+     * @param generators 生成器配置
+     */
+    private static void loadTemplateFromAkka(Configuration config, Generators generators) {
+        String templateName = null;
+
+        // 确定需要加载的模板名称
+        if (Constants.XML.equals(generators.getConfigFormat())) {
+            templateName = "xml.ftl";
+        } else if (Constants.PROPERTIES.equals(generators.getConfigFormat())) {
+            templateName = "properties.ftl";
+        } else if (Constants.PROPERTIES2.equals(generators.getConfigFormat())) {
+            templateName = "properties2.ftl";
+        } else if (Constants.PROPERTIES3.equals(generators.getConfigFormat())) {
+            templateName = "properties3.ftl";
+        } else if (Constants.PROMETHEUS.equals(generators.getConfigFormat())) {
+            templateName = "alert.yml";
+        } else if (Constants.CUSTOM.equals(generators.getConfigFormat())) {
+            templateName = generators.getTemplateName();
+        }
+
+        if (templateName != null) {
+            // 从Akka获取模板内容
+            String templateContent = AkkaUtils.getTemplateContent(actorSystem, MASTER_HOST, templateName);
+
+            if (templateContent != null) {
+                // 创建字符串模板加载器
+                StringTemplateLoader stringLoader = new StringTemplateLoader();
+                stringLoader.putTemplate(templateName, templateContent);
+
+                // 设置模板加载器
+                config.setTemplateLoader(stringLoader);
+                logger.info("从Akka加载模板成功: {}", templateName);
+            } else {
+                // 如果从Akka获取失败，回退到本地加载
+                logger.warn("从Akka获取模板失败: {}，将回退到本地模板", templateName);
+                config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+            }
+        } else {
+            // 如果没有找到对应的模板，使用本地模板
+            config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+        }
+    }
 
     public static void generatePromAlertFile(Generators generators, List<AlertItem> configs,
                                              String serviceName) throws IOException, TemplateException {
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-        // 设置加载的目录
-        // ""代表当前包
-        config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+
         // 得到模板对象
         String configFormat = generators.getConfigFormat();
         Template template = null;
 
+        // 如果启用从Akka获取模板，则从Master获取模板内容
         if (Constants.PROMETHEUS.equals(configFormat)) {
-            template = config.getTemplate("alert.yml");
+            String templateName = "alert.yml";
+            String templateContent = AkkaUtils.getTemplateContent(actorSystem, MASTER_HOST, templateName);
+
+            if (templateContent != null) {
+                // 创建字符串模板加载器
+                StringTemplateLoader stringLoader = new StringTemplateLoader();
+                stringLoader.putTemplate(templateName, templateContent);
+
+                // 设置模板加载器
+                config.setTemplateLoader(stringLoader);
+                template = config.getTemplate(templateName);
+                logger.info("从Akka加载模板成功: {}", templateName);
+            } else {
+                // 如果从Akka获取失败，回退到本地加载
+                logger.warn("从Akka获取模板失败: {}，将回退到本地模板", templateName);
+                config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
+                template = config.getTemplate(templateName);
+            }
         }
+
 
         Map<String, Object> data = new HashMap<>();
         data.put("itemList", configs);
         data.put("serviceName", serviceName);
         // 3.产生输出
         processOut(generators, template, data, "prometheus-2.17.2");
-    }
-
-    public static void generatePromScrapeConfig(Generators generators, List<ServiceConfig> configs,
-                                                String serviceName) throws IOException, TemplateException {
-        // 创建核心配置对象
-        Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-        // 设置加载的目录
-        // ""代表当前包
-        config.setClassForTemplateLoading(FreemakerUtils.class, "/templates");
-        // 得到模板对象
-        Template template = config.getTemplate("scrape.ftl");
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("itemList", configs);
-        // 3.产生输出
-        processOut(generators, template, data, serviceName);
     }
 
     private static void processOut(Generators generators, Template template, Map<String, Object> data,
@@ -173,13 +232,14 @@ public class FreemakerUtils {
             writeToTemplate(template, data, outputFile);
         } else {
             // 如果输出目录不以斜杠开头也不包含逗号，则将输出目录添加到包路径之后作为输出文件的路径
-            String outputFile = packagePath + generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
-//            String outputFile = generators.getOutputDirectory() + Constants.SLASH + generators.getFilename();
+            String outputFile = packagePath + generators.getOutputDirectory() + Constants.SLASH
+                    + generators.getFilename();
+            // String outputFile = generators.getOutputDirectory() + Constants.SLASH +
+            // generators.getFilename();
             // 调用方法将数据模板写入到输出文件中
             writeToTemplate(template, data, outputFile);
         }
     }
-
 
     /**
      * 将数据写入模板并生成输出文件
@@ -205,6 +265,5 @@ public class FreemakerUtils {
         // 关闭文件写入器
         out.close();
     }
-
 
 }

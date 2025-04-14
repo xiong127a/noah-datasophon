@@ -1,0 +1,52 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package com.datasophon.common.model;
+
+import java.io.Serializable;
+
+import lombok.Data;
+
+/**
+ * 模板请求消息
+ * Worker通过此消息向Master请求模板内容
+ */
+@Data
+public class TemplateRequestMessage implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 请求类型: CONTENT - 获取模板内容, LIST - 获取模板列表
+     */
+    private RequestType requestType;
+
+    /**
+     * 模板名称，当requestType=CONTENT时必须提供
+     */
+    private String templateName;
+
+    /**
+     * 请求类型枚举
+     */
+    public enum RequestType {
+        /** 获取模板内容 */
+        CONTENT,
+        /** 获取模板列表 */
+        LIST
+    }
+}

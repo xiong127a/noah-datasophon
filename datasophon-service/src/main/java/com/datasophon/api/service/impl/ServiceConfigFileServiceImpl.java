@@ -19,7 +19,7 @@
 
 package com.datasophon.api.service.impl;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ServiceConfigFileService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
@@ -235,7 +235,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
         }
         // 获取服务名称
         String serviceName = serviceInstance.getServiceName();
-        if (StrUtil.isBlank(serviceName)) {
+        if (CharSequenceUtil.isBlank(serviceName)) {
             throw new RuntimeException("服务名称不能为空，serviceInstanceId: " + serviceInstanceId);
         }
 
@@ -246,4 +246,8 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
         }
         return new AbstractMap.SimpleEntry<>(serviceInstance, serviceRoleHandler);
     }
+
+
+
+
 }
