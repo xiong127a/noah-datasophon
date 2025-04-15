@@ -181,6 +181,7 @@
     "generators": [
       {
         "filename": "dolphinscheduler_env.sh",
+        "fileDescription": "DolphinScheduler环境变量配置文件，设置服务的运行环境参数",
         "configFormat": "custom",
         "outputDirectory": "bin/env/",
         "templateName": "dolphinscheduler_env.ftl",
@@ -193,6 +194,7 @@
       },
       {
         "filename": "common.properties",
+        "fileDescription": "DolphinScheduler核心配置文件，设置服务的键值对参数",
         "configFormat": "properties",
         "outputDirectory": "api-server/conf,master-server/conf,worker-server/conf,alert-server/conf",
         "includeParams": [

@@ -223,7 +223,7 @@
     "generators": [
       {
         "filename": "core-site.xml",
-        "fileDescription": "Hadoop核心配置文件，定义了文件系统、I/O设置等核心功能的配置",
+        "fileDescription": "Hadoop核心配置文件，定义文件系统URI、安全代理和I/O设置等基础参数",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
@@ -256,6 +256,7 @@
       },
       {
         "filename": "hadoop-env.sh",
+        "fileDescription": "Hadoop环境变量配置脚本，设置Java路径、堆内存大小和日志目录",
         "configFormat": "custom",
         "outputDirectory": "etc/hadoop/",
         "templateName": "hadoop-env.ftl",
@@ -269,6 +270,7 @@
       },
       {
         "filename": "hdfs-site.xml",
+        "fileDescription": "HDFS服务核心配置文件，定义NameNode、DataNode、副本数和高可用参数",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
@@ -316,6 +318,7 @@
       },
       {
         "filename": "httpfs-site.xml",
+        "fileDescription": "HDFS HTTP文件系统配置，提供RESTful接口访问HDFS的安全和代理设置",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
@@ -329,6 +332,7 @@
       },
       {
         "filename": "install.properties",
+        "fileDescription": "Ranger HDFS插件配置文件，定义与Ranger权限系统集成和审计参数",
         "configFormat": "custom",
         "outputDirectory": "ranger-hdfs-plugin",
         "templateName": "ranger-hdfs.ftl",

@@ -52,6 +52,7 @@
     "generators": [
       {
         "filename": "application.yaml",
+        "fileDescription": "NOAHJOB属性配置文件，设置NOAHJOB服务的键值对参数",
         "configFormat": "custom",
         "outputDirectory": "standalone-server/conf",
         "templateName": "noah-job-app.ftl",
@@ -73,6 +74,7 @@
       },
       {
         "filename": "common.properties",
+        "fileDescription": "NOAHJOB属性配置文件，设置NOAHJOB服务的键值对参数",
         "configFormat": "properties",
         "outputDirectory": "standalone-server/conf",
         "includeParams": [

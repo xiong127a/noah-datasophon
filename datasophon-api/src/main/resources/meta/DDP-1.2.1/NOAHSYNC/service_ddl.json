@@ -37,6 +37,7 @@
     "generators": [
       {
         "filename": "seatunnel.yaml",
+        "fileDescription": "NoahSync主配置文件，定义集群核心参数和备份设置",
         "configFormat": "custom",
         "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
@@ -46,6 +47,7 @@
       },
       {
         "filename": "hazelcast.yaml",
+        "fileDescription": "NoahSync集群配置文件，设置集群节点通信和分布式缓存",
         "configFormat": "custom",
         "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
@@ -56,6 +58,7 @@
       },
       {
         "filename": "hazelcast-client.yaml",
+        "fileDescription": "NoahSync客户端配置文件，定义连接至集群的客户端行为参数",
         "configFormat": "custom",
         "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
@@ -66,6 +69,7 @@
       },
       {
         "filename": "seatunnel.sh",
+        "fileDescription": "NoahSync启动脚本，配置服务依赖、连接参数和环境变量",
         "configFormat": "custom",
         "templateName": "seatunnel.ftl",
         "outputDirectory": "bin",

@@ -37,6 +37,7 @@
     "generators": [
       {
         "filename": "seatunnel.yaml",
+        "fileDescription": "SeaTunnel引擎配置文件，定义核心运行参数和数据处理设置",
         "configFormat": "custom",
         "templateName": "seatunnel-yml.ftl",
         "outputDirectory": "config",
@@ -46,6 +47,7 @@
       },
       {
         "filename": "hazelcast.yaml",
+        "fileDescription": "SeaTunnel集群管理配置，定义节点间通信和数据分发策略",
         "configFormat": "custom",
         "templateName": "hazelcast.ftl",
         "outputDirectory": "config",
@@ -56,6 +58,7 @@
       },
       {
         "filename": "hazelcast-client.yaml",
+        "fileDescription": "SeaTunnel客户端配置，定义连接集群和任务提交参数",
         "configFormat": "custom",
         "templateName": "hazelcast-client.ftl",
         "outputDirectory": "config",
