@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -159,7 +160,7 @@ public class ServiceConfigController {
             String fileName = params.get("fileName").toString();
 
             byte[] fileContent = serviceConfigFileService.getServiceConfigFileContent(serviceInstanceId, fileName);
-            return Result.success(new String(fileContent, "UTF-8"));
+            return Result.success(new String(fileContent, StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("预览配置文件失败", e);
             return Result.error("预览配置文件失败: " + e.getMessage());

@@ -48,13 +48,4 @@ public class ConfigFile {
      */
     private String fileSize;
 
-    /**
-     * 文件路径
-     */
-    private String filePath;
-
-    /**
-     * 最后修改时间
-     */
-    private String lastModified;
 }

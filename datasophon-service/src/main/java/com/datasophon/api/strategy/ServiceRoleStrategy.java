@@ -22,28 +22,21 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.fastjson.JSONArray;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
-import com.datasophon.common.model.ConfigFile;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.k8s.util.K8sUtil;
@@ -209,20 +202,7 @@ public interface ServiceRoleStrategy {
     }
 
     default Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
-        ClusterServiceInstanceRoleGroupService roleGroupService = SpringUtil
-                .getBean(ClusterServiceInstanceRoleGroupService.class);
-        ClusterServiceRoleGroupConfigService groupConfigService = SpringUtil
-                .getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getRoleGroupByServiceInstanceId(serviceInstanceId);
-        ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-
-        ServiceInfo serviceInfo = ServiceInfoMap.get("DDP-1.2.1_" + roleGroup.getServiceName());
-        String serviceHome = "";
-        if (serviceInfo != null) {
-            serviceHome = serviceInfo.getDecompressPackageName();
-        }
-        return new AbstractMap.SimpleEntry<>(serviceHome,
-                JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class));
+        return SpringTool.listServiceConfigByServiceInstance(serviceInstanceId);
     }
 
     default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
@@ -253,23 +233,4 @@ public interface ServiceRoleStrategy {
         return new AbstractMap.SimpleEntry<>(serviceHome, configMap);
     }
 
-    default byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName) {
-        return null;
-    }
-
-    default List<ConfigFile> getServiceConfigFiles(Integer serviceInstanceId) {
-        return null;
-    }
-
-    /**
-     * 获取所有配置文件名称和内容的映射关系
-     * 
-     * @param serviceInstanceId 服务实例ID
-     * @return 配置文件名和内容的映射
-     */
-    default Map<String, byte[]> getServiceConfigFilesWithContent(Integer serviceInstanceId) {
-        // 默认实现：基于已有方法逐个获取
-
-        return new HashMap<>();
-    }
 }

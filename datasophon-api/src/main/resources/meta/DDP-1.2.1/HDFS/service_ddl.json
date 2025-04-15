@@ -223,6 +223,7 @@
     "generators": [
       {
         "filename": "core-site.xml",
+        "fileDescription": "Hadoop核心配置文件，定义了文件系统、I/O设置等核心功能的配置",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
