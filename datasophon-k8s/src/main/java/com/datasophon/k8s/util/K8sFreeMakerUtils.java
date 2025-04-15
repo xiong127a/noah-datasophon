@@ -43,13 +43,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @UtilityClass
@@ -58,7 +52,8 @@ public class K8sFreeMakerUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
 
-    private static final ConcurrentHashMap<String, KubernetesClient> clientCache = new ConcurrentHashMap<>();
+
+
 
     public static void generateConfigFile(Generators generators,
                                           List<ServiceConfig> configs,
@@ -204,7 +199,7 @@ public class K8sFreeMakerUtils {
             return;
         }
         // 获取 Kubernetes 客户端
-        KubernetesClient client = getOrCreateClient(kubeConfig);
+        KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
@@ -232,15 +227,7 @@ public class K8sFreeMakerUtils {
     }
 
     // 获取或创建缓存客户端[8](@ref)
-    public static KubernetesClient getOrCreateClient(String kubeConfig) {
-        return clientCache.computeIfAbsent(kubeConfig, config -> {
-            try {
-                return KubeUtil.getKubeClientByConfig(config);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create KubernetesClient", e);
-            }
-        });
-    }
+
 
     public static String generateConfigMapName(String serviceRoleName, Generators generators) {
         if (serviceRoleName == null || generators == null) {
