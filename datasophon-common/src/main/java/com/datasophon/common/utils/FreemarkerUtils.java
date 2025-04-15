@@ -58,6 +58,7 @@ import java.util.stream.Collectors;
  * Freemarker工具类
  * 用于生成配置文件，支持多种格式和模板加载方式
  */
+//TODO 业务逻辑代码重复，需要重构。 ConfigureServiceHandler K8sConfigureServiceHandler FreemarkerUtils 后期需要重构
 @UtilityClass
 public class FreemarkerUtils {
 
