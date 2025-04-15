@@ -63,6 +63,7 @@
       {
         "filename": "alertmanager.yml",
         "configFormat": "custom",
+        "fileDescription": "AlertManager配置文件，用于定义告警路由、接收器和通知方式等配置信息",
         "outputDirectory": "",
         "configTargetRoles": "AlertManager",
         "templateName": "alertmanager.yml",

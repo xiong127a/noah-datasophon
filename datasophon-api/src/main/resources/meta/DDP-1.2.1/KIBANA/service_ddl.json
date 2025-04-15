@@ -64,6 +64,7 @@
             {
                 "filename": "kibana.yml",
                 "configFormat": "properties3",
+                "fileDescription": "Kibana配置文件，用于定义Kibana的配置信息",
                 "outputDirectory": "config",
                 "includeParams": [
                     "server.port",

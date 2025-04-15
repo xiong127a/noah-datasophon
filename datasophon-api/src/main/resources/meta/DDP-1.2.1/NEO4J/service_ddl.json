@@ -47,6 +47,7 @@
         "filename": "neo4j.conf",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "fileDescription": "Neo4j配置文件，用于定义Neo4j的配置信息",
         "templateName": "neo4j-conf.ftl",
         "includeParams": [
           "neo4jBoltEnabled",

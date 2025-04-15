@@ -39,6 +39,7 @@
       {
         "filename": "config.properties",
         "configFormat": "properties",
+        "fileDescription": "Paimon配置文件，用于定义Paimon的配置信息",
         "outputDirectory": "",
         "includeParams": [
           "enableSpark",

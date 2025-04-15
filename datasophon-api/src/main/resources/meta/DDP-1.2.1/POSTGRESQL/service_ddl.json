@@ -116,6 +116,7 @@
         "filename": "postgresql.conf",
         "configFormat": "custom",
         "outputDirectory": "data",
+        "fileDescription": "PostgreSQL配置文件，用于定义数据库的配置信息",
         "templateName": "postgresql-conf.ftl",
         "includeParams": [
           "listenAddresses",

@@ -20,6 +20,7 @@
     "generators": [
       {
         "filename": "config.properties",
+        "fileDescription": "Iceberg配置文件，用于定义Iceberg的配置信息",
         "configFormat": "properties",
         "outputDirectory": "",
         "includeParams": [

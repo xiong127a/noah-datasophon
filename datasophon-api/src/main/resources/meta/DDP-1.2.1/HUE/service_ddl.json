@@ -52,6 +52,7 @@
       {
         "filename": "pseudo-distributed.ini",
         "configFormat": "custom",
+        "fileDescription": "HUE配置文件，用于定义HUE的配置信息",
         "outputDirectory": "desktop/conf",
         "templateName": "pseudo-distributed.ftl",
         "includeParams": [

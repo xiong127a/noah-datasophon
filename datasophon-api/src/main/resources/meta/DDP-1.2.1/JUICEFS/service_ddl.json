@@ -23,6 +23,7 @@
             {
                 "filename": "juicefs",
                 "configFormat": "custom",
+                "fileDescription": "JuiceFS配置文件，用于定义JuiceFS的配置信息",
                 "templateName": "juicefs.ftl",
                 "outputDirectory": "bin",
                 "needMount" : false,

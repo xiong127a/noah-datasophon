@@ -63,6 +63,7 @@
       {
         "filename": "prometheus.yml",
         "configFormat": "custom",
+        "fileDescription": "Prometheus配置文件，用于定义Prometheus的配置信息",
         "outputDirectory": "",
         "templateName": "prometheus.ftl",
         "includeParams": [
