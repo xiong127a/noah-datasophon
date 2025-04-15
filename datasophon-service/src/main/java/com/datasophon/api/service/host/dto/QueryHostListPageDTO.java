@@ -70,5 +70,5 @@ public class QueryHostListPageDTO {
 
     private String nodeLabel;
 
-    private Integer serviceRoleNum;
+    private Long serviceRoleNum;
 }

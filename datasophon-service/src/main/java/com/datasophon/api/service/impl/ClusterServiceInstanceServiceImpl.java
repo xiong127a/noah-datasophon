@@ -129,7 +129,7 @@ public class ClusterServiceInstanceServiceImpl
                 serviceInstance.setDashboardUrl(dashboardUrl);
             }
             // 查询告警数量
-            int alertNum = alertHistoryService.count(new QueryWrapper<ClusterAlertHistory>()
+            long alertNum = alertHistoryService.count(new QueryWrapper<ClusterAlertHistory>()
                     .eq(Constants.SERVICE_INSTANCE_ID, serviceInstance.getId()).eq(Constants.IS_ENABLED, 1));
             serviceInstance.setAlertNum(alertNum);
             List<ClusterServiceRoleInstanceEntity> totalRoleList = roleInstanceService.lambdaQuery()
@@ -306,7 +306,7 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public Boolean hasRoleInstance(Integer clusterId, String serviceName) {
-        Integer count = roleInstanceService
+        long count = roleInstanceService
                 .count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                         .eq(Constants.CLUSTER_ID, clusterId)
                         .eq(Constants.SERVICE_NAME, serviceName));

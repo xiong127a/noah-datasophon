@@ -74,13 +74,13 @@ public class ClusterServiceCommandHostCommandServiceImpl
 
     @Override
     public Result getHostCommandList(String hostname, String commandHostId, Integer page, Integer pageSize) {
-        Integer offset = (page - 1) * pageSize;
+        int offset = (page - 1) * pageSize;
         List<ClusterServiceCommandHostCommandEntity> list =
                 this.list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
                         .eq(Constants.COMMAND_HOST_ID, commandHostId)
                         .orderByDesc(Constants.CREATE_TIME)
                         .last("limit " + offset + "," + pageSize));
-        int total = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
+        long total = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
                 .eq(Constants.COMMAND_HOST_ID, commandHostId));
         for (ClusterServiceCommandHostCommandEntity hostCommandEntity : list) {
             hostCommandEntity.setCommandStateCode(hostCommandEntity.getCommandState().getValue());
@@ -106,8 +106,8 @@ public class ClusterServiceCommandHostCommandServiceImpl
     }
 
     @Override
-    public Integer getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId) {
-        int size = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
+    public Long getHostCommandSizeByHostnameAndCommandHostId(String hostname, String commandHostId) {
+        long size = this.count(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
                 .eq(Constants.HOSTNAME, hostname).eq(Constants.COMMAND_HOST_ID, commandHostId));
         return size;
     }

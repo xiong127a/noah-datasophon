@@ -26,7 +26,7 @@ import java.util.List;
 
 public interface ClusterUserGroupService extends IService<ClusterUserGroup> {
 
-    Integer countGroupUserNum(Integer id);
+    Long countGroupUserNum(Integer id);
 
     void deleteByUser(Integer id);
 

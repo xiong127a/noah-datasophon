@@ -17,17 +17,15 @@
 
 package com.datasophon.dao.entity;
 
-import com.datasophon.dao.enums.NeedRestart;
-import com.datasophon.dao.enums.ServiceState;
-
-import java.io.Serializable;
-import java.util.Date;
-
-import lombok.Data;
-
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.datasophon.dao.enums.NeedRestart;
+import com.datasophon.dao.enums.ServiceState;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
 
 @TableName("t_ddh_cluster_service_instance")
 @Data
@@ -74,7 +72,7 @@ public class ClusterServiceInstanceEntity implements Serializable {
     private String dashboardUrl;
 
     @TableField(exist = false)
-    private Integer alertNum;
+    private Long alertNum;
 
     private Integer sortNum;
 }

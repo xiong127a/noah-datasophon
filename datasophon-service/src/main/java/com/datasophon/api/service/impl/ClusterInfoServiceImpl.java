@@ -250,7 +250,7 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
         LambdaQueryWrapper<ClusterServiceRoleInstanceEntity> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper.eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, serviceRoleName)
                 .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, 1);
-        Integer count = clusterServiceRoleInstanceMapper.selectCount(lambdaQueryWrapper);
+        long count = clusterServiceRoleInstanceMapper.selectCount(lambdaQueryWrapper);
         JSONObject jsonObject = JSONUtil.createObj();
         jsonObject.set(serviceRoleName, count);
         return jsonObject.toString();

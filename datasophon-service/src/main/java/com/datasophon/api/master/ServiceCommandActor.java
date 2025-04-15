@@ -96,11 +96,11 @@ public class ServiceCommandActor extends UntypedActor {
             ClusterServiceCommandHostEntity commandHost =
                     commandHostService.getOne(new QueryWrapper<ClusterServiceCommandHostEntity>()
                             .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
-            Integer size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
+            long size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
             Integer totalProgress = service.getHostCommandTotalProgressByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
-            int progress = totalProgress / size;
+            long progress = totalProgress / size;
             commandHost.setCommandProgress(progress);
 
             if (progress == 100) {
@@ -119,9 +119,9 @@ public class ServiceCommandActor extends UntypedActor {
             }
             commandHostService.update(commandHost, new QueryWrapper<ClusterServiceCommandHostEntity>()
                     .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
-            Integer size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
+            Long size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
             Integer totalProgress1 = commandHostService.getCommandHostTotalProgressByCommandId(message.getCommandId());
-            int progress1 = totalProgress1 / size1;
+            Long progress1 = totalProgress1 / size1;
             ClusterServiceCommandEntity command = commandService.lambdaQuery()
                     .eq(ClusterServiceCommandEntity::getCommandId, message.getCommandId()).one();
             command.setCommandProgress(progress1);

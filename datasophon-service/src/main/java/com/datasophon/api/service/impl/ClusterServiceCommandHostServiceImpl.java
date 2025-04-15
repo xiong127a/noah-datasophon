@@ -17,7 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
-import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
+
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
@@ -50,7 +51,7 @@ public class ClusterServiceCommandHostServiceImpl
 
         LambdaQueryChainWrapper<ClusterServiceCommandHostEntity> wrapper = this.lambdaQuery()
                 .eq(ClusterServiceCommandHostEntity::getCommandId, commandId);
-        int total = wrapper.count();
+        long total = wrapper.count();
         List<ClusterServiceCommandHostEntity> list = wrapper
                 .orderByDesc(ClusterServiceCommandHostEntity::getCreateTime)
                 .last("limit " + offset + "," + pageSize)
@@ -63,7 +64,7 @@ public class ClusterServiceCommandHostServiceImpl
     }
 
     @Override
-    public Integer getCommandHostSizeByCommandId(String commandId) {
+    public Long getCommandHostSizeByCommandId(String commandId) {
         return this.lambdaQuery().eq(ClusterServiceCommandHostEntity::getCommandId, commandId).count();
     }
 

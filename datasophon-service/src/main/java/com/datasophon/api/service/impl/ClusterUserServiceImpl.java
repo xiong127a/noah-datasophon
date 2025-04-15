@@ -349,7 +349,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             }
             clusterUser.setMainGroup(mainGroup.getGroupName());
         }
-        int total = this.count(new QueryWrapper<ClusterUser>()
+        long total = this.count(new QueryWrapper<ClusterUser>()
                 .like(StringUtils.isNotBlank(username), Constants.USERNAME, username)
                 .eq(Constants.CLUSTER_ID, clusterId));
         return Result.success(list).put(Constants.TOTAL, total);

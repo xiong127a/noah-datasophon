@@ -34,7 +34,7 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
 
     Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize);
 
-    Integer getCommandHostSizeByCommandId(String commandId);
+    Long getCommandHostSizeByCommandId(String commandId);
 
     Integer getCommandHostTotalProgressByCommandId(String commandId);
 

@@ -21,7 +21,11 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.*;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONException;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
@@ -29,7 +33,19 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
-import com.datasophon.api.service.*;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
+import com.datasophon.api.service.ClusterServiceCommandService;
+import com.datasophon.api.service.ClusterServiceInstanceConfigService;
+import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
+import com.datasophon.api.service.ClusterServiceInstanceService;
+import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
+import com.datasophon.api.service.ClusterServiceRoleInstanceService;
+import com.datasophon.api.service.ClusterVariableService;
+import com.datasophon.api.service.FrameInfoService;
+import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
@@ -37,11 +53,28 @@ import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.*;
+import com.datasophon.common.model.DAG;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.HostServiceRoleMapping;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceInfo;
+import com.datasophon.common.model.ServiceNode;
+import com.datasophon.common.model.ServiceNodeEdge;
+import com.datasophon.common.model.ServiceRoleHostMapping;
+import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.*;
+import com.datasophon.dao.entity.ClusterHostDO;
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceCommandEntity;
+import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
+import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
+import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.dao.entity.ClusterVariable;
+import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import org.apache.commons.lang.StringUtils;
@@ -56,12 +89,35 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
-import static com.datasophon.api.utils.CommonUtils.filterByServiceRoleName;
-import static com.datasophon.common.Constants.*;
+import static com.datasophon.common.Constants.CLUSTER_ID;
+import static com.datasophon.common.Constants.COMMON_CONFIG;
+import static com.datasophon.common.Constants.CONFIG;
+import static com.datasophon.common.Constants.HOST_SERVICE_ROLE_MAPPING;
+import static com.datasophon.common.Constants.INPUT;
+import static com.datasophon.common.Constants.K8S_CLUSTER_IP;
+import static com.datasophon.common.Constants.K8S_NODE_PORT;
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
+import static com.datasophon.common.Constants.MANAGED;
+import static com.datasophon.common.Constants.MASTER;
+import static com.datasophon.common.Constants.MASTER_MANAGE_PACKAGE_PATH;
+import static com.datasophon.common.Constants.ROLE_GROUP_TYPE;
+import static com.datasophon.common.Constants.SERVICE_INSTANCE_ID;
+import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
+import static com.datasophon.common.Constants.SLASH;
+import static com.datasophon.common.Constants.UNDERLINE;
 
 @Service("serviceInstallService")
 @Transactional
@@ -504,13 +560,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     private ClusterServiceInstanceRoleGroup saveNewRoleGroup(
             ClusterServiceInstanceEntity serviceInstanceEntity) {
-        int count =
+        long count =
                 roleGroupService.count(
                         new QueryWrapper<ClusterServiceInstanceRoleGroup>()
                                 .eq(ROLE_GROUP_TYPE, "auto")
                                 .eq(SERVICE_INSTANCE_ID, serviceInstanceEntity.getId()));
         ClusterServiceInstanceRoleGroup roleGroup = new ClusterServiceInstanceRoleGroup();
-        int num = count + 1;
+        long num = count + 1;
         roleGroup.setRoleGroupName("RoleGroup" + num);
         roleGroup.setServiceInstanceId(serviceInstanceEntity.getId());
         roleGroup.setServiceName(serviceInstanceEntity.getServiceName());
