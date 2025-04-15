@@ -45,15 +45,6 @@ public interface ServiceConfigFileService {
     byte[] getServiceConfigFileContent(Integer serviceInstanceId, String fileName);
 
     /**
-     * 获取所有配置文件并根据指定格式打包
-     * 
-     * @param serviceInstanceId 服务实例ID
-     * @param format            压缩格式（zip, tar.gz, 7z）
-     * @return 压缩文件内容
-     */
-    byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format);
-
-    /**
      * 获取服务名称
      * 
      * @param serviceInstanceId 服务实例ID
@@ -61,4 +52,21 @@ public interface ServiceConfigFileService {
      */
     String getServiceName(Integer serviceInstanceId);
 
+    /**
+     * 获取所有配置文件并根据指定格式打包，支持密码保护
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @param format            压缩格式（zip, tar.gz, 7z等）
+     * @param password          密码（可为空）
+     * @return 压缩文件内容
+     */
+    byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format, String password);
+
+    /**
+     * 获取打包进度
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 打包进度（0-100）
+     */
+    Integer getCompressProgress(Integer serviceInstanceId);
 }

@@ -207,14 +207,15 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
     }
 
     /**
-     * 获取所有配置文件并根据指定格式打包
+     * 获取所有配置文件并根据指定格式打包，支持密码保护
      *
      * @param serviceInstanceId 服务实例ID
      * @param format            压缩格式（zip, tar.gz, 7z）
+     * @param password          密码（可为空）
      * @return 压缩文件内容
      */
     @Override
-    public byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format) {
+    public byte[] getAllServiceConfigFiles(Integer serviceInstanceId, String format, String password) {
         // 直接获取文件名和内容的映射
         Map<String, byte[]> configFilesWithContent = getServiceConfigFilesWithContent(serviceInstanceId);
 
@@ -223,29 +224,20 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
             return new byte[0];
         }
 
-        // 使用新的压缩工具类，不指定密码
-        return CompressUtils.getCompressedFiles(configFilesWithContent, format, null);
+        // 使用新的压缩工具类，支持密码保护和进度跟踪
+        return CompressUtils.getCompressedFiles(configFilesWithContent, format, password, serviceInstanceId);
     }
 
     /**
-     * 获取所有配置文件并根据指定格式打包，支持密码保护
+     * 获取打包进度
      *
      * @param serviceInstanceId 服务实例ID
-     * @param format            压缩格式（zip, tar.gz, 7z 等）
-     * @param password          密码（可为空）
-     * @return 压缩文件内容
+     * @return 打包进度（0-100）
      */
-    public byte[] getAllServiceConfigFilesWithPassword(Integer serviceInstanceId, String format, String password) {
-        // 获取文件名和内容的映射
-        Map<String, byte[]> configFilesWithContent = getServiceConfigFilesWithContent(serviceInstanceId);
-
-        if (configFilesWithContent == null || configFilesWithContent.isEmpty()) {
-            log.warn("服务实例{}没有配置文件", serviceInstanceId);
-            return new byte[0];
-        }
-
-        // 使用新的压缩工具类，支持密码保护
-        return CompressUtils.getCompressedFiles(configFilesWithContent, format, password);
+    @Override
+    public Integer getCompressProgress(Integer serviceInstanceId) {
+        // 从CompressUtils获取进度
+        return CompressUtils.getCompressProgress(serviceInstanceId);
     }
 
     /**

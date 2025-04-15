@@ -3,6 +3,14 @@ package com.datasophon.api.utils;
 import cn.hutool.core.util.StrUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.AesKeyStrength;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.EncryptionMethod;
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
+import org.apache.commons.compress.archivers.sevenz.SevenZMethod;
+import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
@@ -10,16 +18,15 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -87,24 +94,65 @@ public class CompressUtils {
     }
 
     /**
+     * 压缩进度缓存,key为serviceInstanceId,value为进度值(0-100)
+     */
+    private static final Map<Integer, Integer> COMPRESS_PROGRESS_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 获取压缩进度
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 压缩进度(0-100)
+     */
+    public static Integer getCompressProgress(Integer serviceInstanceId) {
+        return COMPRESS_PROGRESS_CACHE.getOrDefault(serviceInstanceId, 0);
+    }
+
+    /**
+     * 更新压缩进度
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @param progress          进度值(0-100)
+     */
+    private static void updateCompressProgress(Integer serviceInstanceId, Integer progress) {
+        COMPRESS_PROGRESS_CACHE.put(serviceInstanceId, progress);
+    }
+
+    /**
+     * 清除压缩进度
+     * 
+     * @param serviceInstanceId 服务实例ID
+     */
+    private static void clearCompressProgress(Integer serviceInstanceId) {
+        COMPRESS_PROGRESS_CACHE.remove(serviceInstanceId);
+    }
+
+    /**
      * 压缩文件，支持密码保护
      * 
-     * @param files    文件名与内容的映射
-     * @param type     压缩类型
-     * @param password 密码，为空则不加密
+     * @param files             文件名与内容的映射
+     * @param type              压缩类型
+     * @param password          密码，为空则不加密
+     * @param serviceInstanceId 服务实例ID,用于跟踪进度
      * @return 压缩后的字节数组
      */
-    public static byte[] compress(Map<String, byte[]> files, CompressType type, String password) {
+    public static byte[] compress(Map<String, byte[]> files, CompressType type, String password,
+            Integer serviceInstanceId) {
         if (files == null || files.isEmpty()) {
             log.warn("没有文件需要压缩");
             return new byte[0];
         }
 
         try {
+            // 初始化进度
+            updateCompressProgress(serviceInstanceId, 0);
+
             // 创建临时目录
             Path tempDir = Files.createTempDirectory("compress_temp_");
 
             // 将文件写入临时目录
+            int totalFiles = files.size();
+            int processedFiles = 0;
             for (Map.Entry<String, byte[]> entry : files.entrySet()) {
                 String fileName = entry.getKey();
                 byte[] content = entry.getValue();
@@ -115,14 +163,16 @@ public class CompressUtils {
                     Files.createDirectories(filePath.getParent());
                     Files.write(filePath, content);
                 }
+
+                // 更新进度(写入文件阶段占40%)
+                processedFiles++;
+                int progress = (int) ((processedFiles * 40.0) / totalFiles);
+                updateCompressProgress(serviceInstanceId, progress);
             }
 
             // 根据不同类型执行压缩
             byte[] result;
             switch (type) {
-                case ZIP:
-                    result = compressToZip(tempDir, password);
-                    break;
                 case SEVEN_ZIP:
                     result = compressToSevenZip(tempDir, password);
                     break;
@@ -141,9 +191,13 @@ public class CompressUtils {
                 case BZIP2:
                     result = compressToBzip2(tempDir);
                     break;
+                case ZIP:
                 default:
                     result = compressToZip(tempDir, password);
             }
+
+            // 更新进度为100%
+            updateCompressProgress(serviceInstanceId, 100);
 
             // 清理临时目录
             cleanTempDir(tempDir);
@@ -151,6 +205,8 @@ public class CompressUtils {
             return result;
         } catch (Exception e) {
             log.error("压缩文件失败", e);
+            // 出错时清除进度
+            clearCompressProgress(serviceInstanceId);
             return new byte[0];
         }
     }
@@ -159,20 +215,17 @@ public class CompressUtils {
      * 压缩为ZIP格式，支持密码
      */
     private static byte[] compressToZip(Path directory, String password) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
         // 判断是否需要使用加密ZIP
         if (StrUtil.isNotBlank(password)) {
-            // 使用加密ZIP（需要引入额外依赖）
             try {
                 return compressToEncryptedZip(directory, password);
             } catch (Exception e) {
                 log.error("创建加密ZIP失败，使用非加密ZIP替代", e);
-                // 使用非加密ZIP作为备选
             }
         }
 
-        // 使用非加密ZIP
+        // 使用标准ZIP（无密码）
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
             // 设置压缩级别
             zipOut.setLevel(Deflater.BEST_COMPRESSION);
@@ -199,99 +252,55 @@ public class CompressUtils {
     }
 
     /**
-     * 创建加密ZIP文件，使用zip4j库（运行时检测依赖）
+     * 创建加密ZIP文件(使用zip4j库)
      */
     private static byte[] compressToEncryptedZip(Path directory, String password) throws Exception {
         // 创建临时zip文件
         Path tempZipFile = Files.createTempFile("encrypted_", ".zip");
 
         try {
-            // 动态检测zip4j依赖
-            try {
-                Class<?> zipFileClass = Class.forName("net.lingala.zip4j.ZipFile");
-                Class<?> zipParamsClass = Class.forName("net.lingala.zip4j.model.");
-                Class<?> compressionLevelEnum = Class.forName("net.lingala.zip4j.model.enums.CompressionLevel");
-                Class<?> encryptionMethodEnum = Class.forName("net.lingala.zip4j.model.enums.EncryptionMethod");
-                Class<?> aesKeyStrengthEnum = Class.forName("net.lingala.zip4j.model.enums.AesKeyStrength");
+            // 创建zip4j实例
+            ZipFile zipFile = new ZipFile(tempZipFile.toFile());
 
-                // 创建zip4j对象 (使用反射方式调用)
-                Object zipFile = zipFileClass.getConstructor(File.class).newInstance(tempZipFile.toFile());
-
-                // 设置密码
-                if (StrUtil.isNotBlank(password)) {
-                    zipFileClass.getMethod("setPassword", char[].class)
-                            .invoke(zipFile, (Object) password.toCharArray());
-                }
-
-                // 设置加密参数
-                Object parameters = zipParamsClass.newInstance();
-
-                // 设置压缩级别
-                Object ultraLevel = compressionLevelEnum.getField("ULTRA").get(null);
-                zipParamsClass.getMethod("setCompressionLevel", compressionLevelEnum)
-                        .invoke(parameters, ultraLevel);
-
-                // 设置加密选项
-                if (StrUtil.isNotBlank(password)) {
-                    zipParamsClass.getMethod("setEncryptFiles", boolean.class)
-                            .invoke(parameters, true);
-
-                    Object aesMethod = encryptionMethodEnum.getField("AES").get(null);
-                    zipParamsClass.getMethod("setEncryptionMethod", encryptionMethodEnum)
-                            .invoke(parameters, aesMethod);
-
-                    Object keyStrength = aesKeyStrengthEnum.getField("KEY_STRENGTH_256").get(null);
-                    zipParamsClass.getMethod("setAesKeyStrength", aesKeyStrengthEnum)
-                            .invoke(parameters, keyStrength);
-                }
-
-                // 添加文件到zip
-                Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        try {
-                            Path relativePath = directory.relativize(file);
-                            String entryName = relativePath.toString().replace("\\", "/");
-
-                            // 为每个文件创建新的参数对象，避免共享问题
-                            Object fileParams = zipParamsClass.newInstance();
-
-                            // 复制参数设置
-                            if (StrUtil.isNotBlank(password)) {
-                                zipParamsClass.getMethod("setEncryptFiles", boolean.class)
-                                        .invoke(fileParams, true);
-
-                                Object aesMethod = encryptionMethodEnum.getField("AES").get(null);
-                                zipParamsClass.getMethod("setEncryptionMethod", encryptionMethodEnum)
-                                        .invoke(fileParams, aesMethod);
-
-                                Object keyStrength = aesKeyStrengthEnum.getField("KEY_STRENGTH_256").get(null);
-                                zipParamsClass.getMethod("setAesKeyStrength", aesKeyStrengthEnum)
-                                        .invoke(fileParams, keyStrength);
-                            }
-
-                            // 设置文件名
-                            zipParamsClass.getMethod("setFileNameInZip", String.class)
-                                    .invoke(fileParams, entryName);
-
-                            // 添加文件
-                            zipFileClass.getMethod("addFile", File.class, zipParamsClass)
-                                    .invoke(zipFile, file.toFile(), fileParams);
-
-                        } catch (Exception e) {
-                            throw new IOException("添加文件到加密ZIP失败", e);
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-
-                // 读取zip文件内容
-                return Files.readAllBytes(tempZipFile);
-
-            } catch (ClassNotFoundException e) {
-                log.warn("zip4j依赖不存在，无法创建加密ZIP，使用非加密ZIP替代", e);
-                return compressToZip(directory, null);
+            // 设置密码
+            if (StrUtil.isNotBlank(password)) {
+                zipFile.setPassword(password.toCharArray());
             }
+
+            // 压缩参数
+            ZipParameters zipParameters = new ZipParameters();
+            zipParameters.setCompressionLevel(CompressionLevel.ULTRA); // 最高压缩级别
+
+            // 设置加密选项
+            if (StrUtil.isNotBlank(password)) {
+                zipParameters.setEncryptFiles(true);
+                zipParameters.setEncryptionMethod(EncryptionMethod.AES);
+                zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
+            }
+
+            // 添加文件到zip
+            Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    try {
+                        Path relativePath = directory.relativize(file);
+                        String entryName = relativePath.toString().replace("\\", "/");
+
+                        // 为每个文件创建新的参数对象，避免共享问题
+                        ZipParameters fileParams = new ZipParameters(zipParameters);
+                        fileParams.setFileNameInZip(entryName);
+
+                        // 添加文件
+                        zipFile.addFile(file.toFile(), fileParams);
+                    } catch (Exception e) {
+                        throw new IOException("添加文件到加密ZIP失败", e);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+
+            // 读取zip文件内容
+            return Files.readAllBytes(tempZipFile);
         } finally {
             // 删除临时文件
             try {
@@ -303,87 +312,65 @@ public class CompressUtils {
     }
 
     /**
-     * 压缩为7Z格式，支持密码（运行时检测依赖）
+     * 压缩为7Z格式
+     * 使用Apache Commons Compress库实现标准7z格式
+     * 注意：此实现不支持密码保护，即使传入密码参数也会被忽略
      */
     private static byte[] compressToSevenZip(Path directory, String password) throws IOException {
+        // 如果有密码参数，记录警告日志但继续使用7z格式
+        if (StrUtil.isNotBlank(password)) {
+            log.warn("7z格式不支持密码保护，将忽略密码参数");
+        }
+
         try {
-            // 检查是否存在sevenzipjbinding库
-            try {
-                Class<?> sevenZipClass = Class.forName("net.sf.sevenzipjbinding.SevenZip");
-                Class<?> outItemAllFormatsClass = Class.forName("net.sf.sevenzipjbinding.IOutItemAllFormats");
-                Class<?> outCreateCallbackClass = Class.forName("net.sf.sevenzipjbinding.IOutCreateCallback");
-                Class<?> outItemCallbackClass = Class
-                        .forName("net.sf.sevenzipjbinding.impl.OutItemFactory$OutItemCallback");
-                Class<?> sevenZipExceptionClass = Class.forName("net.sf.sevenzipjbinding.SevenZipException");
-                Class<?> cryptoPasswordClass = Class.forName("net.sf.sevenzipjbinding.ICryptoGetTextPassword");
+            // 创建临时7z文件
+            Path tempFile = Files.createTempFile("temp_", ".7z");
 
-                // 创建临时7z文件
-                Path tempFile = Files.createTempFile("temp_", ".7z");
+            // 使用Commons Compress创建7z文件
+            try (SevenZOutputFile sevenZOutput = new SevenZOutputFile(tempFile.toFile())) {
+                // 设置LZMA2压缩方法
+                sevenZOutput.setContentCompression(SevenZMethod.LZMA2);
 
-                try {
-                    // 创建文件映射，用于存储要压缩的文件
-                    Map<String, Path> fileMap = new HashMap<>();
+                // 添加目录中的所有文件
+                Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        try {
+                            // 获取相对路径
+                            Path relativePath = directory.relativize(file);
+                            String entryName = relativePath.toString().replace("\\", "/");
 
-                    // 遍历目录收集文件
-                    Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
-                        @Override
-                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                            String relativePath = directory.relativize(file).toString().replace("\\", "/");
-                            fileMap.put(relativePath, file);
-                            return FileVisitResult.CONTINUE;
+                            // 创建7z条目
+                            SevenZArchiveEntry entry = sevenZOutput.createArchiveEntry(file.toFile(), entryName);
+                            sevenZOutput.putArchiveEntry(entry);
+
+                            // 写入文件内容
+                            try (FileInputStream fis = new FileInputStream(file.toFile())) {
+                                byte[] buffer = new byte[8192];
+                                int len;
+                                while ((len = fis.read(buffer)) > 0) {
+                                    sevenZOutput.write(buffer, 0, len);
+                                }
+                            }
+                            sevenZOutput.closeArchiveEntry();
+                        } catch (Exception e) {
+                            throw new IOException("添加文件到7Z归档失败：" + e.getMessage(), e);
                         }
-                    });
-
-                    // 如果有文件需要压缩
-                    if (!fileMap.isEmpty()) {
-                        // 创建输出流
-                        OutputStream outputStream = Files.newOutputStream(tempFile);
-
-                        // 通过反射调用SevenZip API
-                        // 创建压缩器
-                        Object outArchive = sevenZipClass.getMethod("openOutArchive7z").invoke(null);
-
-                        // 设置密码
-                        if (StrUtil.isNotBlank(password)) {
-                            // 创建密码回调对象
-                            Object passwordCallback = java.lang.reflect.Proxy.newProxyInstance(
-                                    CompressUtils.class.getClassLoader(),
-                                    new Class<?>[] { cryptoPasswordClass },
-                                    (proxy, method, args) -> {
-                                        if (method.getName().equals("cryptoGetTextPassword")) {
-                                            return password;
-                                        }
-                                        return null;
-                                    });
-
-                            // 设置密码回调
-                            outArchive.getClass().getMethod("setPasswordCallback", cryptoPasswordClass)
-                                    .invoke(outArchive, passwordCallback);
-                        }
-
-                        // 执行压缩
-                        // 由于回调接口较复杂，这里简化处理，直接返回ZIP格式
-                        log.info("由于7z回调接口复杂，使用ZIP格式替代");
-                        Files.deleteIfExists(tempFile);
-                        return compressToZip(directory, password);
+                        return FileVisitResult.CONTINUE;
                     }
-
-                    // 读取文件内容
-                    byte[] content = Files.readAllBytes(tempFile);
-                    return content;
-
-                } finally {
-                    // 删除临时文件
-                    Files.deleteIfExists(tempFile);
-                }
-
-            } catch (ClassNotFoundException e) {
-                log.warn("sevenzipjbinding依赖不存在，无法创建7Z文件，使用ZIP格式替代");
-                // 如果没有sevenzipjbinding库，就使用ZIP格式
-                return compressToZip(directory, password);
+                });
             }
+
+            // 读取生成的7z文件内容
+            byte[] sevenZContent = Files.readAllBytes(tempFile);
+
+            // 删除临时文件
+            Files.deleteIfExists(tempFile);
+
+            return sevenZContent;
         } catch (Exception e) {
-            log.error("创建7Z文件失败，使用ZIP格式替代", e);
+            log.error("创建7Z文件失败: {}", e.getMessage(), e);
+            log.warn("由于7Z格式压缩失败，系统将使用ZIP格式代替（保留7z后缀）");
             return compressToZip(directory, password);
         }
     }
@@ -591,13 +578,15 @@ public class CompressUtils {
     /**
      * 获取带密码的压缩文件内容
      * 
-     * @param files    文件映射
-     * @param format   压缩格式
-     * @param password 密码，可为空
+     * @param files             文件映射
+     * @param format            压缩格式
+     * @param password          密码，可为空
+     * @param serviceInstanceId 服务实例ID,用于跟踪进度
      * @return 压缩后的字节数组
      */
-    public static byte[] getCompressedFiles(Map<String, byte[]> files, String format, String password) {
+    public static byte[] getCompressedFiles(Map<String, byte[]> files, String format, String password,
+            Integer serviceInstanceId) {
         CompressType type = CompressType.fromString(format);
-        return compress(files, type, password);
+        return compress(files, type, password, serviceInstanceId);
     }
 }

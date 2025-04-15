@@ -46,8 +46,10 @@ export default {
   getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo', // 获取服务连接信息
   getServiceConfigFiles: path + '/api/service/config/getConfigFiles', // 获取服务配置文件列表
   downloadServiceConfigFile: path + '/api/service/config/downloadFile', // 下载单个配置文件
-  downloadAllServiceConfigFiles: path + '/api/service/config/downloadAllFiles', // 打包下载所有配置文件
+  downloadAllServiceConfigFiles: path + '/api/service/config/downloadAllFiles', // 打包下载所有配置文件（支持ZIP、TAR、TAR.GZ、TAR.XZ、7Z、GZIP、BZIP2格式，ZIP密码保护需额外安装zip4j库）
+  getCompressProgress: path + '/api/service/config/getCompressProgress', // 获取压缩打包进度
   previewServiceConfigFile: path + '/api/service/config/previewFile', // 预览配置文件内容
+  getSupportedCompressFormats: path + '/api/service/config/getSupportedCompressFormats', // 获取系统支持的压缩格式列表
 
   // K8s相关接口
   getK8sConfigMaps: path + '/api/k8s/configmaps', // 获取ConfigMap列表
