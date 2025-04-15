@@ -87,7 +87,7 @@
       </a-tab-pane>
       
       <a-tab-pane key="k8s-config" tab="K8s配置" :forceRender="true">
-        <K8sConfig :serviceId="serviceId" :serviceName="serviceName" />
+        <K8sConfig :serviceId="serviceId" :serviceName="serviceName" :clusterId="clusterId"/>
       </a-tab-pane>
       
       <a-tab-pane key="config-download" tab="配置文件下载" :forceRender="true">

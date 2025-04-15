@@ -1,5 +1,4 @@
 /*
-/*
  *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
@@ -17,8 +16,6 @@
  *  limitations under the License.
  *
  */
-
-
 
 import paths from '@/api/baseUrl'// 后台服务地址
 
@@ -50,5 +47,16 @@ export default {
   getServiceConfigFiles: path + '/api/service/config/getConfigFiles', // 获取服务配置文件列表
   downloadServiceConfigFile: path + '/api/service/config/downloadFile', // 下载单个配置文件
   downloadAllServiceConfigFiles: path + '/api/service/config/downloadAllFiles', // 打包下载所有配置文件
-  previewServiceConfigFile: path + '/api/service/config/previewFile' // 预览配置文件内容
+  previewServiceConfigFile: path + '/api/service/config/previewFile', // 预览配置文件内容
+
+  // K8s相关接口
+  getK8sConfigMaps: path + '/api/k8s/configmaps', // 获取ConfigMap列表
+  getK8sConfigMapDetail: path + '/api/k8s/configmap/detail', // 获取ConfigMap详情
+  updateK8sConfigMap: path + '/api/k8s/configmap/update', // 更新ConfigMap
+  getK8sServices: path + '/api/k8s/services', // 获取Service列表
+  getK8sServiceDetail: path + '/api/k8s/service/detail', // 获取Service详情
+  updateK8sService: path + '/api/k8s/service/update', // 更新Service
+  getK8sPvcs: path + '/api/k8s/pvcs', // 获取PVC列表
+  getK8sPvcDetail: path + '/api/k8s/pvc/detail', // 获取PVC详情
+  updateK8sPvc: path + '/api/k8s/pvc/update', // 更新PVC
 }
