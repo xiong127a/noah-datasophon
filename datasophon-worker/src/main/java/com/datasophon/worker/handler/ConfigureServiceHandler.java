@@ -30,8 +30,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.ShellUtils;
-import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.utils.TaskConstants;
+import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -211,10 +211,10 @@ public class ConfigureServiceHandler {
                     if (extTemplateDir.exists() && extTemplateDir.isDirectory()) {
                         // 3rd app, load ext templates
                         logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
-                        FreemakerUtils.generateConfigFile(generators, configs, decompressPackageName,
+                        WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName,
                                 extTemplateDir.getAbsolutePath());
                     } else {
-                        FreemakerUtils.generateConfigFile(generators, configs, decompressPackageName);
+                        WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName);
                     }
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;

@@ -35,11 +35,11 @@ import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
-import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.actor.RemoteEventActor;
 import com.datasophon.worker.actor.WorkerActor;
 import com.datasophon.worker.utils.ActorUtils;
 import com.datasophon.worker.utils.UnixUtils;
+import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
@@ -133,7 +133,7 @@ public class WorkerApplicationServer {
         system.actorOf(Props.create(WorkerActor.class), WORKER);
 
         // 设置ActorSystem到FreemakerUtils，用于模板获取
-        FreemakerUtils.setActorSystem(system);
+        WorkerFreemarkerUtils.setActorSystem(system);
 
         return system;
     }
