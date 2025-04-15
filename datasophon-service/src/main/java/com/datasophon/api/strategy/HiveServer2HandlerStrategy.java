@@ -41,7 +41,6 @@ import java.util.Map;
 
 public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
-
     @Override
     public void handler(Integer clusterId, List<String> hosts) {
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
@@ -116,9 +115,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId,String serviceHome,Map<String, String> configMap) {
-
-
+    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+            Map<String, String> configMap) {
 
         List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
         // 获取所有HiveServer2节点的主机名
@@ -453,8 +451,8 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                     .basicInfoList(basicInfoList)
                     .jdbcUrl(jdbcUrl)
                     .jdbcUrls(jdbcUrls)
-                    .javaCode(generateJavaCode(jdbcUrl, enableKerberos))
-                    .pythonCode(generatePythonCode(hiveServer2Host, hiveServer2Port, enableKerberos))
+                    .javaCode(generateJavaCode(jdbcUrl, metastoreUris, enableKerberos))
+                    .pythonCode(generatePythonCode(hiveServer2Host, hiveServer2Port, metastoreUris, enableKerberos))
                     .commandLines(commandLines)
                     .hostName(hiveServer2Host) // 添加主机名到ConnectionInfo
                     .build();
@@ -467,72 +465,225 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
     /**
      * 生成Java示例代码
      */
-    private String generateJavaCode(String jdbcUrl, boolean enableKerberos) {
-        return "import java.sql.Connection;\n" +
-                "import java.sql.DriverManager;\n" +
-                "import java.sql.ResultSet;\n" +
-                "import java.sql.Statement;\n\n" +
-                "public class HiveJdbcClient {\n" +
-                "    public static void main(String[] args) throws Exception {\n" +
-                "        try {\n" +
-                "            Class.forName(\"org.apache.hive.jdbc.HiveDriver\");\n" +
-                "        } catch (ClassNotFoundException e) {\n" +
-                "            e.printStackTrace();\n" +
-                "            System.exit(1);\n" +
-                "        }\n\n" +
-                "        // JDBC URL\n" +
-                "        String jdbcURL = \"" + jdbcUrl + "\";\n" +
-                (enableKerberos ? "        // Kerberos认证需要设置以下系统属性\n" +
-                        "        System.setProperty(\"java.security.krb5.conf\", \"/etc/krb5.conf\");\n" +
-                        "        System.setProperty(\"javax.security.auth.useSubjectCredsOnly\", \"false\");\n"
-                        : "")
-                +
-                "\n" +
-                "        Connection conn = DriverManager.getConnection(jdbcURL);\n" +
-                "        Statement stmt = conn.createStatement();\n" +
-                "        String sql = \"SHOW DATABASES\";\n" +
-                "        ResultSet rs = stmt.executeQuery(sql);\n" +
-                "        while (rs.next()) {\n" +
-                "            System.out.println(rs.getString(1));\n" +
-                "        }\n" +
-                "        rs.close();\n" +
-                "        stmt.close();\n" +
-                "        conn.close();\n" +
-                "    }\n" +
-                "}";
+    private String generateJavaCode(String jdbcUrl, String metastoreUris, boolean enableKerberos) {
+        StringBuilder code = new StringBuilder();
+
+        // JDBC示例代码
+        code.append("// ======== HiveServer2 JDBC连接示例 ========\n");
+        code.append("import java.sql.Connection;\n");
+        code.append("import java.sql.DriverManager;\n");
+        code.append("import java.sql.ResultSet;\n");
+        code.append("import java.sql.Statement;\n\n");
+        code.append("public class HiveJdbcClient {\n");
+        code.append("    public static void main(String[] args) throws Exception {\n");
+        code.append("        try {\n");
+        code.append("            Class.forName(\"org.apache.hive.jdbc.HiveDriver\");\n");
+        code.append("        } catch (ClassNotFoundException e) {\n");
+        code.append("            e.printStackTrace();\n");
+        code.append("            System.exit(1);\n");
+        code.append("        }\n\n");
+        code.append("        // JDBC URL\n");
+        code.append("        String jdbcURL = \"").append(jdbcUrl).append("\";\n");
+
+        if (enableKerberos) {
+            code.append("        // Kerberos认证需要设置以下系统属性\n");
+            code.append("        System.setProperty(\"java.security.krb5.conf\", \"/etc/krb5.conf\");\n");
+            code.append("        System.setProperty(\"javax.security.auth.useSubjectCredsOnly\", \"false\");\n");
+        }
+
+        code.append("\n");
+        code.append("        Connection conn = DriverManager.getConnection(jdbcURL);\n");
+        code.append("        Statement stmt = conn.createStatement();\n");
+        code.append("        String sql = \"SHOW DATABASES\";\n");
+        code.append("        ResultSet rs = stmt.executeQuery(sql);\n");
+        code.append("        while (rs.next()) {\n");
+        code.append("            System.out.println(rs.getString(1));\n");
+        code.append("        }\n");
+        code.append("        rs.close();\n");
+        code.append("        stmt.close();\n");
+        code.append("        conn.close();\n");
+        code.append("    }\n");
+        code.append("}\n\n");
+
+        // Metastore示例代码
+        code.append("// ======== Hive Metastore连接示例 ========\n");
+        code.append("import org.apache.hadoop.hive.conf.HiveConf;\n");
+        code.append("import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;\n");
+        code.append("import org.apache.hadoop.hive.metastore.api.Database;\n");
+        code.append("import org.apache.hadoop.hive.metastore.api.Table;\n");
+        code.append("import org.apache.thrift.TException;\n");
+        code.append("import java.util.List;\n\n");
+        code.append("public class HiveMetastoreClient {\n");
+        code.append("    public static void main(String[] args) {\n");
+        code.append("        try {\n");
+        code.append("            // 创建Hive配置\n");
+        code.append("            HiveConf conf = new HiveConf();\n");
+        code.append("            conf.set(\"hive.metastore.uris\", \"").append(metastoreUris).append("\");\n");
+
+        if (enableKerberos) {
+            code.append("            // Kerberos配置\n");
+            code.append("            conf.set(\"hadoop.security.authentication\", \"kerberos\");\n");
+            code.append("            conf.set(\"hive.metastore.kerberos.principal\", \"hive/_HOST@HADOOP.COM\");\n");
+            code.append("            org.apache.hadoop.security.UserGroupInformation.setConfiguration(conf);\n");
+            code.append(
+                    "            org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytab(\"hive@HADOOP.COM\", \"/path/to/hive.keytab\");\n");
+        }
+
+        code.append("\n");
+        code.append("            // 创建Metastore客户端\n");
+        code.append("            HiveMetaStoreClient client = new HiveMetaStoreClient(conf);\n\n");
+        code.append("            // 获取所有数据库\n");
+        code.append("            List<String> databases = client.getAllDatabases();\n");
+        code.append("            System.out.println(\"数据库列表:\");\n");
+        code.append("            for (String db : databases) {\n");
+        code.append("                System.out.println(db);\n");
+        code.append("            }\n\n");
+        code.append("            // 获取数据库详情\n");
+        code.append("            Database defaultDb = client.getDatabase(\"default\");\n");
+        code.append("            System.out.println(\"数据库路径: \" + defaultDb.getLocationUri());\n\n");
+        code.append("            // 获取所有表\n");
+        code.append("            List<String> tables = client.getAllTables(\"default\");\n");
+        code.append("            System.out.println(\"表列表:\");\n");
+        code.append("            for (String tableName : tables) {\n");
+        code.append("                System.out.println(tableName);\n");
+        code.append("            }\n\n");
+        code.append("            // 获取表详情\n");
+        code.append("            if (!tables.isEmpty()) {\n");
+        code.append("                Table table = client.getTable(\"default\", tables.get(0));\n");
+        code.append(
+                "                System.out.println(\"表详情: \" + table.getTableName() + \", 列数: \" + table.getSd().getColsSize());\n");
+        code.append("            }\n\n");
+        code.append("            // 关闭客户端\n");
+        code.append("            client.close();\n");
+        code.append("        } catch (TException e) {\n");
+        code.append("            e.printStackTrace();\n");
+        code.append("        }\n");
+        code.append("    }\n");
+        code.append("}\n");
+
+        return code.toString();
     }
 
     /**
      * 生成Python示例代码
      */
-    private String generatePythonCode(String hiveServer2Host, String hiveServer2Port, boolean enableKerberos) {
-        return "from pyhive import hive\n\n" +
-                "# 连接Hive\n" +
-                "conn = hive.Connection(\n" +
-                "    host='" + hiveServer2Host + "',\n" +
-                "    port=" + hiveServer2Port + ",\n" +
-                (enableKerberos ? "    auth='KERBEROS',\n" +
-                        "    kerberos_service_name='hive',\n" : "")
-                +
-                "    database='default'\n" +
-                ")\n\n" +
-                "# 创建游标\n" +
-                "cursor = conn.cursor()\n\n" +
-                "# 执行查询\n" +
-                "cursor.execute('SHOW DATABASES')\n\n" +
-                "# 获取结果\n" +
-                "for result in cursor.fetchall():\n" +
-                "    print(result[0])\n\n" +
-                "# 关闭连接\n" +
-                "cursor.close()\n" +
-                "conn.close()";
+    private String generatePythonCode(String hiveServer2Host, String hiveServer2Port, String metastoreUris,
+            boolean enableKerberos) {
+        StringBuilder code = new StringBuilder();
+
+        // JDBC示例代码
+        code.append("# ======== HiveServer2 Python连接示例 ========\n");
+        code.append("from pyhive import hive\n\n");
+        code.append("# 连接Hive\n");
+        code.append("conn = hive.Connection(\n");
+        code.append("    host='").append(hiveServer2Host).append("',\n");
+        code.append("    port=").append(hiveServer2Port).append(",\n");
+
+        if (enableKerberos) {
+            code.append("    auth='KERBEROS',\n");
+            code.append("    kerberos_service_name='hive',\n");
+        }
+
+        code.append("    database='default'\n");
+        code.append(")\n\n");
+        code.append("# 创建游标\n");
+        code.append("cursor = conn.cursor()\n\n");
+        code.append("# 执行查询\n");
+        code.append("cursor.execute('SHOW DATABASES')\n\n");
+        code.append("# 获取结果\n");
+        code.append("for result in cursor.fetchall():\n");
+        code.append("    print(result[0])\n\n");
+        code.append("# 关闭连接\n");
+        code.append("cursor.close()\n");
+        code.append("conn.close()\n\n");
+
+        // Metastore示例代码
+        code.append("# ======== Hive Metastore Python连接示例 ========\n");
+        code.append("# 安装依赖: pip install thrift pymysql\n");
+        code.append("# 注意: 需要Hive的thrift生成的Python模块 - 可以从Hive源码生成或者在PyPI上查找\n\n");
+        code.append("# 方法1: 使用PyHive的元数据API (如果安装了PyHive)\n");
+        code.append("try:\n");
+        code.append("    from pyhive import hive_metastore\n");
+        code.append("    \n");
+        code.append("    # 连接到Metastore\n");
+
+        // 从metastoreUris中提取主机名和端口号
+        String metastoreHost = "localhost";
+        String metastorePort = "9083";
+        if (StrUtil.isNotBlank(metastoreUris) && metastoreUris.startsWith("thrift://")) {
+            String[] parts = metastoreUris.replace("thrift://", "").split(":");
+            if (parts.length >= 1) {
+                metastoreHost = parts[0];
+            }
+            if (parts.length >= 2) {
+                metastorePort = parts[1];
+            }
+        }
+
+        code.append("    client = hive_metastore.Client('").append(metastoreHost).append("', ").append(metastorePort)
+                .append(")\n");
+        code.append("    \n");
+        code.append("    # 获取所有数据库\n");
+        code.append("    databases = client.get_all_databases()\n");
+        code.append("    print('数据库列表:', databases)\n");
+        code.append("    \n");
+        code.append("    # 获取默认数据库中的所有表\n");
+        code.append("    tables = client.get_all_tables('default')\n");
+        code.append("    print('表列表:', tables)\n");
+        code.append("    \n");
+        code.append("    # 获取表详情\n");
+        code.append("    if tables:\n");
+        code.append("        table = client.get_table('default', tables[0])\n");
+        code.append("        print(f'表名: {table.tableName}')\n");
+        code.append("        print(f'表类型: {table.tableType}')\n");
+        code.append("        print(f'列数: {len(table.sd.cols)}')\n");
+        code.append("except ImportError:\n");
+        code.append("    print('PyHive的元数据API未安装，请尝试方法2')\n\n");
+
+        code.append("# 方法2: 直接通过MySQL数据库连接Metastore (如果Metastore使用MySQL作为后端)\n");
+        code.append("import pymysql\n");
+        code.append("\n");
+        code.append("try:\n");
+        code.append("    # 假设Metastore使用MySQL作为后端存储\n");
+        code.append("    # 请替换这些参数为您的实际配置\n");
+        code.append("    conn = pymysql.connect(\n");
+        code.append("        host='localhost',            # MySQL主机名\n");
+        code.append("        user='hive',                 # MySQL用户名\n");
+        code.append("        password='hive',             # MySQL密码\n");
+        code.append("        database='metastore',        # Metastore数据库名称\n");
+        code.append("        charset='utf8mb4'\n");
+        code.append("    )\n");
+        code.append("    \n");
+        code.append("    cursor = conn.cursor()\n");
+        code.append("    \n");
+        code.append("    # 获取所有数据库\n");
+        code.append("    cursor.execute('SELECT NAME FROM DBS')\n");
+        code.append("    databases = [row[0] for row in cursor.fetchall()]\n");
+        code.append("    print('数据库列表:', databases)\n");
+        code.append("    \n");
+        code.append("    # 获取默认数据库中的所有表\n");
+        code.append("    cursor.execute(\"\"\"\n");
+        code.append("        SELECT T.TBL_NAME \n");
+        code.append("        FROM TBLS T \n");
+        code.append("        JOIN DBS D ON T.DB_ID = D.DB_ID \n");
+        code.append("        WHERE D.NAME = 'default'\n");
+        code.append("    \"\"\")\n");
+        code.append("    tables = [row[0] for row in cursor.fetchall()]\n");
+        code.append("    print('表列表:', tables)\n");
+        code.append("    \n");
+        code.append("    cursor.close()\n");
+        code.append("    conn.close()\n");
+        code.append("except Exception as e:\n");
+        code.append("    print(f'直接连接Metastore数据库失败: {e}')\n");
+
+        return code.toString();
     }
 
     /**
      * 生成命令行示例
      */
     private List<CommandLineItem> generateCommandLines(String jdbcUrl,
-                                                       String serviceHome, String hostname) {
+            String serviceHome, String hostname) {
         List<CommandLineItem> commandLines = new ArrayList<>();
 
         // 获取beeline命令路径 - 使用相对路径
@@ -662,6 +813,5 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
 
         return addFinalPrompt(commandLines, serviceHome, hostname);
     }
-
 
 }

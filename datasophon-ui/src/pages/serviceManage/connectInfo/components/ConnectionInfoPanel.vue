@@ -52,8 +52,8 @@
         <!-- Java 示例代码 -->
         <div v-else-if="activeTab === 1" class="info-panel">
           <CodeBlock
-            :title="javaTitle"
-            :file-name="javaFileName"
+            :title="connectionInfo?.javaTitle || defaultJavaTitle"
+            :file-name="connectionInfo?.javaFileName || defaultJavaFileName"
             :code="connectionInfo?.javaCode || ''"
             language="java"
             ref="javaCodeBlock"
@@ -63,8 +63,8 @@
         <!-- Python 示例代码 -->
         <div v-else-if="activeTab === 2" class="info-panel">
           <CodeBlock
-            :title="pythonTitle"
-            :file-name="pythonFileName"
+            :title="connectionInfo?.pythonTitle || defaultPythonTitle"
+            :file-name="connectionInfo?.pythonFileName || defaultPythonFileName"
             :code="connectionInfo?.pythonCode || ''"
             language="python"
             ref="pythonCodeBlock"
@@ -74,7 +74,7 @@
         <!-- 命令行 -->
         <div v-else-if="activeTab === 3" class="info-panel">
           <CommandTerminal 
-            :title="commandTitle"
+            :title="connectionInfo?.commandTitle || defaultCommandTitle"
             :commands="commandLineArray"
             :host-name="connectionInfo?.hostName || getServiceHost()"
             :service-home="connectionInfo?.serviceHome || ''"
@@ -146,20 +146,20 @@ export default {
   },
   computed: {
     // 提取标题
-    javaTitle() {
+    defaultJavaTitle() {
       return this.titles.javaTitle || 'Java连接示例';
     },
-    pythonTitle() {
+    defaultPythonTitle() {
       return this.titles.pythonTitle || 'Python连接示例';
     },
-    commandTitle() {
+    defaultCommandTitle() {
       return this.titles.commandTitle || '常用命令';
     },
     // 提取文件名
-    javaFileName() {
+    defaultJavaFileName() {
       return this.fileNames.javaFileName || 'Example.java';
     },
-    pythonFileName() {
+    defaultPythonFileName() {
       return this.fileNames.pythonFileName || 'example.py';
     },
     // 检查连接信息是否为空

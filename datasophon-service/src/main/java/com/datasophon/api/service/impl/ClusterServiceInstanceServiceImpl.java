@@ -338,13 +338,55 @@ public class ClusterServiceInstanceServiceImpl
         Map.Entry<String, Map<String, String>> serviceConfigMap = strategy.getServiceConfigMap(serviceInstanceId);
         Map<String, String> configMap = serviceConfigMap.getValue();
         String serviceHome = serviceConfigMap.getKey();
-        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId,serviceHome,configMap);
+        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId, serviceHome,
+                configMap);
         if (connectionInfo == null || connectionInfo.getBasicInfo() == null) {
             log.warn("服务{}未提供连接信息", serviceName);
             return Result.error("该服务未提供连接信息");
         }
+        String camelServiceName = toCamelCase(serviceName);
+        // 如果标题和文件名未设置，则根据服务名称设置默认值
+        if (connectionInfo.getJavaTitle() == null) {
+            connectionInfo.setJavaTitle(camelServiceName + " Java连接示例");
+        }
+        if (connectionInfo.getPythonTitle() == null) {
+            connectionInfo.setPythonTitle(camelServiceName + " Python连接示例");
+        }
+        if (connectionInfo.getCommandTitle() == null) {
+            connectionInfo.setCommandTitle(camelServiceName + "常用命令");
+        }
+        if (connectionInfo.getJavaFileName() == null) {
+            // 将服务名转换为驼峰命名(首字母大写，其余小写)
+
+            connectionInfo.setJavaFileName(camelServiceName + "Example.java");
+        }
+        if (connectionInfo.getPythonFileName() == null) {
+            // 将服务名转换为驼峰命名(首字母小写，其余小写)
+            String lowercaseServiceName = serviceName.toLowerCase();
+            connectionInfo.setPythonFileName(lowercaseServiceName + "_example.py");
+        }
+        if (connectionInfo.getServiceHome() == null) {
+            connectionInfo.setServiceHome(serviceHome);
+        }
 
         return Result.success(connectionInfo);
+    }
+
+    /**
+     * 将全大写的服务名转换为驼峰命名格式
+     * 例如：HDFS -> Hdfs, HIVESERVER2 -> Hiveserver2
+     *
+     * @param serviceName 服务名称
+     * @return 驼峰命名格式的服务名
+     */
+    private String toCamelCase(String serviceName) {
+        if (serviceName == null || serviceName.isEmpty()) {
+            return "";
+        }
+        // 先转为小写
+        String lowercase = serviceName.toLowerCase();
+        // 首字母大写
+        return Character.toUpperCase(lowercase.charAt(0)) + lowercase.substring(1);
     }
 
 }

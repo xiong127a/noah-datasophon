@@ -76,4 +76,34 @@ public class ConnectionInfo implements Serializable {
      * 主机名
      */
     private String hostName;
+
+    /**
+     * Java代码示例标题
+     */
+    private String javaTitle;
+
+    /**
+     * Python代码示例标题
+     */
+    private String pythonTitle;
+
+    /**
+     * 命令行示例标题
+     */
+    private String commandTitle;
+
+    /**
+     * Java示例文件名
+     */
+    private String javaFileName;
+
+    /**
+     * Python示例文件名
+     */
+    private String pythonFileName;
+
+    /**
+     * 服务安装目录
+     */
+    private String serviceHome;
 }
