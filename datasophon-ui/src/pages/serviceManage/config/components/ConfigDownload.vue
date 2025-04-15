@@ -187,6 +187,7 @@
       :title="null"
       width="70%"
       :footer="null"
+      :closable="false"
       :maskClosable="true"
       class="preview-modal"
       :destroyOnClose="true"
@@ -228,12 +229,17 @@
           <div class="syntax-info">{{ getFileType(currentPreviewFile) }}</div>
           <div class="syntax-actions">
             <a-radio-group v-model="previewTheme" buttonStyle="solid" size="small">
-              <a-radio-button value="light">浅色</a-radio-button>
               <a-radio-button value="dark">深色</a-radio-button>
+              <a-radio-button value="light">浅色</a-radio-button>
             </a-radio-group>
           </div>
         </div>
-        <pre :class="['config-preview', {'dark-theme': previewTheme === 'dark'}]">{{ previewContent }}</pre>
+        <codemirror
+          v-model="previewContent"
+          :options="cmOptions"
+          class="code-mirror"
+          :style="{ height: '500px' }"
+        />
       </a-spin>
     </a-modal>
   </div>
@@ -241,8 +247,28 @@
 
 <script>
 import Empty from 'ant-design-vue/lib/empty';
+import { codemirror } from 'vue-codemirror';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/dracula.css';
+import 'codemirror/theme/eclipse.css';
+import 'codemirror/mode/xml/xml.js';
+import 'codemirror/mode/javascript/javascript.js';
+import 'codemirror/mode/yaml/yaml.js';
+import 'codemirror/mode/properties/properties.js';
+import 'codemirror/mode/shell/shell.js';
+import 'codemirror/addon/edit/matchbrackets.js';
+import 'codemirror/addon/edit/closebrackets.js';
+import 'codemirror/addon/fold/foldcode.js';
+import 'codemirror/addon/fold/foldgutter.js';
+import 'codemirror/addon/fold/brace-fold.js';
+import 'codemirror/addon/fold/xml-fold.js';
+import 'codemirror/addon/fold/foldgutter.css';
+
 export default {
   name: 'ConfigDownload',
+  components: {
+    codemirror
+  },
   props: {
     serviceId: {
       type: [Number, String],
@@ -265,7 +291,7 @@ export default {
       currentPreviewFile: '',
       searchText: '',
       viewMode: 'list',
-      previewTheme: 'light',
+      previewTheme: 'dark',
       emptyImage: Empty.PRESENTED_IMAGE_SIMPLE,
       columns: [
         {
@@ -293,7 +319,22 @@ export default {
           width: '15%',
           scopedSlots: { customRender: 'operation' }
         }
-      ]
+      ],
+      cmOptions: {
+        mode: 'text/x-yaml',
+        theme: 'dracula',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        foldOptions: {
+          widget: 'triangle',
+          marker: 'triangle',
+          open: 'triangle',
+          closed: 'triangle'
+        }
+      }
     };
   },
   computed: {
@@ -307,6 +348,16 @@ export default {
         file.fileName.toLowerCase().includes(searchLower) || 
         (file.description && file.description.toLowerCase().includes(searchLower))
       );
+    }
+  },
+  watch: {
+    previewTheme(val) {
+      this.cmOptions.theme = val === 'dark' ? 'dracula' : 'eclipse';
+    },
+    currentPreviewFile(val) {
+      if (val) {
+        this.updateCodeMirrorMode(val);
+      }
     }
   },
   mounted() {
@@ -421,6 +472,7 @@ export default {
       try {
         if (!global.API || !global.API.previewServiceConfigFile) {
           this.previewContent = '系统配置错误，无法获取文件内容';
+          this.$message.error('系统配置错误，无法获取文件内容');
           return;
         }
         
@@ -432,12 +484,30 @@ export default {
         const res = await this.$axiosJsonPost(global.API.previewServiceConfigFile, params);
         
         if (res.code === 200) {
-          this.previewContent = res.data || '文件内容为空';
+          // 处理空文件的情况
+          if (!res.data || res.data.trim() === '') {
+            this.previewContent = '// 文件内容为空';
+            this.$message.warning('当前文件内容为空');
+          } else {
+            this.previewContent = res.data;
+          }
         } else {
-          this.previewContent = '获取文件内容失败: ' + (res.msg || '未知错误');
+          this.previewContent = '获取文件内容失败';
+          // 只有在有具体错误信息时才显示
+          if (res.msg && res.msg !== 'null') {
+            this.$message.error(res.msg);
+          } else {
+            this.$message.error('获取文件内容失败，请稍后重试');
+          }
         }
       } catch (error) {
-        this.previewContent = '获取文件内容失败: ' + (error && error.message ? error.message : '未知错误');
+        this.previewContent = '获取文件内容失败';
+        // 只有在有具体错误信息时才显示
+        if (error && typeof error === 'object' && error.message && error.message !== 'null') {
+          this.$message.error('获取文件内容失败：' + error.message);
+        } else {
+          this.$message.error('获取文件内容失败，请稍后重试');
+        }
       } finally {
         this.previewLoading = false;
       }
@@ -472,18 +542,99 @@ export default {
       const extension = fileName.split('.').pop().toLowerCase();
       
       const iconMap = {
-        xml: 'file-xml',
+        // 配置文件类型
+        xml: 'tags',  // 使用tags图标，因为XML是基于标签的标记语言
+        options: 'setting',
         json: 'file-json',
+        yaml: 'file-markdown',
+        yml: 'file-markdown',
         properties: 'setting',
-        yaml: 'code',
-        yml: 'code',
-        sh: 'console',
-        txt: 'file-text',
         conf: 'setting',
         cfg: 'setting',
         ini: 'setting',
-        log: 'file-text'
+        toml: 'setting',
+        
+        // 脚本文件类型
+        sh: 'code',
+        bash: 'code',
+        zsh: 'code',
+        bat: 'code',
+        cmd: 'code',
+        ps1: 'code',
+        
+        // 日志文件类型
+        log: 'file-text',
+        out: 'file-text',
+        err: 'file-text',
+        trace: 'file-text',
+        
+        // 数据文件类型
+        csv: 'file-excel',
+        tsv: 'file-excel',
+        xlsx: 'file-excel',
+        xls: 'file-excel',
+        
+        // 文本文件类型
+        txt: 'file-text',
+        md: 'file-markdown',
+        markdown: 'file-markdown',
+        rst: 'file-text',
+        
+        // 压缩文件类型
+        zip: 'file-zip',
+        tar: 'file-zip',
+        gz: 'file-zip',
+        bz2: 'file-zip',
+        rar: 'file-zip',
+        '7z': 'file-zip',
+        
+        // 图片文件类型
+        png: 'file-image',
+        jpg: 'file-image',
+        jpeg: 'file-image',
+        gif: 'file-image',
+        svg: 'file-image',
+        ico: 'file-image',
+        
+        // 其他常见文件类型
+        pdf: 'file-pdf',
+        doc: 'file-word',
+        docx: 'file-word',
+        ppt: 'file-ppt',
+        pptx: 'file-ppt',
+        html: 'file-html',
+        htm: 'file-html',
+        css: 'file-css',
+        js: 'file-javascript',
+        ts: 'file-typescript',
+        java: 'file-java',
+        py: 'file-python',
+        go: 'file-go',
+        c: 'file-c',
+        cpp: 'file-cpp',
+        h: 'file-c',
+        hpp: 'file-cpp',
+        sql: 'database',
+        db: 'database',
+        sqlite: 'database',
+        mdb: 'database',
+        accdb: 'database'
       };
+      
+      // 处理没有扩展名的特殊文件名
+      if (!extension || extension === fileName) {
+        // 一些常见的无扩展名配置文件
+        const specialFiles = {
+          'options': 'setting',
+          'config': 'setting',
+          'dockerfile': 'code',
+          'makefile': 'code',
+          'readme': 'file-markdown'
+        };
+        
+        const lowerFileName = fileName.toLowerCase();
+        return specialFiles[lowerFileName] || 'file';
+      }
       
       return iconMap[extension] || 'file';
     },
@@ -547,6 +698,35 @@ export default {
       } else {
         return `${(totalKB / (1024 * 1024)).toFixed(2)} GB`;
       }
+    },
+
+    // 更新CodeMirror的模式
+    updateCodeMirrorMode(fileName) {
+      const extension = fileName.split('.').pop().toLowerCase();
+      let mode = 'text/plain';
+      
+      switch (extension) {
+        case 'xml':
+          mode = 'application/xml';
+          break;
+        case 'json':
+          mode = 'application/json';
+          break;
+        case 'yaml':
+        case 'yml':
+          mode = 'text/x-yaml';
+          break;
+        case 'properties':
+          mode = 'text/x-properties';
+          break;
+        case 'sh':
+          mode = 'text/x-sh';
+          break;
+        default:
+          mode = 'text/plain';
+      }
+      
+      this.cmOptions.mode = mode;
     }
   }
 };
@@ -1095,5 +1275,102 @@ export default {
   .file-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
+}
+
+.code-mirror {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-mirror :deep(.CodeMirror) {
+  height: 100%;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.code-mirror :deep(.CodeMirror-gutters) {
+  border-right: 1px solid #f0f0f0;
+  background-color: #f9fafb;
+}
+
+.code-mirror :deep(.CodeMirror-linenumber) {
+  color: #999;
+  padding: 0 8px;
+}
+
+.code-mirror :deep(.CodeMirror-foldgutter) {
+  width: 20px;
+}
+
+.code-mirror :deep(.CodeMirror-foldgutter-open),
+.code-mirror :deep(.CodeMirror-foldgutter-folded) {
+  color: #999;
+  cursor: pointer;
+}
+
+/* 深色主题 */
+.code-mirror :deep(.cm-s-dracula) {
+  background-color: #1F2937;
+  color: #E5E7EB;
+}
+
+.code-mirror :deep(.cm-s-dracula .CodeMirror-gutters) {
+  background-color: #111827;
+  border-right: 1px solid #374151;
+}
+
+.code-mirror :deep(.cm-s-dracula .CodeMirror-linenumber) {
+  color: #6B7280;
+}
+
+/* XML声明和样式表声明的样式 */
+.code-mirror :deep(.cm-s-dracula .cm-meta) {
+  color: #FF9D00; /* XML声明使用橙色 */
+}
+
+.code-mirror :deep(.cm-s-dracula .cm-tag) {
+  color: #FF5370; /* 标签使用红色 */
+}
+
+.code-mirror :deep(.cm-s-dracula .cm-attribute) {
+  color: #C792EA; /* 属性使用紫色 */
+}
+
+.code-mirror :deep(.cm-s-dracula .cm-string) {
+  color: #C3E88D; /* 字符串使用绿色 */
+}
+
+/* 浅色主题 */
+.code-mirror :deep(.cm-s-eclipse) {
+  background-color: #f9fafb;
+  color: #333;
+}
+
+.code-mirror :deep(.cm-s-eclipse .CodeMirror-gutters) {
+  background-color: #f0f0f0;
+  border-right: 1px solid #e0e0e0;
+}
+
+.code-mirror :deep(.cm-s-eclipse .CodeMirror-linenumber) {
+  color: #999;
+}
+
+/* 浅色主题的XML样式 */
+.code-mirror :deep(.cm-s-eclipse .cm-meta) {
+  color: #FF6B00; /* XML声明使用橙色 */
+}
+
+.code-mirror :deep(.cm-s-eclipse .cm-tag) {
+  color: #881280; /* 标签使用深紫色 */
+}
+
+.code-mirror :deep(.cm-s-eclipse .cm-attribute) {
+  color: #994500; /* 属性使用棕色 */
+}
+
+.code-mirror :deep(.cm-s-eclipse .cm-string) {
+  color: #1A1AA6; /* 字符串使用蓝色 */
 }
 </style> 

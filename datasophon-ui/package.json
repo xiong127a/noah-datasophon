@@ -28,7 +28,7 @@
     "ant-design-vue": "1.7.2",
     "axios": "^0.19.2",
     "clipboard": "^2.0.6",
-    "codemirror": "^5.65.2",
+    "codemirror": "^5.65.19",
     "core-js": "^3.6.5",
     "date-fns": "^2.14.0",
     "enquire.js": "^2.1.6",
