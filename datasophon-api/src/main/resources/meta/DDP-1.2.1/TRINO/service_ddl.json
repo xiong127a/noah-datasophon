@@ -90,6 +90,7 @@
     "generators": [
       {
         "filename": "config.properties",
+        "fileDescription": "Trino主要配置文件，设置协调器模式、内存限制和服务发现参数",
         "configFormat": "properties",
         "outputDirectory": "etc",
         "includeParams": [
@@ -103,6 +104,7 @@
       },
       {
         "filename": "jvm.config",
+        "fileDescription": "Trino JVM配置文件，设置Java虚拟机的堆内存和GC参数",
         "configFormat": "custom",
         "outputDirectory": "etc",
         "templateName": "jvm.config.ftl",
@@ -112,6 +114,7 @@
       },
       {
         "filename": "node.properties",
+        "fileDescription": "Trino节点配置文件，定义节点标识和数据存储路径",
         "configFormat": "properties",
         "outputDirectory": "etc",
         "includeParams": [
@@ -121,6 +124,7 @@
       },
       {
         "filename": "carbondata.properties",
+        "fileDescription": "Trino Carbondata连接器配置，用于访问Carbondata数据源",
         "configFormat": "properties",
         "outputDirectory": "etc/catalog",
         "includeParams": [
@@ -129,6 +133,7 @@
       },
       {
         "filename": "hive.properties",
+        "fileDescription": "Trino Hive连接器配置，用于访问Hive元数据和HDFS数据",
         "configFormat": "properties",
         "outputDirectory": "etc/catalog",
         "includeParams": [

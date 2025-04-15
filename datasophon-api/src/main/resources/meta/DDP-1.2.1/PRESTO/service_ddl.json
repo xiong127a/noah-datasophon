@@ -90,6 +90,7 @@
     "generators": [
       {
         "filename": "config.properties",
+        "fileDescription": "Presto核心配置文件，定义服务功能、端口和资源参数",
         "configFormat": "properties",
         "outputDirectory": "etc",
         "includeParams": [
@@ -103,6 +104,7 @@
       },
       {
         "filename": "jvm.config",
+        "fileDescription": "Presto JVM配置文件，设置Java虚拟机内存和垃圾回收参数",
         "configFormat": "custom",
         "outputDirectory": "etc",
         "templateName": "presto.jvm.config.ftl",
@@ -112,6 +114,7 @@
       },
       {
         "filename": "node.properties",
+        "fileDescription": "Presto节点配置文件，定义节点环境和数据存储路径",
         "configFormat": "properties",
         "outputDirectory": "etc",
         "includeParams": [
@@ -121,6 +124,7 @@
       },
       {
         "filename": "hive.properties",
+        "fileDescription": "Presto Hive连接器配置文件，设置与Hive元数据和数据的交互参数",
         "configFormat": "properties",
         "outputDirectory": "etc/catalog",
         "includeParams": [

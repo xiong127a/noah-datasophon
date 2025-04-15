@@ -50,6 +50,7 @@
     "generators": [
       {
         "filename": "zoo.cfg",
+        "fileDescription": "ZooKeeper主配置文件，定义集群成员、会话超时、数据目录等核心参数",
         "configFormat": "properties",
         "outputDirectory": "conf",
         "configTargetRoles": "ZkServer",
@@ -73,6 +74,7 @@
       },
       {
         "filename": "java.env",
+        "fileDescription": "ZooKeeper JVM环境配置，设置堆内存和Java安全参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
         "configTargetRoles": "CommonConfig",
@@ -86,6 +88,7 @@
       },
       {
         "filename": "jaas.conf",
+        "fileDescription": "ZooKeeper JAAS认证配置文件，定义Kerberos安全认证参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
         "configTargetRoles": "CommonConfig",
@@ -95,16 +98,17 @@
           "zkRealm"
         ]
       },
-        {
-          "filename": "pvc.config.k8s",
-          "configFormat": "properties",
-          "configTargetRoles": "CommonConfig",
-          "outputDirectory": "",
-          "includeParams": [
-            "storageClasses",
-            "mountPath"
-          ]
-        }
+      {
+        "filename": "pvc.config.k8s",
+        "fileDescription": "ZooKeeper Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "CommonConfig",
+        "outputDirectory": "",
+        "includeParams": [
+          "storageClasses",
+          "mountPath"
+        ]
+      }
     ]
   },
   "parameters": [

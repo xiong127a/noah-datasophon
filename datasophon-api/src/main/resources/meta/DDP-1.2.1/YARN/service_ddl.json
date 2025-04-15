@@ -201,6 +201,7 @@
     "generators": [
       {
         "filename": "yarn-site.xml",
+        "fileDescription": "YARN核心配置文件，定义资源管理、节点管理和应用程序管理参数",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
@@ -266,6 +267,7 @@
       },
       {
         "filename": "mapred-site.xml",
+        "fileDescription": "MapReduce框架配置文件，设置作业历史服务器和MapReduce执行引擎参数",
         "configFormat": "xml",
         "outputDirectory": "etc/hadoop/",
         "includeParams": [
@@ -278,6 +280,7 @@
       },
       {
         "filename": "install.properties",
+        "fileDescription": "Ranger YARN插件配置文件，定义权限管理和审计设置",
         "configFormat": "custom",
         "outputDirectory": "ranger-yarn-plugin",
         "templateName": "ranger-yarn.ftl",

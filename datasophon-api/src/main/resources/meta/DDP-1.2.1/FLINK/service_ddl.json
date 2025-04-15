@@ -21,6 +21,7 @@
     "generators": [
       {
         "filename": "flink-conf.yaml",
+        "fileDescription": "Flink核心配置文件，定义JobManager、TaskManager内存和高可用参数",
         "configFormat": "custom",
         "templateName": "properties3.ftl",
         "outputDirectory": "conf",

@@ -109,6 +109,7 @@
     "generators": [
       {
         "filename": "control_redis.sh",
+        "fileDescription": "Redis Sentinel控制脚本，用于启动、停止和检查各节点状态",
         "configFormat": "custom",
         "outputDirectory": "",
         "templateName": "redis-sentinel-control.ftl",
@@ -120,6 +121,7 @@
       },
       {
         "filename": "redis-master.conf",
+        "fileDescription": "Redis主节点配置文件，定义Sentinel架构中的主实例参数",
         "configFormat": "custom",
         "configTargetRoles": "RedisSentinelMaster",
         "outputDirectory": "conf",
@@ -132,6 +134,7 @@
       },
       {
         "filename": "redis-slave.conf",
+        "fileDescription": "Redis从节点配置文件，定义Sentinel架构中的复制实例参数",
         "configFormat": "custom",
         "configTargetRoles": "RedisSentinelSlave",
         "outputDirectory": "conf",
@@ -145,6 +148,7 @@
       },
       {
         "filename": "sentinel.conf",
+        "fileDescription": "Redis Sentinel配置文件，定义高可用监控和故障转移参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
         "templateName": "redis-sentinel.ftl",

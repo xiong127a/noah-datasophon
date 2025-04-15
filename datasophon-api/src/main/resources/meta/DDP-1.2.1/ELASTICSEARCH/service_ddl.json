@@ -99,6 +99,7 @@
     "generators": [
       {
         "filename": "elasticsearch.yml",
+        "fileDescription": "ElasticSearch核心配置文件，定义集群节点、网络和存储参数",
         "configFormat": "properties3",
         "configTargetRoles": "ElasticSearch",
         "outputDirectory": "config",
@@ -124,6 +125,7 @@
       },
       {
         "filename": "jvm.options",
+        "fileDescription": "ElasticSearch JVM配置文件，设置堆内存大小和垃圾回收参数",
         "configFormat": "custom",
         "outputDirectory": "",
         "templateName": "jvm.options.ftl",

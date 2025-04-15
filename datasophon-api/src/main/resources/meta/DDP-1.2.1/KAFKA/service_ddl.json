@@ -94,6 +94,7 @@
     "generators": [
       {
         "filename": "server.properties",
+        "fileDescription": "Kafka服务器配置文件，定义Broker、Topic、日志存储等核心参数",
         "configTargetRoles": "KafkaBroker",
         "configFormat": "properties",
         "outputDirectory": "config",
@@ -128,6 +129,7 @@
       },
       {
         "filename": "system-config.properties",
+        "fileDescription": "Kafka监控系统配置文件，定义EFAK监控参数和数据库连接信息",
         "configFormat": "properties",
         "configTargetRoles": "efak",
         "outputDirectory": "efak/conf",
@@ -175,6 +177,7 @@
       },
       {
         "filename": "kafka-server-start.sh",
+        "fileDescription": "Kafka服务启动脚本，配置JVM参数和堆内存大小",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -184,9 +187,9 @@
           "JMX_PORT"
         ]
       },
-
       {
         "filename": "kafka-run-class.sh",
+        "fileDescription": "Kafka类运行脚本，配置安全认证和Kerberos参数",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -198,6 +201,7 @@
       },
       {
         "filename": "kafka-topics.sh",
+        "fileDescription": "Kafka主题管理脚本，用于创建和管理Topic的命令行工具",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -208,6 +212,7 @@
       },
       {
         "filename": "kafka-console-consumer.sh",
+        "fileDescription": "Kafka消费者脚本，用于消费和查看Topic数据的命令行工具",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -218,6 +223,7 @@
       },
       {
         "filename": "kafka-console-producer.sh",
+        "fileDescription": "Kafka生产者脚本，用于向Topic发送消息的命令行工具",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -228,6 +234,7 @@
       },
       {
         "filename": "kafka-consumer-groups.sh",
+        "fileDescription": "Kafka消费者组管理脚本，用于管理和监控消费者组状态",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "bin",
@@ -238,6 +245,7 @@
       },
       {
         "filename": "kafka-jaas.conf",
+        "fileDescription": "Kafka JAAS安全认证配置，定义Kerberos认证信息",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",
@@ -249,6 +257,7 @@
       },
       {
         "filename": "kafka-client-jaas.conf",
+        "fileDescription": "Kafka客户端JAAS配置，定义客户端连接认证信息",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",
@@ -260,6 +269,7 @@
       },
       {
         "filename": "kafka-client.properties",
+        "fileDescription": "Kafka客户端连接配置，定义安全协议和认证机制",
         "configFormat": "custom",
         "configTargetRoles": "KafkaBroker",
         "outputDirectory": "config",

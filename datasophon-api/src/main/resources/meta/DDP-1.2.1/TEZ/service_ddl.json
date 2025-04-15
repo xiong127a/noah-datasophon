@@ -57,6 +57,7 @@
     "generators": [
       {
         "filename": "configs.js",
+        "fileDescription": "Tez UI前端配置文件，定义YARN和Timeline服务连接地址",
         "configFormat": "custom",
         "outputDirectory": "tez-server/tezui/config",
         "templateName": "tez-server-config.ftl",
@@ -67,6 +68,7 @@
       },
       {
         "filename": "tez-site.xml",
+        "fileDescription": "Tez核心配置文件，设置库路径、历史记录和UI参数",
         "configFormat": "xml",
         "outputDirectory": "conf",
         "includeParams": [

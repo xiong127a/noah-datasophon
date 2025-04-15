@@ -148,6 +148,7 @@
         "generators": [
             {
                 "filename": "hbase-site.xml",
+                "fileDescription": "HBase核心配置文件，定义存储路径、ZooKeeper连接和安全认证参数",
                 "configFormat": "xml",
                 "outputDirectory": "conf",
                 "includeParams": [
@@ -178,6 +179,7 @@
             },
             {
                 "filename": "install.properties",
+                "fileDescription": "Ranger HBase插件配置文件，设置权限管理和审计参数",
                 "configFormat": "custom",
                 "outputDirectory": "ranger-hbase-plugin",
                 "templateName": "ranger-hbase.ftl",
@@ -191,6 +193,7 @@
             },
             {
                 "filename": "zk-jaas.conf",
+                "fileDescription": "ZooKeeper认证配置文件，设置Kerberos安全认证参数",
                 "configFormat": "custom",
                 "outputDirectory": "conf",
                 "templateName": "zk-jaas.ftl",
@@ -200,6 +203,7 @@
             },
             {
                 "filename": "hbase-env.sh",
+                "fileDescription": "HBase环境变量脚本，设置进程ID目录、日志路径和安全配置",
                 "configFormat": "custom",
                 "outputDirectory": "conf",
                 "templateName": "hbase-env.ftl",

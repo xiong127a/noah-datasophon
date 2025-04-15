@@ -107,6 +107,7 @@
     "generators": [
       {
         "filename": "be.conf",
+        "fileDescription": "Doris BE节点配置文件，定义存储引擎端口和内存资源参数",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
         "configTargetRoles": "DorisBE",
@@ -123,6 +124,7 @@
       },
       {
         "filename": "fe.conf",
+        "fileDescription": "Doris FE节点配置文件，定义元数据存储和查询服务参数",
         "configFormat": "custom",
         "outputDirectory": "fe/conf",
         "configTargetRoles": "DorisFE",

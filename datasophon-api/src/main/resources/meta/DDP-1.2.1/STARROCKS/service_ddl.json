@@ -137,6 +137,7 @@
     "generators": [
       {
         "filename": "be.conf",
+        "fileDescription": "StarRocks BE节点配置文件，定义存储引擎和计算资源参数",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
         "configTargetRoles": "SRBE",
@@ -160,6 +161,7 @@
       },
       {
         "filename": "cn.conf",
+        "fileDescription": "StarRocks CN节点配置文件，定义计算节点网络和资源参数",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
         "configTargetRoles": "SRCN",
@@ -183,6 +185,7 @@
       },
       {
         "filename": "fe.conf",
+        "fileDescription": "StarRocks FE节点配置文件，定义元数据和SQL查询服务参数",
         "configFormat": "custom",
         "configTargetRoles": "SRFE",
         "outputDirectory": "fe/conf",

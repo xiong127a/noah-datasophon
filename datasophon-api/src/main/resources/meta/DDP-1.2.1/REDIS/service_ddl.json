@@ -109,6 +109,7 @@
     "generators": [
       {
         "filename": "control_redis.sh",
+        "fileDescription": "Redis控制脚本，用于启动、停止和检查Redis服务状态",
         "configFormat": "custom",
         "outputDirectory": "",
         "templateName": "redis-control.ftl",
@@ -119,6 +120,7 @@
       },
       {
         "filename": "redis-master.conf",
+        "fileDescription": "Redis主节点配置文件，定义主节点的端口、内存和持久化参数",
         "configFormat": "custom",
         "configTargetRoles": "RedisMaster",
         "outputDirectory": "cluster/conf",
@@ -130,6 +132,7 @@
       },
       {
         "filename": "redis-slave.conf",
+        "fileDescription": "Redis从节点配置文件，定义从节点的端口和与主节点复制参数",
         "configFormat": "custom",
         "configTargetRoles": "RedisWorker",
         "outputDirectory": "cluster/conf",
@@ -141,6 +144,7 @@
       },
       {
         "filename": "redis-cluster.sh",
+        "fileDescription": "Redis集群构建脚本，用于创建和管理Redis集群节点",
         "configFormat": "custom",
         "outputDirectory": "",
         "templateName": "redis-cluster.ftl",
@@ -151,6 +155,7 @@
       },
       {
         "filename": "control_redis_exporter.sh",
+        "fileDescription": "Redis监控导出器控制脚本，用于收集Redis指标数据",
         "configFormat": "custom",
         "outputDirectory": "redis_exporter",
         "templateName": "redis-control-exporter.ftl",
@@ -160,6 +165,7 @@
       },
       {
         "filename": "redis.json",
+        "fileDescription": "Redis监控指标配置文件，定义Prometheus收集的指标项",
         "configFormat": "custom",
         "configTargetRoles": "RedisExporter",
         "outputDirectory": "redis_exporter",

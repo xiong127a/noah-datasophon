@@ -146,6 +146,7 @@
         "generators": [
             {
                 "filename": "nebula-metad.conf",
+                "fileDescription": "NebulaGraph元数据服务配置文件，定义Meta节点的存储和网络参数",
                 "configFormat": "custom",
                 "configTargetRoles": "Meta",
                 "templateName": "nebula-metad.ftl",
@@ -161,6 +162,7 @@
             },
             {
                 "filename": "nebula-graphd.conf",
+                "fileDescription": "NebulaGraph图服务配置文件，定义Graph节点的查询和内存参数",
                 "configFormat": "custom",
                 "configTargetRoles": "Graph",
                 "outputDirectory": "etc",
@@ -192,6 +194,7 @@
             },
             {
                 "filename": "nebula-storaged.conf",
+                "fileDescription": "NebulaGraph存储服务配置文件，定义Storage节点的数据管理参数",
                 "configFormat": "custom",
                 "configTargetRoles": "Storage",
                 "templateName": "nebula-storaged.ftl",

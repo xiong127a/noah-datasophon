@@ -125,6 +125,7 @@
         "generators": [
             {
                 "filename": "install.properties",
+        "fileDescription": "Ranger主配置文件，用于定义Ranger Admin服务基本参数和数据库连接",
                 "configFormat": "custom",
                 "templateName": "ranger-install.ftl",
                 "configTargetRoles": "RangerAdmin",
@@ -157,6 +158,7 @@
             },
             {
                 "filename": "install.properties1",
+        "fileDescription": "Ranger用户同步配置文件，定义用户同步服务连接参数和LDAP设置",
                 "configFormat": "custom",
                 "templateName": "ranger-usersync-install.ftl",
                 "configTargetRoles": "RangerUsersync",
@@ -176,6 +178,7 @@
             },
             {
                 "filename": "install.properties2",
+        "fileDescription": "Ranger KMS配置文件，用于设置密钥管理服务连接参数和安全设置",
                 "configFormat": "custom",
                 "templateName": "ranger-kms-install.ftl",
                 "configTargetRoles": "RangerKms",
@@ -203,6 +206,7 @@
             },
             {
                 "filename": "kms-site.xml",
+        "fileDescription": "Ranger KMS站点配置，定义KMS服务的Hadoop集成和认证参数",
                 "configFormat": "custom",
                 "templateName": "kms-site.ftl",
                 "outputDirectory": "ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf",
@@ -217,6 +221,7 @@
             },
             {
                 "filename": "ranger-kms-site.xml",
+        "fileDescription": "Ranger KMS服务配置，定义Ranger KMS访问地址和服务参数",
                 "configFormat": "custom",
                 "templateName": "ranger-kms-site.ftl",
                 "outputDirectory": "ranger-2.1.0-kms/ews/webapp/WEB-INF/classes/conf",
