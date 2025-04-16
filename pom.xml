@@ -70,7 +70,7 @@
         <lombok.version>1.18.24</lombok.version>
         <guava.version>31.1-jre</guava.version>
         <junit.version>5.9.0</junit.version>
-        <org.freemarker.verion>2.3.30</org.freemarker.verion>
+        <org.freemarker.verion>2.3.34</org.freemarker.verion>
         <commons-codec.version>1.15</commons-codec.version>
         <commons-compress.version>1.21</commons-compress.version>
         <jackson-annotations.version>2.13.0</jackson-annotations.version>
