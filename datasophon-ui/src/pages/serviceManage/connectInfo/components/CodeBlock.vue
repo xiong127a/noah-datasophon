@@ -24,8 +24,15 @@
           <div v-if="isEditing" class="edit-indicator">编辑模式</div>
         </div>
         
+        <!-- 加载状态 -->
+        <div v-if="!editorReady" class="loading-container">
+          <a-spin tip="代码格式化中...">
+            <div class="loading-content"></div>
+          </a-spin>
+        </div>
+        
         <!-- CodeMirror编辑器 -->
-        <div class="editor-container" @click="enableEditMode">
+        <div v-show="editorReady" class="editor-container" @click="enableEditMode">
           <codemirror
             v-model="editorContent"
             :options="cmOptions"
@@ -78,6 +85,46 @@ import 'codemirror/addon/edit/matchbrackets.js'
 // 行号和当前行高亮
 import 'codemirror/addon/selection/active-line.js'
 
+// 导入格式化相关插件
+import 'codemirror/addon/comment/comment.js'  // 注释处理
+import 'codemirror/addon/edit/trailingspace.js'  // 尾随空格显示
+import 'codemirror/addon/edit/continuelist.js'  // 多行编辑支持
+import 'codemirror/addon/display/placeholder.js'  // 占位符
+
+// 导入格式化工具函数
+function formatCode(code, mode) {
+  // 创建临时DOM元素用于格式化
+  const tempTextArea = document.createElement('textarea');
+  document.body.appendChild(tempTextArea);
+  
+  // 创建临时CodeMirror实例
+  const tempEditor = CodeMirror.fromTextArea(tempTextArea, {
+    mode: mode,
+    indentUnit: 4,
+    smartIndent: true,
+    tabSize: 4,
+    indentWithTabs: false,
+    lineNumbers: false
+  });
+  
+  // 设置代码并格式化
+  tempEditor.setValue(code);
+  
+  // 执行自动格式化
+  const totalLines = tempEditor.lineCount();
+  for (let i = 0; i < totalLines; i++) {
+    tempEditor.indentLine(i);
+  }
+  
+  // 获取格式化后的代码
+  const formattedCode = tempEditor.getValue();
+  
+  // 清理临时DOM元素
+  document.body.removeChild(tempTextArea);
+  
+  return formattedCode;
+}
+
 export default {
   name: "CodeBlock",
   components: {
@@ -103,6 +150,11 @@ export default {
     language: {
       type: String,
       default: 'java'
+    },
+    // 是否自动格式化代码
+    autoFormat: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -115,6 +167,8 @@ export default {
       isEditing: false,
       // 是否已编辑
       isEdited: false,
+      // 是否显示编辑器（用于控制初始加载和格式化）
+      editorReady: false,
       // CodeMirror配置选项
       cmOptions: {
         // 主题
@@ -140,7 +194,7 @@ export default {
         // 自动括号匹配
         autoCloseBrackets: true,
         // 缩进单位
-        tabSize: 2,
+        tabSize: 4,
         // 启用代码折叠指示器
         gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
         // 缩进使用空格
@@ -153,58 +207,38 @@ export default {
     };
   },
   watch: {
-    // 当外部代码改变时更新
-    code: {
-      immediate: true,
-      handler(newVal) {
-        this.originalCode = newVal || '';
-        // 只有当编辑器未被手动修改时才更新
-        if (!this.isEdited) {
-          this.editorContent = this.originalCode;
-        }
-        this.updateLanguageMode();
-        
-        // 延迟刷新以确保编辑器正确初始化
-        this.$nextTick(() => {
-          if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
-            this.$refs.cmEditor.codemirror.refresh();
-          }
-        });
+    // 监听输入代码变化
+    code(newCode) {
+      // 预处理代码 - 在设置到编辑器之前进行格式化
+      if (this.autoFormat && newCode) {
+        // 使用预处理函数格式化代码
+        this.preFormatCode(newCode);
+      } else {
+        // 直接设置内容，不格式化
+        this.editorContent = newCode || '';
+        this.originalCode = newCode || '';
       }
     },
-    // 当语言改变时更新编辑器配置
-    language: {
-      immediate: true,
-      handler() {
-        this.updateLanguageMode();
-      }
-    },
-    // 监听编辑模式变化
-    isEditing(newVal) {
-      // 更新编辑器的只读状态
-      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
-        this.$refs.cmEditor.codemirror.setOption('readOnly', !newVal);
-        
-        // 如果进入编辑模式，刷新编辑器并聚焦
-        if (newVal) {
-          this.$nextTick(() => {
-            this.$refs.cmEditor.codemirror.refresh();
-            this.$refs.cmEditor.codemirror.focus();
-          });
-        }
-        
-        // 如果退出编辑模式，通知上层组件内容变化
-        if (!newVal && this.isEdited) {
-          this.$emit('code-changed', this.editorContent);
-        }
-      }
+    // 监听语言变化
+    language() {
+      this.updateLanguageMode();
+    }
+  },
+  created() {
+    // 在实例创建时导入CodeMirror滚动条样式扩展，使用简约滚动条
+    require('codemirror/addon/scroll/simplescrollbars.js');
+    require('codemirror/addon/scroll/simplescrollbars.css');
+    
+    // 预处理初始代码
+    if (this.autoFormat && this.code) {
+      this.preFormatCode(this.code);
+    } else {
+      this.editorContent = this.code || '';
+      this.originalCode = this.code || '';
+      this.editorReady = true;
     }
   },
   mounted() {
-    // 初始化编辑器内容
-    this.editorContent = this.code || '';
-    this.originalCode = this.code || '';
-    
     // 设置语言模式
     this.updateLanguageMode();
     
@@ -232,82 +266,114 @@ export default {
       }
     });
   },
-  created() {
-    // 在实例创建时导入CodeMirror滚动条样式扩展，使用简约滚动条
-    require('codemirror/addon/scroll/simplescrollbars.js');
-    require('codemirror/addon/scroll/simplescrollbars.css');
-  },
   methods: {
-    // 复制代码
-    copyCode() {
-      if (!this.editorContent) return;
+    // 预处理代码格式化 - 在代码显示之前进行格式化
+    preFormatCode(code) {
+      if (!code) return;
       
-      // 创建临时textarea元素用于复制
-      const textarea = document.createElement('textarea');
-      textarea.value = this.editorContent;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'absolute';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      
-      // 选择并复制文本
-      const selected = document.getSelection().rangeCount > 0 
-        ? document.getSelection().getRangeAt(0) 
-        : false;
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      
-      // 恢复原始选区
-      if (selected) {
-        document.getSelection().removeAllRanges();
-        document.getSelection().addRange(selected);
+      try {
+        // 获取当前模式
+        let mode = this.getLanguageMode();
+        
+        // 创建临时DOM元素用于格式化
+        const textArea = document.createElement('textarea');
+        document.body.appendChild(textArea);
+        
+        // 创建一个隐藏的CodeMirror实例来格式化代码
+        const CodeMirror = window.CodeMirror || require('codemirror');
+        const tempEditor = CodeMirror.fromTextArea(textArea, {
+          mode: mode,
+          indentUnit: 4,
+          smartIndent: true,
+          tabSize: 4,
+          indentWithTabs: false
+        });
+        
+        // 设置代码
+        tempEditor.setValue(code);
+        
+        // 格式化所有行
+        const totalLines = tempEditor.lineCount();
+        for (let i = 0; i < totalLines; i++) {
+          tempEditor.indentLine(i);
+        }
+        
+        // 获取格式化后的代码
+        const formattedCode = tempEditor.getValue();
+        
+        // 清理临时元素
+        tempEditor.toTextArea();
+        document.body.removeChild(textArea);
+        
+        // 设置到编辑器
+        this.editorContent = formattedCode;
+        this.originalCode = formattedCode;
+      } catch (error) {
+        console.error('代码格式化失败:', error);
+        // 出错时直接使用原始代码
+        this.editorContent = code;
+        this.originalCode = code;
       }
       
-      // 显示复制成功消息
-      this.$message.success('代码已复制到剪贴板');
+      // 标记编辑器已准备好
+      this.editorReady = true;
     },
     
-    // 点击编辑器内容启用编辑模式
+    // 复制代码到剪贴板
+    copyCode() {
+      this.$copyText(this.editorContent).then(
+        () => {
+          this.$message.success(`${this.title}已复制到剪贴板`);
+        },
+        () => {
+          this.$message.error('复制失败，请手动选择并复制');
+        }
+      );
+    },
+    
+    // 切换到编辑模式
     enableEditMode() {
       if (!this.isEditing) {
         this.isEditing = true;
+        // 启用编辑模式
+        if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+          this.$refs.cmEditor.codemirror.setOption('readOnly', false);
+          // 设置焦点
+          this.$refs.cmEditor.codemirror.focus();
+        }
       }
     },
     
-    // 处理代码变化
+    // 监听代码变化
     onCodeChange(newCode) {
-      // 检查是否与原始代码不同
       this.isEdited = newCode !== this.originalCode;
+    },
+    
+    // 获取当前语言的模式
+    getLanguageMode() {
+      // 根据语言类型设置相应的模式
+      switch (this.language.toLowerCase()) {
+        case 'java':
+          return 'text/x-java';
+        case 'javascript':
+        case 'js':
+          return 'text/javascript';
+        case 'python':
+        case 'py':
+          return 'text/x-python';
+        case 'sql':
+          return 'text/x-sql';
+        case 'bash':
+        case 'shell':
+          return 'text/x-sh';
+        default:
+          return 'text/plain';
+      }
     },
     
     // 更新语言模式
     updateLanguageMode() {
-      let mode;
-      
-      // 根据语言类型设置相应的模式
-      switch (this.language.toLowerCase()) {
-        case 'java':
-          mode = 'text/x-java';
-          break;
-        case 'javascript':
-        case 'js':
-          mode = 'text/javascript';
-          break;
-        case 'python':
-        case 'py':
-          mode = 'text/x-python';
-          break;
-        case 'sql':
-          mode = 'text/x-sql';
-          break;
-        case 'bash':
-        case 'shell':
-          mode = 'text/x-sh';
-          break;
-        default:
-          mode = 'text/plain';
-      }
+      const mode = this.getLanguageMode();
       
       // 更新选项
       this.cmOptions.mode = mode;
@@ -402,6 +468,32 @@ export default {
       position: relative;
       padding: 0;
       background: var(--editor-bg);
+      
+      /* 加载状态容器 */
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 300px;
+        background: var(--editor-bg);
+        
+        .loading-content {
+          min-height: 200px;
+          min-width: 200px;
+        }
+
+        /* 自定义加载图标颜色为紫色以匹配主题 */
+        .ant-spin-dot i {
+          background-color: #5E5CE6;
+        }
+        
+        /* 自定义加载文字颜色为浅色以匹配暗背景 */
+        .ant-spin-text {
+          color: #abb2bf;
+          margin-top: 10px;
+          font-size: 14px;
+        }
+      }
       
       /* 顶部工具栏 */
       .title-bar {
