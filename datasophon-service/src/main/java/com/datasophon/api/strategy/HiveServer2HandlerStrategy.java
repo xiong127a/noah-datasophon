@@ -18,7 +18,6 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.druid.util.JdbcUtils;
 import com.datasophon.api.load.GlobalVariables;
@@ -26,16 +25,15 @@ import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ConnectionInfo;
+import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -114,50 +112,44 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
         }
     }
 
+    /**
+     * 获取Hive服务特定的连接信息
+     */
     @Override
-    public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
-            Map<String, String> configMap) {
-
-        List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
-        // 获取所有HiveServer2节点的主机名
-
+    protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
+            Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
         try {
-            // 获取globalVariables用于isEnableKerberos方法
+            // 获取HiveServer2节点列表
+            List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");
+
+            // 获取全局变量用于Kerberos判断
             Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
-            // 判断是否启用了Kerberos
+            // 判断是否启用Kerberos认证
             boolean enableKerberos = false;
             if (configMap.containsKey("enableKerberos")) {
                 enableKerberos = Boolean.parseBoolean(String.valueOf(configMap.get("enableKerberos")));
-                // 如果配置中有Kerberos相关设置，进一步处理
                 if (enableKerberos) {
                     enableKerberos = isEnableKerberos(clusterId, globalVariables, enableKerberos, null, "HIVE");
                 }
             }
 
-            // 从configMap中解析判断是否启用了HiveServer2高可用
+            // 判断是否启用HiveServer2高可用
             boolean enableHiveServer2HA = "true".equalsIgnoreCase(String.valueOf(
                     configMap.getOrDefault("hive.server2.support.dynamic.service.discovery", "false"))) ||
                     "true".equalsIgnoreCase(String.valueOf(
                             configMap.getOrDefault("hive.server2.active.passive.ha.enable", "false")));
 
-            // 解析高可用相关配置
+            // 解析高可用模式
             boolean dynamicServiceDiscovery = "true".equalsIgnoreCase(String.valueOf(
                     configMap.getOrDefault("hive.server2.support.dynamic.service.discovery", "false")));
             boolean activePassiveHA = "true".equalsIgnoreCase(String.valueOf(
                     configMap.getOrDefault("hive.server2.active.passive.ha.enable", "false")));
+
+            // 获取ZooKeeper命名空间
             String zkNamespace = StrUtil.isNotBlank(String.valueOf(configMap.get("hive.server2.zookeeper.namespace")))
                     ? String.valueOf(configMap.get("hive.server2.zookeeper.namespace"))
                     : "hiveserver2";
-
-            // 如果是主被动HA模式，获取特定的命名空间
-            if (activePassiveHA && configMap.containsKey("hive.server2.active.passive.ha.registry.namespace")) {
-                String registryNamespace = String
-                        .valueOf(configMap.get("hive.server2.active.passive.ha.registry.namespace"));
-                if (StrUtil.isNotBlank(registryNamespace)) {
-                    zkNamespace = registryNamespace;
-                }
-            }
 
             // 确定高可用模式
             String haMode = Constants.HA_MODE_STANDALONE;
@@ -169,14 +161,11 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
 
-            // 基本信息收集
-            Map<String, String> basicInfo = new HashMap<>();
-
-            // 获取HiveServer2主机地址和端口（从configMap中获取）
+            // 获取HiveServer2主机地址和端口
             String hiveServer2Host = String.valueOf(configMap.getOrDefault("hive.server2.thrift.bind.host", ""));
             String hiveServer2Port = String.valueOf(configMap.getOrDefault("hive.server2.thrift.port", "10000"));
 
-            // 如果配置中找不到或是${host}占位符，使用HiveServer2实例的主机名
+            // 如果配置中找不到主机名，使用HiveServer2实例的主机名
             if (StrUtil.isBlank(hiveServer2Host) || "${host}".equals(hiveServer2Host)) {
                 if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
                     hiveServer2Host = hiveServer2Hosts.get(0);
@@ -185,25 +174,20 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
 
-            // 如果仍然无法获取到Hive服务主机地址，则返回空对象
+            // 如果无法获取到主机地址，返回空对象
             if (StrUtil.isBlank(hiveServer2Host)) {
                 log.warn("无法获取HiveServer2主机地址，集群ID: {}", clusterId);
-                return ConnectionInfo.builder().build();
+                return ConnectionInfo.builder();
             }
 
-            // 获取ZooKeeper地址（从configMap中获取）
+            // 获取ZooKeeper地址
             String zkQuorum = String.valueOf(configMap.getOrDefault("hive.zookeeper.quorum", ""));
-
-            // 如果配置中找不到，尝试从服务信息中获取
             if (StrUtil.isBlank(zkQuorum)) {
-                // 使用全局变量中的值
                 zkQuorum = globalVariables.getOrDefault("${zkQuorum}", "");
             }
 
-            // 获取HiveMetastore地址（从configMap中获取）
+            // 获取HiveMetastore地址
             String metastoreUris = String.valueOf(configMap.getOrDefault("hive.metastore.uris", ""));
-
-            // 如果配置中找不到，尝试构建一个
             if (StrUtil.isBlank(metastoreUris)) {
                 String hiveMetastoreHost = ProcessUtils.getServiceRoleHostname(clusterId, "HIVE", "HiveMetaStore");
                 if (StrUtil.isNotBlank(hiveMetastoreHost)) {
@@ -211,10 +195,10 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
 
-            // 生成JDBC URL
-            String jdbcUrl;
-
             // 根据高可用模式生成JDBC URL
+            String jdbcUrl;
+            String haDescription = "单实例模式";
+
             if (enableHiveServer2HA) {
                 switch (haMode) {
                     case Constants.HA_MODE_ZOOKEEPER:
@@ -223,15 +207,12 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                             jdbcUrl = String.format(
                                     "jdbc:hive2://%s/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=%s",
                                     zkQuorum, zkNamespace);
-
-                            // 高可用信息添加到基本信息中
-                            basicInfo.put("HiveServer2高可用", "true");
-                            basicInfo.put("高可用模式", "ZooKeeper服务发现(负载均衡)");
+                            haDescription = "ZooKeeper服务发现(负载均衡)";
                         } else {
                             // 回退到单实例模式
                             jdbcUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-                            basicInfo.put("HiveServer2高可用", "false");
-                            basicInfo.put("高可用模式", "ZooKeeper服务发现(配置不完整)");
+                            haDescription = "ZooKeeper服务发现(配置不完整)";
+                            enableHiveServer2HA = false;
                         }
                         break;
 
@@ -241,39 +222,31 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                             jdbcUrl = String.format(
                                     "jdbc:hive2://%s/;serviceDiscoveryMode=zooKeeperHA;zooKeeperNamespace=%s",
                                     zkQuorum, zkNamespace);
-
-                            // 高可用信息添加到基本信息中
-                            basicInfo.put("HiveServer2高可用", "true");
-                            basicInfo.put("高可用模式", "ZooKeeper主备切换(Active-Passive)");
+                            haDescription = "ZooKeeper主备切换(Active-Passive)";
                         } else {
                             // 回退到单实例模式
                             jdbcUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-                            basicInfo.put("HiveServer2高可用", "false");
-                            basicInfo.put("高可用模式", "ZooKeeper主备切换(配置不完整)");
+                            haDescription = "ZooKeeper主备切换(配置不完整)";
+                            enableHiveServer2HA = false;
                         }
                         break;
-
-                    // HTTP负载均衡模式
-                    // 高可用信息添加到基本信息中
-                    // 回退到单实例模式
 
                     default:
                         // 默认模式，直接使用HiveServer2
                         jdbcUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-                        basicInfo.put("HiveServer2高可用", "true");
-                        basicInfo.put("高可用模式", "单实例模式");
+                        haDescription = "单实例模式";
                         break;
                 }
             } else {
                 // 非高可用模式
                 jdbcUrl = "jdbc:hive2://" + hiveServer2Host + ":" + hiveServer2Port;
-                basicInfo.put("HiveServer2高可用", "false");
-                basicInfo.put("高可用模式", "单实例模式");
+                haDescription = "单实例模式";
             }
 
-            // 添加Kerberos支持（如果启用）
+            // 处理Kerberos认证的URL
+            String principal = "";
             if (enableKerberos) {
-                String principal = String.valueOf(configMap.getOrDefault(
+                principal = String.valueOf(configMap.getOrDefault(
                         "hive.server2.authentication.kerberos.principal",
                         "hive/" + hiveServer2Host + "@HADOOP.COM"));
 
@@ -285,533 +258,149 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
                 jdbcUrl += ";principal=" + principal + ";auth=kerberos";
             }
 
-            // 补充基本连接信息
+            // Hive JDBC 认证参数
+            String authType = String.valueOf(configMap.getOrDefault("hive.server2.authentication", "NONE"));
+            // 正确判断是否启用密码认证：当认证类型为NONE时，不启用密码认证
+            // 当认证类型为CUSTOM、LDAP或PAM时，启用密码认证
+            boolean enablePasswordAuth = !enableKerberos &&
+                    ("CUSTOM".equalsIgnoreCase(authType) ||
+                            "LDAP".equalsIgnoreCase(authType) ||
+                            "PAM".equalsIgnoreCase(authType) ||
+                            "NOSASL".equalsIgnoreCase(authType));
+
+            // 设置默认用户名密码（即使不启用密码认证也需要显示）
+            String username = String.valueOf(configMap.getOrDefault("hive.server2.authentication.username", ""));
+            String password = String.valueOf(configMap.getOrDefault("hive.server2.authentication.password", ""));
+
+            // 检查其他可能的用户名密码配置项
+            if (StrUtil.isBlank(username)) {
+                username = String.valueOf(configMap.getOrDefault("hive.server2.thrift.http.username", ""));
+            }
+            if (StrUtil.isBlank(password)) {
+                password = String.valueOf(configMap.getOrDefault("hive.server2.thrift.http.password", ""));
+            }
+
+            // 如果用户名密码为空，使用默认值
+            if (StrUtil.isBlank(username)) {
+                username = "hive"; // 默认用户名
+            }
+            if (StrUtil.isBlank(password)) {
+                password = "hive"; // 默认密码
+            }
+
+            // 如果开启了密码认证，但没有在JDBC URL中配置，添加认证参数
+            if (enablePasswordAuth && !jdbcUrl.contains("user=") && !jdbcUrl.contains("password=")) {
+                if (jdbcUrl.contains(";")) {
+                    jdbcUrl += ";user=" + username + ";password=" + password;
+                } else {
+                    jdbcUrl += ";user=" + username + ";password=" + password;
+                }
+            }
+
+            // 构建基本信息项列表
+            List<InfoItem> basicInfoItems = new ArrayList<>();
+            basicInfoItems.add(new InfoItem("host", "主机", hiveServer2Host));
+            basicInfoItems.add(new InfoItem("port", "端口", hiveServer2Port));
+            basicInfoItems.add(new InfoItem("highAvailability", "高可用", enableHiveServer2HA ? "true" : "false"));
+            basicInfoItems.add(new InfoItem("haMode", "高可用模式", haDescription));
+
+            // 添加主节点信息（明确标识为主节点）
+            if (CollUtil.isNotEmpty(hiveServer2Hosts)) {
+                basicInfoItems
+                        .add(new InfoItem("masterNode", "主节点服务器", hiveServer2Hosts.get(0) + ":" + hiveServer2Port));
+            }
+
+            // 添加从节点信息
+            if (enableHiveServer2HA && CollUtil.isNotEmpty(hiveServer2Hosts) && hiveServer2Hosts.size() > 1) {
+                // 按照主机名排序
+                List<String> sortedHosts = new ArrayList<>(hiveServer2Hosts);
+                Collections.sort(sortedHosts);
+
+                // 跳过第一个节点（主节点）
+                for (int i = 1; i < sortedHosts.size(); i++) {
+                    String host = sortedHosts.get(i);
+                    basicInfoItems.add(new InfoItem("slaveNode" + i, "HiveServer2从节点" + i,
+                            host + ":" + hiveServer2Port));
+                }
+            }
+
+            // 添加元数据服务地址
             if (StrUtil.isNotBlank(metastoreUris)) {
-                basicInfo.put("HiveMetastore地址", metastoreUris);
+                basicInfoItems.add(new InfoItem("metastoreUri", "HiveMetastore地址", metastoreUris));
             }
-            basicInfo.put("启用Kerberos", enableKerberos ? "true" : "false");
 
-            // 调整基本信息顺序
-            List<Map<String, String>> basicInfoList = new ArrayList<>();
+            // 构建安全信息项列表
+            List<InfoItem> securityInfoItems = new ArrayList<>();
 
-            // 按照固定的顺序添加信息
-            String[] orderedKeys = {
-                    "HiveServer2高可用",
-                    "高可用模式",
-                    "HiveServer2主节点",
-                    // 从节点将动态添加
-                    "启用Kerberos",
-                    "HiveMetastore地址",
-                    "负载均衡地址" // 如果有的话
-            };
+            // 总是添加用户名密码信息，无论是否启用了密码认证
+            securityInfoItems.add(new InfoItem("auth.enabled", "启用认证", enablePasswordAuth ? "true" : "false"));
+            securityInfoItems.add(new InfoItem("username", "用户名", username));
+            securityInfoItems.add(new InfoItem("password", "密码", password));
+            if (enablePasswordAuth) {
+                securityInfoItems.add(new InfoItem("auth.type", "认证类型", authType));
+            }
 
-            // 先按照固定顺序添加
-            for (String key : orderedKeys) {
-                if (basicInfo.containsKey(key)) {
-                    Map<String, String> item = new HashMap<>(2);
-                    item.put("label", key);
-                    item.put("value", basicInfo.get(key));
-                    basicInfoList.add(item);
+            // Kerberos 认证信息
+            securityInfoItems.add(new InfoItem("kerberos.enabled", "启用Kerberos", enableKerberos ? "true" : "false"));
+
+            if (enableKerberos) {
+                securityInfoItems.add(new InfoItem("principal", "服务主体", principal));
+                // 将krb5配置文件路径添加到安全信息中
+                securityInfoItems.add(new InfoItem("krb5.conf.path", "Kerberos配置文件", "/etc/krb5.conf"));
+
+                // 如果配置中有keytab相关配置，也添加到安全信息中
+                String keytabPath = configMap.getOrDefault("hive.server2.authentication.kerberos.keytab", "");
+                if (StrUtil.isNotBlank(keytabPath)) {
+                    securityInfoItems.add(new InfoItem("keytab.path", "密钥表文件", keytabPath));
                 }
             }
 
-            // 添加从节点信息（按照节点序号排序）
-            List<String> slaveKeys = new ArrayList<>();
-            for (String key : basicInfo.keySet()) {
-                if (key.startsWith("HiveServer2从节点")) {
-                    slaveKeys.add(key);
-                }
+            // 构建连接信息项列表
+            List<InfoItem> connectInfoItems = new ArrayList<>();
+            connectInfoItems.add(new InfoItem("jdbcUrl", "JDBC URL", jdbcUrl));
+
+            // 将HiveMetastore地址添加到连接信息中
+            if (StrUtil.isNotBlank(metastoreUris)) {
+                connectInfoItems.add(new InfoItem("jdbc.metastoreUri", "HiveMetastore地址", metastoreUris));
             }
 
-            // 确保按照数字顺序排序（HiveServer2从节点1, HiveServer2从节点2, ...）
-            slaveKeys.sort((a, b) -> {
-                // 提取数字部分并比较
-                try {
-                    int numA = Integer.parseInt(a.substring("HiveServer2从节点".length()));
-                    int numB = Integer.parseInt(b.substring("HiveServer2从节点".length()));
-                    return Integer.compare(numA, numB);
-                } catch (NumberFormatException e) {
-                    return a.compareTo(b);
-                }
-            });
-
-            // 按顺序添加从节点信息
-            for (String key : slaveKeys) {
-                Map<String, String> item = new HashMap<>(2);
-                item.put("label", key);
-                item.put("value", basicInfo.get(key));
-                basicInfoList.add(item);
-
-                // 将从节点信息插入到主节点后面（而不是放在最后）
-                int mainNodeIndex = -1;
-                for (int i = 0; i < basicInfoList.size(); i++) {
-                    if (basicInfoList.get(i).get("label").equals("HiveServer2主节点")) {
-                        mainNodeIndex = i;
-                        break;
-                    }
-                }
-
-                if (mainNodeIndex >= 0 && basicInfoList.size() > 1) {
-                    // 移除刚添加的项
-                    Map<String, String> lastItem = basicInfoList.remove(basicInfoList.size() - 1);
-                    // 插入到主节点后面
-                    basicInfoList.add(mainNodeIndex + 1, lastItem);
-                }
+            // 如果有ZooKeeper信息，添加到连接信息中
+            if (StrUtil.isNotBlank(zkQuorum)) {
+                connectInfoItems.add(new InfoItem("zkConnect", "ZooKeeper连接", zkQuorum));
             }
 
-            // 确保只保留我们已经添加的信息
-            Map<String, Boolean> processedKeys = new HashMap<>();
-            for (Map<String, String> item : basicInfoList) {
-                processedKeys.put(item.get("label"), true);
-            }
+            // 添加数据库信息
+            connectInfoItems.add(new InfoItem("database", "默认数据库", "default"));
 
-            // 添加任何未处理的信息到列表末尾
-            for (Map.Entry<String, String> entry : basicInfo.entrySet()) {
-                if (!processedKeys.containsKey(entry.getKey())) {
-                    Map<String, String> item = new HashMap<>(2);
-                    item.put("label", entry.getKey());
-                    item.put("value", entry.getValue());
-                    basicInfoList.add(item);
-                }
-            }
-
-            // 修正JDBC URL列表
-            List<Map<String, String>> jdbcUrls = new ArrayList<>();
-
-            // 先更新主节点和从节点信息
+            // 设置单节点JDBC URL（用于直接连接特定节点）
             if (enableHiveServer2HA && CollUtil.isNotEmpty(hiveServer2Hosts)) {
-                // 按照主机名排序（保持稳定的显示顺序）
-                List<String> sortedHosts = new ArrayList<>(hiveServer2Hosts);
-                Collections.sort(sortedHosts);
-
-                // 添加节点信息到basicInfo
-                for (int i = 0; i < sortedHosts.size(); i++) {
-                    String host = sortedHosts.get(i);
-                    if (i == 0) {
-                        basicInfo.put("HiveServer2主节点", host + ":" + hiveServer2Port);
-                    } else {
-                        basicInfo.put("HiveServer2从节点" + i, host + ":" + hiveServer2Port);
-                    }
-                }
-            }
-
-            // 对于ZooKeeper服务发现模式，使用ZooKeeper地址
-            if (haMode.equals(Constants.HA_MODE_ZOOKEEPER) || haMode.equals(Constants.HA_MODE_ZOOKEEPER_HA)) {
-                if (StrUtil.isNotBlank(zkQuorum)) {
-                    // 主JDBC URL
-                    Map<String, String> jdbcUrlItem = new HashMap<>(2);
-                    jdbcUrlItem.put("label", "Hive JDBC URL");
-                    jdbcUrlItem.put("value", jdbcUrl);
-                    jdbcUrls.add(jdbcUrlItem);
-                }
-            } else {
-                // 对于其他模式，使用原有逻辑
-                Map<String, String> jdbcUrlItem = new HashMap<>(2);
-                jdbcUrlItem.put("label", "Hive JDBC URL");
-                jdbcUrlItem.put("value", jdbcUrl);
-                jdbcUrls.add(jdbcUrlItem);
-            }
-
-            // 添加所有HiveServer2节点的URL
-            if (enableHiveServer2HA && CollUtil.isNotEmpty(hiveServer2Hosts)) {
-                // 按照主机名排序（保持稳定的显示顺序）
-                List<String> sortedHosts = new ArrayList<>(hiveServer2Hosts);
-                Collections.sort(sortedHosts);
-
-                // 添加单节点URL
-                for (int i = 0; i < sortedHosts.size(); i++) {
-                    String host = sortedHosts.get(i);
-
-                    // 添加单节点连接URL
-                    String nodeUrl = "jdbc:hive2://" + host + ":" + hiveServer2Port;
+                for (int i = 0; i < hiveServer2Hosts.size(); i++) {
+                    String host = hiveServer2Hosts.get(i);
+                    String nodeJdbcUrl = "jdbc:hive2://" + host + ":" + hiveServer2Port;
                     if (enableKerberos) {
-                        String principal = String.valueOf(configMap.getOrDefault(
-                                "hive.server2.authentication.kerberos.principal",
-                                "hive/" + host + "@HADOOP.COM"));
-                        // 替换principal中的${host}为实际主机名
-                        if (principal.contains("${host}")) {
-                            principal = principal.replace("${host}", host);
+                        String nodePrincipal = principal;
+                        if (nodePrincipal.contains(hiveServer2Host)) {
+                            nodePrincipal = nodePrincipal.replace(hiveServer2Host, host);
                         }
-                        nodeUrl += ";principal=" + principal + ";auth=kerberos";
+                        nodeJdbcUrl += ";principal=" + nodePrincipal + ";auth=kerberos";
                     }
-
-                    Map<String, String> nodeUrlItem = new HashMap<>(2);
-                    nodeUrlItem.put("label", "节点" + (i + 1) + " URL");
-                    nodeUrlItem.put("value", nodeUrl);
-                    jdbcUrls.add(nodeUrlItem);
+                    connectInfoItems.add(new InfoItem("node" + (i + 1) + "JdbcUrl",
+                            "节点" + (i + 1) + " JDBC URL", nodeJdbcUrl));
                 }
             }
 
-            // 生成命令行示例 - 使用实际的HiveServer2主机作为主机名
-            List<CommandLineItem> commandLines = generateCommandLines(jdbcUrl, serviceHome, hiveServer2Host);
-
-            // 构建并返回ConnectionInfo对象
+            // 构建并返回ConnectionInfo.ConnectionInfoBuilder对象
             return ConnectionInfo.builder()
-                    .basicInfo(basicInfo)
-                    .basicInfoList(basicInfoList)
-                    .jdbcUrl(jdbcUrl)
-                    .jdbcUrls(jdbcUrls)
-                    .javaCode(generateJavaCode(jdbcUrl, metastoreUris, enableKerberos))
-                    .pythonCode(generatePythonCode(hiveServer2Host, hiveServer2Port, metastoreUris, enableKerberos))
-                    .commandLines(commandLines)
-                    .hostName(hiveServer2Host) // 添加主机名到ConnectionInfo
-                    .build();
+                    .basicInfoItems(basicInfoItems)
+                    .securityInfoItems(securityInfoItems)
+                    .connectInfoItems(connectInfoItems)
+                    .hostName(hiveServer2Host)
+                    // 添加重要键列表，将JDBC URL和连接信息中metastore地址设置为高亮显示
+                    .importantKeys(Arrays.asList("jdbcUrl", "jdbc.metastoreUri"));
         } catch (Exception e) {
             log.error("获取Hive连接信息出错: {}", e.getMessage(), e);
-            return ConnectionInfo.builder().build();
+            return ConnectionInfo.builder();
         }
-    }
-
-    /**
-     * 生成Java示例代码
-     */
-    private String generateJavaCode(String jdbcUrl, String metastoreUris, boolean enableKerberos) {
-        StringBuilder code = new StringBuilder();
-
-        // JDBC示例代码
-        code.append("// ======== HiveServer2 JDBC连接示例 ========\n");
-        code.append("import java.sql.Connection;\n");
-        code.append("import java.sql.DriverManager;\n");
-        code.append("import java.sql.ResultSet;\n");
-        code.append("import java.sql.Statement;\n\n");
-        code.append("public class HiveJdbcClient {\n");
-        code.append("    public static void main(String[] args) throws Exception {\n");
-        code.append("        try {\n");
-        code.append("            Class.forName(\"org.apache.hive.jdbc.HiveDriver\");\n");
-        code.append("        } catch (ClassNotFoundException e) {\n");
-        code.append("            e.printStackTrace();\n");
-        code.append("            System.exit(1);\n");
-        code.append("        }\n\n");
-        code.append("        // JDBC URL\n");
-        code.append("        String jdbcURL = \"").append(jdbcUrl).append("\";\n");
-
-        if (enableKerberos) {
-            code.append("        // Kerberos认证需要设置以下系统属性\n");
-            code.append("        System.setProperty(\"java.security.krb5.conf\", \"/etc/krb5.conf\");\n");
-            code.append("        System.setProperty(\"javax.security.auth.useSubjectCredsOnly\", \"false\");\n");
-        }
-
-        code.append("\n");
-        code.append("        Connection conn = DriverManager.getConnection(jdbcURL);\n");
-        code.append("        Statement stmt = conn.createStatement();\n");
-        code.append("        String sql = \"SHOW DATABASES\";\n");
-        code.append("        ResultSet rs = stmt.executeQuery(sql);\n");
-        code.append("        while (rs.next()) {\n");
-        code.append("            System.out.println(rs.getString(1));\n");
-        code.append("        }\n");
-        code.append("        rs.close();\n");
-        code.append("        stmt.close();\n");
-        code.append("        conn.close();\n");
-        code.append("    }\n");
-        code.append("}\n\n");
-
-        // Metastore示例代码
-        code.append("// ======== Hive Metastore连接示例 ========\n");
-        code.append("import org.apache.hadoop.hive.conf.HiveConf;\n");
-        code.append("import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;\n");
-        code.append("import org.apache.hadoop.hive.metastore.api.Database;\n");
-        code.append("import org.apache.hadoop.hive.metastore.api.Table;\n");
-        code.append("import org.apache.thrift.TException;\n");
-        code.append("import java.util.List;\n\n");
-        code.append("public class HiveMetastoreClient {\n");
-        code.append("    public static void main(String[] args) {\n");
-        code.append("        try {\n");
-        code.append("            // 创建Hive配置\n");
-        code.append("            HiveConf conf = new HiveConf();\n");
-        code.append("            conf.set(\"hive.metastore.uris\", \"").append(metastoreUris).append("\");\n");
-
-        if (enableKerberos) {
-            code.append("            // Kerberos配置\n");
-            code.append("            conf.set(\"hadoop.security.authentication\", \"kerberos\");\n");
-            code.append("            conf.set(\"hive.metastore.kerberos.principal\", \"hive/_HOST@HADOOP.COM\");\n");
-            code.append("            org.apache.hadoop.security.UserGroupInformation.setConfiguration(conf);\n");
-            code.append(
-                    "            org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytab(\"hive@HADOOP.COM\", \"/path/to/hive.keytab\");\n");
-        }
-
-        code.append("\n");
-        code.append("            // 创建Metastore客户端\n");
-        code.append("            HiveMetaStoreClient client = new HiveMetaStoreClient(conf);\n\n");
-        code.append("            // 获取所有数据库\n");
-        code.append("            List<String> databases = client.getAllDatabases();\n");
-        code.append("            System.out.println(\"数据库列表:\");\n");
-        code.append("            for (String db : databases) {\n");
-        code.append("                System.out.println(db);\n");
-        code.append("            }\n\n");
-        code.append("            // 获取数据库详情\n");
-        code.append("            Database defaultDb = client.getDatabase(\"default\");\n");
-        code.append("            System.out.println(\"数据库路径: \" + defaultDb.getLocationUri());\n\n");
-        code.append("            // 获取所有表\n");
-        code.append("            List<String> tables = client.getAllTables(\"default\");\n");
-        code.append("            System.out.println(\"表列表:\");\n");
-        code.append("            for (String tableName : tables) {\n");
-        code.append("                System.out.println(tableName);\n");
-        code.append("            }\n\n");
-        code.append("            // 获取表详情\n");
-        code.append("            if (!tables.isEmpty()) {\n");
-        code.append("                Table table = client.getTable(\"default\", tables.get(0));\n");
-        code.append(
-                "                System.out.println(\"表详情: \" + table.getTableName() + \", 列数: \" + table.getSd().getColsSize());\n");
-        code.append("            }\n\n");
-        code.append("            // 关闭客户端\n");
-        code.append("            client.close();\n");
-        code.append("        } catch (TException e) {\n");
-        code.append("            e.printStackTrace();\n");
-        code.append("        }\n");
-        code.append("    }\n");
-        code.append("}\n");
-
-        return code.toString();
-    }
-
-    /**
-     * 生成Python示例代码
-     */
-    private String generatePythonCode(String hiveServer2Host, String hiveServer2Port, String metastoreUris,
-            boolean enableKerberos) {
-        StringBuilder code = new StringBuilder();
-
-        // JDBC示例代码
-        code.append("# ======== HiveServer2 Python连接示例 ========\n");
-        code.append("from pyhive import hive\n\n");
-        code.append("# 连接Hive\n");
-        code.append("conn = hive.Connection(\n");
-        code.append("    host='").append(hiveServer2Host).append("',\n");
-        code.append("    port=").append(hiveServer2Port).append(",\n");
-
-        if (enableKerberos) {
-            code.append("    auth='KERBEROS',\n");
-            code.append("    kerberos_service_name='hive',\n");
-        }
-
-        code.append("    database='default'\n");
-        code.append(")\n\n");
-        code.append("# 创建游标\n");
-        code.append("cursor = conn.cursor()\n\n");
-        code.append("# 执行查询\n");
-        code.append("cursor.execute('SHOW DATABASES')\n\n");
-        code.append("# 获取结果\n");
-        code.append("for result in cursor.fetchall():\n");
-        code.append("    print(result[0])\n\n");
-        code.append("# 关闭连接\n");
-        code.append("cursor.close()\n");
-        code.append("conn.close()\n\n");
-
-        // Metastore示例代码
-        code.append("# ======== Hive Metastore Python连接示例 ========\n");
-        code.append("# 安装依赖: pip install thrift pymysql\n");
-        code.append("# 注意: 需要Hive的thrift生成的Python模块 - 可以从Hive源码生成或者在PyPI上查找\n\n");
-        code.append("# 方法1: 使用PyHive的元数据API (如果安装了PyHive)\n");
-        code.append("try:\n");
-        code.append("    from pyhive import hive_metastore\n");
-        code.append("    \n");
-        code.append("    # 连接到Metastore\n");
-
-        // 从metastoreUris中提取主机名和端口号
-        String metastoreHost = "localhost";
-        String metastorePort = "9083";
-        if (StrUtil.isNotBlank(metastoreUris) && metastoreUris.startsWith("thrift://")) {
-            String[] parts = metastoreUris.replace("thrift://", "").split(":");
-            if (parts.length >= 1) {
-                metastoreHost = parts[0];
-            }
-            if (parts.length >= 2) {
-                metastorePort = parts[1];
-            }
-        }
-
-        code.append("    client = hive_metastore.Client('").append(metastoreHost).append("', ").append(metastorePort)
-                .append(")\n");
-        code.append("    \n");
-        code.append("    # 获取所有数据库\n");
-        code.append("    databases = client.get_all_databases()\n");
-        code.append("    print('数据库列表:', databases)\n");
-        code.append("    \n");
-        code.append("    # 获取默认数据库中的所有表\n");
-        code.append("    tables = client.get_all_tables('default')\n");
-        code.append("    print('表列表:', tables)\n");
-        code.append("    \n");
-        code.append("    # 获取表详情\n");
-        code.append("    if tables:\n");
-        code.append("        table = client.get_table('default', tables[0])\n");
-        code.append("        print(f'表名: {table.tableName}')\n");
-        code.append("        print(f'表类型: {table.tableType}')\n");
-        code.append("        print(f'列数: {len(table.sd.cols)}')\n");
-        code.append("except ImportError:\n");
-        code.append("    print('PyHive的元数据API未安装，请尝试方法2')\n\n");
-
-        code.append("# 方法2: 直接通过MySQL数据库连接Metastore (如果Metastore使用MySQL作为后端)\n");
-        code.append("import pymysql\n");
-        code.append("\n");
-        code.append("try:\n");
-        code.append("    # 假设Metastore使用MySQL作为后端存储\n");
-        code.append("    # 请替换这些参数为您的实际配置\n");
-        code.append("    conn = pymysql.connect(\n");
-        code.append("        host='localhost',            # MySQL主机名\n");
-        code.append("        user='hive',                 # MySQL用户名\n");
-        code.append("        password='hive',             # MySQL密码\n");
-        code.append("        database='metastore',        # Metastore数据库名称\n");
-        code.append("        charset='utf8mb4'\n");
-        code.append("    )\n");
-        code.append("    \n");
-        code.append("    cursor = conn.cursor()\n");
-        code.append("    \n");
-        code.append("    # 获取所有数据库\n");
-        code.append("    cursor.execute('SELECT NAME FROM DBS')\n");
-        code.append("    databases = [row[0] for row in cursor.fetchall()]\n");
-        code.append("    print('数据库列表:', databases)\n");
-        code.append("    \n");
-        code.append("    # 获取默认数据库中的所有表\n");
-        code.append("    cursor.execute(\"\"\"\n");
-        code.append("        SELECT T.TBL_NAME \n");
-        code.append("        FROM TBLS T \n");
-        code.append("        JOIN DBS D ON T.DB_ID = D.DB_ID \n");
-        code.append("        WHERE D.NAME = 'default'\n");
-        code.append("    \"\"\")\n");
-        code.append("    tables = [row[0] for row in cursor.fetchall()]\n");
-        code.append("    print('表列表:', tables)\n");
-        code.append("    \n");
-        code.append("    cursor.close()\n");
-        code.append("    conn.close()\n");
-        code.append("except Exception as e:\n");
-        code.append("    print(f'直接连接Metastore数据库失败: {e}')\n");
-
-        return code.toString();
-    }
-
-    /**
-     * 生成命令行示例
-     */
-    private List<CommandLineItem> generateCommandLines(String jdbcUrl,
-            String serviceHome, String hostname) {
-        List<CommandLineItem> commandLines = new ArrayList<>();
-
-        // 获取beeline命令路径 - 使用相对路径
-        String beelineCommand = "beeline";
-        String shellPrompt = "[root@" + hostname + " " + serviceHome + "]# ";
-        if (StringUtils.isNotEmpty(serviceHome)) {
-            // 只使用bin目录下的beeline，而不是完整路径
-            beelineCommand = "bin/beeline";
-        }
-
-        // 1. 直接执行SQL命令（使用-e参数）
-        CommandLineItem directSqlCmd = new CommandLineItem();
-        directSqlCmd.setLabel("直接执行SQL命令");
-        directSqlCmd.setValue(String.format("%s -u '%s' -n %s -p %s -e 'SHOW DATABASES;'",
-                beelineCommand, jdbcUrl, "hive", "hive"));
-        directSqlCmd.setCommandResult(
-                "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+");
-        directSqlCmd.setCommandPrompt(shellPrompt);
-        commandLines.add(directSqlCmd);
-
-        // 2. 进入beeline交互界面
-        CommandLineItem interactiveCmd = new CommandLineItem();
-        interactiveCmd.setLabel("进入beeline交互界面");
-        interactiveCmd.setValue(String.format("%s -u '%s' -n %s -p %s",
-                beelineCommand, jdbcUrl, "hive", "hive"));
-        interactiveCmd.setCommandPrompt(shellPrompt);
-        interactiveCmd.setCommandResult(
-                "Connecting to jdbc:hive2://...\nConnected to: Apache Hive (version 3.1.0)\nDriver: Hive JDBC (version 3.1.0)\nTransaction isolation: TRANSACTION_REPEATABLE_READ\nBeeline version 3.1.0 by Apache Hive\n0: jdbc:hive2://...");
-        commandLines.add(interactiveCmd);
-
-        // beeline提示符 - 用于后续命令
-        String beelinePrompt = "0: jdbc:hive2://...> ";
-
-        // 3. 常用Hive命令（在beeline交互界面中执行）
-        // 3.1 列出所有数据库
-        CommandLineItem showDatabasesCmd = new CommandLineItem();
-        showDatabasesCmd.setLabel("列出所有数据库");
-        showDatabasesCmd.setValue("SHOW DATABASES;");
-        showDatabasesCmd.setCommandPrompt(beelinePrompt);
-        showDatabasesCmd.setCommandResult(
-                "+-----------------+\n| database_name    |\n+-----------------+\n| default         |\n| test            |\n| example         |\n+-----------------+\n3 rows selected (0.056 seconds)");
-        commandLines.add(showDatabasesCmd);
-
-        // 3.2 使用指定数据库
-        CommandLineItem useDatabaseCmd = new CommandLineItem();
-        useDatabaseCmd.setLabel("使用指定数据库");
-        useDatabaseCmd.setValue("USE default;");
-        useDatabaseCmd.setCommandPrompt(beelinePrompt);
-        useDatabaseCmd.setCommandResult("No rows affected (0.023 seconds)");
-        commandLines.add(useDatabaseCmd);
-
-        // 3.3 列出当前数据库中的所有表
-        CommandLineItem showTablesCmd = new CommandLineItem();
-        showTablesCmd.setLabel("列出当前数据库中的所有表");
-        showTablesCmd.setValue("SHOW TABLES;");
-        showTablesCmd.setCommandPrompt(beelinePrompt);
-        showTablesCmd.setCommandResult(
-                "+-----------+\n| tab_name  |\n+-----------+\n| customers |\n| orders    |\n| products  |\n+-----------+\n3 rows selected (0.045 seconds)");
-        commandLines.add(showTablesCmd);
-
-        // 3.4 查看表结构
-        CommandLineItem descTableCmd = new CommandLineItem();
-        descTableCmd.setLabel("查看表结构");
-        descTableCmd.setValue("DESC customers;");
-        descTableCmd.setCommandPrompt(beelinePrompt);
-        descTableCmd.setCommandResult(
-                "+--------------+------------+----------+\n|   col_name    | data_type  | comment  |\n+--------------+------------+----------+\n| id           | int        |          |\n| name         | string     |          |\n| address      | string     |          |\n| create_time  | timestamp  |          |\n+--------------+------------+----------+\n4 rows selected (0.058 seconds)");
-        commandLines.add(descTableCmd);
-
-        // 3.5 查看表分区
-        CommandLineItem showPartitionsCmd = new CommandLineItem();
-        showPartitionsCmd.setLabel("查看表分区");
-        showPartitionsCmd.setValue("SHOW PARTITIONS orders;");
-        showPartitionsCmd.setCommandPrompt(beelinePrompt);
-        showPartitionsCmd.setCommandResult(
-                "+---------------+\n| partition     |\n+---------------+\n| dt=2023-01-01 |\n| dt=2023-01-02 |\n| dt=2023-01-03 |\n+---------------+\n3 rows selected (0.037 seconds)");
-        commandLines.add(showPartitionsCmd);
-
-        // 3.6 执行查询
-        CommandLineItem selectCmd = new CommandLineItem();
-        selectCmd.setLabel("执行查询");
-        selectCmd.setValue("SELECT * FROM customers LIMIT 3;");
-        selectCmd.setCommandPrompt(beelinePrompt);
-        selectCmd.setCommandResult(
-                "+-------+----------+-------------------+-------------------------+\n| id    | name     | address           | create_time             |\n+-------+----------+-------------------+-------------------------+\n| 1     | 张三      | 北京市朝阳区       | 2023-01-01 10:00:00.0   |\n| 2     | 李四      | 上海市浦东新区     | 2023-01-02 14:30:00.0   |\n| 3     | 王五      | 广州市天河区       | 2023-01-03 09:15:00.0   |\n+-------+----------+-------------------+-------------------------+\n3 rows selected (0.127 seconds)");
-        commandLines.add(selectCmd);
-
-        // 3.7 创建表
-        CommandLineItem createTableCmd = new CommandLineItem();
-        createTableCmd.setLabel("创建表");
-        createTableCmd.setValue("CREATE TABLE test_table (id INT, name STRING);");
-        createTableCmd.setCommandPrompt(beelinePrompt);
-        createTableCmd.setCommandResult("No rows affected (0.523 seconds)");
-        commandLines.add(createTableCmd);
-
-        // 3.8 加载数据
-        CommandLineItem loadDataCmd = new CommandLineItem();
-        loadDataCmd.setLabel("加载数据");
-        loadDataCmd.setValue("LOAD DATA LOCAL INPATH '/path/to/data.csv' INTO TABLE test_table;");
-        loadDataCmd.setCommandPrompt(beelinePrompt);
-        loadDataCmd.setCommandResult("No rows affected (0.689 seconds)");
-        commandLines.add(loadDataCmd);
-
-        // 3.9 添加分区
-        CommandLineItem addPartitionCmd = new CommandLineItem();
-        addPartitionCmd.setLabel("添加分区");
-        addPartitionCmd.setValue("ALTER TABLE orders ADD PARTITION (dt='2023-01-04');");
-        addPartitionCmd.setCommandPrompt(beelinePrompt);
-        addPartitionCmd.setCommandResult("No rows affected (0.387 seconds)");
-        commandLines.add(addPartitionCmd);
-
-        // 3.10 删除表
-        CommandLineItem dropTableCmd = new CommandLineItem();
-        dropTableCmd.setLabel("删除表");
-        dropTableCmd.setValue("DROP TABLE test_table;");
-        dropTableCmd.setCommandPrompt(beelinePrompt);
-        dropTableCmd.setCommandResult("No rows affected (0.256 seconds)");
-        commandLines.add(dropTableCmd);
-
-        // 3.11 退出beeline
-        CommandLineItem exitCmd = new CommandLineItem();
-        exitCmd.setLabel("退出beeline");
-        exitCmd.setValue("!quit");
-        exitCmd.setCommandPrompt(beelinePrompt);
-        exitCmd.setCommandResult("Closing: 0: jdbc:hive2://...");
-        commandLines.add(exitCmd);
-
-        return addFinalPrompt(commandLines, serviceHome, hostname);
     }
 
 }

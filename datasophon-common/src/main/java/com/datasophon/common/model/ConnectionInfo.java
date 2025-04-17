@@ -28,7 +28,7 @@ import java.util.Map;
 
 /**
  * 连接信息实体类
- * 用于展示服务的连接信息，包括基本信息、JDBC URL、代码示例等
+ * 用于展示服务的连接信息，基本信息按照分组进行展示
  */
 @Data
 @Builder
@@ -39,14 +39,28 @@ public class ConnectionInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 基本连接信息Map，已弃用，请使用basicInfoList
+     * 基础信息项列表
+     * 包含主机名、端口、集群名等基本配置信息
      */
-    private Map<String, String> basicInfo;
+    private List<InfoItem> basicInfoItems;
 
     /**
-     * JDBC URL
+     * 安全信息项列表
+     * 包含认证模式、用户名、密码等安全认证信息
      */
-    private String jdbcUrl;
+    private List<InfoItem> securityInfoItems;
+
+    /**
+     * 连接信息项列表
+     * 包含连接URL、连接字符串等直接用于连接的信息
+     */
+    private List<InfoItem> connectInfoItems;
+
+    /**
+     * 重要信息标识
+     * 保存需要重点突出显示的信息键名列表
+     */
+    private List<String> importantKeys;
 
     /**
      * Java代码示例
@@ -63,15 +77,6 @@ public class ConnectionInfo implements Serializable {
      */
     private List<CommandLineItem> commandLines;
 
-    /**
-     * 有序的基本信息列表
-     */
-    private List<Map<String, String>> basicInfoList;
-
-    /**
-     * 多个JDBC URL列表
-     */
-    private List<Map<String, String>> jdbcUrls;
     /**
      * 主机名
      */
@@ -106,4 +111,82 @@ public class ConnectionInfo implements Serializable {
      * 服务安装目录
      */
     private String serviceHome;
+
+    /**
+     * Java依赖信息
+     * 包含Maven依赖等信息
+     */
+    private String javaDependencies;
+
+    /**
+     * Python依赖信息
+     * 包含pip安装命令等信息
+     */
+    private String pythonDependencies;
+
+    /**
+     * Java依赖摘要
+     * 简短描述依赖信息
+     */
+    private String javaDependenciesSummary;
+
+    /**
+     * Python依赖摘要
+     * 简短描述依赖信息
+     */
+    private String pythonDependenciesSummary;
+
+    /**
+     * 模板变量
+     * 用于存储传递给代码模板的变量
+     */
+    private Map<String, Object> templateVariables;
+
+    /**
+     * 从基本信息项列表中获取指定键的值
+     *
+     * @param key          键名
+     * @param defaultValue 默认值
+     * @return 查找到的值或默认值
+     */
+    public String getBasicInfoValue(String key, String defaultValue) {
+        if (basicInfoItems == null)
+            return defaultValue;
+        return basicInfoItems.stream()
+                .filter(item -> key.equals(item.getKey()))
+                .map(InfoItem::getValue)
+                .findFirst().orElse(defaultValue);
+    }
+
+    /**
+     * 从安全信息项列表中获取指定键的值
+     *
+     * @param key          键名
+     * @param defaultValue 默认值
+     * @return 查找到的值或默认值
+     */
+    public String getSecurityInfoValue(String key, String defaultValue) {
+        if (securityInfoItems == null)
+            return defaultValue;
+        return securityInfoItems.stream()
+                .filter(item -> key.equals(item.getKey()))
+                .map(InfoItem::getValue)
+                .findFirst().orElse(defaultValue);
+    }
+
+    /**
+     * 从连接信息项列表中获取指定键的值
+     *
+     * @param key          键名
+     * @param defaultValue 默认值
+     * @return 查找到的值或默认值
+     */
+    public String getConnectInfoValue(String key, String defaultValue) {
+        if (connectInfoItems == null)
+            return defaultValue;
+        return connectInfoItems.stream()
+                .filter(item -> key.equals(item.getKey()))
+                .map(InfoItem::getValue)
+                .findFirst().orElse(defaultValue);
+    }
 }

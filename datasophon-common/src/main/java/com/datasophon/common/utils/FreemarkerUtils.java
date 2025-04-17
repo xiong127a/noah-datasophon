@@ -58,7 +58,8 @@ import java.util.stream.Collectors;
  * Freemarker工具类
  * 用于生成配置文件，支持多种格式和模板加载方式
  */
-//TODO 业务逻辑代码重复，需要重构。 ConfigureServiceHandler K8sConfigureServiceHandler FreemarkerUtils 后期需要重构
+// TODO 业务逻辑代码重复，需要重构。 ConfigureServiceHandler K8sConfigureServiceHandler
+// FreemarkerUtils 后期需要重构
 @UtilityClass
 public class FreemarkerUtils {
 
@@ -502,7 +503,7 @@ public class FreemarkerUtils {
     }
 
     /**
-     * 渲染模板并返回生成的内容
+     * 渲染模板并返回生成的字符串内容
      *
      * @param template 模板对象
      * @param data     模板数据
@@ -510,12 +511,27 @@ public class FreemarkerUtils {
      * @throws TemplateException 模板处理异常
      * @throws IOException       IO异常
      */
+    public static String renderTemplateToString(Template template, Map<String, Object> data)
+            throws TemplateException, IOException {
+        StringWriter writer = new StringWriter();
+        template.process(data, writer);
+        writer.close();
+        return writer.toString();
+    }
+
+    /**
+     * 渲染模板并返回生成的内容
+     *
+     * @param template 模板对象
+     * @param data     模板数据
+     * @return 渲染后的内容字节数组
+     * @throws TemplateException 模板处理异常
+     * @throws IOException       IO异常
+     */
     public static byte[] renderTemplateToBytes(Template template, Map<String, Object> data)
             throws TemplateException, IOException {
-        StringWriter byteStream = new StringWriter();
-        template.process(data, byteStream);
-        byteStream.close();
-        return StrUtil.utf8Bytes(byteStream.toString());
+        String content = renderTemplateToString(template, data);
+        return StrUtil.utf8Bytes(content);
     }
 
     /**
@@ -793,6 +809,51 @@ public class FreemarkerUtils {
             // 调用方法将数据模板写入到输出文件中
             writeToTemplate(template, data, outputFile);
         }
+    }
+
+    /**
+     * 直接根据模板内容字符串和变量映射渲染为结果字符串
+     * 
+     * @param templateContent 模板内容字符串
+     * @param variables       变量映射（键值对）
+     * @return 渲染后的内容字符串
+     * @throws IOException       IO异常
+     * @throws TemplateException 模板异常
+     */
+    public static String renderFromTemplateContent(String templateContent, Map<String, Object> variables)
+            throws IOException, TemplateException {
+        if (StringUtils.isBlank(templateContent)) {
+            return "";
+        }
+
+        // 创建模板
+        Template template = createTemplateFromContent(templateContent, "dynamic_template");
+
+        // 渲染并返回结果
+        return renderTemplateToString(template, variables);
+    }
+
+    /**
+     * 直接根据模板内容字符串和String类型变量映射渲染为结果字符串
+     * 
+     * @param templateContent 模板内容字符串
+     * @param stringVariables 字符串变量映射（键值对）
+     * @return 渲染后的内容字符串
+     * @throws IOException       IO异常
+     * @throws TemplateException 模板异常
+     */
+    public static String renderFromTemplateContentWithStringVars(String templateContent,
+            Map<String, String> stringVariables)
+            throws IOException, TemplateException {
+        // 将String类型的变量Map转换为Object类型的变量Map
+        Map<String, Object> variables = new HashMap<>();
+        if (stringVariables != null) {
+            for (Map.Entry<String, String> entry : stringVariables.entrySet()) {
+                variables.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return renderFromTemplateContent(templateContent, variables);
     }
 
 }

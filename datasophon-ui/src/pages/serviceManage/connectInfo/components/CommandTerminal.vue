@@ -2,57 +2,69 @@
  * @describe: 命令行终端公共组件 - 用于显示命令行示例
 -->
 <template>
-  <div class="command-card">
-    <div class="command-header">
-      <span class="command-title">{{ title }}</span>
-      <a-tooltip :title="copyTooltip">
-        <a-icon
-          type="copy"
-          class="action-icon"
-          @click="copyAllCommands"
-        />
-      </a-tooltip>
-    </div>
-    <div class="command-content">
-      <div class="title-bar">
-        <div class="file-name">Terminal</div>
-      </div>
-      <div class="terminal-content bash-terminal">
-        <!-- 命令列表 -->
-        <div v-for="(cmd, index) in commandsToShow" :key="index" class="terminal-line-wrapper">
-          <!-- 命令注释 -->
-          <div class="terminal-line" v-if="cmd.label !== '#'">
-            <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
-            <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
-            <span class="command-comment">#{{ cmd.label }}</span>
-          </div>
-          
-          <!-- 命令内容 -->
-          <div class="terminal-line" v-if="cmd.value">
-            <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
-            <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
-            <span class="command" @click="copySingleCommand(cmd.value)">{{ getCommandDisplay(cmd.value) }}</span>
-            <a-tooltip title="复制命令" placement="left">
-              <a-icon type="copy" class="copy-icon" @click.stop="copySingleCommand(cmd.value)" />
-            </a-tooltip>
-          </div>
-          
-          <!-- 命令执行结果 -->
-          <div v-if="cmd.commandResult" class="terminal-line result-line">
-            <span class="command-result">{{ cmd.commandResult }}</span>
-          </div>
+  <div class="command-block-section">
+    <div class="code-card">
+      <div class="code-header">
+        <div class="title-section">
+          <span class="code-title">{{ title }}</span>
+        </div>
+        <div class="header-actions">
+          <a-tooltip :title="copyTooltip">
+            <a-button 
+              type="link" 
+              class="action-button copy-button"
+              @click="copyAllCommands"
+            >
+              <a-icon type="copy" />
+            </a-button>
+          </a-tooltip>
         </div>
       </div>
-      <div class="status-bar">
-        <div class="status-item encoding">UTF-8</div>
-        <div class="status-item">Shell</div>
-        <div class="status-item filetype">bash</div>
+      <div class="code-content">
+        <div class="title-bar">
+          <div class="file-name">Terminal</div>
+        </div>
+        <div class="terminal-container">
+          <div class="terminal-content bash-terminal">
+            <!-- 命令列表 -->
+            <div v-for="(cmd, index) in commandsToShow" :key="index" class="terminal-line-wrapper">
+              <!-- 命令注释 -->
+              <div class="terminal-line" v-if="cmd.label !== '#'">
+                <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
+                <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
+                <span class="command-comment">#{{ cmd.label }}</span>
+              </div>
+              
+              <!-- 命令内容 -->
+              <div class="terminal-line" v-if="cmd.value">
+                <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
+                <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
+                <span class="command" @click="copySingleCommand(cmd.value)">{{ getCommandDisplay(cmd.value) }}</span>
+                <a-tooltip title="复制命令" placement="left">
+                  <a-icon type="copy" class="copy-icon" @click.stop="copySingleCommand(cmd.value)" />
+                </a-tooltip>
+              </div>
+              
+              <!-- 命令执行结果 -->
+              <div v-if="cmd.commandResult" class="terminal-line result-line">
+                <span class="command-result">{{ cmd.commandResult }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="status-bar">
+          <div class="status-item encoding">UTF-8</div>
+          <div class="status-item">LF</div>
+          <div class="status-item filetype">bash</div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { copyText } from '@/utils/copyUtil';
+
 export default {
   name: "CommandTerminal",
   props: {
@@ -82,13 +94,48 @@ export default {
       default: '复制所有命令'
     }
   },
+  data() {
+    return {
+      // 预留一些数据状态
+    };
+  },
   computed: {
     // 添加一个空的计算属性以保持结构完整
     commandsToShow() {
       return this.commands || [];
     }
   },
+  mounted() {
+    // 在挂载后调整终端容器高度
+    this.adjustTerminalHeight();
+    
+    // 监听窗口大小改变事件
+    window.addEventListener('resize', this.adjustTerminalHeight);
+  },
+  beforeDestroy() {
+    // 移除事件监听器
+    window.removeEventListener('resize', this.adjustTerminalHeight);
+  },
   methods: {
+    // 调整终端高度
+    adjustTerminalHeight() {
+      const terminalContainer = this.$el.querySelector('.terminal-container');
+      if (!terminalContainer) return;
+      
+      // 获取视窗高度
+      const windowHeight = window.innerHeight;
+      const containerPosition = terminalContainer.getBoundingClientRect();
+      
+      // 计算可用空间，留出更少的底部边距
+      const availableHeight = windowHeight - containerPosition.top - 50;
+      
+      // 设置最小高度为600px
+      const terminalHeight = Math.max(600, availableHeight);
+      
+      // 设置高度
+      terminalContainer.style.height = `${terminalHeight}px`;
+    },
+    
     // 获取命令显示（去掉前缀路径，显示更简洁）
     getCommandDisplay(command) {
       if (!command) return '';
@@ -114,274 +161,275 @@ export default {
         }
       });
       
-      // 复制到剪贴板
-      this.copyText(allCommands.trim());
+      // 使用通用复制工具复制到剪贴板
+      copyText(allCommands.trim(), '所有命令', this);
     },
     
     // 复制单条命令
     copySingleCommand(commandText) {
       if (!commandText) return;
       
-      // 复制到剪贴板
-      this.copyText(commandText);
-    },
-    
-    // 复制文本到剪贴板
-    copyText(text) {
-      if (!text) return;
-      
-      // 创建临时textarea元素用于复制
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'absolute';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      
-      // 选择并复制文本
-      const selected = document.getSelection().rangeCount > 0 
-        ? document.getSelection().getRangeAt(0) 
-        : false;
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      
-      // 恢复原始选区
-      if (selected) {
-        document.getSelection().removeAllRanges();
-        document.getSelection().addRange(selected);
-      }
-      
-      // 显示复制成功消息
-      this.$message.success('复制成功');
+      // 使用通用复制工具复制到剪贴板
+      copyText(commandText, '命令', this);
     }
   }
 };
 </script>
 
 <style lang="less" scoped>
-// 命令行卡片样式
-.command-card {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid rgba(210, 210, 215, 0.4);
-  overflow: hidden;
-  margin-bottom: 16px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.1);
+// 命令终端部分样式
+.command-block-section {
+  margin-bottom: 24px;
   
-  &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-  }
-  
-  .command-header {
-    background: linear-gradient(135deg, #5E5CE6 0%, #4E48E0 100%);
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .code-card {
+    flex: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e8e8e8;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s;
     
-    .command-title {
-      font-weight: 500;
-      color: white;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    
-    .action-icon {
-      color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        color: white;
-        transform: scale(1.1);
-      }
-    }
-  }
-  
-  .command-content {
-    padding: 0;
-    background: #282a36;
-    position: relative;
-    
-    /* 顶部工具栏 */
-    &::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 30px;
-      background: #44475a;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      z-index: 1;
-    }
-    
-    /* 标题栏 */
-    .title-bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 30px;
-      z-index: 2;
+    .code-header {
+      padding: 12px 16px;
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
+      background: linear-gradient(to right, #f8f9fa, #edf0f5);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
       
-      .file-name {
-        font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.7);
-        padding: 0 15px;
-      }
-    }
-    
-    /* 底部状态栏 */
-    .status-bar {
-      position: sticky;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 22px;
-      background: linear-gradient(135deg, #5E5CE6 0%, #4E48E0 100%);
-      color: white;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-      z-index: 10;
-      
-      .status-item {
-        padding: 0 10px;
+      .title-section {
         display: flex;
         align-items: center;
-        height: 100%;
+        flex: 1;
+        overflow: hidden;
+      }
+      
+      .code-title {
+        font-weight: 600;
+        font-size: 15px;
+        color: #262626;
+        margin-right: 12px;
+        letter-spacing: -0.01em;
+      }
+      
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         
-        &.encoding {
-          border-right: 1px solid rgba(255, 255, 255, 0.3);
+        .action-button {
+          padding: 4px 8px;
+          color: #0078d4;
+          border-radius: 6px;
+          
+          &:hover {
+            background: rgba(0, 120, 212, 0.1);
+          }
+          
+          &.copy-button {
+            color: #0078d4;
+          }
+        }
+      }
+    }
+    
+    .code-content {
+      .title-bar {
+        padding: 8px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(to right, #eaeef2, #e6e9ee);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        
+        .file-name {
+          font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+          font-size: 13px;
+          color: #3f3f3f;
+          font-weight: 500;
+        }
+      }
+      
+      .terminal-container {
+        height: 650px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background-color: #282a36; // 使用Dracula主题背景色，与CodeMirror相同
+        position: relative;
+        
+        /* 自定义滚动条样式 - 透明化处理 */
+        &::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
         }
         
-        &.filetype {
-          margin-left: auto;
-          background-color: rgba(0, 0, 0, 0.15);
+        &::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        &::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
+        }
+        
+        &::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Firefox滚动条样式 */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+      }
+      
+      /* 终端内容 */
+      .terminal-content {
+        padding: 16px 20px;
+        font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #f8f8f2; // Dracula前景色
+        line-height: 1.6;
+        tab-size: 4;
+        min-height: 100%;
+        
+        .terminal-line-wrapper {
+          margin-bottom: 16px;
+          position: relative;
+        }
+        
+        .terminal-line {
+          display: flex;
+          flex-wrap: nowrap;
+          position: relative;
+          padding-left: 8px;
+          padding-right: 30px; /* 为复制图标留出空间 */
+          margin-bottom: 6px;
+          
+          .prompt {
+            color: #50fa7b; // Dracula绿色
+            margin-right: 8px;
+            user-select: none;
+            font-weight: 500;
+          }
+          
+          .command-comment {
+            color: #6272a4; // Dracula注释色
+            word-break: break-all;
+            overflow-wrap: break-word;
+            user-select: none;
+            font-style: italic;
+          }
+          
+          .command {
+            color: #f8f8f2; // Dracula前景色
+            word-break: break-all;
+            overflow-wrap: break-word;
+            cursor: pointer;
+            flex: 1;
+            
+            &:hover {
+              text-decoration: underline;
+              color: #8be9fd; // Dracula青色
+            }
+          }
+          
+          .command-result {
+            color: #bd93f9; // Dracula紫色
+            word-break: break-all;
+            overflow-wrap: break-word;
+            padding-left: 16px; /* 缩进结果 */
+            font-size: 13px;
+          }
+          
+          .copy-icon {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s ease;
+            
+            &:hover {
+              color: #8be9fd; // Dracula青色
+              transform: translateY(-50%) scale(1.1);
+            }
+          }
+          
+          &:hover .copy-icon {
+            opacity: 1;
+          }
+        }
+      }
+      
+      /* 底部状态栏 */
+      .status-bar {
+        padding: 4px 16px;
+        display: flex;
+        align-items: center;
+        background-color: #f7f7f7;
+        border-top: 1px solid #f0f0f0;
+        
+        .status-item {
+          margin-right: 16px;
+          font-size: 12px;
+          color: #999;
+          
+          &.encoding {
+            color: #0078d4;
+            font-weight: 500;
+          }
+          
+          &:nth-child(2) {
+            color: #9061F9;
+          }
+          
+          &.filetype {
+            text-transform: uppercase;
+            color: #4A9E5C;
+            font-weight: 500;
+          }
         }
       }
     }
   }
 }
 
-// 终端样式
-.terminal-content {
-  margin: 0;
-  padding: 45px 16px 22px;  /* 为底部状态栏留出空间 */
-  font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  color: #f8f8f2;
-  line-height: 1.5;
-  tab-size: 4;
-  position: relative;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  
-  .terminal-line-wrapper {
-    margin-bottom: 12px;
-    position: relative;
-  }
-  
-  .terminal-line {
-    display: flex;
-    flex-wrap: nowrap;
-    position: relative;
-    padding-left: 8px;
-    padding-right: 30px; /* 为复制图标留出空间 */
-    margin-bottom: 4px;
-    
-    .prompt {
-      color: #50fa7b;
-      margin-right: 8px;
-      user-select: none;
-      font-weight: bold;
-    }
-    
-    .command-comment {
-      color: #6272a4; /* Vim风格的蓝色注释 */
-      word-break: break-all;
-      overflow-wrap: break-word;
-      user-select: none;
-      font-style: italic;
-    }
-    
-    .command {
-      color: #f8f8f2;
-      word-break: break-all;
-      overflow-wrap: break-word;
-      cursor: pointer;
-      flex: 1;
+/* 媒体查询 */
+@media screen and (max-width: 768px) {
+  .command-block-section {
+    .code-card {
+      .code-header {
+        padding: 12px 16px;
+        
+        .code-title {
+          font-size: 14px;
+        }
+      }
       
-      &:hover {
-        text-decoration: underline;
-        color: #8be9fd;
+      .code-content {
+        .title-bar {
+          height: 30px;
+          padding: 0 12px;
+        }
+        
+        .terminal-content {
+          font-size: 13px;
+          padding: 12px 16px;
+        }
+        
+        .status-bar {
+          height: 24px;
+          font-size: 11px;
+        }
       }
     }
-    
-    .command-result {
-      color: #bd93f9; /* 紫色显示命令结果 */
-      word-break: break-all;
-      overflow-wrap: break-word;
-      padding-left: 16px; /* 缩进结果 */
-      font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-    }
-    
-    .copy-icon {
-      position: absolute;
-      right: 5px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: rgba(255, 255, 255, 0.3);
-      cursor: pointer;
-      opacity: 0;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        color: #8be9fd;
-      }
-    }
-    
-    &:hover .copy-icon {
-      opacity: 1;
-    }
-  }
-  
-  .terminal-prompt-line {
-    margin-top: 12px;
-    margin-bottom: 0;
-    
-    .cursor-wrapper {
-      position: relative;
-      display: inline-block;
-      height: 16px;
-    }
-  }
-  
-  .terminal-cursor {
-    display: inline-block;
-    width: 8px;
-    height: 16px;
-    background-color: rgba(255, 255, 255, 0.7);
-    vertical-align: middle;
-    animation: blink 1s step-end infinite;
   }
 }
-
-@keyframes blink {
-  0%, 100% { opacity: 0; }
-  50% { opacity: 1; }
-}
-</style> 
+</style>

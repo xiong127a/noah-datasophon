@@ -3,10 +3,32 @@
 -->
 <template>
   <div class="code-block-section">
+    <div class="code-container" :class="{'with-dependencies': isDependenciesExpanded}">
+      <!-- 代码编辑器区域 -->
     <div class="code-card">
       <div class="code-header">
+          <div class="title-section">
         <span class="code-title">{{ title }}</span>
+            <!-- 依赖状态标记 -->
+            <span v-if="dependencies" class="dependency-badge" @click="toggleDependencies">
+              <a-icon type="api" />
+              <span class="deps-text">{{ dependenciesSummary || '需要添加依赖' }}</span>
+              <a-icon :type="isDependenciesExpanded ? 'caret-up' : 'caret-down'" />
+            </span>
+          </div>
         <div class="header-actions">
+            <!-- 依赖展开按钮 -->
+            <a-tooltip v-if="dependencies" :title="isDependenciesExpanded ? '收起依赖' : '展开依赖'">
+              <a-button 
+                type="link" 
+                class="action-button deps-button"
+                @click="toggleDependencies"
+              >
+                <a-icon :type="isDependenciesExpanded ? 'menu-fold' : 'menu-unfold'" />
+                {{ isDependenciesExpanded ? '' : '依赖' }}
+              </a-button>
+            </a-tooltip>
+            
           <a-tooltip :title="`复制${title}`">
             <a-button 
               type="link" 
@@ -23,16 +45,16 @@
           <div class="file-name">{{ fileName }}</div>
           <div v-if="isEditing" class="edit-indicator">编辑模式</div>
         </div>
-        
-        <!-- 加载状态 -->
-        <div v-if="!editorReady" class="loading-container">
-          <a-spin tip="代码格式化中...">
-            <div class="loading-content"></div>
-          </a-spin>
+          
+          <!-- 加载状态 -->
+          <div v-if="!editorReady" class="loading-container">
+            <a-spin tip="代码格式化中...">
+              <div class="loading-content"></div>
+            </a-spin>
         </div>
         
         <!-- CodeMirror编辑器 -->
-        <div v-show="editorReady" class="editor-container" @click="enableEditMode">
+          <div v-show="editorReady" class="editor-container" @click="enableEditMode">
           <codemirror
             v-model="editorContent"
             :options="cmOptions"
@@ -47,6 +69,49 @@
           <div class="status-item">LF</div>
           <div class="status-item filetype">{{ language }}</div>
           <div v-if="isEdited" class="status-item modified">已修改</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 依赖信息区域 -->
+      <div v-if="dependencies && isDependenciesExpanded" class="dependencies-section">
+        <div class="deps-card">
+          <div class="deps-header">
+            <div class="deps-title">
+              {{ getDependencyFileName() }}
+              <span class="deps-subtitle">{{ dependenciesSummary || '项目依赖' }}</span>
+            </div>
+            <a-tooltip title="复制依赖">
+              <a-button 
+                type="link"
+                class="deps-copy-btn"
+                @click="copyDependencies"
+              >
+                <a-icon type="copy" />
+              </a-button>
+            </a-tooltip>
+          </div>
+          <div class="deps-content">
+            <!-- 使用CodeMirror替换原来的pre标签 -->
+            <div v-if="!depEditorReady" class="loading-container">
+              <a-spin tip="加载依赖中...">
+                <div class="loading-content"></div>
+              </a-spin>
+            </div>
+            <div v-show="depEditorReady" class="editor-container">
+              <codemirror
+                v-model="dependenciesContent"
+                :options="depCmOptions"
+                class="code-mirror-editor"
+                ref="depCmEditor"
+              ></codemirror>
+            </div>
+            <div class="status-bar">
+              <div class="status-item encoding">UTF-8</div>
+              <div class="status-item">LF</div>
+              <div class="status-item filetype">{{ getDependencyFileType() }}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -56,7 +121,11 @@
 <script>
 // 导入vue-codemirror和基础codemirror
 import { codemirror } from 'vue-codemirror'
+import CodeMirror from 'codemirror'
 import 'codemirror/lib/codemirror.css'
+
+// 导入通用复制工具 - 直接静态导入
+import { copyText } from '@/utils/copyUtil'
 
 // 导入语言模式
 import 'codemirror/mode/javascript/javascript.js'
@@ -64,6 +133,7 @@ import 'codemirror/mode/python/python.js'
 import 'codemirror/mode/clike/clike.js'       // Java支持
 import 'codemirror/mode/sql/sql.js'           // SQL支持
 import 'codemirror/mode/shell/shell.js'       // Shell/Bash支持
+import 'codemirror/mode/xml/xml.js'           // XML支持
 
 // 导入主题
 import 'codemirror/theme/dracula.css'
@@ -91,38 +161,65 @@ import 'codemirror/addon/edit/trailingspace.js'  // 尾随空格显示
 import 'codemirror/addon/edit/continuelist.js'  // 多行编辑支持
 import 'codemirror/addon/display/placeholder.js'  // 占位符
 
+// 导入prismjs用于语法高亮依赖代码
+import Prism from 'prismjs'
+import 'prismjs/themes/prism.css'
+import 'prismjs/components/prism-markup.js'
+import 'prismjs/components/prism-xml-doc.js'
+import 'prismjs/components/prism-python.js'
+
+// 自动闭合括号和标签
+import 'codemirror/addon/edit/closebrackets.js'
+import 'codemirror/addon/edit/matchbrackets.js'
+
+// 行号和当前行高亮
+import 'codemirror/addon/selection/active-line.js'
+
+// 导入格式化相关插件
+import 'codemirror/addon/comment/comment.js'  // 注释处理
+import 'codemirror/addon/edit/trailingspace.js'  // 尾随空格显示
+import 'codemirror/addon/edit/continuelist.js'  // 多行编辑支持
+import 'codemirror/addon/display/placeholder.js'  // 占位符
+
 // 导入格式化工具函数
 function formatCode(code, mode) {
-  // 创建临时DOM元素用于格式化
-  const tempTextArea = document.createElement('textarea');
-  document.body.appendChild(tempTextArea);
+  if (!code) return code;
   
-  // 创建临时CodeMirror实例
-  const tempEditor = CodeMirror.fromTextArea(tempTextArea, {
-    mode: mode,
-    indentUnit: 4,
-    smartIndent: true,
-    tabSize: 4,
-    indentWithTabs: false,
-    lineNumbers: false
-  });
-  
-  // 设置代码并格式化
-  tempEditor.setValue(code);
-  
-  // 执行自动格式化
-  const totalLines = tempEditor.lineCount();
-  for (let i = 0; i < totalLines; i++) {
-    tempEditor.indentLine(i);
+  try {
+    // 创建临时DOM元素用于格式化
+    const tempTextArea = document.createElement('textarea');
+    document.body.appendChild(tempTextArea);
+    
+    // 创建临时CodeMirror实例
+    const tempEditor = CodeMirror.fromTextArea(tempTextArea, {
+      mode: mode,
+      indentUnit: 4,
+      smartIndent: true,
+      tabSize: 4,
+      indentWithTabs: false,
+      lineNumbers: false
+    });
+    
+    // 设置代码并格式化
+    tempEditor.setValue(code);
+    
+    // 执行自动格式化
+    const totalLines = tempEditor.lineCount();
+    for (let i = 0; i < totalLines; i++) {
+      tempEditor.indentLine(i);
+    }
+    
+    // 获取格式化后的代码
+    const formattedCode = tempEditor.getValue();
+    
+    // 清理临时DOM元素
+    document.body.removeChild(tempTextArea);
+    
+    return formattedCode;
+  } catch (error) {
+    console.error('格式化函数错误:', error);
+    return code; // 返回原始代码
   }
-  
-  // 获取格式化后的代码
-  const formattedCode = tempEditor.getValue();
-  
-  // 清理临时DOM元素
-  document.body.removeChild(tempTextArea);
-  
-  return formattedCode;
 }
 
 export default {
@@ -155,12 +252,24 @@ export default {
     autoFormat: {
       type: Boolean,
       default: true
+    },
+    // 依赖信息
+    dependencies: {
+      type: String,
+      default: ''
+    },
+    // 依赖摘要信息
+    dependenciesSummary: {
+      type: String,
+      default: ''
     }
   },
   data() {
     return {
       // 编辑器内容
       editorContent: '',
+      // 依赖内容
+      dependenciesContent: '',
       // 原始代码（用于比较）
       originalCode: '',
       // 是否处于编辑模式
@@ -169,6 +278,10 @@ export default {
       isEdited: false,
       // 是否显示编辑器（用于控制初始加载和格式化）
       editorReady: false,
+      // 依赖编辑器是否准备好
+      depEditorReady: false,
+      // 是否展开依赖面板
+      isDependenciesExpanded: false,
       // CodeMirror配置选项
       cmOptions: {
         // 主题
@@ -203,6 +316,37 @@ export default {
         scrollbarStyle: 'null',
         // 启用自动高度
         viewportMargin: Infinity
+      },
+      // 依赖编辑器配置选项
+      depCmOptions: {
+        // 主题
+        theme: 'dracula',
+        // 启用行号
+        lineNumbers: true,
+        // 启用代码折叠
+        foldGutter: true,
+        // 行包装
+        lineWrapping: true,
+        // 总是只读模式
+        readOnly: true,
+        // 自动缩进
+        smartIndent: true,
+        // 当前行高亮
+        styleActiveLine: false,
+        // 自动高亮匹配的括号
+        matchBrackets: true,
+        // 显示光标位置信息
+        showCursorWhenSelecting: false,
+        // 缩进单位
+        tabSize: 4,
+        // 启用代码折叠指示器
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        // 缩进使用空格
+        indentWithTabs: false,
+        // 简单滚动条配置
+        scrollbarStyle: 'null',
+        // 启用自动高度
+        viewportMargin: Infinity
       }
     };
   },
@@ -221,7 +365,27 @@ export default {
     },
     // 监听语言变化
     language() {
-      this.updateLanguageMode();
+        this.updateLanguageMode();
+    },
+    // 监听依赖
+    dependencies(newDeps) {
+      if (newDeps) {
+        this.setDependenciesContent(newDeps);
+      } else {
+        this.dependenciesContent = '';
+        this.depEditorReady = true;
+      }
+    },
+    // 监听依赖面板展开状态
+    isDependenciesExpanded(newVal) {
+      if (newVal && this.dependencies && !this.depEditorReady) {
+        this.setDependenciesContent(this.dependencies);
+      }
+      // 状态改变后重新计算编辑器高度
+          this.$nextTick(() => {
+        this.setEditorHeight();
+        this.setDependencyEditorHeight();
+      });
     }
   },
   created() {
@@ -237,6 +401,11 @@ export default {
       this.originalCode = this.code || '';
       this.editorReady = true;
     }
+    
+    // 如果有依赖且已展开，设置依赖内容
+    if (this.dependencies && this.isDependenciesExpanded) {
+      this.setDependenciesContent(this.dependencies);
+    }
   },
   mounted() {
     // 设置语言模式
@@ -244,144 +413,302 @@ export default {
     
     // 确保编辑器正确渲染
     this.$nextTick(() => {
-      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
-        const cm = this.$refs.cmEditor.codemirror;
-        
-        // 设置固定高度而不是最小/最大高度
-        const windowHeight = window.innerHeight;
-        // 计算适合屏幕的高度，保证足够大的垂直空间
-        const editorPosition = cm.getWrapperElement().getBoundingClientRect();
-        const availableHeight = windowHeight - editorPosition.top - 80;
-        
-        // 确保高度不小于500px
-        const editorHeight = Math.max(500, availableHeight);
-        
-        // 直接设置固定高度
-        cm.getWrapperElement().style.height = `${editorHeight}px`;
-        
-        // 强制刷新确保渲染正确
-        setTimeout(() => {
-          cm.refresh();
-        }, 100);
-      }
+      this.setEditorHeight();
+      
+      // 窗口大小改变时重新计算编辑器高度
+      window.addEventListener('resize', this.setEditorHeight);
     });
   },
+  beforeDestroy() {
+    // 组件销毁前移除事件监听
+    window.removeEventListener('resize', this.setEditorHeight);
+    
+    // 清理所有编辑器实例和DOM
+    this.cleanupEditors();
+  },
   methods: {
-    // 预处理代码格式化 - 在代码显示之前进行格式化
-    preFormatCode(code) {
-      if (!code) return;
-      
-      try {
-        // 获取当前模式
-        let mode = this.getLanguageMode();
-        
-        // 创建临时DOM元素用于格式化
-        const textArea = document.createElement('textarea');
-        document.body.appendChild(textArea);
-        
-        // 创建一个隐藏的CodeMirror实例来格式化代码
-        const CodeMirror = window.CodeMirror || require('codemirror');
-        const tempEditor = CodeMirror.fromTextArea(textArea, {
-          mode: mode,
-          indentUnit: 4,
-          smartIndent: true,
-          tabSize: 4,
-          indentWithTabs: false
-        });
-        
-        // 设置代码
-        tempEditor.setValue(code);
-        
-        // 格式化所有行
-        const totalLines = tempEditor.lineCount();
-        for (let i = 0; i < totalLines; i++) {
-          tempEditor.indentLine(i);
-        }
-        
-        // 获取格式化后的代码
-        const formattedCode = tempEditor.getValue();
-        
-        // 清理临时元素
-        tempEditor.toTextArea();
-        document.body.removeChild(textArea);
-        
-        // 设置到编辑器
-        this.editorContent = formattedCode;
-        this.originalCode = formattedCode;
-      } catch (error) {
-        console.error('代码格式化失败:', error);
-        // 出错时直接使用原始代码
-        this.editorContent = code;
-        this.originalCode = code;
+    // 新增清理方法
+    cleanupEditors() {
+      // 清理代码编辑器
+      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+        const editor = this.$refs.cmEditor.codemirror;
+        editor.toTextArea(); // 将编辑器转换回原始textarea
       }
       
-      // 标记编辑器已准备好
-      this.editorReady = true;
+      // 清理依赖编辑器
+      if (this.$refs.depCmEditor && this.$refs.depCmEditor.codemirror) {
+        const depEditor = this.$refs.depCmEditor.codemirror;
+        depEditor.toTextArea(); // 将编辑器转换回原始textarea
+      }
+      
+      // 延迟清理DOM中残留的CodeMirror元素
+        setTimeout(() => {
+        // 移除所有孤立的CodeMirror相关元素
+        const orphanedElements = document.querySelectorAll('body > .CodeMirror, body > pre.CodeMirror-line, body > .CodeMirror-code, body > .CodeMirror-gutter, body > .CodeMirror-linenumber, body > .CodeMirror-cursor, body > textarea.CodeMirror-textarea');
+        
+        orphanedElements.forEach(element => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        });
+      }, 100);
+    },
+    // 格式化语言字符串到CodeMirror语言模式
+    formatLanguage(lang) {
+      const langMap = {
+        'javascript': 'text/javascript',
+        'js': 'text/javascript',
+        'typescript': 'text/typescript',
+        'ts': 'text/typescript',
+        'java': 'text/x-java',
+        'python': 'text/x-python',
+        'py': 'text/x-python',
+        'sql': 'text/x-sql',
+        'shell': 'text/x-sh',
+        'bash': 'text/x-sh'
+      };
+      
+      return langMap[lang.toLowerCase()] || lang;
+    },
+    
+    // 更新编辑器语言模式
+    updateLanguageMode() {
+      if (this.cmOptions) {
+        this.cmOptions.mode = this.formatLanguage(this.language);
+        
+        // 如果编辑器已经存在，则更新其模式
+        if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+          this.$refs.cmEditor.codemirror.setOption('mode', this.formatLanguage(this.language));
+        }
+      }
+    },
+    
+    // 预处理并格式化代码
+    preFormatCode(code) {
+      try {
+        this.editorReady = false;
+        
+        // 格式化代码
+        // 注意: 在实际环境中，formatCode可能需要使用异步处理，
+        // 因为大型代码的格式化可能会阻塞主线程
+        let formattedCode = code;
+        try {
+          formattedCode = formatCode(code, this.formatLanguage(this.language));
+        } catch (formatError) {
+          console.error('代码格式化函数执行失败:', formatError);
+          formattedCode = code; // 使用原始代码
+        }
+        
+        this.editorContent = formattedCode;
+        this.originalCode = formattedCode;
+        
+        this.$nextTick(() => {
+          this.editorReady = true;
+          // 延迟设置高度确保DOM已更新
+          setTimeout(() => {
+            this.setEditorHeight();
+          }, 100);
+        });
+      } catch (error) {
+        console.error('代码格式化失败:', error);
+        // 格式化失败，直接使用原代码
+        this.editorContent = code;
+        this.originalCode = code;
+        this.editorReady = true;
+      }
+    },
+    
+    // 设置编辑器高度
+    setEditorHeight() {
+      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+        const editor = this.$refs.cmEditor.codemirror;
+        
+        // 自动调整编辑器高度以适应内容
+        const totalLines = editor.lineCount();
+        const lineHeight = editor.defaultTextHeight();
+        
+        // 根据语言类型设置不同的最小高度和最大高度
+        let minHeight, maxHeight;
+        
+        if (this.language === 'shell' || this.language === 'bash') {
+          // 命令行使用当前设置，看起来已经不错
+          minHeight = 8 * lineHeight;
+          maxHeight = Math.min(Math.max((totalLines + 2) * lineHeight, minHeight), 40 * lineHeight);
+        } else {
+          // Java和Python需要显示更紧凑
+          minHeight = 6 * lineHeight; // 减少最小行数
+          
+          // 计算内容高度，但限制最大显示行数
+          const visibleLines = Math.min(totalLines, 15); // 最多显示15行
+          const contentHeight = (visibleLines + 1) * lineHeight;
+          
+          // 设置最大高度限制
+          maxHeight = Math.min(Math.max(contentHeight, minHeight), 20 * lineHeight);
+        }
+        
+        // 应用高度，确保至少达到最小高度
+        const calculatedHeight = Math.max(minHeight, maxHeight);
+        
+        // 设置编辑器容器的最小高度
+        const editorContainer = this.$refs.cmEditor.$el;
+        if (editorContainer) {
+          editorContainer.style.minHeight = minHeight + 'px';
+        }
+        
+        // 设置编辑器高度
+        editor.setSize(null, calculatedHeight);
+        
+        // 强制刷新编辑器显示
+        setTimeout(() => {
+          editor.refresh();
+        }, 50);
+      }
+    },
+    
+    // 获取依赖文件名
+    getDependencyFileName() {
+      if (this.language === 'java') {
+        return 'pom.xml';
+      } else if (this.language === 'python') {
+        return 'requirements.txt';
+      } else {
+        return '依赖信息';
+      }
+    },
+    
+    // 启用编辑模式
+    enableEditMode() {
+      if (!this.isEditing) {
+        this.isEditing = true;
+        
+        // 如果编辑器存在，启用编辑模式
+        if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+          this.$refs.cmEditor.codemirror.setOption('readOnly', false);
+        }
+      }
+    },
+    
+    // 代码变更处理
+    onCodeChange(newCode) {
+      // 检测代码是否有变化
+      this.isEdited = newCode !== this.originalCode;
     },
     
     // 复制代码到剪贴板
     copyCode() {
-      this.$copyText(this.editorContent).then(
-        () => {
-          this.$message.success(`${this.title}已复制到剪贴板`);
-        },
-        () => {
-          this.$message.error('复制失败，请手动选择并复制');
-        }
-      );
+      if (!this.editorContent) return;
+      
+      // 使用通用复制工具
+      copyText(this.editorContent, this.title);
     },
     
-    // 切换到编辑模式
-    enableEditMode() {
-      if (!this.isEditing) {
-        this.isEditing = true;
-        // 启用编辑模式
-        if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
-          this.$refs.cmEditor.codemirror.setOption('readOnly', false);
-          // 设置焦点
-          this.$refs.cmEditor.codemirror.focus();
+    // 切换依赖面板展开/收起状态
+    toggleDependencies() {
+      this.isDependenciesExpanded = !this.isDependenciesExpanded;
+      
+      // 如果是展开依赖面板，确保依赖内容已设置
+      if (this.isDependenciesExpanded && this.dependencies) {
+        this.setDependenciesContent(this.dependencies);
+      }
+      
+      // 依赖面板改变后重新计算编辑器高度
+      this.$nextTick(() => {
+        this.setEditorHeight();
+      });
+    },
+    
+    // 设置依赖内容
+    setDependenciesContent(dependencies) {
+      if (!dependencies) return;
+      
+      this.depEditorReady = false;
+      this.dependenciesContent = dependencies;
+      
+      // 设置适当的语言模式
+      if (this.depCmOptions) {
+        if (this.language === 'java') {
+          this.depCmOptions.mode = 'application/xml';
+        } else if (this.language === 'python') {
+          this.depCmOptions.mode = 'text/x-python';
+        } else {
+          this.depCmOptions.mode = 'text/plain';
         }
+      }
+      
+      // 确保模板渲染后再初始化编辑器
+      this.$nextTick(() => {
+        this.depEditorReady = true;
+        
+        // 再次确保DOM已更新，编辑器实例存在
+        this.$nextTick(() => {
+          if (this.$refs.depCmEditor && this.$refs.depCmEditor.codemirror) {
+            const cm = this.$refs.depCmEditor.codemirror;
+            
+            // 强制更新编辑器内容和刷新显示
+            cm.setValue(dependencies);
+            cm.refresh();
+            
+            // 设置正确的编辑器高度
+            this.setDependencyEditorHeight();
+          }
+        });
+      });
+    },
+    
+    // 设置依赖编辑器高度
+    setDependencyEditorHeight() {
+      if (this.$refs.depCmEditor && this.$refs.depCmEditor.codemirror) {
+        const editor = this.$refs.depCmEditor.codemirror;
+        
+        // 自动调整编辑器高度以适应内容
+        const totalLines = editor.lineCount();
+        const lineHeight = editor.defaultTextHeight();
+        
+        // 设置更紧凑的最小高度
+        const minHeight = 6 * lineHeight;
+        
+        // 限制最大显示行数
+        const visibleLines = Math.min(totalLines, 12); // 最多显示12行
+        const contentHeight = (visibleLines + 1) * lineHeight;
+        
+        // 限制最大高度
+        const maxHeight = Math.min(Math.max(contentHeight, minHeight), 16 * lineHeight);
+        
+        // 应用高度，确保至少达到最小高度
+        const calculatedHeight = Math.max(minHeight, maxHeight);
+        
+        // 设置编辑器容器的最小高度
+        const editorContainer = this.$refs.depCmEditor.$el;
+        if (editorContainer) {
+          editorContainer.style.minHeight = minHeight + 'px';
+        }
+        
+        // 设置编辑器高度
+        editor.setSize(null, calculatedHeight);
+        
+        // 强制刷新编辑器显示
+        setTimeout(() => {
+          editor.refresh();
+        }, 50);
       }
     },
     
-    // 监听代码变化
-    onCodeChange(newCode) {
-      this.isEdited = newCode !== this.originalCode;
+    // 复制依赖信息到剪贴板
+    copyDependencies() {
+      if (!this.dependencies) return;
+      
+      // 使用通用复制工具
+      copyText(this.dependencies, '依赖信息');
     },
     
-    // 获取当前语言的模式
-    getLanguageMode() {
-      // 根据语言类型设置相应的模式
-      switch (this.language.toLowerCase()) {
-        case 'java':
-          return 'text/x-java';
-        case 'javascript':
-        case 'js':
-          return 'text/javascript';
-        case 'python':
-        case 'py':
-          return 'text/x-python';
-        case 'sql':
-          return 'text/x-sql';
-        case 'bash':
-        case 'shell':
-          return 'text/x-sh';
-        default:
-          return 'text/plain';
-      }
-    },
-    
-    // 更新语言模式
-    updateLanguageMode() {
-      const mode = this.getLanguageMode();
-      
-      // 更新选项
-      this.cmOptions.mode = mode;
-      
-      // 如果编辑器已实例化，直接设置模式
-      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
-        this.$refs.cmEditor.codemirror.setOption('mode', mode);
-        this.$refs.cmEditor.codemirror.refresh();
+    // 获取依赖文件类型
+    getDependencyFileType() {
+      if (this.language === 'java') {
+        return 'XML';
+      } else if (this.language === 'python') {
+        return 'TXT';
+      } else {
+        return 'TXT';
       }
     }
   }
@@ -389,291 +716,484 @@ export default {
 </script>
 
 <style lang="less">
-/* 全局CSS变量 */
-:root {
-  --editor-bg: #282c34;
-  --editor-text: #abb2bf;
-  --editor-line-number: #636d83;
-  --editor-gutter-bg: #21252b;
-  --editor-cursor: #528bff;
-  --editor-selection: rgba(100, 100, 100, 0.33);
-  --editor-active-line: rgba(0, 0, 0, 0.2);
-  --editor-matched-bracket: rgba(255, 255, 255, 0.25);
-  --editor-scrollbar-thumb: #4e566a;
-  --editor-scrollbar-track: #282c34;
-  --editor-hint-bg: #282c34;
-  --editor-hint-border: #181a1f;
-  --editor-overlay-bg: rgba(0, 0, 0, 0.5);
-  --editor-tooltip-bg: #282c34;
-  --editor-tooltip-border: #181a1f;
-  --editor-header-bg: #5E5CE6;
-  --editor-border-radius: 12px;
-  --editor-button-hover: rgba(255, 255, 255, 0.1);
+/* 全局样式：隐藏CodeMirror生成的额外textarea */
+.CodeMirror-code + textarea,
+.CodeMirror ~ textarea,
+.CodeMirror textarea.CodeMirror-textarea,
+body > textarea,
+body > textarea.CodeMirror-textarea,
+textarea:not([class]):not([id]) {
+  height: 0 !important;
+  width: 0 !important;
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  display: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  resize: none !important;
+  min-height: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
 }
 
-/* 代码编辑器卡片样式 */
+/* 确保CodeMirror编辑器不会溢出其容器 */
+.CodeMirror {
+  position: relative !important;
+  z-index: 1 !important;
+  height: auto !important;
+  max-height: 800px !important;
+  font-family: 'SF Mono', 'Consolas', 'Courier New', monospace !important;
+}
+
+/* 清理直接添加到body的孤立CodeMirror元素 */
+body > .CodeMirror,
+body > .CodeMirror-scroll,
+body > .CodeMirror-sizer,
+body > .CodeMirror-gutter,
+body > .CodeMirror-gutters,
+body > .CodeMirror-linenumber,
+body > .CodeMirror-lines,
+body > .CodeMirror-cursor,
+body > .CodeMirror-code,
+body > pre.CodeMirror-line,
+body > pre.CodeMirror-line-like,
+body > .CodeMirror-measure,
+body > .CodeMirror-selected,
+body > div[role="presentation"],
+body > div[cm-not-content="true"] {
+  display: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  height: 0 !important;
+  width: 0 !important;
+  z-index: -9999 !important;
+  opacity: 0 !important;
+}
+
+/* 隐藏可能的垃圾文本 */
+body > div:not([class]):not([id]),
+body > span:not([class]):not([id]),
+body > p:not([class]):not([id]),
+body > pre:not([class]):not([id]) {
+  display: none !important;
+}
+
+/* 修复连接信息页面底部可能出现的文本内容 */
+.code-block-section + div:not([class]):not([id]),
+.code-block-section + pre:not([class]):not([id]),
+.code-block-section + textarea:not([class]):not([id]),
+.code-block-section ~ div:not([class]):not([id]),
+.code-block-section ~ pre:not([class]):not([id]),
+.code-block-section ~ textarea:not([class]):not([id]) {
+  display: none !important;
+}
+
+/* 强制规定代码内容区域，防止内容泄漏 */
+.service-connection-info-container {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* 限制全局的CodeMirror-line元素，防止它们出现在非编辑器区域 */
+body div > pre.CodeMirror-line:not(.CodeMirror .CodeMirror-line),
+body .CodeMirror-code > pre.CodeMirror-line:not(.CodeMirror .CodeMirror-code > .CodeMirror-line),
+body > pre.CodeMirror-line {
+  display: none !important;
+}
+
+/* 优化标签栏样式，减少高度占用 */
+.connection-info-panel .ant-tabs-nav {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.connection-info-panel .ant-tabs-nav-wrap {
+  padding: 0 !important;
+}
+
+.connection-info-panel .ant-tabs-tab {
+  padding: 6px 14px !important;
+  margin: 0 10px 0 0 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  min-height: 0 !important;
+}
+
+.connection-info-panel .ant-tabs-tabpane {
+  padding-top: 12px !important;
+}
+
+.connection-info-panel {
+  padding: 16px !important;
+}
+
+/* 减少标签页内容的顶部边距 */
+.tab-content {
+  padding: 0 !important;
+  margin-top: 8px !important;
+}
+</style>
+
+<style lang="less" scoped>
 .code-block-section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  position: relative !important;
+  overflow: visible !important;
   
-  .code-card {
-    background: #ffffff;
-    border-radius: var(--editor-border-radius);
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+  // 代码与依赖容器
+  .code-container {
+    display: flex;
+    gap: 12px;
+    position: relative !important;
+    transition: all 0.3s;
+    overflow: visible !important;
+    z-index: 5 !important;
     
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    &.with-dependencies {
+      margin-bottom: 12px;
     }
+  }
+  
+  // 代码卡片
+  .code-card {
+    flex: 1;
+    border-radius: 6px;
+    overflow: hidden !important;
+    border: 1px solid #e8e8e8;
+    background-color: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s;
+    display: flex !important;
+    flex-direction: column !important;
     
     .code-header {
-      background: linear-gradient(135deg, #5E5CE6 0%, #4E48E0 100%);
-      padding: 12px 16px;
+      padding: 6px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: linear-gradient(to right, #f8f9fa, #edf0f5);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
+      
+      .title-section {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        overflow: hidden;
+      }
       
       .code-title {
-        font-weight: 500;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+        font-size: 14px;
+        color: #262626;
+        margin-right: 10px;
+        letter-spacing: -0.01em;
+      }
+      
+      .dependency-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: rgba(0, 120, 212, 0.08);
+        color: #0078d4;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        max-width: 350px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        
+        &:hover {
+          background: rgba(0, 120, 212, 0.12);
+        }
+        
+        .deps-text {
+          margin: 0 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
       }
       
       .header-actions {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        gap: 4px;
         
         .action-button {
-          color: white;
-          padding: 4px 8px;
+          padding: 2px 6px;
+          color: #0078d4;
           border-radius: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          border: none;
-          transition: all 0.2s ease;
           
           &:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.05);
+            background: rgba(0, 120, 212, 0.1);
           }
           
-          &:active {
-            transform: scale(0.95);
+          &.deps-button {
+            color: #0078d4;
+          }
+          
+          &.copy-button {
+            color: #0078d4;
           }
         }
       }
     }
     
     .code-content {
-      position: relative;
-      padding: 0;
-      background: var(--editor-bg);
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      overflow: hidden !important;
       
-      /* 加载状态容器 */
-      .loading-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 300px;
-        background: var(--editor-bg);
-        
-        .loading-content {
-          min-height: 200px;
-          min-width: 200px;
-        }
-
-        /* 自定义加载图标颜色为紫色以匹配主题 */
-        .ant-spin-dot i {
-          background-color: #5E5CE6;
-        }
-        
-        /* 自定义加载文字颜色为浅色以匹配暗背景 */
-        .ant-spin-text {
-          color: #abb2bf;
-          margin-top: 10px;
-          font-size: 14px;
-        }
-      }
-      
-      /* 顶部工具栏 */
       .title-bar {
-        position: sticky;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 30px;
-        background: var(--editor-gutter-bg);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        z-index: 10;
+        padding: 4px 12px;
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        padding: 0 15px;
+        align-items: center;
+        background: linear-gradient(to right, #eaeef2, #e6e9ee);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
         
         .file-name {
-          font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
+          font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
           font-size: 12px;
-          color: rgba(255, 255, 255, 0.7);
+          color: #3f3f3f;
+          font-weight: 500;
         }
         
         .edit-indicator {
-          font-size: 12px;
-          color: #ff9500;
-          background: rgba(255, 149, 0, 0.15);
-          padding: 2px 8px;
-          border-radius: 4px;
-          animation: pulse 2s infinite;
+          font-size: 11px;
+          color: #ff7875;
+          padding: 1px 6px;
+          border-radius: 8px;
+          background-color: rgba(255, 120, 117, 0.1);
         }
       }
       
-      /* 编辑器容器 */
       .editor-container {
-        cursor: text;
-        position: relative;
+        background-color: #282a36;
+        min-height: 100px; // 减少最小高度
+        flex: 1 !important;
+        overflow: hidden !important;
+        position: relative !important;
         
-        &::after {
-          content: "点击编辑";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: rgba(0, 0, 0, 0.6);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 4px;
-          font-size: 14px;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          pointer-events: none;
-        }
-        
-        &:hover::after {
-          opacity: 1;
-        }
-      }
-      
-      /* CodeMirror编辑器样式覆盖 */
-      .code-mirror-editor {
-        height: auto;
-        
-        /* 编辑器根容器 */
-        .CodeMirror {
-          /* 使用固定高度替代min/max-height */
-          height: 600px !important;
-          font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-          line-height: 1.5;
-          font-size: 13px;
-          color: var(--editor-text);
-          background: var(--editor-bg);
-          border: none;
-          border-radius: 0;
+        .code-mirror-editor {
+          height: auto;
+          text-align: left;
+          min-height: 100px; // 减少最小高度
           
-          /* 编辑器滚动容器 */
-          .CodeMirror-scroll {
-            /* 只保留垂直滚动 */
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
+          // 针对Java和Python的特殊样式
+          &.java-editor, &.python-editor {
+            max-height: 300px; // 限制最大高度
           }
           
-          /* 编辑器内容区域 */
-          .CodeMirror-lines {
-            padding: 16px 0;
-          }
-          
-          /* 行号区域 */
-          .CodeMirror-gutters {
-            background: var(--editor-gutter-bg);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          
-          /* 行号 */
-          .CodeMirror-linenumber {
-            color: var(--editor-line-number);
-          }
-          
-          /* 光标 */
-          .CodeMirror-cursor {
-            border-left: 2px solid var(--editor-cursor);
-          }
-          
-          /* 当前行高亮 */
-          .CodeMirror-activeline-background {
-            background: var(--editor-active-line);
-          }
-          
-          /* 选中文本背景 */
-          .CodeMirror-selected {
-            background: var(--editor-selection);
-          }
-          
-          /* 匹配的括号 */
-          .CodeMirror-matchingbracket {
-            background: var(--editor-matched-bracket);
-            color: #fff !important;
-            border-bottom: 1px solid #528bff;
-          }
-          
-          /* 代码折叠 */
-          .CodeMirror-foldgutter {
-            width: 15px;
-          }
-          
-          .CodeMirror-foldgutter-open:after {
-            content: "▾";
-          }
-          
-          .CodeMirror-foldgutter-folded:after {
-            content: "▸";
+          // 命令行编辑器保持原样
+          &.shell-editor {
+            min-height: 120px;
           }
         }
       }
       
-      /* 底部状态栏 */
       .status-bar {
-        position: sticky;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 22px;
-        background: linear-gradient(135deg, #5E5CE6 0%, #4E48E0 100%);
-        color: white;
-        font-size: 11px;
+        padding: 2px 12px;
         display: flex;
         align-items: center;
-        font-family: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", Courier, monospace;
-        z-index: 10;
+        background-color: #f7f7f7;
+        border-top: 1px solid #f0f0f0;
         
         .status-item {
-          padding: 0 10px;
-          display: flex;
-          align-items: center;
-          height: 100%;
+          margin-right: 12px;
+          font-size: 11px;
+          color: #999;
           
           &.encoding {
-            border-right: 1px solid rgba(255, 255, 255, 0.3);
+            color: #0078d4;
+            font-weight: 500;
+          }
+          
+          &:nth-child(2) {
+            color: #9061F9;
           }
           
           &.filetype {
             text-transform: uppercase;
+            color: #4A9E5C;
+            font-weight: 500;
           }
           
           &.modified {
-            margin-left: auto;
-            background-color: rgba(255, 149, 0, 0.7);
-            color: white;
-            font-weight: bold;
-            animation: pulse 2s infinite;
+            color: #ff7875;
+          }
+        }
+      }
+      
+      .loading-container {
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        .loading-content {
+          min-height: 80px;
+          min-width: 250px;
+        }
+      }
+    }
+  }
+  
+  // 依赖信息区域样式
+  .dependencies-section {
+    width: 35%;
+    min-width: 280px;
+    position: relative !important;
+    z-index: 5 !important;
+    
+    .deps-card {
+      border-radius: 6px;
+      overflow: hidden !important;
+      border: 1px solid #e8e8e8;
+      background-color: #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      height: 100%;
+      display: flex !important;
+      flex-direction: column !important;
+      
+      .deps-header {
+        padding: 6px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(to right, #f8f9fa, #edf0f5);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
+        
+        .deps-title {
+          font-weight: 600;
+          font-size: 14px;
+          color: #262626;
+          display: flex;
+          flex-direction: column;
+          letter-spacing: -0.01em;
+          
+          .deps-subtitle {
+            font-size: 11px;
+            color: #666666;
+            margin-top: 1px;
+            font-weight: 400;
+          }
+        }
+        
+        .deps-copy-btn {
+          color: #0078d4;
+          padding: 2px 6px;
+          border-radius: 4px;
+          
+          &:hover {
+            background: rgba(0, 120, 212, 0.1);
+          }
+        }
+      }
+      
+      .deps-content {
+        padding: 0;
+        flex: 1 !important;
+        overflow: hidden !important;
+        background-color: #282a36;
+        display: flex !important;
+        flex-direction: column !important;
+        position: relative !important;
+        
+        /* 自定义滚动条样式 - 透明化处理 */
+        &::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        
+        &::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        &::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
+        }
+        
+        &::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Firefox滚动条样式 */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        
+        .editor-container {
+          flex: 1 !important;
+          overflow: hidden !important;
+          position: relative !important;
+          
+          .code-mirror-editor {
+            height: auto;
+            text-align: left;
+          }
+        }
+        
+        .loading-container {
+          min-height: 120px;
+        display: flex;
+        align-items: center;
+          justify-content: center;
+          
+          .loading-content {
+            min-height: 40px;
+            min-width: 180px;
+          }
+        }
+        
+        .status-bar {
+          padding: 2px 12px;
+          display: flex;
+          align-items: center;
+          background-color: #f7f7f7;
+          border-top: 1px solid #f0f0f0;
+          
+          .status-item {
+            margin-right: 12px;
+            font-size: 11px;
+            color: #999;
+          
+          &.encoding {
+              color: #0078d4;
+              font-weight: 500;
+            }
+            
+            &:nth-child(2) {
+              color: #9061F9;
+          }
+          
+          &.filetype {
+            text-transform: uppercase;
+              color: #4A9E5C;
+              font-weight: 500;
+            }
           }
         }
       }
     }
   }
-}
-
-/* 动画效果 */
-@keyframes pulse {
-  0% { opacity: 0.7; }
-  50% { opacity: 1; }
-  100% { opacity: 0.7; }
 }
 </style> 

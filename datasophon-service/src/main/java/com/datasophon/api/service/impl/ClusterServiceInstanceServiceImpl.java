@@ -340,10 +340,14 @@ public class ClusterServiceInstanceServiceImpl
         String serviceHome = serviceConfigMap.getKey();
         ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId, serviceHome,
                 configMap);
-        if (connectionInfo == null || connectionInfo.getBasicInfo() == null) {
+
+        // 检查是否有有效的连接信息（使用新的InfoItem列表结构）
+        if (connectionInfo == null
+                || (connectionInfo.getBasicInfoItems() == null || connectionInfo.getBasicInfoItems().isEmpty())) {
             log.warn("服务{}未提供连接信息", serviceName);
             return Result.error("该服务未提供连接信息");
         }
+
         String camelServiceName = toCamelCase(serviceName);
         // 如果标题和文件名未设置，则根据服务名称设置默认值
         if (connectionInfo.getJavaTitle() == null) {
@@ -357,7 +361,6 @@ public class ClusterServiceInstanceServiceImpl
         }
         if (connectionInfo.getJavaFileName() == null) {
             // 将服务名转换为驼峰命名(首字母大写，其余小写)
-
             connectionInfo.setJavaFileName(camelServiceName + "Example.java");
         }
         if (connectionInfo.getPythonFileName() == null) {
