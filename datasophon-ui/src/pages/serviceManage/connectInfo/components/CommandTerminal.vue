@@ -14,6 +14,7 @@
               type="link" 
               class="action-button copy-button"
               @click="copyAllCommands"
+              :loading="copyingAll"
             >
               <a-icon type="copy" />
             </a-button>
@@ -36,12 +37,25 @@
               </div>
               
               <!-- 命令内容 -->
-              <div class="terminal-line" v-if="cmd.value">
+              <div class="terminal-line command-line" v-if="cmd.value">
                 <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
                 <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
-                <span class="command" @click="copySingleCommand(cmd.value)">{{ getCommandDisplay(cmd.value) }}</span>
+                <span 
+                  class="command-text"
+                  :class="{'active': selectedCommand === cmd.value}" 
+                  @click="selectAndCopyCommand(cmd.value, cmd.label, $event)" 
+                  ref="commandText"
+                >{{ getCommandDisplay(cmd.value) }}</span>
                 <a-tooltip title="复制命令" placement="left">
-                  <a-icon type="copy" class="copy-icon" @click.stop="copySingleCommand(cmd.value)" />
+                  <a-button
+                    type="link"
+                    size="small"
+                    class="copy-btn"
+                    :class="{'visible': selectedCommand === cmd.value}"
+                    @click="copySingleCommand(cmd.value, cmd.label)"
+                  >
+                    <a-icon type="copy" /> 复制
+                  </a-button>
                 </a-tooltip>
               </div>
               
@@ -63,8 +77,6 @@
 </template>
 
 <script>
-import { copyText } from '@/utils/copyUtil';
-
 export default {
   name: "CommandTerminal",
   props: {
@@ -96,7 +108,13 @@ export default {
   },
   data() {
     return {
-      // 预留一些数据状态
+      // 复制状态
+      copyingAll: false,
+      copiedCommand: null,
+      // 当前选中的命令
+      selectedCommand: null,
+      // 选择范围
+      selection: null
     };
   },
   computed: {
@@ -109,8 +127,8 @@ export default {
     // 在挂载后调整终端容器高度
     this.adjustTerminalHeight();
     
-    // 监听窗口大小改变事件
-    window.addEventListener('resize', this.adjustTerminalHeight);
+    // 监听窗口大小改变事件，添加passive标志
+    window.addEventListener('resize', this.adjustTerminalHeight, { passive: true });
   },
   beforeDestroy() {
     // 移除事件监听器
@@ -146,9 +164,38 @@ export default {
       return command;
     },
 
+    // 选中并直接复制命令文本
+    selectAndCopyCommand(commandText, commandLabel, event) {
+      // 设置当前选中的命令
+      this.selectedCommand = commandText;
+      
+      // 阻止事件冒泡但不阻止默认行为
+      if (event) {
+        event.stopPropagation();
+      }
+      
+      // 使用微任务确保UI更新后再执行复制
+      Promise.resolve().then(() => {
+        // 直接使用可靠的复制方法
+        this.copyTextToClipboard(commandText, '命令', commandLabel);
+      });
+    },
+
+    // 复制单条命令
+    copySingleCommand(commandText, commandLabel) {
+      if (!commandText) return;
+      
+      // 使用微任务确保UI更新后再执行复制
+      Promise.resolve().then(() => {
+        this.copyTextToClipboard(commandText, '命令', commandLabel);
+      });
+    },
+    
     // 复制所有命令到剪贴板
     copyAllCommands() {
       if (!this.commands || this.commands.length === 0) return;
+      
+      this.copyingAll = true;
       
       // 构建包含所有命令和注释的文本
       let allCommands = '';
@@ -160,17 +207,180 @@ export default {
           allCommands += `${cmd.value}\n\n`;
         }
       });
-      
-      // 使用通用复制工具复制到剪贴板
-      copyText(allCommands.trim(), '所有命令', this);
+
+      // 使用微任务确保UI更新后再执行复制
+      Promise.resolve().then(() => {
+        // 复制全部命令文本
+        this.copyTextToClipboard(allCommands.trim(), '所有命令');
+      });
     },
     
-    // 复制单条命令
-    copySingleCommand(commandText) {
-      if (!commandText) return;
+    // 文本复制到剪贴板的通用方法
+    copyTextToClipboard(text, title, commandLabel = '') {
+      if (!text) return;
       
-      // 使用通用复制工具复制到剪贴板
-      copyText(commandText, '命令', this);
+      // 设置加载状态
+      if (title === '所有命令') {
+        this.copyingAll = true;
+      }
+      
+      console.log(`开始复制${title}，长度:${text.length}`);
+      
+      // 准备成功消息
+      const successMessage = this.getSuccessMessage(title, commandLabel);
+      
+      // 尝试使用Clipboard API (最现代的方法)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            console.log(`使用Clipboard API成功复制${title}`);
+            this.$message.success(successMessage);
+            
+            if (title === '所有命令') {
+              this.copyingAll = false;
+            }
+            
+            // 清除选中状态，延迟以便用户看到视觉反馈
+            setTimeout(() => {
+              this.clearSelection();
+            }, 1000);
+          })
+          .catch(err => {
+            console.warn(`Clipboard API失败(${err.message})，使用DOM方法`);
+            // 使用requestAnimationFrame确保在浏览器重绘后再执行DOM操作
+            requestAnimationFrame(() => {
+              this.legacyCopy(text, title, commandLabel); 
+            });
+          });
+        return;
+      }
+      
+      // 回退到传统方法，使用requestAnimationFrame确保在浏览器重绘后再执行
+      requestAnimationFrame(() => {
+        this.legacyCopy(text, title, commandLabel);
+      });
+    },
+    
+    // 获取复制成功消息
+    getSuccessMessage(title, commandLabel) {
+      if (title === '所有命令') {
+        return `已复制${title}`;
+      } else if (commandLabel) {
+        return `已复制"${commandLabel}"的命令`;
+      } else {
+        return `已复制${title}`;
+      }
+    },
+    
+    // 传统复制方法 (DOM方法)
+    legacyCopy(text, title, commandLabel = '') {
+      try {
+        // 记录当前滚动位置
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+        
+        // 创建临时textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        
+        // 设置样式，使用absolute而非fixed，相对于当前滚动位置
+        textarea.style.cssText = `
+          position: absolute !important;
+          left: ${scrollLeft}px !important;
+          top: ${scrollTop}px !important;
+          width: 2em !important;
+          height: 2em !important;
+          padding: 0 !important;
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+          background: transparent !important;
+          z-index: 999999 !important;
+          opacity: 0.01 !important;
+          user-select: text !important;
+        `;
+        
+        // 添加到DOM
+        document.body.appendChild(textarea);
+        
+        // 延迟选择和复制，确保元素已添加到DOM
+        setTimeout(() => {
+          try {
+            // 选择和复制
+            textarea.focus();
+            textarea.select();
+            
+            // 执行复制
+            const successful = document.execCommand('copy');
+            
+            // 获取成功消息
+            const successMessage = this.getSuccessMessage(title, commandLabel);
+            
+            // 反馈
+            if (successful) {
+              console.log(`成功使用DOM方法复制${title}`);
+              this.$message.success(successMessage);
+            } else {
+              console.error(`DOM复制${title}失败`);
+              this.$message.error(`复制${title}失败，请手动复制`);
+            }
+          } catch (innerErr) {
+            console.error(`复制操作过程中出错:`, innerErr);
+            this.$message.error(`复制${title}失败，请手动复制`);
+          } finally {
+            // 清理DOM
+            if (document.body.contains(textarea)) {
+              document.body.removeChild(textarea);
+            }
+            
+            // 恢复滚动位置
+            window.scrollTo(scrollLeft, scrollTop);
+            
+            // 重置状态
+            if (title === '所有命令') {
+              this.copyingAll = false;
+            }
+            
+            // 清除选中状态，延迟以便用户看到视觉反馈
+            setTimeout(() => {
+              this.clearSelection();
+            }, 1000);
+          }
+        }, 10);
+      } catch (err) {
+        console.error(`复制${title}出错:`, err);
+        this.$message.error(`复制${title}失败，请手动复制`);
+        
+        if (title === '所有命令') {
+          this.copyingAll = false;
+        }
+        
+        this.clearSelection();
+      }
+    },
+    
+    // 清除选中状态
+    clearSelection() {
+      this.selectedCommand = null;
+      
+      if (window.getSelection) {
+        window.getSelection().removeAllRanges();
+      }
+      
+      this.selection = null;
+    },
+    
+    // 兼容旧方法调用
+    directCopy(text, title) {
+      this.copyTextToClipboard(text, title);
+    },
+    
+    githubStyleCopy(text, title) {
+      this.copyTextToClipboard(text, title);
+    },
+    
+    execCommandCopy(text, title) {
+      this.copyTextToClipboard(text, title);
     }
   }
 };
@@ -307,7 +517,7 @@ export default {
           flex-wrap: nowrap;
           position: relative;
           padding-left: 8px;
-          padding-right: 30px; /* 为复制图标留出空间 */
+          padding-right: 100px; /* 为复制按钮留出更多空间 */
           margin-bottom: 6px;
           
           .prompt {
@@ -325,16 +535,27 @@ export default {
             font-style: italic;
           }
           
-          .command {
+          .command-text {
             color: #f8f8f2; // Dracula前景色
             word-break: break-all;
             overflow-wrap: break-word;
             cursor: pointer;
             flex: 1;
+            position: relative;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
             
             &:hover {
               text-decoration: underline;
+              background-color: rgba(139, 233, 253, 0.1); // 浅色背景
               color: #8be9fd; // Dracula青色
+            }
+            
+            &.active {
+              background-color: rgba(139, 233, 253, 0.2); // 选中状态背景色
+              text-decoration: underline;
+              outline: 1px dashed rgba(255, 255, 255, 0.3);
             }
           }
           
@@ -346,24 +567,38 @@ export default {
             font-size: 13px;
           }
           
-          .copy-icon {
+          // 复制按钮
+          .copy-btn {
             position: absolute;
             right: 5px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.3);
-            cursor: pointer;
+            background-color: rgba(80, 250, 123, 0.15); // 半透明绿色背景
+            color: #50fa7b;
+            border-radius: 3px;
+            padding: 0 5px;
+            font-size: 12px;
+            height: 20px;
+            line-height: 20px;
             opacity: 0;
+            visibility: hidden;
             transition: all 0.2s ease;
             
             &:hover {
-              color: #8be9fd; // Dracula青色
-              transform: translateY(-50%) scale(1.1);
+              background-color: rgba(80, 250, 123, 0.3);
+              color: #f8f8f2;
+            }
+            
+            &.visible {
+              opacity: 1;
+              visibility: visible;
             }
           }
           
-          &:hover .copy-icon {
-            opacity: 1;
+          // 显示复制按钮
+          &:hover .copy-btn {
+            opacity: 0.8;
+            visibility: visible;
           }
         }
       }

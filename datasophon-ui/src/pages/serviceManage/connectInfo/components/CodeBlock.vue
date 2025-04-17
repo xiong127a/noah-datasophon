@@ -29,11 +29,12 @@
               </a-button>
             </a-tooltip>
             
-          <a-tooltip :title="`复制${title}`">
+          <a-tooltip :title="`点击复制${title}所有代码`">
             <a-button 
               type="link" 
               class="action-button copy-button"
               @click="copyCode"
+              :loading="copyingCode"
             >
               <a-icon type="copy" />
             </a-button>
@@ -81,11 +82,12 @@
               {{ getDependencyFileName() }}
               <span class="deps-subtitle">{{ dependenciesSummary || '项目依赖' }}</span>
             </div>
-            <a-tooltip title="复制依赖">
+            <a-tooltip title="点击复制依赖">
               <a-button 
                 type="link"
                 class="deps-copy-btn"
                 @click="copyDependencies"
+                :loading="copyingDeps"
               >
                 <a-icon type="copy" />
               </a-button>
@@ -292,8 +294,8 @@ export default {
         foldGutter: true,
         // 行包装
         lineWrapping: true,
-        // 默认为只读模式
-        readOnly: true,
+        // 允许编辑
+        readOnly: false,
         // 根据语言类型设置语言模式，默认为java
         mode: 'text/x-java',
         // 自动高亮匹配的括号
@@ -312,8 +314,8 @@ export default {
         gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
         // 缩进使用空格
         indentWithTabs: false,
-        // 简单滚动条配置
-        scrollbarStyle: 'null',
+        // 使用默认滚动条，不使用简约滚动条
+        scrollbarStyle: null,
         // 启用自动高度
         viewportMargin: Infinity
       },
@@ -347,7 +349,10 @@ export default {
         scrollbarStyle: 'null',
         // 启用自动高度
         viewportMargin: Infinity
-      }
+      },
+      // 复制状态标记
+      copyingCode: false,
+      copyingDeps: false
     };
   },
   watch: {
@@ -413,10 +418,14 @@ export default {
     
     // 确保编辑器正确渲染
     this.$nextTick(() => {
+      // 强制设置为可编辑模式
+      this.forceEnableEditMode();
+      
+      // 设置高度
       this.setEditorHeight();
       
       // 窗口大小改变时重新计算编辑器高度
-      window.addEventListener('resize', this.setEditorHeight);
+      window.addEventListener('resize', this.setEditorHeight, { passive: true });
     });
   },
   beforeDestroy() {
@@ -427,6 +436,50 @@ export default {
     this.cleanupEditors();
   },
   methods: {
+    // 强制启用编辑模式
+    forceEnableEditMode() {
+      if (this.$refs.cmEditor && this.$refs.cmEditor.codemirror) {
+        const editor = this.$refs.cmEditor.codemirror;
+        
+        // 强制设置为可编辑
+        editor.setOption('readOnly', false);
+        
+        // 设置正确的滚动条样式
+        editor.setOption('scrollbarStyle', null);
+        
+        // 防止编辑器被覆盖层阻挡
+        const wrapper = editor.getWrapperElement();
+        if (wrapper) {
+          wrapper.style.zIndex = '100';
+          wrapper.style.position = 'relative';
+          wrapper.style.pointerEvents = 'auto';
+          wrapper.style.userSelect = 'text';
+          
+          // 确保滚动区域可滚动
+          const scrollArea = wrapper.querySelector('.CodeMirror-scroll');
+          if (scrollArea) {
+            scrollArea.style.overflow = 'auto';
+            scrollArea.style.maxHeight = '600px';
+            scrollArea.style.overflowY = 'auto';
+            scrollArea.style.overflowX = 'auto';
+          }
+        }
+        
+        // 强制刷新编辑器
+        setTimeout(() => {
+          editor.refresh();
+          console.log('编辑器已强制刷新并设置为可编辑模式');
+          
+          // 模拟点击事件，确保编辑器获得焦点
+          this.isEditing = true;
+        }, 200);
+      } else {
+        console.log('编辑器实例不存在，将在100ms后重试');
+        setTimeout(() => {
+          this.forceEnableEditMode();
+        }, 100);
+      }
+    },
     // 新增清理方法
     cleanupEditors() {
       // 清理代码编辑器
@@ -527,6 +580,14 @@ export default {
         const totalLines = editor.lineCount();
         const lineHeight = editor.defaultTextHeight();
         
+        // 确保滚动区域可以滚动
+        const scrollArea = editor.getScrollerElement();
+        if (scrollArea) {
+          scrollArea.style.overflow = 'auto';
+          scrollArea.style.overflowY = 'auto';
+          scrollArea.style.maxHeight = '600px';
+        }
+        
         // 根据语言类型设置不同的最小高度和最大高度
         let minHeight, maxHeight;
         
@@ -553,6 +614,7 @@ export default {
         const editorContainer = this.$refs.cmEditor.$el;
         if (editorContainer) {
           editorContainer.style.minHeight = minHeight + 'px';
+          editorContainer.style.overflow = 'visible';
         }
         
         // 设置编辑器高度
@@ -596,10 +658,168 @@ export default {
     
     // 复制代码到剪贴板
     copyCode() {
-      if (!this.editorContent) return;
+      // 设置加载状态
+      this.copyingCode = true;
       
-      // 使用通用复制工具
-      copyText(this.editorContent, this.title);
+      try {
+        // 获取代码文本
+        const codeEditor = this.$refs.cmEditor && this.$refs.cmEditor.codemirror;
+        if (!codeEditor) {
+          console.warn('编辑器实例不存在');
+          this.$message.warning('编辑器初始化失败，请手动复制');
+          this.copyingCode = false;
+          return;
+        }
+        
+        // 获取纯文本内容，统一换行符为\n
+        const codeText = codeEditor.getValue().replace(/\r\n/g, '\n');
+        console.log('获取到代码内容，长度:', codeText.length);
+        
+        if (!codeText) {
+          this.$message.warning('没有可复制的代码内容');
+          this.copyingCode = false;
+          return;
+        }
+        
+        // 使用简单直接的复制方法
+        this.simpleCopy(codeText, `${this.title}所有代码`);
+      } catch (err) {
+        console.error('复制初始化异常:', err);
+        this.$message.error('复制失败，请手动复制');
+        this.copyingCode = false;
+      }
+    },
+    
+    // 复制依赖信息到剪贴板
+    copyDependencies() {
+      if (!this.dependencies) return;
+      
+      // 设置加载状态
+      this.copyingDeps = true;
+      
+      try {
+        // 统一换行符为\n
+        const depsText = this.dependencies.replace(/\r\n/g, '\n');
+        console.log('获取到依赖内容，长度:', depsText.length);
+        
+        // 使用简单直接的复制方法
+        this.simpleCopy(depsText, '依赖信息');
+      } catch (err) {
+        console.error('复制依赖初始化异常:', err);
+        this.$message.error('复制失败，请手动复制');
+        this.copyingDeps = false;
+      }
+    },
+    
+    // 简单直接的复制方法
+    simpleCopy(text, title) {
+      // 1. 首先尝试使用现代API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            console.log(`成功使用Clipboard API复制${title}`);
+            this.$message.success(`已复制${title}`);
+            this.resetCopyState(title);
+          })
+          .catch(err => {
+            console.log(`Clipboard API失败 (${err.message})，使用备用方法`);
+            this.directExecCopy(text, title);
+          });
+        return;
+      }
+      
+      // 2. 如果不支持现代API，使用直接复制
+      this.directExecCopy(text, title);
+    },
+    
+    // 使用execCommand直接复制
+    directExecCopy(text, title) {
+      try {
+        // 记录滚动位置
+        const scrollPos = {
+          x: window.pageXOffset, 
+          y: window.pageYOffset
+        };
+        
+        // 创建一个只存在一瞬间的临时textarea
+        const textarea = document.createElement('textarea');
+        
+        // 设置样式使其不可见但可访问
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        textarea.style.top = (window.pageYOffset || document.documentElement.scrollTop) + 'px';
+        textarea.setAttribute('readonly', 'readonly');
+        
+        // 设置文本并添加到DOM
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        
+        // 选择文本
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        
+        // 执行复制
+        const success = document.execCommand('copy');
+        
+        // 移除textarea
+        document.body.removeChild(textarea);
+        
+        // 恢复滚动位置
+        window.scrollTo(scrollPos.x, scrollPos.y);
+        
+        if (success) {
+          console.log(`成功复制${title}`);
+          this.$message.success(`已复制${title}`);
+        } else {
+          console.log(`复制${title}失败，尝试备用方法`);
+          this.fallbackCopy(text, title);
+        }
+        
+        this.resetCopyState(title);
+      } catch (err) {
+        console.error(`复制出错: ${err.message}`);
+        this.fallbackCopy(text, title);
+      }
+    },
+    
+    // 备用复制方法
+    fallbackCopy(text, title) {
+      try {
+        // 创建input元素备用
+        const input = document.createElement('input');
+        input.value = text;
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        input.style.top = '0';
+        input.style.left = '0';
+        
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        
+        const success = document.execCommand('copy');
+        document.body.removeChild(input);
+        
+        if (success) {
+          this.$message.success(`已复制${title}`);
+        } else {
+          this.$message.error(`复制${title}失败，请手动复制`);
+        }
+      } catch (e) {
+        console.error(`备用复制方法失败: ${e.message}`);
+        this.$message.error(`复制${title}失败，请手动复制`);
+      } finally {
+        this.resetCopyState(title);
+      }
+    },
+    
+    // 重置复制状态
+    resetCopyState(title) {
+      if (title.includes('依赖')) {
+        this.copyingDeps = false;
+      } else {
+        this.copyingCode = false;
+      }
     },
     
     // 切换依赖面板展开/收起状态
@@ -693,14 +913,6 @@ export default {
       }
     },
     
-    // 复制依赖信息到剪贴板
-    copyDependencies() {
-      if (!this.dependencies) return;
-      
-      // 使用通用复制工具
-      copyText(this.dependencies, '依赖信息');
-    },
-    
     // 获取依赖文件类型
     getDependencyFileType() {
       if (this.language === 'java') {
@@ -716,42 +928,95 @@ export default {
 </script>
 
 <style lang="less">
-/* 全局样式：隐藏CodeMirror生成的额外textarea */
+/* 移除所有可能干扰编辑器的全局样式 */
+.code-mirror-editor,
+.CodeMirror {
+  /* 强制启用所有交互 */
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  
+  /* 确保正确的位置和层级 */
+  position: relative !important;
+  z-index: 100 !important;
+  
+  /* 确保可见性 */
+  opacity: 1 !important;
+  visibility: visible !important;
+  
+  /* 允许所有内部元素交互 */
+  * {
+    pointer-events: auto !important;
+    user-select: auto !important;
+  }
+}
+
+/* 修复滚动区域 */
+.CodeMirror-scroll {
+  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  position: relative !important;
+  outline: none !important;
+  /* 修复触摸设备 */
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* 修复编辑器内的所有元素 */
+.CodeMirror-scroll,
+.CodeMirror-sizer,
+.CodeMirror-gutter,
+.CodeMirror-gutters,
+.CodeMirror-linenumber,
+.CodeMirror-lines,
+.CodeMirror-line,
+.CodeMirror-cursor,
+.CodeMirror-selected,
+.CodeMirror-code {
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+}
+
+/* 确保编辑器容器可交互并支持滚动 */
+.editor-container {
+  overflow: visible !important;
+  pointer-events: auto !important;
+  user-select: auto !important;
+  cursor: text !important;
+  position: relative !important;
+  z-index: 100 !important;
+  min-height: 150px !important;
+}
+
+/* 全局样式：仅隐藏CodeMirror生成的额外textarea，不阻止交互 */
 .CodeMirror-code + textarea,
 .CodeMirror ~ textarea,
 .CodeMirror textarea.CodeMirror-textarea,
 body > textarea,
 body > textarea.CodeMirror-textarea,
 textarea:not([class]):not([id]) {
-  height: 0 !important;
-  width: 0 !important;
   position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
   opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: -9999 !important;
   overflow: hidden !important;
-  visibility: hidden !important;
-  left: -9999px !important;
-  top: -9999px !important;
-  display: none !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  resize: none !important;
-  min-height: 0 !important;
-  font-size: 0 !important;
-  line-height: 0 !important;
-  clip: rect(0, 0, 0, 0) !important;
-  clip-path: inset(50%) !important;
+  z-index: -100 !important;
 }
 
-/* 确保CodeMirror编辑器不会溢出其容器 */
+/* 确保CodeMirror编辑器不会溢出其容器，且可以接收鼠标事件 */
 .CodeMirror {
   position: relative !important;
   z-index: 1 !important;
   height: auto !important;
   max-height: 800px !important;
   font-family: 'SF Mono', 'Consolas', 'Courier New', monospace !important;
+  pointer-events: auto !important; /* 确保可以接收鼠标事件 */
 }
 
 /* 清理直接添加到body的孤立CodeMirror元素 */
@@ -801,7 +1066,7 @@ body > pre:not([class]):not([id]) {
 /* 强制规定代码内容区域，防止内容泄漏 */
 .service-connection-info-container {
   position: relative !important;
-  overflow: hidden !important;
+  overflow: visible !important; /* 修改为visible */
 }
 
 /* 限制全局的CodeMirror-line元素，防止它们出现在非编辑器区域 */
@@ -843,6 +1108,47 @@ body > pre.CodeMirror-line {
 .tab-content {
   padding: 0 !important;
   margin-top: 8px !important;
+}
+
+/* 修复CodeMirror-hscrollbar和CodeMirror-vscrollbar滚动条 */
+.CodeMirror-hscrollbar,
+.CodeMirror-vscrollbar {
+  z-index: 200 !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  cursor: default !important;
+  position: absolute !important;
+  pointer-events: auto !important;
+}
+
+.CodeMirror-vscrollbar {
+  right: 0 !important;
+  top: 0 !important;
+  height: 100% !important;
+  width: 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: scroll !important;
+}
+
+.CodeMirror-hscrollbar {
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 12px !important;
+  overflow-x: scroll !important;
+  overflow-y: hidden !important;
+}
+
+/* 确保编辑器容器 */
+.editor-container, 
+.code-container,
+.code-card,
+.code-content {
+  overflow: visible !important;
+  max-height: none !important;
 }
 </style>
 
