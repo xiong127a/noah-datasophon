@@ -349,7 +349,7 @@ export default {
 
       this.$set(this.isGroupExpanded, serviceName, {});
       Object.keys(groupedData).forEach(groupName => {
-        this.$set(this.isGroupExpanded[serviceName], groupName, false);
+        this.$set(this.isGroupExpanded[serviceName], groupName, true);
       });
       return groupedData;
     },
