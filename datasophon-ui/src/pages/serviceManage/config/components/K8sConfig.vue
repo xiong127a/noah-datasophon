@@ -1,16 +1,5 @@
 <template>
   <div class="k8s-config-container">
-    <!-- 顶部图标和标题区域 -->
-    <div class="page-header">
-      <div class="header-icon-wrapper">
-        <a-icon type="cluster" theme="filled" class="header-icon" />
-      </div>
-      <div class="header-content">
-        <h2 class="title">{{ serviceName }} K8s 配置</h2>
-        <p class="subtitle">管理{{ serviceName }}服务的K8s配置</p>
-      </div>
-    </div>
-
     <a-tabs>
       <a-tab-pane key="configmap" tab="ConfigMap">
         <a-spin :spinning="loading">
@@ -44,9 +33,10 @@
             :pagination="false"
           >
             <template #action="{ record }">
-              <a @click="handleViewService(record)">查看</a>
-              <a-divider type="vertical" />
-              <a @click="handleEditService(record)">编辑</a>
+              <div class="action-icons">
+                <a class="action-button" @click="handleViewService(record)">查看</a>
+                <a class="action-button" @click="handleEditService(record)">编辑</a>
+              </div>
             </template>
           </a-table>
         </a-spin>
@@ -129,7 +119,7 @@ export default {
           title: '名称',
           dataIndex: 'name',
           key: 'name',
-          width: '20%',
+          width: '30%',
         },
         {
           title: '标签',
@@ -148,13 +138,13 @@ export default {
           title: 'Cluster IP',
           dataIndex: 'clusterIP',
           key: 'clusterIP',
-          width: '20%',
+          width: '10%',
         },
         {
           title: '操作',
           key: 'action',
           width: '10%',
-          slots: { customRender: 'action' },
+          scopedSlots: { customRender: 'action' },
         },
       ],
       pvcColumns: [
@@ -168,7 +158,7 @@ export default {
           title: '标签',
           dataIndex: 'labels',
           key: 'labels',
-          width: '30%',
+          width: '20%',
           slots: { customRender: 'labels' }
         },
         {
@@ -186,7 +176,7 @@ export default {
         {
           title: '操作',
           key: 'action',
-          width: '10%',
+          width: '20%',
           slots: { customRender: 'action' },
         },
       ]
@@ -225,7 +215,24 @@ export default {
         console.error('Error fetching config maps:', error);
       }
     },async fetchServices() {
-
+      try {
+        const res = await this.$axiosGet(global.API.getK8sServices, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.services = res.data.map(item => ({
+            name: item.name,
+            labels: item.labels,// 直接使用 labels 对象，而不是转换为字符串
+            type: item.type,
+            clusterIP: item.clusterIP,
+            time: item.time
+          }));
+        }
+        console.log(this.configMaps.labels);
+      } catch (error) {
+        console.error('Error fetching config maps:', error);
+      }
     },async fetchPvcs() {
 
     },
@@ -374,5 +381,24 @@ export default {
 .action-icons {
   display: flex;
   gap: 8px;
+  justify-content: center;
+}
+
+.action-button {
+  color: #1890ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  transition: all 0.2s ease;
+  font-size: 12px;
+
+  &:hover {
+    background: rgba(24, 144, 255, 0.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 </style>

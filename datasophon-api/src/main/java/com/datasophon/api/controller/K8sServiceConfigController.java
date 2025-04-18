@@ -28,8 +28,8 @@ public class K8sServiceConfigController {
     }
 
     @GetMapping("/services")
-    public Result getK8sServices(@RequestParam String clusterId) {
-        return k8sServiceConfigService.getK8sServices(clusterId);
+    public Result getK8sServices(@RequestParam Integer clusterId, @RequestParam String serviceName) {
+        return k8sServiceConfigService.getK8sServices(clusterId, serviceName);
     }
 
     @GetMapping("/service/detail")
