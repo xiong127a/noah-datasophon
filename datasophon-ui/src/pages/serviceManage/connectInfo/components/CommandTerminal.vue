@@ -29,11 +29,9 @@
           <div class="terminal-content bash-terminal">
             <!-- 命令列表 -->
             <div v-for="(cmd, index) in commandsToShow" :key="index" class="terminal-line-wrapper">
-              <!-- 命令注释 -->
-              <div class="terminal-line" v-if="cmd.label && cmd.label !== '#'">
-                <span class="prompt" v-if="!cmd.commandPrompt">[root@{{ hostName }} {{ serviceHome ? serviceHome.split('/').pop() : '~' }}]#</span>
-                <span class="prompt" v-else>{{ cmd.commandPrompt }}</span>
-                <span class="command-comment">#{{ cmd.label }}</span>
+              <!-- 命令注释/说明 -->
+              <div class="command-label" v-if="cmd.label && cmd.label !== '#'">
+                <span class="label-text">{{ cmd.label }}</span>
               </div>
               
               <!-- 命令内容 -->
@@ -558,6 +556,23 @@ export default {
         .terminal-line-wrapper {
           margin-bottom: 16px;
           position: relative;
+        }
+        
+        .command-label {
+          margin-bottom: 4px;
+          padding-left: 8px;
+          
+          .label-text {
+            color: #6272a4; // Dracula注释蓝色，更柔和的颜色
+            font-weight: normal;
+            font-style: italic;
+            display: block;
+            padding: 2px 8px;
+            border-left: 2px solid #6272a4;
+            border-radius: 0 2px 2px 0;
+            font-size: 13px;
+            opacity: 0.9;
+          }
         }
         
         .terminal-line {
