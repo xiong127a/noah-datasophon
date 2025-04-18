@@ -26,19 +26,29 @@
 -->
 <template>
   <div class="service-setting steps">
-    <div class="flex-bewteen-container" style="flex-direction:row-reverse;">
-      <div class="w180" style="margin-right:23px;">
-        版本：
-        <a-select placeholder="请选择" :value="currentVersion" @change="changeVersion" style="width:180px">
-          <a-select-option v-for="(child, childIndex) in verSionList" :key="childIndex" :value="child">{{ child }}
-          </a-select-option>
-        </a-select>
-      </div>
-    </div>
-    
     <!-- 添加Tab页签 -->
     <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
       <a-tab-pane key="service-config" tab="服务配置" :forceRender="true">
+        <!-- 将版本选择器移到这里，Tab页签下面但在左右分栏布局上方 -->
+        <div class="version-selector">
+          <span class="version-label">版本：</span>
+          <a-select 
+            placeholder="选择版本" 
+            :value="currentVersion" 
+            @change="changeVersion" 
+            size="small" 
+            class="version-select"
+          >
+            <a-select-option 
+              v-for="(child, childIndex) in verSionList" 
+              :key="childIndex" 
+              :value="child"
+            >
+              {{ child }}
+            </a-select-option>
+          </a-select>
+        </div>
+        
         <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
           <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
             <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
@@ -59,6 +69,8 @@
             </div>
           </a-spin>
           <a-spin :spinning="loading" class="steps-body" style="position: relative; flex:1; margin:0 20px">
+            <!-- 移除这里的版本选择器 -->
+            
             <!-- 调整模板中的配置组部分 -->
             <div v-for="(group, groupName) in templateData"
                  :key="groupName"
@@ -604,6 +616,48 @@ export default {
   /deep/ .ant-spin-container {
     position: relative;
   }
+  
+  /* 调整版本选择器样式 */
+  .version-selector {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    
+    .version-label {
+      font-size: 13px;
+      color: #606266;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    
+    .version-select {
+      width: 60px;
+    }
+    
+    /deep/ .ant-select-selection {
+      border-radius: 4px;
+      border-color: #dcdfe6;
+    }
+    
+    /deep/ .ant-select-selection:hover {
+      border-color: #1890ff;
+    }
+    
+    /deep/ .ant-select-focused .ant-select-selection,
+    /deep/ .ant-select-selection:focus,
+    /deep/ .ant-select-selection:active {
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+    }
+  }
+  
   .setting{
     overflow-y: auto;
     font-size: 12px;
