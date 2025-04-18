@@ -115,10 +115,10 @@ import {mapActions, mapState} from "vuex";
 import RenameGroup from "./renameGroup.vue";
 import {getServiceName} from "@/utils/util";
 import ConfigDownload from "./config/components/ConfigDownload.vue";
-import K8sConfig from "./config/components/K8sConfig.vue";
+import KubernetesDashboard from "./config/kubernetes/dashboard/KubernetesDashboard.vue";
 
 export default {
-  components: {CommonTemplate, ConfigDownload, K8sConfig},
+  components: {CommonTemplate, ConfigDownload, K8sConfig: KubernetesDashboard},
   props: {
     steps4Data: Object,
   },

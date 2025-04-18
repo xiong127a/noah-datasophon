@@ -52,6 +52,21 @@ export default {
   getSupportedCompressFormats: path + '/api/service/config/getSupportedCompressFormats', // 获取系统支持的压缩格式列表
 
   // K8s相关接口
+  getK8sNamespaces: path + '/api/k8s/dashboard/namespaces', // 获取命名空间列表
+  getK8sDeployments: path + '/api/k8s/dashboard/deployments', // 获取Deployments列表
+  getK8sPods: path + '/api/k8s/dashboard/pods', // 获取Pods列表
+  getK8sReplicaSets: path + '/api/k8s/dashboard/replicasets', // 获取ReplicaSets列表
+  getK8sReplicationControllers: path + '/api/k8s/dashboard/replicationcontrollers', // 获取ReplicationControllers列表
+  getK8sStatefulSets: path + '/api/k8s/dashboard/statefulsets', // 获取StatefulSets列表
+  getK8sDaemonSets: path + '/api/k8s/dashboard/daemonsets', // 获取DaemonSets列表
+  getK8sJobs: path + '/api/k8s/dashboard/jobs', // 获取Jobs列表
+  getK8sCronJobs: path + '/api/k8s/dashboard/cronjobs', // 获取CronJobs列表
+  getK8sIngresses: path + '/api/k8s/dashboard/ingresses', // 获取Ingress列表
+  getK8sIngressClasses: path + '/api/k8s/dashboard/ingressclasses', // 获取IngressClass列表
+  getK8sSecrets: path + '/api/k8s/dashboard/secrets', // 获取Secrets列表
+  getK8sPersistentVolumes: path + '/api/k8s/dashboard/persistentvolumes', // 获取PersistentVolumes列表
+  getK8sStorageClasses: path + '/api/k8s/dashboard/storageclasses', // 获取StorageClasses列表
+  
   getK8sConfigMaps: path + '/api/k8s/configmaps', // 获取ConfigMap列表
   getK8sConfigMapDetail: path + '/api/k8s/configmap/detail', // 获取ConfigMap详情
   updateK8sConfigMap: path + '/api/k8s/configmap/update', // 更新ConfigMap
@@ -61,4 +76,9 @@ export default {
   getK8sPvcs: path + '/api/k8s/pvcs', // 获取PVC列表
   getK8sPvcDetail: path + '/api/k8s/pvc/detail', // 获取PVC详情
   updateK8sPvc: path + '/api/k8s/pvc/update', // 更新PVC
+  
+  // 添加Kubernetes Deployment详情相关API
+  getK8sDeploymentDetail: path + '/api/k8s/dashboard/deployment/detail', // 获取Deployment详情
+  getK8sDeploymentYaml: path + '/api/k8s/dashboard/deployment/yaml', // 获取Deployment YAML
+  getK8sDeploymentEvents: path + '/api/k8s/dashboard/deployment/events', // 获取Deployment事件
 }

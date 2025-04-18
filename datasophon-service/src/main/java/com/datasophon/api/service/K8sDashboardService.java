@@ -1,0 +1,197 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package com.datasophon.api.service;
+
+import com.datasophon.common.utils.Result;
+
+/**
+ * K8S仪表盘服务接口
+ * 提供Kubernetes资源查询方法
+ */
+public interface K8sDashboardService {
+
+    /**
+     * 获取Kubernetes命名空间列表
+     * 
+     * @param clusterId 集群ID
+     * @return 命名空间列表
+     */
+    Result getNamespaces(Integer clusterId);
+
+    /**
+     * 获取Deployments列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Deployments列表
+     */
+    Result getDeployments(Integer clusterId, String namespace);
+
+    /**
+     * 获取Pods列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Pods列表
+     */
+    Result getPods(Integer clusterId, String namespace);
+
+    /**
+     * 获取Services列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Services列表
+     */
+    Result getServices(Integer clusterId, String namespace);
+
+    /**
+     * 获取ConfigMaps列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return ConfigMaps列表
+     */
+    Result getConfigMaps(Integer clusterId, String namespace);
+
+    /**
+     * 获取Secrets列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Secrets列表
+     */
+    Result getSecrets(Integer clusterId, String namespace);
+
+    /**
+     * 获取PersistentVolumes列表
+     * 
+     * @param clusterId 集群ID
+     * @return PersistentVolumes列表
+     */
+    Result getPersistentVolumes(Integer clusterId);
+
+    /**
+     * 获取PersistentVolumeClaims列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return PersistentVolumeClaims列表
+     */
+    Result getPersistentVolumeClaims(Integer clusterId, String namespace);
+
+    /**
+     * 获取StorageClasses列表
+     * 
+     * @param clusterId 集群ID
+     * @return StorageClasses列表
+     */
+    Result getStorageClasses(Integer clusterId);
+
+    /**
+     * 获取Ingresses列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Ingresses列表
+     */
+    Result getIngresses(Integer clusterId, String namespace);
+
+    /**
+     * 获取IngressClasses列表
+     * 
+     * @param clusterId 集群ID
+     * @return IngressClasses列表
+     */
+    Result getIngressClasses(Integer clusterId);
+
+    /**
+     * 获取DaemonSets列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return DaemonSets列表
+     */
+    Result getDaemonSets(Integer clusterId, String namespace);
+
+    /**
+     * 获取StatefulSets列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return StatefulSets列表
+     */
+    Result getStatefulSets(Integer clusterId, String namespace);
+
+    /**
+     * 获取ReplicaSets列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return ReplicaSets列表
+     */
+    Result getReplicaSets(Integer clusterId, String namespace);
+
+    /**
+     * 获取ReplicationControllers列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return ReplicationControllers列表
+     */
+    Result getReplicationControllers(Integer clusterId, String namespace);
+
+    /**
+     * 获取Jobs列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return Jobs列表
+     */
+    Result getJobs(Integer clusterId, String namespace);
+
+    /**
+     * 获取CronJobs列表
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @return CronJobs列表
+     */
+    Result getCronJobs(Integer clusterId, String namespace);
+
+    /**
+     * 获取Deployment详情
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @param name      Deployment名称
+     * @return Deployment详情
+     */
+    Result getDeploymentDetail(Integer clusterId, String namespace, String name);
+
+    /**
+     * 获取资源相关事件
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @param kind      资源类型
+     * @param name      资源名称
+     * @return 事件列表
+     */
+    Result getResourceEvents(Integer clusterId, String namespace, String kind, String name);
+}

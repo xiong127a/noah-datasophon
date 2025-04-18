@@ -288,7 +288,7 @@ export default {
         this.loading = false;
       }
     },
-
+    
     // 下载当前预览的文件
     downloadCurrentFile() {
       if (!this.currentPreviewFile) return;
@@ -305,7 +305,7 @@ export default {
         this.$refs.downloadConfig.downloadSingleConfig(record);
       }
     },
-    
+
     // 预览配置文件
     async previewConfig(record) {
       this.previewVisible = true;
@@ -1491,4 +1491,4 @@ export default {
 .code-mirror :deep(.cm-s-dracula::-webkit-scrollbar-thumb:hover) {
   background: rgba(255, 255, 255, 0.3);
 }
-</style>
+</style> 
