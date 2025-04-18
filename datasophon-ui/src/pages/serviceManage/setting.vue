@@ -98,7 +98,7 @@
         </div>
       </a-tab-pane>
       
-      <a-tab-pane key="k8s-config" tab="Kubernetes配置" :forceRender="true">
+      <a-tab-pane key="k8s-config" tab="Kubernetes 仪表盘" :forceRender="true">
         <K8sConfig :serviceId="serviceId" :serviceName="serviceName" :clusterId="clusterId"/>
       </a-tab-pane>
       
