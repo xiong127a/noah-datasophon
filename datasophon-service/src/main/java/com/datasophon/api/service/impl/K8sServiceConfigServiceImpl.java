@@ -68,6 +68,41 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
         }
     }
 
+
+    public Result getK8sServices(Integer clusterId, String serviceName) {
+        // 参数校验
+        if (!validateParams(clusterId, serviceName)) {
+            return Result.error(INVALID_PARAMS_MSG);
+        }
+
+        // 获取kubeconfig
+        String kubeConfig = getKubeConfig(clusterId);
+        if (kubeConfig == null) {
+            return Result.error(NO_KUBECONFIG_MSG);
+        }
+
+        // 获取服务角色
+        Result serviceRoleResult = getServiceRoles(clusterId, serviceName);
+        if (!serviceRoleResult.isSuccess()) {
+            return serviceRoleResult;
+        }
+
+        // 转换角色列表
+        List<FrameServiceRoleEntity> roleList = convertToRoleList(serviceRoleResult.getData());
+        if (roleList.isEmpty()) {
+            return Result.error(NO_ROLES_MSG + serviceName);
+        }
+
+        // 查询Service
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            List<Map<String, Object>> serviceDataList = queryServicesForRoles(client, roleList, serviceName);
+            return Result.success(serviceDataList);
+        } catch (Exception e) {
+            log.error("K8s连接异常", e);
+            return Result.error("集群连接异常");
+        }
+    }
+
     private boolean validateParams(Integer clusterId, String serviceName) {
         return clusterId != null && StringUtils.isNotBlank(serviceName);
     }
@@ -133,7 +168,12 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
                 .map(configMap -> {
                     Map<String, Object> info = new HashMap<>(4);
                     info.put("name", configMap.getMetadata().getName());
-                    info.put("labels", configMap.getMetadata().getLabels());
+                    // 将 labels 转换为 key : value 的格式
+                    Map<String, String> labels = configMap.getMetadata().getLabels();
+                    String formattedLabels = labels.entrySet().stream()
+                            .map(entry -> entry.getKey() + " : " + entry.getValue())
+                            .collect(Collectors.joining("  "));
+                    info.put("labels", formattedLabels.isEmpty() ? "-" : formattedLabels);
                     info.put("data", configMap.getData());
                     info.put("time", configMap.getMetadata().getCreationTimestamp());
                     return info;
@@ -141,6 +181,47 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
                 .collect(Collectors.toList());
         return collect;
 
+    }
+
+    private List<Map<String, Object>> queryServicesForRoles(KubernetesClient client, List<FrameServiceRoleEntity> roles, String serviceName) {
+        List<Map<String, Object>> serviceDataList = new ArrayList<>();
+        for (FrameServiceRoleEntity role : roles) {
+            try {
+                String selector = buildLabelSelector(serviceName, role.getServiceRoleName());
+                List<Map<String, Object>> items = queryServices(client, selector);
+                if (!items.isEmpty()) {
+                    serviceDataList.addAll(items);
+                }
+            } catch (KubernetesClientException e) {
+                log.error("查询Service失败，role: {}", role.getServiceRoleName(), e);
+            }
+        }
+        return serviceDataList;
+    }
+
+    private List<Map<String, Object>> queryServices(KubernetesClient client, String labelSelector) {
+        List<io.fabric8.kubernetes.api.model.Service> items = client.services()
+                .inNamespace(Constant.K8S_NAMESPACE)
+                .withLabelSelector(labelSelector)
+                .list()
+                .getItems();
+
+        return items.stream()
+                .map(service -> {
+                    Map<String, Object> info = new HashMap<>(4);
+                    info.put("name", service.getMetadata().getName());
+                    // 将 labels 转换为 key : value 的格式
+                    Map<String, String> labels = service.getMetadata().getLabels();
+                    String formattedLabels = labels.entrySet().stream()
+                            .map(entry -> entry.getKey() + " : " + entry.getValue())
+                            .collect(Collectors.joining("  "));
+                    info.put("labels", formattedLabels.isEmpty() ? "-" : formattedLabels);
+                    info.put("type", service.getSpec().getType());
+                    info.put("clusterIP", service.getSpec().getClusterIP());
+                    info.put("time", service.getMetadata().getCreationTimestamp());
+                    return info;
+                })
+                .collect(Collectors.toList());
     }
 
 
@@ -156,11 +237,6 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
         return Result.success();
     }
 
-    @Override
-    public Result getK8sServices(String clusterId) {
-        // TODO: 实现获取Service列表的逻辑
-        return Result.success();
-    }
 
     @Override
     public Result getK8sServiceDetail(Integer clusterId,String name) {
