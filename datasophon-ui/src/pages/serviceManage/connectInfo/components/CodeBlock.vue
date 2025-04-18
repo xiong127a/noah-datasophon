@@ -459,9 +459,8 @@ export default {
           const scrollArea = wrapper.querySelector('.CodeMirror-scroll');
           if (scrollArea) {
             scrollArea.style.overflow = 'auto';
-            scrollArea.style.maxHeight = '600px';
             scrollArea.style.overflowY = 'auto';
-            scrollArea.style.overflowX = 'auto';
+            scrollArea.style.maxHeight = '800px';
           }
         }
         
@@ -585,7 +584,7 @@ export default {
         if (scrollArea) {
           scrollArea.style.overflow = 'auto';
           scrollArea.style.overflowY = 'auto';
-          scrollArea.style.maxHeight = '600px';
+          scrollArea.style.maxHeight = '800px';
         }
         
         // 根据语言类型设置不同的最小高度和最大高度
@@ -599,12 +598,12 @@ export default {
           // Java和Python需要显示更紧凑
           minHeight = 6 * lineHeight; // 减少最小行数
           
-          // 计算内容高度，但限制最大显示行数
-          const visibleLines = Math.min(totalLines, 15); // 最多显示15行
+          // 计算内容高度，但设置更大的可见行数
+          const visibleLines = Math.min(totalLines, 30); // 从15行增加到30行
           const contentHeight = (visibleLines + 1) * lineHeight;
           
-          // 设置最大高度限制
-          maxHeight = Math.min(Math.max(contentHeight, minHeight), 20 * lineHeight);
+          // 设置更大的最大高度限制
+          maxHeight = Math.min(Math.max(contentHeight, minHeight), 40 * lineHeight); // 从20行增加到40行
         }
         
         // 应用高度，确保至少达到最小高度
@@ -1014,7 +1013,7 @@ textarea:not([class]):not([id]) {
   position: relative !important;
   z-index: 1 !important;
   height: auto !important;
-  max-height: 800px !important;
+  max-height: 1000px !important;
   font-family: 'SF Mono', 'Consolas', 'Courier New', monospace !important;
   pointer-events: auto !important; /* 确保可以接收鼠标事件 */
 }
@@ -1089,25 +1088,25 @@ body > pre.CodeMirror-line {
 }
 
 .connection-info-panel .ant-tabs-tab {
-  padding: 6px 14px !important;
+  padding: 4px 14px !important;
   margin: 0 10px 0 0 !important;
   font-size: 14px !important;
-  line-height: 1.5 !important;
+  line-height: 1.4 !important;
   min-height: 0 !important;
 }
 
 .connection-info-panel .ant-tabs-tabpane {
-  padding-top: 12px !important;
+  padding-top: 0 !important;
 }
 
 .connection-info-panel {
-  padding: 16px !important;
+  padding: 8px 16px !important;
 }
 
 /* 减少标签页内容的顶部边距 */
 .tab-content {
   padding: 0 !important;
-  margin-top: 8px !important;
+  margin-top: 0 !important;
 }
 
 /* 修复CodeMirror-hscrollbar和CodeMirror-vscrollbar滚动条 */
@@ -1154,28 +1153,29 @@ body > pre.CodeMirror-line {
 
 <style lang="less" scoped>
 .code-block-section {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+  margin-top: 0;
   position: relative !important;
   overflow: visible !important;
   
   // 代码与依赖容器
   .code-container {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     position: relative !important;
     transition: all 0.3s;
     overflow: visible !important;
     z-index: 5 !important;
     
     &.with-dependencies {
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
   }
   
   // 代码卡片
   .code-card {
     flex: 1;
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden !important;
     border: 1px solid #e8e8e8;
     background-color: #ffffff;
@@ -1185,14 +1185,14 @@ body > pre.CodeMirror-line {
     flex-direction: column !important;
     
     .code-header {
-      padding: 6px 12px;
+      padding: 4px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: linear-gradient(to right, #f8f9fa, #edf0f5);
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-      border-top-left-radius: 6px;
-      border-top-right-radius: 6px;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
       box-shadow: 0 1px 1px rgba(0, 0, 0, 0.02);
       
       .title-section {
@@ -1204,20 +1204,20 @@ body > pre.CodeMirror-line {
       
       .code-title {
         font-weight: 600;
-        font-size: 14px;
+        font-size: 13px;
         color: #262626;
-        margin-right: 10px;
+        margin-right: 6px;
         letter-spacing: -0.01em;
       }
       
       .dependency-badge {
         display: inline-flex;
         align-items: center;
-        padding: 2px 8px;
-        border-radius: 12px;
+        padding: 1px 6px;
+        border-radius: 10px;
         background: rgba(0, 120, 212, 0.08);
         color: #0078d4;
-        font-size: 12px;
+        font-size: 11px;
         cursor: pointer;
         transition: all 0.2s;
         max-width: 350px;
@@ -1230,7 +1230,7 @@ body > pre.CodeMirror-line {
         }
         
         .deps-text {
-          margin: 0 4px;
+          margin: 0 3px;
           overflow: hidden;
           text-overflow: ellipsis;
         }
@@ -1305,7 +1305,7 @@ body > pre.CodeMirror-line {
           
           // 针对Java和Python的特殊样式
           &.java-editor, &.python-editor {
-            max-height: 300px; // 限制最大高度
+            max-height: 600px; // 从300px增加到600px
           }
           
           // 命令行编辑器保持原样
