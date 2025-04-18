@@ -17,6 +17,8 @@
 
 package com.datasophon.api.service.impl;
 
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.TimedCache;
 import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -98,6 +100,15 @@ public class ClusterServiceInstanceServiceImpl
 
     @Autowired
     private ClusterServiceRoleInstanceWebuisService webuisService;
+
+    // 创建一个定时缓存，缓存时间为10秒
+    private static final TimedCache<String, ConnectionInfo> CONNECTION_INFO_CACHE = CacheUtil.newTimedCache(5000);
+
+    // 开启缓存定时清理
+    static {
+        // 每5秒检查一次过期缓存
+        CONNECTION_INFO_CACHE.schedulePrune(2000);
+    }
 
     @Override
     public ClusterServiceInstanceEntity getServiceInstanceByClusterIdAndServiceName(Integer clusterId,
@@ -315,6 +326,19 @@ public class ClusterServiceInstanceServiceImpl
 
     @Override
     public Result getConnectionInfo(Integer serviceInstanceId) {
+        // 构建缓存键，使用serviceInstanceId作为唯一标识
+        String cacheKey = "connectionInfo:" + serviceInstanceId;
+
+        // 先从缓存中获取
+        ConnectionInfo connectionInfo = CONNECTION_INFO_CACHE.get(cacheKey);
+        if (connectionInfo != null) {
+            log.info("从缓存获取服务[{}]的连接信息", serviceInstanceId);
+            return Result.success(connectionInfo);
+        }
+
+        // 缓存中没有，执行原逻辑获取连接信息
+        log.info("缓存中无数据，开始获取服务[{}]的连接信息", serviceInstanceId);
+
         // 获取服务实例信息
         ClusterServiceInstanceEntity serviceInstance = this.getById(serviceInstanceId);
         if (serviceInstance == null) {
@@ -338,8 +362,7 @@ public class ClusterServiceInstanceServiceImpl
         Map.Entry<String, Map<String, String>> serviceConfigMap = strategy.getServiceConfigMap(serviceInstanceId);
         Map<String, String> configMap = serviceConfigMap.getValue();
         String serviceHome = serviceConfigMap.getKey();
-        ConnectionInfo connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId, serviceHome,
-                configMap);
+        connectionInfo = strategy.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
 
         // 检查是否有有效的连接信息（使用新的InfoItem列表结构）
         if (connectionInfo == null
@@ -371,6 +394,10 @@ public class ClusterServiceInstanceServiceImpl
         if (connectionInfo.getServiceHome() == null) {
             connectionInfo.setServiceHome(serviceHome);
         }
+
+        // 将获取到的连接信息放入缓存
+        CONNECTION_INFO_CACHE.put(cacheKey, connectionInfo);
+        log.info("将服务[{}]的连接信息存入缓存，缓存时间5秒", serviceInstanceId);
 
         return Result.success(connectionInfo);
     }
