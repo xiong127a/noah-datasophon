@@ -18,8 +18,6 @@
  *
  */
 
-// 导入事件监听器补丁，需要在所有其他导入之前
-import './utils/eventListenerPatch'
 
 import Vue from 'vue'
 import App from './App.vue'
