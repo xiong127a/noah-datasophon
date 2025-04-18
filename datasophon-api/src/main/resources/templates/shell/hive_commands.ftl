@@ -1,10 +1,3 @@
-TIP> 以下是Hive命令行连接和常用操作示例
-TIP> 命令前缀说明: 
-TIP>   CMD> - 表示在Linux终端中输入的命令
-TIP>   RES> - 表示命令执行后的输出结果
-TIP>   PRT> - 表示终端提示符
-TIP>   <--- - 表示命令说明
-
 <#if data.getSecurityInfoValue('kerberos.enabled', 'false') == 'true'>
 TIP> 您的Hive集群启用了Kerberos认证，请先进行身份认证
 

@@ -1,14 +1,3 @@
-# ClickHouse命令行示例
-# 格式说明：
-# CMD> 开头的行表示命令输入
-# RES> 开头的行表示命令输出结果
-# TIP> 开头的行表示提示信息
-# <---> 表示命令分隔符
-# PRT> 开头的行表示命令提示符 (例如: [root@hostname ~]#)
-#
-# 注意：不要修改这些格式标记，它们会被系统解析用于生成交互式命令示例
-
-
 # 连接到ClickHouse服务器
 TIP> 使用clickhouse-client连接到服务器<#if data.getBasicInfoValue('tcpPort', '9000') != "9000">（使用非默认端口${data.getBasicInfoValue('tcpPort', '9000')}）</#if>
 CMD> ${data.getConnectInfoValue('commandLine', 'clickhouse-client --host=localhost')}
