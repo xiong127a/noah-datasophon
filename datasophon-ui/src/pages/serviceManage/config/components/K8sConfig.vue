@@ -18,6 +18,7 @@
             :columns="configMapColumns"
             :dataSource="configMaps"
             :pagination="false"
+            rowKey="name"
           >
             <template #action="{ record }">
               <a @click="handleViewConfigMap(record)">查看</a>
@@ -25,10 +26,7 @@
               <a @click="handleEditConfigMap(record)">编辑</a>
             </template>
             <template #labels="{ text }">
-              <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-                222
-                {{ key }}: {{ value }}
-              </div>
+              <span v-if="text">{{ text }}</span>
               <span v-else>-</span>
             </template>
             <template #time="{ text }">
@@ -216,44 +214,23 @@ export default {
           serviceName: this.serviceName
         });
         if (res.code === 200) {
-          // 确认数据结构包含 labels 和 time 字段
           this.configMaps = res.data.map(item => ({
             name: item.name,
-            labels: item.labels || {}, // 确保 labels 存在
-            time: item.time // 确保时间字段正确
+            labels: item.labels,// 直接使用 labels 对象，而不是转换为字符串
+            time: item.time
           }));
         }
+        console.log(this.configMaps.labels);
       } catch (error) {
         console.error('Error fetching config maps:', error);
       }
+    },async fetchServices() {
+
+    },async fetchPvcs() {
+
     },
-    async fetchServices() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sServices, {
-          clusterId: this.clusterId
-        });
-        if (res.code === 200) {
-          this.services = res.data;
-        } else {
-          console.error('Failed to fetch services:', res.msg);
-        }
-      } catch (error) {
-        console.error('Error fetching services:', error);
-      }
-    },
-    async fetchPvcs() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sPvcs, {
-          clusterId: this.clusterId
-        });
-        if (res.code === 200) {
-          this.pvcs = res.data;
-        } else {
-          console.error('Failed to fetch PVCs:', res.msg);
-        }
-      } catch (error) {
-        console.error('Error fetching PVCs:', error);
-      }
+    formatTime(time) {
+      return time ? this.$dayjs(time).format('YYYY-MM-DD HH:mm') : '-'
     },
     handleViewConfigMap(record) {
       console.log(record);
@@ -263,15 +240,12 @@ export default {
         content: (
           <div>
             <p><strong>名称:</strong> {record.name}</p>
-            <p><strong>标签:</strong> {Object.entries(record.labels || {}).map(([key, value]) => `${key}=${value}`).join(', ')}</p>
+            <p><strong>标签:</strong> {record.labels}</p>
             <p><strong>创建时间:</strong> {new Date(record.creationTimestamp).toLocaleString()}</p>
           </div>
         ),
         onOk() {},
       });
-    },
-    formatTime(time) {
-      return time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '-'
     },
     handleEditConfigMap(record) {
       // TODO: 实现编辑ConfigMap的逻辑
@@ -352,16 +326,53 @@ export default {
   color: #666;
   margin: 0;
 }
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+
+/* 新增样式 */
+.config-map-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.custom-tag {
+.config-map-table th,
+.config-map-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.config-map-table th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+.config-map-table .name-column {
+  width: 30%;
+}
+
+.config-map-table .labels-column {
+  width: 40%;
+}
+
+.config-map-table .time-column {
+  width: 20%;
+}
+
+.config-map-table .action-column {
+  width: 10%;
+}
+
+.label-badge {
+  display: inline-block;
+  padding: 4px 8px;
   margin: 2px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  background-color: #f0f0f0;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #333;
+}
+
+.action-icons {
+  display: flex;
+  gap: 8px;
 }
 </style>

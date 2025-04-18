@@ -133,7 +133,12 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
                 .map(configMap -> {
                     Map<String, Object> info = new HashMap<>(4);
                     info.put("name", configMap.getMetadata().getName());
-                    info.put("labels", configMap.getMetadata().getLabels());
+                    // 将 labels 转换为 key : value 的格式
+                    Map<String, String> labels = configMap.getMetadata().getLabels();
+                    String formattedLabels = labels.entrySet().stream()
+                            .map(entry -> entry.getKey() + " : " + entry.getValue())
+                            .collect(Collectors.joining("  "));
+                    info.put("labels", formattedLabels.isEmpty() ? "-" : formattedLabels);
                     info.put("data", configMap.getData());
                     info.put("time", configMap.getMetadata().getCreationTimestamp());
                     return info;

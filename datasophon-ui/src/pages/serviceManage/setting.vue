@@ -26,19 +26,29 @@
 -->
 <template>
   <div class="service-setting steps">
-    <div class="flex-bewteen-container" style="flex-direction:row-reverse;">
-      <div class="w180" style="margin-right:23px;">
-        版本：
-        <a-select placeholder="请选择" :value="currentVersion" @change="changeVersion" style="width:180px">
-          <a-select-option v-for="(child, childIndex) in verSionList" :key="childIndex" :value="child">{{ child }}
-          </a-select-option>
-        </a-select>
-      </div>
-    </div>
-    
+
     <!-- 添加Tab页签 -->
     <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
       <a-tab-pane key="service-config" tab="服务配置" :forceRender="true">
+        <div class="version-select-container" style="margin-bottom: 20px;">
+          <div class="w180">
+            版本：
+            <a-select
+                placeholder="请选择"
+                :value="currentVersion"
+                @change="changeVersion"
+                style="width:180px"
+            >
+              <a-select-option
+                  v-for="(child, childIndex) in verSionList"
+                  :key="childIndex"
+                  :value="child"
+              >
+                {{ child }}
+              </a-select-option>
+            </a-select>
+          </div>
+        </div>
         <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
           <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
             <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
@@ -85,11 +95,11 @@
 
         </div>
       </a-tab-pane>
-      
+
       <a-tab-pane key="k8s-config" tab="K8s配置" :forceRender="true">
         <K8sConfig :serviceId="serviceId" :serviceName="serviceName" :clusterId="clusterId"/>
       </a-tab-pane>
-      
+
       <a-tab-pane key="config-download" tab="配置文件下载" :forceRender="true">
         <ConfigDownload :serviceId="serviceId" :serviceName="serviceName" />
       </a-tab-pane>
@@ -336,6 +346,7 @@ export default {
     // 单个标签页的保存
     async handleSubmit() {
       try {
+        console.log("开始保存配置...");
         // 1. 获取所有配置组表单实例
         const formRefs = Object.keys(this.templateData)
             .map(groupName => this.$refs[`template_${groupName}`]?.[0])
@@ -351,23 +362,40 @@ export default {
                 })
             )
         );
-
+        console.log(formRefs)
         // 3. 合并所有配置数据
         const mergedValues = formRefs.reduce((acc, form) => {
-          return { ...acc, ...form.form.getFieldsValue() };
-        }, {});
+          const values = form.form.getFieldsValue();
 
+
+          // 处理 arrayWithData
+          const arrayWithData = this.handlearrayWithData(values);
+
+          // 处理 multipleData
+          const multipleData = this.handleMultipleData(values);
+          console.log("values:", values);
+          console.log("multipleData:", multipleData);
+          // 合并 values、arrayWithData 和 multipleData
+          return {
+            ...values, // 先合并原始 values
+            ...arrayWithData, // 再合并 arrayWithData
+            ...multipleData // 最后合并 multipleData
+          };
+        }, {});
+        console.log("mergedValues:", mergedValues)
         // 4. 转换数据结构（修复核心问题）
         const param = _.cloneDeep(this.templateData);
         const allConfigItems = Object.values(param).flat(); // 转换为扁平化数组
+        console.log("allConfigItems:", allConfigItems)
 
-        // 5. 更新配置项值
-        Object.entries(mergedValues).forEach(([name, value]) => {
-          const targetItem = allConfigItems.find(item => item.name === name);
-          if (targetItem) {
-            targetItem.value = value;
-          }
-        });
+
+        for (let name in mergedValues) {
+          allConfigItems.forEach((item) => {
+            if (item.name === name) {
+              item.value = mergedValues[name];
+            }
+          });
+        }
 
         // 6. 处理配置项名称
         const processedItems = allConfigItems.map(item => ({
@@ -379,7 +407,7 @@ export default {
         const filterParam = processedItems.filter(
             item => !(!item.required && item.hidden)
         );
-
+        console.log("filterParam:", filterParam)
         // 8. 获取服务名称（保持原有逻辑）
         let serviceName = '';
         const serviceId = this.$route.params.serviceId || '';
@@ -480,7 +508,7 @@ export default {
         // 初始化所有分组为收起状态
         Object.keys(this.templateData).forEach(name => {
           if (!(name in this.isGroupExpanded)) {
-            this.$set(this.isGroupExpanded, name, false)
+            this.$set(this.isGroupExpanded, name, true)
           }
         });
       }
@@ -519,7 +547,7 @@ export default {
     },
     handleTabChange(key) {
       this.activeTabKey = key;
-      
+
       // 确保serviceName有值
       if (!this.serviceName && this.$route.params.serviceId) {
         // 从菜单数据中获取服务名称
@@ -533,7 +561,7 @@ export default {
             }
           });
         }
-        
+
         // 如果还是没有找到，则使用默认值
         if (!this.serviceName) {
           this.serviceName = "未知服务";
@@ -546,21 +574,21 @@ export default {
     // 从query和params中获取参数
     const queryParams = this.$route.query;
     const routeParams = this.$route.params;
-    
+
     console.log('setting.vue创建, 查询参数:', queryParams);
     console.log('路由参数:', routeParams);
-    
+
     // 优先使用query中的参数，如果没有则使用params中的
     const serviceInstanceId = queryParams.serviceInstanceId || routeParams.serviceId;
     const serviceName = queryParams.serviceName;
     const serviceType = queryParams.serviceType;
-    
+
     console.log('合并后serviceInstanceId:', serviceInstanceId);
     console.log('serviceName:', serviceName);
     console.log('serviceType:', serviceType);
-    
+
     this.serviceId = serviceInstanceId;
-    
+
     // 设置serviceName
     if (serviceName) {
       this.serviceName = serviceName;
@@ -577,17 +605,17 @@ export default {
           }
         });
       }
-      
+
       // 如果还是没有找到，使用默认值
       if (!this.serviceName) {
         this.serviceName = "未知服务";
         console.warn('无法获取服务名称，使用默认值');
       }
     }
-    
+
     console.log('设置后的serviceId:', this.serviceId);
     console.log('设置后的serviceName:', this.serviceName);
-    
+
     this.getServiceRoleType();
   },
   mounted() {
@@ -782,6 +810,12 @@ export default {
       transform: translateY(-1px);
     }
   }
+}
+.version-select-container {
+  display: flex;
+  justify-content: flex-end; /* 右对齐 */
+  padding: 0 20px; /* 与内容区对齐 */
+  margin-top: -10px; /* 调整与标签头间距 */
 }
 
 </style>
