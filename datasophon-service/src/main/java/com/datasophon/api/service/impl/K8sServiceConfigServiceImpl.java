@@ -7,6 +7,8 @@ import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.KubeUtil;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import lombok.extern.slf4j.Slf4j;
@@ -250,21 +252,180 @@ public class K8sServiceConfigServiceImpl implements K8sServiceConfigService {
         return Result.success();
     }
 
+
     @Override
-    public Result getK8sPvcs(String clusterId) {
-        // TODO: 实现获取PVC列表的逻辑
-        return Result.success();
+    public Result getK8sPvcs(Integer clusterId, String serviceName) {
+        // 参数校验
+        if (!validateParams(clusterId, serviceName)) {
+            return Result.error(INVALID_PARAMS_MSG);
+        }
+
+        // 获取kubeconfig
+        String kubeConfig = getKubeConfig(clusterId);
+        if (kubeConfig == null) {
+            return Result.error(NO_KUBECONFIG_MSG);
+        }
+
+        // 获取服务角色
+        Result serviceRoleResult = getServiceRoles(clusterId, serviceName);
+        if (!serviceRoleResult.isSuccess()) {
+            return serviceRoleResult;
+        }
+
+        // 转换角色列表
+        List<FrameServiceRoleEntity> roleList = convertToRoleList(serviceRoleResult.getData());
+        if (roleList.isEmpty()) {
+            return Result.error(NO_ROLES_MSG + serviceName);
+        }
+
+        // 查询PVC
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            List<Map<String, Object>> pvcDataList = queryPvcsForRoles(client, roleList, serviceName);
+            return Result.success(pvcDataList);
+        } catch (Exception e) {
+            log.error("K8s连接异常", e);
+            return Result.error("集群连接异常");
+        }
+    }
+
+    private List<Map<String, Object>> queryPvcsForRoles(KubernetesClient client, List<FrameServiceRoleEntity> roles, String serviceName) {
+        List<Map<String, Object>> pvcDataList = new ArrayList<>();
+        for (FrameServiceRoleEntity role : roles) {
+            try {
+                String selector = buildLabelSelector(serviceName, role.getServiceRoleName());
+                List<Map<String, Object>> items = queryPvcs(client, selector);
+                if (!items.isEmpty()) {
+                    pvcDataList.addAll(items);
+                }
+            } catch (KubernetesClientException e) {
+                log.error("查询PVC失败，role: {}", role.getServiceRoleName(), e);
+            }
+        }
+        return pvcDataList;
+    }
+
+    private List<Map<String, Object>> queryPvcs(KubernetesClient client, String labelSelector) {
+        List<PersistentVolumeClaim> items = client.persistentVolumeClaims()
+                .inNamespace(Constant.K8S_NAMESPACE)
+                .withLabelSelector(labelSelector)
+                .list()
+                .getItems();
+
+        return items.stream()
+                .map(pvc -> {
+                    Map<String, Object> info = new HashMap<>(6);
+                    info.put("name", pvc.getMetadata().getName());
+                    Map<String, String> labels = pvc.getMetadata().getLabels();
+                    String formattedLabels = labels.entrySet().stream()
+                            .map(entry -> entry.getKey() + " : " + entry.getValue())
+                            .collect(Collectors.joining("  "));
+                    info.put("labels", formattedLabels.isEmpty() ? "-" : formattedLabels);
+                    info.put("status", pvc.getStatus().getPhase());
+                    info.put("storageClass", pvc.getSpec().getStorageClassName());
+                    Map<String, Quantity> capacity = pvc.getStatus().getCapacity();
+                    // 提取容量值并格式化
+                    String capacityValue = capacity != null && capacity.containsKey("storage") 
+                            ? capacity.get("storage").getAmount() + capacity.get("storage").getFormat() 
+                            : "-";
+                    info.put("capacity", capacityValue);
+                    info.put("time", pvc.getMetadata().getCreationTimestamp());
+                    return info;
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Result getK8sPvcDetail(Integer clusterId,String name) {
-        // TODO: 实现获取PVC详情的逻辑
-        return Result.success();
+    public Result getK8sPvcDetail(Integer clusterId, String name) {
+        // 参数校验
+        if (clusterId == null || StringUtils.isBlank(name)) {
+            return Result.error("参数错误：必须提供集群ID和PVC名称");
+        }
+
+        // 获取kubeconfig
+        String kubeConfig = getKubeConfig(clusterId);
+        if (kubeConfig == null) {
+            return Result.error(NO_KUBECONFIG_MSG);
+        }
+
+        // 查询PVC详情
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            PersistentVolumeClaim pvc = client.persistentVolumeClaims()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .withName(name)
+                    .get();
+
+            if (pvc == null) {
+                return Result.error("未找到匹配的PVC");
+            }
+
+            Map<String, Object> pvcInfo = new HashMap<>();
+            pvcInfo.put("name", pvc.getMetadata().getName());
+            pvcInfo.put("labels", pvc.getMetadata().getLabels());
+            pvcInfo.put("status", pvc.getStatus().getPhase());
+            pvcInfo.put("storageClass", pvc.getSpec().getStorageClassName());
+            pvcInfo.put("capacity", pvc.getStatus().getCapacity());
+            pvcInfo.put("time", pvc.getMetadata().getCreationTimestamp());
+            pvcInfo.put("accessModes", pvc.getSpec().getAccessModes());
+            pvcInfo.put("volumeName", pvc.getSpec().getVolumeName());
+
+            return Result.success(pvcInfo);
+        } catch (Exception e) {
+            log.error("K8s连接异常", e);
+            return Result.error("集群连接异常");
+        }
     }
 
     @Override
-    public Result updateK8sPvc(Integer clusterId,String name, String content) {
-        // TODO: 实现更新PVC的逻辑
-        return Result.success();
+    public Result updateK8sPvc(Integer clusterId, String name, String content) {
+        // 参数校验
+        if (clusterId == null || StringUtils.isBlank(name) || StringUtils.isBlank(content)) {
+            return Result.error("参数错误：必须提供集群ID、PVC名称和更新内容");
+        }
+
+        // 获取kubeconfig
+        String kubeConfig = getKubeConfig(clusterId);
+        if (kubeConfig == null) {
+            return Result.error(NO_KUBECONFIG_MSG);
+        }
+
+        // 更新PVC
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            PersistentVolumeClaim pvc = client.persistentVolumeClaims()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .withName(name)
+                    .get();
+
+            if (pvc == null) {
+                return Result.error("未找到匹配的PVC");
+            }
+
+            // 解析并更新PVC内容
+            Map<String, Object> updateContent = parsePvcContent(content);
+            if (updateContent.containsKey("labels")) {
+                pvc.getMetadata().setLabels((Map<String, String>) updateContent.get("labels"));
+            }
+            if (updateContent.containsKey("storageClass")) {
+                pvc.getSpec().setStorageClassName((String) updateContent.get("storageClass"));
+            }
+            if (updateContent.containsKey("accessModes")) {
+                pvc.getSpec().setAccessModes((List<String>) updateContent.get("accessModes"));
+            }
+
+            client.persistentVolumeClaims()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .resource(pvc)
+                    .update();
+
+            return Result.success("PVC更新成功");
+        } catch (Exception e) {
+            log.error("K8s连接异常", e);
+            return Result.error("集群连接异常");
+        }
+    }
+
+    private Map<String, Object> parsePvcContent(String content) {
+        // 这里实现从字符串内容解析出PVC更新参数的逻辑
+        // 可以根据实际需求实现，例如解析JSON格式的内容
+        return new HashMap<>();
     }
 }

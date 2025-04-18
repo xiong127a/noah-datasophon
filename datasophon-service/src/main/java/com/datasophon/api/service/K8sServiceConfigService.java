@@ -17,7 +17,7 @@ public interface K8sServiceConfigService {
 
     Result updateK8sService(Integer clusterId,String name, String content);
 
-    Result getK8sPvcs(String clusterId);
+    Result getK8sPvcs(Integer clusterId, String content);
 
     Result getK8sPvcDetail(Integer clusterId,String name);
 
