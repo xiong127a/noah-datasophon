@@ -853,6 +853,7 @@ export default {
   overflow: hidden;
   border-color: #d1d1d6;
   color: #8e8e93;
+  transition: all 0.3s ease;
 }
 
 .view-toggle /deep/ .ant-radio-button-wrapper:first-child {
@@ -864,12 +865,27 @@ export default {
 }
 
 .view-toggle /deep/ .ant-radio-button-wrapper-checked {
-  color: #007AFF;
+  color: #ffffff;
   border-color: #007AFF;
+  background-color: #007AFF;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.25);
 }
 
 .view-toggle /deep/ .ant-radio-button-wrapper-checked::before {
   background-color: #007AFF;
+}
+
+.view-toggle /deep/ .ant-radio-button-wrapper:hover {
+  color: #007AFF;
+  border-color: #007AFF;
+  z-index: 1;
+}
+
+.view-toggle /deep/ .ant-radio-button-wrapper-checked:hover {
+  color: #ffffff;
+  background-color: #0070E8;
+  border-color: #0070E8;
 }
 
 /* 列表视图 */
