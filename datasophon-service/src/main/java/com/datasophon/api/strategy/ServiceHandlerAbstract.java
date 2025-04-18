@@ -69,6 +69,7 @@ public abstract class ServiceHandlerAbstract {
         if (commandLines == null) {
             commandLines = new ArrayList<>();
         }
+        String processedServiceHome = processServiceHome(serviceHome);
 
         // 获取正确的服务目录提示符
         String serviceDirName = serviceHome.substring(serviceHome.lastIndexOf('/') + 1);
@@ -91,7 +92,7 @@ public abstract class ServiceHandlerAbstract {
         CommandLineItem cdCommand = new CommandLineItem();
 
         cdCommand.setLabel("切换到" + serviceName + "服务");
-        cdCommand.setValue("cd " + serviceHome);
+        cdCommand.setValue("cd " + processedServiceHome);
         cdCommand.setCommandPrompt("[root@" + hostname + " ~]# ");
         cdCommand.setCommandResult(""); // 通常cd命令没有输出
         commandLines.add(1, cdCommand);
@@ -542,8 +543,7 @@ public abstract class ServiceHandlerAbstract {
             Map<String, String> configMap) {
         // 提取服务名称（从子类类名）
         String serviceName = getServiceName(serviceInstanceId);
-        // 处理服务目录名称，父类统一处理
-        String processedServiceHome = processServiceHome(serviceHome);
+
         try {
             // 获取基本连接信息对象
             ConnectionInfo connectionInfo;
@@ -612,7 +612,7 @@ public abstract class ServiceHandlerAbstract {
             try {
                 // 处理命令行示例
                 String shellCommands = generateShellCommands(serviceName, connectionInfo);
-                List<CommandLineItem> commandLines = parseCommandLines(shellCommands, serviceName, processedServiceHome,
+                List<CommandLineItem> commandLines = parseCommandLines(shellCommands, serviceName, serviceHome,
                         connectionInfo.getHostName());
                 connectionInfo.setCommandLines(commandLines);
             } catch (Exception e) {
@@ -650,7 +650,7 @@ public abstract class ServiceHandlerAbstract {
             return commandLineItems;
         }
 
-        // 设置默认命令行提示符
+        // 获取正确的服务目录提示符（只显示最后一级目录名）
         String defaultPrompt = "[root@" + hostname + " " + serviceHome + "]# ";
 
         // 分割命令行
@@ -691,6 +691,28 @@ public abstract class ServiceHandlerAbstract {
                 continue;
             }
 
+            // 处理提示信息行
+            if (trimmedLine.startsWith("TIP>")) {
+                String tipText = trimmedLine.substring(4).trim();
+
+                // 如果TIP行出现在CMD行之前，则创建一个新的CommandLineItem
+                if (currentItem == null) {
+                    currentItem = new CommandLineItem();
+                    currentItem.setLabel(tipText);
+                    // 预设默认提示符，后续会被PRT行或CMD行更新
+                    currentItem.setCommandPrompt(defaultPrompt);
+                    commandLineItems.add(currentItem);
+                } else if (StringUtils.isBlank(currentItem.getLabel())) {
+                    // 已有CommandLineItem但尚未设置标签
+                    currentItem.setLabel(tipText);
+                } else {
+                    // 已有标签的情况，追加新的TIP内容
+                    currentItem.setLabel(currentItem.getLabel() + "\n" + tipText);
+                }
+                lastLineType = "TIP";
+                continue;
+            }
+
             // 处理命令输入行
             if (trimmedLine.startsWith("CMD>")) {
                 String commandValue = trimmedLine.substring(4).trim();
@@ -698,6 +720,7 @@ public abstract class ServiceHandlerAbstract {
                 if (currentItem == null || !"CMD".equals(lastLineType)) {
                     currentItem = new CommandLineItem();
                     currentItem.setValue(commandValue);
+                    // 确保使用当前最新的提示符
                     currentItem.setCommandPrompt(currentPrompt);
                     commandLineItems.add(currentItem);
                 } else {
@@ -720,19 +743,6 @@ public abstract class ServiceHandlerAbstract {
                 continue;
             }
 
-            // 处理提示信息行
-            if (trimmedLine.startsWith("TIP>") && currentItem != null) {
-                String tip = currentItem.getLabel();
-                if (StringUtils.isBlank(tip)) {
-                    currentItem.setLabel(trimmedLine.substring(4).trim());
-                } else {
-                    // 允许追加多行提示，虽然模板目前没这么用
-                    currentItem.setLabel(tip + "\n" + trimmedLine.substring(4).trim());
-                }
-                lastLineType = "TIP";
-                continue;
-            }
-
             // 处理其他行（通常视为上一个命令的输出结果）
             if (currentItem != null) {
                 String result = currentItem.getCommandResult();
@@ -742,6 +752,15 @@ public abstract class ServiceHandlerAbstract {
                     currentItem.setCommandResult(result + "\n" + trimmedLine);
                 }
                 lastLineType = "OTHER"; // 标记为其他行，防止被错误地追加为命令
+            }
+        }
+
+        // 统一命令提示符格式
+        for (CommandLineItem item : commandLineItems) {
+            String prompt = item.getCommandPrompt();
+            // 如果提示符包含完整路径格式，替换为只显示目录名的格式
+            if (prompt != null && prompt.contains("/opt/")) {
+                item.setCommandPrompt(defaultPrompt);
             }
         }
 
