@@ -62,7 +62,8 @@ public abstract class ServiceHandlerAbstract {
      * @param hostname     主机名
      * @return 更新后的命令行列表
      */
-    public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines,String serviceName, String serviceHome,
+    public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines, String serviceName,
+            String serviceHome,
             String hostname) {
         // 如果列表为空，创建一个新列表
         if (commandLines == null) {
@@ -376,12 +377,27 @@ public abstract class ServiceHandlerAbstract {
             }
         } else if ("python".equals(type)) {
             // 对Python pip依赖生成摘要
-            Pattern pipPattern = Pattern.compile("pip install ([\\w\\-]+)");
-            Matcher matcher = pipPattern.matcher(dependencies);
-
+            // 首先按行分割文本，排除注释行
+            String[] lines = dependencies.split("\\r?\\n");
             List<String> packages = new ArrayList<>();
-            while (matcher.find()) {
-                packages.add(matcher.group(1));
+
+            for (String line : lines) {
+                line = line.trim();
+                // 跳过空行和注释行
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                // 匹配形如 "package==version" 或 "package>=version" 的依赖
+                Pattern pipPattern = Pattern.compile("^([\\w\\-\\.]+)(?:==|>=|>|<|<=|~=|!=)?[\\d\\.]*");
+                Matcher matcher = pipPattern.matcher(line);
+
+                if (matcher.find()) {
+                    String pkg = matcher.group(1).trim();
+                    if (!pkg.isEmpty() && packages.indexOf(pkg) == -1) {
+                        packages.add(pkg);
+                    }
+                }
             }
 
             if (!packages.isEmpty()) {
@@ -545,7 +561,6 @@ public abstract class ServiceHandlerAbstract {
                     connectionInfo = builder.build();
                 }
 
-
                 if (connectionInfo.getServiceHome() == null || connectionInfo.getServiceHome().isEmpty()) {
                     connectionInfo.setServiceHome(serviceHome);
                 }
@@ -597,7 +612,7 @@ public abstract class ServiceHandlerAbstract {
             try {
                 // 处理命令行示例
                 String shellCommands = generateShellCommands(serviceName, connectionInfo);
-                List<CommandLineItem> commandLines = parseCommandLines(shellCommands,serviceName, processedServiceHome,
+                List<CommandLineItem> commandLines = parseCommandLines(shellCommands, serviceName, processedServiceHome,
                         connectionInfo.getHostName());
                 connectionInfo.setCommandLines(commandLines);
             } catch (Exception e) {
@@ -628,7 +643,8 @@ public abstract class ServiceHandlerAbstract {
      * @param hostname     主机名
      * @return CommandLineItem列表
      */
-    protected List<CommandLineItem> parseCommandLines(String commandLines, String serviceName,String serviceHome, String hostname) {
+    protected List<CommandLineItem> parseCommandLines(String commandLines, String serviceName, String serviceHome,
+            String hostname) {
         List<CommandLineItem> commandLineItems = new ArrayList<>();
         if (StringUtils.isBlank(commandLines)) {
             return commandLineItems;
@@ -730,7 +746,7 @@ public abstract class ServiceHandlerAbstract {
         }
 
         // 添加最终提示
-        return addFinalPrompt(commandLineItems, serviceName,serviceHome, hostname);
+        return addFinalPrompt(commandLineItems, serviceName, serviceHome, hostname);
     }
 
     /**
