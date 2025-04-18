@@ -86,11 +86,11 @@
         </div>
       </a-tab-pane>
       
-      <a-tab-pane key="k8s-config" tab="K8s配置" :forceRender="true">
+      <a-tab-pane key="k8s-config" tab="Kubernetes配置" :forceRender="true">
         <K8sConfig :serviceId="serviceId" :serviceName="serviceName" :clusterId="clusterId"/>
       </a-tab-pane>
       
-      <a-tab-pane key="config-download" tab="配置文件下载" :forceRender="true">
+      <a-tab-pane key="config-download" tab="配置导出" :forceRender="true">
         <ConfigDownload :serviceId="serviceId" :serviceName="serviceName" />
       </a-tab-pane>
     </a-tabs>
