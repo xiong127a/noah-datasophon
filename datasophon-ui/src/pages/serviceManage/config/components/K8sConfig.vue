@@ -3,7 +3,7 @@
     <!-- 顶部图标和标题区域 -->
     <div class="page-header">
       <div class="header-icon-wrapper">
-        <a-icon type="cluster" theme="filled" class="header-icon" />
+        <div class="kubernetes-logo"></div>
       </div>
       <div class="header-content">
         <h2 class="title">{{ serviceName }} K8s 配置</h2>
@@ -320,48 +320,43 @@ export default {
 .header-icon-wrapper {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
-  border-radius: 15px;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 20px;
-  box-shadow: 0 6px 12px rgba(0, 122, 255, 0.2);
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-.header-icon {
-  font-size: 30px;
-  color: white;
+.header-icon-wrapper:hover {
+  transform: translateY(-2px);
 }
 
-.header-content {
-  flex: 1;
+.kubernetes-logo {
+  width: 60px;
+  height: 60px;
+  background-image: url('../../../../assets/images/kubernetes-logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 6px 10px rgba(50, 108, 229, 0.3));
 }
 
-.title {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  color: #000;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
+.header-icon-wrapper:hover .kubernetes-logo {
+  transform: scale(1.1);
+  filter: drop-shadow(0 8px 15px rgba(50, 108, 229, 0.4));
 }
 
-.subtitle {
-  font-size: 16px;
-  color: #666;
-  margin: 0;
-}
-.tag-list {
+.k8s-logo-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.custom-tag {
-  margin: 2px;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: #326CE5;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(50, 108, 229, 0.2);
 }
 </style>
