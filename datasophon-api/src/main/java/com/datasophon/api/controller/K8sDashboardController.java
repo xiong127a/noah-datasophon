@@ -19,14 +19,10 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.service.K8sDashboardService;
 import com.datasophon.common.utils.Result;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * K8S仪表盘控制器
@@ -34,7 +30,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("api/k8s/dashboard")
-@Slf4j
 public class K8sDashboardController {
 
     @Autowired
@@ -54,13 +49,8 @@ public class K8sDashboardController {
     @RequestMapping("/deployments")
     public Result getDeployments(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        if (serviceId != null) {
-            return k8sDashboardService.getDeployments(clusterId, serviceId, namespace);
-        } else {
-            return k8sDashboardService.getDeployments(clusterId, namespace);
-        }
+        return k8sDashboardService.getDeployments(clusterId, namespace);
     }
 
     /**
@@ -231,82 +221,5 @@ public class K8sDashboardController {
             @RequestParam("kind") String kind,
             @RequestParam("name") String name) {
         return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
-    }
-
-    /**
-     * 获取资源相关事件
-     */
-    @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
-    public Result getResourceEvents(@RequestParam Integer clusterId,
-            @RequestParam String namespace,
-            @RequestParam String kind,
-            @RequestParam String name) {
-        return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
-    }
-
-    /**
-     * 获取资源统计数据
-     * 只统计各类资源的数量，不返回资源列表以提高性能
-     */
-    @RequestMapping("/resource-stats")
-    public Result getResourceStats(
-            @RequestParam(name = "clusterId", required = false) Integer clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        try {
-            // 添加调试日志
-            log.info("收到resource-stats请求：clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
-
-            // 确保clusterId不为空
-            if (clusterId == null) {
-                log.warn("收到resource-stats请求但缺少clusterId参数");
-                return Result.error("缺少clusterId参数");
-            }
-
-            // 调用优化后的Service方法，一次性获取所有资源统计数据
-            Result result = k8sDashboardService.getResourceStats(clusterId, serviceId, namespace);
-
-            // 日志记录返回结果
-            log.info("resource-stats接口返回：code={}, data={}", result.getCode(), result.getData() != null ? "非空" : "空");
-
-            return result;
-        } catch (Exception e) {
-            log.error("获取K8s资源统计失败", e);
-            return Result.error("获取K8s资源统计失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 从结果中获取资源数量
-     * 提取Result对象中data字段的列表大小
-     * 
-     * @param result 结果对象
-     * @return 资源数量
-     */
-    private int getCountFromResult(Result result) {
-        if (result == null || result.getData() == null) {
-            return 0;
-        }
-
-        Object data = result.getData();
-        if (data instanceof Iterable) {
-            int count = 0;
-            for (Object ignored : (Iterable<?>) data) {
-                count++;
-            }
-            return count;
-        } else if (data instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) data;
-            Object items = map.get("items");
-            if (items instanceof Iterable) {
-                int count = 0;
-                for (Object ignored : (Iterable<?>) items) {
-                    count++;
-                }
-                return count;
-            }
-        }
-
-        return 0;
     }
 }

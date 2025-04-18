@@ -10,7 +10,7 @@
         <p class="subtitle">查看和管理{{ serviceLabel || serviceName }}服务的Kubernetes资源</p>
       </div>
       <!-- 命名空间选择器 -->
-      <div class="namespace-selector" style="display: none;"><!-- 隐藏命名空间选择器 -->
+      <div class="namespace-selector">
         <a-select
           v-model="selectedNamespace"
           placeholder="请选择命名空间"
@@ -34,35 +34,35 @@
           <div class="group-title">工作负载</div>
           <div class="menu-item" :class="{ active: activeResource === 'cronjobs' }" @click="activeResource = 'cronjobs'">
             <span class="item-text">Cron Jobs</span>
-            <span class="item-count">{{ resourceCounts.cronJobs || 0 }}</span>
+            <span class="item-count">{{ cronJobs && cronJobs.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'daemonsets' }" @click="activeResource = 'daemonsets'">
             <span class="item-text">Daemon Sets</span>
-            <span class="item-count">{{ resourceCounts.daemonSets || 0 }}</span>
+            <span class="item-count">{{ daemonSets && daemonSets.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'deployments' }" @click="activeResource = 'deployments'">
             <span class="item-text">Deployments</span>
-            <span class="item-count">{{ resourceCounts.deployments || 0 }}</span>
+            <span class="item-count">{{ deployments && deployments.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'jobs' }" @click="activeResource = 'jobs'">
             <span class="item-text">Jobs</span>
-            <span class="item-count">{{ resourceCounts.jobs || 0 }}</span>
+            <span class="item-count">{{ jobs && jobs.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pods' }" @click="activeResource = 'pods'">
             <span class="item-text">Pods</span>
-            <span class="item-count">{{ resourceCounts.pods || 0 }}</span>
+            <span class="item-count">{{ pods && pods.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'replicasets' }" @click="activeResource = 'replicasets'">
             <span class="item-text">Replica Sets</span>
-            <span class="item-count">{{ resourceCounts.replicaSets || 0 }}</span>
+            <span class="item-count">{{ replicaSets && replicaSets.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'replicationcontrollers' }" @click="activeResource = 'replicationcontrollers'">
             <span class="item-text">Replication Controllers</span>
-            <span class="item-count">{{ resourceCounts.replicationControllers || 0 }}</span>
+            <span class="item-count">{{ replicationControllers && replicationControllers.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'statefulsets' }" @click="activeResource = 'statefulsets'">
             <span class="item-text">Stateful Sets</span>
-            <span class="item-count">{{ resourceCounts.statefulSets || 0 }}</span>
+            <span class="item-count">{{ statefulSets && statefulSets.length || 0 }}</span>
           </div>
         </div>
         
@@ -70,15 +70,15 @@
           <div class="group-title">服务</div>
           <div class="menu-item" :class="{ active: activeResource === 'service' }" @click="activeResource = 'service'">
             <span class="item-text">Services</span>
-            <span class="item-count">{{ resourceCounts.services || 0 }}</span>
+            <span class="item-count">{{ services && services.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'ingress' }" @click="activeResource = 'ingress'">
             <span class="item-text">Ingresses</span>
-            <span class="item-count">{{ resourceCounts.ingresses || 0 }}</span>
+            <span class="item-count">{{ ingresses && ingresses.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'ingressclass' }" @click="activeResource = 'ingressclass'">
             <span class="item-text">Ingress Classes</span>
-            <span class="item-count">{{ resourceCounts.ingressClasses || 0 }}</span>
+            <span class="item-count">{{ ingressClasses && ingressClasses.length || 0 }}</span>
           </div>
         </div>
         
@@ -86,23 +86,23 @@
           <div class="group-title">配置和存储</div>
           <div class="menu-item" :class="{ active: activeResource === 'configmap' }" @click="activeResource = 'configmap'">
             <span class="item-text">Config Maps</span>
-            <span class="item-count">{{ resourceCounts.configMaps || 0 }}</span>
+            <span class="item-count">{{ configMaps && configMaps.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'secret' }" @click="activeResource = 'secret'">
             <span class="item-text">Secrets</span>
-            <span class="item-count">{{ resourceCounts.secrets || 0 }}</span>
+            <span class="item-count">{{ secrets && secrets.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pv' }" @click="activeResource = 'pv'">
             <span class="item-text">Persistent Volumes</span>
-            <span class="item-count">{{ resourceCounts.persistentVolumes || 0 }}</span>
+            <span class="item-count">{{ persistentVolumes && persistentVolumes.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pvc' }" @click="activeResource = 'pvc'">
             <span class="item-text">Persistent Volume Claims</span>
-            <span class="item-count">{{ resourceCounts.persistentVolumeClaims || 0 }}</span>
+            <span class="item-count">{{ pvcs && pvcs.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'storageclass' }" @click="activeResource = 'storageclass'">
             <span class="item-text">Storage Classes</span>
-            <span class="item-count">{{ resourceCounts.storageClasses || 0 }}</span>
+            <span class="item-count">{{ storageClasses && storageClasses.length || 0 }}</span>
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@
             :columns="configMapColumns"
             :dataSource="configMaps"
             :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -154,7 +154,7 @@
             :columns="serviceColumns"
             :dataSource="services"
             :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -172,12 +172,6 @@
                 </div>
                 <span v-else>-</span>
             </template>
-              <!-- 添加创建时间自定义渲染函数 -->
-              <template #creationTime="{ record }">
-                <span class="format-time-cell">
-                  {{ formatTime(record.objectMeta?.creationTimestamp) }}
-                </span>
-            </template>
           </a-table>
         </a-spin>
         </div>
@@ -192,7 +186,7 @@
               :columns="ingressColumns"
               :dataSource="ingresses"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -224,7 +218,7 @@
               :columns="ingressClassColumns"
               :dataSource="ingressClasses"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -256,7 +250,7 @@
               :columns="secretColumns"
               :dataSource="secrets"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -291,7 +285,7 @@
               :columns="pvColumns"
               :dataSource="persistentVolumes"
               :pagination="false"
-              :rowKey="record => `${record.namespace || ''}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -326,7 +320,7 @@
             :columns="pvcColumns"
             :dataSource="pvcs"
             :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -361,7 +355,7 @@
               :columns="storageClassColumns"
               :dataSource="storageClasses"
               :pagination="false"
-              :rowKey="record => `${record.namespace || ''}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -392,7 +386,7 @@
               :columns="cronJobColumns"
               :dataSource="cronJobs"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -427,7 +421,7 @@
               :columns="daemonSetColumns"
               :dataSource="daemonSets"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -452,59 +446,100 @@
         <!-- Deployment列表 -->
         <div v-if="activeResource === 'deployments'" class="resource-list">
           <!-- 顶部图表区域 -->
-          <div class="k8s-dashboard-charts">
-            <!-- CPU Usage Chart -->
-            <div class="k8s-chart-card">
-              <div class="k8s-chart-header">
-                <div class="k8s-chart-title">CPU Usage</div>
-                <div class="k8s-chart-actions">
-                  <a-icon type="fullscreen" class="k8s-action-icon" />
+          <div class="charts-container">
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>CPU Usage</h3>
+                <a-icon type="fullscreen" />
               </div>
-              </div>
-              <div class="k8s-chart-content">
-                <div class="k8s-chart-y-label">CPU (cores)</div>
-                <div ref="cpuChart" class="chart"></div>
+              <div class="chart-content">
+                <div class="chart" ref="cpuChart"></div>
               </div>
             </div>
             
-            <!-- Memory Usage Chart -->
-            <div class="k8s-chart-card">
-              <div class="k8s-chart-header">
-                <div class="k8s-chart-title">Memory Usage</div>
-                <div class="k8s-chart-actions">
-                  <a-icon type="fullscreen" class="k8s-action-icon" />
+            <div class="chart-card">
+              <div class="chart-header">
+                <h3>Memory Usage</h3>
+                <a-icon type="fullscreen" />
               </div>
-              </div>
-              <div class="k8s-chart-content">
-                <div class="k8s-chart-y-label">Memory (bytes)</div>
-                <div ref="memoryChart" class="chart"></div>
+              <div class="chart-content">
+                <div class="chart" ref="memoryChart"></div>
               </div>
             </div>
           </div>
           
           <!-- Deployments列表区域 -->
-          <div class="k8s-dashboard-card k8s-resource-card">
-            <div class="k8s-card-header">
-              <span class="k8s-card-title">Deployments</span>
-              <div class="k8s-card-actions">
-                <a-icon type="bars" class="k8s-action-icon" />
-                <a class="k8s-card-collapse-icon">
-                  <a-icon type="minus" />
-                </a>
+          <div class="deployments-list-container">
+            <div class="list-header">
+              <h3>Deployments</h3>
+              <div class="header-actions">
+                <a-tooltip title="过滤">
+                  <a-icon type="filter" class="action-icon" />
+                </a-tooltip>
+                <a-tooltip title="展开/收起">
+                  <a-icon type="arrows-alt" class="action-icon" />
+                </a-tooltip>
               </div>
             </div>
-            <div class="k8s-card-content">
             <a-spin :spinning="loading">
               <a-table 
                 :columns="deploymentColumns" 
                 :dataSource="deployments" 
                 :pagination="false"
-                  :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+                :rowKey="record => record.name"
                 class="k8s-table"
               >
+                <template #statusDot="{ record }">
+                  <span class="status-dot" :class="{'status-running': record.readyReplicas === record.replicas, 'status-warning': record.readyReplicas !== record.replicas}"></span>
+                </template>
+                
+                <template #name="{ record }">
+                  <div class="name-cell">
+                    <span class="name-text">{{ record.name }}</span>
+                  </div>
+                </template>
+                
+                <template #image="{ text }">
+                  <div class="image-cell">
+                    <a-tooltip :title="text">
+                      <span class="image-text">{{ text }}</span>
+                    </a-tooltip>
+                  </div>
+                </template>
+                
+                <template #labels="{ text }">
+                  <div class="tag-list" v-if="text && Object.keys(text).length > 0">
+                    <a-tag v-for="(value, key) in text" :key="key" color="blue">
+                      {{ key }}: {{ value }}
+                    </a-tag>
+                  </div>
+                  <span v-else>-</span>
+                </template>
+                
+                <template #pods="{ record }">
+                  <span>{{ record.readyReplicas || 0 }} / {{ record.replicas || 0 }}</span>
+                </template>
+                
+                <template #creationTime="{ text }">
+                  <span>{{ formatTime(text) }}</span>
+                </template>
+                
+                <template #action="{ record }">
+                  <div class="action-buttons">
+                    <a-dropdown :trigger="['click']">
+                      <a-button type="link" size="small">
+                        操作 <a-icon type="down" />
+                      </a-button>
+                      <a-menu slot="overlay">
+                        <a-menu-item @click="handleViewDeployment(record)">查看详情</a-menu-item>
+                        <a-menu-item @click="handleEditDeployment(record)">编辑</a-menu-item>
+                        <a-menu-item @click="handleScaleDeployment(record)">伸缩</a-menu-item>
+                      </a-menu>
+                    </a-dropdown>
+                  </div>
+                </template>
               </a-table>
             </a-spin>
-            </div>
           </div>
         </div>
 
@@ -518,7 +553,7 @@
               :columns="jobColumns"
               :dataSource="jobs"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -550,7 +585,7 @@
               :columns="podColumns"
               :dataSource="pods"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -585,7 +620,7 @@
               :columns="replicaSetColumns"
               :dataSource="replicaSets"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -617,7 +652,7 @@
               :columns="replicationControllerColumns"
               :dataSource="replicationControllers"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -649,7 +684,7 @@
               :columns="statefulSetColumns"
               :dataSource="statefulSets"
               :pagination="false"
-              :rowKey="record => `${record.namespace}-${record.name}`"
+              :rowKey="record => record.name"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -686,9 +721,6 @@
 <script>
 import { defineComponent, ref, reactive } from 'vue'
 import DeploymentView from '../components/DeploymentView.vue'
-import dayjs from 'dayjs'
-// 导入API
-import API from '@/api';
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -718,7 +750,7 @@ export default defineComponent({
   data() {
     return {
       namespaces: [],
-      selectedNamespace: 'datasophon', // 固定使用datasophon命名空间
+      selectedNamespace: 'all',
       namespacesLoading: false,
       activeResource: 'configmap', // 默认显示ConfigMap
       // 工作负载
@@ -820,189 +852,50 @@ export default defineComponent({
           dataIndex: 'status',
           key: 'status',
           width: '20px',
-          customRender: (text, record) => {
-            const classNames = ['status-dot'];
-            if (record?.pods?.running > 0) classNames.push('status-running');
-            if (record?.pods?.pending > 0) classNames.push('status-warning');
-            if (record?.pods?.failed > 0) classNames.push('status-danger');
-            if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
-              classNames.push('status-unknown');
-            return <span class={classNames.join(' ')}></span>;
-          }
+          slots: { customRender: 'statusDot' }
         },
         {
           title: '名称',
-          dataIndex: 'objectMeta.name',
+          dataIndex: 'name',
           key: 'name',
           width: '20%',
-          customRender: (_, record) => {
-            return <div class="name-cell">
-              <span class="name-text">{record?.objectMeta?.name || '未知'}</span>
-            </div>
-          }
-        },
-        {
-          title: '命名空间',
-          dataIndex: 'namespace',
-          key: 'namespace',
-          width: '12%'
+          slots: { customRender: 'name' }
         },
         {
           title: '镜像',
-          dataIndex: 'containerImages',
+          dataIndex: 'image',
           key: 'image',
           width: '25%',
-          customRender: (_, record) => {
-            return <div class="image-cell">
-              <a-tooltip title={record?.containerImages ? record.containerImages.join(', ') : ''}>
-                <span class="image-text">{record?.containerImages ? record.containerImages.join(', ') : '-'}</span>
-              </a-tooltip>
-            </div>
-          }
+          slots: { customRender: 'image' }
         },
         {
           title: '标签',
+          dataIndex: 'labels',
           key: 'labels',
           width: '20%',
-          customRender: (text, record) => {
-            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
-              return '-';
-            }
-            
-            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
-            return h('div', { class: 'labels-container' }, 
-              Object.entries(record.objectMeta.labels).map(([key, value]) => {
-                return h('a-tag', { 
-                  props: { color: 'blue' },
-                  class: 'label-chip',
-                  key: key
-                }, `${key}: ${value}`);
-              })
-            );
-          }
+          slots: { customRender: 'labels' }
         },
         {
           title: 'Pods',
-          dataIndex: 'pods',
           key: 'pods',
           width: '10%',
-          customRender: (_, record) => {
-            return <div class="pods-display">
-              <span>{record?.pods && record.pods.running !== undefined ? record.pods.running : 0} / {record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0}</span>
-            </div>
-          }
-        },
-        {
-          title: '内部 Endpoints',
-          key: 'internalEndpoints',
-          width: '15%',
-          customRender: (text, record) => {
-            // 显示内部端点
-            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
-              return '-';
-            }
-            
-            const endpoints = [];
-            
-            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
-            record.internalEndpoint.ports.forEach(port => {
-              // 显示内部端口
-              endpoints.push(h('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.port} ${port.protocol}`));
-              
-              // 如果存在nodePort，则显示nodePort端口
-              if (port.nodePort) {
-                endpoints.push(h('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`));
-              }
-            });
-            
-            return h('div', {}, endpoints);
-          }
-        },
-        {
-          title: '外部 Endpoints',
-          key: 'externalEndpoints',
-          width: '15%',
-          customRender: (text, record) => {
-            // 检查externalEndpoints是否为空数组
-            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
-            
-            // 如果externalEndpoints不为空，显示外部端点
-            if (hasExternalEndpoints) {
-              const endpoints = [];
-              
-              record.externalEndpoints.forEach(endpoint => {
-                if (endpoint.ports && endpoint.ports.length > 0) {
-                  endpoint.ports.forEach(port => {
-                    if (port.port) {
-                      endpoints.push(h('div', {}, [
-                        h('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.port}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer'
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          `${endpoint.host}:${port.port}`,
-                          h('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                    
-                    if (!port.port && port.nodePort) {
-                      endpoints.push(h('div', {}, [
-                        h('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.nodePort}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer'
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          `${endpoint.host}:${port.nodePort}`,
-                          h('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                  });
-                } else {
-                  endpoints.push(h('div', {}, [
-                    h('a', { 
-                      attrs: { 
-                        href: `http://${endpoint.host}`,
-                        target: '_blank',
-                        rel: 'noopener noreferrer'
-                      },
-                      class: 'external-endpoint'
-                    }, [
-                      endpoint.host,
-                      h('i', { class: 'anticon anticon-link external-icon' })
-                    ])
-                  ]));
-                }
-              });
-              
-              return h('div', {}, endpoints);
-            }
-            
-            return '-';
-          }
+          slots: { customRender: 'pods' }
         },
         {
           title: '创建时间',
+          dataIndex: 'createTime',
           key: 'creationTime',
-          width: '10%',
-          sorter: true,
-          className: 'normal-column-header', // 添加自定义类名
-          customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
-            
-            // 格式化为 "x天前" 的形式
-            const days = this.getDaysAgo(timestamp);
-            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
+          width: '15%',
+          slots: { customRender: 'creationTime' },
+          sorter: (a, b) => {
+            return new Date(a.createTime) - new Date(b.createTime);
           }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: '10%',
+          slots: { customRender: 'action' }
         }
       ],
       jobColumns: [
@@ -1206,19 +1099,10 @@ export default defineComponent({
         },
         {
           title: '创建时间',
-          key: 'creationTime',
-          width: '10%',
-          sorter: true,
-          className: 'normal-column-header', // 添加自定义类名
-          customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
-            
-            // 格式化为 "x天前" 的形式
-            const days = this.getDaysAgo(timestamp);
-            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
-          }
+          dataIndex: 'time',
+          key: 'time',
+          width: '25%',
+          slots: { customRender: 'time' }
         },
         {
           title: '操作',
@@ -1230,205 +1114,35 @@ export default defineComponent({
       serviceColumns: [
         {
           title: '名称',
-          dataIndex: ['objectMeta', 'name'],
+          dataIndex: 'name',
           key: 'name',
-          width: '15%',
-          customRender: (text, record) => {
-            // 绿色状态点和名称一起显示
-            return h('div', { style: { display: 'flex', alignItems: 'center' } }, [
-              h('span', { 
-                class: ['status-dot'], 
-                style: { 
-                  backgroundColor: '#4caf50', 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  display: 'inline-block',
-                  marginRight: '8px'
-                } 
-              }),
-              h('span', { class: 'cell-content', title: text || '未知' }, text || '未知')
-            ]);
-          }
-        },
-        {
-          title: '命名空间',
-          dataIndex: ['objectMeta', 'namespace'],
-          key: 'namespace',
-          width: '10%',
-          customRender: (text) => {
-            return h('span', { class: 'cell-content', title: text || 'datasophon' }, text || 'datasophon');
-          }
+          width: '20%',
         },
         {
           title: '标签',
+          dataIndex: 'labels',
           key: 'labels',
-          width: '15%',
-          customRender: (text, record) => {
-            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
-              return '-';
-            }
-            
-            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
-            return h('div', { class: 'labels-container' }, 
-              Object.entries(record.objectMeta.labels).map(([key, value]) => {
-                return h('a-tag', { 
-                  props: { color: 'blue' },
-                  class: 'label-chip',
-                  key: key
-                }, `${key}: ${value}`);
-              })
-            );
-          }
+          width: '30%',
+          slots: { customRender: 'labels' }
         },
         {
           title: '类型',
           dataIndex: 'type',
           key: 'type',
-          width: '10%',
-          customRender: (text) => {
-            return h('span', { class: 'cell-content', title: text || 'NodePort' }, text || 'NodePort');
-          }
+          width: '15%',
         },
         {
-          title: '集群 IP',
+          title: 'Cluster IP',
           dataIndex: 'clusterIP',
           key: 'clusterIP',
-          width: '10%',
-          customRender: (text) => {
-            return h('span', { class: 'cell-content', title: text || '-' }, text || '-');
-          }
+          width: '20%',
         },
         {
-          title: '内部 Endpoints',
-          key: 'internalEndpoints',
+          title: '操作',
+          key: 'action',
           width: '15%',
-          customRender: (text, record) => {
-            // 显示内部端点
-            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
-              return '-';
-            }
-            
-            const endpoints = [];
-            
-            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
-            record.internalEndpoint.ports.forEach(port => {
-              // 创建内部端口文本
-              const internalPortText = `${record.internalEndpoint.host}:${port.port} ${port.protocol}`;
-              endpoints.push(h('div', { 
-                class: 'internal-endpoint',
-                title: internalPortText
-              }, internalPortText));
-              
-              // 如果存在nodePort，则显示nodePort端口
-              if (port.nodePort) {
-                const nodePortText = `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`;
-                endpoints.push(h('div', { 
-                  class: 'internal-endpoint',
-                  title: nodePortText
-                }, nodePortText));
-              }
-            });
-            
-            return h('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
-          }
+          slots: { customRender: 'action' },
         },
-        {
-          title: '外部 Endpoints',
-          key: 'externalEndpoints',
-          width: '10%',
-          customRender: (text, record) => {
-            // 检查externalEndpoints是否为空数组
-            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
-            
-            // 如果externalEndpoints不为空，显示外部端点
-            if (hasExternalEndpoints) {
-              const endpoints = [];
-              
-              record.externalEndpoints.forEach(endpoint => {
-                if (endpoint.ports && endpoint.ports.length > 0) {
-                  endpoint.ports.forEach(port => {
-                    if (port.port) {
-                      const portText = `${endpoint.host}:${port.port}`;
-                      endpoints.push(h('div', {}, [
-                        h('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.port}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer',
-                            title: portText
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          h('span', { class: 'cell-content' }, portText),
-                          h('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                    
-                    if (!port.port && port.nodePort) {
-                      const nodePortText = `${endpoint.host}:${port.nodePort}`;
-                      endpoints.push(h('div', {}, [
-                        h('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.nodePort}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer',
-                            title: nodePortText
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          h('span', { class: 'cell-content' }, nodePortText),
-                          h('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                  });
-                } else {
-                  endpoints.push(h('div', {}, [
-                    h('a', { 
-                      attrs: { 
-                        href: `http://${endpoint.host}`,
-                        target: '_blank',
-                        rel: 'noopener noreferrer',
-                        title: endpoint.host
-                      },
-                      class: 'external-endpoint'
-                    }, [
-                      h('span', { class: 'cell-content' }, endpoint.host),
-                      h('i', { class: 'anticon anticon-link external-icon' })
-                    ])
-                  ]));
-                }
-              });
-              
-              return h('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
-            }
-            
-            return '-';
-          }
-        },
-        {
-          title: '创建时间',
-          key: 'createTime',
-          dataIndex: ['objectMeta', 'creationTimestamp'],
-          width: '15%',
-          customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
-            
-            // 格式化为 "x天前" 的形式
-            const days = this.getDaysAgo(timestamp);
-            
-            // 返回包含title属性的span，鼠标悬停时显示精确日期
-            return h('span', { 
-              class: 'format-time-cell', 
-              style: 'white-space: nowrap;',
-              title: this.formatTime(timestamp)
-            }, `${days}天前`);
-          }
-        }
       ],
       ingressColumns: [
         {
@@ -1513,19 +1227,10 @@ export default defineComponent({
         },
         {
           title: '创建时间',
-          key: 'creationTime',
-          width: '10%',
-          sorter: true,
-          className: 'normal-column-header', // 添加自定义类名
-          customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
-            
-            // 格式化为 "x天前" 的形式
-            const days = this.getDaysAgo(timestamp);
-            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
-          }
+          dataIndex: 'time',
+          key: 'time',
+          width: '15%',
+          slots: { customRender: 'time' }
         },
         {
           title: '操作',
@@ -1649,48 +1354,81 @@ export default defineComponent({
       // 添加图表相关属性
       cpuChart: null,
       memoryChart: null,
-      metricsData: [], // 保存从API获取的指标数据
-      serviceLoading: false,
-      serviceErrors: [],
-      serviceTotalItems: 0,
-      resourceStats: {},
-      resourceCounts: {},
-      
-      // 不再自定义API路径，使用全局API
     };
   },
-  created() {
-    // 不再需要初始化API路径
-  },
   methods: {
-    // 移除API路径初始化方法
     async fetchK8sResources() {
-      // 获取命名空间列表
-      this.fetchNamespaces();
+      this.loading = true;
+      try {
+        // 确保所有数组已初始化
+        this.deployments = this.deployments || [];
+        this.pods = this.pods || [];
+        this.services = this.services || [];
+        this.configMaps = this.configMaps || [];
+        this.cronJobs = this.cronJobs || [];
+        this.daemonSets = this.daemonSets || [];
+        this.jobs = this.jobs || [];
+        this.replicaSets = this.replicaSets || [];
+        this.replicationControllers = this.replicationControllers || [];
+        this.statefulSets = this.statefulSets || [];
+        this.ingresses = this.ingresses || [];
+        this.ingressClasses = this.ingressClasses || [];
+        this.secrets = this.secrets || [];
+        this.persistentVolumes = this.persistentVolumes || [];
+        this.pvcs = this.pvcs || [];
+        this.storageClasses = this.storageClasses || [];
+    
+        // 先获取命名空间列表
+        if (this.namespaces.length === 0) {
+          await this.fetchNamespaces();
+        }
         
-      // 根据当前选中的资源类型加载数据
-      this.updateResourceData();
-      
+        // 根据当前显示的资源类型加载数据
+        if (this.activeResource === 'deployments') {
+          await this.fetchDeployments();
           // 初始化图表
           this.$nextTick(() => {
             this.initCharts();
           });
+        } else if (this.activeResource === 'pods') {
+          await this.fetchPods();
+        } else if (this.activeResource === 'services') {
+          await this.fetchServices();
+        } else if (this.activeResource === 'configmap') {
+          await this.fetchConfigMaps();
+        } else if (this.activeResource === 'daemonsets') {
+          await this.fetchDaemonSets();
+        } else if (this.activeResource === 'statefulsets') {
+          await this.fetchStatefulSets();
+        } else if (this.activeResource === 'replicasets') {
+          await this.fetchReplicaSets();
+        } else if (this.activeResource === 'replicationcontrollers') {
+          await this.fetchReplicationControllers();
+        } else if (this.activeResource === 'jobs') {
+          await this.fetchJobs();
+        } else if (this.activeResource === 'cronjobs') {
+          await this.fetchCronJobs();
+        }
+        
+      } catch (error) {
+        console.error('Error fetching K8s resources:', error);
+        this.$message.error(`获取Kubernetes资源失败: ${error.message || '未知错误'}`);
+      } finally {
+        this.loading = false;
+      }
     },
     // 获取命名空间
     async fetchNamespaces() {
       this.namespacesLoading = true;
       try {
-        // 使用导入的API对象
-        const res = await this.$axiosGet('/ddh' + API.getK8sNamespaces, {
+        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
           clusterId: this.clusterId,
           serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
-        
-        if (res && res.code === 200) {
-          // 确保获取命名空间列表数组
-          this.namespaces = res.data && Array.isArray(res.data) ? res.data : (res.data && res.data.namespaces ? res.data.namespaces : []);
+        if (res.code === 200) {
+          this.namespaces = res.data || [];
         } else {
-          console.error('Failed to fetch namespaces:', res ? res.msg : '无响应');
+          console.error('Failed to fetch namespaces:', res.msg);
           this.namespaces = [];
         }
       } catch (error) {
@@ -1705,11 +1443,13 @@ export default defineComponent({
       this.selectedNamespace = value;
       this.fetchK8sResources(); // 重新加载资源
     },
+    // 工作负载相关方法
     async fetchCronJobs() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sCronJobs, {
+        const res = await this.$axiosGet(global.API.getK8sCronJobs, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.cronJobs = res.data || [];
@@ -1724,9 +1464,10 @@ export default defineComponent({
     },
     async fetchDaemonSets() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sDaemonSets, {
+        const res = await this.$axiosGet(global.API.getK8sDaemonSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.daemonSets = res.data || [];
@@ -1741,55 +1482,28 @@ export default defineComponent({
     },
     async fetchDeployments() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sDeployments, {
+        const res = await this.$axiosGet(global.API.getK8sDeployments, {
           clusterId: this.clusterId,
-          serviceId: this.serviceId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
-          // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
-          let deployList = res.data && res.data.deployments ? res.data.deployments : [];
-          
-          // 处理deployments数据，确保每个项都有必要的属性
-          this.deployments = deployList.map(deploy => {
-            // 如果deploy为null或undefined，返回一个空对象
-            if (!deploy) return { objectMeta: {}, pods: {} };
-            
-            // 确保objectMeta存在
-            if (!deploy.objectMeta) deploy.objectMeta = {};
-            
-            // 确保pods存在
-            if (!deploy.pods) deploy.pods = {};
-            
-            return deploy;
-          });
-          
-          console.log("处理后的deployments数据:", this.deployments);
-          
-          // 保存获取到的指标数据
-          this.metricsData = res.data && res.data.cumulativeMetrics ? res.data.cumulativeMetrics : [];
-          console.log("获取到的指标数据:", this.metricsData);
-          
-          // 初始化图表
-          this.$nextTick(() => {
-            this.initCharts();
-          });
+          this.deployments = res.data || [];
         } else {
           console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
-          this.metricsData = [];
         }
       } catch (error) {
         console.error('Error fetching deployments:', error);
         this.deployments = [];
-        this.metricsData = [];
       }
     },
     async fetchJobs() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sJobs, {
+        const res = await this.$axiosGet(global.API.getK8sJobs, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.jobs = res.data || [];
@@ -1804,7 +1518,7 @@ export default defineComponent({
     },
     async fetchPods() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sPods, {
+        const res = await this.$axiosGet(global.API.getK8sPods, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
@@ -1821,9 +1535,10 @@ export default defineComponent({
     },
     async fetchReplicaSets() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sReplicaSets, {
+        const res = await this.$axiosGet(global.API.getK8sReplicaSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.replicaSets = res.data || [];
@@ -1838,9 +1553,10 @@ export default defineComponent({
     },
     async fetchReplicationControllers() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sReplicationControllers, {
+        const res = await this.$axiosGet(global.API.getK8sReplicationControllers, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.replicationControllers = res.data || [];
@@ -1855,9 +1571,10 @@ export default defineComponent({
     },
     async fetchStatefulSets() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sStatefulSets, {
+        const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
           this.statefulSets = res.data || [];
@@ -1888,14 +1605,9 @@ export default defineComponent({
       this.$message.info(`编辑DaemonSet ${record.name} 的功能正在开发中`);
     },
     handleViewDeployment(record) {
-      if (!record || !record.objectMeta) {
-        this.$message.warning('部署信息不完整，无法查看详情');
-        return;
-      }
-      
       this.currentDeployment = {
-        namespace: record.objectMeta.namespace || '',
-        name: record.objectMeta.name || ''
+        namespace: record.namespace,
+        name: record.name
       }
       this.deploymentViewVisible = true
     },
@@ -2032,131 +1744,33 @@ export default defineComponent({
       this.$nextTick(() => {
         const echarts = require('echarts');
         
-        // 获取CPU和内存指标数据
-        let cpuMetric = this.metricsData && this.metricsData.length > 0 
-          ? this.metricsData.find(metric => metric.metricName === 'cpu/usage_rate') 
-          : null;
-        
-        let memoryMetric = this.metricsData && this.metricsData.length > 0 
-          ? this.metricsData.find(metric => metric.metricName === 'memory/usage') 
-          : null;
-        
-        // 提取时间轴和数据点
-        let xAxisData = [];
-        let cpuData = [];
-        let memoryData = [];
-        
-        // 处理CPU指标数据
-        if (cpuMetric && cpuMetric.dataPoints && cpuMetric.dataPoints.length > 0) {
-          // 排序数据点，确保时间顺序正确
-          const sortedDataPoints = [...cpuMetric.dataPoints].sort((a, b) => a.x - b.x);
-          
-          // 提取x轴数据
-          sortedDataPoints.forEach(point => {
-            const date = new Date(point.x * 1000);
-            const timeStr = `${date.getHours()}:${date.getMinutes() < 10 ? '0' : ''}${date.getMinutes()}`;
-            xAxisData.push(timeStr);
-            cpuData.push(point.y);
-          });
-        } else {
-          // 如果没有数据，使用默认时间轴
-          xAxisData = this.generateTimeAxis();
-          cpuData = new Array(xAxisData.length).fill(0);
-        }
-        
-        // 处理内存指标数据
-        if (memoryMetric && memoryMetric.dataPoints && memoryMetric.dataPoints.length > 0) {
-          const sortedDataPoints = [...memoryMetric.dataPoints].sort((a, b) => a.x - b.x);
-          memoryData = sortedDataPoints.map(point => point.y);
-        } else {
-          memoryData = new Array(xAxisData.length).fill(0);
-        }
-        
         // 初始化CPU使用率图表
         if (this.$refs.cpuChart) {
-          this.cpuChart = echarts.init(this.$refs.cpuChart, null, {
-            renderer: 'canvas',
-            useDirtyRect: true,
-            devicePixelRatio: window.devicePixelRatio
-          });
+          this.cpuChart = echarts.init(this.$refs.cpuChart);
           const cpuOption = {
-            title: {
-              show: false
-            },
             grid: {
-              left: '8%',
-              right: '2%',
-              bottom: '10%',
-              top: '5%',
-              containLabel: false
-            },
-            tooltip: {
-              trigger: 'axis',
-              formatter: '{b}<br/>{a}: {c} cores'
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              top: '3%',
+              containLabel: true
             },
             xAxis: {
               type: 'category',
-              data: xAxisData,
-              axisLine: {
-                lineStyle: {
-                  color: '#E0E0E0'
-                }
-              },
+              data: this.generateTimeAxis(),
               axisTick: {
-                alignWithLabel: true,
-                lineStyle: {
-                  color: '#E0E0E0'
-                }
-              },
-              axisLabel: {
-                color: '#666',
-                fontSize: 10
-              },
-              splitLine: {
-                show: true,
-                lineStyle: {
-                  color: ['#f0f0f0'],
-                  type: 'dashed'
-                }
+                alignWithLabel: true
               }
             },
             yAxis: {
               type: 'value',
-              name: '',
-              nameLocation: 'end',
-              nameGap: 15,
-              nameTextStyle: {
-                color: '#666',
-                fontSize: 10,
-                padding: [0, 0, 0, 10]
-              },
-              min: 0,
-              max: 0.01, // 与官方一致，Y轴最大值固定为0.01
-              axisLine: {
-                show: false
-              },
-              axisTick: {
-                show: false
-              },
-              axisLabel: {
-                color: '#666',
-                fontSize: 10,
-                formatter: '{value}'
-              },
-              splitLine: {
-                show: true,
-                lineStyle: {
-                  color: ['#f0f0f0'],
-                  type: 'dashed'
-                }
-              }
+              name: 'CPU (cores)',
+              min: 0
             },
             series: [{
-              name: 'CPU Usage',
-              data: cpuData,
+              data: this.generateRandomData(0, 0.01),
               type: 'line',
               smooth: true,
-              symbol: 'none',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -2165,18 +1779,18 @@ export default defineComponent({
                   x2: 0,
                   y2: 1,
                   colorStops: [{
-                    offset: 0, color: 'rgba(83, 231, 139, 0.8)' // 更接近官方的绿色
+                    offset: 0, color: 'rgba(128, 255, 165, 0.8)'
                   }, {
-                    offset: 1, color: 'rgba(83, 231, 139, 0.1)'
+                    offset: 1, color: 'rgba(128, 255, 165, 0.1)'
                   }]
                 }
               },
               itemStyle: {
-                color: '#53e78b' // 更接近官方的绿色
+                color: '#10b981'
               },
               lineStyle: {
                 width: 2,
-                color: '#53e78b' // 更接近官方的绿色
+                color: '#10b981'
               }
             }]
           };
@@ -2185,98 +1799,35 @@ export default defineComponent({
         
         // 初始化内存使用率图表
         if (this.$refs.memoryChart) {
-          this.memoryChart = echarts.init(this.$refs.memoryChart, null, {
-            renderer: 'canvas',
-            useDirtyRect: true,
-            devicePixelRatio: window.devicePixelRatio
-          });
-          
-          // 计算内存单位和转换
-          const maxMemory = Math.max(...memoryData);
-          const memoryInMi = maxMemory / (1024 * 1024);
-          const yAxisMax = 20; // 固定为20 Mi，与官方一致
-          
+          this.memoryChart = echarts.init(this.$refs.memoryChart);
           const memoryOption = {
-            title: {
-              show: false
-            },
             grid: {
-              left: '8%',
-              right: '2%',
-              bottom: '10%',
-              top: '5%',
-              containLabel: false
-            },
-            tooltip: {
-              trigger: 'axis',
-              formatter: function(params) {
-                const value = params[0].value / (1024 * 1024); // 转换为Mi
-                return params[0].axisValue + '<br/>' + params[0].seriesName + ': ' + value.toFixed(2) + ' Mi';
-              }
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              top: '3%',
+              containLabel: true
             },
             xAxis: {
               type: 'category',
-              data: xAxisData,
-              axisLine: {
-                lineStyle: {
-                  color: '#E0E0E0'
-                }
-              },
+              data: this.generateTimeAxis(),
               axisTick: {
-                alignWithLabel: true,
-                lineStyle: {
-                  color: '#E0E0E0'
-                }
-              },
-              axisLabel: {
-                color: '#666',
-                fontSize: 10
-              },
-              splitLine: {
-                show: true,
-                lineStyle: {
-                  color: ['#f0f0f0'],
-                  type: 'dashed'
-                }
+                alignWithLabel: true
               }
             },
             yAxis: {
               type: 'value',
-              name: '',
-              nameLocation: 'end',
-              nameGap: 15,
-              nameTextStyle: {
-                color: '#666',
-                fontSize: 10,
-                padding: [0, 0, 0, 10]
-              },
+              name: 'Memory (bytes)',
               min: 0,
-              max: yAxisMax,
-              axisLine: {
-                show: false
-              },
-              axisTick: {
-                show: false
-              },
+              max: 200,
               axisLabel: {
-                color: '#666',
-                fontSize: 10,
                 formatter: '{value} Mi'
-              },
-              splitLine: {
-                show: true,
-                lineStyle: {
-                  color: ['#f0f0f0'],
-                  type: 'dashed'
-                }
               }
             },
             series: [{
-              name: 'Memory Usage',
-              data: memoryData.map(value => value), // 原始字节值
+              data: this.generateRandomData(50, 100),
               type: 'line',
               smooth: true,
-              symbol: 'none',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -2285,18 +1836,18 @@ export default defineComponent({
                   x2: 0,
                   y2: 1,
                   colorStops: [{
-                    offset: 0, color: 'rgba(66, 133, 244, 0.9)' // 使用更亮的蓝色，增加不透明度
+                    offset: 0, color: 'rgba(100, 149, 237, 0.8)'
                   }, {
-                    offset: 1, color: 'rgba(66, 133, 244, 0.2)'
+                    offset: 1, color: 'rgba(100, 149, 237, 0.1)'
                   }]
                 }
               },
               itemStyle: {
-                color: '#4285f4' // Google蓝
+                color: '#3b82f6'
               },
               lineStyle: {
                 width: 2,
-                color: '#4285f4' // Google蓝
+                color: '#3b82f6'
               }
             }]
           };
@@ -2304,7 +1855,7 @@ export default defineComponent({
         }
         
         // 添加窗口大小变化监听，调整图表大小
-        window.addEventListener('resize', this.resizeCharts, { passive: true });
+        window.addEventListener('resize', this.resizeCharts);
       });
     },
     
@@ -2319,20 +1870,41 @@ export default defineComponent({
       return times;
     },
     
+    // 生成随机数据用于图表展示
+    generateRandomData(min, max) {
+      const data = [];
+      for (let i = 0; i < 13; i++) {
+        data.push((Math.random() * (max - min) + min).toFixed(4));
+      }
+      return data;
+    },
+    
     // 更新图表
     updateCharts() {
-      // 如果没有图表数据，重新获取部署数据
-      if (!this.metricsData || this.metricsData.length === 0) {
-        this.fetchDeployments();
-        return;
-      }
-      
       // 确保图表实例存在且未被销毁
       if (this.cpuChart && !this.cpuChart.isDisposed() && 
           this.memoryChart && !this.memoryChart.isDisposed()) {
-            
-        // 重新获取部署数据和指标数据
-        this.fetchDeployments();
+        const times = this.generateTimeAxis();
+        const cpuData = this.generateRandomData(0, 0.01);
+        const memoryData = this.generateRandomData(50, 100);
+        
+        this.cpuChart.setOption({
+          xAxis: {
+            data: times
+          },
+          series: [{
+            data: cpuData
+          }]
+        });
+        
+        this.memoryChart.setOption({
+          xAxis: {
+            data: times
+          },
+          series: [{
+            data: memoryData
+          }]
+        });
       } else if (this.activeResource === 'deployments') {
         // 如果当前页面是deployments但图表已销毁，尝试重新初始化
         clearInterval(this.chartsInterval);
@@ -2363,264 +1935,43 @@ export default defineComponent({
     
     async fetchServices() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sServices, {
+        const res = await this.$axiosGet(global.API.getK8sServices, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
-        
-        if (res.code === 200 && res.data) {
-          // 添加调试日志
-          console.log('服务数据结构:', JSON.stringify(res.data.services[0]));
-          console.log('创建时间字段:', res.data.services[0].objectMeta?.creationTimestamp);
-          
-          // 处理服务数据
-          this.services = res.data.services || [];
-          this.serviceTotalItems = res.data.listMeta?.totalItems || 0;
-          
-          // 返回的数据不需要特殊处理，直接使用
-          // 如果有必要，可以在这里添加额外的数据处理逻辑
+        if (res.code === 200) {
+          this.services = res.data || [];
         } else {
+          console.error('Failed to fetch services:', res.msg);
           this.services = [];
-          this.serviceTotalItems = 0;
-          console.error('获取服务列表失败:', res.msg);
         }
       } catch (error) {
-        console.error('获取服务列表失败:', error);
-        this.$message.error('获取服务列表失败');
+        console.error('Error fetching services:', error);
         this.services = [];
-        this.serviceTotalItems = 0;
       }
     },
     
     async fetchConfigMaps() {
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sConfigMaps, {
+        const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          serviceName: this.serviceName // 添加serviceName参数
         });
-        if (res.code === 200 && res.data) {
-          // 确保获取configmaps列表，并设置表格数据
-          this.configMaps = res.data.configMaps || [];
-          this.configMapsTotalItems = res.data.listMeta ? res.data.listMeta.totalItems : 0;
+        if (res.code === 200) {
+          this.configMaps = res.data || [];
         } else {
-          console.error('获取配置映射列表失败:', res ? res.msg : '未知错误');
+          console.error('Failed to fetch config maps:', res.msg);
           this.configMaps = [];
-          this.configMapsTotalItems = 0;
         }
       } catch (error) {
-        console.error('获取配置映射列表异常:', error);
-        this.$message.error('获取配置映射列表失败');
+        console.error('Error fetching config maps:', error);
         this.configMaps = [];
-        this.configMapsTotalItems = 0;
       }
-    },
-    
-    // 添加formatTime方法
-    formatTime(time) {
-      if (!time) return '-';
-      return new Date(time).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-    },
-    
-    // 添加相对时间格式化方法
-    formatRelativeTime(time) {
-      if (!time) return '-';
-      
-      const now = new Date();
-      const date = new Date(time);
-      const diff = Math.floor((now - date) / 1000); // 转换为秒
-      
-      if (diff < 60) {
-        return '刚刚';
-      } else if (diff < 3600) {
-        return Math.floor(diff / 60) + '分钟前';
-      } else if (diff < 86400) {
-        return Math.floor(diff / 3600) + '小时前';
-      } else if (diff < 2592000) {
-        return Math.floor(diff / 86400) + '天前';
-      } else if (diff < 31536000) {
-        return Math.floor(diff / 2592000) + '个月前';
-      } else {
-        return Math.floor(diff / 31536000) + '年前';
-      }
-    },
-    updateResourceData() {
-      // 清除之前的数据
-      this.loading = true;
-      
-      // 根据当前选中的资源类型加载数据
-      switch (this.activeResource) {
-        case 'deployment':
-          this.fetchDeployments();
-          break;
-        case 'pod':
-          this.fetchPods();
-          break;
-        case 'replicaset':
-          this.fetchReplicaSets();
-          break;
-        case 'replicationcontroller':
-          this.fetchReplicationControllers();
-          break;
-        case 'statefulset':
-          this.fetchStatefulSets();
-          break;
-        case 'daemonset':
-          this.fetchDaemonSets();
-          break;
-        case 'job':
-          this.fetchJobs();
-          break;
-        case 'cronjob':
-          this.fetchCronJobs();
-          break;
-        case 'service':
-          this.fetchServices();
-          break;
-        case 'ingress':
-          this.fetchIngresses();
-          break;
-        case 'configmap':
-          this.fetchConfigMaps();
-          break;
-        case 'secret':
-          this.fetchSecrets();
-          break;
-        case 'pv':
-          this.fetchPersistentVolumes();
-          break;
-        case 'pvc':
-          this.fetchPVCs();
-          break;
-        case 'storageclass':
-          this.fetchStorageClasses();
-          break;
-        default:
-          // 默认加载Deployments
-          this.fetchDeployments();
-      }
-      
-      this.loading = false;
-    },
-    getDaysAgo(timestamp) {
-      if (!timestamp) return '-';
-      
-      const date = new Date(timestamp);
-      const now = new Date();
-      
-      // 计算时间差（毫秒）
-      const timeDiff = Math.abs(now - date);
-      
-      // 转换为天数
-      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-      
-      return days;
-    },
-    // 获取所有资源统计数据
-    async fetchResourceStats() {
-      try {
-        // 显示加载状态
-        this.loading = true;
-        
-        // 确保clusterId存在
-        if (!this.clusterId) {
-          console.error('clusterId不能为空，当前值:', this.clusterId);
-          // 尝试从localStorage获取
-          this.clusterId = window.localStorage.getItem('clusterId');
-          console.log('从localStorage获取的clusterId:', this.clusterId);
-        }
-        
-        // 构建请求参数
-        const params = {
-          clusterId: this.clusterId,
-          serviceId: this.serviceId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        };
-        
-        // 使用导入的API对象
-        const apiUrl = '/ddh' + API.getK8sResourceStats;
-        
-        console.log('调用resource-stats接口，参数:', params);
-        console.log('请求URL:', apiUrl);
-        
-        // 调用后端统计接口
-        const res = await this.$axiosGet(apiUrl, params);
-        
-        console.log('resource-stats接口返回结果:', res);
-        
-        if (res && res.code === 200 && res.data) {
-          // 更新资源数量统计数据（现在后端只返回数量而不是资源列表）
-          this.resourceStats = res.data;
-          
-          // 更新资源计数显示
-          this.resourceCounts = {
-            deployments: res.data.deployments || 0,
-            pods: res.data.pods || 0,
-            services: res.data.services || 0,
-            configMaps: res.data.configMaps || 0,
-            ingresses: res.data.ingresses || 0,
-            ingressClasses: res.data.ingressClasses || 0,
-            secrets: res.data.secrets || 0,
-            persistentVolumes: res.data.persistentVolumes || 0,
-            persistentVolumeClaims: res.data.persistentVolumeClaims || 0,
-            storageClasses: res.data.storageClasses || 0,
-            cronJobs: res.data.cronJobs || 0,
-            daemonSets: res.data.daemonSets || 0,
-            jobs: res.data.jobs || 0,
-            replicaSets: res.data.replicaSets || 0,
-            replicationControllers: res.data.replicationControllers || 0,
-            statefulSets: res.data.statefulSets || 0
-          };
-          
-          console.log('资源统计数据加载成功:', res.data);
-        } else {
-          console.error('获取资源统计数据失败:', res ? res.msg : '返回结果为空');
-          // 初始化空数据
-          this.initEmptyResourceCounts();
-        }
-      } catch (error) {
-        console.error('获取资源统计数据异常:', error);
-        // 初始化空数据
-        this.initEmptyResourceCounts();
-      } finally {
-        this.loading = false;
-      }
-    },
-    
-    // 初始化空的资源计数
-    initEmptyResourceCounts() {
-      this.resourceCounts = {
-        deployments: 0,
-        pods: 0,
-        services: 0,
-        configMaps: 0,
-        ingresses: 0,
-        ingressClasses: 0,
-        secrets: 0,
-        persistentVolumes: 0,
-        persistentVolumeClaims: 0,
-        storageClasses: 0,
-        cronJobs: 0,
-        daemonSets: 0,
-        jobs: 0,
-        replicaSets: 0,
-        replicationControllers: 0,
-        statefulSets: 0
-      };
     },
   },
   mounted() {
     if (this.serviceId) {
-      // 首先获取所有资源统计数据
-      this.fetchResourceStats();
-      // 然后获取详细资源数据
       this.fetchK8sResources();
     } else {
       console.error('serviceId is required to fetch K8s resources');
@@ -2654,688 +2005,356 @@ export default defineComponent({
     },
     activeResource(newVal, oldVal) {
       if (newVal !== oldVal) {
-        this.updateResourceData();
+        this.fetchK8sResources();
+        
+        if (newVal === 'deployments') {
+          // 当切换到deployments时初始化图表
+          this.$nextTick(() => {
+            // 设置定时刷新
+            if (this.chartsInterval) {
+              clearInterval(this.chartsInterval);
+            }
+            this.chartsInterval = setInterval(() => {
+              this.updateCharts();
+            }, 30000); // 每30秒更新一次
+          });
+        } else {
+          // 切换到其他资源时清理定时器
+          if (this.chartsInterval) {
+            clearInterval(this.chartsInterval);
+            this.chartsInterval = null;
+          }
+        }
       }
     },
     selectedNamespace(newVal, oldVal) {
       if (newVal !== oldVal) {
-        this.updateResourceData();
+        this.fetchK8sResources();
       }
     }
   }
 });
 </script>
 
-<style lang="less" scoped>
+<style scoped>
 .k8s-config-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: #f5f7fa;
-  
-  // 页面头部样式
+  padding: 24px;
+  background-color: #f9fafc;
+  min-height: calc(100vh - 120px);
+}
+
 .page-header {
   display: flex;
   align-items: center;
-    padding: 16px 24px;
-    background-color: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    margin-bottom: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+  background-color: transparent;
+}
 
 .header-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-right: 16px;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
 
 .kubernetes-logo {
-        width: 40px;
-        height: 40px;
-        background-image: url('~@/assets/images/kubernetes-logo.svg');
+  width: 42px;
+  height: 42px;
+  background-image: url("../../../../../assets/images/kubernetes-logo.svg");
   background-size: contain;
   background-repeat: no-repeat;
-      }
+  background-position: center;
 }
 
 .header-content {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+}
 
 .title {
-        margin: 0;
-        padding: 0;
-        font-size: 18px;
+  font-size: 22px;
+  margin-bottom: 4px;
+  color: #333333;
   font-weight: 500;
-        color: #333;
-        line-height: 1.4;
+  letter-spacing: -0.3px;
 }
 
 .subtitle {
-        margin: 4px 0 0;
-        padding: 0;
-        font-size: 13px;
-        color: #666;
-        line-height: 1.4;
-      }
+  font-size: 14px;
+  color: #666666;
+  font-weight: 400;
 }
 
 .namespace-selector {
-      margin-left: 16px;
-    }
-  }
-  
-  // 整体仪表盘布局
+  display: flex;
+  align-items: center;
+}
+
+.namespace-selector :deep(.ant-select-selection) {
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.namespace-selector :deep(.ant-select-selection:hover) {
+  border-color: #4f7ff3;
+}
+
+.namespace-selector :deep(.ant-select-selection:focus) {
+  border-color: #326CE5;
+  box-shadow: 0 0 0 2px rgba(50, 108, 229, 0.2);
+}
+
+/* 新增的Dashboard布局样式 */
 .k8s-dashboard-layout {
   display: flex;
-    flex: 1;
-    min-height: calc(100vh - 185px);
-    padding: 0 24px 16px;
-    
-    // 左侧导航样式
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid #eaeaea;
+}
+
+/* 左侧导航菜单 */
 .sidebar-menu {
-      width: 280px;
-      min-width: 280px;
-      margin-right: 16px;
-      background-color: #fff;
-      border-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  width: 250px;
+  background-color: #f8f9fa;
+  border-right: 1px solid #e9ecef;
+  padding: 16px 0;
+}
 
 .menu-group {
-        padding: 12px 0;
-        border-bottom: 1px solid #f0f0f0;
-        
-        &:last-child {
-          border-bottom: none;
+  margin-bottom: 16px;
 }
 
 .group-title {
   padding: 8px 16px;
-          color: #999;
-          font-size: 12px;
-          font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  color: #586069;
   text-transform: uppercase;
-          letter-spacing: 0.5px;
 }
 
 .menu-item {
   display: flex;
-          justify-content: space-between;
   align-items: center;
-          padding: 10px 16px;
-          color: #333;
+  padding: 8px 16px;
   font-size: 14px;
   cursor: pointer;
-          transition: all 0.2s;
-          
-          &:hover {
-            background-color: #f5f7fa;
+  transition: background-color 0.3s;
 }
 
-          &.active {
-            background-color: #e6f7ff;
-            color: #1890ff;
-            border-right: 3px solid #1890ff;
-            
-            .item-count {
-              background-color: #1890ff;
-              color: #fff;
-            }
+.menu-item:hover {
+  background-color: #f1f3f5;
+}
+
+.menu-item.active {
+  background-color: #e9ecef;
+  color: #326CE5;
+  font-weight: 500;
+  border-left: 3px solid #326CE5;
 }
 
 .item-text {
   flex: 1;
+  color: #24292e;
 }
 
 .item-count {
-            display: inline-block;
-            min-width: 24px;
-            height: 24px;
-            line-height: 24px;
-            text-align: center;
-            padding: 0 6px;
-            border-radius: 12px;
-            background-color: #f0f0f0;
-            color: #666;
   font-size: 12px;
-          }
-        }
-      }
+  padding: 2px 6px;
+  background-color: #f1f3f5;
+  border-radius: 10px;
+  color: #586069;
 }
 
-    // 右侧内容区域样式
+/* 右侧内容区域 */
 .content-area {
   flex: 1;
-      
-      .resource-list {
-        height: 100%;
+  padding: 20px;
+  overflow: auto;
+}
 
 .resource-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px 0;
   margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
 
-          h3 {
+.resource-header h3 {
+  font-size: 18px;
+  color: #24292e;
   margin: 0;
-            font-size: 18px;
-            font-weight: 500;
-            color: #333;
 }
-        }
-      }
-    }
-  }
-  
-  // 仪表板卡片样式
-  .k8s-dashboard-card {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    margin-bottom: 16px;
-    overflow: hidden;
-    
-    &.k8s-resource-card {
-      .k8s-card-header {
+
+/* 表格样式 */
+.k8s-table {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.k8s-table :deep(.ant-table-thead > tr > th) {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #586069;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.k8s-table :deep(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.k8s-table :deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #f8f9fa;
+}
+
+.action-buttons {
   display: flex;
-        justify-content: space-between;
   align-items: center;
-        height: 48px;
-        padding: 0 16px;
-        background-color: #f7f7f7;
-        border-bottom: 1px solid #eee;
-        
-        .k8s-card-title {
-          font-size: 16px;
-          font-weight: 500;
-          color: #333;
 }
 
-        .k8s-card-actions {
-  display: flex;
-          gap: 12px;
-          
-          .k8s-action-icon {
-            font-size: 16px;
-            color: #999;
-            cursor: pointer;
-            
-            &:hover {
-              color: #1890ff;
-            }
-          }
-        }
-      }
-      
-      .k8s-card-content {
-        padding: 0;
-      }
-    }
-  }
+.action-buttons a {
+  color: #326CE5;
 }
 
-// 图表相关样式
-.k8s-dashboard-charts {
+.action-buttons a:hover {
+  color: #4f7ff3;
+}
+
+.tag-list {
   display: flex;
   flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* 图表区域样式 */
+.charts-container {
+  display: flex;
+  width: 100%;
+  margin-bottom: 24px;
   gap: 16px;
-  margin-bottom: 16px;
+}
 
-  .k8s-chart-card {
+.chart-card {
   flex: 1;
-    min-width: 400px;
-    height: 250px;
+  background-color: #ffffff;
   border-radius: 4px;
-    background-color: #fff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   overflow: hidden;
-    position: relative;
+  border: 1px solid #eaeaea;
+}
 
-    .k8s-chart-header {
+.chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-      height: 48px;
-      padding: 0 16px;
-      background-color: #f7f7f7;
-      border-bottom: 1px solid #e8e8e8;
-      
-      .k8s-chart-title {
-  font-size: 14px;
-  font-weight: 500;
-        color: #333;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-      .k8s-chart-actions {
-        .k8s-action-icon {
-          cursor: pointer;
-          color: #999;
-          transition: color 0.3s;
-          
-          &:hover {
-            color: #1890ff;
-          }
-        }
-      }
-    }
-    
-    .k8s-chart-content {
-      position: relative;
-      height: calc(100% - 48px);
-      padding: 10px 5px 10px 15px;
-      
-      .k8s-chart-y-label {
-        position: absolute;
-        left: -25px;
-        top: 50%;
-        transform: rotate(-90deg);
-        transform-origin: center;
-        font-size: 12px;
-        color: #666;
-        white-space: nowrap;
-        z-index: 2;
-        width: 80px;
-        text-align: center;
+.chart-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chart-content {
+  padding: 16px;
+  height: 200px;
 }
 
 .chart {
   width: 100%;
   height: 100%;
 }
-    }
-  }
-}
 
-/* 响应式布局 */
-@media screen and (max-width: 1200px) {
-  .k8s-dashboard-container {
-    .k8s-dashboard-charts {
-      .k8s-chart-card {
-        min-width: 300px;
-      }
-    }
-  }
-}
-
-@media screen and (max-width: 768px) {
-  .k8s-dashboard-container {
-    .k8s-dashboard-charts {
-      flex-direction: column;
-      
-      .k8s-chart-card {
-        width: 100%;
-      }
-    }
-  }
-}
-
-/* 表格通用样式 */
-.k8s-table {
-  .status-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-    
-    &.status-running {
-      background-color: #52c41a;
-    }
-    
-    &.status-warning {
-      background-color: #faad14;
-    }
-    
-    &.status-danger {
-      background-color: #f5222d;
-    }
-    
-    &.status-unknown {
-      background-color: #d9d9d9;
-    }
-  }
-  
-  .name-cell, .image-cell, .pods-display {
-    white-space: nowrap;
+/* Deployments列表容器样式 */
+.deployments-list-container {
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   overflow: hidden;
-    text-overflow: ellipsis;
+  border: 1px solid #eaeaea;
 }
 
-  .tag-list {
+.list-header {
   display: flex;
-    flex-wrap: wrap;
-    
-    .label-tag {
-      margin: 2px;
-    }
-  }
-  
-  .action-buttons {
-    white-space: nowrap;
-    
-    a {
-      color: #1890ff;
-      
-      &:hover {
-        color: #40a9ff;
-      }
-    }
-  }
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-// 额外的表格样式修复
-:deep(.ant-table-thead > tr > th) {
-  background-color: #fafafa;
+.list-header h3 {
+  margin: 0;
+  font-size: 14px;
   font-weight: 500;
-  color: #333;
 }
 
-:deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #e6f7ff;
+.header-actions {
+  display: flex;
+  gap: 8px;
 }
 
-:deep(.ant-tag) {
-  margin-right: 4px;
-  margin-bottom: 4px;
-  border-radius: 2px;
+.action-icon {
+  cursor: pointer;
+  padding: 6px;
+  color: #666;
 }
 
-:deep(.ant-spin-container) {
-  height: 100%;
+.action-icon:hover {
+  color: #1890ff;
 }
 
-:deep(.ant-empty-image) {
-  margin-top: 32px;
-}
-
-:deep(.ant-table-placeholder) {
-  height: 100%;
-}
-
-.k8s-dashboard {
-  &-container {
-    min-height: 600px;
-    background-color: #fff;
-    border-radius: 4px;
-    padding: 16px;
-
-    .tabs-container {
-      margin-top: 16px;
-}
-
-    .service-table {
-      margin-top: 16px;
-      
-      // 状态点样式
+/* 状态点样式 */
 .status-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-        margin-right: 8px;
+  background-color: #d9d9d9;
+}
 
-        &.status-running {
+.status-running {
   background-color: #52c41a;
 }
 
-        &.status-warning {
+.status-warning {
   background-color: #faad14;
 }
 
-        &.status-unknown {
-          background-color: #d9d9d9;
-        }
-      }
-      
-      // 标签样式
-      .labels-container {
+/* 名称单元格样式 */
+.name-cell {
   display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        
-        .label-chip {
-          margin-right: 4px;
-          margin-bottom: 4px;
-          max-width: 100%;
-          height: auto;
-          line-height: 1.5;
-          white-space: normal;
-          word-break: break-word;
+  align-items: center;
 }
-      }
-      
-      // 表格头部样式
-      .ant-table-thead > tr > th {
-        background-color: #f5f7fa;
+
+.name-text {
   font-weight: 500;
-        color: #262626;
+  color: #1890ff;
+  cursor: pointer;
 }
 
-      // 表格单元格样式
-      .ant-table-tbody > tr > td {
-        padding: 10px 16px;
-        word-break: break-word;
-      }
-      
-      // 创建时间列样式
-      .ant-table-row td:last-child {
-  white-space: nowrap;
-      }
-    }
-  }
+.name-text:hover {
+  text-decoration: underline;
 }
 
-.service-detail-dialog {
-  width: 80%;
-  max-width: 900px;
-}
-
-// 端点样式
-.internal-endpoint, .external-endpoint {
-  padding: 2px 0;
-  word-break: break-all;
-}
-
-.external-endpoint {
-  display: flex;
-  align-items: center;
-  
-  .external-icon {
-    margin-left: 4px;
-    font-size: 12px;
-  }
-}
-
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-
-// 表格样式优化
-.ant-table {
-  table-layout: fixed;
-  
-  .ant-table-tbody > tr > td {
-    white-space: nowrap;
+/* 镜像单元格样式 */
+.image-cell {
+  max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
-    word-break: keep-all;
-  }
-  
-  // 确保创建时间列正确显示
-  .ant-table-row td:last-child {
   white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-// 为单元格内容添加工具提示
-.cell-content {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  max-width: 100%;
-}
-
-// 修复表格在Safari和Firefox中的显示问题
-.k8s-config-container {
-  .ant-table-wrapper {
-    overflow-x: auto;
-    
-    .ant-table {
-      min-width: 1000px; // 确保表格内容有足够的显示空间
-      
-      // 修复表头标题竖向显示问题
-      .ant-table-thead > tr > th {
-        white-space: nowrap !important;
-        text-align: left !important;
-        min-width: 100px; // 确保每列有足够宽度显示标题
-      }
-      
-      // 特别处理创建时间列的表头
-      .ant-table-thead > tr > th:last-child {
-        min-width: 100px;
-        white-space: nowrap !important;
-        text-align: left !important;
-        writing-mode: horizontal-tb !important; // 强制水平文本
-        transform: none !important; // 防止任何旋转
-      }
-    }
-    
-    .ant-table-thead > tr > th,
-    .ant-table-tbody > tr > td {
-      padding: 10px 8px;
-      vertical-align: middle;
-    }
-    
-    .ant-table-column-title {
-      word-break: keep-all;
-      white-space: nowrap;
-      text-align: left !important;
-      writing-mode: horizontal-tb !important; // 强制水平文本
-      transform: none !important; // 防止任何旋转
-      display: inline-block !important; // 确保标题按照预期显示
-    }
-  }
-}
-
-// 内部端点样式
-.internal-endpoint {
-  padding: 2px 0;
-  word-break: keep-all;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-// 外部端点样式
-.external-endpoint {
-  display: flex;
-  align-items: center;
-  padding: 2px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  
-  .external-icon {
-    margin-left: 4px;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-}
-
-.normal-column-header {
-  .ant-table-column-title {
-    writing-mode: horizontal-tb !important;
-    transform: none !important;
-    white-space: nowrap !important;
-    min-width: 90px !important;
-    display: inline-block !important;
-  }
-}
-
-// 修改全局表头样式
-.k8s-config-container {
-  .ant-table-column-has-sorters {
-    .ant-table-column-title {
-      writing-mode: horizontal-tb !important;
-      transform: none !important;
-      white-space: nowrap !important;
-    }
-  }
-}
-
-/* 确保所有表头正常水平显示，不会竖直旋转 */
-:deep(.normal-column-header) {
-  .ant-table-column-title {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    writing-mode: horizontal-tb !important;
-    min-width: 90px !important;
-    transform: none !important;
-  }
-}
-
-/* 修复表格内容样式 */
-:deep(.ant-table-tbody) {
-  td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-/* 全局修复表头标题垂直显示问题 */
-:deep(.ant-table-thead > tr > th) {
-  white-space: nowrap !important;
-  text-align: left !important;
-  
-  .ant-table-column-title {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    writing-mode: horizontal-tb !important;
-    transform: none !important;
-    word-break: keep-all !important;
-    min-width: auto !important;
-    width: auto !important;
-    max-width: 100% !important;
-  }
-}
-
-:deep(.ant-table-column-has-sorters) {
-  .ant-table-column-sorter {
-    display: inline-flex !important;
-    align-items: center !important;
-    vertical-align: middle !important;
-    margin-left: 4px !important;
-  }
-}
-
-/* 特别针对"创建时间"列的表头 */
-:deep(.ant-table-thead > tr > th.normal-column-header) {
-  .ant-table-column-title {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    writing-mode: horizontal-tb !important;
-    transform: none !important;
-    word-break: keep-all !important;
-  }
-}
-
-/* 修复表格内容溢出问题 */
-:deep(.ant-table-body) {
-  overflow-x: auto !important;
-}
-
-:deep(.ant-table-tbody > tr > td) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: keep-all;
 }
 </style>

@@ -10,7 +10,7 @@
       class="deployment-detail-modal"
     >
       <a-spin :spinning="loading">
-        <a-tabs v-model="activeTab">
+        <a-tabs v-model:activeKey="activeTab">
           <a-tab-pane key="overview" tab="概览">
             <div class="detail-section">
               <div class="section-title">基本信息</div>
@@ -83,7 +83,7 @@
                 </a-button>
               </div>
               <a-textarea
-                v-model="yamlContent"
+                v-model:value="yamlContent"
                 :auto-size="{ minRows: 20, maxRows: 30 }"
                 readonly
                 class="yaml-editor"
