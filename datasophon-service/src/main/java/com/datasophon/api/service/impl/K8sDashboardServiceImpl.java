@@ -36,6 +36,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -90,71 +91,393 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
 
             // 获取Deployments
             DeploymentList deploymentList;
+            namespace = "datasophon";
             if (namespace != null && !namespace.isEmpty()) {
                 deploymentList = client.apps().deployments().inNamespace(namespace).list();
             } else {
                 deploymentList = client.apps().deployments().inAnyNamespace().list();
             }
 
-            // 转换为前端需要的数据结构
-            List<DeploymentInfo> deployments = deploymentList.getItems().stream()
+            // 转换为与原生Kubernetes Dashboard兼容的数据结构
+            List<Map<String, Object>> deployments = deploymentList.getItems().stream()
                     .map(deployment -> {
-                        DeploymentInfo info = new DeploymentInfo();
-                        info.setName(deployment.getMetadata().getName());
-                        info.setNamespace(deployment.getMetadata().getNamespace());
-                        info.setLabels(deployment.getMetadata().getLabels());
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> pods = new HashMap<>();
 
-                        if (deployment.getSpec() != null) {
-                            info.setReplicas(
-                                    deployment.getSpec().getReplicas() != null ? deployment.getSpec().getReplicas()
-                                            : 0);
-
-                            if (deployment.getSpec().getSelector() != null) {
-                                info.setSelector(deployment.getSpec().getSelector().getMatchLabels());
-                            }
-
-                            // 获取第一个容器的镜像
-                            if (deployment.getSpec().getTemplate() != null &&
-                                    deployment.getSpec().getTemplate().getSpec() != null &&
-                                    deployment.getSpec().getTemplate().getSpec().getContainers() != null &&
-                                    !deployment.getSpec().getTemplate().getSpec().getContainers().isEmpty()) {
-                                info.setImage(
-                                        deployment.getSpec().getTemplate().getSpec().getContainers().get(0).getImage());
-                            }
+                        // 部署基本信息
+                        if (deployment.getMetadata() != null) {
+                            objectMeta.put("name", deployment.getMetadata().getName());
+                            objectMeta.put("namespace", deployment.getMetadata().getNamespace());
+                            objectMeta.put("labels", deployment.getMetadata().getLabels());
+                            objectMeta.put("annotations", deployment.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", deployment.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", deployment.getMetadata().getUid());
                         }
+                        item.put("objectMeta", objectMeta);
 
+                        // 提取容器镜像
+                        List<String> containerImages = new ArrayList<>();
+                        if (deployment.getSpec() != null && deployment.getSpec().getTemplate() != null
+                                && deployment.getSpec().getTemplate().getSpec() != null
+                                && deployment.getSpec().getTemplate().getSpec().getContainers() != null) {
+                            deployment.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    containerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("containerImages", containerImages);
+
+                        // Pod状态
                         if (deployment.getStatus() != null) {
-                            info.setAvailableReplicas(deployment.getStatus().getAvailableReplicas() != null
-                                    ? deployment.getStatus().getAvailableReplicas()
-                                    : 0);
-                            info.setReadyReplicas(deployment.getStatus().getReadyReplicas() != null
-                                    ? deployment.getStatus().getReadyReplicas()
-                                    : 0);
+                            pods.put("desired", deployment.getSpec() != null ? deployment.getSpec().getReplicas() : 0);
+                            pods.put("running",
+                                    deployment.getStatus().getAvailableReplicas() != null
+                                            ? deployment.getStatus().getAvailableReplicas()
+                                            : 0);
+                            pods.put("failed", 0); // 默认值，实际应计算
+                            pods.put("pending",
+                                    deployment.getStatus().getUnavailableReplicas() != null
+                                            ? deployment.getStatus().getUnavailableReplicas()
+                                            : 0);
+                        } else {
+                            pods.put("desired", 0);
+                            pods.put("running", 0);
+                            pods.put("failed", 0);
+                            pods.put("pending", 0);
                         }
+                        item.put("pods", pods);
 
-                        if (deployment.getMetadata().getCreationTimestamp() != null) {
-                            try {
-                                // 将K8s时间字符串转换为Java Date对象
-                                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                Date createDate = sdf.parse(deployment.getMetadata().getCreationTimestamp());
-                                info.setCreateTime(createDate);
-                            } catch (ParseException e) {
-                                // 转换失败时记录日志并使用当前时间
-                                logger.error("解析创建时间失败: " + e.getMessage());
-                                info.setCreateTime(new Date());
-                            }
-                        }
+                        // 添加其他必要信息
+                        Map<String, String> typeMeta = new HashMap<>();
+                        typeMeta.put("kind", "Deployment");
+                        item.put("typeMeta", typeMeta);
 
-                        return info;
+                        return item;
                     })
                     .collect(Collectors.toList());
 
-            return Result.success().put(Constants.DATA, deployments);
+            // 构建状态统计信息
+            Map<String, Integer> status = new HashMap<>();
+            status.put("running", (int) deployments.stream().filter(d -> {
+                Map<String, Object> pods = (Map<String, Object>) d.get("pods");
+                return pods != null && (int) pods.get("running") > 0;
+            }).count());
+            status.put("failed", 0);
+            status.put("pending", (int) deployments.stream().filter(d -> {
+                Map<String, Object> pods = (Map<String, Object>) d.get("pods");
+                return pods != null && (int) pods.get("pending") > 0;
+            }).count());
+
+            // 获取指标数据
+            List<Map<String, Object>> cumulativeMetrics = getCumulativeMetrics(client, namespace);
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("deployments", deployments);
+            result.put("status", status);
+            result.put("cumulativeMetrics", cumulativeMetrics);
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Deployments列表出错", e);
             return Result.error("获取Deployments列表出错: " + e.getMessage());
         }
+    }
+
+    /**
+     * 获取累计指标数据
+     * 
+     * @param client    Kubernetes客户端
+     * @param namespace 命名空间
+     * @return 累计指标数据列表
+     */
+    private List<Map<String, Object>> getCumulativeMetrics(KubernetesClient client, String namespace) {
+        try {
+            // 确定目标命名空间
+            String targetNamespace = namespace != null && !namespace.isEmpty() ? namespace : "default";
+            logger.info("使用命名空间获取指标数据: {}", targetNamespace);
+
+            // 从Prometheus API获取真实数据
+            // 获取当前集群关联的Prometheus服务地址
+            String prometheusUrl = getPrometheusServiceUrl(client);
+            if (prometheusUrl == null) {
+                logger.error("无法获取Prometheus服务地址");
+                return new ArrayList<>();
+            }
+
+            // 计算时间范围
+            long endTime = System.currentTimeMillis() / 1000; // 当前时间
+            long startTime = endTime - 15 * 60; // 15分钟前
+
+            // 获取CPU和内存数据
+            List<Map<String, Object>> cumulativeMetrics = new ArrayList<>();
+
+            // 添加CPU指标
+            Map<String, Object> cpuMetric = new HashMap<>();
+            cpuMetric.put("metricName", "cpu/usage_rate");
+            cpuMetric.put("aggregation", "sum");
+
+            // 构建CPU查询
+            String cpuQuery = String.format("sum(rate(container_cpu_usage_seconds_total{namespace=\"%s\"}[5m]))",
+                    targetNamespace);
+            List<List<Object>> cpuResults = queryPrometheus(prometheusUrl, cpuQuery, startTime, endTime, "15s");
+
+            List<Double> cpuValues = new ArrayList<>();
+            List<Long> timestamps = new ArrayList<>();
+
+            if (cpuResults != null && !cpuResults.isEmpty()) {
+                for (List<Object> point : cpuResults) {
+                    if (point.size() >= 2) {
+                        long timestamp = ((Double) point.get(0)).longValue();
+                        double value = ((Double) point.get(1));
+                        timestamps.add(timestamp);
+                        cpuValues.add(value);
+                    }
+                }
+            } else {
+                // 如果没有数据，使用空时间序列
+                logger.warn("没有CPU指标数据，使用空时间序列");
+                long now = System.currentTimeMillis() / 1000;
+                for (int i = 15; i >= 0; i--) {
+                    timestamps.add(now - i * 60);
+                    cpuValues.add(0.0);
+                }
+            }
+
+            // 创建CPU数据点
+            List<Map<String, Object>> cpuDataPoints = createDataPoints(timestamps, cpuValues);
+            cpuMetric.put("dataPoints", cpuDataPoints);
+
+            // 添加metricPoints字段，与官方格式保持一致
+            List<Map<String, Object>> cpuMetricPoints = createMetricPoints(timestamps, cpuValues);
+            cpuMetric.put("metricPoints", cpuMetricPoints);
+
+            cumulativeMetrics.add(cpuMetric);
+
+            // 添加内存指标
+            Map<String, Object> memoryMetric = new HashMap<>();
+            memoryMetric.put("metricName", "memory/usage");
+            memoryMetric.put("aggregation", "sum");
+
+            // 构建内存查询
+            String memoryQuery = String.format("sum(container_memory_usage_bytes{namespace=\"%s\"})", targetNamespace);
+            List<List<Object>> memoryResults = queryPrometheus(prometheusUrl, memoryQuery, startTime, endTime, "15s");
+
+            List<Double> memoryValues = new ArrayList<>();
+            List<Long> memoryTimestamps = new ArrayList<>();
+
+            if (memoryResults != null && !memoryResults.isEmpty()) {
+                for (List<Object> point : memoryResults) {
+                    if (point.size() >= 2) {
+                        long timestamp = ((Double) point.get(0)).longValue();
+                        double value = ((Double) point.get(1));
+                        memoryTimestamps.add(timestamp);
+                        memoryValues.add(value);
+                    }
+                }
+            } else {
+                // 如果没有数据，使用空时间序列
+                logger.warn("没有内存指标数据，使用空时间序列");
+                memoryTimestamps = timestamps; // 复用CPU时间戳
+                for (int i = 0; i < memoryTimestamps.size(); i++) {
+                    memoryValues.add(0.0);
+                }
+            }
+
+            // 创建内存数据点
+            List<Map<String, Object>> memoryDataPoints = createDataPoints(memoryTimestamps, memoryValues);
+            memoryMetric.put("dataPoints", memoryDataPoints);
+
+            // 添加metricPoints字段，与官方格式保持一致
+            List<Map<String, Object>> memoryMetricPoints = createMetricPoints(memoryTimestamps, memoryValues);
+            memoryMetric.put("metricPoints", memoryMetricPoints);
+
+            cumulativeMetrics.add(memoryMetric);
+
+            return cumulativeMetrics;
+        } catch (Exception e) {
+            logger.error("获取指标数据出错", e);
+            return new ArrayList<>(); // 出错时返回空列表
+        }
+    }
+
+    /**
+     * 获取Prometheus服务URL
+     * 
+     * @param client Kubernetes客户端
+     * @return Prometheus服务URL
+     */
+    private String getPrometheusServiceUrl(KubernetesClient client) {
+        try {
+            // 查找Prometheus服务
+            String prometheusService = client.services()
+                    .inAnyNamespace()
+                    .withLabel("app", "prometheus")
+                    .list()
+                    .getItems()
+                    .stream()
+                    .findFirst()
+                    .map(service -> {
+                        String namespace = service.getMetadata().getNamespace();
+                        String name = service.getMetadata().getName();
+                        Integer port = service.getSpec().getPorts().get(0).getPort();
+                        return String.format("http://%s.%s.svc.cluster.local:%d", name, namespace, port);
+                    })
+                    .orElse(null);
+
+            if (prometheusService != null) {
+                return prometheusService;
+            }
+
+            // 如果找不到带app=prometheus标签的服务，尝试查找名称中包含prometheus的服务
+            return client.services()
+                    .inAnyNamespace()
+                    .list()
+                    .getItems()
+                    .stream()
+                    .filter(service -> service.getMetadata().getName().toLowerCase().contains("prometheus"))
+                    .findFirst()
+                    .map(service -> {
+                        String namespace = service.getMetadata().getNamespace();
+                        String name = service.getMetadata().getName();
+                        Integer port = service.getSpec().getPorts().get(0).getPort();
+                        return String.format("http://%s.%s.svc.cluster.local:%d", name, namespace, port);
+                    })
+                    .orElse("http://prometheus.datasophon.svc.cluster.local:9090"); // 默认地址
+        } catch (Exception e) {
+            logger.error("获取Prometheus服务URL出错", e);
+            return "http://prometheus.datasophon.svc.cluster.local:9090"; // 默认地址
+        }
+    }
+
+    /**
+     * 查询Prometheus API
+     * 
+     * @param prometheusUrl Prometheus URL
+     * @param query         查询表达式
+     * @param start         开始时间（Unix时间戳，秒）
+     * @param end           结束时间（Unix时间戳，秒）
+     * @param step          步长
+     * @return 查询结果
+     */
+    @SuppressWarnings("unchecked")
+    private List<List<Object>> queryPrometheus(String prometheusUrl, String query, long start, long end, String step) {
+        try {
+            // 构建查询URL
+            String url = String.format("%s/api/v1/query_range?query=%s&start=%d&end=%d&step=%s",
+                    prometheusUrl, java.net.URLEncoder.encode(query, "UTF-8"), start, end, step);
+
+            // 执行HTTP请求
+            java.net.URL apiUrl = new java.net.URL(url);
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) apiUrl.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+
+            // 读取响应
+            StringBuilder response = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(connection.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+
+            // 解析JSON响应
+            com.alibaba.fastjson.JSONObject jsonResponse = com.alibaba.fastjson.JSON.parseObject(response.toString());
+
+            // 检查状态
+            String status = jsonResponse.getString("status");
+            if (!"success".equals(status)) {
+                logger.error("Prometheus查询失败: {}", jsonResponse.getString("error"));
+                return null;
+            }
+
+            // 提取结果
+            com.alibaba.fastjson.JSONObject data = jsonResponse.getJSONObject("data");
+            com.alibaba.fastjson.JSONArray results = data.getJSONArray("result");
+
+            if (results.isEmpty()) {
+                logger.warn("Prometheus查询没有返回数据");
+                return new ArrayList<>();
+            }
+
+            // 获取第一个结果的值
+            com.alibaba.fastjson.JSONObject firstResult = results.getJSONObject(0);
+            List<List> valuesList = firstResult.getJSONArray("values").toJavaList(List.class);
+
+            // 明确进行类型转换
+            List<List<Object>> typedList = new ArrayList<>();
+            for (List list : valuesList) {
+                typedList.add((List<Object>) list);
+            }
+
+            return typedList;
+        } catch (Exception e) {
+            logger.error("查询Prometheus出错", e);
+            return null;
+        }
+    }
+
+    /**
+     * 创建数据点列表 (dataPoints格式)
+     *
+     * @param timestamps 时间戳列表
+     * @param values     值列表
+     * @return 数据点列表
+     */
+    private List<Map<String, Object>> createDataPoints(List<Long> timestamps, List<Double> values) {
+        List<Map<String, Object>> dataPoints = new ArrayList<>();
+
+        // 确保两个列表长度一致
+        int size = Math.min(timestamps.size(), values.size());
+
+        for (int i = 0; i < size; i++) {
+            Map<String, Object> point = new HashMap<>();
+            // 时间戳已经是秒级
+            point.put("x", timestamps.get(i));
+            point.put("y", values.get(i));
+            dataPoints.add(point);
+        }
+
+        return dataPoints;
+    }
+
+    /**
+     * 创建指标点列表 (metricPoints格式)
+     *
+     * @param timestamps 时间戳列表
+     * @param values     值列表
+     * @return 指标点列表
+     */
+    private List<Map<String, Object>> createMetricPoints(List<Long> timestamps, List<Double> values) {
+        List<Map<String, Object>> metricPoints = new ArrayList<>();
+
+        // 确保两个列表长度一致
+        int size = Math.min(timestamps.size(), values.size());
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        for (int i = 0; i < size; i++) {
+            Map<String, Object> point = new HashMap<>();
+            // 时间戳转换为ISO格式
+            point.put("timestamp", sdf.format(new Date(timestamps.get(i) * 1000))); // 秒转毫秒
+            point.put("value", values.get(i));
+            metricPoints.add(point);
+        }
+
+        return metricPoints;
+    }
+
+    @Override
+    public Result getDeployments(Integer clusterId, Integer serviceId, String namespace) {
+        // 目前serviceId暂时不使用，留作后期扩展使用
+        logger.info("获取Deployments列表, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        return getDeployments(clusterId, namespace);
     }
 
     private KubernetesClient getKubernetesClient(Integer clusterId) {
@@ -573,6 +896,23 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
         } catch (Exception e) {
             logger.error("获取资源事件出错", e);
             return Result.error("获取资源事件出错: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result getDeploymentMetrics(Integer clusterId, Integer serviceId, String namespace) {
+        logger.info("获取Deployment监控数据, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        try {
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取指标数据
+            List<Map<String, Object>> cumulativeMetrics = getCumulativeMetrics(client, namespace);
+
+            return Result.success().put(Constants.DATA, cumulativeMetrics);
+        } catch (Exception e) {
+            logger.error("获取Deployment监控数据出错", e);
+            return Result.error("获取Deployment监控数据出错: " + e.getMessage());
         }
     }
 }

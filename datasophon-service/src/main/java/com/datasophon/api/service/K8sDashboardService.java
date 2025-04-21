@@ -43,6 +43,16 @@ public interface K8sDashboardService {
     Result getDeployments(Integer clusterId, String namespace);
 
     /**
+     * 获取Deployments列表（带服务ID）
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return Deployments列表
+     */
+    Result getDeployments(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
      * 获取Pods列表
      * 
      * @param clusterId 集群ID
@@ -194,4 +204,14 @@ public interface K8sDashboardService {
      * @return 事件列表
      */
     Result getResourceEvents(Integer clusterId, String namespace, String kind, String name);
+
+    /**
+     * 获取Deployment资源监控数据
+     *
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return 监控数据结果
+     */
+    Result getDeploymentMetrics(Integer clusterId, Integer serviceId, String namespace);
 }

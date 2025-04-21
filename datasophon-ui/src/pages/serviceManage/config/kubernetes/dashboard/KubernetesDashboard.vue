@@ -119,7 +119,7 @@
             :columns="configMapColumns"
             :dataSource="configMaps"
             :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -154,7 +154,7 @@
             :columns="serviceColumns"
             :dataSource="services"
             :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -186,7 +186,7 @@
               :columns="ingressColumns"
               :dataSource="ingresses"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -218,7 +218,7 @@
               :columns="ingressClassColumns"
               :dataSource="ingressClasses"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -250,7 +250,7 @@
               :columns="secretColumns"
               :dataSource="secrets"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -285,7 +285,7 @@
               :columns="pvColumns"
               :dataSource="persistentVolumes"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace || ''}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -320,7 +320,7 @@
             :columns="pvcColumns"
             :dataSource="pvcs"
             :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
           >
             <template #action="{ record }">
@@ -355,7 +355,7 @@
               :columns="storageClassColumns"
               :dataSource="storageClasses"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace || ''}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -386,7 +386,7 @@
               :columns="cronJobColumns"
               :dataSource="cronJobs"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -421,7 +421,7 @@
               :columns="daemonSetColumns"
               :dataSource="daemonSets"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -446,100 +446,59 @@
         <!-- Deployment列表 -->
         <div v-if="activeResource === 'deployments'" class="resource-list">
           <!-- 顶部图表区域 -->
-          <div class="charts-container">
-            <div class="chart-card">
-              <div class="chart-header">
-                <h3>CPU Usage</h3>
-                <a-icon type="fullscreen" />
+          <div class="k8s-dashboard-charts">
+            <!-- CPU Usage Chart -->
+            <div class="k8s-chart-card">
+              <div class="k8s-chart-header">
+                <div class="k8s-chart-title">CPU Usage</div>
+                <div class="k8s-chart-actions">
+                  <a-icon type="fullscreen" class="k8s-action-icon" />
+                </div>
               </div>
-              <div class="chart-content">
-                <div class="chart" ref="cpuChart"></div>
+              <div class="k8s-chart-content">
+                <div class="k8s-chart-y-label">CPU (cores)</div>
+                <div ref="cpuChart" class="chart"></div>
               </div>
             </div>
-            
-            <div class="chart-card">
-              <div class="chart-header">
-                <h3>Memory Usage</h3>
-                <a-icon type="fullscreen" />
+
+            <!-- Memory Usage Chart -->
+            <div class="k8s-chart-card">
+              <div class="k8s-chart-header">
+                <div class="k8s-chart-title">Memory Usage</div>
+                <div class="k8s-chart-actions">
+                  <a-icon type="fullscreen" class="k8s-action-icon" />
+                </div>
               </div>
-              <div class="chart-content">
-                <div class="chart" ref="memoryChart"></div>
+              <div class="k8s-chart-content">
+                <div class="k8s-chart-y-label">Memory (bytes)</div>
+                <div ref="memoryChart" class="chart"></div>
               </div>
             </div>
           </div>
           
           <!-- Deployments列表区域 -->
-          <div class="deployments-list-container">
-            <div class="list-header">
-              <h3>Deployments</h3>
-              <div class="header-actions">
-                <a-tooltip title="过滤">
-                  <a-icon type="filter" class="action-icon" />
-                </a-tooltip>
-                <a-tooltip title="展开/收起">
-                  <a-icon type="arrows-alt" class="action-icon" />
-                </a-tooltip>
+          <div class="k8s-dashboard-card k8s-resource-card">
+            <div class="k8s-card-header">
+              <span class="k8s-card-title">Deployments</span>
+              <div class="k8s-card-actions">
+                <a-icon type="bars" class="k8s-action-icon" />
+                <a class="k8s-card-collapse-icon">
+                  <a-icon type="minus" />
+                </a>
               </div>
             </div>
-            <a-spin :spinning="loading">
-              <a-table 
-                :columns="deploymentColumns" 
-                :dataSource="deployments" 
-                :pagination="false"
-                :rowKey="record => record.name"
-                class="k8s-table"
-              >
-                <template #statusDot="{ record }">
-                  <span class="status-dot" :class="{'status-running': record.readyReplicas === record.replicas, 'status-warning': record.readyReplicas !== record.replicas}"></span>
-                </template>
-                
-                <template #name="{ record }">
-                  <div class="name-cell">
-                    <span class="name-text">{{ record.name }}</span>
-                  </div>
-                </template>
-                
-                <template #image="{ text }">
-                  <div class="image-cell">
-                    <a-tooltip :title="text">
-                      <span class="image-text">{{ text }}</span>
-                    </a-tooltip>
-                  </div>
-                </template>
-                
-                <template #labels="{ text }">
-                  <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-                    <a-tag v-for="(value, key) in text" :key="key" color="blue">
-                      {{ key }}: {{ value }}
-                    </a-tag>
-                  </div>
-                  <span v-else>-</span>
-                </template>
-                
-                <template #pods="{ record }">
-                  <span>{{ record.readyReplicas || 0 }} / {{ record.replicas || 0 }}</span>
-                </template>
-                
-                <template #creationTime="{ text }">
-                  <span>{{ formatTime(text) }}</span>
-                </template>
-                
-                <template #action="{ record }">
-                  <div class="action-buttons">
-                    <a-dropdown :trigger="['click']">
-                      <a-button type="link" size="small">
-                        操作 <a-icon type="down" />
-                      </a-button>
-                      <a-menu slot="overlay">
-                        <a-menu-item @click="handleViewDeployment(record)">查看详情</a-menu-item>
-                        <a-menu-item @click="handleEditDeployment(record)">编辑</a-menu-item>
-                        <a-menu-item @click="handleScaleDeployment(record)">伸缩</a-menu-item>
-                      </a-menu>
-                    </a-dropdown>
-                  </div>
-                </template>
-              </a-table>
-            </a-spin>
+            <div class="k8s-card-content">
+              <a-spin :spinning="loading">
+                <a-table 
+                  :columns="deploymentColumns" 
+                  :dataSource="deployments" 
+                  :pagination="false"
+                  :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+                  class="k8s-table"
+                >
+                </a-table>
+              </a-spin>
+            </div>
           </div>
         </div>
 
@@ -553,7 +512,7 @@
               :columns="jobColumns"
               :dataSource="jobs"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -585,7 +544,7 @@
               :columns="podColumns"
               :dataSource="pods"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -620,7 +579,7 @@
               :columns="replicaSetColumns"
               :dataSource="replicaSets"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -652,7 +611,7 @@
               :columns="replicationControllerColumns"
               :dataSource="replicationControllers"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -684,7 +643,7 @@
               :columns="statefulSetColumns"
               :dataSource="statefulSets"
               :pagination="false"
-              :rowKey="record => record.name"
+              :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
             >
               <template #action="{ record }">
@@ -852,50 +811,91 @@ export default defineComponent({
           dataIndex: 'status',
           key: 'status',
           width: '20px',
-          slots: { customRender: 'statusDot' }
-        },
-        {
-          title: '名称',
-          dataIndex: 'name',
-          key: 'name',
-          width: '20%',
-          slots: { customRender: 'name' }
-        },
-        {
-          title: '镜像',
-          dataIndex: 'image',
-          key: 'image',
-          width: '25%',
-          slots: { customRender: 'image' }
-        },
-        {
-          title: '标签',
-          dataIndex: 'labels',
-          key: 'labels',
-          width: '20%',
-          slots: { customRender: 'labels' }
-        },
-        {
-          title: 'Pods',
-          key: 'pods',
-          width: '10%',
-          slots: { customRender: 'pods' }
-        },
-        {
-          title: '创建时间',
-          dataIndex: 'createTime',
-          key: 'creationTime',
-          width: '15%',
-          slots: { customRender: 'creationTime' },
-          sorter: (a, b) => {
-            return new Date(a.createTime) - new Date(b.createTime);
+          customRender: (text, record) => {
+            const classNames = ['status-dot'];
+            if (record?.pods?.running > 0) classNames.push('status-running');
+            if (record?.pods?.pending > 0) classNames.push('status-warning');
+            if (record?.pods?.failed > 0) classNames.push('status-danger');
+            if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
+              classNames.push('status-unknown');
+            return <span class={classNames.join(' ')}></span>;
           }
         },
         {
-          title: '操作',
-          key: 'action',
+          title: '名称',
+          dataIndex: 'objectMeta.name',
+          key: 'name',
+          width: '20%',
+          customRender: (_, record) => {
+            return <div class="name-cell">
+              <span class="name-text">{record?.objectMeta?.name || '未知'}</span>
+            </div>
+          }
+        },
+        {
+          title: '命名空间',
+          dataIndex: 'objectMeta.namespace',
+          key: 'namespace',
+          width: '10%'
+        },
+        {
+          title: '镜像',
+          dataIndex: 'containerImages',
+          key: 'image',
+          width: '25%',
+          customRender: (_, record) => {
+            return <div class="image-cell">
+              <a-tooltip title={record?.containerImages ? record.containerImages.join(', ') : ''}>
+                <span class="image-text">{record?.containerImages ? record.containerImages.join(', ') : '-'}</span>
+              </a-tooltip>
+            </div>
+          }
+        },
+        {
+          title: '标签',
+          dataIndex: 'objectMeta.labels',
+          key: 'labels',
+          width: '25%',
+          customRender: (_, record) => {
+            if (record?.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0) {
+              return <div class="tag-list">
+                {Object.entries(record.objectMeta.labels).map(([key, value]) => (
+                  <a-tag color="blue" class="label-tag" key={key}>
+                    {key}: {value}
+                  </a-tag>
+                ))}
+              </div>
+            }
+            return <span>-</span>
+          }
+        },
+        {
+          title: 'Pods',
+          dataIndex: 'pods',
+          key: 'pods',
           width: '10%',
-          slots: { customRender: 'action' }
+          customRender: (_, record) => {
+            return <div class="pods-display">
+              <span>{record?.pods && record.pods.running !== undefined ? record.pods.running : 0} / {record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0}</span>
+            </div>
+          }
+        },
+        {
+          title: '创建时间',
+          dataIndex: 'objectMeta.creationTimestamp',
+          key: 'creationTime',
+          width: '20%',
+          customRender: (_, record) => {
+            const exactTime = this.formatTime(record?.objectMeta?.creationTimestamp);
+            return (
+              <a-tooltip title={exactTime}>
+                <span>{this.formatRelativeTime(record?.objectMeta?.creationTimestamp)}</span>
+              </a-tooltip>
+            );
+          },
+          sorter: (a, b) => {
+            return new Date(a.objectMeta?.creationTimestamp || 0) - new Date(b.objectMeta?.creationTimestamp || 0);
+          }
         }
       ],
       jobColumns: [
@@ -1354,6 +1354,7 @@ export default defineComponent({
       // 添加图表相关属性
       cpuChart: null,
       memoryChart: null,
+      metricsData: [], // 保存从API获取的指标数据
     };
   },
   methods: {
@@ -1426,7 +1427,8 @@ export default defineComponent({
           serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
         if (res.code === 200) {
-          this.namespaces = res.data || [];
+          // 确保获取命名空间列表数组
+          this.namespaces = res.data && Array.isArray(res.data) ? res.data : (res.data && res.data.namespaces ? res.data.namespaces : []);
         } else {
           console.error('Failed to fetch namespaces:', res.msg);
           this.namespaces = [];
@@ -1482,20 +1484,51 @@ export default defineComponent({
     },
     async fetchDeployments() {
       try {
+        // 使用serviceInstanceId作为serviceId参数
+        const serviceId = this.serviceInstanceId || 40; // 使用默认值40
+        
         const res = await this.$axiosGet(global.API.getK8sDeployments, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          serviceId: serviceId,
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
-          this.deployments = res.data || [];
+          // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
+          let deployList = res.data && res.data.deployments ? res.data.deployments : [];
+          
+          // 处理deployments数据，确保每个项都有必要的属性
+          this.deployments = deployList.map(deploy => {
+            // 如果deploy为null或undefined，返回一个空对象
+            if (!deploy) return { objectMeta: {}, pods: {} };
+            
+            // 确保objectMeta存在
+            if (!deploy.objectMeta) deploy.objectMeta = {};
+            
+            // 确保pods存在
+            if (!deploy.pods) deploy.pods = {};
+            
+            return deploy;
+          });
+          
+          console.log("处理后的deployments数据:", this.deployments);
+          
+          // 保存获取到的指标数据
+          this.metricsData = res.data && res.data.cumulativeMetrics ? res.data.cumulativeMetrics : [];
+          console.log("获取到的指标数据:", this.metricsData);
+          
+          // 初始化图表
+          this.$nextTick(() => {
+            this.initCharts();
+          });
         } else {
           console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
+          this.metricsData = [];
         }
       } catch (error) {
         console.error('Error fetching deployments:', error);
         this.deployments = [];
+        this.metricsData = [];
       }
     },
     async fetchJobs() {
@@ -1605,9 +1638,14 @@ export default defineComponent({
       this.$message.info(`编辑DaemonSet ${record.name} 的功能正在开发中`);
     },
     handleViewDeployment(record) {
+      if (!record || !record.objectMeta) {
+        this.$message.warning('部署信息不完整，无法查看详情');
+        return;
+      }
+      
       this.currentDeployment = {
-        namespace: record.namespace,
-        name: record.name
+        namespace: record.objectMeta.namespace || '',
+        name: record.objectMeta.name || ''
       }
       this.deploymentViewVisible = true
     },
@@ -1744,33 +1782,131 @@ export default defineComponent({
       this.$nextTick(() => {
         const echarts = require('echarts');
         
+        // 获取CPU和内存指标数据
+        let cpuMetric = this.metricsData && this.metricsData.length > 0 
+          ? this.metricsData.find(metric => metric.metricName === 'cpu/usage_rate') 
+          : null;
+        
+        let memoryMetric = this.metricsData && this.metricsData.length > 0 
+          ? this.metricsData.find(metric => metric.metricName === 'memory/usage') 
+          : null;
+        
+        // 提取时间轴和数据点
+        let xAxisData = [];
+        let cpuData = [];
+        let memoryData = [];
+        
+        // 处理CPU指标数据
+        if (cpuMetric && cpuMetric.dataPoints && cpuMetric.dataPoints.length > 0) {
+          // 排序数据点，确保时间顺序正确
+          const sortedDataPoints = [...cpuMetric.dataPoints].sort((a, b) => a.x - b.x);
+          
+          // 提取x轴数据
+          sortedDataPoints.forEach(point => {
+            const date = new Date(point.x * 1000);
+            const timeStr = `${date.getHours()}:${date.getMinutes() < 10 ? '0' : ''}${date.getMinutes()}`;
+            xAxisData.push(timeStr);
+            cpuData.push(point.y);
+          });
+        } else {
+          // 如果没有数据，使用默认时间轴
+          xAxisData = this.generateTimeAxis();
+          cpuData = new Array(xAxisData.length).fill(0);
+        }
+        
+        // 处理内存指标数据
+        if (memoryMetric && memoryMetric.dataPoints && memoryMetric.dataPoints.length > 0) {
+          const sortedDataPoints = [...memoryMetric.dataPoints].sort((a, b) => a.x - b.x);
+          memoryData = sortedDataPoints.map(point => point.y);
+        } else {
+          memoryData = new Array(xAxisData.length).fill(0);
+        }
+        
         // 初始化CPU使用率图表
         if (this.$refs.cpuChart) {
-          this.cpuChart = echarts.init(this.$refs.cpuChart);
+          this.cpuChart = echarts.init(this.$refs.cpuChart, null, {
+            renderer: 'canvas',
+            useDirtyRect: true,
+            devicePixelRatio: window.devicePixelRatio
+          });
           const cpuOption = {
+            title: {
+              show: false
+            },
             grid: {
-              left: '3%',
-              right: '4%',
-              bottom: '3%',
-              top: '3%',
-              containLabel: true
+              left: '8%',
+              right: '2%',
+              bottom: '10%',
+              top: '5%',
+              containLabel: false
+            },
+            tooltip: {
+              trigger: 'axis',
+              formatter: '{b}<br/>{a}: {c} cores'
             },
             xAxis: {
               type: 'category',
-              data: this.generateTimeAxis(),
+              data: xAxisData,
+              axisLine: {
+                lineStyle: {
+                  color: '#E0E0E0'
+                }
+              },
               axisTick: {
-                alignWithLabel: true
+                alignWithLabel: true,
+                lineStyle: {
+                  color: '#E0E0E0'
+                }
+              },
+              axisLabel: {
+                color: '#666',
+                fontSize: 10
+              },
+              splitLine: {
+                show: true,
+                lineStyle: {
+                  color: ['#f0f0f0'],
+                  type: 'dashed'
+                }
               }
             },
             yAxis: {
               type: 'value',
-              name: 'CPU (cores)',
-              min: 0
+              name: '',
+              nameLocation: 'end',
+              nameGap: 15,
+              nameTextStyle: {
+                color: '#666',
+                fontSize: 10,
+                padding: [0, 0, 0, 10]
+              },
+              min: 0,
+              max: 0.01, // 与官方一致，Y轴最大值固定为0.01
+              axisLine: {
+                show: false
+              },
+              axisTick: {
+                show: false
+              },
+              axisLabel: {
+                color: '#666',
+                fontSize: 10,
+                formatter: '{value}'
+              },
+              splitLine: {
+                show: true,
+                lineStyle: {
+                  color: ['#f0f0f0'],
+                  type: 'dashed'
+                }
+              }
             },
             series: [{
-              data: this.generateRandomData(0, 0.01),
+              name: 'CPU Usage',
+              data: cpuData,
               type: 'line',
               smooth: true,
+              symbol: 'none',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -1779,18 +1915,18 @@ export default defineComponent({
                   x2: 0,
                   y2: 1,
                   colorStops: [{
-                    offset: 0, color: 'rgba(128, 255, 165, 0.8)'
+                    offset: 0, color: 'rgba(83, 231, 139, 0.8)' // 更接近官方的绿色
                   }, {
-                    offset: 1, color: 'rgba(128, 255, 165, 0.1)'
+                    offset: 1, color: 'rgba(83, 231, 139, 0.1)'
                   }]
                 }
               },
               itemStyle: {
-                color: '#10b981'
+                color: '#53e78b' // 更接近官方的绿色
               },
               lineStyle: {
                 width: 2,
-                color: '#10b981'
+                color: '#53e78b' // 更接近官方的绿色
               }
             }]
           };
@@ -1799,35 +1935,98 @@ export default defineComponent({
         
         // 初始化内存使用率图表
         if (this.$refs.memoryChart) {
-          this.memoryChart = echarts.init(this.$refs.memoryChart);
+          this.memoryChart = echarts.init(this.$refs.memoryChart, null, {
+            renderer: 'canvas',
+            useDirtyRect: true,
+            devicePixelRatio: window.devicePixelRatio
+          });
+          
+          // 计算内存单位和转换
+          const maxMemory = Math.max(...memoryData);
+          const memoryInMi = maxMemory / (1024 * 1024);
+          const yAxisMax = 20; // 固定为20 Mi，与官方一致
+          
           const memoryOption = {
+            title: {
+              show: false
+            },
             grid: {
-              left: '3%',
-              right: '4%',
-              bottom: '3%',
-              top: '3%',
-              containLabel: true
+              left: '8%',
+              right: '2%',
+              bottom: '10%',
+              top: '5%',
+              containLabel: false
+            },
+            tooltip: {
+              trigger: 'axis',
+              formatter: function(params) {
+                const value = params[0].value / (1024 * 1024); // 转换为Mi
+                return params[0].axisValue + '<br/>' + params[0].seriesName + ': ' + value.toFixed(2) + ' Mi';
+              }
             },
             xAxis: {
               type: 'category',
-              data: this.generateTimeAxis(),
+              data: xAxisData,
+              axisLine: {
+                lineStyle: {
+                  color: '#E0E0E0'
+                }
+              },
               axisTick: {
-                alignWithLabel: true
+                alignWithLabel: true,
+                lineStyle: {
+                  color: '#E0E0E0'
+                }
+              },
+              axisLabel: {
+                color: '#666',
+                fontSize: 10
+              },
+              splitLine: {
+                show: true,
+                lineStyle: {
+                  color: ['#f0f0f0'],
+                  type: 'dashed'
+                }
               }
             },
             yAxis: {
               type: 'value',
-              name: 'Memory (bytes)',
+              name: '',
+              nameLocation: 'end',
+              nameGap: 15,
+              nameTextStyle: {
+                color: '#666',
+                fontSize: 10,
+                padding: [0, 0, 0, 10]
+              },
               min: 0,
-              max: 200,
+              max: yAxisMax,
+              axisLine: {
+                show: false
+              },
+              axisTick: {
+                show: false
+              },
               axisLabel: {
+                color: '#666',
+                fontSize: 10,
                 formatter: '{value} Mi'
+              },
+              splitLine: {
+                show: true,
+                lineStyle: {
+                  color: ['#f0f0f0'],
+                  type: 'dashed'
+                }
               }
             },
             series: [{
-              data: this.generateRandomData(50, 100),
+              name: 'Memory Usage',
+              data: memoryData.map(value => value), // 原始字节值
               type: 'line',
               smooth: true,
+              symbol: 'none',
               areaStyle: {
                 color: {
                   type: 'linear',
@@ -1836,18 +2035,18 @@ export default defineComponent({
                   x2: 0,
                   y2: 1,
                   colorStops: [{
-                    offset: 0, color: 'rgba(100, 149, 237, 0.8)'
+                    offset: 0, color: 'rgba(66, 133, 244, 0.9)' // 使用更亮的蓝色，增加不透明度
                   }, {
-                    offset: 1, color: 'rgba(100, 149, 237, 0.1)'
+                    offset: 1, color: 'rgba(66, 133, 244, 0.2)'
                   }]
                 }
               },
               itemStyle: {
-                color: '#3b82f6'
+                color: '#4285f4' // Google蓝
               },
               lineStyle: {
                 width: 2,
-                color: '#3b82f6'
+                color: '#4285f4' // Google蓝
               }
             }]
           };
@@ -1855,7 +2054,7 @@ export default defineComponent({
         }
         
         // 添加窗口大小变化监听，调整图表大小
-        window.addEventListener('resize', this.resizeCharts);
+        window.addEventListener('resize', this.resizeCharts, { passive: true });
       });
     },
     
@@ -1870,41 +2069,20 @@ export default defineComponent({
       return times;
     },
     
-    // 生成随机数据用于图表展示
-    generateRandomData(min, max) {
-      const data = [];
-      for (let i = 0; i < 13; i++) {
-        data.push((Math.random() * (max - min) + min).toFixed(4));
-      }
-      return data;
-    },
-    
     // 更新图表
     updateCharts() {
+      // 如果没有图表数据，重新获取部署数据
+      if (!this.metricsData || this.metricsData.length === 0) {
+        this.fetchDeployments();
+        return;
+      }
+      
       // 确保图表实例存在且未被销毁
       if (this.cpuChart && !this.cpuChart.isDisposed() && 
           this.memoryChart && !this.memoryChart.isDisposed()) {
-        const times = this.generateTimeAxis();
-        const cpuData = this.generateRandomData(0, 0.01);
-        const memoryData = this.generateRandomData(50, 100);
-        
-        this.cpuChart.setOption({
-          xAxis: {
-            data: times
-          },
-          series: [{
-            data: cpuData
-          }]
-        });
-        
-        this.memoryChart.setOption({
-          xAxis: {
-            data: times
-          },
-          series: [{
-            data: memoryData
-          }]
-        });
+            
+        // 重新获取部署数据和指标数据
+        this.fetchDeployments();
       } else if (this.activeResource === 'deployments') {
         // 如果当前页面是deployments但图表已销毁，尝试重新初始化
         clearInterval(this.chartsInterval);
@@ -1967,6 +2145,43 @@ export default defineComponent({
       } catch (error) {
         console.error('Error fetching config maps:', error);
         this.configMaps = [];
+      }
+    },
+    
+    // 添加formatTime方法
+    formatTime(time) {
+      if (!time) return '-';
+      return new Date(time).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    },
+    
+    // 添加相对时间格式化方法
+    formatRelativeTime(time) {
+      if (!time) return '-';
+      
+      const now = new Date();
+      const date = new Date(time);
+      const diff = Math.floor((now - date) / 1000); // 转换为秒
+      
+      if (diff < 60) {
+        return '刚刚';
+      } else if (diff < 3600) {
+        return Math.floor(diff / 60) + '分钟前';
+      } else if (diff < 86400) {
+        return Math.floor(diff / 3600) + '小时前';
+      } else if (diff < 2592000) {
+        return Math.floor(diff / 86400) + '天前';
+      } else if (diff < 31536000) {
+        return Math.floor(diff / 2592000) + '个月前';
+      } else {
+        return Math.floor(diff / 31536000) + '年前';
       }
     },
   },
@@ -2036,325 +2251,386 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style lang="less" scoped>
 .k8s-config-container {
-  padding: 24px;
-  background-color: #f9fafc;
-  min-height: calc(100vh - 120px);
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e9ecef;
-  background-color: transparent;
-}
-
-.header-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16px;
-  background-color: transparent;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.kubernetes-logo {
-  width: 42px;
-  height: 42px;
-  background-image: url("../../../../../assets/images/kubernetes-logo.svg");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.header-content {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  background-color: #f5f7fa;
+  
+  // 页面头部样式
+  .page-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    margin-bottom: 16px;
+    
+    .header-icon-wrapper {
+      margin-right: 16px;
+      
+      .kubernetes-logo {
+        width: 40px;
+        height: 40px;
+        background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHBhdGggZD0iTTMxLjg3OCA2MC4xMDRhMS42MTkgMS42MTkgMCAwIDEtLjc1NS0uMThsLTI2LjM2LTE1LjFhMS42MSAxLjYxIDAgMCAxLS44MjMtMS40MDVWMTkuNzg3YzAtLjU5LjMxOS0xLjEzLjgzMi0xLjQwOWwyNi4zNS0xNS4wOThhMS42MTcgMS42MTcgMCAwIDEgMS41NTEtLjAwMzZMMzguOTkgMTguMzdhMS42MSAxLjYxIDAgMCAxIC44MyAxLjQwOHYyMy42MzFhMS42MSAxLjYxIDAgMCAxLS44MjIgMS40MDVsLTI2LjM2MyAxNS4xYTEuNjIgMS42MiAwIDAgMS0uNzU2LjE4eiIgZmlsbD0iIzMyNmRlNiIvPjxwYXRoIGQ9Ik0zMi4wOTggMTkuNTg0Yy0uNDY1IDAtLjg0NS4zOC0uODQyLjg1NGEuODQ5Ljg0OSAwIDAgMCAuODQ2Ljg0NS44NDcuODQ3IDAgMCAwIC44NDQtLjg0NS44NDcuODQ3IDAgMCAwLS44NDgtLjg1NHoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMjUuOTggMTYuMTQyYzAgLjYxMy40OTggMS4xMSAxLjEwOSAxLjExVjE1LjAzYTEuMTEgMS4xMSAwIDAgMC0xLjExIDEuMTExek0yOS43NiAxNC4xMjdBMTEuMDQ0IDExLjA0NCAwIDAgMCAyNy4wNyAxMy42Yy0uMjE4LS4wMDMtLjQzNS4wMDktLjY1Mi4wMzR2Mi43ODhhMi45MjEgMi45MjEgMCAwIDAgMi43MiAxLjkzMmwtLjAxODAxLS4wMDEwMWMuMDQyLS4wMDIwMS4wODUtLjAwMzAxLjEyOC0uMDA1MDFhMi45MzQgMi45MzQgMCAwIDAgMi4wNDgtLjg0NDk3IDIuOTQ4IDIuOTQ4IDAgMCAwIC43MTItLi45NTRsLTIuMjQ5LTIuNDIyeiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yOS4wODIgMTkuNTgyYS44NDguODQ4IDAgMCAwLS44NDkuODU0LjgzOC44MzggMCAwIDAgLjAwMS4xNzQuODQ2Ljg0NiAwIDAgMCAxLjUxNzAyLjUxMy44NS44NSAwIDAgMCAuMTc3LS4yODIuODQ5Ljg0OSAwIDAgMCAtLjg0Ny0xLjI1OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUuMTcgMTQuMjczIDBsMCAwaC0uMDAxYS41MzYuNTM2IDAgMCAwIC0uNDQ1LjIzOCAxMS4wNiAxMS4wNiAwIDAgMC0xLjY4NSAzLjg2MmwtLjAyOCAwIGMuMTMyLjA0NS4yNjQuMDkxLjM5NS4xMzluMCAwaC4wMDFhMS40NS0xLjQ1IDAgMCAxIC44NjItLjQyOSA1LjY2OCA1LjY2OCAwIDAgMSAuNTgxLTIuMjI4YzEuMDc4IDUuMzU1IDUuNzYgNi4yMDQgOC4xMTEgNC4yMjRhOS42MTMgOS42MTMgMCAwIDEtMS4zNDMgMS40OWMtLjE2Mi4wMTMtLjMxNi4wNS0uNDYxLjExNWgwYS43NTIuNzUyIDAgMCAwIC0uMTYzLjAxYy0uNTIuMjU2LS45NDYuNjA1LTEuMjkuOTg2YS44NDkuODQ5IDAgMCAwIC0uNDk1LS4xNTguODQ2Ljg0NiAwIDAgMCAtLjg0Ni44NDUuODQxLjg0MSAwIDAgMCAuMDA5LjEzM2MuNTk1LjI3MSAxLjM1LjM1NCAyLjE3Ni4zMDEuODA2LS4wNTIgMS42NDItLjI2NSAyLjQ0My0uNTM4YTE0LjYyIDE0LjYyIDAgMCAwIDQuNDU1LTIuNTNsLjAyLS4wMTgwMWExMC45MiAxMC45MiAwIDAgMC0yLjc2MDk4LTMuNjI1Yy0yLjI2OTAxLTEuNzI5LTUuMTI0MDEtMi41NzItNy44ODYtMi42MjZ6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1LjExNSAxOS41ODRhLjg0Ny44NDcgMCAwIDAtLjg0OC44NDUuODQ3Ljg0NyAwIDAgMCAuODQ3Ljg0Ny44NDguODQ4IDAgMSAwIC4wMDE5OS0xLjY5M3oiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzQuNzg2IDI2LjFhLjg0Ny44NDcgMCAwIDAtLjEzNC4wMTNjLS4xMzYuMDIxLS4yNjYuMDcxLS4zODEuMTQ2YTExLjA3IDExLjA3IDAgMCAwIC0uMjQ0IDQuMmwyLjA1OC0uMDI2YS44OTQuODk0IDAgMCAxIC0uMDE3LS4xODcgMS4xMSAxLjExIDAgMCAxIDEuMTEtMS4xMXYtMi4yMmMtLjkyNy4wMzQtMS44MzEtLjI2Ni0yLjM5Mi0uODE2eiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0zOC4xMTggMTkuNTg0YS44NDguODQ4IDAgMCAwIC0uODUuODQ0LjgzOC44MzggMCAwIDAgLjAwMS4xMzQuODQ4Ljg0OCAwIDAgMCAuOC44NS44NDcuODQ3IDAgMCAwIC44NDQtLjg1LjgzNy44MzcgMCAwIDAgLS4wMDEtLjEzNC44NDguODQ4IDAgMCAwIC0uNzk1LS44NDV6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM0LjQ0NyA0MC45MzlhMi45NDYgMi45NDYgMCAwIDAgLTIuOTQ2IDIuOTQ4IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuODQ5IDIuOTQ2Yy4wMzIuMDEuMDY1LjAwMi4wOTcuMDAyYTIuOTQ3IDIuOTQ3IDAgMCAwIDIuODU1LTIuOTQ4IDIuOTQ3IDIuOTQ3IDAgMCAwIC0yLjg1NS0yLjk0OHoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzguMzIxIDI2LjAzOGEuODQ1Ljg0NSAwIDAgMCAtLjYwNC4yNTQgOC4xOTMgOC4xOTMgMCAwIDEgLTIuNDQ3IDIuODcyIDE0LjYyIDE0LjYyIDAgMCAwIC0yLjkzOSA0LjE4MWwtLjAyLjAzOGEyLjk0NiAyLjk0NiAwIDAgMCAuMjM0IDMuMTA2IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuNDUyLjk4NSAyLjk0MSAyLjk0MSAwIDAgMCAyLjQyNC0xLjAyN2gwaC4wMDFhMi45NTIgMi45NTIgMCAwIDAgLjcwMS0yLjQ0MyAyLjk0NiAyLjk0NiAwIDAgMCAtLjQ1OS0xLjE2OSAxMS4wNTkgMTEuMDU5IDAgMCAwIC0uODgyLTQuMjY4bC0uMDA0LS4wMTFjLS4yOTMgMC0uNTg3IDAtLjg4LjAxMmMtLjA1My4wMDItLjEwNS4wMDYtLjE1Ny4wMTFhMS4xMSAxLjExIDAgMCAxIC0uOTY5LTEuMTAzIDEuMTEgMS4xMSAwIDAgMSAxLjEwOS0xLjExdi0uMzI5YS44NDYuODQ2IDAgMCAwIC0uNTUxLjI5MXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDEuMTIzIDE5LjU4NGEuODQ3Ljg0NyAwIDEgMCAwIDEuNjk1LjgzNy44MzcgMCAwIDAgLjEzNC0uMDEzLjg0Ni44NDYgMCAwIDAgLjctLjgzN2EuODQ3Ljg0NyAwIDAgMCAtLjgzNS0uODQ1eiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik00Mi4xNCAxNC4xMjVhMTAuOTggMTAuOTggMCAwIDAtMi42NDQuMjc2bC0yLjM5MiAyLjQyMmguMDA2YTIuOTQ3IDIuOTQ3IDAgMCAwIC43MDUuOTU0IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuMDQ3Ljg0NSAyLjk0NSAyLjk0NSAwIDAgMCAyLjA0Ny0uODQ0OTcgMi45NDYgMi45NDYgMCAwIDAgLjg0OS0yLjA1Mzk5di0xLjU5OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDQuMTQgMTYuMTQyYzAgLjYxNC0uNDk3IDEuMTExLTEuMTA5IDEuMTExVjE1LjAzYTEuMTEgMS4xMSAwIDAgMSAxLjEwOSAxLjExMXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDIuMjg1IDI2LjFhNC4xOSA0LjE5IDAgMCAxLTEuMDYyLjU1MiA4LjI2NiA4LjI2NiAwIDAgMS0uNzYyLjIwMSAzLjA3OCAzLjA3OCAwIDAgMSAtLjU3NS4wNjNsLjAxOC4zMjlhMi4xMDQgMi4xMDQgMCAwIDAgLjkxLS4wODUxYy4wNzQtLjAxOS4xNDctLjA0MS4yMi0uMDY0aDBoLjAwMWMuMDczLS4wMjMuMTQ2LS4wNDYuMjE5LS4wNzJoMGwuMDQ1LS4wMTcwMWExLjEwNSAxLjEwNSAwIDAgMCAuMDA5IDE2NC4wNDIgMTY0LjA0MiAwIDAgMCAuMjExLjA3OWguMDAxYzEuMjUxLjQ2NCAyLjUxNi45MzIgMy42Nzc0OC0uMWExMS4wNjQgMTEuMDY0IDAgMCAwIC0uMjQ1LTQuMmwtMi42NjMtLjQ3OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDMuOTg0IDE5LjU4NGEuODQ4Ljg0OCAwIDAgMC0uODUuODQ0Ljg1LjA1IDAgMCAwIC4wMDIuMTM0Ljg0OC44NDggMCAwIDAgLjgwNC44NS44NDguODQ4IDAgMCAwIC44NDQtLjg1LjgzNy44MzcgMCAwIDAgLS4wMDItLjEzNC44NDYuODQ2IDAgMCAwIC0uNzk4LS44NDV6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTQ2Ljk2MiAxNi4zMDZhMTEuMDU2IDExLjA1NiAwIDAgMC0xLjYzMy0zLjc2OS41MzYuNTM2IDAgMCAwIC0uNDczLS4yNjJoLS4wMDJsLS4wMDUgMGE4LjA3MSA4LjA3MSAwIDAgMCAuNzk2LS4wMTNjLTIuMjY5LS4wNTQtNS4xMjMuNzg5LTcuMzkzIDIuNTE4YTEwLjkxOCAxMC45MTggMCAwIDAtMi43NjMgMy42MjUgMTQuNjE4IDE0LjYxOCAwIDAgMCAyLjI2NyAxLjQ3NyAxNC42MjIgMTQuNjIyIDAgMCAwIDIuMjQgMS4wODJjLjgwMS4yNzQgMS42MzcuNDg3IDIuNDQzLjUzOC44MDcuMDUyIDEuNTYyLS4wMzEgMi4xNTgtLjMwMS4wMDUtLjA0NS4wMDktLjA4OS4wMDktLjEzMy44NDguODQ4IDAgMCAwIC0uODQ1LS44NDVsLTQuODUuMTU3YS44NDcuODQ3IDAgMCAwIC0uMTYzLS4wMS43NTIuNzUyIDAgMCAwIC0uNDYtLjExNSA5LjYxMiA5LjYxMiAwIDAgMS0xLjM0My0xLjQ5YzIuMzUgMS45OCA3LjAzMyAxLjEzMSA4LjExLTQuMjI0YTUuNjY4IDUuNjY4IDAgMCAxIC42MDkgMi4yNTYgMS40NSAxLjQ1IDAgMCAxIC44NjIuNDI5cy4zOTUtLjE0LjM5NS0uMTM5bC0uMDMzLS4wNXoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=');
+        background-size: contain;
+        background-repeat: no-repeat;
+      }
+    }
+    
+    .header-content {
+      flex: 1;
+      
+      .title {
+        margin: 0;
+        padding: 0;
+        font-size: 18px;
+        font-weight: 500;
+        color: #333;
+        line-height: 1.4;
+      }
+      
+      .subtitle {
+        margin: 4px 0 0;
+        padding: 0;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.4;
+      }
+    }
+    
+    .namespace-selector {
+      margin-left: 16px;
+    }
+  }
+  
+  // 整体仪表盘布局
+  .k8s-dashboard-layout {
+    display: flex;
+    flex: 1;
+    min-height: calc(100vh - 185px);
+    padding: 0 24px 16px;
+    
+    // 左侧导航样式
+    .sidebar-menu {
+      width: 280px;
+      min-width: 280px;
+      margin-right: 16px;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      
+      .menu-group {
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .group-title {
+          padding: 8px 16px;
+          color: #999;
+          font-size: 12px;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .menu-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 16px;
+          color: #333;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          
+          &:hover {
+            background-color: #f5f7fa;
+          }
+          
+          &.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-right: 3px solid #1890ff;
+            
+            .item-count {
+              background-color: #1890ff;
+              color: #fff;
+            }
+          }
+          
+          .item-text {
+            flex: 1;
+          }
+          
+          .item-count {
+            display: inline-block;
+            min-width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            padding: 0 6px;
+            border-radius: 12px;
+            background-color: #f0f0f0;
+            color: #666;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+    
+    // 右侧内容区域样式
+    .content-area {
+      flex: 1;
+      
+      .resource-list {
+        height: 100%;
+        
+        .resource-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 0;
+          margin-bottom: 16px;
+          
+          h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+            color: #333;
+          }
+        }
+      }
+    }
+  }
+  
+  // 仪表板卡片样式
+  .k8s-dashboard-card {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 16px;
+    overflow: hidden;
+    
+    &.k8s-resource-card {
+      .k8s-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 48px;
+        padding: 0 16px;
+        background-color: #f7f7f7;
+        border-bottom: 1px solid #eee;
+        
+        .k8s-card-title {
+          font-size: 16px;
+          font-weight: 500;
+          color: #333;
+        }
+        
+        .k8s-card-actions {
+          display: flex;
+          gap: 12px;
+          
+          .k8s-action-icon {
+            font-size: 16px;
+            color: #999;
+            cursor: pointer;
+            
+            &:hover {
+              color: #1890ff;
+            }
+          }
+        }
+      }
+      
+      .k8s-card-content {
+        padding: 0;
+      }
+    }
+  }
 }
 
-.title {
-  font-size: 22px;
-  margin-bottom: 4px;
-  color: #333333;
-  font-weight: 500;
-  letter-spacing: -0.3px;
-}
-
-.subtitle {
-  font-size: 14px;
-  color: #666666;
-  font-weight: 400;
-}
-
-.namespace-selector {
-  display: flex;
-  align-items: center;
-}
-
-.namespace-selector :deep(.ant-select-selection) {
-  background-color: #fff;
-  border-radius: 6px;
-  border: 1px solid #e1e4e8;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.namespace-selector :deep(.ant-select-selection:hover) {
-  border-color: #4f7ff3;
-}
-
-.namespace-selector :deep(.ant-select-selection:focus) {
-  border-color: #326CE5;
-  box-shadow: 0 0 0 2px rgba(50, 108, 229, 0.2);
-}
-
-/* 新增的Dashboard布局样式 */
-.k8s-dashboard-layout {
-  display: flex;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  border: 1px solid #eaeaea;
-}
-
-/* 左侧导航菜单 */
-.sidebar-menu {
-  width: 250px;
-  background-color: #f8f9fa;
-  border-right: 1px solid #e9ecef;
-  padding: 16px 0;
-}
-
-.menu-group {
-  margin-bottom: 16px;
-}
-
-.group-title {
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #586069;
-  text-transform: uppercase;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.menu-item:hover {
-  background-color: #f1f3f5;
-}
-
-.menu-item.active {
-  background-color: #e9ecef;
-  color: #326CE5;
-  font-weight: 500;
-  border-left: 3px solid #326CE5;
-}
-
-.item-text {
-  flex: 1;
-  color: #24292e;
-}
-
-.item-count {
-  font-size: 12px;
-  padding: 2px 6px;
-  background-color: #f1f3f5;
-  border-radius: 10px;
-  color: #586069;
-}
-
-/* 右侧内容区域 */
-.content-area {
-  flex: 1;
-  padding: 20px;
-  overflow: auto;
-}
-
-.resource-header {
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.resource-header h3 {
-  font-size: 18px;
-  color: #24292e;
-  margin: 0;
-}
-
-/* 表格样式 */
-.k8s-table {
-  width: 100%;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.k8s-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #586069;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.k8s-table :deep(.ant-table-tbody > tr > td) {
-  border-bottom: 1px solid #f1f3f5;
-}
-
-.k8s-table :deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #f8f9fa;
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-}
-
-.action-buttons a {
-  color: #326CE5;
-}
-
-.action-buttons a:hover {
-  color: #4f7ff3;
-}
-
-.tag-list {
+// 图表相关样式
+.k8s-dashboard-charts {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-}
-
-/* 图表区域样式 */
-.charts-container {
-  display: flex;
-  width: 100%;
-  margin-bottom: 24px;
   gap: 16px;
+  margin-bottom: 16px;
+  
+  .k8s-chart-card {
+    flex: 1;
+    min-width: 400px;
+    height: 250px;
+    border-radius: 4px;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+    
+    .k8s-chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 48px;
+      padding: 0 16px;
+      background-color: #f7f7f7;
+      border-bottom: 1px solid #e8e8e8;
+      
+      .k8s-chart-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+      }
+      
+      .k8s-chart-actions {
+        .k8s-action-icon {
+          cursor: pointer;
+          color: #999;
+          transition: color 0.3s;
+          
+          &:hover {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+    
+    .k8s-chart-content {
+      position: relative;
+      height: calc(100% - 48px);
+      padding: 10px 5px 10px 15px;
+      
+      .k8s-chart-y-label {
+        position: absolute;
+        left: -25px;
+        top: 50%;
+        transform: rotate(-90deg);
+        transform-origin: center;
+        font-size: 12px;
+        color: #666;
+        white-space: nowrap;
+        z-index: 2;
+        width: 80px;
+        text-align: center;
+      }
+      
+      .chart {
+        width: 100%;
+        height: 100%;
+      }
+    }
+  }
 }
 
-.chart-card {
-  flex: 1;
-  background-color: #ffffff;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  overflow: hidden;
-  border: 1px solid #eaeaea;
+/* 响应式布局 */
+@media screen and (max-width: 1200px) {
+  .k8s-dashboard-container {
+    .k8s-dashboard-charts {
+      .k8s-chart-card {
+        min-width: 300px;
+      }
+    }
+  }
 }
 
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+@media screen and (max-width: 768px) {
+  .k8s-dashboard-container {
+    .k8s-dashboard-charts {
+      flex-direction: column;
+      
+      .k8s-chart-card {
+        width: 100%;
+      }
+    }
+  }
 }
 
-.chart-header h3 {
-  margin: 0;
-  font-size: 14px;
+/* 表格通用样式 */
+.k8s-table {
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    
+    &.status-running {
+      background-color: #52c41a;
+    }
+    
+    &.status-warning {
+      background-color: #faad14;
+    }
+    
+    &.status-danger {
+      background-color: #f5222d;
+    }
+    
+    &.status-unknown {
+      background-color: #d9d9d9;
+    }
+  }
+  
+  .name-cell, .image-cell, .pods-display {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    
+    .label-tag {
+      margin: 2px;
+    }
+  }
+  
+  .action-buttons {
+    white-space: nowrap;
+    
+    a {
+      color: #1890ff;
+      
+      &:hover {
+        color: #40a9ff;
+      }
+    }
+  }
+}
+
+// 额外的表格样式修复
+:deep(.ant-table-thead > tr > th) {
+  background-color: #fafafa;
   font-weight: 500;
+  color: #333;
 }
 
-.chart-content {
-  padding: 16px;
-  height: 200px;
+:deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #e6f7ff;
 }
 
-.chart {
-  width: 100%;
+:deep(.ant-tag) {
+  margin-right: 4px;
+  margin-bottom: 4px;
+  border-radius: 2px;
+}
+
+:deep(.ant-spin-container) {
   height: 100%;
 }
 
-/* Deployments列表容器样式 */
-.deployments-list-container {
-  background-color: #ffffff;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-  overflow: hidden;
-  border: 1px solid #eaeaea;
+:deep(.ant-empty-image) {
+  margin-top: 32px;
 }
 
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.list-header h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-icon {
-  cursor: pointer;
-  padding: 6px;
-  color: #666;
-}
-
-.action-icon:hover {
-  color: #1890ff;
-}
-
-/* 状态点样式 */
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #d9d9d9;
-}
-
-.status-running {
-  background-color: #52c41a;
-}
-
-.status-warning {
-  background-color: #faad14;
-}
-
-/* 名称单元格样式 */
-.name-cell {
-  display: flex;
-  align-items: center;
-}
-
-.name-text {
-  font-weight: 500;
-  color: #1890ff;
-  cursor: pointer;
-}
-
-.name-text:hover {
-  text-decoration: underline;
-}
-
-/* 镜像单元格样式 */
-.image-cell {
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+:deep(.ant-table-placeholder) {
+  height: 100%;
 }
 </style>
