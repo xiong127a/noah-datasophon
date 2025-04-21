@@ -21,6 +21,7 @@ import com.datasophon.api.service.K8sDashboardService;
 import com.datasophon.common.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,8 +50,13 @@ public class K8sDashboardController {
     @RequestMapping("/deployments")
     public Result getDeployments(
             @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getDeployments(clusterId, namespace);
+        if (serviceId != null) {
+            return k8sDashboardService.getDeployments(clusterId, serviceId, namespace);
+        } else {
+            return k8sDashboardService.getDeployments(clusterId, namespace);
+        }
     }
 
     /**
@@ -220,6 +226,17 @@ public class K8sDashboardController {
             @RequestParam("namespace") String namespace,
             @RequestParam("kind") String kind,
             @RequestParam("name") String name) {
+        return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
+    }
+
+    /**
+     * 获取资源相关事件
+     */
+    @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
+    public Result getResourceEvents(@RequestParam Integer clusterId,
+            @RequestParam String namespace,
+            @RequestParam String kind,
+            @RequestParam String name) {
         return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
     }
 }
