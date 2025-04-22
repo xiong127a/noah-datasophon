@@ -51,3 +51,4 @@ node/
 /datasophon-ui/src/main/resources/rebel.xml
 /datasophon-worker/src/main/resources/rebel.xml
 /commit-prompt.txt
+/dashboard/

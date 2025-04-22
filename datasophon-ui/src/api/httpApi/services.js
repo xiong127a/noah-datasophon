@@ -70,7 +70,7 @@ export default {
   getK8sConfigMaps: path + '/api/k8s/configmaps', // 获取ConfigMap列表
   getK8sConfigMapDetail: path + '/api/k8s/configmap/detail', // 获取ConfigMap详情
   updateK8sConfigMap: path + '/api/k8s/configmap/update', // 更新ConfigMap
-  getK8sServices: path + '/api/k8s/services', // 获取Service列表
+  getK8sServices: path + '/api/k8s/dashboard/services', // 获取Service列表
   getK8sServiceDetail: path + '/api/k8s/service/detail', // 获取Service详情
   updateK8sService: path + '/api/k8s/service/update', // 更新Service
   getK8sPvcs: path + '/api/k8s/pvcs', // 获取PVC列表

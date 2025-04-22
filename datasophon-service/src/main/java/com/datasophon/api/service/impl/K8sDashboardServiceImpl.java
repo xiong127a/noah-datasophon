@@ -91,7 +91,6 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
 
             // 获取Deployments
             DeploymentList deploymentList;
-            namespace = "datasophon";
             if (namespace != null && !namespace.isEmpty()) {
                 deploymentList = client.apps().deployments().inNamespace(namespace).list();
             } else {
@@ -508,16 +507,114 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     @Override
     public Result getServices(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取Services
+            io.fabric8.kubernetes.api.model.ServiceList serviceList;
+            if (namespace != null && !namespace.isEmpty()) {
+                serviceList = client.services().inNamespace(namespace).list();
+            } else {
+                serviceList = client.services().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取Services逻辑
-            List<Object> services = new ArrayList<>();
+            // 按照Kubernetes Dashboard的格式构建结果
+            Map<String, Object> result = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, services);
+            // 构建services列表
+            List<Map<String, Object>> services = serviceList.getItems().stream()
+                    .map(service -> {
+                        Map<String, Object> item = new HashMap<>();
+
+                        // 1. objectMeta
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        if (service.getMetadata() != null) {
+                            objectMeta.put("name", service.getMetadata().getName());
+                            objectMeta.put("namespace", service.getMetadata().getNamespace());
+                            objectMeta.put("labels", service.getMetadata().getLabels());
+                            objectMeta.put("creationTimestamp", service.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", service.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 2. typeMeta
+                        Map<String, String> typeMeta = new HashMap<>();
+                        typeMeta.put("kind", "service");
+                        item.put("typeMeta", typeMeta);
+
+                        // 3. internalEndpoint
+                        Map<String, Object> internalEndpoint = new HashMap<>();
+                        String host = String.format("%s.%s", service.getMetadata().getName(),
+                                service.getMetadata().getNamespace());
+                        internalEndpoint.put("host", host);
+
+                        List<Map<String, Object>> ports = new ArrayList<>();
+                        if (service.getSpec() != null && service.getSpec().getPorts() != null) {
+                            service.getSpec().getPorts().forEach(port -> {
+                                Map<String, Object> portInfo = new HashMap<>();
+                                portInfo.put("port", port.getPort());
+                                portInfo.put("protocol", port.getProtocol());
+                                if (port.getNodePort() != null && port.getNodePort() > 0) {
+                                    portInfo.put("nodePort", port.getNodePort());
+                                }
+                                ports.add(portInfo);
+                            });
+                        }
+                        internalEndpoint.put("ports", ports);
+                        item.put("internalEndpoint", internalEndpoint);
+
+                        // 4. externalEndpoints
+                        List<Object> externalEndpoints = new ArrayList<>();
+                        // 根据服务类型处理外部访问点
+                        if (service.getSpec() != null) {
+                            String serviceType = service.getSpec().getType();
+                            if ("LoadBalancer".equals(serviceType) && service.getStatus() != null &&
+                                    service.getStatus().getLoadBalancer() != null &&
+                                    service.getStatus().getLoadBalancer().getIngress() != null) {
+                                service.getStatus().getLoadBalancer().getIngress().forEach(ingress -> {
+                                    Map<String, Object> endpoint = new HashMap<>();
+                                    endpoint.put("host",
+                                            ingress.getHostname() != null ? ingress.getHostname() : ingress.getIp());
+                                    endpoint.put("ports", ports); // 复用内部端口
+                                    externalEndpoints.add(endpoint);
+                                });
+                            }
+                        }
+                        item.put("externalEndpoints", externalEndpoints);
+
+                        // 5. selector
+                        if (service.getSpec() != null && service.getSpec().getSelector() != null) {
+                            item.put("selector", service.getSpec().getSelector());
+                        } else {
+                            item.put("selector", new HashMap<String, String>());
+                        }
+
+                        // 6. type
+                        if (service.getSpec() != null) {
+                            item.put("type", service.getSpec().getType());
+                        }
+
+                        // 7. clusterIP
+                        if (service.getSpec() != null) {
+                            item.put("clusterIP", service.getSpec().getClusterIP());
+                        }
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建listMeta
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", services.size());
+            result.put("listMeta", listMeta);
+
+            // 添加services列表
+            result.put("services", services);
+
+            // 添加errors数组
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Services列表出错", e);
             return Result.error("获取Services列表出错: " + e.getMessage());
