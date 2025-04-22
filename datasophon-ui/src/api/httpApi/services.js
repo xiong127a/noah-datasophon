@@ -61,4 +61,10 @@ export default {
   getK8sPvcs: path + '/api/k8s/pvcs', // 获取PVC列表
   getK8sPvcDetail: path + '/api/k8s/pvc/detail', // 获取PVC详情
   updateK8sPvc: path + '/api/k8s/pvc/update', // 更新PVC
+  getK8sDeployments: path + '/api/k8s/deployments', // 获取Deployment列表
+  getK8sDeploymentDetail: path + '/api/k8s/deployment/detail', // 获取Deployment详情
+  updateK8sDeployment: path + '/api/k8s/deployment/update', // 更新Deployment
+  getK8sStatefulSets: path + '/api/k8s/statefulsets', // 获取StatefulSet列表
+  getK8sStatefulSetDetail: path + '/api/k8s/statefulset/detail', // 获取StatefulSet详情
+  updateK8sStatefulSet: path + '/api/k8s/statefulset/update', // 更新StatefulSet
 }

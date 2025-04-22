@@ -56,4 +56,34 @@ public class K8sServiceConfigController {
     public Result updateK8sPvc(@RequestParam Integer clusterId, @RequestParam String name, @RequestParam String content) {
         return k8sServiceConfigService.updateK8sPvc(clusterId, name, content);
     }
+
+    @GetMapping("/deployments")
+    public Result getK8sDeployments(@RequestParam Integer clusterId, @RequestParam String serviceName) {
+        return k8sServiceConfigService.getK8sDeployments(clusterId, serviceName);
+    }
+
+    @GetMapping("/deployment/detail")
+    public Result getK8sDeploymentDetail(@RequestParam Integer clusterId, @RequestParam String name) {
+        return k8sServiceConfigService.getK8sDeploymentDetail(clusterId, name);
+    }
+
+    @PostMapping("/deployment/update")
+    public Result updateK8sDeployment(@RequestParam Integer clusterId, @RequestParam String name, @RequestParam String content) {
+        return k8sServiceConfigService.updateK8sDeployment(clusterId, name, content);
+    }
+
+    @GetMapping("/statefulsets")
+    public Result getK8sStatefulSets(@RequestParam Integer clusterId, @RequestParam String serviceName) {
+        return k8sServiceConfigService.getK8sStatefulSets(clusterId, serviceName);
+    }
+
+    @GetMapping("/statefulset/detail")
+    public Result getK8sStatefulSetDetail(@RequestParam Integer clusterId, @RequestParam String name) {
+        return k8sServiceConfigService.getK8sStatefulSetDetail(clusterId, name);
+    }
+
+    @PostMapping("/statefulset/update")
+    public Result updateK8sStatefulSet(@RequestParam Integer clusterId, @RequestParam String name, @RequestParam String content) {
+        return k8sServiceConfigService.updateK8sStatefulSet(clusterId, name, content);
+    }
 }

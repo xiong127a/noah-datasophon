@@ -6,21 +6,6 @@
         <h2 class="title">{{ serviceName }} K8s 配置</h2>
         <p class="subtitle">管理{{ serviceName }}服务的K8s配置</p>
       </div>
-      <!-- 命名空间选择器 -->
-      <div class="namespace-selector">
-        <a-select
-          v-model="selectedNamespace"
-          placeholder="请选择命名空间"
-          :loading="namespacesLoading"
-          @change="handleNamespaceChange"
-          style="width: 200px"
-        >
-          <a-select-option value="all">所有命名空间</a-select-option>
-          <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
-            {{ ns.name }}
-          </a-select-option>
-        </a-select>
-      </div>
     </div>
 
     <div class="k8s-dashboard-layout">
@@ -29,37 +14,37 @@
         <!-- 工作负载分组 -->
         <div class="menu-group">
           <div class="group-title">工作负载</div>
-          <div class="menu-item" :class="{ active: activeResource === 'cronjobs' }" @click="activeResource = 'cronjobs'">
+          <div class="menu-item" v-if="cronJobs.length > 0" :class="{ active: activeResource === 'cronjobs' }" @click="activeResource = 'cronjobs'">
             <span class="item-text">Cron Jobs</span>
-            <span class="item-count">{{ cronJobs && cronJobs.length || 0 }}</span>
+            <span class="item-count">{{ cronJobs.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'daemonsets' }" @click="activeResource = 'daemonsets'">
+          <div class="menu-item" v-if="daemonSets.length > 0" :class="{ active: activeResource === 'daemonsets' }" @click="activeResource = 'daemonsets'">
             <span class="item-text">Daemon Sets</span>
-            <span class="item-count">{{ daemonSets && daemonSets.length || 0 }}</span>
+            <span class="item-count">{{ daemonSets.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'deployments' }" @click="activeResource = 'deployments'">
+          <div class="menu-item" v-if="deployments.length > 0" :class="{ active: activeResource === 'deployments' }" @click="activeResource = 'deployments'">
             <span class="item-text">Deployments</span>
-            <span class="item-count">{{ deployments && deployments.length || 0 }}</span>
+            <span class="item-count">{{ deployments.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'jobs' }" @click="activeResource = 'jobs'">
+          <div class="menu-item" v-if="jobs.length > 0" :class="{ active: activeResource === 'jobs' }" @click="activeResource = 'jobs'">
             <span class="item-text">Jobs</span>
-            <span class="item-count">{{ jobs && jobs.length || 0 }}</span>
+            <span class="item-count">{{ jobs.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'pods' }" @click="activeResource = 'pods'">
+          <div class="menu-item" v-if="pods.length > 0" :class="{ active: activeResource === 'pods' }" @click="activeResource = 'pods'">
             <span class="item-text">Pods</span>
-            <span class="item-count">{{ pods && pods.length || 0 }}</span>
+            <span class="item-count">{{ pods.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'replicasets' }" @click="activeResource = 'replicasets'">
+          <div class="menu-item" v-if="replicaSets.length > 0" :class="{ active: activeResource === 'replicasets' }" @click="activeResource = 'replicasets'">
             <span class="item-text">Replica Sets</span>
-            <span class="item-count">{{ replicaSets && replicaSets.length || 0 }}</span>
+            <span class="item-count">{{ replicaSets.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'replicationcontrollers' }" @click="activeResource = 'replicationcontrollers'">
+          <div class="menu-item" v-if="replicationControllers.length > 0" :class="{ active: activeResource === 'replicationcontrollers' }" @click="activeResource = 'replicationcontrollers'">
             <span class="item-text">Replication Controllers</span>
-            <span class="item-count">{{ replicationControllers && replicationControllers.length || 0 }}</span>
+            <span class="item-count">{{ replicationControllers.length }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'statefulsets' }" @click="activeResource = 'statefulsets'">
+          <div class="menu-item" v-if="statefulSets.length > 0" :class="{ active: activeResource === 'statefulsets' }" @click="activeResource = 'statefulsets'">
             <span class="item-text">Stateful Sets</span>
-            <span class="item-count">{{ statefulSets && statefulSets.length || 0 }}</span>
+            <span class="item-count">{{ statefulSets.length }}</span>
           </div>
         </div>
         
@@ -69,14 +54,6 @@
             <span class="item-text">Services</span>
             <span class="item-count">{{ services && services.length || 0 }}</span>
           </div>
-          <div class="menu-item" :class="{ active: activeResource === 'ingress' }" @click="activeResource = 'ingress'">
-            <span class="item-text">Ingresses</span>
-            <span class="item-count">{{ ingresses && ingresses.length || 0 }}</span>
-          </div>
-          <div class="menu-item" :class="{ active: activeResource === 'ingressclass' }" @click="activeResource = 'ingressclass'">
-            <span class="item-text">Ingress Classes</span>
-            <span class="item-count">{{ ingressClasses && ingressClasses.length || 0 }}</span>
-          </div>
         </div>
         
         <div class="menu-group">
@@ -84,10 +61,6 @@
           <div class="menu-item" :class="{ active: activeResource === 'configmap' }" @click="activeResource = 'configmap'">
             <span class="item-text">Config Maps</span>
             <span class="item-count">{{ configMaps && configMaps.length || 0 }}</span>
-          </div>
-          <div class="menu-item" :class="{ active: activeResource === 'secret' }" @click="activeResource = 'secret'">
-            <span class="item-text">Secrets</span>
-            <span class="item-count">{{ secrets && secrets.length || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pv' }" @click="activeResource = 'pv'">
             <span class="item-text">Persistent Volumes</span>
@@ -173,104 +146,6 @@
           </a-spin>
         </div>
 
-        <!-- Ingress列表 -->
-        <div v-if="activeResource === 'ingress'" class="resource-list">
-          <div class="resource-header">
-            <h3>Ingresses</h3>
-          </div>
-          <a-spin :spinning="loading">
-            <a-table
-              :columns="ingressColumns"
-              :dataSource="ingresses"
-              :pagination="false"
-              :rowKey="record => record.name"
-              class="k8s-table"
-            >
-              <template #action="{ record }">
-                <div class="action-buttons">
-                  <a @click="handleViewIngress(record)">查看</a>
-                  <a-divider type="vertical" />
-                  <a @click="handleEditIngress(record)">编辑</a>
-                </div>
-              </template>
-              <template #labels="{ text }">
-                <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-                  <a-tag v-for="(value, key) in text" :key="key" color="blue">
-                    {{ key }}: {{ value }}
-                  </a-tag>
-                </div>
-                <span v-else>-</span>
-              </template>
-            </a-table>
-          </a-spin>
-        </div>
-
-        <!-- IngressClass列表 -->
-        <div v-if="activeResource === 'ingressclass'" class="resource-list">
-          <div class="resource-header">
-            <h3>Ingress Classes</h3>
-          </div>
-          <a-spin :spinning="loading">
-            <a-table
-              :columns="ingressClassColumns"
-              :dataSource="ingressClasses"
-              :pagination="false"
-              :rowKey="record => record.name"
-              class="k8s-table"
-            >
-              <template #action="{ record }">
-                <div class="action-buttons">
-                  <a @click="handleViewIngressClass(record)">查看</a>
-                  <a-divider type="vertical" />
-                  <a @click="handleEditIngressClass(record)">编辑</a>
-                </div>
-              </template>
-              <template #labels="{ text }">
-                <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-                  <a-tag v-for="(value, key) in text" :key="key" color="blue">
-                    {{ key }}: {{ value }}
-                  </a-tag>
-                </div>
-                <span v-else>-</span>
-              </template>
-            </a-table>
-          </a-spin>
-        </div>
-
-        <!-- Secret列表 -->
-        <div v-if="activeResource === 'secret'" class="resource-list">
-          <div class="resource-header">
-            <h3>Secrets</h3>
-          </div>
-          <a-spin :spinning="loading">
-            <a-table
-              :columns="secretColumns"
-              :dataSource="secrets"
-              :pagination="false"
-              :rowKey="record => record.name"
-              class="k8s-table"
-            >
-              <template #action="{ record }">
-                <div class="action-buttons">
-                  <a @click="handleViewSecret(record)">查看</a>
-                  <a-divider type="vertical" />
-                  <a @click="handleEditSecret(record)">编辑</a>
-                </div>
-              </template>
-              <template #labels="{ text }">
-                <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-                  <a-tag v-for="(value, key) in text" :key="key" color="blue">
-                    {{ key }}: {{ value }}
-                  </a-tag>
-                </div>
-                <span v-else>-</span>
-              </template>
-              <template #type="{ text }">
-                <a-tag color="green">{{ text }}</a-tag>
-              </template>
-            </a-table>
-          </a-spin>
-        </div>
 
         <!-- PV列表 -->
         <div v-if="activeResource === 'pv'" class="resource-list">
@@ -677,9 +552,6 @@ export default {
       configMaps: [],
       services: [],
       pvcs: [],
-      ingresses: [],
-      ingressClasses: [],
-      secrets: [],
       persistentVolumes: [],
       storageClasses: [],
       loading: false,
@@ -762,40 +634,83 @@ export default {
           title: '名称',
           dataIndex: 'name',
           key: 'name',
-          width: '25%',
+          width: '20%',
         },
         {
-          title: '命名空间',
-          dataIndex: 'namespace',
-          key: 'namespace',
-          width: '15%',
+          title: '镜像',
+          dataIndex: 'image',
+          key: 'image',
+          width: '20%',
         },
         {
           title: '标签',
           dataIndex: 'labels',
           key: 'labels',
-          width: '25%',
+          width: '20%',
           slots: { customRender: 'labels' }
         },
         {
-          title: '副本',
-          dataIndex: 'replicas',
-          key: 'replicas',
+          title: 'Pods',
+          dataIndex: 'readyReplicas',
+          key: 'readyReplicas',
           width: '10%',
         },
         {
-          title: '可用',
-          dataIndex: 'available',
-          key: 'available',
-          width: '10%',
+          title: '创建时间',
+          dataIndex: 'creationTimestamp',
+          key: 'creationTimestamp',
+          width: '20%',
+          slots: { customRender: 'time' }
         },
         {
           title: '操作',
           key: 'action',
-          width: '15%',
+          width: '10%',
           slots: { customRender: 'action' },
         },
       ],
+
+      statefulSetColumns: [
+        {
+          title: '名称',
+          dataIndex: 'name',
+          key: 'name',
+          width: '20%',
+        },
+        {
+          title: '镜像',
+          dataIndex: 'image',
+          key: 'image',
+          width: '20%',
+        },
+        {
+          title: '标签',
+          dataIndex: 'labels',
+          key: 'labels',
+          width: '20%',
+          slots: { customRender: 'labels' }
+        },
+        {
+          title: 'Pods',
+          dataIndex: 'readyReplicas',
+          key: 'readyReplicas',
+          width: '10%',
+        },
+        {
+          title: '创建时间',
+          dataIndex: 'creationTimestamp',
+          key: 'creationTimestamp',
+          width: '20%',
+          slots: { customRender: 'time' }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: '10%',
+          slots: { customRender: 'action' },
+        },
+      ],
+
       jobColumns: [
         {
           title: '名称',
@@ -938,39 +853,6 @@ export default {
           title: '当前副本',
           dataIndex: 'current',
           key: 'current',
-          width: '10%',
-        },
-        {
-          title: '操作',
-          key: 'action',
-          width: '15%',
-          slots: { customRender: 'action' },
-        },
-      ],
-      statefulSetColumns: [
-        {
-          title: '名称',
-          dataIndex: 'name',
-          key: 'name',
-          width: '25%',
-        },
-        {
-          title: '命名空间',
-          dataIndex: 'namespace',
-          key: 'namespace',
-          width: '15%',
-        },
-        {
-          title: '标签',
-          dataIndex: 'labels',
-          key: 'labels',
-          width: '25%',
-          slots: { customRender: 'labels' }
-        },
-        {
-          title: '副本',
-          dataIndex: 'replicas',
-          key: 'replicas',
           width: '10%',
         },
         {
@@ -1246,202 +1128,149 @@ export default {
       ]
     };
   },
+  computed: {
+
+  },
   methods: {
-    async fetchK8sResources() {
-      this.loading = true;
-      try {
-        // 先获取命名空间列表
-        if (this.namespaces.length === 0) {
-          await this.fetchNamespaces();
+      async fetchK8sResources() {
+        this.loading = true;
+        try {
+          await Promise.all([
+            this.fetchConfigMaps(),
+            this.fetchServices(),
+            this.fetchPvcs(),
+            this.fetchPersistentVolumes(),
+            this.fetchStorageClasses(),
+            this.fetchDeployments(), // 新增
+            this.fetchStatefulSets() // 新增
+          ]);
+        } catch (error) {
+          console.error('Error fetching K8s resources:', error);
+        } finally {
+          this.loading = false;
         }
-        
-        await Promise.all([
-          // 工作负载
-          this.fetchCronJobs(),
-          this.fetchDaemonSets(),
-          this.fetchDeployments(),
-          this.fetchJobs(),
-          this.fetchPods(),
-          this.fetchReplicaSets(),
-          this.fetchReplicationControllers(),
-          this.fetchStatefulSets(),
-          // 已有资源
-          this.fetchConfigMaps(),
-          this.fetchServices(),
-          this.fetchPvcs(),
-          this.fetchIngresses(),
-          this.fetchIngressClasses(),
-          this.fetchSecrets(),
-          this.fetchPersistentVolumes(),
-          this.fetchStorageClasses()
-        ]);
-      } catch (error) {
-        console.error('Error fetching K8s resources:', error);
-      } finally {
-        this.loading = false;
-      }
-    },
-    // 获取命名空间
-    async fetchNamespaces() {
-      this.namespacesLoading = true;
-      try {
-        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
-          clusterId: this.clusterId
-        });
-        if (res.code === 200) {
-          this.namespaces = res.data || [];
-        } else {
-          console.error('Failed to fetch namespaces:', res.msg);
-          this.namespaces = [];
+      },
+      async fetchConfigMaps() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.configMaps = res.data || [];
+          } else {
+            console.error('Failed to fetch config maps:', res.msg);
+            this.configMaps = [];
+          }
+        } catch (error) {
+          console.error('Error fetching config maps:', error);
+          this.configMaps = [];
         }
-      } catch (error) {
-        console.error('Error fetching namespaces:', error);
-        this.namespaces = [];
-      } finally {
-        this.namespacesLoading = false;
-      }
-    },
-    // 命名空间变化处理
-    handleNamespaceChange(value) {
-      this.selectedNamespace = value;
-      this.fetchK8sResources(); // 重新加载资源
-    },
-    // 工作负载相关方法
-    async fetchCronJobs() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sCronJobs, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.cronJobs = res.data || [];
-        } else {
-          console.error('Failed to fetch cron jobs:', res.msg);
-          this.cronJobs = [];
+      },
+      async fetchServices() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sServices, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.services = res.data || [];
+          } else {
+            console.error('Failed to fetch services:', res.msg);
+            this.services = [];
+          }
+        } catch (error) {
+          console.error('Error fetching services:', error);
+          this.services = [];
         }
-      } catch (error) {
-        console.error('Error fetching cron jobs:', error);
-        this.cronJobs = [];
-      }
-    },
-    async fetchDaemonSets() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sDaemonSets, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.daemonSets = res.data || [];
-        } else {
-          console.error('Failed to fetch daemon sets:', res.msg);
-          this.daemonSets = [];
+      },
+      async fetchPvcs() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sPvcs, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.pvcs = res.data || [];
+          } else {
+            console.error('Failed to fetch PVCs:', res.msg);
+            this.pvcs = [];
+          }
+        } catch (error) {
+          console.error('Error fetching PVCs:', error);
+          this.pvcs = [];
         }
-      } catch (error) {
-        console.error('Error fetching daemon sets:', error);
-        this.daemonSets = [];
-      }
-    },
-    async fetchDeployments() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sDeployments, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.deployments = res.data || [];
-        } else {
-          console.error('Failed to fetch deployments:', res.msg);
+      },
+      async fetchPersistentVolumes() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sPersistentVolumes, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.persistentVolumes = res.data || [];
+          } else {
+            console.error('Failed to fetch persistent volumes:', res.msg);
+            this.persistentVolumes = [];
+          }
+        } catch (error) {
+          console.error('Error fetching persistent volumes:', error);
+          this.persistentVolumes = [];
+        }
+      },
+      async fetchStorageClasses() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sStorageClasses, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.storageClasses = res.data || [];
+          } else {
+            console.error('Failed to fetch storage classes:', res.msg);
+            this.storageClasses = [];
+          }
+        } catch (error) {
+          console.error('Error fetching storage classes:', error);
+          this.storageClasses = [];
+        }
+      },
+
+      async fetchDeployments() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sDeployments, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.deployments = res.data || [];
+          } else {
+            console.error('Failed to fetch deployments:', res.msg);
+            this.deployments = [];
+          }
+        } catch (error) {
+          console.error('Error fetching deployments:', error);
           this.deployments = [];
         }
-      } catch (error) {
-        console.error('Error fetching deployments:', error);
-        this.deployments = [];
-      }
-    },
-    async fetchJobs() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sJobs, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.jobs = res.data || [];
-        } else {
-          console.error('Failed to fetch jobs:', res.msg);
-          this.jobs = [];
-        }
-      } catch (error) {
-        console.error('Error fetching jobs:', error);
-        this.jobs = [];
-      }
-    },
-    async fetchPods() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sPods, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.pods = res.data || [];
-        } else {
-          console.error('Failed to fetch pods:', res.msg);
-          this.pods = [];
-        }
-      } catch (error) {
-        console.error('Error fetching pods:', error);
-        this.pods = [];
-      }
-    },
-    async fetchReplicaSets() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sReplicaSets, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.replicaSets = res.data || [];
-        } else {
-          console.error('Failed to fetch replica sets:', res.msg);
-          this.replicaSets = [];
-        }
-      } catch (error) {
-        console.error('Error fetching replica sets:', error);
-        this.replicaSets = [];
-      }
-    },
-    async fetchReplicationControllers() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sReplicationControllers, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.replicationControllers = res.data || [];
-        } else {
-          console.error('Failed to fetch replication controllers:', res.msg);
-          this.replicationControllers = [];
-        }
-      } catch (error) {
-        console.error('Error fetching replication controllers:', error);
-        this.replicationControllers = [];
-      }
-    },
-    async fetchStatefulSets() {
-      try {
-        const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
-          clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
-        if (res.code === 200) {
-          this.statefulSets = res.data || [];
-        } else {
-          console.error('Failed to fetch stateful sets:', res.msg);
+      },
+
+      async fetchStatefulSets() {
+        try {
+          const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName
+          });
+          if (res.code === 200) {
+            this.statefulSets = res.data || [];
+          } else {
+            console.error('Failed to fetch stateful sets:', res.msg);
+            this.statefulSets = [];
+          }
+        } catch (error) {
+          console.error('Error fetching stateful sets:', error);
           this.statefulSets = [];
         }
-      } catch (error) {
-        console.error('Error fetching stateful sets:', error);
-        this.statefulSets = [];
-      }
+      },
     },
     // 工作负载处理方法
     handleViewCronJob(record) {
@@ -1509,8 +1338,6 @@ export default {
           return 'default';
       }
     },
-    // ... existing methods ...
-  },
   mounted() {
     if (this.serviceId) {
       this.fetchK8sResources();
