@@ -10,7 +10,7 @@
         <p class="subtitle">查看和管理{{ serviceLabel || serviceName }}服务的Kubernetes资源</p>
       </div>
       <!-- 命名空间选择器 -->
-      <div class="namespace-selector">
+      <div class="namespace-selector" style="display: none;"><!-- 隐藏命名空间选择器 -->
         <a-select
           v-model="selectedNamespace"
           placeholder="请选择命名空间"
@@ -149,19 +149,19 @@
           <div class="resource-header">
             <h3>Services</h3>
           </div>
-        <a-spin :spinning="loading">
-          <a-table
-            :columns="serviceColumns"
-            :dataSource="services"
-            :pagination="false"
+          <a-spin :spinning="loading">
+            <a-table
+              :columns="serviceColumns"
+              :dataSource="services"
+              :pagination="false"
               :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
-          >
-            <template #action="{ record }">
+            >
+              <template #action="{ record }">
                 <div class="action-buttons">
-              <a @click="handleViewService(record)">查看</a>
-              <a-divider type="vertical" />
-              <a @click="handleEditService(record)">编辑</a>
+                  <a @click="handleViewService(record)">查看</a>
+                  <a-divider type="vertical" />
+                  <a @click="handleEditService(record)">编辑</a>
                 </div>
               </template>
               <template #labels="{ text }">
@@ -171,9 +171,15 @@
                   </a-tag>
                 </div>
                 <span v-else>-</span>
-            </template>
-          </a-table>
-        </a-spin>
+              </template>
+              <!-- 添加创建时间自定义渲染函数 -->
+              <template #creationTime="{ record }">
+                <span class="format-time-cell">
+                  {{ formatTime(record.objectMeta?.creationTimestamp) }}
+                </span>
+              </template>
+            </a-table>
+          </a-spin>
         </div>
 
         <!-- Ingress列表 -->
@@ -453,21 +459,21 @@
                 <div class="k8s-chart-title">CPU Usage</div>
                 <div class="k8s-chart-actions">
                   <a-icon type="fullscreen" class="k8s-action-icon" />
-                </div>
+              </div>
               </div>
               <div class="k8s-chart-content">
                 <div class="k8s-chart-y-label">CPU (cores)</div>
                 <div ref="cpuChart" class="chart"></div>
               </div>
             </div>
-
+            
             <!-- Memory Usage Chart -->
             <div class="k8s-chart-card">
               <div class="k8s-chart-header">
                 <div class="k8s-chart-title">Memory Usage</div>
                 <div class="k8s-chart-actions">
                   <a-icon type="fullscreen" class="k8s-action-icon" />
-                </div>
+              </div>
               </div>
               <div class="k8s-chart-content">
                 <div class="k8s-chart-y-label">Memory (bytes)</div>
@@ -488,16 +494,16 @@
               </div>
             </div>
             <div class="k8s-card-content">
-              <a-spin :spinning="loading">
-                <a-table 
-                  :columns="deploymentColumns" 
-                  :dataSource="deployments" 
-                  :pagination="false"
+            <a-spin :spinning="loading">
+              <a-table 
+                :columns="deploymentColumns" 
+                :dataSource="deployments" 
+                :pagination="false"
                   :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
-                  class="k8s-table"
-                >
-                </a-table>
-              </a-spin>
+                class="k8s-table"
+              >
+              </a-table>
+            </a-spin>
             </div>
           </div>
         </div>
@@ -680,6 +686,7 @@
 <script>
 import { defineComponent, ref, reactive } from 'vue'
 import DeploymentView from '../components/DeploymentView.vue'
+import dayjs from 'dayjs'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -709,7 +716,7 @@ export default defineComponent({
   data() {
     return {
       namespaces: [],
-      selectedNamespace: 'all',
+      selectedNamespace: 'datasophon', // 固定使用datasophon命名空间
       namespacesLoading: false,
       activeResource: 'configmap', // 默认显示ConfigMap
       // 工作负载
@@ -834,9 +841,9 @@ export default defineComponent({
         },
         {
           title: '命名空间',
-          dataIndex: 'objectMeta.namespace',
+          dataIndex: 'namespace',
           key: 'namespace',
-          width: '10%'
+          width: '12%'
         },
         {
           title: '镜像',
@@ -853,20 +860,23 @@ export default defineComponent({
         },
         {
           title: '标签',
-          dataIndex: 'objectMeta.labels',
           key: 'labels',
-          width: '25%',
-          customRender: (_, record) => {
-            if (record?.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0) {
-              return <div class="tag-list">
-                {Object.entries(record.objectMeta.labels).map(([key, value]) => (
-                  <a-tag color="blue" class="label-tag" key={key}>
-                    {key}: {value}
-                  </a-tag>
-                ))}
-              </div>
+          width: '20%',
+          customRender: (text, record) => {
+            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
+              return '-';
             }
-            return <span>-</span>
+            
+            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
+            return h('div', { class: 'labels-container' }, 
+              Object.entries(record.objectMeta.labels).map(([key, value]) => {
+                return h('a-tag', { 
+                  props: { color: 'blue' },
+                  class: 'label-chip',
+                  key: key
+                }, `${key}: ${value}`);
+              })
+            );
           }
         },
         {
@@ -881,20 +891,115 @@ export default defineComponent({
           }
         },
         {
+          title: '内部 Endpoints',
+          key: 'internalEndpoints',
+          width: '15%',
+          customRender: (text, record) => {
+            // 显示内部端点
+            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
+              return '-';
+            }
+            
+            const endpoints = [];
+            
+            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
+            record.internalEndpoint.ports.forEach(port => {
+              // 显示内部端口
+              endpoints.push(h('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.port} ${port.protocol}`));
+              
+              // 如果存在nodePort，则显示nodePort端口
+              if (port.nodePort) {
+                endpoints.push(h('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`));
+              }
+            });
+            
+            return h('div', {}, endpoints);
+          }
+        },
+        {
+          title: '外部 Endpoints',
+          key: 'externalEndpoints',
+          width: '15%',
+          customRender: (text, record) => {
+            // 检查externalEndpoints是否为空数组
+            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
+            
+            // 如果externalEndpoints不为空，显示外部端点
+            if (hasExternalEndpoints) {
+              const endpoints = [];
+              
+              record.externalEndpoints.forEach(endpoint => {
+                if (endpoint.ports && endpoint.ports.length > 0) {
+                  endpoint.ports.forEach(port => {
+                    if (port.port) {
+                      endpoints.push(h('div', {}, [
+                        h('a', { 
+                          attrs: { 
+                            href: `http://${endpoint.host}:${port.port}`,
+                            target: '_blank',
+                            rel: 'noopener noreferrer'
+                          },
+                          class: 'external-endpoint'
+                        }, [
+                          `${endpoint.host}:${port.port}`,
+                          h('i', { class: 'anticon anticon-link external-icon' })
+                        ])
+                      ]));
+                    }
+                    
+                    if (!port.port && port.nodePort) {
+                      endpoints.push(h('div', {}, [
+                        h('a', { 
+                          attrs: { 
+                            href: `http://${endpoint.host}:${port.nodePort}`,
+                            target: '_blank',
+                            rel: 'noopener noreferrer'
+                          },
+                          class: 'external-endpoint'
+                        }, [
+                          `${endpoint.host}:${port.nodePort}`,
+                          h('i', { class: 'anticon anticon-link external-icon' })
+                        ])
+                      ]));
+                    }
+                  });
+                } else {
+                  endpoints.push(h('div', {}, [
+                    h('a', { 
+                      attrs: { 
+                        href: `http://${endpoint.host}`,
+                        target: '_blank',
+                        rel: 'noopener noreferrer'
+                      },
+                      class: 'external-endpoint'
+                    }, [
+                      endpoint.host,
+                      h('i', { class: 'anticon anticon-link external-icon' })
+                    ])
+                  ]));
+                }
+              });
+              
+              return h('div', {}, endpoints);
+            }
+            
+            return '-';
+          }
+        },
+        {
           title: '创建时间',
-          dataIndex: 'objectMeta.creationTimestamp',
           key: 'creationTime',
-          width: '20%',
-          customRender: (_, record) => {
-            const exactTime = this.formatTime(record?.objectMeta?.creationTimestamp);
-            return (
-              <a-tooltip title={exactTime}>
-                <span>{this.formatRelativeTime(record?.objectMeta?.creationTimestamp)}</span>
-              </a-tooltip>
-            );
-          },
-          sorter: (a, b) => {
-            return new Date(a.objectMeta?.creationTimestamp || 0) - new Date(b.objectMeta?.creationTimestamp || 0);
+          width: '10%',
+          sorter: true,
+          className: 'normal-column-header', // 添加自定义类名
+          customRender: (text, record) => {
+            // 获取创建时间
+            const timestamp = record.objectMeta?.creationTimestamp;
+            if (!timestamp) return '-';
+            
+            // 格式化为 "x天前" 的形式
+            const days = this.getDaysAgo(timestamp);
+            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
           }
         }
       ],
@@ -1099,10 +1204,19 @@ export default defineComponent({
         },
         {
           title: '创建时间',
-          dataIndex: 'time',
-          key: 'time',
-          width: '25%',
-          slots: { customRender: 'time' }
+          key: 'creationTime',
+          width: '10%',
+          sorter: true,
+          className: 'normal-column-header', // 添加自定义类名
+          customRender: (text, record) => {
+            // 获取创建时间
+            const timestamp = record.objectMeta?.creationTimestamp;
+            if (!timestamp) return '-';
+            
+            // 格式化为 "x天前" 的形式
+            const days = this.getDaysAgo(timestamp);
+            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
+          }
         },
         {
           title: '操作',
@@ -1114,35 +1228,205 @@ export default defineComponent({
       serviceColumns: [
         {
           title: '名称',
-          dataIndex: 'name',
+          dataIndex: ['objectMeta', 'name'],
           key: 'name',
-          width: '20%',
+          width: '15%',
+          customRender: (text, record) => {
+            // 绿色状态点和名称一起显示
+            return h('div', { style: { display: 'flex', alignItems: 'center' } }, [
+              h('span', { 
+                class: ['status-dot'], 
+                style: { 
+                  backgroundColor: '#4caf50', 
+                  width: '8px', 
+                  height: '8px', 
+                  borderRadius: '50%', 
+                  display: 'inline-block',
+                  marginRight: '8px'
+                } 
+              }),
+              h('span', { class: 'cell-content', title: text || '未知' }, text || '未知')
+            ]);
+          }
+        },
+        {
+          title: '命名空间',
+          dataIndex: ['objectMeta', 'namespace'],
+          key: 'namespace',
+          width: '10%',
+          customRender: (text) => {
+            return h('span', { class: 'cell-content', title: text || 'datasophon' }, text || 'datasophon');
+          }
         },
         {
           title: '标签',
-          dataIndex: 'labels',
           key: 'labels',
-          width: '30%',
-          slots: { customRender: 'labels' }
+          width: '15%',
+          customRender: (text, record) => {
+            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
+              return '-';
+            }
+            
+            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
+            return h('div', { class: 'labels-container' }, 
+              Object.entries(record.objectMeta.labels).map(([key, value]) => {
+                return h('a-tag', { 
+                  props: { color: 'blue' },
+                  class: 'label-chip',
+                  key: key
+                }, `${key}: ${value}`);
+              })
+            );
+          }
         },
         {
           title: '类型',
           dataIndex: 'type',
           key: 'type',
-          width: '15%',
+          width: '10%',
+          customRender: (text) => {
+            return h('span', { class: 'cell-content', title: text || 'NodePort' }, text || 'NodePort');
+          }
         },
         {
-          title: 'Cluster IP',
+          title: '集群 IP',
           dataIndex: 'clusterIP',
           key: 'clusterIP',
-          width: '20%',
+          width: '10%',
+          customRender: (text) => {
+            return h('span', { class: 'cell-content', title: text || '-' }, text || '-');
+          }
         },
         {
-          title: '操作',
-          key: 'action',
+          title: '内部 Endpoints',
+          key: 'internalEndpoints',
           width: '15%',
-          slots: { customRender: 'action' },
+          customRender: (text, record) => {
+            // 显示内部端点
+            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
+              return '-';
+            }
+            
+            const endpoints = [];
+            
+            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
+            record.internalEndpoint.ports.forEach(port => {
+              // 创建内部端口文本
+              const internalPortText = `${record.internalEndpoint.host}:${port.port} ${port.protocol}`;
+              endpoints.push(h('div', { 
+                class: 'internal-endpoint',
+                title: internalPortText
+              }, internalPortText));
+              
+              // 如果存在nodePort，则显示nodePort端口
+              if (port.nodePort) {
+                const nodePortText = `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`;
+                endpoints.push(h('div', { 
+                  class: 'internal-endpoint',
+                  title: nodePortText
+                }, nodePortText));
+              }
+            });
+            
+            return h('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
+          }
         },
+        {
+          title: '外部 Endpoints',
+          key: 'externalEndpoints',
+          width: '10%',
+          customRender: (text, record) => {
+            // 检查externalEndpoints是否为空数组
+            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
+            
+            // 如果externalEndpoints不为空，显示外部端点
+            if (hasExternalEndpoints) {
+              const endpoints = [];
+              
+              record.externalEndpoints.forEach(endpoint => {
+                if (endpoint.ports && endpoint.ports.length > 0) {
+                  endpoint.ports.forEach(port => {
+                    if (port.port) {
+                      const portText = `${endpoint.host}:${port.port}`;
+                      endpoints.push(h('div', {}, [
+                        h('a', { 
+                          attrs: { 
+                            href: `http://${endpoint.host}:${port.port}`,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            title: portText
+                          },
+                          class: 'external-endpoint'
+                        }, [
+                          h('span', { class: 'cell-content' }, portText),
+                          h('i', { class: 'anticon anticon-link external-icon' })
+                        ])
+                      ]));
+                    }
+                    
+                    if (!port.port && port.nodePort) {
+                      const nodePortText = `${endpoint.host}:${port.nodePort}`;
+                      endpoints.push(h('div', {}, [
+                        h('a', { 
+                          attrs: { 
+                            href: `http://${endpoint.host}:${port.nodePort}`,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            title: nodePortText
+                          },
+                          class: 'external-endpoint'
+                        }, [
+                          h('span', { class: 'cell-content' }, nodePortText),
+                          h('i', { class: 'anticon anticon-link external-icon' })
+                        ])
+                      ]));
+                    }
+                  });
+                } else {
+                  endpoints.push(h('div', {}, [
+                    h('a', { 
+                      attrs: { 
+                        href: `http://${endpoint.host}`,
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        title: endpoint.host
+                      },
+                      class: 'external-endpoint'
+                    }, [
+                      h('span', { class: 'cell-content' }, endpoint.host),
+                      h('i', { class: 'anticon anticon-link external-icon' })
+                    ])
+                  ]));
+                }
+              });
+              
+              return h('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
+            }
+            
+            return '-';
+          }
+        },
+        {
+          title: '创建时间',
+          key: 'createTime',
+          dataIndex: ['objectMeta', 'creationTimestamp'],
+          width: '15%',
+          customRender: (text, record) => {
+            // 获取创建时间
+            const timestamp = record.objectMeta?.creationTimestamp;
+            if (!timestamp) return '-';
+            
+            // 格式化为 "x天前" 的形式
+            const days = this.getDaysAgo(timestamp);
+            
+            // 返回包含title属性的span，鼠标悬停时显示精确日期
+            return h('span', { 
+              class: 'format-time-cell', 
+              style: 'white-space: nowrap;',
+              title: this.formatTime(timestamp)
+            }, `${days}天前`);
+          }
+        }
       ],
       ingressColumns: [
         {
@@ -1227,10 +1511,19 @@ export default defineComponent({
         },
         {
           title: '创建时间',
-          dataIndex: 'time',
-          key: 'time',
-          width: '15%',
-          slots: { customRender: 'time' }
+          key: 'creationTime',
+          width: '10%',
+          sorter: true,
+          className: 'normal-column-header', // 添加自定义类名
+          customRender: (text, record) => {
+            // 获取创建时间
+            const timestamp = record.objectMeta?.creationTimestamp;
+            if (!timestamp) return '-';
+            
+            // 格式化为 "x天前" 的形式
+            const days = this.getDaysAgo(timestamp);
+            return h('span', { style: 'white-space: nowrap;' }, `${days}天前`);
+          }
         },
         {
           title: '操作',
@@ -1355,68 +1648,23 @@ export default defineComponent({
       cpuChart: null,
       memoryChart: null,
       metricsData: [], // 保存从API获取的指标数据
+      serviceLoading: false,
+      serviceErrors: [],
+      serviceTotalItems: 0,
     };
   },
   methods: {
     async fetchK8sResources() {
-      this.loading = true;
-      try {
-        // 确保所有数组已初始化
-        this.deployments = this.deployments || [];
-        this.pods = this.pods || [];
-        this.services = this.services || [];
-        this.configMaps = this.configMaps || [];
-        this.cronJobs = this.cronJobs || [];
-        this.daemonSets = this.daemonSets || [];
-        this.jobs = this.jobs || [];
-        this.replicaSets = this.replicaSets || [];
-        this.replicationControllers = this.replicationControllers || [];
-        this.statefulSets = this.statefulSets || [];
-        this.ingresses = this.ingresses || [];
-        this.ingressClasses = this.ingressClasses || [];
-        this.secrets = this.secrets || [];
-        this.persistentVolumes = this.persistentVolumes || [];
-        this.pvcs = this.pvcs || [];
-        this.storageClasses = this.storageClasses || [];
-    
-        // 先获取命名空间列表
-        if (this.namespaces.length === 0) {
-          await this.fetchNamespaces();
-        }
+      // 获取命名空间列表
+      this.fetchNamespaces();
         
-        // 根据当前显示的资源类型加载数据
-        if (this.activeResource === 'deployments') {
-          await this.fetchDeployments();
+      // 根据当前选中的资源类型加载数据
+      this.updateResourceData();
+      
           // 初始化图表
           this.$nextTick(() => {
             this.initCharts();
           });
-        } else if (this.activeResource === 'pods') {
-          await this.fetchPods();
-        } else if (this.activeResource === 'services') {
-          await this.fetchServices();
-        } else if (this.activeResource === 'configmap') {
-          await this.fetchConfigMaps();
-        } else if (this.activeResource === 'daemonsets') {
-          await this.fetchDaemonSets();
-        } else if (this.activeResource === 'statefulsets') {
-          await this.fetchStatefulSets();
-        } else if (this.activeResource === 'replicasets') {
-          await this.fetchReplicaSets();
-        } else if (this.activeResource === 'replicationcontrollers') {
-          await this.fetchReplicationControllers();
-        } else if (this.activeResource === 'jobs') {
-          await this.fetchJobs();
-        } else if (this.activeResource === 'cronjobs') {
-          await this.fetchCronJobs();
-        }
-        
-      } catch (error) {
-        console.error('Error fetching K8s resources:', error);
-        this.$message.error(`获取Kubernetes资源失败: ${error.message || '未知错误'}`);
-      } finally {
-        this.loading = false;
-      }
     },
     // 获取命名空间
     async fetchNamespaces() {
@@ -2113,19 +2361,35 @@ export default defineComponent({
     
     async fetchServices() {
       try {
+        this.serviceLoading = true;
         const res = await this.$axiosGet(global.API.getK8sServices, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: 'datasophon' // 固定使用datasophon命名空间
         });
-        if (res.code === 200) {
-          this.services = res.data || [];
+        
+        if (res.code === 200 && res.data) {
+          // 添加调试日志
+          console.log('服务数据结构:', JSON.stringify(res.data.services[0]));
+          console.log('创建时间字段:', res.data.services[0].objectMeta?.creationTimestamp);
+          
+          // 处理服务数据
+          this.services = res.data.services || [];
+          this.serviceTotalItems = res.data.listMeta?.totalItems || 0;
+          
+          // 返回的数据不需要特殊处理，直接使用
+          // 如果有必要，可以在这里添加额外的数据处理逻辑
         } else {
-          console.error('Failed to fetch services:', res.msg);
           this.services = [];
+          this.serviceTotalItems = 0;
+          console.error('获取服务列表失败:', res.msg);
         }
       } catch (error) {
-        console.error('Error fetching services:', error);
+        console.error('获取服务列表失败:', error);
+        this.$message.error('获取服务列表失败');
         this.services = [];
+        this.serviceTotalItems = 0;
+      } finally {
+        this.serviceLoading = false;
       }
     },
     
@@ -2184,6 +2448,78 @@ export default defineComponent({
         return Math.floor(diff / 31536000) + '年前';
       }
     },
+    updateResourceData() {
+      // 清除之前的数据
+      this.loading = true;
+      
+      // 根据当前选中的资源类型加载数据
+      switch (this.activeResource) {
+        case 'deployment':
+          this.fetchDeployments();
+          break;
+        case 'pod':
+          this.fetchPods();
+          break;
+        case 'replicaset':
+          this.fetchReplicaSets();
+          break;
+        case 'replicationcontroller':
+          this.fetchReplicationControllers();
+          break;
+        case 'statefulset':
+          this.fetchStatefulSets();
+          break;
+        case 'daemonset':
+          this.fetchDaemonSets();
+          break;
+        case 'job':
+          this.fetchJobs();
+          break;
+        case 'cronjob':
+          this.fetchCronJobs();
+          break;
+        case 'service':
+          this.fetchServices();
+          break;
+        case 'ingress':
+          this.fetchIngresses();
+          break;
+        case 'configmap':
+          this.fetchConfigMaps();
+          break;
+        case 'secret':
+          this.fetchSecrets();
+          break;
+        case 'pv':
+          this.fetchPersistentVolumes();
+          break;
+        case 'pvc':
+          this.fetchPVCs();
+          break;
+        case 'storageclass':
+          this.fetchStorageClasses();
+          break;
+        default:
+          // 默认加载Deployments
+          this.fetchDeployments();
+      }
+      
+      this.loading = false;
+    },
+    getDaysAgo(timestamp) {
+      if (!timestamp) return '-';
+      
+      const date = new Date(timestamp);
+      const now = new Date();
+      
+      // 计算时间差（毫秒）
+      const timeDiff = Math.abs(now - date);
+      
+      // 转换为天数
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      return days;
+    },
   },
   mounted() {
     if (this.serviceId) {
@@ -2220,31 +2556,12 @@ export default defineComponent({
     },
     activeResource(newVal, oldVal) {
       if (newVal !== oldVal) {
-        this.fetchK8sResources();
-        
-        if (newVal === 'deployments') {
-          // 当切换到deployments时初始化图表
-          this.$nextTick(() => {
-            // 设置定时刷新
-            if (this.chartsInterval) {
-              clearInterval(this.chartsInterval);
-            }
-            this.chartsInterval = setInterval(() => {
-              this.updateCharts();
-            }, 30000); // 每30秒更新一次
-          });
-        } else {
-          // 切换到其他资源时清理定时器
-          if (this.chartsInterval) {
-            clearInterval(this.chartsInterval);
-            this.chartsInterval = null;
-          }
-        }
+        this.updateResourceData();
       }
     },
     selectedNamespace(newVal, oldVal) {
       if (newVal !== oldVal) {
-        this.fetchK8sResources();
+        this.updateResourceData();
       }
     }
   }
@@ -2260,99 +2577,99 @@ export default defineComponent({
   background-color: #f5f7fa;
   
   // 页面头部样式
-  .page-header {
-    display: flex;
-    align-items: center;
+.page-header {
+  display: flex;
+  align-items: center;
     padding: 16px 24px;
     background-color: #fff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     margin-bottom: 16px;
-    
-    .header-icon-wrapper {
-      margin-right: 16px;
-      
-      .kubernetes-logo {
+
+.header-icon-wrapper {
+  margin-right: 16px;
+
+.kubernetes-logo {
         width: 40px;
         height: 40px;
-        background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHBhdGggZD0iTTMxLjg3OCA2MC4xMDRhMS42MTkgMS42MTkgMCAwIDEtLjc1NS0uMThsLTI2LjM2LTE1LjFhMS42MSAxLjYxIDAgMCAxLS44MjMtMS40MDVWMTkuNzg3YzAtLjU5LjMxOS0xLjEzLjgzMi0xLjQwOWwyNi4zNS0xNS4wOThhMS42MTcgMS42MTcgMCAwIDEgMS41NTEtLjAwMzZMMzguOTkgMTguMzdhMS42MSAxLjYxIDAgMCAxIC44MyAxLjQwOHYyMy42MzFhMS42MSAxLjYxIDAgMCAxLS44MjIgMS40MDVsLTI2LjM2MyAxNS4xYTEuNjIgMS42MiAwIDAgMS0uNzU2LjE4eiIgZmlsbD0iIzMyNmRlNiIvPjxwYXRoIGQ9Ik0zMi4wOTggMTkuNTg0Yy0uNDY1IDAtLjg0NS4zOC0uODQyLjg1NGEuODQ5Ljg0OSAwIDAgMCAuODQ2Ljg0NS44NDcuODQ3IDAgMCAwIC44NDQtLjg0NS44NDcuODQ3IDAgMCAwLS44NDgtLjg1NHoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMjUuOTggMTYuMTQyYzAgLjYxMy40OTggMS4xMSAxLjEwOSAxLjExVjE1LjAzYTEuMTEgMS4xMSAwIDAgMC0xLjExIDEuMTExek0yOS43NiAxNC4xMjdBMTEuMDQ0IDExLjA0NCAwIDAgMCAyNy4wNyAxMy42Yy0uMjE4LS4wMDMtLjQzNS4wMDktLjY1Mi4wMzR2Mi43ODhhMi45MjEgMi45MjEgMCAwIDAgMi43MiAxLjkzMmwtLjAxODAxLS4wMDEwMWMuMDQyLS4wMDIwMS4wODUtLjAwMzAxLjEyOC0uMDA1MDFhMi45MzQgMi45MzQgMCAwIDAgMi4wNDgtLjg0NDk3IDIuOTQ4IDIuOTQ4IDAgMCAwIC43MTItLi45NTRsLTIuMjQ5LTIuNDIyeiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yOS4wODIgMTkuNTgyYS44NDguODQ4IDAgMCAwLS44NDkuODU0LjgzOC44MzggMCAwIDAgLjAwMS4xNzQuODQ2Ljg0NiAwIDAgMCAxLjUxNzAyLjUxMy44NS44NSAwIDAgMCAuMTc3LS4yODIuODQ5Ljg0OSAwIDAgMCAtLjg0Ny0xLjI1OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUuMTcgMTQuMjczIDBsMCAwaC0uMDAxYS41MzYuNTM2IDAgMCAwIC0uNDQ1LjIzOCAxMS4wNiAxMS4wNiAwIDAgMC0xLjY4NSAzLjg2MmwtLjAyOCAwIGMuMTMyLjA0NS4yNjQuMDkxLjM5NS4xMzluMCAwaC4wMDFhMS40NS0xLjQ1IDAgMCAxIC44NjItLjQyOSA1LjY2OCA1LjY2OCAwIDAgMSAuNTgxLTIuMjI4YzEuMDc4IDUuMzU1IDUuNzYgNi4yMDQgOC4xMTEgNC4yMjRhOS42MTMgOS42MTMgMCAwIDEtMS4zNDMgMS40OWMtLjE2Mi4wMTMtLjMxNi4wNS0uNDYxLjExNWgwYS43NTIuNzUyIDAgMCAwIC0uMTYzLjAxYy0uNTIuMjU2LS45NDYuNjA1LTEuMjkuOTg2YS44NDkuODQ5IDAgMCAwIC0uNDk1LS4xNTguODQ2Ljg0NiAwIDAgMCAtLjg0Ni44NDUuODQxLjg0MSAwIDAgMCAuMDA5LjEzM2MuNTk1LjI3MSAxLjM1LjM1NCAyLjE3Ni4zMDEuODA2LS4wNTIgMS42NDItLjI2NSAyLjQ0My0uNTM4YTE0LjYyIDE0LjYyIDAgMCAwIDQuNDU1LTIuNTNsLjAyLS4wMTgwMWExMC45MiAxMC45MiAwIDAgMC0yLjc2MDk4LTMuNjI1Yy0yLjI2OTAxLTEuNzI5LTUuMTI0MDEtMi41NzItNy44ODYtMi42MjZ6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1LjExNSAxOS41ODRhLjg0Ny44NDcgMCAwIDAtLjg0OC44NDUuODQ3Ljg0NyAwIDAgMCAuODQ3Ljg0Ny44NDguODQ4IDAgMSAwIC4wMDE5OS0xLjY5M3oiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzQuNzg2IDI2LjFhLjg0Ny44NDcgMCAwIDAtLjEzNC4wMTNjLS4xMzYuMDIxLS4yNjYuMDcxLS4zODEuMTQ2YTExLjA3IDExLjA3IDAgMCAwIC0uMjQ0IDQuMmwyLjA1OC0uMDI2YS44OTQuODk0IDAgMCAxIC0uMDE3LS4xODcgMS4xMSAxLjExIDAgMCAxIDEuMTEtMS4xMXYtMi4yMmMtLjkyNy4wMzQtMS44MzEtLjI2Ni0yLjM5Mi0uODE2eiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0zOC4xMTggMTkuNTg0YS44NDguODQ4IDAgMCAwIC0uODUuODQ0LjgzOC44MzggMCAwIDAgLjAwMS4xMzQuODQ4Ljg0OCAwIDAgMCAuOC44NS44NDcuODQ3IDAgMCAwIC44NDQtLjg1LjgzNy44MzcgMCAwIDAgLS4wMDEtLjEzNC44NDguODQ4IDAgMCAwIC0uNzk1LS44NDV6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM0LjQ0NyA0MC45MzlhMi45NDYgMi45NDYgMCAwIDAgLTIuOTQ2IDIuOTQ4IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuODQ5IDIuOTQ2Yy4wMzIuMDEuMDY1LjAwMi4wOTcuMDAyYTIuOTQ3IDIuOTQ3IDAgMCAwIDIuODU1LTIuOTQ4IDIuOTQ3IDIuOTQ3IDAgMCAwIC0yLjg1NS0yLjk0OHoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzguMzIxIDI2LjAzOGEuODQ1Ljg0NSAwIDAgMCAtLjYwNC4yNTQgOC4xOTMgOC4xOTMgMCAwIDEgLTIuNDQ3IDIuODcyIDE0LjYyIDE0LjYyIDAgMCAwIC0yLjkzOSA0LjE4MWwtLjAyLjAzOGEyLjk0NiAyLjk0NiAwIDAgMCAuMjM0IDMuMTA2IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuNDUyLjk4NSAyLjk0MSAyLjk0MSAwIDAgMCAyLjQyNC0xLjAyN2gwaC4wMDFhMi45NTIgMi45NTIgMCAwIDAgLjcwMS0yLjQ0MyAyLjk0NiAyLjk0NiAwIDAgMCAtLjQ1OS0xLjE2OSAxMS4wNTkgMTEuMDU5IDAgMCAwIC0uODgyLTQuMjY4bC0uMDA0LS4wMTFjLS4yOTMgMC0uNTg3IDAtLjg4LjAxMmMtLjA1My4wMDItLjEwNS4wMDYtLjE1Ny4wMTFhMS4xMSAxLjExIDAgMCAxIC0uOTY5LTEuMTAzIDEuMTEgMS4xMSAwIDAgMSAxLjEwOS0xLjExdi0uMzI5YS44NDYuODQ2IDAgMCAwIC0uNTUxLjI5MXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDEuMTIzIDE5LjU4NGEuODQ3Ljg0NyAwIDEgMCAwIDEuNjk1LjgzNy44MzcgMCAwIDAgLjEzNC0uMDEzLjg0Ni44NDYgMCAwIDAgLjctLjgzN2EuODQ3Ljg0NyAwIDAgMCAtLjgzNS0uODQ1eiIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik00Mi4xNCAxNC4xMjVhMTAuOTggMTAuOTggMCAwIDAtMi42NDQuMjc2bC0yLjM5MiAyLjQyMmguMDA2YTIuOTQ3IDIuOTQ3IDAgMCAwIC43MDUuOTU0IDIuOTQ3IDIuOTQ3IDAgMCAwIDIuMDQ3Ljg0NSAyLjk0NSAyLjk0NSAwIDAgMCAyLjA0Ny0uODQ0OTcgMi45NDYgMi45NDYgMCAwIDAgLjg0OS0yLjA1Mzk5di0xLjU5OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDQuMTQgMTYuMTQyYzAgLjYxNC0uNDk3IDEuMTExLTEuMTA5IDEuMTExVjE1LjAzYTEuMTEgMS4xMSAwIDAgMSAxLjEwOSAxLjExMXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDIuMjg1IDI2LjFhNC4xOSA0LjE5IDAgMCAxLTEuMDYyLjU1MiA4LjI2NiA4LjI2NiAwIDAgMS0uNzYyLjIwMSAzLjA3OCAzLjA3OCAwIDAgMSAtLjU3NS4wNjNsLjAxOC4zMjlhMi4xMDQgMi4xMDQgMCAwIDAgLjkxLS4wODUxYy4wNzQtLjAxOS4xNDctLjA0MS4yMi0uMDY0aDBoLjAwMWMuMDczLS4wMjMuMTQ2LS4wNDYuMjE5LS4wNzJoMGwuMDQ1LS4wMTcwMWExLjEwNSAxLjEwNSAwIDAgMCAuMDA5IDE2NC4wNDIgMTY0LjA0MiAwIDAgMCAuMjExLjA3OWguMDAxYzEuMjUxLjQ2NCAyLjUxNi45MzIgMy42Nzc0OC0uMWExMS4wNjQgMTEuMDY0IDAgMCAwIC0uMjQ1LTQuMmwtMi42NjMtLjQ3OXoiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNDMuOTg0IDE5LjU4NGEuODQ4Ljg0OCAwIDAgMC0uODUuODQ0Ljg1LjA1IDAgMCAwIC4wMDIuMTM0Ljg0OC44NDggMCAwIDAgLjgwNC44NS44NDguODQ4IDAgMCAwIC44NDQtLjg1LjgzNy44MzcgMCAwIDAgLS4wMDItLjEzNC44NDYuODQ2IDAgMCAwIC0uNzk4LS44NDV6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTQ2Ljk2MiAxNi4zMDZhMTEuMDU2IDExLjA1NiAwIDAgMC0xLjYzMy0zLjc2OS41MzYuNTM2IDAgMCAwIC0uNDczLS4yNjJoLS4wMDJsLS4wMDUgMGE4LjA3MSA4LjA3MSAwIDAgMCAuNzk2LS4wMTNjLTIuMjY5LS4wNTQtNS4xMjMuNzg5LTcuMzkzIDIuNTE4YTEwLjkxOCAxMC45MTggMCAwIDAtMi43NjMgMy42MjUgMTQuNjE4IDE0LjYxOCAwIDAgMCAyLjI2NyAxLjQ3NyAxNC42MjIgMTQuNjIyIDAgMCAwIDIuMjQgMS4wODJjLjgwMS4yNzQgMS42MzcuNDg3IDIuNDQzLjUzOC44MDcuMDUyIDEuNTYyLS4wMzEgMi4xNTgtLjMwMS4wMDUtLjA0NS4wMDktLjA4OS4wMDktLjEzMy44NDguODQ4IDAgMCAwIC0uODQ1LS44NDVsLTQuODUuMTU3YS44NDcuODQ3IDAgMCAwIC0uMTYzLS4wMS43NTIuNzUyIDAgMCAwIC0uNDYtLjExNSA5LjYxMiA5LjYxMiAwIDAgMS0xLjM0My0xLjQ5YzIuMzUgMS45OCA3LjAzMyAxLjEzMSA4LjExLTQuMjI0YTUuNjY4IDUuNjY4IDAgMCAxIC42MDkgMi4yNTYgMS40NSAxLjQ1IDAgMCAxIC44NjIuNDI5cy4zOTUtLjE0LjM5NS0uMTM5bC0uMDMzLS4wNXoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=');
+        background-image: url('~@/assets/images/kubernetes-logo.svg');
         background-size: contain;
         background-repeat: no-repeat;
       }
-    }
-    
-    .header-content {
-      flex: 1;
-      
-      .title {
+}
+
+.header-content {
+  flex: 1;
+
+.title {
         margin: 0;
         padding: 0;
         font-size: 18px;
-        font-weight: 500;
+  font-weight: 500;
         color: #333;
         line-height: 1.4;
-      }
-      
-      .subtitle {
+}
+
+.subtitle {
         margin: 4px 0 0;
         padding: 0;
         font-size: 13px;
         color: #666;
         line-height: 1.4;
       }
-    }
-    
-    .namespace-selector {
+}
+
+.namespace-selector {
       margin-left: 16px;
     }
   }
   
   // 整体仪表盘布局
-  .k8s-dashboard-layout {
-    display: flex;
+.k8s-dashboard-layout {
+  display: flex;
     flex: 1;
     min-height: calc(100vh - 185px);
     padding: 0 24px 16px;
     
     // 左侧导航样式
-    .sidebar-menu {
+.sidebar-menu {
       width: 280px;
       min-width: 280px;
       margin-right: 16px;
       background-color: #fff;
       border-radius: 4px;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-      
-      .menu-group {
+
+.menu-group {
         padding: 12px 0;
         border-bottom: 1px solid #f0f0f0;
         
         &:last-child {
           border-bottom: none;
-        }
-        
-        .group-title {
-          padding: 8px 16px;
+}
+
+.group-title {
+  padding: 8px 16px;
           color: #999;
           font-size: 12px;
           font-weight: 500;
-          text-transform: uppercase;
+  text-transform: uppercase;
           letter-spacing: 0.5px;
-        }
-        
-        .menu-item {
-          display: flex;
+}
+
+.menu-item {
+  display: flex;
           justify-content: space-between;
-          align-items: center;
+  align-items: center;
           padding: 10px 16px;
           color: #333;
-          font-size: 14px;
-          cursor: pointer;
+  font-size: 14px;
+  cursor: pointer;
           transition: all 0.2s;
           
           &:hover {
             background-color: #f5f7fa;
-          }
-          
+}
+
           &.active {
             background-color: #e6f7ff;
             color: #1890ff;
@@ -2362,13 +2679,13 @@ export default defineComponent({
               background-color: #1890ff;
               color: #fff;
             }
-          }
-          
-          .item-text {
-            flex: 1;
-          }
-          
-          .item-count {
+}
+
+.item-text {
+  flex: 1;
+}
+
+.item-count {
             display: inline-block;
             min-width: 24px;
             height: 24px;
@@ -2378,32 +2695,32 @@ export default defineComponent({
             border-radius: 12px;
             background-color: #f0f0f0;
             color: #666;
-            font-size: 12px;
+  font-size: 12px;
           }
         }
       }
-    }
-    
+}
+
     // 右侧内容区域样式
-    .content-area {
-      flex: 1;
+.content-area {
+  flex: 1;
       
       .resource-list {
         height: 100%;
-        
-        .resource-header {
+
+.resource-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           padding: 16px 0;
-          margin-bottom: 16px;
-          
+  margin-bottom: 16px;
+
           h3 {
-            margin: 0;
+  margin: 0;
             font-size: 18px;
             font-weight: 500;
             color: #333;
-          }
+}
         }
       }
     }
@@ -2419,9 +2736,9 @@ export default defineComponent({
     
     &.k8s-resource-card {
       .k8s-card-header {
-        display: flex;
+  display: flex;
         justify-content: space-between;
-        align-items: center;
+  align-items: center;
         height: 48px;
         padding: 0 16px;
         background-color: #f7f7f7;
@@ -2431,10 +2748,10 @@ export default defineComponent({
           font-size: 16px;
           font-weight: 500;
           color: #333;
-        }
-        
+}
+
         .k8s-card-actions {
-          display: flex;
+  display: flex;
           gap: 12px;
           
           .k8s-action-icon {
@@ -2462,32 +2779,32 @@ export default defineComponent({
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 16px;
-  
+
   .k8s-chart-card {
-    flex: 1;
+  flex: 1;
     min-width: 400px;
     height: 250px;
-    border-radius: 4px;
+  border-radius: 4px;
     background-color: #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+  overflow: hidden;
     position: relative;
-    
+
     .k8s-chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
       height: 48px;
       padding: 0 16px;
       background-color: #f7f7f7;
       border-bottom: 1px solid #e8e8e8;
       
       .k8s-chart-title {
-        font-size: 14px;
-        font-weight: 500;
+  font-size: 14px;
+  font-weight: 500;
         color: #333;
-      }
-      
+}
+
       .k8s-chart-actions {
         .k8s-action-icon {
           cursor: pointer;
@@ -2518,12 +2835,12 @@ export default defineComponent({
         z-index: 2;
         width: 80px;
         text-align: center;
-      }
-      
-      .chart {
-        width: 100%;
-        height: 100%;
-      }
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
     }
   }
 }
@@ -2579,12 +2896,12 @@ export default defineComponent({
   
   .name-cell, .image-cell, .pods-display {
     white-space: nowrap;
-    overflow: hidden;
+  overflow: hidden;
     text-overflow: ellipsis;
-  }
-  
+}
+
   .tag-list {
-    display: flex;
+  display: flex;
     flex-wrap: wrap;
     
     .label-tag {
@@ -2632,5 +2949,295 @@ export default defineComponent({
 
 :deep(.ant-table-placeholder) {
   height: 100%;
+}
+
+.k8s-dashboard {
+  &-container {
+    min-height: 600px;
+    background-color: #fff;
+    border-radius: 4px;
+    padding: 16px;
+
+    .tabs-container {
+      margin-top: 16px;
+}
+
+    .service-table {
+      margin-top: 16px;
+      
+      // 状态点样式
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+        margin-right: 8px;
+
+        &.status-running {
+  background-color: #52c41a;
+}
+
+        &.status-warning {
+  background-color: #faad14;
+}
+
+        &.status-unknown {
+          background-color: #d9d9d9;
+        }
+      }
+      
+      // 标签样式
+      .labels-container {
+  display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        
+        .label-chip {
+          margin-right: 4px;
+          margin-bottom: 4px;
+          max-width: 100%;
+          height: auto;
+          line-height: 1.5;
+          white-space: normal;
+          word-break: break-word;
+        }
+      }
+      
+      // 表格头部样式
+      .ant-table-thead > tr > th {
+        background-color: #f5f7fa;
+  font-weight: 500;
+        color: #262626;
+}
+
+      // 表格单元格样式
+      .ant-table-tbody > tr > td {
+        padding: 10px 16px;
+        word-break: break-word;
+      }
+      
+      // 创建时间列样式
+      .ant-table-row td:last-child {
+  white-space: nowrap;
+      }
+    }
+  }
+}
+
+.service-detail-dialog {
+  width: 80%;
+  max-width: 900px;
+}
+
+// 端点样式
+.internal-endpoint, .external-endpoint {
+  padding: 2px 0;
+  word-break: break-all;
+}
+
+.external-endpoint {
+  display: flex;
+  align-items: center;
+  
+  .external-icon {
+    margin-left: 4px;
+    font-size: 12px;
+  }
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+// 表格样式优化
+.ant-table {
+  table-layout: fixed;
+  
+  .ant-table-tbody > tr > td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: keep-all;
+  }
+  
+  // 确保创建时间列正确显示
+  .ant-table-row td:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// 为单元格内容添加工具提示
+.cell-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  max-width: 100%;
+}
+
+// 修复表格在Safari和Firefox中的显示问题
+.k8s-config-container {
+  .ant-table-wrapper {
+    overflow-x: auto;
+    
+    .ant-table {
+      min-width: 1000px; // 确保表格内容有足够的显示空间
+      
+      // 修复表头标题竖向显示问题
+      .ant-table-thead > tr > th {
+        white-space: nowrap !important;
+        text-align: left !important;
+        min-width: 100px; // 确保每列有足够宽度显示标题
+      }
+      
+      // 特别处理创建时间列的表头
+      .ant-table-thead > tr > th:last-child {
+        min-width: 100px;
+        white-space: nowrap !important;
+        text-align: left !important;
+        writing-mode: horizontal-tb !important; // 强制水平文本
+        transform: none !important; // 防止任何旋转
+      }
+    }
+    
+    .ant-table-thead > tr > th,
+    .ant-table-tbody > tr > td {
+      padding: 10px 8px;
+      vertical-align: middle;
+    }
+    
+    .ant-table-column-title {
+      word-break: keep-all;
+      white-space: nowrap;
+      text-align: left !important;
+      writing-mode: horizontal-tb !important; // 强制水平文本
+      transform: none !important; // 防止任何旋转
+      display: inline-block !important; // 确保标题按照预期显示
+    }
+  }
+}
+
+// 内部端点样式
+.internal-endpoint {
+  padding: 2px 0;
+  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+// 外部端点样式
+.external-endpoint {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  
+  .external-icon {
+    margin-left: 4px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+}
+
+.normal-column-header {
+  .ant-table-column-title {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    white-space: nowrap !important;
+    min-width: 90px !important;
+    display: inline-block !important;
+  }
+}
+
+// 修改全局表头样式
+.k8s-config-container {
+  .ant-table-column-has-sorters {
+    .ant-table-column-title {
+      writing-mode: horizontal-tb !important;
+      transform: none !important;
+      white-space: nowrap !important;
+    }
+  }
+}
+
+/* 确保所有表头正常水平显示，不会竖直旋转 */
+:deep(.normal-column-header) {
+  .ant-table-column-title {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    writing-mode: horizontal-tb !important;
+    min-width: 90px !important;
+    transform: none !important;
+  }
+}
+
+/* 修复表格内容样式 */
+:deep(.ant-table-tbody) {
+  td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* 全局修复表头标题垂直显示问题 */
+:deep(.ant-table-thead > tr > th) {
+  white-space: nowrap !important;
+  text-align: left !important;
+  
+  .ant-table-column-title {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    word-break: keep-all !important;
+    min-width: auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+}
+
+:deep(.ant-table-column-has-sorters) {
+  .ant-table-column-sorter {
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    margin-left: 4px !important;
+  }
+}
+
+/* 特别针对"创建时间"列的表头 */
+:deep(.ant-table-thead > tr > th.normal-column-header) {
+  .ant-table-column-title {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    word-break: keep-all !important;
+  }
+}
+
+/* 修复表格内容溢出问题 */
+:deep(.ant-table-body) {
+  overflow-x: auto !important;
+}
+
+:deep(.ant-table-tbody > tr > td) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
 }
 </style>
