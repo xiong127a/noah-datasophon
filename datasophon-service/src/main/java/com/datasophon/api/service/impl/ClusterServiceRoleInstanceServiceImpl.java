@@ -112,7 +112,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         return this.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
                 .eq(ClusterServiceRoleInstanceEntity::getHostname, hostname)
-                .eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, ServiceRoleState.STOP)
+                //.eq(ClusterServiceRoleInstanceEntity::getServiceRoleState, ServiceRoleState.STOP)
                 .list();
     }
 
