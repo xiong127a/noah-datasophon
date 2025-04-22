@@ -214,4 +214,15 @@ public interface K8sDashboardService {
      * @return 监控数据结果
      */
     Result getDeploymentMetrics(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
+     * 一次性获取所有Kubernetes资源统计数据
+     * 该方法旨在提高性能，通过一次客户端连接获取所有资源数量
+     *
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID（可选）
+     * @param namespace 命名空间（可选）
+     * @return 包含所有资源数量的统计结果
+     */
+    Result getResourceStats(Integer clusterId, Integer serviceId, String namespace);
 }

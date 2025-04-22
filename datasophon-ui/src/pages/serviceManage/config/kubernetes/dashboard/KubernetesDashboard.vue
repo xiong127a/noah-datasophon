@@ -34,35 +34,35 @@
           <div class="group-title">工作负载</div>
           <div class="menu-item" :class="{ active: activeResource === 'cronjobs' }" @click="activeResource = 'cronjobs'">
             <span class="item-text">Cron Jobs</span>
-            <span class="item-count">{{ cronJobs && cronJobs.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.cronJobs || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'daemonsets' }" @click="activeResource = 'daemonsets'">
             <span class="item-text">Daemon Sets</span>
-            <span class="item-count">{{ daemonSets && daemonSets.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.daemonSets || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'deployments' }" @click="activeResource = 'deployments'">
             <span class="item-text">Deployments</span>
-            <span class="item-count">{{ deployments && deployments.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.deployments || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'jobs' }" @click="activeResource = 'jobs'">
             <span class="item-text">Jobs</span>
-            <span class="item-count">{{ jobs && jobs.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.jobs || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pods' }" @click="activeResource = 'pods'">
             <span class="item-text">Pods</span>
-            <span class="item-count">{{ pods && pods.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.pods || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'replicasets' }" @click="activeResource = 'replicasets'">
             <span class="item-text">Replica Sets</span>
-            <span class="item-count">{{ replicaSets && replicaSets.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.replicaSets || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'replicationcontrollers' }" @click="activeResource = 'replicationcontrollers'">
             <span class="item-text">Replication Controllers</span>
-            <span class="item-count">{{ replicationControllers && replicationControllers.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.replicationControllers || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'statefulsets' }" @click="activeResource = 'statefulsets'">
             <span class="item-text">Stateful Sets</span>
-            <span class="item-count">{{ statefulSets && statefulSets.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.statefulSets || 0 }}</span>
           </div>
         </div>
         
@@ -70,15 +70,15 @@
           <div class="group-title">服务</div>
           <div class="menu-item" :class="{ active: activeResource === 'service' }" @click="activeResource = 'service'">
             <span class="item-text">Services</span>
-            <span class="item-count">{{ services && services.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.services || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'ingress' }" @click="activeResource = 'ingress'">
             <span class="item-text">Ingresses</span>
-            <span class="item-count">{{ ingresses && ingresses.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.ingresses || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'ingressclass' }" @click="activeResource = 'ingressclass'">
             <span class="item-text">Ingress Classes</span>
-            <span class="item-count">{{ ingressClasses && ingressClasses.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.ingressClasses || 0 }}</span>
           </div>
         </div>
         
@@ -86,23 +86,23 @@
           <div class="group-title">配置和存储</div>
           <div class="menu-item" :class="{ active: activeResource === 'configmap' }" @click="activeResource = 'configmap'">
             <span class="item-text">Config Maps</span>
-            <span class="item-count">{{ configMaps && configMaps.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.configMaps || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'secret' }" @click="activeResource = 'secret'">
             <span class="item-text">Secrets</span>
-            <span class="item-count">{{ secrets && secrets.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.secrets || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pv' }" @click="activeResource = 'pv'">
             <span class="item-text">Persistent Volumes</span>
-            <span class="item-count">{{ persistentVolumes && persistentVolumes.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.persistentVolumes || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'pvc' }" @click="activeResource = 'pvc'">
             <span class="item-text">Persistent Volume Claims</span>
-            <span class="item-count">{{ pvcs && pvcs.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.persistentVolumeClaims || 0 }}</span>
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'storageclass' }" @click="activeResource = 'storageclass'">
             <span class="item-text">Storage Classes</span>
-            <span class="item-count">{{ storageClasses && storageClasses.length || 0 }}</span>
+            <span class="item-count">{{ resourceCounts.storageClasses || 0 }}</span>
           </div>
         </div>
       </div>
@@ -149,19 +149,19 @@
           <div class="resource-header">
             <h3>Services</h3>
           </div>
-          <a-spin :spinning="loading">
-            <a-table
-              :columns="serviceColumns"
-              :dataSource="services"
-              :pagination="false"
+        <a-spin :spinning="loading">
+          <a-table
+            :columns="serviceColumns"
+            :dataSource="services"
+            :pagination="false"
               :rowKey="record => `${record.namespace}-${record.name}`"
               class="k8s-table"
-            >
-              <template #action="{ record }">
+          >
+            <template #action="{ record }">
                 <div class="action-buttons">
-                  <a @click="handleViewService(record)">查看</a>
-                  <a-divider type="vertical" />
-                  <a @click="handleEditService(record)">编辑</a>
+              <a @click="handleViewService(record)">查看</a>
+              <a-divider type="vertical" />
+              <a @click="handleEditService(record)">编辑</a>
                 </div>
               </template>
               <template #labels="{ text }">
@@ -171,15 +171,15 @@
                   </a-tag>
                 </div>
                 <span v-else>-</span>
-              </template>
+            </template>
               <!-- 添加创建时间自定义渲染函数 -->
               <template #creationTime="{ record }">
                 <span class="format-time-cell">
                   {{ formatTime(record.objectMeta?.creationTimestamp) }}
                 </span>
-              </template>
-            </a-table>
-          </a-spin>
+            </template>
+          </a-table>
+        </a-spin>
         </div>
 
         <!-- Ingress列表 -->
@@ -687,6 +687,8 @@
 import { defineComponent, ref, reactive } from 'vue'
 import DeploymentView from '../components/DeploymentView.vue'
 import dayjs from 'dayjs'
+// 导入API
+import API from '@/api';
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -1651,9 +1653,17 @@ export default defineComponent({
       serviceLoading: false,
       serviceErrors: [],
       serviceTotalItems: 0,
+      resourceStats: {},
+      resourceCounts: {},
+      
+      // 不再自定义API路径，使用全局API
     };
   },
+  created() {
+    // 不再需要初始化API路径
+  },
   methods: {
+    // 移除API路径初始化方法
     async fetchK8sResources() {
       // 获取命名空间列表
       this.fetchNamespaces();
@@ -1670,15 +1680,17 @@ export default defineComponent({
     async fetchNamespaces() {
       this.namespacesLoading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
+        // 使用导入的API对象
+        const res = await this.$axiosGet('/ddh' + API.getK8sNamespaces, {
           clusterId: this.clusterId,
           serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
-        if (res.code === 200) {
+        
+        if (res && res.code === 200) {
           // 确保获取命名空间列表数组
           this.namespaces = res.data && Array.isArray(res.data) ? res.data : (res.data && res.data.namespaces ? res.data.namespaces : []);
         } else {
-          console.error('Failed to fetch namespaces:', res.msg);
+          console.error('Failed to fetch namespaces:', res ? res.msg : '无响应');
           this.namespaces = [];
         }
       } catch (error) {
@@ -1693,13 +1705,11 @@ export default defineComponent({
       this.selectedNamespace = value;
       this.fetchK8sResources(); // 重新加载资源
     },
-    // 工作负载相关方法
     async fetchCronJobs() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sCronJobs, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sCronJobs, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.cronJobs = res.data || [];
@@ -1714,10 +1724,9 @@ export default defineComponent({
     },
     async fetchDaemonSets() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sDaemonSets, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sDaemonSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.daemonSets = res.data || [];
@@ -1732,12 +1741,9 @@ export default defineComponent({
     },
     async fetchDeployments() {
       try {
-        // 使用serviceInstanceId作为serviceId参数
-        const serviceId = this.serviceInstanceId || 40; // 使用默认值40
-        
-        const res = await this.$axiosGet(global.API.getK8sDeployments, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sDeployments, {
           clusterId: this.clusterId,
-          serviceId: serviceId,
+          serviceId: this.serviceId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
@@ -1781,10 +1787,9 @@ export default defineComponent({
     },
     async fetchJobs() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sJobs, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sJobs, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.jobs = res.data || [];
@@ -1799,7 +1804,7 @@ export default defineComponent({
     },
     async fetchPods() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sPods, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sPods, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
@@ -1816,10 +1821,9 @@ export default defineComponent({
     },
     async fetchReplicaSets() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sReplicaSets, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sReplicaSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.replicaSets = res.data || [];
@@ -1834,10 +1838,9 @@ export default defineComponent({
     },
     async fetchReplicationControllers() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sReplicationControllers, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sReplicationControllers, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.replicationControllers = res.data || [];
@@ -1852,10 +1855,9 @@ export default defineComponent({
     },
     async fetchStatefulSets() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sStatefulSets, {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
           this.statefulSets = res.data || [];
@@ -2361,10 +2363,9 @@ export default defineComponent({
     
     async fetchServices() {
       try {
-        this.serviceLoading = true;
-        const res = await this.$axiosGet(global.API.getK8sServices, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sServices, {
           clusterId: this.clusterId,
-          namespace: 'datasophon' // 固定使用datasophon命名空间
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         
         if (res.code === 200 && res.data) {
@@ -2388,27 +2389,29 @@ export default defineComponent({
         this.$message.error('获取服务列表失败');
         this.services = [];
         this.serviceTotalItems = 0;
-      } finally {
-        this.serviceLoading = false;
       }
     },
     
     async fetchConfigMaps() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
+        const res = await this.$axiosGet('/ddh' + API.getK8sConfigMaps, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
-          serviceName: this.serviceName // 添加serviceName参数
         });
-        if (res.code === 200) {
-          this.configMaps = res.data || [];
+        if (res.code === 200 && res.data) {
+          // 确保获取configmaps列表，并设置表格数据
+          this.configMaps = res.data.configMaps || [];
+          this.configMapsTotalItems = res.data.listMeta ? res.data.listMeta.totalItems : 0;
         } else {
-          console.error('Failed to fetch config maps:', res.msg);
+          console.error('获取配置映射列表失败:', res ? res.msg : '未知错误');
           this.configMaps = [];
+          this.configMapsTotalItems = 0;
         }
       } catch (error) {
-        console.error('Error fetching config maps:', error);
+        console.error('获取配置映射列表异常:', error);
+        this.$message.error('获取配置映射列表失败');
         this.configMaps = [];
+        this.configMapsTotalItems = 0;
       }
     },
     
@@ -2520,9 +2523,104 @@ export default defineComponent({
       
       return days;
     },
+    // 获取所有资源统计数据
+    async fetchResourceStats() {
+      try {
+        // 显示加载状态
+        this.loading = true;
+        
+        // 确保clusterId存在
+        if (!this.clusterId) {
+          console.error('clusterId不能为空，当前值:', this.clusterId);
+          // 尝试从localStorage获取
+          this.clusterId = window.localStorage.getItem('clusterId');
+          console.log('从localStorage获取的clusterId:', this.clusterId);
+        }
+        
+        // 构建请求参数
+        const params = {
+          clusterId: this.clusterId,
+          serviceId: this.serviceId,
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+        };
+        
+        // 使用导入的API对象
+        const apiUrl = '/ddh' + API.getK8sResourceStats;
+        
+        console.log('调用resource-stats接口，参数:', params);
+        console.log('请求URL:', apiUrl);
+        
+        // 调用后端统计接口
+        const res = await this.$axiosGet(apiUrl, params);
+        
+        console.log('resource-stats接口返回结果:', res);
+        
+        if (res && res.code === 200 && res.data) {
+          // 更新资源数量统计数据（现在后端只返回数量而不是资源列表）
+          this.resourceStats = res.data;
+          
+          // 更新资源计数显示
+          this.resourceCounts = {
+            deployments: res.data.deployments || 0,
+            pods: res.data.pods || 0,
+            services: res.data.services || 0,
+            configMaps: res.data.configMaps || 0,
+            ingresses: res.data.ingresses || 0,
+            ingressClasses: res.data.ingressClasses || 0,
+            secrets: res.data.secrets || 0,
+            persistentVolumes: res.data.persistentVolumes || 0,
+            persistentVolumeClaims: res.data.persistentVolumeClaims || 0,
+            storageClasses: res.data.storageClasses || 0,
+            cronJobs: res.data.cronJobs || 0,
+            daemonSets: res.data.daemonSets || 0,
+            jobs: res.data.jobs || 0,
+            replicaSets: res.data.replicaSets || 0,
+            replicationControllers: res.data.replicationControllers || 0,
+            statefulSets: res.data.statefulSets || 0
+          };
+          
+          console.log('资源统计数据加载成功:', res.data);
+        } else {
+          console.error('获取资源统计数据失败:', res ? res.msg : '返回结果为空');
+          // 初始化空数据
+          this.initEmptyResourceCounts();
+        }
+      } catch (error) {
+        console.error('获取资源统计数据异常:', error);
+        // 初始化空数据
+        this.initEmptyResourceCounts();
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // 初始化空的资源计数
+    initEmptyResourceCounts() {
+      this.resourceCounts = {
+        deployments: 0,
+        pods: 0,
+        services: 0,
+        configMaps: 0,
+        ingresses: 0,
+        ingressClasses: 0,
+        secrets: 0,
+        persistentVolumes: 0,
+        persistentVolumeClaims: 0,
+        storageClasses: 0,
+        cronJobs: 0,
+        daemonSets: 0,
+        jobs: 0,
+        replicaSets: 0,
+        replicationControllers: 0,
+        statefulSets: 0
+      };
+    },
   },
   mounted() {
     if (this.serviceId) {
+      // 首先获取所有资源统计数据
+      this.fetchResourceStats();
+      // 然后获取详细资源数据
       this.fetchK8sResources();
     } else {
       console.error('serviceId is required to fetch K8s resources');
@@ -2592,8 +2690,8 @@ export default defineComponent({
         width: 40px;
         height: 40px;
         background-image: url('~@/assets/images/kubernetes-logo.svg');
-        background-size: contain;
-        background-repeat: no-repeat;
+  background-size: contain;
+  background-repeat: no-repeat;
       }
 }
 
@@ -3000,7 +3098,7 @@ export default defineComponent({
           line-height: 1.5;
           white-space: normal;
           word-break: break-word;
-        }
+}
       }
       
       // 表格头部样式
@@ -3059,14 +3157,14 @@ export default defineComponent({
   
   .ant-table-tbody > tr > td {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  overflow: hidden;
+  text-overflow: ellipsis;
     word-break: keep-all;
   }
   
   // 确保创建时间列正确显示
   .ant-table-row td:last-child {
-    white-space: nowrap;
+  white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
