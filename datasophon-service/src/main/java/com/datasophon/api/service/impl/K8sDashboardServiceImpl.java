@@ -1012,4 +1012,119 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
             return Result.error("获取Deployment监控数据出错: " + e.getMessage());
         }
     }
+
+    @Override
+    public Result getResourceStats(Integer clusterId, Integer serviceId, String namespace) {
+        logger.info("一次性获取所有K8s资源统计, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        try {
+            // 使用kubeconfig创建Kubernetes客户端（只创建一次连接）
+            KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("创建Kubernetes客户端失败");
+            }
+
+            // 创建统计结果Map
+            Map<String, Integer> statsMap = new HashMap<>();
+
+            // 确定目标命名空间
+            boolean hasNamespace = namespace != null && !namespace.isEmpty();
+
+            // 1. 获取命名空间数量
+            int namespacesCount = client.namespaces().list().getItems().size();
+            statsMap.put("namespaces", namespacesCount);
+
+            // 2. 获取Deployments数量
+            int deploymentsCount = hasNamespace
+                    ? client.apps().deployments().inNamespace(namespace).list().getItems().size()
+                    : client.apps().deployments().inAnyNamespace().list().getItems().size();
+            statsMap.put("deployments", deploymentsCount);
+
+            // 3. 获取Pods数量
+            int podsCount = hasNamespace ? client.pods().inNamespace(namespace).list().getItems().size()
+                    : client.pods().inAnyNamespace().list().getItems().size();
+            statsMap.put("pods", podsCount);
+
+            // 4. 获取Services数量
+            int servicesCount = hasNamespace ? client.services().inNamespace(namespace).list().getItems().size()
+                    : client.services().inAnyNamespace().list().getItems().size();
+            statsMap.put("services", servicesCount);
+
+            // 5. 获取ConfigMaps数量
+            int configMapsCount = hasNamespace ? client.configMaps().inNamespace(namespace).list().getItems().size()
+                    : client.configMaps().inAnyNamespace().list().getItems().size();
+            statsMap.put("configMaps", configMapsCount);
+
+            // 6. 获取Secrets数量
+            int secretsCount = hasNamespace ? client.secrets().inNamespace(namespace).list().getItems().size()
+                    : client.secrets().inAnyNamespace().list().getItems().size();
+            statsMap.put("secrets", secretsCount);
+
+            // 7. 获取PersistentVolumes数量
+            int persistentVolumesCount = client.persistentVolumes().list().getItems().size();
+            statsMap.put("persistentVolumes", persistentVolumesCount);
+
+            // 8. 获取PersistentVolumeClaims数量
+            int pvcsCount = hasNamespace
+                    ? client.persistentVolumeClaims().inNamespace(namespace).list().getItems().size()
+                    : client.persistentVolumeClaims().inAnyNamespace().list().getItems().size();
+            statsMap.put("persistentVolumeClaims", pvcsCount);
+
+            // 9. 获取StorageClasses数量
+            int storageClassesCount = client.storage().storageClasses().list().getItems().size();
+            statsMap.put("storageClasses", storageClassesCount);
+
+            // 10. 获取Ingresses数量
+            int ingressesCount = hasNamespace
+                    ? client.network().v1().ingresses().inNamespace(namespace).list().getItems().size()
+                    : client.network().v1().ingresses().inAnyNamespace().list().getItems().size();
+            statsMap.put("ingresses", ingressesCount);
+
+            // 11. 获取IngressClasses数量
+            int ingressClassesCount = client.network().v1().ingressClasses().list().getItems().size();
+            statsMap.put("ingressClasses", ingressClassesCount);
+
+            // 12. 获取DaemonSets数量
+            int daemonSetsCount = hasNamespace
+                    ? client.apps().daemonSets().inNamespace(namespace).list().getItems().size()
+                    : client.apps().daemonSets().inAnyNamespace().list().getItems().size();
+            statsMap.put("daemonSets", daemonSetsCount);
+
+            // 13. 获取StatefulSets数量
+            int statefulSetsCount = hasNamespace
+                    ? client.apps().statefulSets().inNamespace(namespace).list().getItems().size()
+                    : client.apps().statefulSets().inAnyNamespace().list().getItems().size();
+            statsMap.put("statefulSets", statefulSetsCount);
+
+            // 14. 获取ReplicaSets数量
+            int replicaSetsCount = hasNamespace
+                    ? client.apps().replicaSets().inNamespace(namespace).list().getItems().size()
+                    : client.apps().replicaSets().inAnyNamespace().list().getItems().size();
+            statsMap.put("replicaSets", replicaSetsCount);
+
+            // 15. 获取ReplicationControllers数量
+            int replicationControllersCount = hasNamespace
+                    ? client.replicationControllers().inNamespace(namespace).list().getItems().size()
+                    : client.replicationControllers().inAnyNamespace().list().getItems().size();
+            statsMap.put("replicationControllers", replicationControllersCount);
+
+            // 16. 获取Jobs数量
+            int jobsCount = hasNamespace ? client.batch().v1().jobs().inNamespace(namespace).list().getItems().size()
+                    : client.batch().v1().jobs().inAnyNamespace().list().getItems().size();
+            statsMap.put("jobs", jobsCount);
+
+            // 17. 获取CronJobs数量
+            int cronJobsCount = hasNamespace
+                    ? client.batch().v1().cronjobs().inNamespace(namespace).list().getItems().size()
+                    : client.batch().v1().cronjobs().inAnyNamespace().list().getItems().size();
+            statsMap.put("cronJobs", cronJobsCount);
+
+            // 关闭客户端连接
+            client.close();
+
+            return Result.success().put(Constants.DATA, statsMap);
+        } catch (Exception e) {
+            logger.error("获取K8s资源统计出错", e);
+            return Result.error("获取K8s资源统计出错: " + e.getMessage());
+        }
+    }
 }
