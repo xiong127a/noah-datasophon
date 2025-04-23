@@ -685,7 +685,7 @@
 
 <script>
 import { defineComponent, ref, reactive } from 'vue'
-import DeploymentView from '../components/DeploymentView.vue'
+import DeploymentView from './DeploymentView.vue'
 import dayjs from 'dayjs'
 // 导入API
 import API from '@/api';
