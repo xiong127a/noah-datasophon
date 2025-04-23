@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import API from '@/api';
+// import API from '@/api';
 
 export default {
   name: 'ConfigMapList',
@@ -100,7 +100,7 @@ export default {
     async fetchConfigMaps() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sConfigMaps, {
+        const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
         });

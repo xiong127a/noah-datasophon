@@ -67,18 +67,21 @@ export default {
   getK8sPersistentVolumes: path + '/api/k8s/dashboard/persistentvolumes', // 获取PersistentVolumes列表
   getK8sStorageClasses: path + '/api/k8s/dashboard/storageclasses', // 获取StorageClasses列表
   
-  getK8sConfigMaps: path + '/api/k8s/configmaps', // 获取ConfigMap列表
-  getK8sConfigMapDetail: path + '/api/k8s/configmap/detail', // 获取ConfigMap详情
-  updateK8sConfigMap: path + '/api/k8s/configmap/update', // 更新ConfigMap
+  getK8sConfigMaps: path + '/api/k8s/dashboard/configmaps', // 获取ConfigMap列表
+  getK8sConfigMapDetail: path + '/api/k8s/dashboard/configmap/detail', // 获取ConfigMap详情
+  updateK8sConfigMap: path + '/api/k8s/dashboard/configmap/update', // 更新ConfigMap
   getK8sServices: path + '/api/k8s/dashboard/services', // 获取Service列表
-  getK8sServiceDetail: path + '/api/k8s/service/detail', // 获取Service详情
-  updateK8sService: path + '/api/k8s/service/update', // 更新Service
-  getK8sPvcs: path + '/api/k8s/pvcs', // 获取PVC列表
-  getK8sPvcDetail: path + '/api/k8s/pvc/detail', // 获取PVC详情
-  updateK8sPvc: path + '/api/k8s/pvc/update', // 更新PVC
+  getK8sServiceDetail: path + '/api/k8s/dashboard/service/detail', // 获取Service详情
+  updateK8sService: path + '/api/k8s/dashboard/service/update', // 更新Service
+  getK8sPvcs: path + '/api/k8s/dashboard/pvcs', // 获取PVC列表
+  getK8sPvcDetail: path + '/api/k8s/dashboard/pvc/detail', // 获取PVC详情
+  updateK8sPvc: path + '/api/k8s/dashboard/pvc/update', // 更新PVC
   
   // 添加Kubernetes Deployment详情相关API
   getK8sDeploymentDetail: path + '/api/k8s/dashboard/deployment/detail', // 获取Deployment详情
   getK8sDeploymentYaml: path + '/api/k8s/dashboard/deployment/yaml', // 获取Deployment YAML
   getK8sDeploymentEvents: path + '/api/k8s/dashboard/deployment/events', // 获取Deployment事件
+  
+  // 添加资源统计接口
+  getK8sResourceStats: path + '/api/k8s/dashboard/resource-stats', // 获取K8s资源统计
 }

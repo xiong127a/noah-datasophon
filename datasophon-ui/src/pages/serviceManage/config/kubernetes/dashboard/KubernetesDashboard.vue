@@ -72,8 +72,8 @@
 import { defineComponent, ref, reactive } from 'vue'
 import DeploymentView from './DeploymentView.vue'
 import dayjs from 'dayjs'
-// 导入API
-import API from '@/api';
+// 移除对已删除api.js的导入
+// import API from '@/api';
 
 // 导入拆分的组件
 import K8sSidebarMenu from './K8sSidebarMenu.vue';
@@ -1068,8 +1068,8 @@ export default defineComponent({
     async fetchNamespaces() {
       this.namespacesLoading = true;
       try {
-        // 使用导入的API对象
-        const res = await this.$axiosGet('/ddh' + API.getK8sNamespaces, {
+        // 使用全局API对象替代导入的API
+        const res = await this.$axiosGet(global.API.getK8sNamespaces, {
           clusterId: this.clusterId,
           serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
         });
@@ -1164,9 +1164,9 @@ export default defineComponent({
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         };
         
-        // 使用导入的API对象
-        const apiUrl = '/ddh' + API.getK8sResourceStats;
-        
+        // 使用全局API对象
+        const apiUrl = global.API.getK8sResourceStats;
+
         console.log('调用resource-stats接口，参数:', params);
         console.log('请求URL:', apiUrl);
         

@@ -42,7 +42,7 @@
 </template>
 
 <script>
-import API from '@/api';
+// import API from '@/api';
 import K8sMetricsCharts from './K8sMetricsCharts.vue';
 import DeploymentView from './DeploymentView.vue';
 
@@ -280,7 +280,7 @@ export default {
     async fetchDeployments() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet('/ddh' + API.getK8sDeployments, {
+        const res = await this.$axiosGet(global.API.getK8sDeployments, {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace

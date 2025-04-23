@@ -35,50 +35,13 @@ const handleParams = function(data) {
 
 const axiosGet = function(url, params = {}) {
   return new Promise((resolve, reject) => {
-    // 检查URL是否存在
-    if (!url) {
-      console.error('axiosGet: URL未定义');
-      reject(new Error('URL未定义'));
-      return;
-    }
-    
-    // K8s仪表盘接口特殊处理
-    if (url.indexOf('/api/k8s/dashboard/') !== -1) {
-      console.log('axiosGet发送K8s仪表盘请求:', url, params);
-      
-      // 确保clusterId存在
-      if (!params.clusterId) {
-        console.warn('K8s请求缺少clusterId参数，尝试从localStorage获取');
-        params.clusterId = window.localStorage.getItem('clusterId');
-      }
-    }
-    
     axios({
       method: 'get',
       url: url,
       params: params,
     }).then(res => {
-      // 检查特定URL的响应
-      if (url.indexOf('/api/k8s/dashboard/') !== -1) {
-        console.log('K8s接口响应:', url, res.status, res.data);
-      }
-      
       resolve(res.data)
     }).catch(error => {
-      // 增强错误处理
-      console.error('请求失败:', url, error);
-      
-      // 对于K8s仪表盘接口，返回一个空的成功响应，避免UI崩溃
-      if (url.indexOf('/api/k8s/dashboard/') !== -1) {
-        console.warn('K8s接口请求失败，返回空数据');
-        resolve({
-          code: 200,
-          msg: 'fallback response',
-          data: {}
-        });
-        return;
-      }
-      
       reject(error)
     })
   })

@@ -125,18 +125,6 @@ const reqCommon = {
     config.headers['Content-Type'] = config.ContentType?config.ContentType:'application/json;charset=UTF-8'
     config.headers.clusterId =  window.localStorage.getItem("clusterId");
     config.headers['satoken'] = window.localStorage.getItem("satoken");
-    
-    // 增加K8s仪表盘接口的特殊处理
-    if (url.indexOf('/api/k8s/dashboard/') !== -1) {
-      console.log('发送K8s仪表盘请求:', config);
-      
-      // 确保clusterId存在于params中
-      if (config.params && !config.params.clusterId) {
-        config.params.clusterId = window.localStorage.getItem("clusterId");
-        console.log('为K8s请求自动添加clusterId:', config.params.clusterId);
-      }
-    }
-    
     return config
   },
   /**
@@ -147,13 +135,6 @@ const reqCommon = {
    */
   onRejected(error, options) {
     const {message} = options
-    
-    // 添加更详细的请求错误日志
-    console.error('请求发送失败:', error);
-    if (error.config) {
-      console.error('请求配置:', error.config.url, error.config.params);
-    }
-    
     message.error(error.message)
     return Promise.reject(error)
   }
