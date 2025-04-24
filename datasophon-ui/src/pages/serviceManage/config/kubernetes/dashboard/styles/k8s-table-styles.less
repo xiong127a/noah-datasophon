@@ -3,13 +3,14 @@
  * 这些样式仅在K8s仪表盘组件内生效
  */
 
-// 为所有K8s仪表盘表格定义统一样式类
+/* K8s表格通用样式 */
 .k8s-table {
   width: 100%;
   
   // 启用表格水平滚动
   &:deep(.ant-table) {
     overflow-x: auto;
+    font-size: 13px;
   }
   
   // 固定表格布局，提高性能
@@ -20,28 +21,17 @@
   
   // 表头样式
   &:deep(.ant-table-thead > tr > th) {
-    background-color: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
-    font-weight: 600;
-    color: #374151;
-    padding: 12px 16px;
-    transition: background 0.3s ease;
-    white-space: nowrap; // 表头不换行
-    
-    &:hover {
-      background-color: #f0f2f5;
-    }
-    
-    // 表头排序图标样式
-    .ant-table-column-sorter {
-      color: #a0aec0;
-    }
+    background-color: #fafafa;
+    font-weight: 500;
+    color: #333;
+    padding: 8px 12px;
+    white-space: nowrap;
   }
   
   // 表格行样式
   &:deep(.ant-table-tbody > tr > td) {
+    padding: 8px 12px;
     border-bottom: 1px solid #f3f4f6;
-    padding: 12px 16px;
     word-break: break-word; // 允许在单词内换行，防止溢出
     
     // 单元格内容溢出处理
@@ -78,22 +68,15 @@
     gap: 4px;
     max-width: 100%;
     
-    .label-tag, .label-chip {
-      margin-right: 4px;
-      margin-bottom: 4px;
-      max-width: 100%;
-      height: auto;
-      line-height: 1.5;
-      white-space: normal;
-      word-break: break-word;
-      
-      // 超长标签处理
-      &.truncate-tag {
-        max-width: 150px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
+    .label-tag {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin: 2px;
+      height: 22px;
+      line-height: 20px;
+      padding: 0 8px;
     }
   }
   
@@ -133,14 +116,12 @@
   
   // 操作按钮样式
   .action-buttons {
-    white-space: nowrap;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
     
-    a {
-      color: #1890ff;
-      
-      &:hover {
-        color: #40a9ff;
-      }
+    .ant-btn {
+      padding: 0 8px;
     }
   }
   
@@ -205,5 +186,22 @@
     overflow-y: auto;
     word-break: break-word;
     white-space: normal;
+  }
+} 
+
+// 响应式调整
+@media screen and (max-width: 1400px) {
+  .k8s-table {
+    .labels-container .label-tag {
+      max-width: 150px;
+    }
+  }
+}
+
+@media screen and (max-width: 1200px) {
+  .k8s-table {
+    .labels-container .label-tag {
+      max-width: 120px;
+    }
   }
 } 

@@ -81,7 +81,8 @@ export default {
           title: '',
           dataIndex: 'status',
           key: 'status',
-          width: '20px',
+          width: 40,
+          fixed: 'left',
           customRender: (text, record) => {
             const classNames = ['status-dot'];
             if (record?.pods?.running > 0) classNames.push('status-running');
@@ -96,50 +97,39 @@ export default {
           title: '名称',
           dataIndex: 'objectMeta.name',
           key: 'name',
-          width: '20%',
+          width: '15%',
+          fixed: 'left',
           customRender: (_, record) => {
             return this.$createElement('div', { class: 'name-cell' }, [
-              this.$createElement('span', { class: 'name-text' }, record?.objectMeta?.name || '未知')
+              this.$createElement('span', { class: 'name-text', attrs: { title: record?.objectMeta?.name || '未知' } }, record?.objectMeta?.name || '未知')
             ]);
           }
-        },
-        {
-          title: '命名空间',
-          dataIndex: 'namespace',
-          key: 'namespace',
-          width: '12%'
         },
         {
           title: '镜像',
           dataIndex: 'containerImages',
           key: 'image',
-          width: '25%',
+          width: '20%',
           customRender: (_, record) => {
-            return this.$createElement('div', { class: 'image-cell' }, [
-              this.$createElement('a-tooltip', {
-                props: {
-                  title: record?.containerImages ? record.containerImages.join(', ') : ''
-                }
-              }, [
-                this.$createElement('span', { class: 'image-text' }, record?.containerImages ? record.containerImages.join(', ') : '-')
-              ])
+            return this.$createElement('div', { class: 'image-cell', attrs: { title: record?.containerImages ? record.containerImages.join(', ') : '' } }, [
+              this.$createElement('span', {}, record?.containerImages ? record.containerImages.join(', ') : '-')
             ]);
           }
         },
         {
           title: '标签',
           key: 'labels',
-          width: '20%',
+          width: '25%',
           customRender: (text, record) => {
             if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
-              return '-';
+              return this.$createElement('span', { class: 'empty-value' }, '-');
             }
             
-            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
             const tags = Object.entries(record.objectMeta.labels).map(([key, value]) => {
               return this.$createElement('a-tag', { 
                 props: { color: 'blue' },
-                class: 'label-chip',
+                class: 'label-tag',
+                attrs: { title: `${key}: ${value}` },
                 key: key
               }, `${key}: ${value}`);
             });
@@ -163,25 +153,19 @@ export default {
           key: 'internalEndpoints',
           width: '15%',
           customRender: (text, record) => {
-            // 显示内部端点
             if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
-              return '-';
+              return this.$createElement('span', { class: 'empty-value' }, '-');
             }
             
-            const endpoints = [];
-            
-            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
-            record.internalEndpoint.ports.forEach(port => {
-              // 显示内部端口
-              endpoints.push(this.$createElement('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.port} ${port.protocol}`));
-              
-              // 如果存在nodePort，则显示nodePort端口
-              if (port.nodePort) {
-                endpoints.push(this.$createElement('div', { class: 'internal-endpoint' }, `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`));
-              }
+            const endpoints = record.internalEndpoint.ports.map(port => {
+              const endpointText = `${record.internalEndpoint.host}:${port.port} ${port.protocol}`;
+              return this.$createElement('div', { 
+                class: 'internal-endpoint',
+                attrs: { title: endpointText }
+              }, endpointText);
             });
             
-            return this.$createElement('div', {}, endpoints);
+            return this.$createElement('div', { class: 'endpoint-cell' }, endpoints);
           }
         },
         {
@@ -189,85 +173,55 @@ export default {
           key: 'externalEndpoints',
           width: '15%',
           customRender: (text, record) => {
-            // 检查externalEndpoints是否为空数组
-            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
-            
-            // 如果externalEndpoints不为空，显示外部端点
-            if (hasExternalEndpoints) {
-              const endpoints = [];
-              
-              record.externalEndpoints.forEach(endpoint => {
-                if (endpoint.ports && endpoint.ports.length > 0) {
-                  endpoint.ports.forEach(port => {
-                    if (port.port) {
-                      endpoints.push(this.$createElement('div', {}, [
-                        this.$createElement('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.port}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer'
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          `${endpoint.host}:${port.port}`,
-                          this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                    
-                    if (!port.port && port.nodePort) {
-                      endpoints.push(this.$createElement('div', {}, [
-                        this.$createElement('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.nodePort}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer'
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          `${endpoint.host}:${port.nodePort}`,
-                          this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                  });
-                } else {
-                  endpoints.push(this.$createElement('div', {}, [
-                    this.$createElement('a', { 
-                      attrs: { 
-                        href: `http://${endpoint.host}`,
-                        target: '_blank',
-                        rel: 'noopener noreferrer'
-                      },
-                      class: 'external-endpoint'
-                    }, [
-                      endpoint.host,
-                      this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                    ])
-                  ]));
-                }
-              });
-              
-              return this.$createElement('div', {}, endpoints);
+            if (!record.externalEndpoints || !record.externalEndpoints.length) {
+              return this.$createElement('span', { class: 'empty-value' }, '-');
             }
             
-            return '-';
+            const endpoints = record.externalEndpoints.map(endpoint => {
+              if (!endpoint.ports || !endpoint.ports.length) {
+                return this.$createElement('div', { class: 'external-endpoint' }, [
+                  this.$createElement('a', {
+                    attrs: {
+                      href: `http://${endpoint.host}`,
+                      target: '_blank',
+                      rel: 'noopener',
+                      title: endpoint.host
+                    }
+                  }, endpoint.host)
+                ]);
+              }
+              
+              return endpoint.ports.map(port => {
+                const url = port.port ? `${endpoint.host}:${port.port}` : `${endpoint.host}:${port.nodePort}`;
+                return this.$createElement('div', { class: 'external-endpoint' }, [
+                  this.$createElement('a', {
+                    attrs: {
+                      href: `http://${url}`,
+                      target: '_blank',
+                      rel: 'noopener',
+                      title: url
+                    }
+                  }, url)
+                ]);
+              });
+            }).flat();
+            
+            return this.$createElement('div', { class: 'endpoint-cell' }, endpoints);
           }
         },
         {
           title: '创建时间',
           key: 'creationTime',
           width: '10%',
-          sorter: true,
-          className: 'normal-column-header', // 添加自定义类名
           customRender: (text, record) => {
-            // 获取创建时间
             const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
+            if (!timestamp) return this.$createElement('span', { class: 'empty-value' }, '-');
             
-            // 格式化为 "x天前" 的形式
             const days = this.getDaysAgo(timestamp);
-            return this.$createElement('span', { style: 'white-space: nowrap;' }, `${days}天前`);
+            return this.$createElement('span', { 
+              class: 'time-cell',
+              attrs: { title: this.formatTime(timestamp) }
+            }, `${days}天前`);
           }
         }
       ]

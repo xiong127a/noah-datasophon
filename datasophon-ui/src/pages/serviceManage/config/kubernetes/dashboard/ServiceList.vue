@@ -277,22 +277,6 @@ export default {
               attrs: { title: this.formatTime(timestamp) }
             }, `${days}天前`);
           }
-        },
-        {
-          title: '状态',
-          key: 'status',
-          width: '10%',
-          customRender: (text, record) => {
-            return this.$createElement('span', { class: 'cell-content', attrs: { title: text || 'Unknown' } }, text || 'Unknown');
-          }
-        },
-        {
-          title: '镜像',
-          key: 'image',
-          width: '10%',
-          customRender: (text) => {
-            return this.$createElement('span', { class: 'long-text-cell', attrs: { title: text || '-' } }, text || '-');
-          }
         }
       ]
     };
