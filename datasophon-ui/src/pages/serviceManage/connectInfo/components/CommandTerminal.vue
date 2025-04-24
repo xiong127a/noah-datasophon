@@ -321,30 +321,49 @@ export default {
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
         
+        // 创建隔离容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: ${scrollTop}px;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          overflow: hidden;
+          z-index: -9999;
+          pointer-events: none;
+        `;
+        
         // 创建临时textarea
         const textarea = document.createElement('textarea');
         textarea.value = text;
         
         // 设置样式，使其完全不可见
         textarea.style.cssText = `
-          position: fixed !important;
-          left: -9999px !important;
-          top: -9999px !important;
-          width: 1px !important;
-          height: 1px !important;
-          padding: 0 !important;
-          border: none !important;
-          outline: none !important;
-          box-shadow: none !important;
-          background: transparent !important;
-          z-index: -9999 !important;
-          opacity: 0 !important;
-          user-select: text !important;
-          overflow: hidden !important;
+          position: relative;
+          left: 0;
+          top: 0;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          border: none;
+          outline: none;
+          box-shadow: none;
+          background: transparent;
+          opacity: 0;
+          user-select: text;
+          overflow: hidden;
         `;
         
-        // 添加到DOM
-        document.body.appendChild(textarea);
+        // 添加到DOM - 使用组件元素或document.documentElement，避免使用body
+        if (this.$el) {
+          this.$el.appendChild(container);
+          container.appendChild(textarea);
+        } else {
+          document.documentElement.appendChild(container);
+          container.appendChild(textarea);
+        }
         
         // 延迟选择和复制，确保元素已添加到DOM
         setTimeout(() => {
@@ -375,8 +394,12 @@ export default {
             this.$message.error(`复制${title}失败，请手动复制`);
           } finally {
             // 清理DOM
-            if (document.body.contains(textarea)) {
-              document.body.removeChild(textarea);
+            if (container) {
+              if (this.$el && this.$el.contains(container)) {
+                this.$el.removeChild(container);
+              } else if (document.documentElement.contains(container)) {
+                document.documentElement.removeChild(container);
+              }
             }
             
             // 恢复滚动位置

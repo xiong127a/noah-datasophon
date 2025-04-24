@@ -153,6 +153,8 @@
 </template>
 
 <script>
+import { downloadFile } from '@/utils/copyUtil';
+
 export default {
   name: 'DownloadConfig',
   props: {
@@ -311,27 +313,31 @@ export default {
     },
 
     // 下载单个配置文件
-    downloadSingleConfig(record) {
-      const { fileName } = record;
-      
-      if (!global.API || !global.API.downloadServiceConfigFile) {
-        this.$message.error('系统配置错误，无法下载文件');
+    async downloadFile(fileName) {
+      if (!fileName) {
+        this.$message.error('文件名不能为空');
         return;
       }
       
       try {
         const downloadUrl = `${window.location.origin}${global.API.downloadServiceConfigFile}?serviceInstanceId=${this.serviceId}&fileName=${encodeURIComponent(fileName)}`;
         
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.setAttribute('download', fileName);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        this.$message.success(`正在下载 ${fileName}`);
+        await downloadFile(downloadUrl, fileName, this);
       } catch (error) {
         this.$message.error('下载文件失败');
+      }
+    },
+    
+    // 向后兼容方法 - 被ConfigDownload.vue等组件通过ref调用
+    downloadSingleConfig(record) {
+      // 如果传入的是对象（如ConfigDownload组件传入的record），则提取fileName
+      const fileName = record && typeof record === 'object' ? record.fileName : record;
+      
+      if (fileName) {
+        return this.downloadFile(fileName);
+      } else {
+        this.$message.error('无效的文件信息');
+        return Promise.reject(new Error('无效的文件信息'));
       }
     },
 
@@ -520,17 +526,13 @@ export default {
           downloadUrl += `&password=${encodeURIComponent(this.passwordForm.password)}`;
         }
         
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        
         // 根据不同格式设置不同的文件扩展名
         const fileExtension = this.selectedFormat === 'tar.gz' || this.selectedFormat === 'tar.xz' ? 
                              '.' + this.selectedFormat : `.${this.selectedFormat}`;
-        link.setAttribute('download', `${this.serviceName}_configs${fileExtension}`);
+        const fileName = `${this.serviceName}_configs${fileExtension}`;
         
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 使用通用下载工具函数替代直接操作DOM
+        downloadFile(downloadUrl, fileName, this);
         
         this.$message.success(`正在下载 ${this.selectedFormat.toUpperCase()} 格式配置文件`);
         this.downloadModalVisible = false;

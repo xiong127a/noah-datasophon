@@ -511,14 +511,14 @@ export default {
       }
       
       // 延迟清理DOM中残留的CodeMirror元素
-      setTimeout(() => {
+        setTimeout(() => {
         // 只清理当前组件内的孤立元素，避免影响全局
         if (this.$el) {
           // 查找当前组件内的孤立元素
           const orphanedElements = this.$el.querySelectorAll('.CodeMirror, pre.CodeMirror-line, .CodeMirror-code, .CodeMirror-gutter, .CodeMirror-linenumber, .CodeMirror-cursor');
-          
+        
           // 为找到的元素添加隐藏类，而不是直接删除
-          orphanedElements.forEach(element => {
+        orphanedElements.forEach(element => {
             if (element && !element.classList.contains('cm-orphaned')) {
               element.classList.add('cm-orphaned');
               // 设置样式确保完全隐藏

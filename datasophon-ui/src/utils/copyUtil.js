@@ -165,6 +165,74 @@ export function copyText(text, label, vueInstance) {
   });
 }
 
+/**
+ * 安全地下载文件，避免直接使用document.body
+ * @param {String} url 下载链接
+ * @param {String} fileName 文件名
+ * @param {Object} [vueInstance] Vue实例，用于显示消息和挂载DOM
+ * @returns {Promise<boolean>} 是否下载成功
+ */
+export function downloadFile(url, fileName, vueInstance) {
+  return new Promise((resolve) => {
+    try {
+      // 创建隔离容器
+      const container = document.createElement('div');
+      container.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        overflow: hidden;
+        z-index: -9999;
+        pointer-events: none;
+      `;
+      
+      // 创建下载链接
+      const link = document.createElement('a');
+      link.href = url;
+      if (fileName) {
+        link.setAttribute('download', fileName);
+      }
+      link.style.display = 'none';
+      
+      // 确定容器挂载位置
+      const mountTarget = vueInstance?.$el || document.documentElement;
+      mountTarget.appendChild(container);
+      container.appendChild(link);
+      
+      // 触发点击
+      link.click();
+      
+      // 显示成功消息
+      if (vueInstance && vueInstance.$message) {
+        vueInstance.$message.success(`正在下载 ${fileName || '文件'}`);
+      } else if (window.$message) {
+        window.$message.success(`正在下载 ${fileName || '文件'}`);
+      }
+      
+      // 异步清理DOM
+      setTimeout(() => {
+        // 清理DOM
+        if (mountTarget.contains(container)) {
+          mountTarget.removeChild(container);
+        }
+        resolve(true);
+      }, 100);
+    } catch (error) {
+      console.error('下载文件失败:', error);
+      if (vueInstance && vueInstance.$message) {
+        vueInstance.$message.error('下载文件失败');
+      } else if (window.$message) {
+        window.$message.error('下载文件失败');
+      }
+      resolve(false);
+    }
+  });
+}
+
 export default {
-  copyText
+  copyText,
+  downloadFile
 }; 

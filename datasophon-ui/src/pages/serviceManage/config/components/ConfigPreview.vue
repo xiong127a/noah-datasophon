@@ -109,24 +109,33 @@
 
 <script>
 import { codemirror } from 'vue-codemirror';
+import CodeMirror from 'codemirror';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/dracula.css';
-import 'codemirror/theme/eclipse.css';
-import 'codemirror/mode/xml/xml.js';
-import 'codemirror/mode/javascript/javascript.js';
-import 'codemirror/mode/yaml/yaml.js';
-import 'codemirror/mode/properties/properties.js';
-import 'codemirror/mode/shell/shell.js';
-import 'codemirror/addon/edit/matchbrackets.js';
-import 'codemirror/addon/edit/closebrackets.js';
-import 'codemirror/addon/fold/foldcode.js';
-import 'codemirror/addon/fold/foldgutter.js';
-import 'codemirror/addon/fold/brace-fold.js';
-import 'codemirror/addon/fold/xml-fold.js';
-import 'codemirror/addon/fold/foldgutter.css';
+
+// 导入通用复制工具
+import { copyText } from '@/utils/copyUtil';
+
+// 导入各种插件
 import 'codemirror/addon/scroll/simplescrollbars.js';
 import 'codemirror/addon/scroll/simplescrollbars.css';
 import 'codemirror/addon/selection/active-line.js';
+import 'codemirror/addon/fold/foldgutter.css';
+import 'codemirror/addon/fold/foldcode.js';
+import 'codemirror/addon/fold/foldgutter.js';
+import 'codemirror/addon/fold/brace-fold.js';
+import 'codemirror/addon/fold/indent-fold.js';
+import 'codemirror/addon/fold/comment-fold.js';
+
+// 导入语言模式
+import 'codemirror/mode/javascript/javascript.js';
+import 'codemirror/mode/python/python.js';
+import 'codemirror/mode/clike/clike.js';
+import 'codemirror/mode/sql/sql.js';
+import 'codemirror/mode/shell/shell.js';
+import 'codemirror/mode/xml/xml.js';
+import 'codemirror/mode/yaml/yaml.js';
+import 'codemirror/mode/properties/properties.js';
 
 export default {
   name: 'ConfigPreview',
@@ -239,14 +248,7 @@ export default {
         return;
       }
 
-      const textarea = document.createElement('textarea');
-      textarea.value = this.content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-
-      this.$message.success('内容已复制到剪贴板');
+      copyText(this.content, '配置内容', this);
     },
     downloadFile() {
       this.$emit('download');

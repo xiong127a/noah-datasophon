@@ -179,6 +179,7 @@
 import Empty from 'ant-design-vue/lib/empty';
 import ConfigPreview from './ConfigPreview.vue';
 import DownloadConfig from './DownloadConfig.vue';
+import { copyText } from '@/utils/copyUtil';
 
 export default {
   name: 'ConfigDownload',
@@ -364,14 +365,7 @@ export default {
         return;
       }
       
-      const textarea = document.createElement('textarea');
-      textarea.value = this.previewContent;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      
-      this.$message.success('内容已复制到剪贴板');
+      copyText(this.previewContent, '配置内容', this);
     },
     
     // 处理搜索

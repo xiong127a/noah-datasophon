@@ -284,10 +284,25 @@ export default {
           }
         }
         
-        // 方法2: 创建不可见文本区域并编程选择
+        // 方法2: 创建不可见文本区域并编程选择，使用隔离容器
         let tempElement = null;
+        let container = null;
         
         try {
+          // 创建隔离容器
+          container = document.createElement('div');
+          container.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: ${window.pageYOffset || document.documentElement.scrollTop}px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            overflow: hidden;
+            z-index: -9999;
+            pointer-events: none;
+          `;
+          
           // 确定使用哪种元素 - 对于普通文本使用textarea，代码文本使用pre
           tempElement = document.createElement(textToCopy.length > 500 ? 'textarea' : 'input');
           
@@ -296,7 +311,7 @@ export default {
           
           // 应用关键样式
           tempElement.style.cssText = `
-            position: fixed;
+            position: relative;
             left: 0;
             top: 0;
             width: 2em;
@@ -308,13 +323,18 @@ export default {
             outline: none;
             resize: none;
             font-size: 16px;
-            z-index: 999999;
             user-select: text;
             -webkit-user-select: text;
           `;
           
-          // 添加到DOM
-          document.body.appendChild(tempElement);
+          // 添加到DOM - 使用组件元素或document.documentElement，避免使用body
+          if (this.$el) {
+            this.$el.appendChild(container);
+            container.appendChild(tempElement);
+          } else {
+            document.documentElement.appendChild(container);
+            container.appendChild(tempElement);
+          }
           
           // 聚焦并选择文本
           tempElement.focus();
@@ -340,9 +360,13 @@ export default {
             throw new Error('复制命令执行失败');
           }
         } finally {
-          // 清理临时元素
-          if (tempElement && tempElement.parentNode) {
-            document.body.removeChild(tempElement);
+          // 清理临时元素和容器
+          if (container) {
+            if (this.$el && this.$el.contains(container)) {
+              this.$el.removeChild(container);
+            } else if (document.documentElement.contains(container)) {
+              document.documentElement.removeChild(container);
+            }
           }
         }
       } catch (err) {
