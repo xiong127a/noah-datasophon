@@ -23,6 +23,7 @@ import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -110,7 +111,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 try {
                     // 获取文件内容并计算大小
                     byte[] content = getServiceConfigFileContent(serviceInstanceId, fileName);
-                    if (content != null) {
+                    if (ArrayUtil.isNotEmpty(content)) {
                         long sizeInKB = content.length / 1024;
                         if (sizeInKB == 0 && content.length > 0) {
                             sizeInKB = 1; // 最小显示1KB
@@ -266,7 +267,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
         if (configFiles != null && !configFiles.isEmpty()) {
             for (ConfigFile configFile : configFiles) {
                 byte[] content = getServiceConfigFileContent(serviceInstanceId, configFile.getFileName());
-                if (content != null && content.length > 0) {
+                if (ArrayUtil.isNotEmpty(content)) {
                     result.put(configFile.getFileName(), content);
                 }
             }
@@ -280,7 +281,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
 
         // 从缓存获取文件内容
         byte[] content = CONFIG_FILE_CACHE.get(cacheKey);
-        if (content != null) {
+        if (ArrayUtil.isNotEmpty(content)) {
             log.debug("从缓存获取配置文件内容: {}", fileName);
             return content;
         }
@@ -293,7 +294,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
         content = generateConfigFileContent(serviceInstanceId, fileName);
 
         // 如果成功生成内容，则放入缓存
-        if (content != null) {
+        if (ArrayUtil.isNotEmpty(content)) {
             CONFIG_FILE_CACHE.put(cacheKey, content);
         }
 
@@ -363,7 +364,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 // 从模板内容创建Template对象
                 Template template = FreemarkerUtils.createTemplateFromContent(templateContent, templateName);
                 byte[] content = FreemarkerUtils.renderTemplateToBytes(template, data);
-                return content != null ? content : new byte[0];
+                return ArrayUtil.isNotEmpty(content) ? content : new byte[0];
             } catch (Exception e) {
                 log.error("处理模板失败: {}", templateName, e);
                 return new byte[0];
