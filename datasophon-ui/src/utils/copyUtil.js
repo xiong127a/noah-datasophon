@@ -56,13 +56,31 @@ export function copyText(text, label, vueInstance) {
           console.warn('Clipboard API 失败，尝试备用方法:', err);
           // 备用方法：使用 document.execCommand
           try {
+            // 创建隔离容器
+            const container = document.createElement('div');
+            container.style.cssText = `
+              position: absolute;
+              left: -9999px;
+              top: -9999px;
+              width: 1px;
+              height: 1px;
+              opacity: 0;
+              overflow: hidden;
+              z-index: -9999;
+              pointer-events: none;
+            `;
+            
+            // 创建textarea
             const textarea = document.createElement('textarea');
             textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            textarea.style.top = '-9999px';
+            textarea.style.position = 'relative';
             textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
+            
+            // 确定容器挂载位置
+            const mountTarget = vueInstance?.$el || document.documentElement;
+            mountTarget.appendChild(container);
+            container.appendChild(textarea);
+            
             textarea.focus();
             textarea.select();
             
@@ -74,7 +92,11 @@ export function copyText(text, label, vueInstance) {
               showError(new Error('execCommand返回失败'));
               resolve(false);
             }
-            document.body.removeChild(textarea);
+            
+            // 清理DOM
+            if (mountTarget.contains(container)) {
+              mountTarget.removeChild(container);
+            }
           } catch (execErr) {
             showError(execErr);
             resolve(false);
@@ -89,13 +111,31 @@ export function copyText(text, label, vueInstance) {
     } else {
       // 浏览器不支持Clipboard API，直接使用备用方法
       try {
+        // 创建隔离容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          overflow: hidden;
+          z-index: -9999;
+          pointer-events: none;
+        `;
+        
+        // 创建textarea
         const textarea = document.createElement('textarea');
         textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        textarea.style.top = '-9999px';
+        textarea.style.position = 'relative';
         textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
+        
+        // 确定容器挂载位置
+        const mountTarget = vueInstance?.$el || document.documentElement;
+        mountTarget.appendChild(container);
+        container.appendChild(textarea);
+        
         textarea.focus();
         textarea.select();
         
@@ -107,7 +147,11 @@ export function copyText(text, label, vueInstance) {
           showError(new Error('execCommand返回失败'));
           resolve(false);
         }
-        document.body.removeChild(textarea);
+        
+        // 清理DOM
+        if (mountTarget.contains(container)) {
+          mountTarget.removeChild(container);
+        }
       } catch (err) {
         showError(err);
         resolve(false);

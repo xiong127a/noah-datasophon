@@ -188,9 +188,26 @@ function formatCode(code, mode) {
   if (!code) return code;
   
   try {
+    // 创建独立隔离容器替代直接使用document.body
+    const container = document.createElement('div');
+    // 设置容器样式，确保不会影响页面布局
+    container.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      z-index: -9999;
+    `;
+    // 挂载到document.documentElement (根节点) 而非body
+    document.documentElement.appendChild(container);
+    
     // 创建临时DOM元素用于格式化
     const tempTextArea = document.createElement('textarea');
-    document.body.appendChild(tempTextArea);
+    container.appendChild(tempTextArea);
     
     // 创建临时CodeMirror实例
     const tempEditor = CodeMirror.fromTextArea(tempTextArea, {
@@ -215,7 +232,7 @@ function formatCode(code, mode) {
     const formattedCode = tempEditor.getValue();
     
     // 清理临时DOM元素
-    document.body.removeChild(tempTextArea);
+    document.documentElement.removeChild(container);
     
     return formattedCode;
   } catch (error) {
@@ -494,13 +511,33 @@ export default {
       }
       
       // 延迟清理DOM中残留的CodeMirror元素
-        setTimeout(() => {
-        // 移除所有孤立的CodeMirror相关元素
-        const orphanedElements = document.querySelectorAll('body > .CodeMirror, body > pre.CodeMirror-line, body > .CodeMirror-code, body > .CodeMirror-gutter, body > .CodeMirror-linenumber, body > .CodeMirror-cursor, body > textarea.CodeMirror-textarea');
+      setTimeout(() => {
+        // 只清理当前组件内的孤立元素，避免影响全局
+        if (this.$el) {
+          // 查找当前组件内的孤立元素
+          const orphanedElements = this.$el.querySelectorAll('.CodeMirror, pre.CodeMirror-line, .CodeMirror-code, .CodeMirror-gutter, .CodeMirror-linenumber, .CodeMirror-cursor');
+          
+          // 为找到的元素添加隐藏类，而不是直接删除
+          orphanedElements.forEach(element => {
+            if (element && !element.classList.contains('cm-orphaned')) {
+              element.classList.add('cm-orphaned');
+              // 设置样式确保完全隐藏
+              element.style.display = 'none';
+              element.style.visibility = 'hidden';
+              element.style.opacity = '0';
+              element.style.pointerEvents = 'none';
+              element.style.position = 'absolute';
+              element.style.zIndex = '-9999';
+            }
+          });
+        }
         
-        orphanedElements.forEach(element => {
-          if (element.parentNode) {
-            element.parentNode.removeChild(element);
+        // 清理挂载在document.documentElement上的元素
+        // 使用更精确的选择器，避免误删antd弹框元素
+        const rootOrphanedTextareas = document.querySelectorAll('textarea.CodeMirror-textarea[style*="opacity: 0"]');
+        rootOrphanedTextareas.forEach(el => {
+          if (el.parentNode === document.documentElement) {
+            document.documentElement.removeChild(el);
           }
         });
       }, 100);
@@ -740,18 +777,40 @@ export default {
           y: window.pageYOffset
         };
         
+        // 创建隔离容器替代直接使用document.body
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: ${window.pageYOffset || document.documentElement.scrollTop}px;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          overflow: hidden;
+          z-index: -9999;
+        `;
+        
         // 创建一个只存在一瞬间的临时textarea
         const textarea = document.createElement('textarea');
         
         // 设置样式使其不可见但可访问
         textarea.style.position = 'absolute';
-        textarea.style.left = '-9999px';
-        textarea.style.top = (window.pageYOffset || document.documentElement.scrollTop) + 'px';
+        textarea.style.left = '0';
+        textarea.style.top = '0';
         textarea.setAttribute('readonly', 'readonly');
         
         // 设置文本并添加到DOM
         textarea.value = text;
-        document.body.appendChild(textarea);
+        
+        // 先将容器添加到组件内，再将textarea添加到容器中
+        if (this.$el) {
+          this.$el.appendChild(container);
+          container.appendChild(textarea);
+        } else {
+          // 降级：如果组件元素不可用，使用documentElement
+          document.documentElement.appendChild(container);
+          container.appendChild(textarea);
+        }
         
         // 选择文本
         textarea.select();
@@ -760,8 +819,12 @@ export default {
         // 执行复制
         const success = document.execCommand('copy');
         
-        // 移除textarea
-        document.body.removeChild(textarea);
+        // 移除textarea和容器
+        if (this.$el && this.$el.contains(container)) {
+          this.$el.removeChild(container);
+        } else if (document.documentElement.contains(container)) {
+          document.documentElement.removeChild(container);
+        }
         
         // 恢复滚动位置
         window.scrollTo(scrollPos.x, scrollPos.y);
@@ -784,6 +847,19 @@ export default {
     // 备用复制方法
     fallbackCopy(text, title) {
       try {
+        // 创建隔离容器
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+          width: 1px;
+          height: 1px;
+          opacity: 0;
+          overflow: hidden;
+          z-index: -9999;
+        `;
+        
         // 创建input元素备用
         const input = document.createElement('input');
         input.value = text;
@@ -792,12 +868,27 @@ export default {
         input.style.top = '0';
         input.style.left = '0';
         
-        document.body.appendChild(input);
+        // 优先挂载到组件元素
+        if (this.$el) {
+          this.$el.appendChild(container);
+          container.appendChild(input);
+        } else {
+          // 降级处理
+          document.documentElement.appendChild(container);
+          container.appendChild(input);
+        }
+        
         input.focus();
         input.select();
         
         const success = document.execCommand('copy');
-        document.body.removeChild(input);
+        
+        // 清理DOM
+        if (this.$el && this.$el.contains(container)) {
+          this.$el.removeChild(container);
+        } else if (document.documentElement.contains(container)) {
+          document.documentElement.removeChild(container);
+        }
         
         if (success) {
           this.$message.success(`已复制${title}`);
@@ -928,8 +1019,8 @@ export default {
 
 <style lang="less">
 /* 移除所有可能干扰编辑器的全局样式 */
-.code-mirror-editor,
-.CodeMirror {
+.code-block-section .code-mirror-editor,
+.code-block-section .CodeMirror {
   /* 强制启用所有交互 */
   pointer-events: auto !important;
   user-select: auto !important;
@@ -953,7 +1044,7 @@ export default {
 }
 
 /* 修复滚动区域 */
-.CodeMirror-scroll {
+.code-block-section .CodeMirror-scroll {
   overflow: auto !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
@@ -965,16 +1056,16 @@ export default {
 }
 
 /* 修复编辑器内的所有元素 */
-.CodeMirror-scroll,
-.CodeMirror-sizer,
-.CodeMirror-gutter,
-.CodeMirror-gutters,
-.CodeMirror-linenumber,
-.CodeMirror-lines,
-.CodeMirror-line,
-.CodeMirror-cursor,
-.CodeMirror-selected,
-.CodeMirror-code {
+.code-block-section .CodeMirror-scroll,
+.code-block-section .CodeMirror-sizer,
+.code-block-section .CodeMirror-gutter,
+.code-block-section .CodeMirror-gutters,
+.code-block-section .CodeMirror-linenumber,
+.code-block-section .CodeMirror-lines,
+.code-block-section .CodeMirror-line,
+.code-block-section .CodeMirror-cursor,
+.code-block-section .CodeMirror-selected,
+.code-block-section .CodeMirror-code {
   pointer-events: auto !important;
   user-select: auto !important;
   -webkit-user-select: auto !important;
@@ -983,7 +1074,7 @@ export default {
 }
 
 /* 确保编辑器容器可交互并支持滚动 */
-.editor-container {
+.code-block-section .editor-container {
   overflow: visible !important;
   pointer-events: auto !important;
   user-select: auto !important;
@@ -993,13 +1084,24 @@ export default {
   min-height: 150px !important;
 }
 
+/* 标记式清理类，替代直接删除DOM元素 */
+.cm-orphaned {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important; 
+  pointer-events: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  z-index: -9999 !important;
+  overflow: hidden !important;
+}
+
 /* 全局样式：仅隐藏CodeMirror生成的额外textarea，不阻止交互 */
-.CodeMirror-code + textarea,
-.CodeMirror ~ textarea,
-.CodeMirror textarea.CodeMirror-textarea,
-body > textarea,
-body > textarea.CodeMirror-textarea,
-textarea:not([class]):not([id]) {
+.code-block-section textarea.CodeMirror-textarea,
+.code-block-section ~ textarea.CodeMirror-textarea {
   position: absolute !important;
   width: 0 !important;
   height: 0 !important;
@@ -1009,7 +1111,7 @@ textarea:not([class]):not([id]) {
 }
 
 /* 确保CodeMirror编辑器不会溢出其容器，且可以接收鼠标事件 */
-.CodeMirror {
+.code-block-section .CodeMirror {
   position: relative !important;
   z-index: 1 !important;
   height: auto !important;
@@ -1018,100 +1120,9 @@ textarea:not([class]):not([id]) {
   pointer-events: auto !important; /* 确保可以接收鼠标事件 */
 }
 
-/* 清理直接添加到body的孤立CodeMirror元素 */
-body > .CodeMirror,
-body > .CodeMirror-scroll,
-body > .CodeMirror-sizer,
-body > .CodeMirror-gutter,
-body > .CodeMirror-gutters,
-body > .CodeMirror-linenumber,
-body > .CodeMirror-lines,
-body > .CodeMirror-cursor,
-body > .CodeMirror-code,
-body > pre.CodeMirror-line,
-body > pre.CodeMirror-line-like,
-body > .CodeMirror-measure,
-body > .CodeMirror-selected,
-body > div[role="presentation"],
-body > div[cm-not-content="true"] {
-  display: none !important;
-  position: absolute !important;
-  left: -9999px !important;
-  top: -9999px !important;
-  height: 0 !important;
-  width: 0 !important;
-  z-index: -9999 !important;
-  opacity: 0 !important;
-}
-
-/* 隐藏可能的垃圾文本 */
-body > div:not([class]):not([id]),
-body > span:not([class]):not([id]),
-body > p:not([class]):not([id]),
-body > pre:not([class]):not([id]) {
-  display: none !important;
-}
-
-/* 修复连接信息页面底部可能出现的文本内容 */
-.code-block-section + div:not([class]):not([id]),
-.code-block-section + pre:not([class]):not([id]),
-.code-block-section + textarea:not([class]):not([id]),
-.code-block-section ~ div:not([class]):not([id]),
-.code-block-section ~ pre:not([class]):not([id]),
-.code-block-section ~ textarea:not([class]):not([id]) {
-  display: none !important;
-}
-
-/* 强制规定代码内容区域，防止内容泄漏 */
-.service-connection-info-container {
-  position: relative !important;
-  overflow: visible !important; /* 修改为visible */
-}
-
-/* 限制全局的CodeMirror-line元素，防止它们出现在非编辑器区域 */
-body div > pre.CodeMirror-line:not(.CodeMirror .CodeMirror-line),
-body .CodeMirror-code > pre.CodeMirror-line:not(.CodeMirror .CodeMirror-code > .CodeMirror-line),
-body > pre.CodeMirror-line {
-  display: none !important;
-}
-
-/* 优化标签栏样式，减少高度占用 */
-.connection-info-panel .ant-tabs-nav {
-  margin: 0 !important;
-  padding: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-}
-
-.connection-info-panel .ant-tabs-nav-wrap {
-  padding: 0 !important;
-}
-
-.connection-info-panel .ant-tabs-tab {
-  padding: 4px 14px !important;
-  margin: 0 10px 0 0 !important;
-  font-size: 14px !important;
-  line-height: 1.4 !important;
-  min-height: 0 !important;
-}
-
-.connection-info-panel .ant-tabs-tabpane {
-  padding-top: 0 !important;
-}
-
-.connection-info-panel {
-  padding: 8px 16px !important;
-}
-
-/* 减少标签页内容的顶部边距 */
-.tab-content {
-  padding: 0 !important;
-  margin-top: 0 !important;
-}
-
 /* 修复CodeMirror-hscrollbar和CodeMirror-vscrollbar滚动条 */
-.CodeMirror-hscrollbar,
-.CodeMirror-vscrollbar {
+.code-block-section .CodeMirror-hscrollbar,
+.code-block-section .CodeMirror-vscrollbar {
   z-index: 200 !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
@@ -1123,7 +1134,7 @@ body > pre.CodeMirror-line {
   pointer-events: auto !important;
 }
 
-.CodeMirror-vscrollbar {
+.code-block-section .CodeMirror-vscrollbar {
   right: 0 !important;
   top: 0 !important;
   height: 100% !important;
@@ -1132,7 +1143,7 @@ body > pre.CodeMirror-line {
   overflow-y: scroll !important;
 }
 
-.CodeMirror-hscrollbar {
+.code-block-section .CodeMirror-hscrollbar {
   bottom: 0 !important;
   left: 0 !important;
   width: 100% !important;
@@ -1142,10 +1153,10 @@ body > pre.CodeMirror-line {
 }
 
 /* 确保编辑器容器 */
-.editor-container, 
-.code-container,
-.code-card,
-.code-content {
+.code-block-section .editor-container, 
+.code-block-section .code-container,
+.code-block-section .code-card,
+.code-block-section .code-content {
   overflow: visible !important;
   max-height: none !important;
 }
