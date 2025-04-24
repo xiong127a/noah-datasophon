@@ -20,14 +20,14 @@
         </template>
         <template #labels="{ text }">
           <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-            <a-tag v-for="(value, key) in text" :key="key" color="blue">
+            <a-tag v-for="(value, key) in text" :key="key" color="blue" class="label-tag truncate-tag" :title="`${key}: ${value}`">
               {{ key }}: {{ value }}
             </a-tag>
           </div>
           <span v-else>-</span>
         </template>
         <template #time="{ text }">
-          <span>{{ formatTime(text) }}</span>
+          <span class="format-time-cell" :title="formatTime(text)">{{ formatTime(text) }}</span>
         </template>
       </a-table>
     </a-spin>
@@ -169,6 +169,8 @@ export default {
 </script>
 
 <style lang="less" scoped>
+@import './styles/k8s-table-styles.less';
+
 .resource-list {
   height: 100%;
 

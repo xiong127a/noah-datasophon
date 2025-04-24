@@ -1,0 +1,209 @@
+/* 
+ * Kubernetes仪表盘统一表格样式
+ * 这些样式仅在K8s仪表盘组件内生效
+ */
+
+// 为所有K8s仪表盘表格定义统一样式类
+.k8s-table {
+  width: 100%;
+  
+  // 启用表格水平滚动
+  &:deep(.ant-table) {
+    overflow-x: auto;
+  }
+  
+  // 固定表格布局，提高性能
+  &:deep(.ant-table-fixed-header .ant-table-container, 
+  .ant-table-fixed-column .ant-table-container) {
+    border-radius: 4px 4px 0 0;
+  }
+  
+  // 表头样式
+  &:deep(.ant-table-thead > tr > th) {
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: #374151;
+    padding: 12px 16px;
+    transition: background 0.3s ease;
+    white-space: nowrap; // 表头不换行
+    
+    &:hover {
+      background-color: #f0f2f5;
+    }
+    
+    // 表头排序图标样式
+    .ant-table-column-sorter {
+      color: #a0aec0;
+    }
+  }
+  
+  // 表格行样式
+  &:deep(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 12px 16px;
+    word-break: break-word; // 允许在单词内换行，防止溢出
+    
+    // 单元格内容溢出处理
+    .cell-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+  }
+  
+  // 表格行悬停样式
+  &:deep(.ant-table-tbody > tr:hover > td) {
+    background-color: #f9fafb;
+  }
+  
+  // 选中行样式
+  &:deep(.ant-table-tbody > tr.ant-table-row-selected > td) {
+    background-color: #e6f7ff;
+    border-color: rgba(0, 0, 0, 0.03);
+  }
+  
+  // 空状态样式
+  &:deep(.ant-empty) {
+    margin: 32px 0;
+  }
+  
+  // 标签样式
+  .tag-list, .labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 100%;
+    
+    .label-tag, .label-chip {
+      margin-right: 4px;
+      margin-bottom: 4px;
+      max-width: 100%;
+      height: auto;
+      line-height: 1.5;
+      white-space: normal;
+      word-break: break-word;
+      
+      // 超长标签处理
+      &.truncate-tag {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+  
+  // 内部端点样式
+  .internal-endpoint {
+    padding: 2px 0;
+    word-break: keep-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  
+  // 外部端点样式
+  .external-endpoint {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    
+    .external-icon {
+      margin-left: 4px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+  }
+  
+  // 格式化时间单元格
+  .format-time-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  // 操作按钮样式
+  .action-buttons {
+    white-space: nowrap;
+    
+    a {
+      color: #1890ff;
+      
+      &:hover {
+        color: #40a9ff;
+      }
+    }
+  }
+  
+  // 长文本单元格处理
+  .long-text-cell {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    position: relative;
+    
+    // 悬停显示全文
+    &:hover::after {
+      content: attr(title);
+      position: absolute;
+      left: 0;
+      top: 100%;
+      z-index: 100;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 4px 8px;
+      max-width: 300px;
+      word-break: break-word;
+      white-space: normal;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  // 可展开内容样式
+  .expandable-content {
+    max-height: 100px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: normal;
+  }
+  
+  // 表格容器确保横向滚动
+  &:deep(.ant-table-container) {
+    overflow-x: auto;
+  }
+  
+  // 针对JSON/YAML等代码型内容
+  .code-content {
+    font-family: monospace;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    padding: 4px;
+    border-radius: 2px;
+  }
+} 
+
+// 为tooltip提供统一样式
+.k8s-tooltip {
+  max-width: 500px;
+  
+  .tooltip-content {
+    max-height: 300px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: normal;
+  }
+} 

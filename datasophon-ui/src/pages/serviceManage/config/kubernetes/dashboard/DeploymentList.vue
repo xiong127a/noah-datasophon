@@ -15,7 +15,7 @@
         <template #name="{ text, record }">
           <div class="resource-name">
             <div class="resource-icon">
-              <img src="@/assets/k8s/deployment.svg" alt="部署" width="20" height="20" />
+              <span class="k8s-icon">K8S</span>
             </div>
             <a @click="viewDeployment(record)">{{ text }}</a>
           </div>
@@ -88,12 +88,6 @@ export default {
           key: 'name',
           slots: { customRender: 'name' },
           width: '25%'
-        },
-        {
-          title: '命名空间',
-          dataIndex: 'namespace',
-          key: 'namespace',
-          width: '10%'
         },
         {
           title: '标签',
@@ -310,6 +304,8 @@ export default {
 </script>
 
 <style scoped>
+@import './styles/k8s-table-styles.less';
+
 .deployment-list-container {
   width: 100%;
   padding: 16px;
@@ -328,6 +324,19 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.k8s-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background-color: #1890ff;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .label-container {

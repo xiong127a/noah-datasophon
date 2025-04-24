@@ -645,15 +645,6 @@ export default defineComponent({
           }
         },
         {
-          title: '命名空间',
-          dataIndex: ['objectMeta', 'namespace'],
-          key: 'namespace',
-          width: '10%',
-          customRender: (text) => {
-            return h('span', { class: 'cell-content', title: text || 'datasophon' }, text || 'datasophon');
-          }
-        },
-        {
           title: '标签',
           key: 'labels',
           width: '15%',

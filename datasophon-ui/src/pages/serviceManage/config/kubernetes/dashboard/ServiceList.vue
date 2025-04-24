@@ -18,18 +18,47 @@
             <a @click="handleEditService(record)">编辑</a>
           </div>
         </template>
+        <template #name="{ text, record }">
+          <div class="resource-name">
+            <div class="resource-icon">
+              <span class="k8s-icon">K8S</span>
+            </div>
+            <a @click="viewDeployment(record)" :title="text">{{ text }}</a>
+          </div>
+        </template>
         <template #labels="{ text }">
-          <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-            <a-tag v-for="(value, key) in text" :key="key" color="blue">
+          <div class="label-container">
+            <a-tag v-for="(value, key) in text" :key="key" color="blue" class="label-tag truncate-tag" :title="`${key}: ${value}`">
               {{ key }}: {{ value }}
             </a-tag>
           </div>
-          <span v-else>-</span>
+        </template>
+        <template #status="{ record }">
+          <a-tag :color="getStatusColor(record)" :title="getStatusText(record)">
+            {{ getStatusText(record) }}
+          </a-tag>
         </template>
         <template #creationTime="{ record }">
           <span class="format-time-cell">
             {{ formatTime(record.objectMeta?.creationTimestamp) }}
           </span>
+        </template>
+        <template #internalEndpoints="{ record }">
+          <!-- 显示内部端点 -->
+          <div v-if="record.internalEndpoint && record.internalEndpoint.ports && record.internalEndpoint.ports.length > 0">
+            <div v-for="(port, index) in record.internalEndpoint.ports" :key="index">
+              <div class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.port} ${port.protocol}`">
+                {{record.internalEndpoint.host}}:{{port.port}} {{port.protocol}}
+              </div>
+              <div v-if="port.nodePort" class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`">
+                {{record.internalEndpoint.host}}:{{port.nodePort}} {{port.protocol}}
+              </div>
+            </div>
+          </div>
+          <span v-else>-</span>
+        </template>
+        <template #image="{ text }">
+          <span class="long-text-cell" :title="text || '-'">{{ text || '-' }}</span>
         </template>
       </a-table>
     </a-spin>
@@ -78,15 +107,6 @@ export default {
               }),
               this.$createElement('span', { class: 'cell-content', attrs: { title: text || '未知' } }, text || '未知')
             ]);
-          }
-        },
-        {
-          title: '命名空间',
-          dataIndex: ['objectMeta', 'namespace'],
-          key: 'namespace',
-          width: '10%',
-          customRender: (text) => {
-            return this.$createElement('span', { class: 'cell-content', attrs: { title: text || 'datasophon' } }, text || 'datasophon');
           }
         },
         {
@@ -257,6 +277,22 @@ export default {
               attrs: { title: this.formatTime(timestamp) }
             }, `${days}天前`);
           }
+        },
+        {
+          title: '状态',
+          key: 'status',
+          width: '10%',
+          customRender: (text, record) => {
+            return this.$createElement('span', { class: 'cell-content', attrs: { title: text || 'Unknown' } }, text || 'Unknown');
+          }
+        },
+        {
+          title: '镜像',
+          key: 'image',
+          width: '10%',
+          customRender: (text) => {
+            return this.$createElement('span', { class: 'long-text-cell', attrs: { title: text || '-' } }, text || '-');
+          }
         }
       ]
     };
@@ -324,6 +360,18 @@ export default {
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       
       return days;
+    },
+    getStatusColor(record) {
+      // 实现根据记录状态返回相应颜色的逻辑
+      return 'blue'; // 临时返回，实际实现需要根据实际情况判断
+    },
+    getStatusText(record) {
+      // 实现根据记录状态返回相应文本的逻辑
+      return 'Running'; // 临时返回，实际实现需要根据实际情况判断
+    },
+    viewDeployment(record) {
+      // 实现查看Deployment的逻辑
+      this.$message.info(`查看Deployment ${record.name} 的功能正在开发中`);
     }
   },
   watch: {
@@ -338,6 +386,8 @@ export default {
 </script>
 
 <style lang="less" scoped>
+@import './styles/k8s-table-styles.less';
+
 .resource-list {
   height: 100%;
 
@@ -425,5 +475,56 @@ export default {
     white-space: normal;
     word-break: break-word;
   }
+}
+
+.resource-name {
+  display: flex;
+  align-items: center;
+
+  .resource-icon {
+    margin-right: 8px;
+    
+    .k8s-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      background-color: #1890ff;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+  }
+
+  a {
+    color: #1890ff;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.label-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.truncate-tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.long-text-cell {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style> 

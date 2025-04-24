@@ -18,10 +18,7 @@
                 <a-descriptions-item label="名称" :span="2">
                   {{ deployment?.name || '-' }}
                 </a-descriptions-item>
-                <a-descriptions-item label="命名空间">
-                  {{ deployment?.namespace || '-' }}
-                </a-descriptions-item>
-                <a-descriptions-item label="创建时间">
+                <a-descriptions-item label="创建时间" :span="2">
                   {{ formatTime(deployment?.createTime) }}
                 </a-descriptions-item>
                 <a-descriptions-item label="副本数" :span="2">
@@ -98,6 +95,7 @@
               :pagination="false"
               :rowKey="record => record.uid || record.time"
               size="small"
+              class="k8s-table"
             >
               <template #type="{ text }">
                 <a-tag :color="getEventTypeColor(text)">{{ text }}</a-tag>
@@ -395,6 +393,8 @@ spec:
 </script>
 
 <style scoped>
+@import './styles/k8s-table-styles.less';
+
 .deployment-detail-container {
   width: 100%;
 }
