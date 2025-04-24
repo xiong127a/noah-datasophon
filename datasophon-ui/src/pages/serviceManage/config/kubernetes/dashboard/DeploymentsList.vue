@@ -1,27 +1,6 @@
 <template>
   <div class="deployments-container">
-    <!-- 图表区域 -->
-    <div class="charts-container">
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>CPU 使用率</h3>
-          <a-icon type="fullscreen" />
-        </div>
-        <div class="chart-content">
-          <div class="chart" ref="cpuChart"></div>
-        </div>
-      </div>
-      
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>内存使用率</h3>
-          <a-icon type="fullscreen" />
-        </div>
-        <div class="chart-content">
-          <div class="chart" ref="memoryChart"></div>
-        </div>
-      </div>
-    </div>
+
     
     <!-- Deployments列表区域 -->
     <div class="deployments-list-container">

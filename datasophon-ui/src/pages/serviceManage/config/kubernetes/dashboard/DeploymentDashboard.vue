@@ -1,10 +1,12 @@
 <template>
   <div class="resource-list">
-    <!-- 顶部图表区域 -->
+    <!-- 顶部图表区域 (暂时隐藏) -->
+    <!--
     <k8s-metrics-charts 
       :metrics-data="metricsData"
       @update-charts="updateCharts"
     />
+    -->
     
     <!-- Deployments列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
@@ -43,13 +45,14 @@
 
 <script>
 // import API from '@/api';
-import K8sMetricsCharts from './K8sMetricsCharts.vue';
+// import K8sMetricsCharts from './K8sMetricsCharts.vue';
 import DeploymentView from './DeploymentView.vue';
 
 export default {
   name: 'DeploymentDashboard',
   components: {
-    K8sMetricsCharts,
+    // Remove unused component registration
+    // K8sMetricsCharts,
     DeploymentView
   },
   props: {
@@ -69,7 +72,6 @@ export default {
   data() {
     return {
       deployments: [],
-      metricsData: [],
       loading: false,
       deploymentViewVisible: false,
       currentDeployment: {
@@ -258,19 +260,13 @@ export default {
           });
           
           console.log("处理后的deployments数据:", this.deployments);
-          
-          // 保存获取到的指标数据
-          this.metricsData = res.data && res.data.cumulativeMetrics ? res.data.cumulativeMetrics : [];
-          console.log("获取到的指标数据:", this.metricsData);
         } else {
           console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
-          this.metricsData = [];
         }
       } catch (error) {
         console.error('Error fetching deployments:', error);
         this.deployments = [];
-        this.metricsData = [];
       } finally {
         this.loading = false;
       }
@@ -305,9 +301,6 @@ export default {
       
       return days;
     },
-    updateCharts() {
-      this.fetchDeployments();
-    }
   },
   watch: {
     selectedNamespace() {
