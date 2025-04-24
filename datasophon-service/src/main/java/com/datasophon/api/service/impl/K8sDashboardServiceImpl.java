@@ -624,16 +624,61 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     @Override
     public Result getConfigMaps(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取ConfigMaps
+            io.fabric8.kubernetes.api.model.ConfigMapList configMapList;
+            if (namespace != null && !namespace.isEmpty()) {
+                configMapList = client.configMaps().inNamespace(namespace).list();
+            } else {
+                configMapList = client.configMaps().inNamespace("datasophon").list();
             }
 
-            // TODO: 实现获取ConfigMaps逻辑
-            List<Object> configMaps = new ArrayList<>();
+            // 按照前端需要的格式构建结果
+            Map<String, Object> result = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, configMaps);
+            // 构建items列表
+            List<Map<String, Object>> items = configMapList.getItems().stream()
+                    .filter(configMap -> configMap.getMetadata() != null)
+                    .map(configMap -> {
+                        Map<String, Object> item = new HashMap<>();
+
+                        // 1. objectMeta
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        if (configMap.getMetadata() != null) {
+                            objectMeta.put("name", configMap.getMetadata().getName());
+                            objectMeta.put("namespace", configMap.getMetadata().getNamespace());
+                            objectMeta.put("labels", configMap.getMetadata().getLabels());
+                            objectMeta.put("creationTimestamp", configMap.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", configMap.getMetadata().getUid());
+
+                            // 如果有annotations，也添加
+                            if (configMap.getMetadata().getAnnotations() != null) {
+                                objectMeta.put("annotations", configMap.getMetadata().getAnnotations());
+                            }
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 2. typeMeta
+                        Map<String, String> typeMeta = new HashMap<>();
+                        typeMeta.put("kind", "configmap");
+                        item.put("typeMeta", typeMeta);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建listMeta
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+
+            // 构建最终结果
+            result.put("listMeta", listMeta);
+            result.put("items", items);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取ConfigMaps列表出错", e);
             return Result.error("获取ConfigMaps列表出错: " + e.getMessage());

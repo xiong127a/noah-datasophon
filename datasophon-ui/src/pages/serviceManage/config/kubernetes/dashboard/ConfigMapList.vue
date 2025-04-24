@@ -4,32 +4,40 @@
       <h3>Config Maps</h3>
     </div>
     <a-spin :spinning="loading">
-      <a-table
-        :columns="configMapColumns"
-        :dataSource="configMaps"
-        :pagination="false"
-        :rowKey="record => `${record.namespace}-${record.name}`"
-        class="k8s-table"
-      >
-        <template #action="{ record }">
-          <div class="action-buttons">
-            <a @click="handleViewConfigMap(record)">查看</a>
-            <a-divider type="vertical" />
-            <a @click="handleEditConfigMap(record)">编辑</a>
-          </div>
-        </template>
-        <template #labels="{ text }">
-          <div class="tag-list" v-if="text && Object.keys(text).length > 0">
-            <a-tag v-for="(value, key) in text" :key="key" color="blue" class="label-tag truncate-tag" :title="`${key}: ${value}`">
-              {{ key }}: {{ value }}
-            </a-tag>
-          </div>
-          <span v-else>-</span>
-        </template>
-        <template #time="{ text }">
-          <span class="format-time-cell" :title="formatTime(text)">{{ formatTime(text) }}</span>
-        </template>
-      </a-table>
+      <div v-if="!loading">
+        <a-table
+          :columns="configMapColumns"
+          :dataSource="configMaps"
+          :pagination="false"
+          :rowKey="record => record?.objectMeta?.uid"
+          class="k8s-table"
+        >
+          <!-- Remove scoped slots as we are using customRender now -->
+          <!--
+          <template #name="{ record }">
+            <a @click="handleViewConfigMap(record)" :title="record.objectMeta?.name">{{ record.objectMeta?.name }}</a>
+          </template>
+          <template #labels="{ record }">
+            <div class="tag-list" v-if="record?.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0">
+              <a-tag v-for="(value, key) in record.objectMeta.labels" :key="key" color="blue" class="label-tag truncate-tag" :title="`${key}: ${value}`">
+                {{ key }}: {{ value }}
+              </a-tag>
+            </div>
+            <span v-else>-</span>
+          </template>
+          <template #creationTime="{ record }">
+            <span class="format-time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
+              {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}天前
+            </span>
+          </template>
+          -->
+        </a-table>
+        <a-empty v-if="configMaps.length === 0" description="暂无数据" style="margin-top: 20px;"/>
+      </div>
+      <div v-else style="text-align: center; padding: 50px;">
+        <!-- Optional: You can add a placeholder or specific loading message here if needed -->
+         <!-- <a-skeleton active /> -->
+      </div>
     </a-spin>
   </div>
 </template>
@@ -57,39 +65,55 @@ export default {
       configMapColumns: [
         {
           title: '名称',
-          dataIndex: 'name',
           key: 'name',
-          width: '25%',
+          width: '30%',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            if (!record || !record.objectMeta) {
+              return h('span', '-');
+            }
+            return h('a', {
+              on: { click: () => this.handleViewConfigMap(record) },
+              attrs: { title: record.objectMeta.name }
+            }, record.objectMeta.name);
+          }
         },
         {
           title: '标签',
-          dataIndex: 'labels',
           key: 'labels',
-          width: '35%',
-          slots: { customRender: 'labels' }
+          width: '40%',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            const labels = record?.objectMeta?.labels;
+            if (!labels || Object.keys(labels).length === 0) {
+              return h('span', '-');
+            }
+            const tags = Object.entries(labels).map(([key, value]) => {
+              return h('a-tag', {
+                key: key,
+                props: { color: 'blue' },
+                class: 'label-tag truncate-tag',
+                attrs: { title: `${key}: ${value}` }
+              }, `${key}: ${value}`);
+            });
+            return h('div', { class: 'tag-list' }, tags);
+          }
         },
         {
           title: '创建时间',
           key: 'creationTime',
-          width: '10%',
-          sorter: true,
-          className: 'normal-column-header', // 添加自定义类名
+          width: '30%',
           customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return '-';
-            
-            // 格式化为 "x天前" 的形式
-            const days = this.getDaysAgo(timestamp);
-            return this.$createElement('span', { style: 'white-space: nowrap;' }, `${days}天前`);
+            const h = this.$createElement;
+            if (!record || !record.objectMeta || !record.objectMeta.creationTimestamp) {
+              return h('span', '-');
+            }
+            return h('span', {
+              class: 'format-time-cell',
+              attrs: { title: this.formatTime(record.objectMeta.creationTimestamp) }
+            }, `${this.getDaysAgo(record.objectMeta.creationTimestamp)}天前`);
           }
-        },
-        {
-          title: '操作',
-          key: 'action',
-          width: '15%',
-          slots: { customRender: 'action' },
-        },
+        }
       ]
     };
   },
@@ -104,31 +128,24 @@ export default {
           clusterId: this.clusterId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
         });
-        if (res.code === 200 && res.data) {
-          // 确保获取configmaps列表，并设置表格数据
-          this.configMaps = res.data.configMaps || [];
-          this.configMapsTotalItems = res.data.listMeta ? res.data.listMeta.totalItems : 0;
+        
+        if (res.code === 200 && res.data && Array.isArray(res.data.items)) {
+          // 适配新的API响应格式，并过滤无效数据
+          this.configMaps = res.data.items.filter(item => item && item.objectMeta);
         } else {
-          console.error('获取配置映射列表失败:', res ? res.msg : '未知错误');
+          console.error('获取配置映射列表失败:', res ? res.msg : '未知错误或数据格式无效');
           this.configMaps = [];
-          this.configMapsTotalItems = 0;
         }
       } catch (error) {
         console.error('获取配置映射列表异常:', error);
         this.$message.error('获取配置映射列表失败');
         this.configMaps = [];
-        this.configMapsTotalItems = 0;
       } finally {
         this.loading = false;
       }
     },
     handleViewConfigMap(record) {
-      // TODO: 实现查看ConfigMap的逻辑
-      this.$message.info(`查看ConfigMap ${record.name} 的功能正在开发中`);
-    },
-    handleEditConfigMap(record) {
-      // TODO: 实现编辑ConfigMap的逻辑
-      this.$message.info(`编辑ConfigMap ${record.name} 的功能正在开发中`);
+      this.$message.info(`查看ConfigMap ${record.objectMeta?.name} 的功能正在开发中`);
     },
     formatTime(time) {
       if (!time) return '-';
@@ -152,9 +169,7 @@ export default {
       const timeDiff = Math.abs(now - date);
       
       // 转换为天数
-      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-      
-      return days;
+      return Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     }
   },
   watch: {
@@ -169,8 +184,6 @@ export default {
 </script>
 
 <style lang="less" scoped>
-@import './styles/k8s-table-styles.less';
-
 .resource-list {
   height: 100%;
 
@@ -189,18 +202,6 @@ export default {
     }
   }
 
-  .action-buttons {
-    white-space: nowrap;
-    
-    a {
-      color: #1890ff;
-      
-      &:hover {
-        color: #40a9ff;
-      }
-    }
-  }
-
   .tag-list {
     display: flex;
     flex-wrap: wrap;
@@ -209,5 +210,30 @@ export default {
       margin: 2px;
     }
   }
+}
+
+.format-time-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.truncate-tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.ant-table-thead > tr > th) {
+  background-color: #f5f7fa;
+}
+
+:deep(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #f5f7fa;
 }
 </style> 
