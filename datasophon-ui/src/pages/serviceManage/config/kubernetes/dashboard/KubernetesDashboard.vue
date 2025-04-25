@@ -68,6 +68,14 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- ReplicaSets列表 -->
+        <replica-sets-dashboard
+          v-if="activeResource === 'replicasets'"
+          :clusterId="clusterId"
+          :serviceId="serviceId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -88,6 +96,7 @@ import ConfigMapList from './ConfigMapList.vue';
 import DeploymentDashboard from './DeploymentDashboard.vue';
 import ServiceList from './ServiceList.vue';
 import PodList from './PodList.vue';
+import ReplicaSetsDashboard from './ReplicaSetsDashboard.vue';
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -97,7 +106,8 @@ export default defineComponent({
     ConfigMapList,
     DeploymentDashboard,
     ServiceList,
-    PodList
+    PodList,
+    ReplicaSetsDashboard
   },
   props: {
     serviceId: {

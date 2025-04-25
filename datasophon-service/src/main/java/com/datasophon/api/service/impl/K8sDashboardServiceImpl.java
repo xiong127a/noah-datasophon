@@ -841,16 +841,116 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     @Override
     public Result getReplicaSets(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取ReplicaSets
+            io.fabric8.kubernetes.api.model.apps.ReplicaSetList replicaSetList;
+            if (namespace != null && !namespace.isEmpty()) {
+                replicaSetList = client.apps().replicaSets().inNamespace(namespace).list();
+            } else {
+                replicaSetList = client.apps().replicaSets().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取ReplicaSets逻辑
-            List<Object> replicaSets = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> replicaSets = replicaSetList.getItems().stream()
+                    .map(replicaSet -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> podInfo = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, replicaSets);
+                        // 基本信息
+                        if (replicaSet.getMetadata() != null) {
+                            objectMeta.put("name", replicaSet.getMetadata().getName());
+                            objectMeta.put("namespace", replicaSet.getMetadata().getNamespace());
+                            objectMeta.put("labels", replicaSet.getMetadata().getLabels());
+                            objectMeta.put("annotations", replicaSet.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", replicaSet.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", replicaSet.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "replicaset");
+                        typeMeta.put("scalable", true);
+                        item.put("typeMeta", typeMeta);
+
+                        // Pod信息
+                        if (replicaSet.getStatus() != null) {
+                            podInfo.put("desired",
+                                    replicaSet.getSpec() != null ? replicaSet.getSpec().getReplicas() : 0);
+                            podInfo.put("current",
+                                    replicaSet.getStatus().getReplicas() != null ? replicaSet.getStatus().getReplicas()
+                                            : 0);
+                            podInfo.put("running",
+                                    replicaSet.getStatus().getAvailableReplicas() != null
+                                            ? replicaSet.getStatus().getAvailableReplicas()
+                                            : 0);
+                            // 计算pending状态的Pod数量 = 当前总数 - 可用数量
+                            int current = replicaSet.getStatus().getReplicas() != null
+                                    ? replicaSet.getStatus().getReplicas()
+                                    : 0;
+                            int available = replicaSet.getStatus().getAvailableReplicas() != null
+                                    ? replicaSet.getStatus().getAvailableReplicas()
+                                    : 0;
+                            podInfo.put("pending", Math.max(0, current - available));
+                            podInfo.put("failed", 0); // 默认值，需要检查Pod状态计算
+                            podInfo.put("succeeded", 0); // 默认值，需要检查Pod状态计算
+                        } else {
+                            podInfo.put("desired", 0);
+                            podInfo.put("current", 0);
+                            podInfo.put("running", 0);
+                            podInfo.put("pending", 0);
+                            podInfo.put("failed", 0);
+                            podInfo.put("succeeded", 0);
+                        }
+                        podInfo.put("warnings", new ArrayList<>());
+                        item.put("podInfo", podInfo);
+
+                        // 提取容器镜像
+                        List<String> containerImages = new ArrayList<>();
+                        if (replicaSet.getSpec() != null && replicaSet.getSpec().getTemplate() != null
+                                && replicaSet.getSpec().getTemplate().getSpec() != null
+                                && replicaSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                            replicaSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    containerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("containerImages", containerImages);
+                        item.put("initContainerImages", null);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建状态统计信息
+            Map<String, Integer> status = new HashMap<>();
+            status.put("running", (int) replicaSets.stream().filter(rs -> {
+                Map<String, Object> podInfo = (Map<String, Object>) rs.get("podInfo");
+                return podInfo != null && (int) podInfo.get("running") > 0;
+            }).count());
+            status.put("pending", (int) replicaSets.stream().filter(rs -> {
+                Map<String, Object> podInfo = (Map<String, Object>) rs.get("podInfo");
+                return podInfo != null && (int) podInfo.get("pending") > 0;
+            }).count());
+            status.put("failed", 0);
+            status.put("succeeded", 0);
+            status.put("unknown", 0);
+            status.put("terminating", 0);
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", replicaSets.size());
+            result.put("listMeta", listMeta);
+            result.put("replicaSets", replicaSets);
+            result.put("status", status);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取ReplicaSets列表出错", e);
             return Result.error("获取ReplicaSets列表出错: " + e.getMessage());
