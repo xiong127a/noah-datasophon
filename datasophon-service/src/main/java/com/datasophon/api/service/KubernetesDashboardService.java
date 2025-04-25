@@ -23,7 +23,7 @@ import com.datasophon.common.utils.Result;
  * K8S仪表盘服务接口
  * 提供Kubernetes资源查询方法
  */
-public interface K8sDashboardService {
+public interface KubernetesDashboardService {
 
     /**
      * 获取Kubernetes命名空间列表
@@ -149,6 +149,16 @@ public interface K8sDashboardService {
     Result getDaemonSets(Integer clusterId, String namespace);
 
     /**
+     * 获取DaemonSets列表（带服务ID）
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return DaemonSets列表
+     */
+    Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
      * 获取StatefulSets列表
      * 
      * @param clusterId 集群ID
@@ -213,7 +223,6 @@ public interface K8sDashboardService {
      * @return 事件列表
      */
     Result getResourceEvents(Integer clusterId, String namespace, String kind, String name);
-
 
     /**
      * 一次性获取所有Kubernetes资源统计数据

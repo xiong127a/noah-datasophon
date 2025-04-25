@@ -111,6 +111,14 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- DaemonSets列表 -->
+        <daemon-sets-dashboard
+          v-if="activeResource === 'daemonsets'"
+          :clusterId="clusterId"
+          :serviceId="serviceId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -136,6 +144,7 @@ import PersistentVolumesDashboard from './PersistentVolumesDashboard.vue';
 import PodsDashboard from './PodsDashboard.vue'
 import ServicesDashboard from './ServicesDashboard.vue'
 import CronJobsDashboard from './CronJobsDashboard.vue'
+import DaemonSetsDashboard from './DaemonSetsDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -151,6 +160,7 @@ export default defineComponent({
     PodsDashboard,
     ServicesDashboard,
     CronJobsDashboard,
+    DaemonSetsDashboard,
   },
   props: {
     serviceId: {

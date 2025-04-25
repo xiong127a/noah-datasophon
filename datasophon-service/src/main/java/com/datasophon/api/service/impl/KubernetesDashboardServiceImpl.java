@@ -18,7 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.K8sDashboardService;
+import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.k8s.DeploymentInfo;
 import com.datasophon.common.utils.Result;
@@ -46,10 +46,10 @@ import java.util.stream.Collectors;
 /**
  * K8S仪表盘服务实现类
  */
-@Service("k8sDashboardService")
-public class K8sDashboardServiceImpl implements K8sDashboardService {
+@Service("kubernetesDashboardService")
+public class KubernetesDashboardServiceImpl implements KubernetesDashboardService {
 
-    private static final Logger logger = LoggerFactory.getLogger(K8sDashboardServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(KubernetesDashboardServiceImpl.class);
 
     @Autowired
     private ClusterInfoService clusterInfoService;
@@ -748,18 +748,129 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     }
 
     @Override
+    public Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace) {
+        // 目前serviceId暂时不使用，留作后期扩展使用
+        logger.info("获取DaemonSets列表, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        return getDaemonSets(clusterId, namespace);
+    }
+
+    @Override
     public Result getDaemonSets(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取DaemonSets
+            io.fabric8.kubernetes.api.model.apps.DaemonSetList daemonSetList;
+            if (namespace != null && !namespace.isEmpty()) {
+                daemonSetList = client.apps().daemonSets().inNamespace(namespace).list();
+            } else {
+                daemonSetList = client.apps().daemonSets().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取DaemonSets逻辑
-            List<Object> daemonSets = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> daemonSets = daemonSetList.getItems().stream()
+                    .map(daemonSet -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> podInfo = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, daemonSets);
+                        // 基本信息
+                        if (daemonSet.getMetadata() != null) {
+                            objectMeta.put("name", daemonSet.getMetadata().getName());
+                            objectMeta.put("namespace", daemonSet.getMetadata().getNamespace());
+                            objectMeta.put("labels", daemonSet.getMetadata().getLabels());
+                            objectMeta.put("annotations", daemonSet.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", daemonSet.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", daemonSet.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "daemonset");
+                        typeMeta.put("scalable", false); // DaemonSet不可缩放
+                        item.put("typeMeta", typeMeta);
+
+                        // Pod信息
+                        if (daemonSet.getStatus() != null) {
+                            podInfo.put("desired", daemonSet.getStatus().getDesiredNumberScheduled());
+                            podInfo.put("current", daemonSet.getStatus().getCurrentNumberScheduled());
+                            podInfo.put("ready", daemonSet.getStatus().getNumberReady());
+                            podInfo.put("available",
+                                    daemonSet.getStatus().getNumberAvailable() != null
+                                            ? daemonSet.getStatus().getNumberAvailable()
+                                            : 0);
+
+                            // 计算unavailable = current - available
+                            int current = daemonSet.getStatus().getCurrentNumberScheduled();
+                            int available = daemonSet.getStatus().getNumberAvailable() != null
+                                    ? daemonSet.getStatus().getNumberAvailable()
+                                    : 0;
+                            podInfo.put("unavailable", Math.max(0, current - available));
+                        } else {
+                            podInfo.put("desired", 0);
+                            podInfo.put("current", 0);
+                            podInfo.put("ready", 0);
+                            podInfo.put("available", 0);
+                            podInfo.put("unavailable", 0);
+                        }
+                        podInfo.put("warnings", new ArrayList<>());
+                        item.put("podInfo", podInfo);
+
+                        // 提取容器镜像
+                        List<String> containerImages = new ArrayList<>();
+                        if (daemonSet.getSpec() != null && daemonSet.getSpec().getTemplate() != null
+                                && daemonSet.getSpec().getTemplate().getSpec() != null
+                                && daemonSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                            daemonSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    containerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("containerImages", containerImages);
+
+                        // 初始化容器镜像
+                        List<String> initContainerImages = new ArrayList<>();
+                        if (daemonSet.getSpec() != null && daemonSet.getSpec().getTemplate() != null
+                                && daemonSet.getSpec().getTemplate().getSpec() != null
+                                && daemonSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                            daemonSet.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    initContainerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("initContainerImages", initContainerImages);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建状态统计信息
+            Map<String, Integer> status = new HashMap<>();
+            status.put("running", (int) daemonSets.stream().filter(ds -> {
+                Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
+                return podInfo != null && (int) podInfo.get("ready") > 0;
+            }).count());
+            status.put("pending", (int) daemonSets.stream().filter(ds -> {
+                Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
+                return podInfo != null && (int) podInfo.get("unavailable") > 0;
+            }).count());
+            status.put("failed", 0);
+            status.put("succeeded", 0);
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", daemonSets.size());
+            result.put("listMeta", listMeta);
+            result.put("daemonSets", daemonSets);
+            result.put("status", status);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取DaemonSets列表出错", e);
             return Result.error("获取DaemonSets列表出错: " + e.getMessage());

@@ -15,13 +15,13 @@ export default {
     },
     /**
      * 资源类型，用于确定状态判断逻辑
-     * 可选值: 'deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service'.
+     * 可选值: 'deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset'.
      */
     resourceType: {
       type: String,
       required: true,
       validator: function(value) {
-        return ['deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service'].includes(value);
+        return ['deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset'].includes(value);
       }
     }
   },
@@ -42,6 +42,8 @@ export default {
           return this.getReplicaSetStatusClass(this.resource);
         case 'service':
           return this.getServiceStatusClass(this.resource);
+        case 'daemonset':
+          return this.getDaemonSetStatusClass(this.resource);
         default:
           return classNames.concat(['status-unknown']).join(' ');
       }
@@ -138,6 +140,17 @@ export default {
       const classNames = ['status-dot'];
       // 服务通常只要存在就是可用的，所以默认为running状态
       classNames.push('status-running');
+      return classNames.join(' ');
+    },
+    
+    getDaemonSetStatusClass(resource) {
+      const classNames = ['status-dot'];
+      // DaemonSet状态逻辑与ReplicaSet类似，基于pod信息
+      if (resource?.podInfo?.running > 0) classNames.push('status-running');
+      if (resource?.podInfo?.pending > 0) classNames.push('status-warning');
+      if (resource?.podInfo?.failed > 0) classNames.push('status-danger');
+      if (!resource?.podInfo || (!resource?.podInfo.running && !resource?.podInfo.pending && !resource?.podInfo.failed))
+        classNames.push('status-unknown');
       return classNames.join(' ');
     }
   }
