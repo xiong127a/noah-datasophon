@@ -7,7 +7,7 @@
       @update-charts="updateCharts"
     />
     -->
-    
+
     <!-- Deployments列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
@@ -21,15 +21,15 @@
       </div>
       <div class="k8s-card-content">
         <a-spin :spinning="loading">
-          <a-table 
-            :columns="deploymentColumns" 
-            :dataSource="deployments" 
-            :pagination="false"
-            :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
-            class="k8s-table"
-            :table-layout="'auto'"
-            :bordered="false"
-            size="middle"
+          <a-table
+              :columns="deploymentColumns"
+              :dataSource="deployments"
+              :pagination="false"
+              :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+              class="k8s-table"
+              :table-layout="'auto'"
+              :bordered="false"
+              size="middle"
           >
             <template slot="status" slot-scope="text, record">
               <span :class="getStatusClass(record)" class="status-indicator"></span>
@@ -50,38 +50,38 @@
             <template slot="labels" slot-scope="text, record">
               <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
-                  <a-tag 
-                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                    :key="idx" 
-                    color="blue"
-                    class="label-tag"
-                    :title="`${entry[0]}: ${entry[1]}`"
+                  <a-tag
+                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                      :key="idx"
+                      color="blue"
+                      class="label-tag"
+                      :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
-                  <a-button 
-                    v-if="Object.keys(record.objectMeta.labels).length > 3" 
-                    type="link" 
-                    size="small"
-                    @click.stop="toggleLabelsExpand(record)"
+                  <a-button
+                      v-if="Object.keys(record.objectMeta.labels).length > 3"
+                      type="link"
+                      size="small"
+                      @click.stop="toggleLabelsExpand(record)"
                   >
                     +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
                   </a-button>
                 </template>
                 <template v-else>
-                  <a-tag 
-                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                    :key="idx" 
-                    color="blue"
-                    class="label-tag"
-                    :title="`${entry[0]}: ${entry[1]}`"
+                  <a-tag
+                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                      :key="idx"
+                      color="blue"
+                      class="label-tag"
+                      :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
-                  <a-button 
-                    type="link" 
-                    size="small"
-                    @click.stop="toggleLabelsExpand(record)"
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click.stop="toggleLabelsExpand(record)"
                   >
                     收起
                   </a-button>
@@ -105,13 +105,13 @@
         </a-spin>
       </div>
     </div>
-    
+
     <deployment-view
-      v-if="deploymentViewVisible"
-      :namespace="currentDeployment.namespace"
-      :deploymentName="currentDeployment.name"
-      :visible="deploymentViewVisible"
-      @update:visible="deploymentViewVisible = $event"
+        v-if="deploymentViewVisible"
+        :namespace="currentDeployment.namespace"
+        :deploymentName="currentDeployment.name"
+        :visible="deploymentViewVisible"
+        @update:visible="deploymentViewVisible = $event"
     />
   </div>
 </template>
@@ -204,7 +204,7 @@ export default {
       if (record?.pods?.running > 0) classNames.push('status-running');
       if (record?.pods?.pending > 0) classNames.push('status-warning');
       if (record?.pods?.failed > 0) classNames.push('status-danger');
-      if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
+      if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed))
         classNames.push('status-unknown');
       return classNames.join(' ');
     },
@@ -228,23 +228,23 @@ export default {
         if (res.code === 200) {
           // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
           let deployList = res.data && res.data.deployments ? res.data.deployments : [];
-          
+
           // 处理deployments数据，确保每个项都有必要的属性
           this.deployments = deployList.map(deploy => {
             // 如果deploy为null或undefined，返回一个空对象
             if (!deploy) return { objectMeta: {}, pods: {} };
-            
+
             // 确保objectMeta存在
             if (!deploy.objectMeta) deploy.objectMeta = {};
-            
+
             // 确保pods存在
             if (!deploy.pods) deploy.pods = {};
-            
+
             return deploy;
           });
-          
+
           console.log("处理后的deployments数据:", this.deployments);
-          
+
           // 单独测试第一个对象的数据结构
           if (this.deployments.length > 0) {
             const firstDeploy = this.deployments[0];
@@ -271,7 +271,7 @@ export default {
         this.$message.warning('部署信息不完整，无法查看详情');
         return;
       }
-      
+
       this.currentDeployment = {
         namespace: record.objectMeta.namespace || '',
         name: record.objectMeta.name || ''
@@ -284,18 +284,18 @@ export default {
     },
     getDaysAgo(timestamp) {
       if (!timestamp) return '-';
-      
+
       const date = new Date(timestamp);
       const now = new Date();
-      
+
       // 计算时间差（毫秒）
       const timeDiff = Math.abs(now - date);
-      
+
       // 转换为天数、小时、分钟
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      
+
       // 根据时间差返回不同格式
       if (days > 0) {
         return `${days}天前`;
@@ -349,7 +349,7 @@ export default {
   cursor: pointer;
   display: inline-block;
   max-width: 100%;
-  
+
   &:hover {
     color: #1890ff;
     text-decoration: underline;
@@ -360,7 +360,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  
+
   .label-tag {
     margin-right: 0;
   }

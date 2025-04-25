@@ -23,13 +23,13 @@
             :table-layout="'auto'"
           >
             <template slot="name" slot-scope="text, record">
-              <div class="name-cell">
-                <span class="pod-name" :title="record.objectMeta?.name || '-'">
-                  {{ record.objectMeta?.name || '-' }}
-                </span>
-              </div>
-            </template>
-            
+                <div class="name-cell">
+                  <span class="pod-name" :title="record.objectMeta?.name || '-'">
+                    {{ record.objectMeta?.name || '-' }}
+                  </span>
+                </div>
+              </template>
+              
             <template slot="image" slot-scope="text, record">
                 <div class="image-cell" :title="record.containerImages && record.containerImages.length ? record.containerImages.join(', ') : ''">
                   <template v-if="record.containerImages && record.containerImages.length">
@@ -64,15 +64,15 @@
                     </a-button>
                   </template>
                   <template v-else>
-                    <a-tag 
+                  <a-tag 
                       v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
                       :key="idx" 
-                      color="blue"
-                      class="label-tag"
+                    color="blue"
+                    class="label-tag"
                       :title="`${entry[0]}: ${entry[1]}`"
-                    >
+                  >
                       {{ entry[0] }}: {{ entry[1] }}
-                    </a-tag>
+                  </a-tag>
                     <a-button 
                       type="link" 
                       size="small"
@@ -86,22 +86,22 @@
               </template>
               
             <template slot="status" slot-scope="text, record">
-              <span :class="['status-dot', getStatusClass(record.status)]"></span>
-            </template>
-            
+                  <span :class="['status-dot', getStatusClass(record.status)]"></span>
+              </template>
+              
             <template slot="cpuUsage" slot-scope="text, record">
               <div class="resource-value">
                 <img src="@/assets/images/cpu.svg" class="resource-icon" alt="CPU" />
                 <span class="resource-text">{{ formatCpuUsage(record) }}</span>
-              </div>
-            </template>
+                </div>
+              </template>
               
             <template slot="memoryUsage" slot-scope="text, record">
               <div class="resource-value">
                 <img src="@/assets/images/memory.svg" class="resource-icon" alt="Memory" />
                 <span class="resource-text">{{ formatMemoryUsage(record) }}</span>
-              </div>
-            </template>
+                </div>
+              </template>
 
             <template slot="creationTime" slot-scope="text, record">
                 <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
