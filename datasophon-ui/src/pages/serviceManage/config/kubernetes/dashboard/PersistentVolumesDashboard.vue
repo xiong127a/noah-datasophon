@@ -1,9 +1,9 @@
 <template>
   <div class="resource-list">
-    <!-- PVC列表区域 -->
+    <!-- PersistentVolumes列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
-        <span class="k8s-card-title">Persistent Volume Claims</span>
+        <span class="k8s-card-title">持久化卷</span>
         <div class="k8s-card-actions">
           <a-icon type="bars" class="k8s-action-icon" />
           <a class="k8s-card-collapse-icon">
@@ -15,7 +15,7 @@
         <a-spin :spinning="loading">
           <a-table 
             :columns="columns" 
-            :dataSource="persistentVolumeClaims" 
+            :dataSource="persistentVolumes" 
             :pagination="false"
             :rowKey="record => record?.objectMeta?.uid || Math.random().toString(36).substring(2)"
             class="k8s-table"
@@ -24,55 +24,12 @@
             size="middle"
           >
             <template slot="name" slot-scope="text, record">
-              <div style="display: flex; align-items: center; line-height: normal;">
-                <StatusIndicator :resource="record" resourceType="persistentVolumeClaim" />
+              <div style="display: flex; align-items: center;">
+                <StatusIndicator :resource="record" resourceType="persistentVolume" />
                 <span class="name-text" :title="record?.objectMeta?.name || '未知'">
                   {{ record?.objectMeta?.name || '未知' }}
                 </span>
               </div>
-            </template>
-
-            <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
-                <template v-if="!isLabelsExpanded(record)">
-                  <a-tag 
-                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                    :key="idx" 
-                    color="blue"
-                    class="label-tag"
-                    :title="`${entry[0]}: ${entry[1]}`"
-                  >
-                    {{ entry[0] }}: {{ entry[1] }}
-                  </a-tag>
-                  <a-button 
-                    v-if="Object.keys(record.objectMeta.labels).length > 3" 
-                    type="link" 
-                    size="small"
-                    @click.stop="toggleLabelsExpand(record)"
-                  >
-                    +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
-                  </a-button>
-                </template>
-                <template v-else>
-                  <a-tag 
-                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                    :key="idx" 
-                    color="blue"
-                    class="label-tag"
-                    :title="`${entry[0]}: ${entry[1]}`"
-                  >
-                    {{ entry[0] }}: {{ entry[1] }}
-                  </a-tag>
-                  <a-button 
-                    type="link" 
-                    size="small"
-                    @click.stop="toggleLabelsExpand(record)"
-                  >
-                    收起
-                  </a-button>
-                </template>
-              </div>
-              <span v-else class="empty-value">-</span>
             </template>
 
             <template slot="capacity" slot-scope="text, record">
@@ -95,10 +52,31 @@
               <span v-else class="empty-value">-</span>
             </template>
 
+            <template slot="reclaimPolicy" slot-scope="text, record">
+              <span :class="['reclaim-policy', getReclaimPolicyClass(record.reclaimPolicy)]">
+                {{ record.reclaimPolicy || '-' }}
+              </span>
+            </template>
+
+            <template slot="status" slot-scope="text, record">
+              <span>{{ record.status || '-' }}</span>
+            </template>
+
+            <template slot="claim" slot-scope="text, record">
+              <span class="claim-cell" v-if="record.claimRef && record.claimRef.name">
+                {{ record.claimRef.namespace }}/{{ record.claimRef.name }}
+              </span>
+              <span v-else class="empty-value">-</span>
+            </template>
+
             <template slot="storageClass" slot-scope="text, record">
               <span class="storage-class-cell" :title="record?.storageClass || '-'">
                 {{ record?.storageClass || '-' }}
               </span>
+            </template>
+
+            <template slot="reason" slot-scope="text, record">
+              <span>{{ record?.reason || '-' }}</span>
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
@@ -117,7 +95,7 @@
 import StatusIndicator from './components/StatusIndicator.vue';
 
 export default {
-  name: 'PersistentVolumeClaimsDashboard',
+  name: 'PersistentVolumesDashboard',
   components: {
     StatusIndicator
   },
@@ -125,34 +103,18 @@ export default {
     clusterId: {
       type: Number,
       required: true
-    },
-    selectedNamespace: {
-      type: String,
-      default: 'datasophon'
     }
   },
   data() {
     return {
-      persistentVolumeClaims: [],
+      persistentVolumes: [],
       loading: false,
-      expandedLabels: {},
       columns: [
         {
           title: '名称',
           key: 'name',
           className: 'name-column',
           scopedSlots: { customRender: 'name' }
-        },
-        {
-          title: '标签',
-          key: 'labels',
-          className: 'labels-column',
-          scopedSlots: { customRender: 'labels' }
-        },
-        {
-          title: 'Volume',
-          dataIndex: 'volume',
-          key: 'volume'
         },
         {
           title: '容量',
@@ -167,10 +129,34 @@ export default {
           scopedSlots: { customRender: 'accessModes' }
         },
         {
+          title: '回收策略',
+          key: 'reclaimPolicy',
+          className: 'reclaim-policy-column',
+          scopedSlots: { customRender: 'reclaimPolicy' }
+        },
+        {
+          title: '状态',
+          key: 'status',
+          className: 'status-column',
+          scopedSlots: { customRender: 'status' }
+        },
+        {
+          title: '要求',
+          key: 'claim',
+          className: 'claim-column',
+          scopedSlots: { customRender: 'claim' }
+        },
+        {
           title: '存储类',
           key: 'storageClass',
           className: 'storage-class-column',
           scopedSlots: { customRender: 'storageClass' }
+        },
+        {
+          title: '原因',
+          key: 'reason',
+          className: 'reason-column',
+          scopedSlots: { customRender: 'reason' }
         },
         {
           title: '创建时间',
@@ -182,60 +168,84 @@ export default {
     };
   },
   mounted() {
-    this.fetchPersistentVolumeClaims();
+    this.fetchPersistentVolumes();
   },
   methods: {
-    async fetchPersistentVolumeClaims() {
+    async fetchPersistentVolumes() {
       this.loading = true;
       try {
-        const params = { 
-          clusterId: this.clusterId,
-          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
-        };
-        
-        const res = await this.$axiosGet(global.API.getK8sPersistentVolumeClaims, params);
+        const res = await this.$axiosGet(global.API.getK8sPersistentVolumes, {
+          clusterId: this.clusterId
+        });
         
         if (res.code === 200) {
-          // 确保获取PVC列表数组
-          let pvcList = res.data && res.data.items ? res.data.items : [];
+          // 确保获取PersistentVolumes列表数组
+          let pvList = [];
+          
+          if (Array.isArray(res.data)) {
+            pvList = res.data;
+          } else if (res.data && Array.isArray(res.data.items)) {
+            pvList = res.data.items;
+          }
           
           // 处理数据，确保每个项都有必要的属性
-          this.persistentVolumeClaims = pvcList.map(pvc => {
+          this.persistentVolumes = pvList.map(pv => {
             // 如果为null或undefined，返回一个空对象
-            if (!pvc) return { objectMeta: {}, capacity: {}, accessModes: [] };
+            if (!pv) return { objectMeta: {}, capacity: {}, accessModes: [] };
             
             // 确保objectMeta存在
-            if (!pvc.objectMeta) pvc.objectMeta = {};
+            if (!pv.objectMeta) pv.objectMeta = {};
             
             // 确保capacity存在
-            if (!pvc.capacity) pvc.capacity = {};
+            if (!pv.capacity) pv.capacity = {};
             
             // 确保accessModes存在
-            if (!pvc.accessModes) pvc.accessModes = [];
+            if (!pv.accessModes) pv.accessModes = [];
             
-            return pvc;
+            return pv;
           });
           
-          console.log("处理后的persistentVolumeClaims数据:", this.persistentVolumeClaims);
+          console.log("处理后的PersistentVolumes数据:", this.persistentVolumes);
         } else {
-          console.error('Failed to fetch PersistentVolumeClaims:', res.msg);
-          this.persistentVolumeClaims = [];
+          console.error('Failed to fetch PersistentVolumes:', res.msg);
+          this.persistentVolumes = [];
         }
       } catch (error) {
-        console.error('Error fetching PersistentVolumeClaims:', error);
-        this.persistentVolumeClaims = [];
+        console.error('Error fetching PersistentVolumes:', error);
+        this.persistentVolumes = [];
       } finally {
         this.loading = false;
       }
     },
-    toggleLabelsExpand(record) {
-      if (!record || !record.objectMeta || !record.objectMeta.uid) return;
-      const uid = record.objectMeta.uid;
-      this.$set(this.expandedLabels, uid, !this.expandedLabels[uid]);
+    getStatusType(status) {
+      if (!status) return 'default';
+      
+      switch(status.toLowerCase()) {
+        case 'bound': 
+          return 'success';
+        case 'available': 
+          return 'processing';
+        case 'released': 
+          return 'warning';
+        case 'failed': 
+          return 'error';
+        default: 
+          return 'default';
+      }
     },
-    isLabelsExpanded(record) {
-      if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
-      return !!this.expandedLabels[record.objectMeta.uid];
+    getReclaimPolicyClass(policy) {
+      if (!policy) return 'policy-unknown';
+      
+      switch(policy.toLowerCase()) {
+        case 'delete':
+          return 'policy-delete';
+        case 'retain':
+          return 'policy-retain';
+        case 'recycle':
+          return 'policy-recycle';
+        default:
+          return 'policy-unknown';
+      }
     },
     getDaysAgo(timestamp) {
       if (!timestamp) return '-';
@@ -277,10 +287,7 @@ export default {
   },
   watch: {
     clusterId() {
-      this.fetchPersistentVolumeClaims();
-    },
-    selectedNamespace() {
-      this.fetchPersistentVolumeClaims();
+      this.fetchPersistentVolumes();
     }
   }
 };
@@ -300,17 +307,7 @@ export default {
   }
 }
 
-.labels-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  
-  .label-tag {
-    margin-right: 0;
-  }
-}
-
-.capacity-cell, .storage-class-cell {
+.capacity-cell, .storage-class-cell, .claim-cell {
   word-break: break-word;
   line-height: 1.5;
   display: block;
@@ -330,5 +327,41 @@ export default {
     word-break: break-word;
     max-width: 100%;
   }
+}
+
+.reclaim-policy {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 12px;
+  
+  &.policy-delete {
+    background-color: #fff1f0;
+    color: #f5222d;
+    border: 1px solid #ffa39e;
+  }
+  
+  &.policy-retain {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+  }
+  
+  &.policy-recycle {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+  }
+  
+  &.policy-unknown {
+    background-color: #f5f5f5;
+    color: #8c8c8c;
+    border: 1px solid #d9d9d9;
+  }
+}
+
+.empty-value {
+  color: #bfbfbf;
+  font-style: italic;
 }
 </style> 

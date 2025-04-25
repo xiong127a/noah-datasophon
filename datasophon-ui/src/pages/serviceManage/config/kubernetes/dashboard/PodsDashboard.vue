@@ -23,13 +23,16 @@
             :table-layout="'auto'"
           >
             <template slot="name" slot-scope="text, record">
+              <div style="display: flex; align-items: center; line-height: normal;">
+                <StatusIndicator :resource="record" resourceType="pod" />
                 <div class="name-cell">
                   <span class="pod-name" :title="record.objectMeta?.name || '-'">
                     {{ record.objectMeta?.name || '-' }}
                   </span>
                 </div>
-              </template>
-              
+              </div>
+            </template>
+            
             <template slot="image" slot-scope="text, record">
                 <div class="image-cell" :title="record.containerImages && record.containerImages.length ? record.containerImages.join(', ') : ''">
                   <template v-if="record.containerImages && record.containerImages.length">
@@ -43,8 +46,9 @@
               </template>
               
             <template slot="labels" slot-scope="text, record">
-                <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
-                  <template v-if="!isLabelsExpanded(record)">
+              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+                <template v-if="!isLabelsExpanded(record)">
+                  <div class="labels-row">
                     <a-tag 
                       v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
                       :key="idx" 
@@ -54,25 +58,30 @@
                     >
                       {{ entry[0] }}: {{ entry[1] }}
                     </a-tag>
+                  </div>
+                  <div class="labels-more" v-if="Object.keys(record.objectMeta.labels).length > 3">
                     <a-button 
-                      v-if="Object.keys(record.objectMeta.labels).length > 3" 
                       type="link" 
                       size="small"
                       @click.stop="toggleLabelsExpand(record)"
                     >
                       +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
                     </a-button>
-                  </template>
-                  <template v-else>
-                  <a-tag 
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="labels-row">
+                    <a-tag 
                       v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
                       :key="idx" 
-                    color="blue"
-                    class="label-tag"
+                      color="blue"
+                      class="label-tag"
                       :title="`${entry[0]}: ${entry[1]}`"
-                  >
+                    >
                       {{ entry[0] }}: {{ entry[1] }}
-                  </a-tag>
+                    </a-tag>
+                  </div>
+                  <div class="labels-more">
                     <a-button 
                       type="link" 
                       size="small"
@@ -80,15 +89,12 @@
                     >
                       收起
                     </a-button>
-                  </template>
-                </div>
-                <span v-else class="empty-value">-</span>
-              </template>
-              
-            <template slot="status" slot-scope="text, record">
-                  <span :class="['status-dot', getStatusClass(record.status)]"></span>
-              </template>
-              
+                  </div>
+                </template>
+              </div>
+              <span v-else class="empty-value">-</span>
+            </template>
+            
             <template slot="cpuUsage" slot-scope="text, record">
               <div class="resource-value">
                 <img src="@/assets/images/cpu.svg" class="resource-icon" alt="CPU" />
@@ -120,12 +126,12 @@ import { mapState } from 'vuex'
 import moment from 'moment'
 import dayjs from 'dayjs'
 import { Transfer, Tag, Modal } from 'ant-design-vue'
+import StatusIndicator from './components/StatusIndicator.vue'
 
 export default {
   name: 'PodsDashboard',
   components: {
-    // IconAppsFilled,
-    // IconContainer
+    StatusIndicator
   },
   props: {
     clusterId: {
@@ -142,14 +148,6 @@ export default {
       loading: false,
       pods: [],
       columns: [
-        {
-          title: '',
-          dataIndex: 'status',
-          key: 'status',
-          width: '50px',
-          className: 'status-column',
-          scopedSlots: { customRender: 'status' },
-        },
         {
           title: '名称',
           dataIndex: 'name',
@@ -221,15 +219,6 @@ export default {
       return record && record.objectMeta ? 
         (record.objectMeta.uid || record.objectMeta.name) : 
         (record.name || Math.random().toString(36).substring(2));
-    },
-    getStatusClass(status) {
-      status = status ? status.toLowerCase() : '';
-      if (status.includes('running')) return 'running';
-      if (status.includes('pending') || status.includes('waiting')) return 'warning';
-      if (status.includes('error') || status.includes('failed') || status.includes('crashloopbackoff')) return 'danger';
-      if (status.includes('completed') || status.includes('succeeded')) return 'succeeded';
-      if (status.includes('terminating')) return 'terminating';
-      return 'unknown';
     },
     async fetchPods() {
       this.loading = true;
@@ -427,15 +416,6 @@ export default {
   }
 }
 
-// 状态点样式
-.status-dot {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-right: 0;
-}
-
 // 镜像单元格样式
 .image-cell {
   white-space: normal;
@@ -453,11 +433,30 @@ export default {
 // 标签容器样式
 .labels-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  width: 100%;
+  
+  .labels-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  
+  .labels-more {
+    display: flex;
+    justify-content: flex-start;
+    
+    .ant-btn {
+      height: 22px;
+      padding: 0 4px;
+    }
+  }
   
   .label-tag {
+    max-width: 100%;
     margin-right: 0;
+    white-space: normal;
   }
 }
 

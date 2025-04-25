@@ -23,14 +23,13 @@
             :bordered="false"
             size="middle"
           >
-            <template slot="status" slot-scope="text, record">
-              <span :class="getStatusClass(record)" class="status-indicator"></span>
-            </template>
-
             <template slot="name" slot-scope="text, record">
-              <span class="name-text" :title="record?.objectMeta?.name || '未知'">
-                {{ record?.objectMeta?.name || '未知' }}
-              </span>
+              <div style="display: flex; align-items: center; line-height: normal;">
+                <StatusIndicator :resource="record" resourceType="replicaSet" />
+                <span class="name-text" :title="record?.objectMeta?.name || '未知'">
+                  {{ record?.objectMeta?.name || '未知' }}
+                </span>
+              </div>
             </template>
 
             <template slot="image" slot-scope="text, record">
@@ -101,8 +100,13 @@
 </template>
 
 <script>
+import StatusIndicator from './components/StatusIndicator.vue';
+
 export default {
   name: 'ReplicaSetsDashboard',
+  components: {
+    StatusIndicator
+  },
   props: {
     clusterId: {
       type: Number,
@@ -123,13 +127,6 @@ export default {
       loading: false,
       expandedLabels: {},  // 用于存储展开状态的对象
       replicaSetColumns: [
-        {
-          title: '',
-          key: 'status',
-          width: '50px',
-          className: 'status-column',
-          scopedSlots: { customRender: 'status' }
-        },
         {
           title: '名称',
           key: 'name',
@@ -169,15 +166,6 @@ export default {
     this.fetchReplicaSets();
   },
   methods: {
-    getStatusClass(record) {
-      const classNames = ['status-dot'];
-      if (record?.podInfo?.running > 0) classNames.push('status-running');
-      if (record?.podInfo?.pending > 0) classNames.push('status-warning');
-      if (record?.podInfo?.failed > 0) classNames.push('status-danger');
-      if (!record?.podInfo || (!record?.podInfo.running && !record?.podInfo.pending && !record?.podInfo.failed)) 
-        classNames.push('status-unknown');
-      return classNames.join(' ');
-    },
     toggleLabelsExpand(record) {
       if (!record || !record.objectMeta || !record.objectMeta.uid) return;
       const uid = record.objectMeta.uid;
@@ -279,14 +267,6 @@ export default {
 
 <style lang="less" scoped>
 @import './styles/k8s-table-styles.less';
-
-.status-indicator {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-right: 0;
-}
 
 .name-text {
   cursor: pointer;

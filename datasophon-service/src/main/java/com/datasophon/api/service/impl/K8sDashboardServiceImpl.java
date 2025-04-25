@@ -170,7 +170,6 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
                 return pods != null && (int) pods.get("pending") > 0;
             }).count());
 
-
             // 构建最终结果
             Map<String, Object> result = new HashMap<>();
             result.put("deployments", deployments);
@@ -424,10 +423,84 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
                 return Result.error("找不到集群Kubernetes配置");
             }
 
-            // TODO: 实现获取PersistentVolumes逻辑
-            List<Object> persistentVolumes = new ArrayList<>();
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
 
-            return Result.success().put(Constants.DATA, persistentVolumes);
+            // 获取PersistentVolumes
+            io.fabric8.kubernetes.api.model.PersistentVolumeList pvList = client.persistentVolumes().list();
+
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> items = pvList.getItems().stream()
+                    .map(pv -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
+                        Map<String, Object> capacity = new HashMap<>();
+
+                        // 基本信息
+                        if (pv.getMetadata() != null) {
+                            objectMeta.put("name", pv.getMetadata().getName());
+                            objectMeta.put("labels", pv.getMetadata().getLabels());
+                            objectMeta.put("annotations", pv.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", pv.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", pv.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "persistentvolume");
+                        item.put("typeMeta", typeMeta);
+
+                        // 状态
+                        if (pv.getStatus() != null) {
+                            item.put("status", pv.getStatus().getPhase());
+                        }
+
+                        // 容量
+                        if (pv.getSpec() != null && pv.getSpec().getCapacity() != null) {
+                            capacity.put("storage", pv.getSpec().getCapacity().get("storage").toString());
+                            item.put("capacity", capacity);
+                        }
+
+                        // 访问模式
+                        if (pv.getSpec() != null && pv.getSpec().getAccessModes() != null) {
+                            item.put("accessModes", pv.getSpec().getAccessModes());
+                        } else {
+                            item.put("accessModes", new ArrayList<>());
+                        }
+
+                        // 回收策略
+                        if (pv.getSpec() != null && pv.getSpec().getPersistentVolumeReclaimPolicy() != null) {
+                            item.put("reclaimPolicy", pv.getSpec().getPersistentVolumeReclaimPolicy());
+                        }
+
+                        // 存储类
+                        if (pv.getSpec() != null && pv.getSpec().getStorageClassName() != null) {
+                            item.put("storageClass", pv.getSpec().getStorageClassName());
+                        }
+
+                        // 声明信息
+                        if (pv.getSpec() != null && pv.getSpec().getClaimRef() != null) {
+                            Map<String, Object> claimRef = new HashMap<>();
+                            claimRef.put("name", pv.getSpec().getClaimRef().getName());
+                            claimRef.put("namespace", pv.getSpec().getClaimRef().getNamespace());
+                            item.put("claimRef", claimRef);
+                        }
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            result.put("listMeta", listMeta);
+            result.put("items", items);
+            result.put("errors", new ArrayList<>());
+
+            logger.info("获取PersistentVolumes列表成功，共{}个PV", items.size());
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取PersistentVolumes列表出错", e);
             return Result.error("获取PersistentVolumes列表出错: " + e.getMessage());
@@ -525,7 +598,8 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取StorageClasses
-            io.fabric8.kubernetes.api.model.storage.StorageClassList storageClassList = client.storage().storageClasses().list();
+            io.fabric8.kubernetes.api.model.storage.StorageClassList storageClassList = client.storage()
+                    .storageClasses().list();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = storageClassList.getItems().stream()
@@ -605,7 +679,8 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取IngressClasses
-            io.fabric8.kubernetes.api.model.networking.v1.IngressClassList ingressClassList = client.network().v1().ingressClasses().list();
+            io.fabric8.kubernetes.api.model.networking.v1.IngressClassList ingressClassList = client.network().v1()
+                    .ingressClasses().list();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = ingressClassList.getItems().stream()

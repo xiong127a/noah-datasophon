@@ -96,6 +96,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- PersistentVolumes列表 -->
+        <persistent-volumes-dashboard
+          v-if="activeResource === 'pv'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -117,6 +124,7 @@ import ReplicaSetsDashboard from './ReplicaSetsDashboard.vue';
 import IngressClassesDashboard from './IngressClassesDashboard.vue';
 import StorageClassesDashboard from './StorageClassesDashboard.vue';
 import PersistentVolumeClaimsDashboard from './PersistentVolumeClaimsDashboard.vue';
+import PersistentVolumesDashboard from './PersistentVolumesDashboard.vue';
 import PodsDashboard from './PodsDashboard.vue'
 import ServicesDashboard from './ServicesDashboard.vue'
 
@@ -130,6 +138,7 @@ export default defineComponent({
     IngressClassesDashboard,
     StorageClassesDashboard,
     PersistentVolumeClaimsDashboard,
+    PersistentVolumesDashboard,
     PodsDashboard,
     ServicesDashboard,
   },
