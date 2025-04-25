@@ -784,16 +784,51 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     @Override
     public Result getIngressClasses(Integer clusterId) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
-            }
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
 
-            // TODO: 实现获取IngressClasses逻辑
-            List<Object> ingressClasses = new ArrayList<>();
+            // 获取IngressClasses
+            io.fabric8.kubernetes.api.model.networking.v1.IngressClassList ingressClassList = client.network().v1().ingressClasses().list();
 
-            return Result.success().put(Constants.DATA, ingressClasses);
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> items = ingressClassList.getItems().stream()
+                    .map(ingressClass -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
+
+                        // 基本信息
+                        if (ingressClass.getMetadata() != null) {
+                            objectMeta.put("name", ingressClass.getMetadata().getName());
+                            objectMeta.put("labels", ingressClass.getMetadata().getLabels());
+                            objectMeta.put("annotations", ingressClass.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", ingressClass.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", ingressClass.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "ingressclass");
+                        item.put("typeMeta", typeMeta);
+
+                        // 控制器信息
+                        if (ingressClass.getSpec() != null && ingressClass.getSpec().getController() != null) {
+                            item.put("controller", ingressClass.getSpec().getController());
+                        }
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            result.put("listMeta", listMeta);
+            result.put("items", items);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取IngressClasses列表出错", e);
             return Result.error("获取IngressClasses列表出错: " + e.getMessage());
