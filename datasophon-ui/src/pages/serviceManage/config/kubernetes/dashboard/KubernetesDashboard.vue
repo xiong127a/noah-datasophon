@@ -104,6 +104,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- CronJobs列表 -->
+        <cron-jobs-dashboard
+          v-if="activeResource === 'cronjobs'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -128,6 +135,7 @@ import PersistentVolumeClaimsDashboard from './PersistentVolumeClaimsDashboard.v
 import PersistentVolumesDashboard from './PersistentVolumesDashboard.vue';
 import PodsDashboard from './PodsDashboard.vue'
 import ServicesDashboard from './ServicesDashboard.vue'
+import CronJobsDashboard from './CronJobsDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -142,6 +150,7 @@ export default defineComponent({
     PersistentVolumesDashboard,
     PodsDashboard,
     ServicesDashboard,
+    CronJobsDashboard,
   },
   props: {
     serviceId: {
@@ -296,7 +305,25 @@ export default defineComponent({
         
         if (res.code === 200 && res.data) {
           this.resourceStats = res.data;
-          this.resourceCounts = res.data; // 保持引用一致性
+          const data = res.data;
+          this.resourceCounts = {
+            deployments: data.deployments || 0,
+            pods: data.pods || 0,
+            services: data.services || 0,
+            configMaps: data.configMaps || 0,
+            ingresses: data.ingresses || 0,
+            ingressClasses: data.ingressClasses || 0,
+            secrets: data.secrets || 0,
+            persistentVolumes: data.persistentVolumes || 0,
+            persistentVolumeClaims: data.persistentVolumeClaims || 0,
+            storageClasses: data.storageClasses || 0,
+            cronJobs: data.cronJobs || 0,
+            daemonSets: data.daemonSets || 0,
+            jobs: data.jobs || 0,
+            replicaSets: data.replicaSets || 0,
+            replicationControllers: data.replicationControllers || 0,
+            statefulSets: data.statefulSets || 0
+          };
           console.log('资源统计数据加载成功:', this.resourceCounts);
         } else {
           this.$message.error('获取资源统计失败: ' + (res.msg || '未知错误'));

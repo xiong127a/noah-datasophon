@@ -951,10 +951,126 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
                 return Result.error("找不到集群Kubernetes配置");
             }
 
-            // TODO: 实现获取CronJobs逻辑
-            List<Object> cronJobs = new ArrayList<>();
+            // 创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("创建Kubernetes客户端失败");
+            }
 
-            return Result.success().put(Constants.DATA, cronJobs);
+            // 获取CronJobs列表
+            List<io.fabric8.kubernetes.api.model.batch.v1.CronJob> cronJobsList;
+            if (namespace != null && !namespace.equals("all")) {
+                cronJobsList = client.batch().v1().cronjobs().inNamespace(namespace).list().getItems();
+            } else {
+                cronJobsList = client.batch().v1().cronjobs().inAnyNamespace().list().getItems();
+            }
+
+            // 处理CronJobs数据
+            List<Map<String, Object>> items = new ArrayList<>();
+            int runningCount = 0;
+
+            for (io.fabric8.kubernetes.api.model.batch.v1.CronJob cronJob : cronJobsList) {
+                Map<String, Object> cronJobMap = new HashMap<>();
+
+                // 处理元数据
+                Map<String, Object> objectMeta = new HashMap<>();
+                objectMeta.put("name", cronJob.getMetadata().getName());
+                objectMeta.put("namespace", cronJob.getMetadata().getNamespace());
+                objectMeta.put("annotations", cronJob.getMetadata().getAnnotations());
+                objectMeta.put("labels", cronJob.getMetadata().getLabels());
+                objectMeta.put("creationTimestamp", cronJob.getMetadata().getCreationTimestamp());
+                objectMeta.put("uid", cronJob.getMetadata().getUid());
+                cronJobMap.put("objectMeta", objectMeta);
+
+                // 类型元数据
+                Map<String, Object> typeMeta = new HashMap<>();
+                typeMeta.put("kind", "cronjob");
+                cronJobMap.put("typeMeta", typeMeta);
+
+                // 调度、暂停和活动信息
+                cronJobMap.put("schedule", cronJob.getSpec().getSchedule());
+                cronJobMap.put("suspend",
+                        cronJob.getSpec().getSuspend() != null ? cronJob.getSpec().getSuspend() : false);
+
+                // 活动作业数量
+                int activeCount = cronJob.getStatus() != null && cronJob.getStatus().getActive() != null
+                        ? cronJob.getStatus().getActive().size()
+                        : 0;
+                cronJobMap.put("active", activeCount);
+
+                // 如果有活动作业，计入运行中的数量
+                if (activeCount > 0) {
+                    runningCount++;
+                }
+
+                // 最后调度时间
+                cronJobMap.put("lastSchedule",
+                        cronJob.getStatus() != null ? cronJob.getStatus().getLastScheduleTime() : null);
+
+                // 提取容器镜像
+                List<String> containerImages = new ArrayList<>();
+                if (cronJob.getSpec() != null &&
+                        cronJob.getSpec().getJobTemplate() != null &&
+                        cronJob.getSpec().getJobTemplate().getSpec() != null &&
+                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate() != null &&
+                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec() != null &&
+                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getContainers() != null) {
+
+                    for (io.fabric8.kubernetes.api.model.Container container : cronJob.getSpec().getJobTemplate()
+                            .getSpec().getTemplate().getSpec().getContainers()) {
+                        if (container.getImage() != null) {
+                            containerImages.add(container.getImage());
+                        }
+                    }
+                }
+                cronJobMap.put("containerImages", containerImages);
+
+                items.add(cronJobMap);
+            }
+
+            // 构建响应数据
+            Map<String, Object> responseData = new HashMap<>();
+
+            // 列表元数据
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            responseData.put("listMeta", listMeta);
+
+            // 度量指标（暂时为空）
+            List<Map<String, Object>> metrics = new ArrayList<>();
+            Map<String, Object> cpuMetric = new HashMap<>();
+            cpuMetric.put("dataPoints", new ArrayList<>());
+            cpuMetric.put("metricPoints", new ArrayList<>());
+            cpuMetric.put("metricName", "cpu/usage_rate");
+            cpuMetric.put("aggregation", "sum");
+            metrics.add(cpuMetric);
+
+            Map<String, Object> memoryMetric = new HashMap<>();
+            memoryMetric.put("dataPoints", new ArrayList<>());
+            memoryMetric.put("metricPoints", new ArrayList<>());
+            memoryMetric.put("metricName", "memory/usage");
+            memoryMetric.put("aggregation", "sum");
+            metrics.add(memoryMetric);
+
+            responseData.put("cumulativeMetrics", metrics);
+
+            // 添加CronJobs列表
+            responseData.put("items", items);
+
+            // 添加状态统计
+            Map<String, Object> status = new HashMap<>();
+            status.put("running", runningCount);
+            status.put("pending", 0);
+            status.put("failed", 0);
+            status.put("succeeded", 0);
+            status.put("unknown", 0);
+            status.put("terminating", 0);
+            responseData.put("status", status);
+
+            // 添加错误列表
+            responseData.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
             logger.error("获取CronJobs列表出错", e);
             return Result.error("获取CronJobs列表出错: " + e.getMessage());
@@ -1184,7 +1300,8 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
             statsMap.put("replicationControllers", replicationControllersCount);
 
             // 16. 获取Jobs数量
-            int jobsCount = hasNamespace ? client.batch().v1().jobs().inNamespace(namespace).list().getItems().size()
+            int jobsCount = hasNamespace
+                    ? client.batch().v1().jobs().inNamespace(namespace).list().getItems().size()
                     : client.batch().v1().jobs().inAnyNamespace().list().getItems().size();
             statsMap.put("jobs", jobsCount);
 
