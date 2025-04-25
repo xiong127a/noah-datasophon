@@ -43,7 +43,7 @@
         <span class="item-text">Services</span>
         <span class="item-count">{{ resourceCounts.services || 0 }}</span>
       </div>
-      <div class="menu-item" :class="{ active: activeResource === 'ingress' }" @click="handleResourceClick('ingress')">
+      <div class="menu-item" :class="{ active: activeResource === 'ingresses' }" @click="handleResourceClick('ingresses')">
         <span class="item-text">Ingresses</span>
         <span class="item-count">{{ resourceCounts.ingresses || 0 }}</span>
       </div>

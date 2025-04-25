@@ -676,16 +676,106 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getIngresses(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("无法创建Kubernetes客户端");
             }
 
-            // TODO: 实现获取Ingresses逻辑
-            List<Object> ingresses = new ArrayList<>();
+            // 获取Ingresses
+            io.fabric8.kubernetes.api.model.networking.v1.IngressList ingressList;
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                ingressList = client.network().v1().ingresses().inNamespace(namespace).list();
+            } else {
+                ingressList = client.network().v1().ingresses().inAnyNamespace().list();
+            }
 
-            return Result.success().put(Constants.DATA, ingresses);
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> items = ingressList.getItems().stream()
+                    .map(ingress -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
+
+                        // 基本信息
+                        if (ingress.getMetadata() != null) {
+                            objectMeta.put("name", ingress.getMetadata().getName());
+                            objectMeta.put("namespace", ingress.getMetadata().getNamespace());
+                            objectMeta.put("labels", ingress.getMetadata().getLabels());
+                            objectMeta.put("annotations", ingress.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", ingress.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", ingress.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "ingress");
+                        item.put("typeMeta", typeMeta);
+
+                        // 收集Endpoints信息 - 修改为只获取节点IP
+                        List<Map<String, Object>> endpoints = new ArrayList<>();
+                        try {
+                            // 获取集群所有Worker节点IP
+                            io.fabric8.kubernetes.api.model.NodeList nodeList = client.nodes().list();
+                            // 过滤掉master节点，只保留worker节点
+                            List<String> nodeIps = nodeList.getItems().stream()
+                                .filter(node -> {
+                                    // 排除具有master标签的节点
+                                    if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
+                                        Map<String, String> labels = node.getMetadata().getLabels();
+                                        return !labels.containsKey("node-role.kubernetes.io/master") && 
+                                               !labels.containsKey("node-role.kubernetes.io/control-plane");
+                                    }
+                                    return true;
+                                })
+                                .flatMap(node -> {
+                                    List<String> ips = new ArrayList<>();
+                                    if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
+                                        node.getStatus().getAddresses().forEach(address -> {
+                                            if ("InternalIP".equals(address.getType()) && address.getAddress() != null) {
+                                                ips.add(address.getAddress());
+                                            }
+                                        });
+                                    }
+                                    return ips.stream();
+                                })
+                                .collect(Collectors.toList());
+                            
+                            // 为每个节点IP创建一个endpoint对象
+                            for (String ip : nodeIps) {
+                                Map<String, Object> endpointInfo = new HashMap<>();
+                                endpointInfo.put("host", ip);
+                                endpoints.add(endpointInfo);
+                            }
+                        } catch (Exception e) {
+                            logger.warn("获取Ingress Endpoints失败: {}", e.getMessage());
+                        }
+                        item.put("endpoints", endpoints);
+
+                        // 收集Hosts信息
+                        List<String> hosts = new ArrayList<>();
+                        if (ingress.getSpec() != null && ingress.getSpec().getRules() != null) {
+                            for (io.fabric8.kubernetes.api.model.networking.v1.IngressRule rule : ingress.getSpec().getRules()) {
+                                if (rule.getHost() != null && !rule.getHost().isEmpty()) {
+                                    hosts.add(rule.getHost());
+                                }
+                            }
+                        }
+                        item.put("hosts", hosts);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            result.put("listMeta", listMeta);
+            result.put("items", items);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Ingresses列表出错", e);
             return Result.error("获取Ingresses列表出错: " + e.getMessage());

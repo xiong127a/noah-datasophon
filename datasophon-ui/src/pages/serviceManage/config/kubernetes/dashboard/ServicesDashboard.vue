@@ -17,7 +17,7 @@
             :columns="serviceColumns"
             :dataSource="services"
             :pagination="false"
-            :rowKey="record => `${record.namespace}-${record.name}`"
+            :rowKey="record => record.objectMeta?.uid || `${record.objectMeta?.namespace || '_'}-${record.objectMeta?.name || '_'}-${Math.random().toString(36).substring(2, 10)}`"
             class="k8s-table"
             :bordered="false"
             :table-layout="'auto'"
@@ -38,7 +38,7 @@
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag 
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                    :key="idx" 
+                    :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-label-${entry[0]}-${idx}`" 
                     color="blue"
                     class="label-tag"
                     :title="`${entry[0]}: ${entry[1]}`"
@@ -57,7 +57,7 @@
                 <template v-else>
                   <a-tag 
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                    :key="idx" 
+                    :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-label-expanded-${entry[0]}-${idx}`" 
                     color="blue"
                     class="label-tag"
                     :title="`${entry[0]}: ${entry[1]}`"
@@ -90,7 +90,7 @@
             
             <template slot="internalEndpoints" slot-scope="text, record">
               <div v-if="record.internalEndpoint && record.internalEndpoint.ports && record.internalEndpoint.ports.length > 0" class="endpoints-container">
-                <div v-for="(port, index) in record.internalEndpoint.ports" :key="index">
+                <div v-for="(port, index) in record.internalEndpoint.ports" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-internal-${port.port}-${port.protocol}-${index}`">
                   <div class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.port} ${port.protocol}`">
                     {{record.internalEndpoint.host}}:{{port.port}} 
                     <a-tag :color="getProtocolColor(port.protocol)" class="protocol-tag">
@@ -110,9 +110,9 @@
             
             <template slot="externalEndpoints" slot-scope="text, record">
               <div v-if="record.externalEndpoints && record.externalEndpoints.length > 0" class="endpoints-container">
-                <div v-for="(endpoint, endpointIndex) in record.externalEndpoints" :key="endpointIndex">
+                <div v-for="(endpoint, endpointIndex) in record.externalEndpoints" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-external-ep-${endpointIndex}`">
                   <template v-if="endpoint.ports && endpoint.ports.length > 0">
-                    <div v-for="(port, portIndex) in endpoint.ports" :key="portIndex">
+                    <div v-for="(port, portIndex) in endpoint.ports" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-ext-${endpoint.host}-${port.port || port.nodePort}-${portIndex}`">
                       <a v-if="port.port" :href="`http://${endpoint.host}:${port.port}`" target="_blank" rel="noopener noreferrer" class="external-endpoint" :title="`${endpoint.host}:${port.port}`">
                         {{endpoint.host}}:{{port.port}}
                         <a-icon type="link" class="external-icon" />

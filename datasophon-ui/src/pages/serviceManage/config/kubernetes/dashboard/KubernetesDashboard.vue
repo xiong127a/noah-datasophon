@@ -127,6 +127,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- Ingresses列表 -->
+        <ingresses-dashboard
+          v-if="activeResource === 'ingresses'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -154,6 +161,7 @@ import ServicesDashboard from './ServicesDashboard.vue'
 import CronJobsDashboard from './CronJobsDashboard.vue'
 import DaemonSetsDashboard from './DaemonSetsDashboard.vue'
 import JobsDashboard from './JobsDashboard.vue'
+import IngressesDashboard from './IngressesDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -171,6 +179,7 @@ export default defineComponent({
     CronJobsDashboard,
     DaemonSetsDashboard,
     JobsDashboard,
+    IngressesDashboard,
   },
   props: {
     serviceId: {
