@@ -27,7 +27,51 @@
             :pagination="false"
             :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
             class="k8s-table"
+            :table-layout="'auto'"
+            :bordered="false"
+            size="middle"
           >
+            <template slot="nameWithStatus" slot-scope="text, record">
+              <div class="name-with-status">
+                <span :class="getStatusClass(record)" class="status-indicator"></span>
+                <span class="name-text" :title="record?.objectMeta?.name || '未知'">
+                  {{ record?.objectMeta?.name || '未知' }}
+                </span>
+              </div>
+            </template>
+
+            <template slot="image" slot-scope="text, record">
+              <span class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
+                {{ record?.containerImages ? record.containerImages.join(', ') : '-' }}
+              </span>
+            </template>
+
+            <template slot="labels" slot-scope="text, record">
+              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+                <a-tag 
+                  v-for="(value, key) in record.objectMeta.labels" 
+                  :key="key" 
+                  color="blue"
+                  class="label-tag"
+                  :title="`${key}: ${value}`"
+                >
+                  {{ key }}: {{ value }}
+                </a-tag>
+              </div>
+              <span v-else class="empty-value">-</span>
+            </template>
+
+            <template slot="pods" slot-scope="text, record">
+              <div class="pods-display">
+                <span>{{ record?.pods && record.pods.running !== undefined ? record.pods.running : 0 }} / {{ record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0 }}</span>
+              </div>
+            </template>
+
+            <template slot="creationTime" slot-scope="text, record">
+              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
+                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              </span>
+            </template>
           </a-table>
         </a-spin>
       </div>
@@ -80,90 +124,36 @@ export default {
       },
       deploymentColumns: [
         {
-          title: '',
-          dataIndex: 'status',
-          key: 'status',
-          width: 40,
-          fixed: 'left',
-          customRender: (text, record) => {
-            const classNames = ['status-dot'];
-            if (record?.pods?.running > 0) classNames.push('status-running');
-            if (record?.pods?.pending > 0) classNames.push('status-warning');
-            if (record?.pods?.failed > 0) classNames.push('status-danger');
-            if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
-              classNames.push('status-unknown');
-            return this.$createElement('span', { class: classNames.join(' ') });
-          }
-        },
-        {
           title: '名称',
-          dataIndex: 'objectMeta.name',
-          key: 'name',
-          width: '15%',
-          fixed: 'left',
-          customRender: (_, record) => {
-            return this.$createElement('div', { class: 'name-cell' }, [
-              this.$createElement('span', { class: 'name-text', attrs: { title: record?.objectMeta?.name || '未知' } }, record?.objectMeta?.name || '未知')
-            ]);
-          }
+          key: 'nameWithStatus',
+          className: 'name-with-status-column',
+          scopedSlots: { customRender: 'nameWithStatus' }
         },
         {
           title: '镜像',
           dataIndex: 'containerImages',
           key: 'image',
-          width: '20%',
-          customRender: (_, record) => {
-            return this.$createElement('div', { class: 'image-cell', attrs: { title: record?.containerImages ? record.containerImages.join(', ') : '' } }, [
-              this.$createElement('span', {}, record?.containerImages ? record.containerImages.join(', ') : '-')
-            ]);
-          }
+          className: 'image-column',
+          scopedSlots: { customRender: 'image' },
+          ellipsis: true
         },
         {
           title: '标签',
           key: 'labels',
-          width: '25%',
-          customRender: (text, record) => {
-            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
-              return this.$createElement('span', { class: 'empty-value' }, '-');
-            }
-            
-            const tags = Object.entries(record.objectMeta.labels).map(([key, value]) => {
-              return this.$createElement('a-tag', { 
-                props: { color: 'blue' },
-                class: 'label-tag',
-                attrs: { title: `${key}: ${value}` },
-                key: key
-              }, `${key}: ${value}`);
-            });
-            
-            return this.$createElement('div', { class: 'labels-container' }, tags);
-          }
+          className: 'labels-column',
+          scopedSlots: { customRender: 'labels' }
         },
         {
           title: 'Pods',
           dataIndex: 'pods',
           key: 'pods',
-          width: '10%',
-          customRender: (_, record) => {
-            return this.$createElement('div', { class: 'pods-display' }, [
-              this.$createElement('span', {}, `${record?.pods && record.pods.running !== undefined ? record.pods.running : 0} / ${record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0}`)
-            ]);
-          }
+          scopedSlots: { customRender: 'pods' }
         },
         {
           title: '创建时间',
           key: 'creationTime',
-          width: '10%',
-          customRender: (text, record) => {
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return this.$createElement('span', { class: 'empty-value' }, '-');
-            
-            const days = this.getDaysAgo(timestamp);
-            return this.$createElement('span', { 
-              class: 'time-cell',
-              attrs: { title: this.formatTime(timestamp) }
-            }, `${days}天前`);
-          }
+          className: 'time-column',
+          scopedSlots: { customRender: 'creationTime' }
         }
       ]
     };
@@ -172,6 +162,15 @@ export default {
     this.fetchDeployments();
   },
   methods: {
+    getStatusClass(record) {
+      const classNames = ['status-dot'];
+      if (record?.pods?.running > 0) classNames.push('status-running');
+      if (record?.pods?.pending > 0) classNames.push('status-warning');
+      if (record?.pods?.failed > 0) classNames.push('status-danger');
+      if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
+        classNames.push('status-unknown');
+      return classNames.join(' ');
+    },
     async fetchDeployments() {
       this.loading = true;
       try {
@@ -199,6 +198,17 @@ export default {
           });
           
           console.log("处理后的deployments数据:", this.deployments);
+          
+          // 单独测试第一个对象的数据结构
+          if (this.deployments.length > 0) {
+            const firstDeploy = this.deployments[0];
+            console.log("第一个deployment的数据结构:", {
+              name: firstDeploy.objectMeta?.name,
+              namespace: firstDeploy.objectMeta?.namespace,
+              images: firstDeploy.containerImages,
+              pods: firstDeploy.pods
+            });
+          }
         } else {
           console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
@@ -235,10 +245,21 @@ export default {
       // 计算时间差（毫秒）
       const timeDiff = Math.abs(now - date);
       
-      // 转换为天数
+      // 转换为天数、小时、分钟
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
       
-      return days;
+      // 根据时间差返回不同格式
+      if (days > 0) {
+        return `${days}天前`;
+      } else if (hours > 0) {
+        return `${hours}小时前`;
+      } else if (minutes > 0) {
+        return `${minutes}分钟前`;
+      } else {
+        return '刚刚';
+      }
     },
     formatTime(time) {
       if (!time) return '-';
@@ -268,150 +289,5 @@ export default {
 </script>
 
 <style lang="less" scoped>
-.resource-list {
-  height: 100%;
-}
-
-// 仪表板卡片样式
-.k8s-dashboard-card {
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  margin-bottom: 16px;
-  overflow: hidden;
-  
-  &.k8s-resource-card {
-    .k8s-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 48px;
-      padding: 0 16px;
-      background-color: #f7f7f7;
-      border-bottom: 1px solid #eee;
-      
-      .k8s-card-title {
-        font-size: 16px;
-        font-weight: 500;
-        color: #333;
-      }
-
-      .k8s-card-actions {
-        display: flex;
-        gap: 12px;
-        
-        .k8s-action-icon {
-          font-size: 16px;
-          color: #999;
-          cursor: pointer;
-          
-          &:hover {
-            color: #1890ff;
-          }
-        }
-      }
-    }
-    
-    .k8s-card-content {
-      padding: 0;
-    }
-  }
-}
-
-/* 表格通用样式 */
-.k8s-table {
-  :deep(.status-dot) {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-    
-    &.status-running {
-      background-color: #52c41a;
-    }
-    
-    &.status-warning {
-      background-color: #faad14;
-    }
-    
-    &.status-danger {
-      background-color: #f5222d;
-    }
-    
-    &.status-unknown {
-      background-color: #d9d9d9;
-    }
-  }
-  
-  :deep(.name-cell, .image-cell, .pods-display) {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  :deep(.tag-list) {
-    display: flex;
-    flex-wrap: wrap;
-    
-    .label-tag {
-      margin: 2px;
-    }
-  }
-  
-  :deep(.action-buttons) {
-    white-space: nowrap;
-    
-    a {
-      color: #1890ff;
-      
-      &:hover {
-        color: #40a9ff;
-      }
-    }
-  }
-}
-
-// 内部端点样式
-:deep(.internal-endpoint) {
-  padding: 2px 0;
-  word-break: keep-all;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-// 外部端点样式
-:deep(.external-endpoint) {
-  display: flex;
-  align-items: center;
-  padding: 2px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  
-  .external-icon {
-    margin-left: 4px;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-}
-
-:deep(.labels-container) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-        
-  .label-chip {
-    margin-right: 4px;
-    margin-bottom: 4px;
-    max-width: 100%;
-    height: auto;
-    line-height: 1.5;
-    white-space: normal;
-    word-break: break-word;
-  }
-}
+@import './styles/k8s-table-styles.less';
 </style> 

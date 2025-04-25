@@ -61,6 +61,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- Pod列表 -->
+        <pod-list
+          v-if="activeResource === 'pods'" 
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -80,6 +87,7 @@ import K8sSidebarMenu from './K8sSidebarMenu.vue';
 import ConfigMapList from './ConfigMapList.vue';
 import DeploymentDashboard from './DeploymentDashboard.vue';
 import ServiceList from './ServiceList.vue';
+import PodList from './PodList.vue';
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -88,7 +96,8 @@ export default defineComponent({
     K8sSidebarMenu,
     ConfigMapList,
     DeploymentDashboard,
-    ServiceList
+    ServiceList,
+    PodList
   },
   props: {
     serviceId: {

@@ -37,7 +37,7 @@
           <template #name="{ text }">
             <div class="name-cell">
               <span class="resource-icon">
-                <img src="@/assets/k8s/deployment.svg" alt="部署" width="20" height="20" />
+                <a-icon type="appstore" theme="filled" />
               </span>
               <span class="name-text" :title="text">{{ text }}</span>
             </div>
