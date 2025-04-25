@@ -21,6 +21,7 @@
               class="k8s-table"
               :table-layout="'auto'"
               :bordered="false"
+              :zebra-stripes="false"
               size="middle"
           >
             <template slot="name" slot-scope="text, record">

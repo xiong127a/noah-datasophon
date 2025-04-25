@@ -21,6 +21,7 @@
             class="k8s-table"
             :scroll="{x: true}"
             :table-layout="'auto'"
+            :bordered="false"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">

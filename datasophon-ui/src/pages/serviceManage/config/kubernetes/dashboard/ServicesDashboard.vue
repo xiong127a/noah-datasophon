@@ -19,6 +19,7 @@
             :pagination="false"
             :rowKey="record => `${record.namespace}-${record.name}`"
             class="k8s-table"
+            :bordered="false"
           >
             <template #action="{ record }">
               <div class="action-buttons">

@@ -3,7 +3,7 @@
     <!-- PersistentVolumes列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
-        <span class="k8s-card-title">持久化卷</span>
+        <span class="k8s-card-title">Persistent Volumes</span>
         <div class="k8s-card-actions">
           <a-icon type="bars" class="k8s-action-icon" />
           <a class="k8s-card-collapse-icon">

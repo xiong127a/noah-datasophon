@@ -19,6 +19,7 @@
             :pagination="false"
             :rowKey="record => record?.objectMeta?.uid"
             class="k8s-table"
+            :bordered="false"
           >
             <!-- Remove scoped slots as we are using customRender now -->
             <!--
