@@ -10,7 +10,8 @@
         <p class="subtitle">查看和管理{{ serviceLabel || serviceName }}服务的Kubernetes资源</p>
       </div>
       <!-- 命名空间选择器 -->
-      <div class="namespace-selector" style="display: none;"><!-- 隐藏命名空间选择器 -->
+      <div class="namespace-selector">
+        <span class="selector-label">命名空间:</span>
         <a-select
           v-model="selectedNamespace"
           placeholder="请选择命名空间"
@@ -195,28 +196,45 @@ export default defineComponent({
       try {
         // 使用全局API对象替代导入的API
         const res = await this.$axiosGet(global.API.getK8sNamespaces, {
-          clusterId: this.clusterId,
-          serviceName: this.serviceName ? this.serviceName.toUpperCase() : this.serviceName
+          clusterId: this.clusterId
         });
         
-        if (res && res.code === 200) {
-          // 确保获取命名空间列表数组
-          this.namespaces = res.data && Array.isArray(res.data) ? res.data : (res.data && res.data.namespaces ? res.data.namespaces : []);
+        if (res.code === 200 && res.data) {
+          // 处理后端返回的命名空间数据
+          this.namespaces = res.data.namespaces || [];
+          
+          // 设置默认命名空间和是否显示选择器
+          if (res.data.defaultNamespace) {
+            this.selectedNamespace = res.data.defaultNamespace;
+          }
+          
+          // 根据showNamespaceSelector决定是否显示选择器
+          if (res.data.showNamespaceSelector === false) {
+            // 如果不显示选择器，可以通过样式隐藏
+            document.querySelector('.namespace-selector').style.display = 'none';
+          }
+          
+          // 加载资源统计信息
+          this.fetchResourceStats();
         } else {
-          console.error('Failed to fetch namespaces:', res ? res.msg : '无响应');
-          this.namespaces = [];
+          this.$message.error('获取命名空间失败：' + (res.msg || '未知错误'));
         }
       } catch (error) {
-        console.error('Error fetching namespaces:', error);
-        this.namespaces = [];
+        console.error('获取命名空间出错：', error);
+        this.$message.error('获取命名空间失败：' + (error.message || '未知错误'));
       } finally {
         this.namespacesLoading = false;
       }
     },
-    // 命名空间变化处理
+    // 处理命名空间变更
     handleNamespaceChange(value) {
       this.selectedNamespace = value;
-      this.fetchK8sResources(); // 重新加载资源
+      // 刷新所有资源显示
+      this.fetchResourceStats();
+      // 更新当前显示的资源
+      this.$nextTick(() => {
+        this.updateResourceData();
+      });
     },
     
     // 资源类型变化处理
@@ -255,87 +273,39 @@ export default defineComponent({
       return days;
     },
     
-    // 根据资源类型更新数据
+    // 更新资源数据
     updateResourceData() {
-      // 清除之前的数据
-      this.loading = true;
+      // 子组件会在其挂载时自动加载其特定的资源
+      console.log(`Updating resource data for ${this.activeResource} in namespace ${this.selectedNamespace}`);
       
-      // 资源数据现在由独立组件处理
-      // 组件通过v-if="activeResource === '资源类型'"条件渲染，所以不需要在这里调用fetch方法
-      console.log(`资源类型已切换为: ${this.activeResource}`);
-      
-      
-      this.loading = false;
+      // 触发资源统计信息刷新
+      this.fetchResourceStats();
     },
     
-    // 获取所有资源统计数据
+    // 获取资源统计信息
     async fetchResourceStats() {
       try {
-        // 显示加载状态
-        this.loading = true;
-        
-        // 确保clusterId存在
-        if (!this.clusterId) {
-          console.error('clusterId不能为空，当前值:', this.clusterId);
-          // 尝试从localStorage获取
-          this.clusterId = window.localStorage.getItem('clusterId');
-          console.log('从localStorage获取的clusterId:', this.clusterId);
-        }
-        
-        // 构建请求参数
+        const apiUrl = global.API.getK8sResourceStats;
         const params = {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         };
         
-        // 使用全局API对象
-        const apiUrl = global.API.getK8sResourceStats;
-
-        console.log('调用resource-stats接口，参数:', params);
-        console.log('请求URL:', apiUrl);
-        
-        // 调用后端统计接口
         const res = await this.$axiosGet(apiUrl, params);
         
-        console.log('resource-stats接口返回结果:', res);
-        
-        if (res && res.code === 200 && res.data) {
-          // 更新资源数量统计数据（现在后端只返回数量而不是资源列表）
+        if (res.code === 200 && res.data) {
           this.resourceStats = res.data;
-          
-          // 更新资源计数显示
-          this.resourceCounts = {
-            deployments: res.data.deployments || 0,
-            pods: res.data.pods || 0,
-            services: res.data.services || 0,
-            configMaps: res.data.configMaps || 0,
-            ingresses: res.data.ingresses || 0,
-            ingressClasses: res.data.ingressClasses || 0,
-            secrets: res.data.secrets || 0,
-            persistentVolumes: res.data.persistentVolumes || 0,
-            persistentVolumeClaims: res.data.persistentVolumeClaims || 0,
-            storageClasses: res.data.storageClasses || 0,
-            cronJobs: res.data.cronJobs || 0,
-            daemonSets: res.data.daemonSets || 0,
-            jobs: res.data.jobs || 0,
-            replicaSets: res.data.replicaSets || 0,
-            replicationControllers: res.data.replicationControllers || 0,
-            statefulSets: res.data.statefulSets || 0
-          };
-          
-          console.log('资源统计数据加载成功:', res.data);
+          this.resourceCounts = res.data; // 保持引用一致性
+          console.log('资源统计数据加载成功:', this.resourceCounts);
         } else {
-          console.error('获取资源统计数据失败:', res ? res.msg : '返回结果为空');
-          // 初始化空数据
-          this.initEmptyResourceCounts();
+          this.$message.error('获取资源统计失败: ' + (res.msg || '未知错误'));
+          this.resourceCounts = {}; // 清空数据
         }
       } catch (error) {
-        console.error('获取资源统计数据异常:', error);
-        // 初始化空数据
-        this.initEmptyResourceCounts();
-      } finally {
-        this.loading = false;
+        console.error('获取资源统计失败:', error);
+        this.$message.error('获取资源统计失败: ' + (error.message || '未知错误'));
+        this.resourceCounts = {}; // 清空数据
       }
     },
     
@@ -426,48 +396,53 @@ export default defineComponent({
 .page-header {
   display: flex;
   align-items: center;
-    padding: 16px 24px;
-    background-color: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    margin-bottom: 16px;
-
-.header-icon-wrapper {
-  margin-right: 16px;
-
-.kubernetes-logo {
-        width: 40px;
-        height: 40px;
-        background-image: url('~@/assets/images/kubernetes-logo.svg');
-  background-size: contain;
-  background-repeat: no-repeat;
-      }
-}
-
-.header-content {
-  flex: 1;
-
-.title {
-        margin: 0;
-        padding: 0;
-        font-size: 18px;
-  font-weight: 500;
-        color: #333;
-        line-height: 1.4;
-}
-
-.subtitle {
-        margin: 4px 0 0;
-        padding: 0;
-        font-size: 13px;
-        color: #666;
-        line-height: 1.4;
-      }
-}
-
-.namespace-selector {
-      margin-left: 16px;
+  margin-bottom: 20px;
+  padding: 16px 0;
+  
+  .header-icon-wrapper {
+    margin-right: 16px;
+    flex-shrink: 0;
+    
+    .kubernetes-logo {
+      width: 40px;
+      height: 40px;
+      background-image: url(~@/assets/images/kubernetes-logo.svg);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
     }
   }
+  
+  .header-content {
+    flex-grow: 1;
+    overflow: hidden;
+    
+    .title {
+      font-size: 20px;
+      margin: 0 0 4px 0;
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+  
+  .namespace-selector {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    
+    .selector-label {
+      margin-right: 8px;
+      color: #666;
+      white-space: nowrap;
+    }
+  }
+}
   
   // 整体仪表盘布局
 .k8s-dashboard-layout {

@@ -74,10 +74,30 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
                 return Result.error("找不到集群Kubernetes配置");
             }
 
-            // TODO: 实现获取命名空间逻辑
-            List<Object> namespaces = new ArrayList<>();
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
 
-            return Result.success().put(Constants.DATA, namespaces);
+            // 获取所有命名空间
+            io.fabric8.kubernetes.api.model.NamespaceList namespaceList = client.namespaces().list();
+
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> namespaces = namespaceList.getItems().stream()
+                    .map(ns -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("name", ns.getMetadata().getName());
+                        item.put("status", ns.getStatus() != null ? ns.getStatus().getPhase() : "Unknown");
+                        item.put("creationTimestamp", ns.getMetadata().getCreationTimestamp());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 创建结果对象
+            Map<String, Object> result = new HashMap<>();
+            result.put("namespaces", namespaces); // 命名空间列表
+            result.put("defaultNamespace", "datasophon"); // 默认命名空间
+            result.put("showNamespaceSelector", true); // 是否显示命名空间选择器
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取命名空间列表出错", e);
             return Result.error("获取命名空间列表出错: " + e.getMessage());
