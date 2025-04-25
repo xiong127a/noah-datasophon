@@ -151,67 +151,6 @@ export default {
           }
         },
         {
-          title: '内部 Endpoints',
-          key: 'internalEndpoints',
-          width: '15%',
-          customRender: (text, record) => {
-            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
-              return this.$createElement('span', { class: 'empty-value' }, '-');
-            }
-            
-            const endpoints = record.internalEndpoint.ports.map(port => {
-              const endpointText = `${record.internalEndpoint.host}:${port.port} ${port.protocol}`;
-              return this.$createElement('div', { 
-                class: 'internal-endpoint',
-                attrs: { title: endpointText }
-              }, endpointText);
-            });
-            
-            return this.$createElement('div', { class: 'endpoint-cell' }, endpoints);
-          }
-        },
-        {
-          title: '外部 Endpoints',
-          key: 'externalEndpoints',
-          width: '15%',
-          customRender: (text, record) => {
-            if (!record.externalEndpoints || !record.externalEndpoints.length) {
-              return this.$createElement('span', { class: 'empty-value' }, '-');
-            }
-            
-            const endpoints = record.externalEndpoints.map(endpoint => {
-              if (!endpoint.ports || !endpoint.ports.length) {
-                return this.$createElement('div', { class: 'external-endpoint' }, [
-                  this.$createElement('a', {
-                    attrs: {
-                      href: `http://${endpoint.host}`,
-                      target: '_blank',
-                      rel: 'noopener',
-                      title: endpoint.host
-                    }
-                  }, endpoint.host)
-                ]);
-              }
-              
-              return endpoint.ports.map(port => {
-                const url = port.port ? `${endpoint.host}:${port.port}` : `${endpoint.host}:${port.nodePort}`;
-                return this.$createElement('div', { class: 'external-endpoint' }, [
-                  this.$createElement('a', {
-                    attrs: {
-                      href: `http://${url}`,
-                      target: '_blank',
-                      rel: 'noopener',
-                      title: url
-                    }
-                  }, url)
-                ]);
-              });
-            }).flat();
-            
-            return this.$createElement('div', { class: 'endpoint-cell' }, endpoints);
-          }
-        },
-        {
           title: '创建时间',
           key: 'creationTime',
           width: '10%',
@@ -301,6 +240,18 @@ export default {
       
       return days;
     },
+    formatTime(time) {
+      if (!time) return '-';
+      return new Date(time).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    }
   },
   watch: {
     selectedNamespace() {
