@@ -42,16 +42,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 @Data
 public class K8sYamlDeploymentHandler {
 
+    private static final Cache<String, ServiceConfig> CONFIG_CACHE = new TimedCache<>(60000);
     private static Logger logger;
     private String serviceName;
     private String serviceRoleName;
     private String serviceRoleFullName;
-    private static final Cache<String, ServiceConfig> CONFIG_CACHE = new TimedCache<>(60000);
     private Map<String, Object> data = MapUtil.newHashMap();
     private Map<String, Object> k8sConfigMap = MapUtil.newHashMap();
 
@@ -112,32 +111,6 @@ public class K8sYamlDeploymentHandler {
         volumePathSet.add(fileConfig);
     }
 
-    public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath, boolean containsHost) {
-
-        String configMapName = generateConfigMapName(generators);
-        // 创建新的 ServiceConfigVolume 对象
-        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
-        configMapName = configMapName.replace('.', '-');
-        fileConfig.setName(configMapName);
-
-
-        String filename = generators.getFilename();
-        if (containsHost) {
-            filename += ".example";
-            configFilePath += ".example";
-        }
-
-
-        // 设置文件路径
-        fileConfig.setValue(configFilePath);
-        fileConfig.setFileName(filename);
-
-        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
-        if (BooleanUtil.isFalse(StrUtil.endWith(filename, ".k8s"))) {
-            volumePathSet.add(fileConfig);
-        }
-    }
-
     public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, String configFileName, String configFilePath) {
         // 创建新的 ServiceConfigVolume 对象
         ServiceConfigVolume fileConfig = new ServiceConfigVolume();
@@ -176,6 +149,32 @@ public class K8sYamlDeploymentHandler {
         }
 
         return configFilePath;
+    }
+
+    public void addConfigFile(Set<ServiceConfigVolume> volumePathSet, Generators generators, String configFilePath, boolean containsHost) {
+
+        String configMapName = generateConfigMapName(generators);
+        // 创建新的 ServiceConfigVolume 对象
+        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+        configMapName = configMapName.replace('.', '-');
+        fileConfig.setName(configMapName);
+
+
+        String filename = generators.getFilename();
+        if (containsHost) {
+            filename += ".example";
+            configFilePath += ".example";
+        }
+
+
+        // 设置文件路径
+        fileConfig.setValue(configFilePath);
+        fileConfig.setFileName(filename);
+
+        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
+        if (BooleanUtil.isFalse(StrUtil.endWith(filename, ".k8s"))) {
+            volumePathSet.add(fileConfig);
+        }
     }
 
     public ExecResult configure(Map<Generators, List<ServiceConfig>> configFileMap, RunAs runAs, ServiceRoleRunner startRunner, ServiceRoleRunner statusRunner, Integer roleNodeCnt, String decompressPackageName, String logFile, String hostname, String serviceRoleName, String masterHost, boolean enableKerberos, boolean enableRangerPlugin) {
@@ -258,6 +257,11 @@ public class K8sYamlDeploymentHandler {
         data.put("statusCommand", statusRunner != null ? String.format("su - %s -c 'cd %s && sh %s %s'", runAs.getUser(), appHome, statusRunner.getProgram(), String.join(" ", statusRunner.getArgs())) : "exit 0");
 
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
+
+        if (CONFIG_CACHE.isEmpty()) {
+            loadConfigToCache(configFileMap);
+        }
+
         // 获取 journalNodeDir 和 nameNodeDir
         populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "namenodeDir");
 
@@ -275,8 +279,8 @@ public class K8sYamlDeploymentHandler {
         int pathCount = 1;
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
-            if (generators.getFilename().equals(K8S_SVC_CONF)) {
-                continue;
+            if (StrUtil.endWith(generators.getFilename(), "." + Constants.K8S_MODE.toLowerCase())) {
+                return;
             }
             boolean containsHost = entry.getValue().stream().anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}"));
 
@@ -377,9 +381,7 @@ public class K8sYamlDeploymentHandler {
     // 提取出一个通用方法，用于从配置中提取目录
     private void populateDataWithConfig(Map<Generators, List<ServiceConfig>> configFileMap, String configName, String targetDataKey) {
 
-        if (CONFIG_CACHE.isEmpty()) {
-            loadConfigToCache(configFileMap);
-        }
+
         ServiceConfig serviceConfig = CONFIG_CACHE.get(configName);
         if (ObjUtil.isNull(serviceConfig)) {
             return;
@@ -397,7 +399,7 @@ public class K8sYamlDeploymentHandler {
         configFileMap.values().stream().flatMap(List::stream).forEach(config -> {
             String k = config.getName();
             CONFIG_CACHE.put(k, config);
-            if (StrUtil.equals(config.getConfigType(), "k8s")) {
+            if (StrUtil.equals(config.getConfigType(), Constants.K8S_MODE.toLowerCase())) {
                 k8sConfigMap.put(config.getName(), config.getValue());
             }
         });

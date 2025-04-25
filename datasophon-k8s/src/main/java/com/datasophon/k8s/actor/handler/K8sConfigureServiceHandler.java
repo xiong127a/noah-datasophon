@@ -40,7 +40,6 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.*;
 
-import static com.datasophon.common.Constants.K8S_SVC_CONF;
 import static com.datasophon.k8s.util.K8sFreeMakerUtils.*;
 
 @Data
@@ -81,7 +80,7 @@ public class K8sConfigureServiceHandler {
             logger.info("Start to configure service role {}", serviceRoleName);
             for (Generators generators : configFileMap.keySet()) {
                 List<ServiceConfig> configs = configFileMap.get(generators);
-                if (generators.getFilename().equals(K8S_SVC_CONF)) {
+                if (StrUtil.endWith(generators.getFilename(), ".k8s")) {
                     continue;
                 }
                 String dataDir = "";

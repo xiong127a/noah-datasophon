@@ -77,7 +77,7 @@
         "fileDescription": "ZooKeeper JVM环境配置，设置堆内存和Java安全参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
-        "configTargetRoles": "CommonConfig",
+        "configTargetRoles": "ZkServer",
         "templateName": "zk-env.ftl",
         "includeParams": [
           "zkHeapSize",
@@ -91,7 +91,7 @@
         "fileDescription": "ZooKeeper JAAS认证配置文件，定义Kerberos安全认证参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
-        "configTargetRoles": "CommonConfig",
+        "configTargetRoles": "ZkServer",
         "templateName": "jaas.ftl",
         "includeParams": [
           "hostname",
@@ -102,11 +102,35 @@
         "filename": "pvc.config.k8s",
         "fileDescription": "ZooKeeper Kubernetes存储配置，定义持久卷存储类和挂载路径",
         "configFormat": "properties",
-        "configTargetRoles": "CommonConfig",
+        "configTargetRoles": "ZkServer",
         "outputDirectory": "",
         "includeParams": [
           "storageClasses",
-          "mountPath"
+          "mountPath",
+          "storage"
+        ]
+      },
+      {
+        "filename": "svc.config.k8s",
+        "fileDescription": "ZooKeeper Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "ZkServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "portMappings"
+        ]
+      },
+      {
+        "filename": "resources.config.k8s",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "ZkServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "requestsMemory",
+          "requestsCpu",
+          "limitsMemory",
+          "limitsCpu"
         ]
       }
     ]
@@ -125,27 +149,96 @@
     },
     {
       "name": "storageClasses",
-      "label": "存储类(Storage Classes)",
+      "label": "存储类名称",
       "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
       "configType": "k8s",
-      "required": true,
+      "required": false,
       "type": "input",
       "value": "nfs-client",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "nfs-client"
     },
     {
       "name": "mountPath",
-      "label": "容器挂载路径",
+      "label": "挂载路径",
       "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为ZooKeeper的数据存储位置（如/data/zookeeper）的父目录",
       "configType": "k8s",
-      "required": true,
+      "required": false,
       "type": "input",
       "value": "/data",
       "configurableInWizard": true,
-      "hidden": false,
+      "hidden": true,
       "defaultValue": "/data"
+    },{
+      "name": "storage",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：10Gi",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "10Gi",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "10Gi"
+    },{
+      "name": "requestsMemory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2Gi",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "2Gi"
+    },
+    {
+      "name": "requestsCpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "1"
+    },
+    {
+      "name": "limitsMemory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "4Gi",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "4Gi"
+    },
+    {
+      "name": "limitsCpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "k8s",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": "2"
+    },{
+      "name": "portMappings",
+      "label": "端口映射 (portMappings)",
+      "description": "定义容器与主机之间的端口映射关系，用于网络通信。key 表示 port 和 targetPort（port 和 targetPort 使用同一个端口），value 表示 nodePort。如果 value 为空，则表示不开放 nodePort。",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [{"2181": "32181", "2888": "2888", "3888": "3888"}],
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": [{"2181": "32181", "2888": "2888", "3888": "3888"}]
     },
     {
       "name": "dataDir",

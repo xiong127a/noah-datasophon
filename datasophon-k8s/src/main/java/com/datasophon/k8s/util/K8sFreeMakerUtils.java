@@ -172,9 +172,6 @@ public class K8sFreeMakerUtils {
      */
     public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName, String fileName, String kubeConfig, String serviceRoleFullName)
             throws IOException, TemplateException {
-        if (StrUtil.endWith(fileName, ".k8s")) {
-            return;
-        }
         // 使用 StringWriter 合并模板和数据
         StringWriter stringWriter = new StringWriter();
         UnixNewlineWriter unixNewlineWriter = new UnixNewlineWriter(stringWriter);

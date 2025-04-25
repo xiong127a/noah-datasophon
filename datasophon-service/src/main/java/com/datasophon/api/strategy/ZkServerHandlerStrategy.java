@@ -164,6 +164,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 serviceConfig.setHidden(false);
                                 serviceConfig.setRequired(true);
                                 serviceConfig.setType("input");
+                                serviceConfig.setConfigTargetRoles("ZkServer");
                                 serviceConfig.setDefaultValue("");
                                 serviceConfig.setConfigType("zkserver");
                                 if (map.containsKey("server." + myid)) {

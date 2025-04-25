@@ -21,11 +21,7 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONException;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson.*;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
@@ -33,19 +29,7 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.api.service.ClusterServiceCommandService;
-import com.datasophon.api.service.ClusterServiceInstanceConfigService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.api.service.FrameInfoService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
-import com.datasophon.api.service.ServiceInstallService;
+import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
@@ -53,28 +37,11 @@ import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.model.DAG;
-import com.datasophon.common.model.Generators;
-import com.datasophon.common.model.HostServiceRoleMapping;
-import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.common.model.ServiceInfo;
-import com.datasophon.common.model.ServiceNode;
-import com.datasophon.common.model.ServiceNodeEdge;
-import com.datasophon.common.model.ServiceRoleHostMapping;
-import com.datasophon.common.model.ServiceRoleInfo;
+import com.datasophon.common.model.*;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.entity.FrameServiceEntity;
+import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
 import org.apache.commons.lang.StringUtils;
@@ -89,35 +56,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
-import static com.datasophon.common.Constants.CLUSTER_ID;
-import static com.datasophon.common.Constants.COMMON_CONFIG;
-import static com.datasophon.common.Constants.CONFIG;
-import static com.datasophon.common.Constants.HOST_SERVICE_ROLE_MAPPING;
-import static com.datasophon.common.Constants.INPUT;
-import static com.datasophon.common.Constants.K8S_CLUSTER_IP;
-import static com.datasophon.common.Constants.K8S_NODE_PORT;
-import static com.datasophon.common.Constants.K8S_SVC_CONF;
-import static com.datasophon.common.Constants.MANAGED;
-import static com.datasophon.common.Constants.MASTER;
-import static com.datasophon.common.Constants.MASTER_MANAGE_PACKAGE_PATH;
-import static com.datasophon.common.Constants.ROLE_GROUP_TYPE;
-import static com.datasophon.common.Constants.SERVICE_INSTANCE_ID;
-import static com.datasophon.common.Constants.SERVICE_ROLE_HOST_MAPPING;
-import static com.datasophon.common.Constants.SLASH;
-import static com.datasophon.common.Constants.UNDERLINE;
+import static com.datasophon.api.utils.ProcessUtils.getDepMode;
+import static com.datasophon.common.Constants.*;
 
 @Service("serviceInstallService")
 @Transactional
@@ -155,44 +99,21 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
 
-    private static JSONObject getGenerators() {
-        Generators generators = new Generators();
-        generators.setFilename(K8S_SVC_CONF);
-        generators.setIncludeParams(new ArrayList<>(Arrays.asList(K8S_CLUSTER_IP, K8S_NODE_PORT)));
-        generators.setTemplateName("properties2.ftl");
-        generators.setConfigFormat("custom");
-        generators.setOutputDirectory("");
-        return JSONObject.parseObject(JSONObject.toJSONString(generators));
-    }
-
-    private static ServiceConfig getClusterIPConfig() {
-        ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setName(K8S_CLUSTER_IP);
-        serviceConfig.setValue(new ArrayList<Map<String, String>>());
-        serviceConfig.setLabel("clusterIp配置");
-        serviceConfig.setDescription("clusterIp配置，key填svc的port，value填svc的targetPort");
-        serviceConfig.setRequired(false);
-        serviceConfig.setHidden(false);
-        serviceConfig.setConfigType("map");
-        serviceConfig.setType("multipleWithKey");
-        serviceConfig.setConfigurableInWizard(true);
-        serviceConfig.setDefaultValue(new ArrayList<Map<String, String>>());
-        return serviceConfig;
-    }
-
-    private static ServiceConfig getNodePortConfig() {
-        ServiceConfig serviceConfig = new ServiceConfig();
-        serviceConfig.setName(K8S_NODE_PORT);
-        serviceConfig.setValue(new ArrayList<Map<String, String>>());
-        serviceConfig.setLabel("nodePort配置");
-        serviceConfig.setDescription("nodePort配置，key填svc的roleFullName，value填svc的targetPort:nodePort（默认范围30000-32767）");
-        serviceConfig.setRequired(false);
-        serviceConfig.setHidden(false);
-        serviceConfig.setConfigType("map");
-        serviceConfig.setType("multipleWithKey");
-        serviceConfig.setConfigurableInWizard(true);
-        serviceConfig.setDefaultValue(new ArrayList<Map<String, String>>());
-        return serviceConfig;
+    /**
+     * 处理配置列表，根据集群模式修改配置项的hidden和required属性
+     *
+     * @param list      配置列表
+     * @param clusterId 集群ID
+     */
+    public static void processConfigList(List<ServiceConfig> list, Integer clusterId) {
+        if (Constants.K8S_MODE.equals(getDepMode(clusterId))) {
+            for (ServiceConfig config : list) {
+                if (Constants.K8S_MODE.toLowerCase().equals(config.getConfigType())) {
+                    config.setHidden(false);
+                    config.setRequired(true);
+                }
+            }
+        }
     }
 
     @Override
@@ -218,24 +139,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
             list = JSONArray.parseArray(serviceConfig, ServiceConfig.class);
 
-           /* if (Constants.K8S_MODE.equals(getDepMode(clusterId))) {
-                FrameServiceEntity frameService =
-                        this.frameService.getServiceByFrameCodeAndServiceName(
-                                clusterInfo.getClusterFrame(), serviceName);
-                Map<JSONObject, JSONArray> configMap =
-                        JSONObject.parseObject(frameService.getConfigFileJson(), new TypeReference<Map<JSONObject, JSONArray>>() {
-                        }, Feature.SupportAutoType);
-                ServiceConfig clusterIPConfig = getClusterIPConfig();
-                ServiceConfig nodePortConfig = getNodePortConfig();
-
-                Objects.requireNonNull(list).add(clusterIPConfig);
-                list.add(nodePortConfig);
-                Objects.requireNonNull(configMap).put(getGenerators(), JSONArray.parseArray(JSONObject.toJSONString(Arrays.asList(clusterIPConfig, nodePortConfig))));
-
-                frameService.setConfigFileJson(JSONObject.toJSONString(configMap));
-                frameService.setConfigFileJsonMd5(SecureUtil.md5(JSONObject.toJSONString(configMap)));
-                this.frameService.updateById(frameService);
-            }*/
+            processConfigList(list, clusterId);
         }
 
         ServiceRoleStrategy serviceRoleHandler =
@@ -853,15 +757,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             ClusterServiceInstanceEntity serviceInstance) {
         ClusterServiceInstanceRoleGroup roleGroup =
                 roleGroupService.getRoleGroupByServiceInstanceId(serviceInstance.getId());
-        ClusterServiceRoleGroupConfig config =
-                groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
-        return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
-    }
-
-    private List<ServiceConfig> listServiceConfigByServiceRoleInstance(
-            ClusterServiceRoleInstanceEntity serviceRoleInstances) {
-        ClusterServiceInstanceRoleGroup roleGroup =
-                roleGroupService.getRoleGroupByServiceInstanceId(serviceRoleInstances.getId());
         ClusterServiceRoleGroupConfig config =
                 groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);

@@ -19,7 +19,7 @@ spec:
         storageClassName: ${storageClasses}
         resources:
           requests:
-            storage: 10Gi
+            storage: ${storage}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
@@ -89,12 +89,10 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           ports:
-            - containerPort: 2181
-              name: client-port
-            - containerPort: 2888
-              name: election-port
-            - containerPort: 3888
-              name: quorum-port
+          <#list portMappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: port-${item?index + 1}
+          </#list>
           imagePullPolicy: Always
           command:
             - "/bin/bash"
@@ -111,11 +109,11 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: ${requestsMemory}
+              cpu: ${requestsCpu}
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: ${limitsMemory}
+              cpu: ${limitsCpu}
           securityContext:
             privileged: true
           volumeMounts:
