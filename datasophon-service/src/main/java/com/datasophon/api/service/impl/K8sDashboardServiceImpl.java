@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -1170,6 +1171,227 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
         } catch (Exception e) {
             logger.error("获取K8s资源统计出错", e);
             return Result.error("获取K8s资源统计出错: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取Pods列表详细信息（包含指标、状态统计等）
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间（null或"all"表示所有命名空间）
+     * @return 包含Pod列表、状态统计等的详细信息
+     */
+    @Override
+    public Result getPodsInfo(Integer clusterId, String namespace) {
+        try {
+            logger.info("获取Pods详细信息请求：clusterId={}, namespace={}", clusterId, namespace);
+
+            // 1. 获取Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("无法获取Kubernetes客户端");
+            }
+
+            // 2. 查询Pod列表
+            io.fabric8.kubernetes.api.model.PodList podList;
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                podList = client.pods().inNamespace(namespace).list();
+            } else {
+                podList = client.pods().inAnyNamespace().list();
+            }
+
+            // 3. 获取Pod指标
+            io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList podMetricsList;
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                podMetricsList = client.top().pods().inNamespace(namespace).metrics();
+            } else {
+                podMetricsList = client.top().pods().metrics();
+            }
+
+            // 创建一个Map快速查找Pod的指标
+            Map<String, io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics> metricsMap = new HashMap<>();
+            if (podMetricsList != null && podMetricsList.getItems() != null) {
+                for (io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics metrics : podMetricsList.getItems()) {
+                    String key = metrics.getMetadata().getNamespace() + "/" + metrics.getMetadata().getName();
+                    metricsMap.put(key, metrics);
+                }
+            }
+
+            // 4. 处理数据并构建响应
+            List<Map<String, Object>> podDetails = new ArrayList<>();
+            Map<String, Integer> statusCount = new HashMap<>();
+            statusCount.put("running", 0);
+            statusCount.put("pending", 0);
+            statusCount.put("failed", 0);
+            statusCount.put("succeeded", 0);
+            statusCount.put("unknown", 0);
+            statusCount.put("terminating", 0);
+
+            // 5. 处理Pod列表
+            for (io.fabric8.kubernetes.api.model.Pod pod : podList.getItems()) {
+                // 提取Pod状态
+                String status = pod.getStatus().getPhase();
+
+                // 更新状态计数
+                updateStatusCount(statusCount, status);
+
+                // 计算重启次数
+                int restartCount = 0;
+                if (pod.getStatus().getContainerStatuses() != null) {
+                    for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus().getContainerStatuses()) {
+                        restartCount += cs.getRestartCount();
+                    }
+                }
+
+                // 提取容器镜像
+                List<String> containerImages = new ArrayList<>();
+                if (pod.getSpec().getContainers() != null) {
+                    for (io.fabric8.kubernetes.api.model.Container container : pod.getSpec().getContainers()) {
+                        containerImages.add(container.getImage());
+                    }
+                }
+
+                // 创建ObjectMeta
+                Map<String, Object> objectMeta = new HashMap<>();
+                objectMeta.put("name", pod.getMetadata().getName());
+                objectMeta.put("namespace", pod.getMetadata().getNamespace());
+                objectMeta.put("labels", pod.getMetadata().getLabels());
+                objectMeta.put("annotations", pod.getMetadata().getAnnotations());
+                objectMeta.put("creationTimestamp", pod.getMetadata().getCreationTimestamp());
+                objectMeta.put("uid", pod.getMetadata().getUid());
+
+                // 创建TypeMeta
+                Map<String, Object> typeMeta = new HashMap<>();
+                typeMeta.put("kind", "pod");
+
+                // 获取Pod指标
+                Map<String, Object> metricsInfo = new HashMap<>();
+                String metricsKey = pod.getMetadata().getNamespace() + "/" + pod.getMetadata().getName();
+                io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics podMetrics = metricsMap.get(metricsKey);
+
+                if (podMetrics != null && podMetrics.getContainers() != null) {
+                    // 计算CPU和内存使用量
+                    int cpuUsageTotal = 0;
+                    long memoryUsageTotal = 0;
+
+                    for (io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics containerMetrics : podMetrics
+                            .getContainers()) {
+                        // CPU单位是"n"，表示纳核，我们需要转换为毫核 (1m = 1000000n)
+                        String cpuQuantity = containerMetrics.getUsage().get("cpu").getAmount();
+                        if (cpuQuantity != null && !cpuQuantity.isEmpty()) {
+                            // 将"n"单位转换为"m"单位 (1m = 1000000n)
+                            if (cpuQuantity.endsWith("n")) {
+                                cpuQuantity = cpuQuantity.substring(0, cpuQuantity.length() - 1);
+                                try {
+                                    long cpuNano = Long.parseLong(cpuQuantity);
+                                    cpuUsageTotal += (int) (cpuNano / 1000000);
+                                } catch (NumberFormatException e) {
+                                    logger.warn("无法解析CPU使用量: {}", cpuQuantity, e);
+                                }
+                            } else {
+                                try {
+                                    // 如果没有单位，假设是核心数，转换为毫核
+                                    double cores = Double.parseDouble(cpuQuantity);
+                                    cpuUsageTotal += (int) (cores * 1000);
+                                } catch (NumberFormatException e) {
+                                    logger.warn("无法解析CPU使用量: {}", cpuQuantity, e);
+                                }
+                            }
+                        }
+
+                        // 内存单位可能是Ki、Mi、Gi等，我们需要转换为字节
+                        String memoryQuantity = containerMetrics.getUsage().get("memory").getAmount();
+                        if (memoryQuantity != null && !memoryQuantity.isEmpty()) {
+                            try {
+                                if (memoryQuantity.endsWith("Ki")) {
+                                    memoryQuantity = memoryQuantity.substring(0, memoryQuantity.length() - 2);
+                                    memoryUsageTotal += Long.parseLong(memoryQuantity) * 1024;
+                                } else if (memoryQuantity.endsWith("Mi")) {
+                                    memoryQuantity = memoryQuantity.substring(0, memoryQuantity.length() - 2);
+                                    memoryUsageTotal += Long.parseLong(memoryQuantity) * 1024 * 1024;
+                                } else if (memoryQuantity.endsWith("Gi")) {
+                                    memoryQuantity = memoryQuantity.substring(0, memoryQuantity.length() - 2);
+                                    memoryUsageTotal += Long.parseLong(memoryQuantity) * 1024 * 1024 * 1024;
+                                } else if (memoryQuantity.endsWith("Ti")) {
+                                    memoryQuantity = memoryQuantity.substring(0, memoryQuantity.length() - 2);
+                                    memoryUsageTotal += Long.parseLong(memoryQuantity) * 1024 * 1024 * 1024 * 1024L;
+                                } else {
+                                    // 假设是字节
+                                    memoryUsageTotal += Long.parseLong(memoryQuantity);
+                                }
+                            } catch (NumberFormatException e) {
+                                logger.warn("无法解析内存使用量: {}", memoryQuantity, e);
+                            }
+                        }
+                    }
+
+                    metricsInfo.put("cpuUsage", cpuUsageTotal);
+                    metricsInfo.put("memoryUsage", memoryUsageTotal);
+                    // 暂不实现历史数据
+                    metricsInfo.put("cpuUsageHistory", null);
+                    metricsInfo.put("memoryUsageHistory", null);
+                }
+
+                // 创建PodDetail
+                Map<String, Object> podDetail = new HashMap<>();
+                podDetail.put("objectMeta", objectMeta);
+                podDetail.put("typeMeta", typeMeta);
+                podDetail.put("status", status);
+                podDetail.put("restartCount", restartCount);
+                podDetail.put("metrics", metricsInfo);
+                podDetail.put("warnings", Collections.emptyList()); // 暂不处理警告
+                podDetail.put("nodeName", pod.getSpec().getNodeName());
+                podDetail.put("containerImages", containerImages);
+
+                podDetails.add(podDetail);
+            }
+
+            // 6. 构建并返回响应
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", podDetails.size());
+
+            response.put("listMeta", listMeta);
+            response.put("cumulativeMetrics", null); // 暂不实现累计指标
+            response.put("status", statusCount);
+            response.put("pods", podDetails);
+            response.put("errors", Collections.emptyList()); // 暂无错误
+
+            logger.info("获取Pods列表成功，共{}个Pod", podDetails.size());
+            return Result.success().put(Constants.DATA, response);
+
+        } catch (Exception e) {
+            logger.error("获取Pods列表失败", e);
+            return Result.error("获取Pods列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据Pod状态更新计数器
+     */
+    private void updateStatusCount(Map<String, Integer> statusCount, String status) {
+        if (status == null) {
+            status = "unknown";
+        }
+
+        switch (status.toLowerCase()) {
+            case "running":
+                statusCount.put("running", statusCount.get("running") + 1);
+                break;
+            case "pending":
+                statusCount.put("pending", statusCount.get("pending") + 1);
+                break;
+            case "failed":
+                statusCount.put("failed", statusCount.get("failed") + 1);
+                break;
+            case "succeeded":
+                statusCount.put("succeeded", statusCount.get("succeeded") + 1);
+                break;
+            case "terminating":
+                statusCount.put("terminating", statusCount.get("terminating") + 1);
+                break;
+            default:
+                statusCount.put("unknown", statusCount.get("unknown") + 1);
         }
     }
 }

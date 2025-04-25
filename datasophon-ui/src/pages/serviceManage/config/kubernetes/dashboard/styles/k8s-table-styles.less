@@ -97,12 +97,13 @@
     max-width: 100%;
     
     .label-tag {
-      max-width: 200px;
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
       margin: 2px;
-      height: 22px;
+      height: auto;
+      min-height: 22px;
       line-height: 20px;
       padding: 0 8px;
     }
@@ -331,22 +332,25 @@
 
 // 优化表格列宽控制
 .name-column {
-  min-width: 120px;
+  min-width: 150px;
+  white-space: normal !important;
+}
+
+// 镜像列样式
+.image-column {
+  min-width: 180px;
+  white-space: normal !important;
 }
 
 // 针对标签列的特殊优化
 .labels-column {
-  min-width: 150px;
+  min-width: 200px;
+  white-space: normal !important;
 }
 
 // 针对时间列的特殊优化
 .time-column {
   min-width: 80px;
-}
-
-// 镜像列优化
-.image-column {
-  min-width: 180px;
 }
 
 // 状态列优化

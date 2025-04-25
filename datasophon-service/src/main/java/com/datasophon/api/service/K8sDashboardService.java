@@ -62,6 +62,15 @@ public interface K8sDashboardService {
     Result getPods(Integer clusterId, String namespace);
 
     /**
+     * 获取Pods列表详细信息（包含指标、状态统计等）
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间（null或"all"表示所有命名空间）
+     * @return 包含Pod列表、状态统计等的详细信息
+     */
+    Result getPodsInfo(Integer clusterId, String namespace);
+
+    /**
      * 获取Services列表
      * 
      * @param clusterId 集群ID

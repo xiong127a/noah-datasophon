@@ -21,12 +21,11 @@ import com.datasophon.api.service.K8sDashboardService;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * K8S仪表盘控制器
@@ -66,11 +65,16 @@ public class K8sDashboardController {
     /**
      * 获取Pods列表
      */
-    @RequestMapping("/pods")
-    public Result getPods(
-            @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getPods(clusterId, namespace);
+    @GetMapping("/pods")
+    public Result getPodsInfo(@RequestParam Integer clusterId,
+            @RequestParam(required = false) String namespace) {
+        try {
+            log.info("获取Pods列表请求：clusterId={}, namespace={}", clusterId, namespace);
+            return k8sDashboardService.getPodsInfo(clusterId, namespace);
+        } catch (Exception e) {
+            log.error("获取Pods列表失败", e);
+            return Result.error("获取Pods列表失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -276,37 +280,5 @@ public class K8sDashboardController {
         }
     }
 
-    /**
-     * 从结果中获取资源数量
-     * 提取Result对象中data字段的列表大小
-     * 
-     * @param result 结果对象
-     * @return 资源数量
-     */
-    private int getCountFromResult(Result result) {
-        if (result == null || result.getData() == null) {
-            return 0;
-        }
 
-        Object data = result.getData();
-        if (data instanceof Iterable) {
-            int count = 0;
-            for (Object ignored : (Iterable<?>) data) {
-                count++;
-            }
-            return count;
-        } else if (data instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) data;
-            Object items = map.get("items");
-            if (items instanceof Iterable) {
-                int count = 0;
-                for (Object ignored : (Iterable<?>) items) {
-                    count++;
-                }
-                return count;
-            }
-        }
-
-        return 0;
-    }
 }

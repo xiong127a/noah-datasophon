@@ -31,13 +31,14 @@
             :bordered="false"
             size="middle"
           >
-            <template slot="nameWithStatus" slot-scope="text, record">
-              <div class="name-with-status">
-                <span :class="getStatusClass(record)" class="status-indicator"></span>
-                <span class="name-text" :title="record?.objectMeta?.name || '未知'">
-                  {{ record?.objectMeta?.name || '未知' }}
-                </span>
-              </div>
+            <template slot="status" slot-scope="text, record">
+              <span :class="getStatusClass(record)" class="status-indicator"></span>
+            </template>
+
+            <template slot="name" slot-scope="text, record">
+              <span class="name-text" :title="record?.objectMeta?.name || '未知'">
+                {{ record?.objectMeta?.name || '未知' }}
+              </span>
             </template>
 
             <template slot="image" slot-scope="text, record">
@@ -48,15 +49,43 @@
 
             <template slot="labels" slot-scope="text, record">
               <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
-                <a-tag 
-                  v-for="(value, key) in record.objectMeta.labels" 
-                  :key="key" 
-                  color="blue"
-                  class="label-tag"
-                  :title="`${key}: ${value}`"
-                >
-                  {{ key }}: {{ value }}
-                </a-tag>
+                <template v-if="!isLabelsExpanded(record)">
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    v-if="Object.keys(record.objectMeta.labels).length > 3" 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
+                  </a-button>
+                </template>
+                <template v-else>
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    收起
+                  </a-button>
+                </template>
               </div>
               <span v-else class="empty-value">-</span>
             </template>
@@ -122,12 +151,20 @@ export default {
         namespace: '',
         name: ''
       },
+      expandedLabels: {},
       deploymentColumns: [
         {
+          title: '',
+          key: 'status',
+          width: '50px',
+          className: 'status-column',
+          scopedSlots: { customRender: 'status' }
+        },
+        {
           title: '名称',
-          key: 'nameWithStatus',
-          className: 'name-with-status-column',
-          scopedSlots: { customRender: 'nameWithStatus' }
+          key: 'name',
+          className: 'name-column',
+          scopedSlots: { customRender: 'name' }
         },
         {
           title: '镜像',
@@ -170,6 +207,15 @@ export default {
       if (!record?.pods || (!record?.pods.running && !record?.pods.pending && !record?.pods.failed)) 
         classNames.push('status-unknown');
       return classNames.join(' ');
+    },
+    toggleLabelsExpand(record) {
+      if (!record || !record.objectMeta || !record.objectMeta.uid) return;
+      const uid = record.objectMeta.uid;
+      this.$set(this.expandedLabels, uid, !this.expandedLabels[uid]);
+    },
+    isLabelsExpanded(record) {
+      if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
+      return !!this.expandedLabels[record.objectMeta.uid];
     },
     async fetchDeployments() {
       this.loading = true;
@@ -290,4 +336,33 @@ export default {
 
 <style lang="less" scoped>
 @import './styles/k8s-table-styles.less';
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0;
+}
+
+.name-text {
+  cursor: pointer;
+  display: inline-block;
+  max-width: 100%;
+  
+  &:hover {
+    color: #1890ff;
+    text-decoration: underline;
+  }
+}
+
+.labels-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  
+  .label-tag {
+    margin-right: 0;
+  }
+}
 </style> 
