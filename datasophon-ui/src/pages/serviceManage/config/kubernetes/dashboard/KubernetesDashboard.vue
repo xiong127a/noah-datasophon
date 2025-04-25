@@ -83,6 +83,12 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- StorageClasses列表 -->
+        <storage-classes-dashboard
+          v-if="activeResource === 'storageclass'"
+          :clusterId="clusterId"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -105,6 +111,7 @@ import ServiceList from './ServiceList.vue';
 import PodList from './PodList.vue';
 import ReplicaSetsDashboard from './ReplicaSetsDashboard.vue';
 import IngressClassesDashboard from './IngressClassesDashboard.vue';
+import StorageClassesDashboard from './StorageClassesDashboard.vue';
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -116,7 +123,8 @@ export default defineComponent({
     ServiceList,
     PodList,
     ReplicaSetsDashboard,
-    IngressClassesDashboard
+    IngressClassesDashboard,
+    StorageClassesDashboard
   },
   props: {
     serviceId: {
