@@ -15,13 +15,13 @@ export default {
     },
     /**
      * 资源类型，用于确定状态判断逻辑
-     * 可选值: 'deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset'.
+     * 可选值: 'deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset', 'job'.
      */
     resourceType: {
       type: String,
       required: true,
       validator: function(value) {
-        return ['deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset'].includes(value);
+        return ['deployment', 'pod', 'persistentVolume', 'persistentVolumeClaim', 'replicaSet', 'service', 'daemonset', 'job'].includes(value);
       }
     }
   },
@@ -44,6 +44,8 @@ export default {
           return this.getServiceStatusClass(this.resource);
         case 'daemonset':
           return this.getDaemonSetStatusClass(this.resource);
+        case 'job':
+          return this.getJobStatusClass(this.resource);
         default:
           return classNames.concat(['status-unknown']).join(' ');
       }
@@ -151,6 +153,34 @@ export default {
       if (resource?.podInfo?.failed > 0) classNames.push('status-danger');
       if (!resource?.podInfo || (!resource?.podInfo.running && !resource?.podInfo.pending && !resource?.podInfo.failed))
         classNames.push('status-unknown');
+      return classNames.join(' ');
+    },
+    
+    getJobStatusClass(resource) {
+      const classNames = ['status-dot'];
+      if (!resource || !resource.jobStatus) {
+        return classNames.concat(['status-unknown']).join(' ');
+      }
+      
+      const status = resource.jobStatus.status?.toLowerCase() || '';
+      
+      if (status === 'complete') {
+        classNames.push('status-running'); // 使用运行中的状态样式表示完成
+      } else if (status === 'running') {
+        classNames.push('status-warning'); // 使用警告状态样式表示正在运行
+      } else if (status === 'failed') {
+        classNames.push('status-danger'); // 使用危险状态样式表示失败
+      } else {
+        classNames.push('status-unknown'); // 其他状态视为未知
+      }
+      
+      // 考虑Pod的状态
+      if (resource.podInfo) {
+        if (resource.podInfo.succeeded > 0) classNames.push('status-running');
+        if (resource.podInfo.pending > 0) classNames.push('status-warning');
+        if (resource.podInfo.failed > 0) classNames.push('status-danger');
+      }
+      
       return classNames.join(' ');
     }
   }

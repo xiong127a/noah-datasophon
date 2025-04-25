@@ -1043,14 +1043,281 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("找不到集群Kubernetes配置");
             }
 
-            // TODO: 实现获取Jobs逻辑
-            List<Object> jobs = new ArrayList<>();
+            // 创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("创建Kubernetes客户端失败");
+            }
 
-            return Result.success().put(Constants.DATA, jobs);
+            // 获取Jobs列表
+            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList;
+            if (namespace != null && !namespace.equals("all")) {
+                jobsList = client.batch().v1().jobs().inNamespace(namespace).list().getItems();
+            } else {
+                jobsList = client.batch().v1().jobs().inAnyNamespace().list().getItems();
+            }
+
+            // 处理Jobs数据
+            List<Map<String, Object>> jobs = new ArrayList<>();
+
+            // 统计各种状态数量
+            int runningCount = 0;
+            int pendingCount = 0;
+            int failedCount = 0;
+            int succeededCount = 0;
+            int unknownCount = 0;
+            int terminatingCount = 0;
+
+            for (io.fabric8.kubernetes.api.model.batch.v1.Job job : jobsList) {
+                Map<String, Object> jobMap = new HashMap<>();
+
+                // 处理元数据
+                Map<String, Object> objectMeta = new HashMap<>();
+                objectMeta.put("name", job.getMetadata().getName());
+                objectMeta.put("namespace", job.getMetadata().getNamespace());
+                objectMeta.put("labels", job.getMetadata().getLabels());
+                objectMeta.put("annotations", job.getMetadata().getAnnotations());
+                objectMeta.put("creationTimestamp", job.getMetadata().getCreationTimestamp());
+                objectMeta.put("uid", job.getMetadata().getUid());
+                jobMap.put("objectMeta", objectMeta);
+
+                // 类型元数据
+                Map<String, Object> typeMeta = new HashMap<>();
+                typeMeta.put("kind", "job");
+                jobMap.put("typeMeta", typeMeta);
+
+                // 获取Job的Pod信息
+                Map<String, Object> podInfo = new HashMap<>();
+                int active = job.getStatus() != null && job.getStatus().getActive() != null
+                        ? job.getStatus().getActive()
+                        : 0;
+                int succeeded = job.getStatus() != null && job.getStatus().getSucceeded() != null
+                        ? job.getStatus().getSucceeded()
+                        : 0;
+                int failed = job.getStatus() != null && job.getStatus().getFailed() != null
+                        ? job.getStatus().getFailed()
+                        : 0;
+
+                // 计算期望的Pod数量
+                int desired = (job.getSpec() != null && job.getSpec().getCompletions() != null)
+                        ? job.getSpec().getCompletions()
+                        : 1;
+
+                // 设置Pod信息
+                podInfo.put("current", active + succeeded + failed);
+                podInfo.put("desired", desired);
+                podInfo.put("running", active);
+                podInfo.put("pending", 0); // 需要进一步查询Pods来获取pending状态的数量
+                podInfo.put("failed", failed);
+                podInfo.put("succeeded", succeeded);
+                podInfo.put("warnings", new ArrayList<>());
+
+                // 查询相关Pod可能的警告信息
+                try {
+                    List<io.fabric8.kubernetes.api.model.Pod> pods = client.pods()
+                            .inNamespace(job.getMetadata().getNamespace())
+                            .withLabel("job-name", job.getMetadata().getName())
+                            .list()
+                            .getItems();
+
+                    // 统计pending状态的Pod
+                    int pendingPods = 0;
+
+                    List<Map<String, Object>> warnings = new ArrayList<>();
+                    for (io.fabric8.kubernetes.api.model.Pod pod : pods) {
+                        // 统计pending状态的Pod
+                        if (pod.getStatus() != null && "Pending".equals(pod.getStatus().getPhase())) {
+                            pendingPods++;
+
+                            // 检查容器状态是否有警告
+                            if (pod.getStatus().getContainerStatuses() != null) {
+                                for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus()
+                                        .getContainerStatuses()) {
+                                    if (cs.getState() != null && cs.getState().getWaiting() != null) {
+                                        String reason = cs.getState().getWaiting().getReason();
+                                        String message = cs.getState().getWaiting().getMessage();
+
+                                        if (reason != null && !reason.isEmpty()) {
+                                            Map<String, Object> warning = new HashMap<>();
+
+                                            Map<String, Object> warnMeta = new HashMap<>();
+                                            warnMeta.put("creationTimestamp", null);
+                                            warning.put("objectMeta", warnMeta);
+
+                                            warning.put("typeMeta", new HashMap<>());
+                                            warning.put("message", message != null ? message : "");
+                                            warning.put("sourceComponent", "");
+                                            warning.put("sourceHost", "");
+                                            warning.put("object", "");
+                                            warning.put("count", 0);
+                                            warning.put("firstSeen", null);
+                                            warning.put("lastSeen", null);
+                                            warning.put("reason", reason);
+                                            warning.put("type", "Warning");
+
+                                            warnings.add(warning);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 更新pending状态的Pod数量
+                    podInfo.put("pending", pendingPods);
+
+                    // 添加警告信息
+                    podInfo.put("warnings", warnings);
+                } catch (Exception e) {
+                    logger.error("获取Job相关Pod警告信息失败", e);
+                }
+
+                jobMap.put("podInfo", podInfo);
+
+                // 提取容器镜像
+                List<String> containerImages = new ArrayList<>();
+                if (job.getSpec() != null &&
+                        job.getSpec().getTemplate() != null &&
+                        job.getSpec().getTemplate().getSpec() != null &&
+                        job.getSpec().getTemplate().getSpec().getContainers() != null) {
+
+                    for (io.fabric8.kubernetes.api.model.Container container : job.getSpec().getTemplate().getSpec()
+                            .getContainers()) {
+                        if (container.getImage() != null) {
+                            containerImages.add(container.getImage());
+                        }
+                    }
+                }
+                jobMap.put("containerImages", containerImages);
+
+                // 初始化容器镜像
+                List<String> initContainerImages = new ArrayList<>();
+                if (job.getSpec() != null &&
+                        job.getSpec().getTemplate() != null &&
+                        job.getSpec().getTemplate().getSpec() != null &&
+                        job.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+
+                    for (io.fabric8.kubernetes.api.model.Container container : job.getSpec().getTemplate().getSpec()
+                            .getInitContainers()) {
+                        if (container.getImage() != null) {
+                            initContainerImages.add(container.getImage());
+                        }
+                    }
+                }
+                jobMap.put("initContainerImages", initContainerImages.isEmpty() ? null : initContainerImages);
+
+                // 获取并行度
+                if (job.getSpec() != null && job.getSpec().getParallelism() != null) {
+                    jobMap.put("parallelism", job.getSpec().getParallelism());
+                } else {
+                    jobMap.put("parallelism", 1);
+                }
+
+                // 获取Job状态
+                Map<String, Object> jobStatus = new HashMap<>();
+                String status = "Unknown";
+                String message = "";
+
+                if (job.getStatus() != null) {
+                    if (job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() > 0) {
+                        status = "Complete";
+                        succeededCount++;
+                    } else if (job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0) {
+                        status = "Failed";
+                        failedCount++;
+                    } else if (job.getStatus().getActive() != null && job.getStatus().getActive() > 0) {
+                        status = "Running";
+                        runningCount++;
+                    }
+
+                    // 获取条件
+                    List<Map<String, Object>> conditions = new ArrayList<>();
+                    if (job.getStatus().getConditions() != null) {
+                        for (io.fabric8.kubernetes.api.model.batch.v1.JobCondition condition : job.getStatus()
+                                .getConditions()) {
+                            Map<String, Object> conditionMap = new HashMap<>();
+                            conditionMap.put("type", condition.getType());
+                            conditionMap.put("status", condition.getStatus());
+                            conditionMap.put("lastProbeTime", condition.getLastProbeTime());
+                            conditionMap.put("lastTransitionTime", condition.getLastTransitionTime());
+                            conditionMap.put("reason", condition.getReason() != null ? condition.getReason() : "");
+                            conditionMap.put("message", condition.getMessage() != null ? condition.getMessage() : "");
+                            conditions.add(conditionMap);
+                        }
+                    }
+
+                    jobStatus.put("conditions", conditions.isEmpty() ? null : conditions);
+                }
+
+                jobStatus.put("status", status);
+                jobStatus.put("message", message);
+
+                jobMap.put("jobStatus", jobStatus);
+
+                // 统计各种状态
+                if (status.equals("Unknown")) {
+                    unknownCount++;
+                } else if (status.equals("Running") && pendingCount > 0) {
+                    pendingCount++;
+                }
+
+                jobs.add(jobMap);
+            }
+
+            // 构建响应数据
+            Map<String, Object> responseData = new HashMap<>();
+
+            // 列表元数据
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", jobs.size());
+            responseData.put("listMeta", listMeta);
+
+            // 度量指标（暂时为空）
+            List<Map<String, Object>> metrics = new ArrayList<>();
+            Map<String, Object> cpuMetric = new HashMap<>();
+            cpuMetric.put("dataPoints", new ArrayList<>());
+            cpuMetric.put("metricPoints", new ArrayList<>());
+            cpuMetric.put("metricName", "cpu/usage_rate");
+            cpuMetric.put("aggregation", "sum");
+            metrics.add(cpuMetric);
+
+            Map<String, Object> memoryMetric = new HashMap<>();
+            memoryMetric.put("dataPoints", new ArrayList<>());
+            memoryMetric.put("metricPoints", new ArrayList<>());
+            memoryMetric.put("metricName", "memory/usage");
+            memoryMetric.put("aggregation", "sum");
+            metrics.add(memoryMetric);
+
+            responseData.put("cumulativeMetrics", metrics);
+
+            // 状态统计
+            Map<String, Object> status = new HashMap<>();
+            status.put("running", runningCount);
+            status.put("pending", pendingCount);
+            status.put("failed", failedCount);
+            status.put("succeeded", succeededCount);
+            status.put("unknown", unknownCount);
+            status.put("terminating", terminatingCount);
+            responseData.put("status", status);
+
+            // 添加Jobs列表
+            responseData.put("jobs", jobs);
+
+            // 添加错误列表
+            responseData.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
             logger.error("获取Jobs列表出错", e);
             return Result.error("获取Jobs列表出错: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Result getJobs(Integer clusterId, Integer serviceId, String namespace) {
+        // 直接调用不带serviceId的方法，因为Jobs资源目前不需要根据serviceId进行过滤
+        // 保留serviceId参数是为了保持API一致性
+        return getJobs(clusterId, namespace);
     }
 
     @Override

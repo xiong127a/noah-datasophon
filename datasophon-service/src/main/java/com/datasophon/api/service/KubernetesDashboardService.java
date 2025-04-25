@@ -195,6 +195,16 @@ public interface KubernetesDashboardService {
     Result getJobs(Integer clusterId, String namespace);
 
     /**
+     * 获取Jobs列表（带服务ID）
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return Jobs列表
+     */
+    Result getJobs(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
      * 获取CronJobs列表
      * 
      * @param clusterId 集群ID

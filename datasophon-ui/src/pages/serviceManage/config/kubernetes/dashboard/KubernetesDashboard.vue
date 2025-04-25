@@ -119,6 +119,14 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- Jobs列表 -->
+        <jobs-dashboard
+          v-if="activeResource === 'jobs'"
+          :clusterId="clusterId"
+          :serviceId="serviceId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -145,6 +153,7 @@ import PodsDashboard from './PodsDashboard.vue'
 import ServicesDashboard from './ServicesDashboard.vue'
 import CronJobsDashboard from './CronJobsDashboard.vue'
 import DaemonSetsDashboard from './DaemonSetsDashboard.vue'
+import JobsDashboard from './JobsDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -161,6 +170,7 @@ export default defineComponent({
     ServicesDashboard,
     CronJobsDashboard,
     DaemonSetsDashboard,
+    JobsDashboard,
   },
   props: {
     serviceId: {

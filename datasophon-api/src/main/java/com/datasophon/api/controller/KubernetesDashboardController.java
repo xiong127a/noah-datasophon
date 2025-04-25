@@ -203,8 +203,11 @@ public class KubernetesDashboardController {
     @RequestMapping("/jobs")
     public Result getJobs(
             @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getJobs(clusterId, namespace);
+        return serviceId != null
+                ? kubernetesDashboardService.getJobs(clusterId, serviceId, namespace)
+                : kubernetesDashboardService.getJobs(clusterId, namespace);
     }
 
     /**
