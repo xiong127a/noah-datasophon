@@ -134,6 +134,14 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- StatefulSets列表 -->
+        <stateful-sets-dashboard
+          v-if="activeResource === 'statefulsets'"
+          :clusterId="clusterId"
+          :serviceId="serviceId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -162,6 +170,7 @@ import CronJobsDashboard from './CronJobsDashboard.vue'
 import DaemonSetsDashboard from './DaemonSetsDashboard.vue'
 import JobsDashboard from './JobsDashboard.vue'
 import IngressesDashboard from './IngressesDashboard.vue'
+import StatefulSetsDashboard from './StatefulSetsDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -180,6 +189,7 @@ export default defineComponent({
     DaemonSetsDashboard,
     JobsDashboard,
     IngressesDashboard,
+    StatefulSetsDashboard,
   },
   props: {
     serviceId: {

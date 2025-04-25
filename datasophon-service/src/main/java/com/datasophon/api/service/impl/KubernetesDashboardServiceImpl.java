@@ -719,28 +719,29 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             io.fabric8.kubernetes.api.model.NodeList nodeList = client.nodes().list();
                             // 过滤掉master节点，只保留worker节点
                             List<String> nodeIps = nodeList.getItems().stream()
-                                .filter(node -> {
-                                    // 排除具有master标签的节点
-                                    if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
-                                        Map<String, String> labels = node.getMetadata().getLabels();
-                                        return !labels.containsKey("node-role.kubernetes.io/master") && 
-                                               !labels.containsKey("node-role.kubernetes.io/control-plane");
-                                    }
-                                    return true;
-                                })
-                                .flatMap(node -> {
-                                    List<String> ips = new ArrayList<>();
-                                    if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
-                                        node.getStatus().getAddresses().forEach(address -> {
-                                            if ("InternalIP".equals(address.getType()) && address.getAddress() != null) {
-                                                ips.add(address.getAddress());
-                                            }
-                                        });
-                                    }
-                                    return ips.stream();
-                                })
-                                .collect(Collectors.toList());
-                            
+                                    .filter(node -> {
+                                        // 排除具有master标签的节点
+                                        if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
+                                            Map<String, String> labels = node.getMetadata().getLabels();
+                                            return !labels.containsKey("node-role.kubernetes.io/master") &&
+                                                    !labels.containsKey("node-role.kubernetes.io/control-plane");
+                                        }
+                                        return true;
+                                    })
+                                    .flatMap(node -> {
+                                        List<String> ips = new ArrayList<>();
+                                        if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
+                                            node.getStatus().getAddresses().forEach(address -> {
+                                                if ("InternalIP".equals(address.getType())
+                                                        && address.getAddress() != null) {
+                                                    ips.add(address.getAddress());
+                                                }
+                                            });
+                                        }
+                                        return ips.stream();
+                                    })
+                                    .collect(Collectors.toList());
+
                             // 为每个节点IP创建一个endpoint对象
                             for (String ip : nodeIps) {
                                 Map<String, Object> endpointInfo = new HashMap<>();
@@ -755,7 +756,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 收集Hosts信息
                         List<String> hosts = new ArrayList<>();
                         if (ingress.getSpec() != null && ingress.getSpec().getRules() != null) {
-                            for (io.fabric8.kubernetes.api.model.networking.v1.IngressRule rule : ingress.getSpec().getRules()) {
+                            for (io.fabric8.kubernetes.api.model.networking.v1.IngressRule rule : ingress.getSpec()
+                                    .getRules()) {
                                 if (rule.getHost() != null && !rule.getHost().isEmpty()) {
                                     hosts.add(rule.getHost());
                                 }
@@ -970,16 +972,125 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getStatefulSets(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取StatefulSets
+            io.fabric8.kubernetes.api.model.apps.StatefulSetList statefulSetList;
+            if (namespace != null && !namespace.isEmpty()) {
+                statefulSetList = client.apps().statefulSets().inNamespace(namespace).list();
+            } else {
+                statefulSetList = client.apps().statefulSets().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取StatefulSets逻辑
-            List<Object> statefulSets = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> statefulSets = statefulSetList.getItems().stream()
+                    .map(statefulSet -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> podInfo = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, statefulSets);
+                        // 基本信息
+                        if (statefulSet.getMetadata() != null) {
+                            objectMeta.put("name", statefulSet.getMetadata().getName());
+                            objectMeta.put("namespace", statefulSet.getMetadata().getNamespace());
+                            objectMeta.put("labels", statefulSet.getMetadata().getLabels());
+                            objectMeta.put("annotations", statefulSet.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", statefulSet.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", statefulSet.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "statefulset");
+                        typeMeta.put("scalable", true); // StatefulSet是可缩放的
+                        item.put("typeMeta", typeMeta);
+
+                        // Pod信息
+                        if (statefulSet.getStatus() != null) {
+                            int desired = statefulSet.getSpec() != null && statefulSet.getSpec().getReplicas() != null
+                                    ? statefulSet.getSpec().getReplicas()
+                                    : 0;
+                            int current = statefulSet.getStatus().getReplicas() != null
+                                    ? statefulSet.getStatus().getReplicas()
+                                    : 0;
+                            int ready = statefulSet.getStatus().getReadyReplicas() != null
+                                    ? statefulSet.getStatus().getReadyReplicas()
+                                    : 0;
+                            int running = ready; // 将ready状态的副本视为running
+
+                            podInfo.put("desired", desired);
+                            podInfo.put("current", current);
+                            podInfo.put("running", running);
+                            podInfo.put("pending", current - ready); // 当前副本数减去就绪副本数为等待中的副本数
+                            podInfo.put("failed", 0); // 默认没有失败的
+                            podInfo.put("succeeded", 0); // 没有成功完成的概念
+                            podInfo.put("warnings", new ArrayList<>()); // 空警告列表
+                        } else {
+                            podInfo.put("desired", 0);
+                            podInfo.put("current", 0);
+                            podInfo.put("running", 0);
+                            podInfo.put("pending", 0);
+                            podInfo.put("failed", 0);
+                            podInfo.put("succeeded", 0);
+                            podInfo.put("warnings", new ArrayList<>());
+                        }
+                        item.put("podInfo", podInfo);
+
+                        // 提取容器镜像
+                        List<String> containerImages = new ArrayList<>();
+                        if (statefulSet.getSpec() != null && statefulSet.getSpec().getTemplate() != null
+                                && statefulSet.getSpec().getTemplate().getSpec() != null
+                                && statefulSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                            statefulSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    containerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("containerImages", containerImages);
+
+                        // 初始化容器镜像
+                        List<String> initContainerImages = new ArrayList<>();
+                        if (statefulSet.getSpec() != null && statefulSet.getSpec().getTemplate() != null
+                                && statefulSet.getSpec().getTemplate().getSpec() != null
+                                && statefulSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                            statefulSet.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    initContainerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("initContainerImages", initContainerImages);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建状态统计信息
+            Map<String, Integer> status = new HashMap<>();
+            status.put("running", (int) statefulSets.stream().filter(sts -> {
+                Map<String, Object> podInfo = (Map<String, Object>) sts.get("podInfo");
+                return podInfo != null && (int) podInfo.get("running") > 0;
+            }).count());
+            status.put("pending", (int) statefulSets.stream().filter(sts -> {
+                Map<String, Object> podInfo = (Map<String, Object>) sts.get("podInfo");
+                return podInfo != null && (int) podInfo.get("pending") > 0;
+            }).count());
+            status.put("failed", 0);
+            status.put("succeeded", 0);
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", statefulSets.size());
+            result.put("listMeta", listMeta);
+            result.put("statefulSets", statefulSets);
+            result.put("status", status);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取StatefulSets列表出错", e);
             return Result.error("获取StatefulSets列表出错: " + e.getMessage());

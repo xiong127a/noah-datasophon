@@ -13,7 +13,8 @@ const VALID_RESOURCE_TYPES = [
   'service', 
   'daemonset', 
   'job', 
-  'ingress'
+  'ingress',
+  'statefulset'
 ];
 
 // 检测是否为开发模式
@@ -124,6 +125,8 @@ export default {
             return this.getJobStatusClass(this.resource);
           case 'ingress':
             return this.getIngressStatusClass(this.resource);
+          case 'statefulset':
+            return this.getStatefulSetStatusClass(this.resource);
           default:
             return classNames.concat(['status-unknown']).join(' ');
         }
@@ -293,6 +296,27 @@ export default {
         classNames.push('status-warning'); // 没有endpoints时显示警告状态
       } else {
         classNames.push('status-running'); // 有endpoints时显示正常运行状态
+      }
+      
+      return classNames.join(' ');
+    },
+    getStatefulSetStatusClass(resource) {
+      const classNames = ['status-dot'];
+      // StatefulSet状态逻辑与ReplicaSet/Deployment类似，基于pod信息
+      if (resource?.podInfo?.running > 0) classNames.push('status-running');
+      if (resource?.podInfo?.pending > 0) classNames.push('status-warning');
+      if (resource?.podInfo?.failed > 0) classNames.push('status-danger');
+      if (!resource?.podInfo || (!resource?.podInfo.running && !resource?.podInfo.pending && !resource?.podInfo.failed))
+        classNames.push('status-unknown');
+      
+      // 检查是否所有期望的pod都在运行
+      if (resource?.podInfo?.current < resource?.podInfo?.desired) {
+        classNames.push('status-warning'); // 如果当前pod数量小于期望值，显示警告状态
+      }
+      
+      // 检查是否有警告
+      if (resource?.podInfo?.warnings && resource.podInfo.warnings.length > 0) {
+        classNames.push('status-warning');
       }
       
       return classNames.join(' ');
