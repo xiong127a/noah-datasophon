@@ -142,6 +142,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <!-- Secrets列表 -->
+        <secrets-dashboard
+          v-if="activeResource === 'secret'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
       </div>
@@ -171,6 +178,7 @@ import DaemonSetsDashboard from './DaemonSetsDashboard.vue'
 import JobsDashboard from './JobsDashboard.vue'
 import IngressesDashboard from './IngressesDashboard.vue'
 import StatefulSetsDashboard from './StatefulSetsDashboard.vue'
+import SecretsDashboard from './SecretsDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -190,6 +198,7 @@ export default defineComponent({
     JobsDashboard,
     IngressesDashboard,
     StatefulSetsDashboard,
+    SecretsDashboard,
   },
   props: {
     serviceId: {

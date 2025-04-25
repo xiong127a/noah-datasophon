@@ -216,25 +216,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getPods(Integer clusterId, String namespace) {
-        try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
-            }
-
-            // TODO: 实现获取Pods逻辑
-            List<Object> pods = new ArrayList<>();
-
-            return Result.success().put(Constants.DATA, pods);
-        } catch (Exception e) {
-            logger.error("获取Pods列表出错", e);
-            return Result.error("获取Pods列表出错: " + e.getMessage());
-        }
-    }
-
-    @Override
     public Result getServices(Integer clusterId, String namespace) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -418,16 +399,55 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getSecrets(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取Secrets
+            io.fabric8.kubernetes.api.model.SecretList secretList;
+            if (namespace != null && !namespace.isEmpty()) {
+                secretList = client.secrets().inNamespace(namespace).list();
+            } else {
+                secretList = client.secrets().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取Secrets逻辑
-            List<Object> secrets = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> secrets = secretList.getItems().stream()
+                    .map(secret -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, secrets);
+                        // 基本信息
+                        if (secret.getMetadata() != null) {
+                            objectMeta.put("name", secret.getMetadata().getName());
+                            objectMeta.put("namespace", secret.getMetadata().getNamespace());
+                            objectMeta.put("labels", secret.getMetadata().getLabels());
+                            objectMeta.put("annotations", secret.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", secret.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", secret.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "secret");
+                        item.put("typeMeta", typeMeta);
+
+                        // Secret类型
+                        item.put("type", secret.getType());
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", secrets.size());
+            result.put("listMeta", listMeta);
+            result.put("secrets", secrets);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Secrets列表出错", e);
             return Result.error("获取Secrets列表出错: " + e.getMessage());

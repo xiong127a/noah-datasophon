@@ -52,14 +52,6 @@ public interface KubernetesDashboardService {
      */
     Result getDeployments(Integer clusterId, Integer serviceId, String namespace);
 
-    /**
-     * 获取Pods列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return Pods列表
-     */
-    Result getPods(Integer clusterId, String namespace);
 
     /**
      * 获取Pods列表详细信息（包含指标、状态统计等）
