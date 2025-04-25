@@ -127,6 +127,13 @@
           :selectedNamespace="selectedNamespace"
         />
 
+        <jobs-dashboard
+            v-if="activeResource === 'jobs'"
+            :clusterId="clusterId"
+            :serviceId="serviceId"
+            :selectedNamespace="selectedNamespace"
+        />
+
         <!-- Ingresses列表 -->
         <ingresses-dashboard
           v-if="activeResource === 'ingresses'"
@@ -147,6 +154,14 @@
           v-if="activeResource === 'secret'"
           :clusterId="clusterId"
           :selectedNamespace="selectedNamespace"
+        />
+
+        <!-- ReplicationControllers列表 -->
+        <replication-controllers-dashboard
+          v-if="activeResource === 'replicationcontrollers'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+          :serviceId="serviceId"
         />
 
         <!-- 其他资源列表保持不变... -->
@@ -179,6 +194,7 @@ import JobsDashboard from './JobsDashboard.vue'
 import IngressesDashboard from './IngressesDashboard.vue'
 import StatefulSetsDashboard from './StatefulSetsDashboard.vue'
 import SecretsDashboard from './SecretsDashboard.vue'
+import ReplicationControllersDashboard from './ReplicationControllersDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
@@ -199,6 +215,7 @@ export default defineComponent({
     IngressesDashboard,
     StatefulSetsDashboard,
     SecretsDashboard,
+    ReplicationControllersDashboard,
   },
   props: {
     serviceId: {

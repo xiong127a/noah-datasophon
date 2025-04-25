@@ -1239,16 +1239,222 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getReplicationControllers(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取ReplicationControllers
+            io.fabric8.kubernetes.api.model.ReplicationControllerList rcList;
+            if (namespace != null && !namespace.isEmpty()) {
+                rcList = client.replicationControllers().inNamespace(namespace).list();
+            } else {
+                rcList = client.replicationControllers().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取ReplicationControllers逻辑
-            List<Object> replicationControllers = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> replicationControllers = rcList.getItems().stream()
+                    .map(rc -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> podInfo = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, replicationControllers);
+                        // 基本信息
+                        if (rc.getMetadata() != null) {
+                            objectMeta.put("name", rc.getMetadata().getName());
+                            objectMeta.put("namespace", rc.getMetadata().getNamespace());
+                            objectMeta.put("labels", rc.getMetadata().getLabels());
+                            objectMeta.put("annotations", rc.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", rc.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", rc.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "replicationcontroller");
+                        typeMeta.put("scalable", true);
+                        item.put("typeMeta", typeMeta);
+
+                        // 提取容器镜像
+                        List<String> containerImages = new ArrayList<>();
+                        if (rc.getSpec() != null && rc.getSpec().getTemplate() != null
+                                && rc.getSpec().getTemplate().getSpec() != null
+                                && rc.getSpec().getTemplate().getSpec().getContainers() != null) {
+                            rc.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    containerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("containerImages", containerImages);
+
+                        // 初始化容器镜像
+                        List<String> initContainerImages = new ArrayList<>();
+                        if (rc.getSpec() != null && rc.getSpec().getTemplate() != null
+                                && rc.getSpec().getTemplate().getSpec() != null
+                                && rc.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                            rc.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
+                                if (container.getImage() != null) {
+                                    initContainerImages.add(container.getImage());
+                                }
+                            });
+                        }
+                        item.put("initContainerImages", initContainerImages.isEmpty() ? null : initContainerImages);
+
+                        // Pod信息
+                        if (rc.getStatus() != null) {
+                            // 获取期望的副本数
+                            int desired = rc.getSpec() != null && rc.getSpec().getReplicas() != null
+                                    ? rc.getSpec().getReplicas()
+                                    : 0;
+
+                            // 获取当前副本数
+                            int current = rc.getStatus().getReplicas() != null ? rc.getStatus().getReplicas() : 0;
+
+                            // 获取可用副本数
+                            int ready = rc.getStatus().getReadyReplicas() != null ? rc.getStatus().getReadyReplicas()
+                                    : 0;
+
+                            // 计算状态
+                            int running = ready;
+                            int pending = current - ready;
+                            int failed = 0;
+                            int succeeded = 0;
+
+                            podInfo.put("desired", desired);
+                            podInfo.put("current", current);
+                            podInfo.put("running", running);
+                            podInfo.put("pending", pending);
+                            podInfo.put("failed", failed);
+                            podInfo.put("succeeded", succeeded);
+
+                            // 尝试获取警告信息
+                            List<Map<String, Object>> warnings = new ArrayList<>();
+                            try {
+                                // 获取相关Pod的警告事件
+                                if (rc.getMetadata() != null && rc.getMetadata().getName() != null
+                                        && rc.getMetadata().getNamespace() != null) {
+                                    String rcName = rc.getMetadata().getName();
+                                    String rcNamespace = rc.getMetadata().getNamespace();
+
+                                    // 查找关联的Pod
+                                    List<io.fabric8.kubernetes.api.model.Pod> pods = client.pods()
+                                            .inNamespace(rcNamespace)
+                                            .withLabels(rc.getSpec().getSelector())
+                                            .list()
+                                            .getItems();
+
+                                    // 处理每个Pod的警告事件
+                                    for (io.fabric8.kubernetes.api.model.Pod pod : pods) {
+                                        if (pod.getStatus() != null && pod.getStatus().getContainerStatuses() != null) {
+                                            for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus()
+                                                    .getContainerStatuses()) {
+                                                if (cs.getState() != null && cs.getState().getWaiting() != null) {
+                                                    String reason = cs.getState().getWaiting().getReason();
+                                                    String message = cs.getState().getWaiting().getMessage();
+
+                                                    if ("ErrImagePull".equals(reason)
+                                                            || "ImagePullBackOff".equals(reason) ||
+                                                            "CrashLoopBackOff".equals(reason)
+                                                            || "Failed".equals(reason)) {
+                                                        // 创建警告对象
+                                                        Map<String, Object> warning = new HashMap<>();
+
+                                                        Map<String, Object> warnObjectMeta = new HashMap<>();
+                                                        warnObjectMeta.put("creationTimestamp", null);
+                                                        warning.put("objectMeta", warnObjectMeta);
+
+                                                        warning.put("typeMeta", new HashMap<>());
+                                                        warning.put("message", message);
+                                                        warning.put("sourceComponent", "");
+                                                        warning.put("sourceHost", "");
+                                                        warning.put("object", "");
+                                                        warning.put("count", 0);
+                                                        warning.put("firstSeen", null);
+                                                        warning.put("lastSeen", null);
+                                                        warning.put("reason", reason);
+                                                        warning.put("type", "Warning");
+
+                                                        warnings.add(warning);
+
+                                                        // 如果是失败状态，增加失败计数
+                                                        if ("Failed".equals(reason)) {
+                                                            failed++;
+                                                            pending--;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.warn("获取ReplicationController警告信息失败", e);
+                            }
+
+                            // 更新Pod信息的失败数量
+                            podInfo.put("failed", failed);
+                            podInfo.put("warnings", warnings);
+                        } else {
+                            // 默认值
+                            podInfo.put("desired", 0);
+                            podInfo.put("current", 0);
+                            podInfo.put("running", 0);
+                            podInfo.put("pending", 0);
+                            podInfo.put("failed", 0);
+                            podInfo.put("succeeded", 0);
+                            podInfo.put("warnings", new ArrayList<>());
+                        }
+                        item.put("podInfo", podInfo);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建状态统计信息
+            Map<String, Integer> status = new HashMap<>();
+            status.put("running", (int) replicationControllers.stream().filter(rc -> {
+                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                return podInfo != null && (int) podInfo.get("running") > 0;
+            }).count());
+            status.put("pending", (int) replicationControllers.stream().filter(rc -> {
+                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                return podInfo != null && (int) podInfo.get("pending") > 0;
+            }).count());
+            status.put("failed", (int) replicationControllers.stream().filter(rc -> {
+                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                return podInfo != null && (int) podInfo.get("failed") > 0;
+            }).count());
+            status.put("succeeded", 0);
+            status.put("unknown", 0);
+            status.put("terminating", 0);
+
+            // 构建度量指标
+            List<Map<String, Object>> metrics = new ArrayList<>();
+            Map<String, Object> cpuMetric = new HashMap<>();
+            cpuMetric.put("dataPoints", new ArrayList<>());
+            cpuMetric.put("metricPoints", new ArrayList<>());
+            cpuMetric.put("metricName", "cpu/usage_rate");
+            cpuMetric.put("aggregation", "sum");
+            metrics.add(cpuMetric);
+
+            Map<String, Object> memoryMetric = new HashMap<>();
+            memoryMetric.put("dataPoints", new ArrayList<>());
+            memoryMetric.put("metricPoints", new ArrayList<>());
+            memoryMetric.put("metricName", "memory/usage");
+            memoryMetric.put("aggregation", "sum");
+            metrics.add(memoryMetric);
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", replicationControllers.size());
+            result.put("listMeta", listMeta);
+            result.put("cumulativeMetrics", metrics);
+            result.put("status", status);
+            result.put("replicationControllers", replicationControllers);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取ReplicationControllers列表出错", e);
             return Result.error("获取ReplicationControllers列表出错: " + e.getMessage());
