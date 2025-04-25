@@ -20,55 +20,128 @@
             :rowKey="record => `${record.namespace}-${record.name}`"
             class="k8s-table"
             :bordered="false"
+            :table-layout="'auto'"
           >
-            <template #action="{ record }">
-              <div class="action-buttons">
-                <a @click="handleViewService(record)">查看</a>
-                <a-divider type="vertical" />
-                <a @click="handleEditService(record)">编辑</a>
-              </div>
-            </template>
-            <template #name="{ text, record }">
-              <div class="resource-name">
-                <div class="resource-icon">
-                  <span class="k8s-icon">K8S</span>
+            <template slot="name" slot-scope="text, record">
+              <div style="display: flex; align-items: center; line-height: normal;">
+                <span class="status-dot status-running"></span>
+                <div class="name-cell">
+                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
+                    {{ record?.objectMeta?.name || '未知' }}
+                  </span>
                 </div>
-                <a @click="viewDeployment(record)" :title="text">{{ text }}</a>
               </div>
             </template>
-            <template #labels="{ text }">
-              <div class="label-container">
-                <a-tag v-for="(value, key) in text" :key="key" color="blue" class="label-tag truncate-tag" :title="`${key}: ${value}`">
-                  {{ key }}: {{ value }}
-                </a-tag>
+            
+            <template slot="labels" slot-scope="text, record">
+              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+                <template v-if="!isLabelsExpanded(record)">
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    v-if="Object.keys(record.objectMeta.labels).length > 3" 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
+                  </a-button>
+                </template>
+                <template v-else>
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    收起
+                  </a-button>
+                </template>
               </div>
+              <span v-else class="empty-value">-</span>
             </template>
-            <template #status="{ record }">
-              <a-tag :color="getStatusColor(record)" :title="getStatusText(record)">
-                {{ getStatusText(record) }}
-              </a-tag>
-            </template>
-            <template #creationTime="{ record }">
-              <span class="format-time-cell">
-                {{ formatTime(record.objectMeta?.creationTimestamp) }}
+            
+            <template slot="type" slot-scope="text, record">
+              <span class="type-cell" :title="record.type || 'NodePort'">
+                {{ record.type || 'NodePort' }}
               </span>
             </template>
-            <template #internalEndpoints="{ record }">
-              <!-- 显示内部端点 -->
-              <div v-if="record.internalEndpoint && record.internalEndpoint.ports && record.internalEndpoint.ports.length > 0">
+            
+            <template slot="clusterIP" slot-scope="text, record">
+              <span class="ip-cell" :title="record.clusterIP || '-'">
+                {{ record.clusterIP || '-' }}
+              </span>
+            </template>
+            
+            <template slot="internalEndpoints" slot-scope="text, record">
+              <div v-if="record.internalEndpoint && record.internalEndpoint.ports && record.internalEndpoint.ports.length > 0" class="endpoints-container">
                 <div v-for="(port, index) in record.internalEndpoint.ports" :key="index">
                   <div class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.port} ${port.protocol}`">
-                    {{record.internalEndpoint.host}}:{{port.port}} {{port.protocol}}
+                    {{record.internalEndpoint.host}}:{{port.port}} 
+                    <a-tag :color="getProtocolColor(port.protocol)" class="protocol-tag">
+                      {{port.protocol}}
+                    </a-tag>
                   </div>
                   <div v-if="port.nodePort" class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`">
-                    {{record.internalEndpoint.host}}:{{port.nodePort}} {{port.protocol}}
+                    {{record.internalEndpoint.host}}:{{port.nodePort}} 
+                    <a-tag :color="getProtocolColor(port.protocol)" class="protocol-tag">
+                      {{port.protocol}}
+                    </a-tag>
                   </div>
                 </div>
               </div>
-              <span v-else>-</span>
+              <span v-else class="empty-value">-</span>
             </template>
-            <template #image="{ text }">
-              <span class="long-text-cell" :title="text || '-'">{{ text || '-' }}</span>
+            
+            <template slot="externalEndpoints" slot-scope="text, record">
+              <div v-if="record.externalEndpoints && record.externalEndpoints.length > 0" class="endpoints-container">
+                <div v-for="(endpoint, endpointIndex) in record.externalEndpoints" :key="endpointIndex">
+                  <template v-if="endpoint.ports && endpoint.ports.length > 0">
+                    <div v-for="(port, portIndex) in endpoint.ports" :key="portIndex">
+                      <a v-if="port.port" :href="`http://${endpoint.host}:${port.port}`" target="_blank" rel="noopener noreferrer" class="external-endpoint" :title="`${endpoint.host}:${port.port}`">
+                        {{endpoint.host}}:{{port.port}}
+                        <a-icon type="link" class="external-icon" />
+                      </a>
+                      <a-tag v-if="port.protocol" :color="getProtocolColor(port.protocol)" class="protocol-tag">
+                        {{port.protocol}}
+                      </a-tag>
+                      <a v-if="!port.port && port.nodePort" :href="`http://${endpoint.host}:${port.nodePort}`" target="_blank" rel="noopener noreferrer" class="external-endpoint" :title="`${endpoint.host}:${port.nodePort}`">
+                        {{endpoint.host}}:{{port.nodePort}}
+                        <a-icon type="link" class="external-icon" />
+                      </a>
+                      <a-tag v-if="!port.port && port.nodePort && port.protocol" :color="getProtocolColor(port.protocol)" class="protocol-tag">
+                        {{port.protocol}}
+                      </a-tag>
+                    </div>
+                  </template>
+                  <a v-else :href="`http://${endpoint.host}`" target="_blank" rel="noopener noreferrer" class="external-endpoint" :title="endpoint.host">
+                    {{endpoint.host}}
+                    <a-icon type="link" class="external-icon" />
+                  </a>
+                </div>
+              </div>
+              <span v-else class="empty-value">-</span>
+            </template>
+            
+            <template slot="creationTime" slot-scope="text, record">
+              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
+                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              </span>
             </template>
           </a-table>
         </a-spin>
@@ -97,190 +170,59 @@ export default {
       services: [],
       serviceTotalItems: 0,
       loading: false,
+      expandedLabels: {}, // 新增: 存储标签展开状态
       serviceColumns: [
         {
           title: '名称',
-          dataIndex: ['objectMeta', 'name'],
           key: 'name',
-          width: null,
+          dataIndex: ['objectMeta', 'name'],
           className: 'name-column',
-          customRender: (text, record) => {
-            // 绿色状态点和名称一起显示
-            return this.$createElement('div', { class: 'name-cell', style: { display: 'flex', alignItems: 'center' } }, [
-              this.$createElement('span', { 
-                class: ['status-dot', 'status-running']
-              }),
-              this.$createElement('span', { attrs: { title: text || '未知' } }, text || '未知')
-            ]);
-          }
+          scopedSlots: { customRender: 'name' },
+          width: '150px'
         },
         {
           title: '标签',
           key: 'labels',
-          width: null,
           className: 'labels-column',
-          customRender: (text, record) => {
-            if (!record.objectMeta?.labels || Object.keys(record.objectMeta.labels).length === 0) {
-              return this.$createElement('span', { class: 'empty-value' }, '-');
-            }
-            
-            // 使用a-tag组件来模拟原始K8s Dashboard中的mat-chip组件
-            const tags = Object.entries(record.objectMeta.labels).map(([key, value]) => {
-              return this.$createElement('a-tag', { 
-                props: { color: 'blue' },
-                class: 'label-tag',
-                key: key,
-                attrs: { title: `${key}: ${value}` }
-              }, `${key}: ${value}`);
-            });
-            
-            return this.$createElement('div', { class: 'labels-container' }, tags);
-          }
+          scopedSlots: { customRender: 'labels' }
         },
         {
           title: '类型',
           dataIndex: 'type',
           key: 'type',
-          width: null,
-          customRender: (text) => {
-            return this.$createElement('span', { attrs: { title: text || 'NodePort' } }, text || 'NodePort');
-          }
+          className: 'type-column',
+          scopedSlots: { customRender: 'type' },
+          width: '100px'
         },
         {
           title: '集群 IP',
           dataIndex: 'clusterIP',
           key: 'clusterIP',
-          width: null,
-          customRender: (text) => {
-            return this.$createElement('span', { attrs: { title: text || '-' } }, text || '-');
-          }
+          className: 'ip-column',
+          scopedSlots: { customRender: 'clusterIP' },
+          width: '120px'
         },
         {
           title: '内部 Endpoints',
           key: 'internalEndpoints',
-          width: null,
-          customRender: (text, record) => {
-            // 显示内部端点
-            if (!record.internalEndpoint || !record.internalEndpoint.ports || record.internalEndpoint.ports.length === 0) {
-              return this.$createElement('span', { class: 'empty-value' }, '-');
-            }
-            
-            const endpoints = [];
-            
-            // 完全按照Kubernetes Dashboard的方式实现内部端点显示
-            record.internalEndpoint.ports.forEach(port => {
-              // 创建内部端口文本
-              const internalPortText = `${record.internalEndpoint.host}:${port.port} ${port.protocol}`;
-              endpoints.push(this.$createElement('div', { 
-                class: 'internal-endpoint',
-                attrs: { title: internalPortText }
-              }, internalPortText));
-              
-              // 如果存在nodePort，则显示nodePort端口
-              if (port.nodePort) {
-                const nodePortText = `${record.internalEndpoint.host}:${port.nodePort} ${port.protocol}`;
-                endpoints.push(this.$createElement('div', { 
-                  class: 'internal-endpoint',
-                  attrs: { title: nodePortText }
-                }, nodePortText));
-              }
-            });
-            
-            return this.$createElement('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
-          }
+          className: 'endpoints-column',
+          scopedSlots: { customRender: 'internalEndpoints' },
+          width: '240px'
         },
         {
           title: '外部 Endpoints',
           key: 'externalEndpoints',
-          width: null,
-          customRender: (text, record) => {
-            // 检查externalEndpoints是否为空数组
-            const hasExternalEndpoints = record.externalEndpoints && record.externalEndpoints.length > 0;
-            
-            // 如果externalEndpoints不为空，显示外部端点
-            if (hasExternalEndpoints) {
-              const endpoints = [];
-              
-              record.externalEndpoints.forEach(endpoint => {
-                if (endpoint.ports && endpoint.ports.length > 0) {
-                  endpoint.ports.forEach(port => {
-                    if (port.port) {
-                      const portText = `${endpoint.host}:${port.port}`;
-                      endpoints.push(this.$createElement('div', {}, [
-                        this.$createElement('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.port}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer',
-                            title: portText
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          this.$createElement('span', {}, portText),
-                          this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                    
-                    if (!port.port && port.nodePort) {
-                      const nodePortText = `${endpoint.host}:${port.nodePort}`;
-                      endpoints.push(this.$createElement('div', {}, [
-                        this.$createElement('a', { 
-                          attrs: { 
-                            href: `http://${endpoint.host}:${port.nodePort}`,
-                            target: '_blank',
-                            rel: 'noopener noreferrer',
-                            title: nodePortText
-                          },
-                          class: 'external-endpoint'
-                        }, [
-                          this.$createElement('span', {}, nodePortText),
-                          this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                        ])
-                      ]));
-                    }
-                  });
-                } else {
-                  endpoints.push(this.$createElement('div', {}, [
-                    this.$createElement('a', { 
-                      attrs: { 
-                        href: `http://${endpoint.host}`,
-                        target: '_blank',
-                        rel: 'noopener noreferrer',
-                        title: endpoint.host
-                      },
-                      class: 'external-endpoint'
-                    }, [
-                      this.$createElement('span', {}, endpoint.host),
-                      this.$createElement('i', { class: 'anticon anticon-link external-icon' })
-                    ])
-                  ]));
-                }
-              });
-              
-              return this.$createElement('div', { style: { maxWidth: '100%', overflow: 'hidden' } }, endpoints);
-            }
-            
-            return this.$createElement('span', { class: 'empty-value' }, '-');
-          }
+          className: 'endpoints-column',
+          scopedSlots: { customRender: 'externalEndpoints' },
+          width: '240px'
         },
         {
           title: '创建时间',
-          key: 'createTime',
+          key: 'creationTime',
           dataIndex: ['objectMeta', 'creationTimestamp'],
-          width: null,
           className: 'time-column',
-          customRender: (text, record) => {
-            // 获取创建时间
-            const timestamp = record.objectMeta?.creationTimestamp;
-            if (!timestamp) return this.$createElement('span', { class: 'empty-value' }, '-');
-            
-            // 返回包含title属性的span，鼠标悬停时显示精确日期
-            return this.$createElement('span', { 
-              class: 'time-cell',
-              attrs: { title: this.formatTime(timestamp) }
-            }, `${this.getDaysAgo(timestamp)}`);
-          }
+          scopedSlots: { customRender: 'creationTime' },
+          width: '120px'
         }
       ]
     };
@@ -289,6 +231,17 @@ export default {
     this.fetchServices();
   },
   methods: {
+    // 新增：标签展开/折叠逻辑
+    toggleLabelsExpand(record) {
+      if (!record || !record.objectMeta || !record.objectMeta.uid) return;
+      const uid = record.objectMeta.uid;
+      this.$set(this.expandedLabels, uid, !this.expandedLabels[uid]);
+    },
+    // 新增：判断标签是否展开
+    isLabelsExpanded(record) {
+      if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
+      return !!this.expandedLabels[record.objectMeta.uid];
+    },
     async fetchServices() {
       this.loading = true;
       try {
@@ -371,6 +324,22 @@ export default {
     viewDeployment(record) {
       // 实现查看Deployment的逻辑
       this.$message.info(`查看Deployment ${record.name} 的功能正在开发中`);
+    },
+    getProtocolColor(protocol) {
+      if (!protocol) return 'default';
+      switch(protocol.toUpperCase()) {
+        case 'TCP':
+          return 'blue';
+        case 'UDP':
+          return 'green';
+        case 'HTTP':
+        case 'HTTPS':
+          return 'purple';
+        case 'SCTP':
+          return 'orange';
+        default:
+          return 'default';
+      }
     }
   },
   watch: {
@@ -387,41 +356,110 @@ export default {
 <style lang="less" scoped>
 @import './styles/k8s-table-styles.less';
 
-// 只保留特定于ServiceList的样式，其他的都从公共样式文件继承
-.resource-name {
-  display: flex;
-  align-items: center;
-
-  .resource-icon {
-    margin-right: 8px;
-    
-    .k8s-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
-      background-color: #1890ff;
-      color: white;
-      font-size: 12px;
-      font-weight: bold;
-    }
-  }
-
-  a {
-    color: #1890ff;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+  
+  &.status-running {
+    background-color: #52c41a;
   }
 }
 
-.label-container {
+.pod-name {
+  cursor: pointer;
+  word-break: break-word !important;
+  max-width: 100%;
+  display: inline-block;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+
+  &:hover {
+    color: #1890ff;
+    text-decoration: underline;
+  }
+}
+
+.name-cell {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100%;
+  line-height: 1.5;
+  display: block !important;
+  overflow: visible !important;
+  padding: 0;
+  white-space: normal !important;
+  text-overflow: clip !important;
+}
+
+.type-cell {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.ip-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.labels-container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  
+  .label-tag {
+    margin-right: 0;
+  }
+}
+
+.endpoints-container {
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.internal-endpoint, .external-endpoint {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: 100%;
+  padding: 2px 0;
+  display: block;
+  line-height: 1.5;
+}
+
+.external-endpoint {
+  color: #1890ff;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+  
+  .external-icon {
+    margin-left: 4px;
+    font-size: 12px;
+  }
+}
+
+.protocol-tag {
+  margin-left: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  height: 20px;
+  vertical-align: middle;
+}
+
+/* 覆盖冲突样式 */
+:deep(.ant-table-tbody > tr > td) {
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 </style> 
