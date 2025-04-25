@@ -51,7 +51,7 @@
 // import API from '@/api';
 
 export default {
-  name: 'ConfigMapList',
+  name: 'ConfigMapDashboard',
   props: {
     clusterId: {
       type: Number,

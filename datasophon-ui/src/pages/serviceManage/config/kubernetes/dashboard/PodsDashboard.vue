@@ -122,7 +122,7 @@ import dayjs from 'dayjs'
 import { Transfer, Tag, Modal } from 'ant-design-vue'
 
 export default {
-  name: 'PodList',
+  name: 'PodsDashboard',
   components: {
     // IconAppsFilled,
     // IconContainer

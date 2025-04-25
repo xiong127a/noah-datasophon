@@ -37,7 +37,7 @@
       <!-- 右侧内容区域 -->
       <div class="content-area">
         <!-- ConfigMap列表 -->
-        <config-map-list
+        <config-map-dashboard
           v-if="activeResource === 'configmap'"
           :clusterId="clusterId"
           :selectedNamespace="selectedNamespace"
@@ -55,14 +55,14 @@
         <!-- 这里将添加其他资源组件 -->
         
         <!-- Service列表 -->
-        <service-list 
+        <services-dashboard 
           v-if="activeResource === 'service'"
           :clusterId="clusterId"
           :selectedNamespace="selectedNamespace"
         />
 
         <!-- Pod列表 -->
-        <pod-list
+        <pods-dashboard
           v-if="activeResource === 'pods'" 
           :clusterId="clusterId"
           :selectedNamespace="selectedNamespace"
@@ -98,11 +98,6 @@
 
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
-
-        <component :is="activeResource + 'Dashboard'" 
-                   :cluster-id="clusterId"
-                   :selected-namespace="selectedNamespace"
-                   v-if="activeResource" />
       </div>
     </div>
   </div>
@@ -110,7 +105,6 @@
 
 <script>
 import { defineComponent, ref, reactive } from 'vue'
-import DeploymentView from './DeploymentView.vue'
 import dayjs from 'dayjs'
 // 移除对已删除api.js的导入
 // import API from '@/api';
@@ -129,8 +123,8 @@ import ServicesDashboard from './ServicesDashboard.vue'
 export default defineComponent({
   name: 'KubernetesDashboard',
   components: {
-    DeploymentView,
     K8sSidebarMenu,
+    ConfigMapDashboard,
     DeploymentDashboard,
     ReplicaSetsDashboard,
     IngressClassesDashboard,

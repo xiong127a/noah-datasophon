@@ -80,7 +80,7 @@
 // import API from '@/api';
 
 export default {
-  name: 'ServiceList',
+  name: 'ServicesDashboard',
   props: {
     clusterId: {
       type: Number,

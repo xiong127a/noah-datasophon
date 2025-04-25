@@ -1,13 +1,5 @@
 <template>
   <div class="resource-list">
-    <!-- 顶部图表区域 (暂时隐藏) -->
-    <!--
-    <k8s-metrics-charts 
-      :metrics-data="metricsData"
-      @update-charts="updateCharts"
-    />
-    -->
-
     <!-- Deployments列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
@@ -105,28 +97,13 @@
         </a-spin>
       </div>
     </div>
-
-    <deployment-view
-        v-if="deploymentViewVisible"
-        :namespace="currentDeployment.namespace"
-        :deploymentName="currentDeployment.name"
-        :visible="deploymentViewVisible"
-        @update:visible="deploymentViewVisible = $event"
-    />
   </div>
 </template>
 
 <script>
-// import API from '@/api';
-// import K8sMetricsCharts from './K8sMetricsCharts.vue';
-import DeploymentView from './DeploymentView.vue';
-
 export default {
   name: 'DeploymentDashboard',
   components: {
-    // Remove unused component registration
-    // K8sMetricsCharts,
-    DeploymentView
   },
   props: {
     clusterId: {
@@ -146,11 +123,6 @@ export default {
     return {
       deployments: [],
       loading: false,
-      deploymentViewVisible: false,
-      currentDeployment: {
-        namespace: '',
-        name: ''
-      },
       expandedLabels: {},
       deploymentColumns: [
         {
@@ -265,18 +237,6 @@ export default {
       } finally {
         this.loading = false;
       }
-    },
-    handleViewDeployment(record) {
-      if (!record || !record.objectMeta) {
-        this.$message.warning('部署信息不完整，无法查看详情');
-        return;
-      }
-
-      this.currentDeployment = {
-        namespace: record.objectMeta.namespace || '',
-        name: record.objectMeta.name || ''
-      }
-      this.deploymentViewVisible = true
     },
     handleEditDeployment(record) {
       // TODO: 实现编辑Deployment的逻辑
