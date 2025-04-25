@@ -19,9 +19,10 @@
             :rowKey="rowKey"
             :pagination="false"
             class="k8s-table"
-            :scroll="{x: true}"
             :table-layout="'auto'"
             :bordered="false"
+            :zebra-stripes="false"
+            size="middle"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
@@ -49,48 +50,41 @@
             <template slot="labels" slot-scope="text, record">
               <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
-                  <div class="labels-row">
-                    <a-tag 
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                      :key="idx" 
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
-                    >
-                      {{ entry[0] }}: {{ entry[1] }}
-                    </a-tag>
-                  </div>
-                  <div class="labels-more" v-if="Object.keys(record.objectMeta.labels).length > 3">
-                    <a-button 
-                      type="link" 
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
-                    >
-                      +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
-                    </a-button>
-                  </div>
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    v-if="Object.keys(record.objectMeta.labels).length > 3"
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
+                  </a-button>
                 </template>
                 <template v-else>
-                  <div class="labels-row">
-                    <a-tag 
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                      :key="idx" 
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
-                    >
-                      {{ entry[0] }}: {{ entry[1] }}
-                    </a-tag>
-                  </div>
-                  <div class="labels-more">
-                    <a-button 
-                      type="link" 
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
-                    >
-                      收起
-                    </a-button>
-                  </div>
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
+                  >
+                    {{ entry[0] }}: {{ entry[1] }}
+                  </a-tag>
+                  <a-button 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
+                  >
+                    收起
+                  </a-button>
                 </template>
               </div>
               <span v-else class="empty-value">-</span>
@@ -155,6 +149,7 @@ export default {
           key: 'name',
           className: 'name-column',
           scopedSlots: { customRender: 'name' },
+          width: '200px'
         },
         {
           title: '镜像',
@@ -162,6 +157,7 @@ export default {
           key: 'image',
           className: 'image-column',
           scopedSlots: { customRender: 'image' },
+          width: '200px'
         },
         {
           title: '标签',
@@ -174,12 +170,14 @@ export default {
           title: '节点',
           dataIndex: 'nodeName',
           key: 'node',
+          className: 'node-column',
         },
         {
           title: '重启',
           dataIndex: 'restartCount',
           key: 'restarts',
           width: '80px',
+          className: 'restart-column',
         },
         {
           title: 'CPU 使用率 (cores)',
@@ -434,25 +432,8 @@ export default {
 // 标签容器样式
 .labels-container {
   display: flex;
-  flex-direction: column;
-  width: 100%;
-  
-  .labels-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 4px;
-  }
-  
-  .labels-more {
-    display: flex;
-    justify-content: flex-start;
-    
-    .ant-btn {
-      height: 22px;
-      padding: 0 4px;
-    }
-  }
+  flex-wrap: wrap;
+  gap: 4px;
   
   .label-tag {
     max-width: 100%;
@@ -483,5 +464,23 @@ export default {
   font-weight: 500;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   letter-spacing: 0.2px;
+}
+
+/* 覆盖KubernetesDashboard.vue中的样式 */
+:deep(.ant-table-tbody > tr > td) {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* 节点列不换行 */
+:deep(.ant-table-tbody > tr > td.node-column) {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 重启列居中 */
+:deep(.ant-table-tbody > tr > td.restart-column) {
+  text-align: center !important;
 }
 </style>
