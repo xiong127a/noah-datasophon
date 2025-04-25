@@ -727,16 +727,81 @@ public class K8sDashboardServiceImpl implements K8sDashboardService {
     @Override
     public Result getPersistentVolumeClaims(Integer clusterId, String namespace) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 获取PersistentVolumeClaims
+            io.fabric8.kubernetes.api.model.PersistentVolumeClaimList pvcList;
+            if (namespace != null && !namespace.isEmpty()) {
+                pvcList = client.persistentVolumeClaims().inNamespace(namespace).list();
+            } else {
+                pvcList = client.persistentVolumeClaims().inAnyNamespace().list();
             }
 
-            // TODO: 实现获取PersistentVolumeClaims逻辑
-            List<Object> persistentVolumeClaims = new ArrayList<>();
+            // 转换为前端需要的数据结构
+            List<Map<String, Object>> items = pvcList.getItems().stream()
+                    .map(pvc -> {
+                        Map<String, Object> item = new HashMap<>();
+                        Map<String, Object> objectMeta = new HashMap<>();
+                        Map<String, Object> typeMeta = new HashMap<>();
+                        Map<String, Object> capacity = new HashMap<>();
 
-            return Result.success().put(Constants.DATA, persistentVolumeClaims);
+                        // 基本信息
+                        if (pvc.getMetadata() != null) {
+                            objectMeta.put("name", pvc.getMetadata().getName());
+                            objectMeta.put("namespace", pvc.getMetadata().getNamespace());
+                            objectMeta.put("labels", pvc.getMetadata().getLabels());
+                            objectMeta.put("annotations", pvc.getMetadata().getAnnotations());
+                            objectMeta.put("creationTimestamp", pvc.getMetadata().getCreationTimestamp());
+                            objectMeta.put("uid", pvc.getMetadata().getUid());
+                        }
+                        item.put("objectMeta", objectMeta);
+
+                        // 类型信息
+                        typeMeta.put("kind", "persistentvolumeclaim");
+                        item.put("typeMeta", typeMeta);
+
+                        // 状态
+                        if (pvc.getStatus() != null) {
+                            item.put("status", pvc.getStatus().getPhase());
+                        }
+
+                        // Volume名称
+                        if (pvc.getSpec() != null && pvc.getSpec().getVolumeName() != null) {
+                            item.put("volume", pvc.getSpec().getVolumeName());
+                        }
+
+                        // 容量
+                        if (pvc.getStatus() != null && pvc.getStatus().getCapacity() != null) {
+                            capacity.put("storage", pvc.getStatus().getCapacity().get("storage").toString());
+                            item.put("capacity", capacity);
+                        }
+
+                        // 访问模式
+                        if (pvc.getSpec() != null && pvc.getSpec().getAccessModes() != null) {
+                            item.put("accessModes", pvc.getSpec().getAccessModes());
+                        } else {
+                            item.put("accessModes", new ArrayList<>());
+                        }
+
+                        // 存储类
+                        if (pvc.getSpec() != null && pvc.getSpec().getStorageClassName() != null) {
+                            item.put("storageClass", pvc.getSpec().getStorageClassName());
+                        }
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            // 构建最终结果
+            Map<String, Object> result = new HashMap<>();
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            result.put("listMeta", listMeta);
+            result.put("items", items);
+            result.put("errors", new ArrayList<>());
+
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取PersistentVolumeClaims列表出错", e);
             return Result.error("获取PersistentVolumeClaims列表出错: " + e.getMessage());

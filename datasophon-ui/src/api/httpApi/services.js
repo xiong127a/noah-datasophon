@@ -65,6 +65,7 @@ export default {
   getK8sIngressClasses: path + '/api/k8s/dashboard/ingressclasses', // 获取IngressClass列表
   getK8sSecrets: path + '/api/k8s/dashboard/secrets', // 获取Secrets列表
   getK8sPersistentVolumes: path + '/api/k8s/dashboard/persistentvolumes', // 获取PersistentVolumes列表
+  getK8sPersistentVolumeClaims: path + '/api/k8s/dashboard/pvcs', // 获取PersistentVolumeClaims列表
   getK8sStorageClasses: path + '/api/k8s/dashboard/storageclasses', // 获取StorageClasses列表
   
   getK8sConfigMaps: path + '/api/k8s/dashboard/configmaps', // 获取ConfigMap列表

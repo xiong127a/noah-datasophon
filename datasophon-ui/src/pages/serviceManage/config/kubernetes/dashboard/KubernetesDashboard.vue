@@ -89,8 +89,20 @@
           :clusterId="clusterId"
         />
 
+        <!-- PersistentVolumeClaims列表 -->
+        <persistent-volume-claims-dashboard
+          v-if="activeResource === 'pvc'"
+          :clusterId="clusterId"
+          :selectedNamespace="selectedNamespace"
+        />
+
         <!-- 其他资源列表保持不变... -->
         <!-- ... existing resources ... -->
+
+        <component :is="activeResource + 'Dashboard'" 
+                   :cluster-id="clusterId"
+                   :selected-namespace="selectedNamespace"
+                   v-if="activeResource" />
       </div>
     </div>
   </div>
@@ -105,26 +117,27 @@ import dayjs from 'dayjs'
 
 // 导入拆分的组件
 import K8sSidebarMenu from './K8sSidebarMenu.vue';
-import ConfigMapList from './ConfigMapList.vue';
+import ConfigMapDashboard from './ConfigMapDashboard.vue';
 import DeploymentDashboard from './DeploymentDashboard.vue';
-import ServiceList from './ServiceList.vue';
-import PodList from './PodList.vue';
 import ReplicaSetsDashboard from './ReplicaSetsDashboard.vue';
 import IngressClassesDashboard from './IngressClassesDashboard.vue';
 import StorageClassesDashboard from './StorageClassesDashboard.vue';
+import PersistentVolumeClaimsDashboard from './PersistentVolumeClaimsDashboard.vue';
+import PodsDashboard from './PodsDashboard.vue'
+import ServicesDashboard from './ServicesDashboard.vue'
 
 export default defineComponent({
   name: 'KubernetesDashboard',
   components: {
     DeploymentView,
     K8sSidebarMenu,
-    ConfigMapList,
     DeploymentDashboard,
-    ServiceList,
-    PodList,
     ReplicaSetsDashboard,
     IngressClassesDashboard,
-    StorageClassesDashboard
+    StorageClassesDashboard,
+    PersistentVolumeClaimsDashboard,
+    PodsDashboard,
+    ServicesDashboard,
   },
   props: {
     serviceId: {
