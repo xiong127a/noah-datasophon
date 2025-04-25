@@ -27,16 +27,24 @@
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
                 <StatusIndicator :resource="record" resourceType="deployment" />
-                <span class="name-text" :title="record?.objectMeta?.name || '未知'">
-                  {{ record?.objectMeta?.name || '未知' }}
-                </span>
+                <div class="name-cell">
+                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
+                    {{ record?.objectMeta?.name || '未知' }}
+                  </span>
+                </div>
               </div>
             </template>
 
             <template slot="image" slot-scope="text, record">
-              <span class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
-                {{ record?.containerImages ? record.containerImages.join(', ') : '-' }}
-              </span>
+              <div class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
+                <template v-if="record?.containerImages && record.containerImages.length">
+                  <span class="container-image">
+                    {{ record.containerImages[0] }}
+                  </span>
+                  <span v-if="record.containerImages.length > 1">+{{ record.containerImages.length - 1 }}</span>
+                </template>
+                <span v-else class="empty-value">-</span>
+              </div>
             </template>
 
             <template slot="labels" slot-scope="text, record">
@@ -132,7 +140,8 @@ export default {
           title: '名称',
           key: 'name',
           className: 'name-column',
-          scopedSlots: { customRender: 'name' }
+          scopedSlots: { customRender: 'name' },
+          width: '200px'
         },
         {
           title: '镜像',
@@ -140,7 +149,7 @@ export default {
           key: 'image',
           className: 'image-column',
           scopedSlots: { customRender: 'image' },
-          ellipsis: true
+          width: '200px'
         },
         {
           title: '标签',
@@ -295,6 +304,51 @@ export default {
   }
 }
 
+.pod-name {
+  cursor: pointer;
+  word-break: break-word !important;
+  max-width: 100%;
+  display: inline-block;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+
+  &:hover {
+    color: #1890ff;
+    text-decoration: underline;
+  }
+}
+
+.container-image {
+  word-break: break-word !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.name-cell {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 100%;
+  line-height: 1.5;
+  display: block !important;
+  overflow: visible !important;
+  padding: 0;
+  white-space: normal !important;
+  text-overflow: clip !important;
+}
+
+.image-cell {
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.5;
+  display: block !important;
+  overflow: visible !important;
+  padding: 0;
+  white-space: normal !important;
+  text-overflow: clip !important;
+}
+
 .labels-container {
   display: flex;
   flex-wrap: wrap;
@@ -303,5 +357,11 @@ export default {
   .label-tag {
     margin-right: 0;
   }
+}
+
+/* 覆盖KubernetesDashboard.vue中的样式 */
+:deep(.ant-table-tbody > tr > td) {
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 </style> 
