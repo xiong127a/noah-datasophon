@@ -1,12 +1,14 @@
 package com.datasophon.api.utils;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ObjUtil;
 import lombok.experimental.UtilityClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -28,8 +30,8 @@ public class TemplatePathUtils {
      * @return 模板文件完整路径
      */
     public static String getTemplateFilePath(String templateName) {
-        File file = FileUtil.file(PATH + templateName);
-        if (!FileUtil.exist(file)) {
+        File file = Arrays.stream(FileUtil.ls(PATH)).filter(x -> x.isFile() && x.getName().equals(templateName)).findFirst().orElse(null);
+        if (ObjUtil.isNull(file) && !FileUtil.exist(file)) {
             logger.error("模板文件不存在: {}", file.getAbsolutePath());
             return null;
         }
