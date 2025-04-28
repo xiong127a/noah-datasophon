@@ -74,7 +74,7 @@ public class WorkerFreemarkerUtils {
                 if (templateContent != null) {
                     // 使用字符串模板生成配置，使用直接模式，避免prepareTemplateData处理
                     FreemarkerUtils.generateConfigFileFromString(generators, configs, templateContent, templateName,
-                            decompressPackageName, true);
+                            decompressPackageName);
                     return;
                 } else {
                     // 获取失败时直接抛出异常，不再回退到本地模板

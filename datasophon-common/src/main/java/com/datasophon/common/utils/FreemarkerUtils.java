@@ -191,17 +191,10 @@ public class FreemarkerUtils {
             List<ServiceConfig> configs,
             String templateContent,
             String templateName,
-            String decompressPackageName,
-            boolean directMode) throws IOException, TemplateException {
+            String decompressPackageName) throws IOException, TemplateException {
         if (StringUtils.isBlank(templateContent)) {
             // 如果模板内容为空，使用标准方法
             generateConfigFile(generators, configs, decompressPackageName);
-            return;
-        }
-
-        // 直接模式，跳过prepareTemplateData处理
-        if (directMode) {
-            generateConfigFileDirectly(generators, configs, templateContent, templateName, decompressPackageName);
             return;
         }
 
