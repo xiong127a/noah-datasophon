@@ -24,7 +24,6 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import freemarker.template.TemplateException;
 import lombok.Setter;
 import lombok.experimental.UtilityClass;
 import org.slf4j.Logger;
@@ -53,20 +52,6 @@ public class WorkerFreemarkerUtils {
     private static ActorSystem actorSystem;
 
     /**
-     * 生成配置文件（从Akka获取模板）
-     *
-     * @param generators            配置文件生成器
-     * @param configs               配置项列表
-     * @param decompressPackageName 解压后的包名
-     * @throws IOException IO异常
-     */
-    public static void generateConfigFile(Generators generators,
-            List<ServiceConfig> configs,
-            String decompressPackageName) throws IOException {
-        generateConfigFile(generators, configs, decompressPackageName, null);
-    }
-
-    /**
      * 生成配置文件（从Akka获取模板，支持扩展路径）
      *
      * @param generators            配置文件生成器
@@ -77,8 +62,7 @@ public class WorkerFreemarkerUtils {
      */
     public static void generateConfigFile(Generators generators,
             List<ServiceConfig> configs,
-            String decompressPackageName,
-            String extPath) throws IOException {
+            String decompressPackageName) throws IOException {
 
         // 获取模板名称
         String templateName = FreemarkerUtils.determineTemplateName(generators);
@@ -101,14 +85,6 @@ public class WorkerFreemarkerUtils {
             } catch (Exception e) {
                 logger.error("通过Akka获取模板时发生异常: {}", templateName, e);
                 throw new IOException("通过Akka获取模板时发生异常: " + templateName, e);
-            }
-        } else if (templateName != null) {
-            // 如果ActorSystem未初始化但模板名称有效，使用本地模板并应用直接模式
-            try {
-                FreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName, extPath, true);
-                return;
-            } catch (TemplateException e) {
-                throw new IOException("使用本地模板时发生异常: " + e.getMessage(), e);
             }
         }
 
