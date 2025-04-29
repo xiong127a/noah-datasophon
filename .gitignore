@@ -52,3 +52,12 @@ node/
 /datasophon-worker/src/main/resources/rebel.xml
 /commit-prompt.txt
 /dashboard/
+/hot-seconds.xml
+/datasophon-api/src/main/resources/rebel-remote.xml
+/datasophon-common/src/main/resources/rebel-remote.xml
+/datasophon-domain/src/main/resources/rebel-remote.xml
+/datasophon-infrastructure/src/main/resources/rebel-remote.xml
+/datasophon-k8s/src/main/resources/rebel-remote.xml
+/datasophon-service/src/main/resources/rebel-remote.xml
+/datasophon-ui/src/main/resources/rebel-remote.xml
+/datasophon-worker/src/main/resources/rebel-remote.xml

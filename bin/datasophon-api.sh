@@ -19,6 +19,8 @@
 # 设置HotSeconds路径，默认为空
 HOT_SECONDS_PATH=""
 HOT_SECONDS_CONF_PATH=""
+# 设置JRebel路径，默认为空
+JREBEL_HOME=""
 
 usage="Usage: start.sh (start|stop|restart) <command> "
 
@@ -102,7 +104,13 @@ if [ "$command" = "api" ]; then
     HOT_SECONDS_OPTS="-XXaltjvm=dcevm -javaagent:$HOT_SECONDS_PATH/HotSecondsServer.jar=hotconf=$HOT_SECONDS_CONF_PATH/hot-seconds-remote.xml"
   fi
   
-  export DDH_OPTS="$HEAP_OPTS $DDH_OPTS $JMX $HOT_SECONDS_OPTS"
+  # 添加JRebel相关参数（如果路径已设置）
+  JREBEL_OPTS=""
+  if [ -n "$JREBEL_HOME" ]; then
+    JREBEL_OPTS="-agentpath:$JREBEL_HOME/lib/libjrebel64.so -Drebel.remoting_plugin=true"
+  fi
+  
+  export DDH_OPTS="$HEAP_OPTS $DDH_OPTS $JMX $HOT_SECONDS_OPTS $JREBEL_OPTS"
 else
   echo "Error: No command named \`$command' was found."
   exit 1
