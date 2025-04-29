@@ -22,7 +22,9 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 
 /**
  * 集群信息表
@@ -34,5 +36,15 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 @Mapper
 public interface ClusterInfoMapper extends BaseMapper<ClusterInfoEntity> {
 
-    ClusterInfoEntity getClusterByClusterCode(@Param("clusterCode") String clusterCode);
+    /**
+     * 根据集群代码获取集群信息
+     *
+     * @param clusterCode 集群代码
+     * @return 集群信息实体
+     */
+    default ClusterInfoEntity getClusterByClusterCode(@Param("clusterCode") String clusterCode) {
+        LambdaQueryWrapper<ClusterInfoEntity> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(ClusterInfoEntity::getClusterCode, clusterCode);
+        return selectOne(queryWrapper);
+    }
 }

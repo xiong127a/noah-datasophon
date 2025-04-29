@@ -17,12 +17,16 @@
 
 package com.datasophon.dao.mapper;
 
+import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.util.Map;
+
+import com.github.yulichang.base.MPJBaseMapper;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 /**
  * 集群服务表
@@ -32,8 +36,29 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-04-24 16:25:17
  */
 @Mapper
-public interface ClusterServiceInstanceMapper extends BaseMapper<ClusterServiceInstanceEntity> {
+public interface ClusterServiceInstanceMapper extends MPJBaseMapper<ClusterServiceInstanceEntity> {
 
-    String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
-                                                     @Param("serviceName") String serviceName);
+    /**
+     * 根据集群ID和服务名称获取服务配置
+     *
+     * @param clusterId   集群ID
+     * @param serviceName 服务名称
+     * @return 服务配置文件JSON字符串
+     */
+    default String getServiceConfigByClusterIdAndServiceName(@Param("clusterId") Integer clusterId,
+            @Param("serviceName") String serviceName) {
+        MPJLambdaWrapper<ClusterServiceInstanceEntity> wrapper = new MPJLambdaWrapper<ClusterServiceInstanceEntity>()
+                .selectAs(ClusterServiceInstanceConfigEntity::getConfigFileJson, "config_file_json")
+                .leftJoin(ClusterServiceInstanceConfigEntity.class,
+                        ClusterServiceInstanceConfigEntity::getServiceId,
+                        ClusterServiceInstanceEntity::getId)
+                .eq(ClusterServiceInstanceEntity::getClusterId, clusterId)
+                .eq(ClusterServiceInstanceEntity::getServiceName, serviceName)
+                .orderByDesc(ClusterServiceInstanceConfigEntity::getConfigVersion)
+                .last("limit 1");
+
+        Map<String, Object> result = selectJoinMap(wrapper);
+
+        return result != null ? (String) result.get("config_file_json") : null;
+    }
 }

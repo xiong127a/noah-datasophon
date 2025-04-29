@@ -57,7 +57,6 @@ public class WorkerFreemarkerUtils {
      * @param generators            配置文件生成器
      * @param configs               配置项列表
      * @param decompressPackageName 解压后的包名
-     * @param extPath               附加模板目录
      * @throws IOException IO异常
      */
     public static void generateConfigFile(Generators generators,

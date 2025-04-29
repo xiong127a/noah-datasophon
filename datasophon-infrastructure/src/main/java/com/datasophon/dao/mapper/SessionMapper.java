@@ -24,7 +24,9 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 
@@ -34,11 +36,40 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-03-16 11:40:00
  */
 @Mapper
-public interface SessionMapper extends BaseMapper<SessionEntity> {
+public interface SessionMapper extends MPJBaseMapper<SessionEntity> {
 
-    SessionEntity queryByUserIdAndIp(@Param("userId") Integer id, @Param("ip") String ip);
+    /**
+     * 根据用户ID和IP查询会话
+     *
+     * @param id 用户ID
+     * @param ip IP地址
+     * @return 会话信息
+     */
+    default SessionEntity queryByUserIdAndIp(@Param("userId") Integer id, @Param("ip") String ip) {
+        LambdaQueryWrapper<SessionEntity> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(SessionEntity::getUserId, id)
+                .eq(SessionEntity::getIp, ip);
+        return selectOne(queryWrapper);
+    }
 
-    List<SessionEntity> queryByUserId(@Param("userId") Integer id);
+    /**
+     * 根据用户ID查询所有会话
+     *
+     * @param id 用户ID
+     * @return 会话列表
+     */
+    default List<SessionEntity> queryByUserId(@Param("userId") Integer id) {
+        LambdaQueryWrapper<SessionEntity> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(SessionEntity::getUserId, id);
+        return selectList(queryWrapper);
+    }
 
-    void insertSession(SessionEntity session);
+    /**
+     * 插入会话信息
+     *
+     * @param session 会话实体
+     */
+    default void insertSession(SessionEntity session) {
+        insert(session);
+    }
 }

@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.ClusterVariable;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 
@@ -31,6 +31,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-06-14 15:50:36
  */
 @Mapper
-public interface ClusterVariableMapper extends BaseMapper<ClusterVariable> {
+public interface ClusterVariableMapper extends MPJBaseMapper<ClusterVariable> {
 
 }
