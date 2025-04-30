@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentList;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
+import io.fabric8.kubernetes.api.model.ListOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,108 +106,122 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getDeployments(Integer clusterId, String namespace) {
+    public Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
+            Integer pageSize) {
+        // 目前serviceId暂时不使用，留作后期扩展使用
+        logger.info("获取Deployments列表, clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                clusterId, serviceId, namespace, pageNum, pageSize);
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取Deployments
-            DeploymentList deploymentList;
+            // 获取总记录数（需要单独查询）
+            int totalCount;
             if (namespace != null && !namespace.isEmpty()) {
-                deploymentList = client.apps().deployments().inNamespace(namespace).list();
+                totalCount = client.apps().deployments().inNamespace(namespace).list().getItems().size();
             } else {
-                deploymentList = client.apps().deployments().inAnyNamespace().list();
+                totalCount = client.apps().deployments().inAnyNamespace().list().getItems().size();
             }
 
+            // 创建ListOptions用于分页
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            List<io.fabric8.kubernetes.api.model.apps.Deployment> pageItems;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                DeploymentList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.isEmpty()) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().deployments().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().deployments().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的Deployments
+            DeploymentList deploymentList;
+            listOptions.setContinue(continueToken);
+
+            if (namespace != null && !namespace.isEmpty()) {
+                deploymentList = client.apps().deployments().inNamespace(namespace).list(listOptions);
+            } else {
+                deploymentList = client.apps().deployments().inAnyNamespace().list(listOptions);
+            }
+
+            pageItems = deploymentList.getItems();
+
             // 转换为与原生Kubernetes Dashboard兼容的数据结构
-            List<Map<String, Object>> deployments = deploymentList.getItems().stream()
+            List<Map<String, Object>> deployments = pageItems.stream()
                     .map(deployment -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
                         Map<String, Object> pods = new HashMap<>();
 
-                        // 部署基本信息
-                        if (deployment.getMetadata() != null) {
-                            objectMeta.put("name", deployment.getMetadata().getName());
-                            objectMeta.put("namespace", deployment.getMetadata().getNamespace());
-                            objectMeta.put("labels", deployment.getMetadata().getLabels());
-                            objectMeta.put("annotations", deployment.getMetadata().getAnnotations());
-                            objectMeta.put("creationTimestamp", deployment.getMetadata().getCreationTimestamp());
-                            objectMeta.put("uid", deployment.getMetadata().getUid());
-                        }
+                        // 设置元数据
+                        objectMeta.put("name", deployment.getMetadata().getName());
+                        objectMeta.put("namespace", deployment.getMetadata().getNamespace());
+                        objectMeta.put("uid", deployment.getMetadata().getUid());
+                        objectMeta.put("creationTimestamp", deployment.getMetadata().getCreationTimestamp());
+                        objectMeta.put("labels", deployment.getMetadata().getLabels());
                         item.put("objectMeta", objectMeta);
 
-                        // 提取容器镜像
+                        // 设置pod信息
+                        Integer desired = deployment.getSpec().getReplicas();
+                        Integer running = deployment.getStatus().getAvailableReplicas() != null
+                                ? deployment.getStatus().getAvailableReplicas()
+                                : 0; // 简化处理，将available视为running
+
+                        pods.put("desired", desired);
+                        pods.put("running", running);
+                        item.put("pods", pods);
+
+                        // 获取容器镜像列表
                         List<String> containerImages = new ArrayList<>();
-                        if (deployment.getSpec() != null && deployment.getSpec().getTemplate() != null
-                                && deployment.getSpec().getTemplate().getSpec() != null
-                                && deployment.getSpec().getTemplate().getSpec().getContainers() != null) {
+                        if (deployment.getSpec() != null &&
+                                deployment.getSpec().getTemplate() != null &&
+                                deployment.getSpec().getTemplate().getSpec() != null &&
+                                deployment.getSpec().getTemplate().getSpec().getContainers() != null) {
+
                             deployment.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
-                                if (container.getImage() != null) {
-                                    containerImages.add(container.getImage());
-                                }
+                                containerImages.add(container.getImage());
                             });
                         }
                         item.put("containerImages", containerImages);
-
-                        // Pod状态
-                        if (deployment.getStatus() != null) {
-                            pods.put("desired", deployment.getSpec() != null ? deployment.getSpec().getReplicas() : 0);
-                            pods.put("running",
-                                    deployment.getStatus().getAvailableReplicas() != null
-                                            ? deployment.getStatus().getAvailableReplicas()
-                                            : 0);
-                            pods.put("failed", 0); // 默认值，实际应计算
-                            pods.put("pending",
-                                    deployment.getStatus().getUnavailableReplicas() != null
-                                            ? deployment.getStatus().getUnavailableReplicas()
-                                            : 0);
-                        } else {
-                            pods.put("desired", 0);
-                            pods.put("running", 0);
-                            pods.put("failed", 0);
-                            pods.put("pending", 0);
-                        }
-                        item.put("pods", pods);
-
-                        // 添加其他必要信息
-                        Map<String, String> typeMeta = new HashMap<>();
-                        typeMeta.put("kind", "Deployment");
-                        item.put("typeMeta", typeMeta);
 
                         return item;
                     })
                     .collect(Collectors.toList());
 
-            // 构建状态统计信息
-            Map<String, Integer> status = new HashMap<>();
-            status.put("running", (int) deployments.stream().filter(d -> {
-                Map<String, Object> pods = (Map<String, Object>) d.get("pods");
-                return pods != null && (int) pods.get("running") > 0;
-            }).count());
-            status.put("failed", 0);
-            status.put("pending", (int) deployments.stream().filter(d -> {
-                Map<String, Object> pods = (Map<String, Object>) d.get("pods");
-                return pods != null && (int) pods.get("pending") > 0;
-            }).count());
-
-            // 构建最终结果
+            // 创建结果对象
             Map<String, Object> result = new HashMap<>();
-            result.put("deployments", deployments);
-            result.put("status", status);
+            result.put("deployments", deployments); // Deployments列表
+            result.put("total", totalCount); // 总数
+            // 计算总页数
+            int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+            result.put("totalPages", totalPages); // 总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Deployments列表出错", e);
             return Result.error("获取Deployments列表出错: " + e.getMessage());
         }
-    }
-
-    @Override
-    public Result getDeployments(Integer clusterId, Integer serviceId, String namespace) {
-        // 目前serviceId暂时不使用，留作后期扩展使用
-        logger.info("获取Deployments列表, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
-        return getDeployments(clusterId, namespace);
     }
 
     private KubernetesClient getKubernetesClient(Integer clusterId) {
@@ -2128,7 +2143,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
     /**
      * 获取Pods列表详细信息（包含指标、状态统计等）
-     * 
+     *
      * @param clusterId 集群ID
      * @param namespace 命名空间（null或"all"表示所有命名空间）
      * @return 包含Pod列表、状态统计等的详细信息

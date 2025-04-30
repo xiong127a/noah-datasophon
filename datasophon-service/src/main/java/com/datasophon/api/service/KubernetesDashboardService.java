@@ -34,24 +34,16 @@ public interface KubernetesDashboardService {
     Result getNamespaces(Integer clusterId);
 
     /**
-     * 获取Deployments列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return Deployments列表
-     */
-    Result getDeployments(Integer clusterId, String namespace);
-
-    /**
-     * 获取Deployments列表（带服务ID）
+     * 获取Deployments列表（带服务ID，分页）
      * 
      * @param clusterId 集群ID
      * @param serviceId 服务ID
      * @param namespace 命名空间
-     * @return Deployments列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Deployments列表（包含分页信息）
      */
-    Result getDeployments(Integer clusterId, Integer serviceId, String namespace);
-
+    Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Pods列表详细信息（包含指标、状态统计等）

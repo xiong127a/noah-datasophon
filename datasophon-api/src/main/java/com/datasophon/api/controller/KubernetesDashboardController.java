@@ -54,12 +54,15 @@ public class KubernetesDashboardController {
     public Result getDeployments(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        if (serviceId != null) {
-            return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace);
-        } else {
-            return kubernetesDashboardService.getDeployments(clusterId, namespace);
-        }
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        log.info("获取Deployments列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                clusterId, serviceId, namespace, pageNum, pageSize);
+
+        return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace, pageNum, pageSize);
+
     }
 
     /**
@@ -67,7 +70,7 @@ public class KubernetesDashboardController {
      */
     @GetMapping("/pods")
     public Result getPodsInfo(@RequestParam Integer clusterId,
-            @RequestParam(required = false) String namespace) {
+                              @RequestParam(required = false) String namespace) {
         try {
             log.info("获取Pods列表请求：clusterId={}, namespace={}", clusterId, namespace);
             return kubernetesDashboardService.getPodsInfo(clusterId, namespace);
@@ -248,9 +251,9 @@ public class KubernetesDashboardController {
      */
     @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
     public Result getResourceEvents(@RequestParam Integer clusterId,
-            @RequestParam String namespace,
-            @RequestParam String kind,
-            @RequestParam String name) {
+                                    @RequestParam String namespace,
+                                    @RequestParam String kind,
+                                    @RequestParam String name) {
         return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
     }
 
