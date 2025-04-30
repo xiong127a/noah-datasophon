@@ -271,15 +271,16 @@ public abstract class ServiceHandlerAbstract {
 
             // 根据模板类型确定文件名
             String fileName;
+            String serviceNameLowerCase = serviceName.toLowerCase();
             switch (templateType) {
                 case "java":
-                    fileName = String.format("%sExample.ftl", StrUtil.toCamelCase(serviceName));
+                    fileName = String.format("%s_Example.ftl", serviceNameLowerCase);
                     break;
                 case "python":
-                    fileName = String.format("%s_example.ftl", serviceName.toLowerCase());
+                    fileName = String.format("%s_example.ftl", serviceNameLowerCase);
                     break;
                 case "shell":
-                    fileName = String.format("%s_commands.ftl", serviceName.toLowerCase());
+                    fileName = String.format("%s_commands.ftl", serviceNameLowerCase);
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的模板类型: " + templateType);
