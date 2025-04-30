@@ -51,15 +51,6 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-worker/src/main/resources/templates</directory>
-            <includes>
-                <include>**/*.ftl</include>
-                <include>**/*.yml</include>
-            </includes>
-            <outputDirectory>conf/templates</outputDirectory>
-            <lineEnding>unix</lineEnding>
-        </fileSet>
-        <fileSet>
             <directory>${basedir}/../datasophon-common/src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>

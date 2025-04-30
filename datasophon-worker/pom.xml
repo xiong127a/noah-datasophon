@@ -130,9 +130,9 @@
                     </archive>
                     <excludes>
                         <exclude>*.properties</exclude>
-                        <exclude>*.xml</exclude>
+                        <exclude>logback.xml</exclude>
+                        <exclude>assembly.xml</exclude>
                         <exclude>*.sh</exclude>
-                        <exclude>templates/**</exclude>
                         <exclude>script/**</exclude>
                         <exclude>jmx/**</exclude>
                         <exclude>node/**</exclude>
