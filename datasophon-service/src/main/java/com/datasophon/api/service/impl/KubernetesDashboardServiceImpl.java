@@ -23,11 +23,11 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.k8s.DeploymentInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import io.fabric8.kubernetes.api.model.ListOptions;
 import io.fabric8.kubernetes.api.model.apps.DeploymentList;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
-import io.fabric8.kubernetes.api.model.ListOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +36,6 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -2141,17 +2140,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
     }
 
-    /**
-     * 获取Pods列表详细信息（包含指标、状态统计等）
-     *
-     * @param clusterId 集群ID
-     * @param namespace 命名空间（null或"all"表示所有命名空间）
-     * @return 包含Pod列表、状态统计等的详细信息
-     */
     @Override
-    public Result getPodsInfo(Integer clusterId, String namespace) {
+    public Result getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize) {
         try {
-            logger.info("获取Pods详细信息请求：clusterId={}, namespace={}", clusterId, namespace);
+            logger.info("获取Pods详细信息请求：clusterId={}, namespace={}, pageNum={}, pageSize={}",
+                    clusterId, namespace, pageNum, pageSize);
 
             // 1. 获取Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -2159,15 +2152,55 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("无法获取Kubernetes客户端");
             }
 
-            // 2. 查询Pod列表
-            io.fabric8.kubernetes.api.model.PodList podList;
+            // 2. 创建ListOptions并设置分页参数
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 获取总记录数（需要单独查询）
+            long totalPods = 0;
             if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                podList = client.pods().inNamespace(namespace).list();
+                totalPods = client.pods().inNamespace(namespace).list().getItems().size();
             } else {
-                podList = client.pods().inAnyNamespace().list();
+                totalPods = client.pods().inAnyNamespace().list().getItems().size();
             }
 
-            // 3. 获取Pod指标
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            io.fabric8.kubernetes.api.model.PodList podList;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                io.fabric8.kubernetes.api.model.PodList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.pods().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.pods().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的Pods
+            listOptions.setContinue(continueToken);
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                podList = client.pods().inNamespace(namespace).list(listOptions);
+            } else {
+                podList = client.pods().inAnyNamespace().list(listOptions);
+            }
+
+            // 4. 获取Pod指标
             io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList podMetricsList;
             if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
                 podMetricsList = client.top().pods().inNamespace(namespace).metrics();
@@ -2184,7 +2217,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 }
             }
 
-            // 4. 处理数据并构建响应
+            // 5. 处理数据并构建响应
             List<Map<String, Object>> podDetails = new ArrayList<>();
             Map<String, Integer> statusCount = new HashMap<>();
             statusCount.put("running", 0);
@@ -2194,8 +2227,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             statusCount.put("unknown", 0);
             statusCount.put("terminating", 0);
 
-            // 5. 处理Pod列表
+            // 6. 处理Pod列表
             for (io.fabric8.kubernetes.api.model.Pod pod : podList.getItems()) {
+                // 处理单个Pod的逻辑，与原方法相同
+                // ...
+
                 // 提取Pod状态
                 String status = pod.getStatus().getPhase();
 
@@ -2305,28 +2341,34 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 podDetail.put("typeMeta", typeMeta);
                 podDetail.put("status", status);
                 podDetail.put("restartCount", restartCount);
-                podDetail.put("metrics", metricsInfo);
-                podDetail.put("warnings", Collections.emptyList()); // 暂不处理警告
                 podDetail.put("nodeName", pod.getSpec().getNodeName());
+                podDetail.put("metrics", metricsInfo);
                 podDetail.put("containerImages", containerImages);
 
                 podDetails.add(podDetail);
             }
 
-            // 6. 构建并返回响应
-            Map<String, Object> response = new HashMap<>();
-            Map<String, Object> listMeta = new HashMap<>();
-            listMeta.put("totalItems", podDetails.size());
+            // 7. 获取Pod总数（用于计算总页数）
+            // totalPods已经在前面计算过了，这里不需要重复计算
+            // long totalPods = 0;
+            // if (namespace != null && !namespace.isEmpty() &&
+            // !"all".equalsIgnoreCase(namespace)) {
+            // totalPods = client.pods().inNamespace(namespace).list().getItems().size();
+            // } else {
+            // totalPods = client.pods().inAnyNamespace().list().getItems().size();
+            // }
 
-            response.put("listMeta", listMeta);
-            response.put("cumulativeMetrics", null); // 暂不实现累计指标
-            response.put("status", statusCount);
-            response.put("pods", podDetails);
-            response.put("errors", Collections.emptyList()); // 暂无错误
+            // 8. 构建返回结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("pods", podDetails);
+            result.put("status", statusCount);
+            result.put("total", totalPods); // 添加总记录数
+            result.put("totalPages", (int) Math.ceil((double) totalPods / pageSize)); // 添加总页数
 
-            logger.info("获取Pods列表成功，共{}个Pod", podDetails.size());
-            return Result.success().put(Constants.DATA, response);
+            // 9. 关闭客户端
+            client.close();
 
+            return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             logger.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());

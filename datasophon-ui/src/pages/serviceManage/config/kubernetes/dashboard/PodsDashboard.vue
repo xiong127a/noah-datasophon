@@ -17,12 +17,22 @@
             :columns="columns"
             :dataSource="pods"
             :rowKey="rowKey"
-            :pagination="false"
+            :pagination="{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['5', '10', '20', '50'],
+              hideOnSinglePage: totalPages <= 1,
+              showTotal: total => `共 ${total} 条记录`
+            }"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             :zebra-stripes="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
@@ -133,6 +143,10 @@ export default {
       type: Number,
       required: true
     },
+    serviceId: {
+      type: [Number, String],
+      required: true
+    },
     selectedNamespace: {
       type: String,
       default: 'datasophon'
@@ -142,6 +156,17 @@ export default {
     return {
       loading: false,
       pods: [],
+      expandedLabels: {}, // 存储每个Pod的标签展开状态
+      totalPages: 1, // 添加总页数字段
+      // 分页配置
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50']
+      },
       columns: [
         {
           title: '名称',
@@ -199,7 +224,6 @@ export default {
           scopedSlots: { customRender: 'creationTime' },
         }
       ],
-      expandedLabels: {}, // 存储每个Pod的标签展开状态
     };
   },
   mounted() {
@@ -210,6 +234,9 @@ export default {
       this.fetchPods();
     },
     clusterId() {
+      this.fetchPods();
+    },
+    serviceId() {
       this.fetchPods();
     }
   },
@@ -226,8 +253,11 @@ export default {
       try {
         const params = { 
             clusterId: this.clusterId,
+            serviceId: this.serviceId,
             // Only add namespace if it's not 'all'
-            ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+            ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace }),
+            pageNum: this.pagination.current,
+            pageSize: this.pagination.pageSize
         };
         
         // 使用全局API对象中定义的getK8sPods接口
@@ -279,6 +309,15 @@ export default {
             };
           });
           
+          // 更新分页信息
+          this.pagination.total = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 1;
+          
+          // 添加调试日志
+          console.log("获取的pods总数:", this.pagination.total);
+          console.log("总页数:", this.totalPages);
+          console.log("是否应该隐藏分页:", this.totalPages <= 1);
+          
           // 如果API返回了状态统计信息，更新这些信息
           if (res.data.status) {
             this.podStatus = res.data.status;
@@ -288,6 +327,8 @@ export default {
         } else {
           console.error('Failed to get Pod list:', res && res.msg ? res.msg : 'Unknown error');
           this.pods = []; // Clear data on failure
+          this.pagination.total = 0;
+          this.totalPages = 1;
           // 使用项目的消息提示替代ArcoDesign的Message
           this.$message.error(res && res.msg ? res.msg : 'Failed to get Pod list');
         }
@@ -296,6 +337,8 @@ export default {
         // 使用项目的消息提示
         this.$message.error('Exception while getting Pod list');
         this.pods = []; // Clear data on error
+        this.pagination.total = 0;
+        this.totalPages = 1;
       } finally {
         this.loading = false;
       }
@@ -388,6 +431,13 @@ export default {
       if (isNaN(memoryBytes)) return '-';
       
       return this.formatBytes(memoryBytes);
+    },
+    handleTableChange(pagination) {
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      this.pagination.total = pagination.total;
+      this.totalPages = Math.ceil(this.pagination.total / this.pagination.pageSize);
+      this.fetchPods();
     },
   }
 }

@@ -69,11 +69,15 @@ public class KubernetesDashboardController {
      * 获取Pods列表
      */
     @GetMapping("/pods")
-    public Result getPodsInfo(@RequestParam Integer clusterId,
-                              @RequestParam(required = false) String namespace) {
+    public Result getPodsInfo(@RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "serviceId", required = false) Integer serviceId,
+            @RequestParam(name = "namespace", required = false) String namespace,
+            @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            log.info("获取Pods列表请求：clusterId={}, namespace={}", clusterId, namespace);
-            return kubernetesDashboardService.getPodsInfo(clusterId, namespace);
+            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                    clusterId, serviceId, namespace, pageNum, pageSize);
+            return kubernetesDashboardService.getPods(clusterId, serviceId, namespace, pageNum, pageSize);
         } catch (Exception e) {
             log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());
@@ -251,9 +255,9 @@ public class KubernetesDashboardController {
      */
     @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
     public Result getResourceEvents(@RequestParam Integer clusterId,
-                                    @RequestParam String namespace,
-                                    @RequestParam String kind,
-                                    @RequestParam String name) {
+            @RequestParam String namespace,
+            @RequestParam String kind,
+            @RequestParam String name) {
         return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
     }
 

@@ -46,13 +46,16 @@ public interface KubernetesDashboardService {
     Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Pods列表详细信息（包含指标、状态统计等）
+     * 获取Pods列表（带分页）
      * 
      * @param clusterId 集群ID
+     * @param serviceId 服务ID
      * @param namespace 命名空间（null或"all"表示所有命名空间）
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
      * @return 包含Pod列表、状态统计等的详细信息
      */
-    Result getPodsInfo(Integer clusterId, String namespace);
+    Result getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Services列表
