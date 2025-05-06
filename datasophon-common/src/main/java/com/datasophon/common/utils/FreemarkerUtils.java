@@ -101,7 +101,7 @@ public class FreemarkerUtils {
 
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
-        loaderList.add(new ClassTemplateLoader(FreemarkerUtils.class, "/templates"));
+        loaderList.add(new ClassTemplateLoader(FreemarkerUtils.class, "/worker/templates"));
         if (StringUtils.isNotBlank(extPath) && new File(extPath).exists()) {
             // 如果第三方package中存在templates模板，则直接加载
             loaderList.add(new FileTemplateLoader(new File(extPath)));
@@ -158,7 +158,7 @@ public class FreemarkerUtils {
             String serviceName) throws IOException, TemplateException {
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-        config.setClassForTemplateLoading(FreemarkerUtils.class, "/templates");
+        config.setClassForTemplateLoading(FreemarkerUtils.class, "/worker/templates");
 
         // 获取模板对象
         String templateName = determineTemplateName(generators);
