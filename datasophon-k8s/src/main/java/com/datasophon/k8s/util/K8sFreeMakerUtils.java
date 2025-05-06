@@ -83,7 +83,7 @@ public class K8sFreeMakerUtils {
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
-        loaderList.add(new ClassTemplateLoader(K8sFreeMakerUtils.class, "/templates"));
+        loaderList.add(new ClassTemplateLoader(K8sFreeMakerUtils.class, "/worker/templates"));
         if (StringUtils.isNotBlank(extPath) && new File(extPath).exists()) {
             // 如果 三方的 package 中存在 templates 模版，则直接加载
             loaderList.add(new FileTemplateLoader(new File(extPath)));
