@@ -192,7 +192,7 @@ public class K8sFreeMakerUtils {
      * @throws IOException 创建或更新ConfigMap过程中发生I/O错误时抛出
      */
     public static void createConfigMap(String configMapName, String generatedContent, String kubeConfig, String fileName, String serviceRoleFullName) {
-        if (StrUtil.endWith(fileName, ".k8s")) {
+        if (StrUtil.endWith(fileName, Constants.K8S_CONFIG_SUFFIX)) {
             return;
         }
         // 获取 Kubernetes 客户端

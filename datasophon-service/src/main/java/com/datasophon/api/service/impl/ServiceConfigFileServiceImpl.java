@@ -24,6 +24,7 @@ import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -35,6 +36,7 @@ import com.datasophon.api.utils.CompressUtils;
 import com.datasophon.api.utils.MetaPathUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.api.utils.TemplatePathUtils;
+import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConfigFile;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
@@ -100,6 +102,10 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 String fileName = generator.getString("filename");
                 // 这里是建议的新字段，用于描述配置文件
                 String fileDescription = generator.getString("fileDescription");
+
+                if (StrUtil.endWith(fileName, Constants.K8S_CONFIG_SUFFIX)) {
+                    continue;
+                }
 
                 // 如果没有描述信息，提供一个默认描述
                 if (CharSequenceUtil.isBlank(fileDescription)) {

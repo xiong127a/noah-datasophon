@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import static com.datasophon.common.Constants.K8S_SVC_CONF;
 
 public class K8sServiceInstallHandler extends ServiceHandler {
 

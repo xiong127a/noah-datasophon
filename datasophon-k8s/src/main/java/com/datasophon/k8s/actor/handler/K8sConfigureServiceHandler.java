@@ -80,7 +80,7 @@ public class K8sConfigureServiceHandler {
             logger.info("Start to configure service role {}", serviceRoleName);
             for (Generators generators : configFileMap.keySet()) {
                 List<ServiceConfig> configs = configFileMap.get(generators);
-                if (StrUtil.endWith(generators.getFilename(), ".k8s")) {
+                if (StrUtil.endWith(generators.getFilename(), Constants.K8S_CONFIG_SUFFIX)) {
                     continue;
                 }
                 String dataDir = "";

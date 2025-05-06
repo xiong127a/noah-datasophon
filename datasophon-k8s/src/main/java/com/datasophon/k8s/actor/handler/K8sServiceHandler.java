@@ -119,44 +119,84 @@ public class K8sServiceHandler {
         return execResult;
     }
 
+    // 生成服务配置的核心方法
     private ArrayList<ServicePort> generateSvcConfig(Map<Generators, List<ServiceConfig>> configFileMap) {
-        // 仅保留文件名为 K8S_SVC_CONF 的配置
-        configFileMap.entrySet().removeIf(entry -> !entry.getKey().getFilename().equals(K8S_SVC_CONF));
+        // 防御性校验
+        if (configFileMap == null || configFileMap.isEmpty()) {
+            logger.warn("Empty configFileMap received");
+            return new ArrayList<>();
+        }
 
-        // 如果配置映射中没有配置或有多个配置，返回 null
-        if (configFileMap.size() != 1) {
+        // 获取指定配置生成器
+        Generators svcGenerator = configFileMap.keySet().stream()
+                .filter(g -> g != null && K8S_SVC_CONF.equals(g.getFilename()))
+                .findFirst()
+                .orElseGet(() -> {
+                    logger.warn("No {} configuration generator found", K8S_SVC_CONF);
+                    return null;
+                });
+
+        if (svcGenerator == null) {
             return null;
         }
 
-        // 获取唯一的配置
-        List<ServiceConfig> serviceConfigs = configFileMap.values().iterator().next();
-
-        // 获取 K8S_CLUSTER_IP 和 K8S_NODE_PORT 的配置并解析
-        Map<Integer, Integer> clusterIpMappings = getTargetValues(serviceConfigs, K8S_CLUSTER_IP);
-        Map<Integer, Integer> nodePortMappings = getTargetValues(serviceConfigs, K8S_NODE_PORT);
-        if (clusterIpMappings.size() == 0) {
-            logger.warn("ClusterIpMappings is empty. No ClusterIp configuration found in svcConfig. Please check the configuration.");
+        // 获取关联配置项
+        List<ServiceConfig> svcConfigs = configFileMap.get(svcGenerator);
+        if (svcConfigs == null || svcConfigs.isEmpty()) {
+            logger.warn("No configurations found under {}", K8S_SVC_CONF);
             return null;
         }
-        ArrayList<ServicePort> ServicePorts = new ArrayList<>();
-        int i = 0;
-        // 遍历所有 clusterIp 并生成相应的 ServicePort
-        for (Integer clusterIp : clusterIpMappings.keySet()) {
-            Integer targetPort = clusterIpMappings.get(clusterIp);
 
-            ServicePort ServicePort = new ServicePort();
-            ServicePort.setPort(clusterIp);
-            ServicePort.setTargetPort(new IntOrString(targetPort));
-            if (!ObjectUtils.isEmpty(nodePortMappings)) {
-                Integer nodePort = nodePortMappings.get(targetPort);
-                ServicePort.setNodePort(nodePort);
+        // 定位端口映射配置项
+        ServiceConfig portMappingConfig = svcConfigs.stream()
+                .filter(config -> K8S_PORT_MAPPING.equals(config.getName()))
+                .findFirst()
+                .orElseGet(() -> {
+                    logger.warn("Missing portMappings config in {}", K8S_SVC_CONF);
+                    return null;
+                });
+
+        if (portMappingConfig == null || portMappingConfig.getValue() == null) {
+            return null;
+        }
+
+        // 解析JSON配置
+        Gson gson = new Gson();
+        Type listType = new TypeToken<List<Map<String, String>>>(){}.getType();
+        ArrayList<ServicePort> servicePorts = new ArrayList<>();
+
+        try {
+            List<Map<String, String>> portMappings = gson.fromJson(
+                    portMappingConfig.getValue().toString(),
+                    listType
+            );
+
+            int index = 0;
+            for (Map<String, String> mapping : portMappings) {
+                for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                    ServicePort servicePort = new ServicePort();
+                    int port = Integer.parseInt(entry.getKey());
+                    int nodePort = Integer.parseInt(entry.getValue());
+
+                    servicePort.setPort(port);
+                    servicePort.setTargetPort(new IntOrString(port));
+                    servicePort.setName("port-" + index++);
+
+                    if (nodePort != port) {
+                        servicePort.setNodePort(nodePort);
+                    }
+
+                    servicePorts.add(servicePort);
+                }
             }
-            ServicePort.setName("port-" + i++);
-            ServicePorts.add(ServicePort);
+        } catch (Exception e) {
+            logger.error("Failed to parse portMappings: {}", e.getMessage());
+            return null;
         }
 
-        return ServicePorts;
+        return servicePorts;
     }
+
 
     // 通用方法：获取并解析目标配置
     public Map<Integer, Integer> getTargetValues(List<ServiceConfig> serviceConfigs, String targetKey) {
@@ -208,40 +248,53 @@ public class K8sServiceHandler {
             return;
         }
 
-        // 分离三类端口
-        List<ServicePort> headlessPorts = new ArrayList<>();  // StatefulSet 无头服务端口
-        List<ServicePort> clusterIPPorts = new ArrayList<>(); // Deployment 的 ClusterIP 端口
-        List<ServicePort> nodePortPorts = new ArrayList<>();  // 所有需要 NodePort 的端口
+        List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
+        List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
 
-        for (ServicePort port : servicePorts) {
-            if (port.getNodePort() != null) {
-                nodePortPorts.add(port);
-            }
+        for (ServicePort originalPort : servicePorts) {
+            // 创建基础服务端口副本
+            ServicePort basePort = cloneServicePort(originalPort);
+            basePort.setNodePort(null);  // 基础服务不使用NodePort
+
+            // 根据工作负载类型添加到对应集合
             if (STATEFULSET.equals(kind)) {
-                port.setNodePort(null);
-                headlessPorts.add(port);
+                basePorts.add(basePort);
             } else if (DEPLOYMENT.equals(kind)) {
-                port.setNodePort(null);
-                clusterIPPorts.add(port);
+                basePorts.add(basePort);
             }
 
+            // 保留原始NodePort配置
+            if (originalPort.getNodePort() != null) {
+                nodePorts.add(originalPort);
+            }
         }
 
-        // 创建 Headless Service（StatefulSet 专用）
-        if (STATEFULSET.equals(kind) && !headlessPorts.isEmpty()) {
-            createHeadlessService(headlessPorts, client);
+        // 创建基础服务
+        if (!basePorts.isEmpty()) {
+            if (STATEFULSET.equals(kind)) {
+                createHeadlessService(basePorts, client);
+            } else if (DEPLOYMENT.equals(kind)) {
+                createClusterIPService(basePorts, client);
+            }
         }
 
-        // 创建 ClusterIP Service（Deployment 专用）
-        if (DEPLOYMENT.equals(kind) && !clusterIPPorts.isEmpty()) {
-            createClusterIPService(clusterIPPorts, client);
-        }
-
-        // 创建 NodePort Service（所有工作负载类型）
-        if (!nodePortPorts.isEmpty()) {
-            createNodePortServices(nodePortPorts, client);
+        // 创建独立NodePort服务
+        if (!nodePorts.isEmpty()) {
+            createNodePortServices(nodePorts, client);
         }
     }
+
+    // 深拷贝ServicePort对象
+    private ServicePort cloneServicePort(ServicePort original) {
+        ServicePort copy = new ServicePort();
+        copy.setName(original.getName());
+        copy.setPort(original.getPort());
+        copy.setTargetPort(original.getTargetPort());
+        copy.setNodePort(original.getNodePort());
+        return copy;
+    }
+
+
 
     // 创建 Headless Service（StatefulSet）
     private void createHeadlessService(List<ServicePort> ports, KubernetesClient client) {
@@ -289,6 +342,14 @@ public class K8sServiceHandler {
     // 创建 NodePort Service（通用）
     private void createNodePortServices(List<ServicePort> ports, KubernetesClient client) {
         for (ServicePort port : ports) {
+            // 确保NodePort在有效范围（30000-32767）
+            if (port.getNodePort() != null) {
+                if (port.getNodePort() < 30000 || port.getNodePort() > 32767) {
+                    logger.warn("Invalid NodePort {} for {}, using random port",
+                            port.getNodePort(), serviceRoleFullName);
+                    port.setNodePort(null);
+                }
+            }
             ServiceSpecBuilder specBuilder = new ServiceSpecBuilder()
                     .withType(K8S_NODE_PORT)
                     .withSelector(Collections.singletonMap("app", serviceRoleFullName))

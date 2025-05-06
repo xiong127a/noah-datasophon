@@ -172,7 +172,7 @@ public class K8sYamlDeploymentHandler {
         fileConfig.setFileName(filename);
 
         // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
-        if (BooleanUtil.isFalse(StrUtil.endWith(filename, ".k8s"))) {
+        if (BooleanUtil.isFalse(StrUtil.endWith(filename, Constants.K8S_CONFIG_SUFFIX))) {
             volumePathSet.add(fileConfig);
         }
     }

@@ -127,9 +127,14 @@ public final class Constants {
         public static final String EQUAL_SIGN = "=";
         public static final String K8S_DNS_SUFFIX = "." + DATASOPHON;
 
-        public static final String K8S_SVC_CONF = "svc.conf.k8s";
+        public static final String K8S_SVC_CONF = "svc.config.k8s";
         public static final String K8S_CLUSTER_IP = "ClusterIp";
         public static final String K8S_NODE_PORT = "NodePort";
+
+
+        public static final String  K8S_CONFIG_SUFFIX= ".k8s";
+
+        public static final String  K8S_PORT_MAPPING= "portMappings";
         public static final String CONFIG_TARGET_ROLES = "configTargetRoles";
 
         public static final String COMMON_CONFIG = "CommonConfig";
