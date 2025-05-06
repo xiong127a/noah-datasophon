@@ -22,7 +22,9 @@ import com.datasophon.dao.entity.FrameInfoEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 集群框架表
@@ -32,7 +34,17 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface FrameInfoMapper extends BaseMapper<FrameInfoEntity> {
+public interface FrameInfoMapper extends MPJBaseMapper<FrameInfoEntity> {
 
-    FrameInfoEntity getFrameInfoByFrameCode(@Param("frameCode") String frameCode);
+    /**
+     * 根据框架代码获取框架信息
+     *
+     * @param frameCode 框架代码
+     * @return 框架信息实体
+     */
+    default FrameInfoEntity getFrameInfoByFrameCode(@Param("frameCode") String frameCode) {
+        LambdaQueryWrapper<FrameInfoEntity> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(FrameInfoEntity::getFrameCode, frameCode);
+        return selectOne(queryWrapper);
+    }
 }

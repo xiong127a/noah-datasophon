@@ -23,7 +23,7 @@ import com.datasophon.common.utils.Result;
  * K8S仪表盘服务接口
  * 提供Kubernetes资源查询方法
  */
-public interface K8sDashboardService {
+public interface KubernetesDashboardService {
 
     /**
      * 获取Kubernetes命名空间列表
@@ -52,14 +52,15 @@ public interface K8sDashboardService {
      */
     Result getDeployments(Integer clusterId, Integer serviceId, String namespace);
 
+
     /**
-     * 获取Pods列表
+     * 获取Pods列表详细信息（包含指标、状态统计等）
      * 
      * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return Pods列表
+     * @param namespace 命名空间（null或"all"表示所有命名空间）
+     * @return 包含Pod列表、状态统计等的详细信息
      */
-    Result getPods(Integer clusterId, String namespace);
+    Result getPodsInfo(Integer clusterId, String namespace);
 
     /**
      * 获取Services列表
@@ -140,6 +141,16 @@ public interface K8sDashboardService {
     Result getDaemonSets(Integer clusterId, String namespace);
 
     /**
+     * 获取DaemonSets列表（带服务ID）
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return DaemonSets列表
+     */
+    Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
      * 获取StatefulSets列表
      * 
      * @param clusterId 集群ID
@@ -176,6 +187,16 @@ public interface K8sDashboardService {
     Result getJobs(Integer clusterId, String namespace);
 
     /**
+     * 获取Jobs列表（带服务ID）
+     * 
+     * @param clusterId 集群ID
+     * @param serviceId 服务ID
+     * @param namespace 命名空间
+     * @return Jobs列表
+     */
+    Result getJobs(Integer clusterId, Integer serviceId, String namespace);
+
+    /**
      * 获取CronJobs列表
      * 
      * @param clusterId 集群ID
@@ -204,16 +225,6 @@ public interface K8sDashboardService {
      * @return 事件列表
      */
     Result getResourceEvents(Integer clusterId, String namespace, String kind, String name);
-
-    /**
-     * 获取Deployment资源监控数据
-     *
-     * @param clusterId 集群ID
-     * @param serviceId 服务ID
-     * @param namespace 命名空间
-     * @return 监控数据结果
-     */
-    Result getDeploymentMetrics(Integer clusterId, Integer serviceId, String namespace);
 
     /**
      * 一次性获取所有Kubernetes资源统计数据

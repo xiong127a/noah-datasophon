@@ -117,7 +117,7 @@ public class ConfigureServiceHandler {
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
                         if (StrUtil.equals("map2", config.getConfigType())) {
                             config.setConfigType("map");
-                        }else {
+                        } else {
                             iterator.remove();
                         }
                     }
@@ -208,14 +208,9 @@ public class ConfigureServiceHandler {
                     // extra app, package: META, templates
                     File extTemplateDir =
                             new File(Constants.INSTALL_PATH + File.separator + decompressPackageName, "templates");
-                    if (extTemplateDir.exists() && extTemplateDir.isDirectory()) {
-                        // 3rd app, load ext templates
-                        logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
-                        WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName,
-                                extTemplateDir.getAbsolutePath());
-                    } else {
-                        WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName);
-                    }
+                    // 3rd app, load ext templates
+                    logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
+                    WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName);
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
                     String outputFile =
@@ -241,7 +236,7 @@ public class ConfigureServiceHandler {
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh");
         ExecResult execResult = ShellUtils
-                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L,logger);
+                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L, logger);
 
         ArrayList<String> globalCommand = new ArrayList<>();
         globalCommand.add(

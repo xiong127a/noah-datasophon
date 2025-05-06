@@ -24,6 +24,7 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.api.utils.TemplatePathUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.CommandLineItem;
 import com.datasophon.common.model.ConnectionInfo;
@@ -46,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,8 +65,8 @@ public abstract class ServiceHandlerAbstract {
      * @return 更新后的命令行列表
      */
     public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines, String serviceName,
-            String serviceHome,
-            String hostname) {
+                                                String serviceHome,
+                                                String hostname) {
         // 如果列表为空，创建一个新列表
         if (commandLines == null) {
             commandLines = new ArrayList<>();
@@ -132,7 +134,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithKerberos(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs) {
+                                         List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -143,7 +145,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithHA(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs) {
+                                   List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -154,7 +156,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithRack(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs) {
+                                     List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -174,7 +176,7 @@ public abstract class ServiceHandlerAbstract {
      * @param kbConfigs       需要添加到当前的配置项
      */
     public void addConfigWithKerberos(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+                                      List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -183,7 +185,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithHA(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+                                List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -192,7 +194,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithRack(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-            List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
+                                  List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 addConfig(globalVariables, map, rackConfigs, serviceConfig);
@@ -201,7 +203,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfig(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-            List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
+                          List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
         if (map.containsKey(serviceConfig.getName())) {
             ServiceConfig config = map.get(serviceConfig.getName());
             config.setRequired(true);
@@ -224,7 +226,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableKerberos(Integer clusterId, Map<String, String> globalVariables, boolean enableKerberos,
-            ServiceConfig config, String serviceName) {
+                                    ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableKerberos = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
@@ -237,7 +239,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableHA(Integer clusterId, Map<String, String> globalVariables, boolean enableHA,
-            ServiceConfig config, String serviceName) {
+                              ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableHA = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "true");
@@ -284,14 +286,10 @@ public abstract class ServiceHandlerAbstract {
             }
 
             // 读取模板文件
-            File templateFile = FileUtil.file(templatePath + fileName);
-            if (!templateFile.exists()) {
-                log.error("模板文件不存在: {}", templatePath + fileName);
-                return "";
-            }
+            File templateFile = TemplatePathUtils.getTemplateFile(templatePath, fileName);
 
             // 添加日志，输出模板文件路径
-            log.info("模板文件路径: {}", templateFile.getAbsolutePath());
+            log.info("模板文件路径: {}", Objects.requireNonNull(templateFile).getAbsolutePath());
 
             String content = FileUtil.readString(templateFile, StandardCharsets.UTF_8);
             if (StringUtils.isBlank(content)) {
@@ -390,12 +388,12 @@ public abstract class ServiceHandlerAbstract {
                 }
 
                 // 匹配形如 "package==version" 或 "package>=version" 的依赖
-                Pattern pipPattern = Pattern.compile("^([\\w\\-\\.]+)(?:==|>=|>|<|<=|~=|!=)?[\\d\\.]*");
+                Pattern pipPattern = Pattern.compile("^([\\w\\-.]+)(?:==|>=|>|<|<=|~=|!=)?[\\d.]*");
                 Matcher matcher = pipPattern.matcher(line);
 
                 if (matcher.find()) {
                     String pkg = matcher.group(1).trim();
-                    if (!pkg.isEmpty() && packages.indexOf(pkg) == -1) {
+                    if (!pkg.isEmpty() && !packages.contains(pkg)) {
                         packages.add(pkg);
                     }
                 }
@@ -540,7 +538,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
-            Map<String, String> configMap) {
+                                            Map<String, String> configMap) {
         // 提取服务名称（从子类类名）
         String serviceName = getServiceName(serviceInstanceId);
 
@@ -644,7 +642,7 @@ public abstract class ServiceHandlerAbstract {
      * @return CommandLineItem列表
      */
     protected List<CommandLineItem> parseCommandLines(String commandLines, String serviceName, String serviceHome,
-            String hostname) {
+                                                      String hostname) {
         List<CommandLineItem> commandLineItems = new ArrayList<>();
         if (StringUtils.isBlank(commandLines)) {
             return commandLineItems;

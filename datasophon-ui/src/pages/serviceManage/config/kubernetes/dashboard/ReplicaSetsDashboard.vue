@@ -1,9 +1,9 @@
 <template>
   <div class="resource-list">
-    <!-- Deployments列表区域 -->
+    <!-- ReplicaSets列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
-        <span class="k8s-card-title">Deployments</span>
+        <span class="k8s-card-title">Replica Sets</span>
         <div class="k8s-card-actions">
           <a-icon type="bars" class="k8s-action-icon" />
           <a class="k8s-card-collapse-icon">
@@ -13,20 +13,19 @@
       </div>
       <div class="k8s-card-content">
         <a-spin :spinning="loading">
-          <a-table
-              :columns="deploymentColumns"
-              :dataSource="deployments"
-              :pagination="false"
-              :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
-              class="k8s-table"
-              :table-layout="'auto'"
-              :bordered="false"
-              :zebra-stripes="false"
-              size="middle"
+          <a-table 
+            :columns="replicaSetColumns" 
+            :dataSource="replicaSets" 
+            :pagination="false"
+            :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+            class="k8s-table"
+            :table-layout="'auto'"
+            :bordered="false"
+            size="middle"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
-                <StatusIndicator :resource="record" resourceType="deployment" />
+                <StatusIndicator :resource="record" resourceType="replicaSet" />
                 <div class="name-cell">
                   <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
                     {{ record?.objectMeta?.name || '未知' }}
@@ -50,38 +49,38 @@
             <template slot="labels" slot-scope="text, record">
               <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
-                  <a-tag
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                      :key="idx"
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
-                  <a-button
-                      v-if="Object.keys(record.objectMeta.labels).length > 3"
-                      type="link"
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
+                  <a-button 
+                    v-if="Object.keys(record.objectMeta.labels).length > 3" 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
                   >
                     +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
                   </a-button>
                 </template>
                 <template v-else>
-                  <a-tag
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                      :key="idx"
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                    :key="idx" 
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
-                  <a-button
-                      type="link"
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
+                  <a-button 
+                    type="link" 
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
                   >
                     收起
                   </a-button>
@@ -92,7 +91,7 @@
 
             <template slot="pods" slot-scope="text, record">
               <div class="pods-display">
-                <span>{{ record?.pods && record.pods.running !== undefined ? record.pods.running : 0 }} / {{ record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0 }}</span>
+                <span>{{ record?.podInfo && record.podInfo.running !== undefined ? record.podInfo.running : 0 }} / {{ record?.podInfo && record.podInfo.desired !== undefined ? record.podInfo.desired : 0 }}</span>
               </div>
             </template>
 
@@ -112,7 +111,7 @@
 import StatusIndicator from './components/StatusIndicator.vue';
 
 export default {
-  name: 'DeploymentDashboard',
+  name: 'ReplicaSetsDashboard',
   components: {
     StatusIndicator
   },
@@ -132,10 +131,10 @@ export default {
   },
   data() {
     return {
-      deployments: [],
+      replicaSets: [],
       loading: false,
-      expandedLabels: {},
-      deploymentColumns: [
+      expandedLabels: {},  // 用于存储展开状态的对象
+      replicaSetColumns: [
         {
           title: '名称',
           key: 'name',
@@ -159,7 +158,7 @@ export default {
         },
         {
           title: 'Pods',
-          dataIndex: 'pods',
+          dataIndex: 'podInfo',
           key: 'pods',
           scopedSlots: { customRender: 'pods' }
         },
@@ -173,7 +172,7 @@ export default {
     };
   },
   mounted() {
-    this.fetchDeployments();
+    this.fetchReplicaSets();
   },
   methods: {
     toggleLabelsExpand(record) {
@@ -185,73 +184,58 @@ export default {
       if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
       return !!this.expandedLabels[record.objectMeta.uid];
     },
-    async fetchDeployments() {
+    async fetchReplicaSets() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sDeployments, {
+        const res = await this.$axiosGet(global.API.getK8sReplicaSets, {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
           namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
         });
         if (res.code === 200) {
-          // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
-          let deployList = res.data && res.data.deployments ? res.data.deployments : [];
-
-          // 处理deployments数据，确保每个项都有必要的属性
-          this.deployments = deployList.map(deploy => {
-            // 如果deploy为null或undefined，返回一个空对象
-            if (!deploy) return { objectMeta: {}, pods: {} };
-
+          // 确保获取ReplicaSets列表数组
+          let replicaSetList = res.data && res.data.replicaSets ? res.data.replicaSets : [];
+          
+          // 处理ReplicaSets数据，确保每个项都有必要的属性
+          this.replicaSets = replicaSetList.map(replicaSet => {
+            // 如果replicaSet为null或undefined，返回一个空对象
+            if (!replicaSet) return { objectMeta: {}, podInfo: {} };
+            
             // 确保objectMeta存在
-            if (!deploy.objectMeta) deploy.objectMeta = {};
-
-            // 确保pods存在
-            if (!deploy.pods) deploy.pods = {};
-
-            return deploy;
+            if (!replicaSet.objectMeta) replicaSet.objectMeta = {};
+            
+            // 确保podInfo存在
+            if (!replicaSet.podInfo) replicaSet.podInfo = {};
+            
+            return replicaSet;
           });
-
-          console.log("处理后的deployments数据:", this.deployments);
-
-          // 单独测试第一个对象的数据结构
-          if (this.deployments.length > 0) {
-            const firstDeploy = this.deployments[0];
-            console.log("第一个deployment的数据结构:", {
-              name: firstDeploy.objectMeta?.name,
-              namespace: firstDeploy.objectMeta?.namespace,
-              images: firstDeploy.containerImages,
-              pods: firstDeploy.pods
-            });
-          }
+          
+          console.log("处理后的replicaSets数据:", this.replicaSets);
         } else {
-          console.error('Failed to fetch deployments:', res.msg);
-          this.deployments = [];
+          console.error('Failed to fetch replicaSets:', res.msg);
+          this.replicaSets = [];
         }
       } catch (error) {
-        console.error('Error fetching deployments:', error);
-        this.deployments = [];
+        console.error('Error fetching replicaSets:', error);
+        this.replicaSets = [];
       } finally {
         this.loading = false;
       }
     },
-    handleEditDeployment(record) {
-      // TODO: 实现编辑Deployment的逻辑
-      this.$message.info(`编辑Deployment ${record.name} 的功能正在开发中`);
-    },
     getDaysAgo(timestamp) {
       if (!timestamp) return '-';
-
+      
       const date = new Date(timestamp);
       const now = new Date();
-
+      
       // 计算时间差（毫秒）
       const timeDiff = Math.abs(now - date);
-
+      
       // 转换为天数、小时、分钟
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-
+      
       // 根据时间差返回不同格式
       if (days > 0) {
         return `${days}天前`;
@@ -278,13 +262,13 @@ export default {
   },
   watch: {
     selectedNamespace() {
-      this.fetchDeployments();
+      this.fetchReplicaSets();
     },
     clusterId() {
-      this.fetchDeployments();
+      this.fetchReplicaSets();
     },
     serviceId() {
-      this.fetchDeployments();
+      this.fetchReplicaSets();
     }
   }
 };
@@ -297,7 +281,7 @@ export default {
   cursor: pointer;
   display: inline-block;
   max-width: 100%;
-
+  
   &:hover {
     color: #1890ff;
     text-decoration: underline;
@@ -353,7 +337,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-
+  
   .label-tag {
     margin-right: 0;
   }

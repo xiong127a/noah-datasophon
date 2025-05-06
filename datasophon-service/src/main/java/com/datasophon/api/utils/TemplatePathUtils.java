@@ -1,6 +1,8 @@
 package com.datasophon.api.utils;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ObjUtil;
 import lombok.experimental.UtilityClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 模板路径工具类
@@ -27,15 +30,24 @@ public class TemplatePathUtils {
      * @param templateName 模板名称
      * @return 模板文件完整路径
      */
-    public static String getTemplateFilePath(String templateName) {
-        File file = FileUtil.file(PATH + templateName);
-        if (!FileUtil.exist(file)) {
-            logger.error("模板文件不存在: {}", file.getAbsolutePath());
+    public static String getTemplateFilePath(String path, String templateName) {
+        File file = getTemplateFile(path, templateName);
+        return Objects.requireNonNull(file).getAbsolutePath();
+    }
+
+    public static File getTemplateFile(String path, String templateName) {
+        File[] files = FileUtil.ls(path);
+        List<File> filteredFiles = CollUtil.newArrayList(files);
+        CollUtil.filter(filteredFiles, file -> file.isFile() && file.getName().equals(templateName));
+
+        File file = CollUtil.isEmpty(filteredFiles) ? null : filteredFiles.get(0);
+        if (ObjUtil.isNull(file) || !FileUtil.exist(file)) {
+            logger.error("模板文件不存在: {}", templateName);
             return null;
         }
-
-        return file.getAbsolutePath();
+        return file;
     }
+
 
     /**
      * 获取所有可用的模板文件名列表
@@ -67,7 +79,7 @@ public class TemplatePathUtils {
      */
     public static String getTemplateContent(String templateName) {
         try {
-            String templateFilePath = getTemplateFilePath(templateName);
+            String templateFilePath = getTemplateFilePath(PATH, templateName);
             return FileUtil.readUtf8String(templateFilePath);
         } catch (Exception e) {
             logger.error("获取模板内容时发生异常: {}", templateName, e);

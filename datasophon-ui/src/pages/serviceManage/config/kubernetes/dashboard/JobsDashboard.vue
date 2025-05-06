@@ -1,9 +1,9 @@
 <template>
   <div class="resource-list">
-    <!-- Deployments列表区域 -->
+    <!-- Jobs列表区域 -->
     <div class="k8s-dashboard-card k8s-resource-card">
       <div class="k8s-card-header">
-        <span class="k8s-card-title">Deployments</span>
+        <span class="k8s-card-title">Jobs</span>
         <div class="k8s-card-actions">
           <a-icon type="bars" class="k8s-action-icon" />
           <a class="k8s-card-collapse-icon">
@@ -13,22 +13,22 @@
       </div>
       <div class="k8s-card-content">
         <a-spin :spinning="loading">
-          <a-table
-              :columns="deploymentColumns"
-              :dataSource="deployments"
-              :pagination="false"
-              :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
-              class="k8s-table"
-              :table-layout="'auto'"
-              :bordered="false"
-              :zebra-stripes="false"
-              size="middle"
+          <a-table 
+            :columns="jobColumns" 
+            :dataSource="jobs" 
+            :pagination="false"
+            :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+            class="k8s-table"
+            :table-layout="'auto'"
+            :bordered="false"
+            :zebra-stripes="false"
+            size="middle"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
-                <StatusIndicator :resource="record" resourceType="deployment" />
+                <StatusIndicator :resource="record" resourceType="job" />
                 <div class="name-cell">
-                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
+                  <span class="job-name" :title="record?.objectMeta?.name || '未知'">
                     {{ record?.objectMeta?.name || '未知' }}
                   </span>
                 </div>
@@ -51,37 +51,37 @@
               <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                      :key="idx"
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
+                    :key="idx"
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
                   <a-button
-                      v-if="Object.keys(record.objectMeta.labels).length > 3"
-                      type="link"
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
+                    v-if="Object.keys(record.objectMeta.labels).length > 3"
+                    type="link"
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
                   >
                     +{{ Object.keys(record.objectMeta.labels).length - 3 }} 更多
                   </a-button>
                 </template>
                 <template v-else>
-                  <a-tag
-                      v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                      :key="idx"
-                      color="blue"
-                      class="label-tag"
-                      :title="`${entry[0]}: ${entry[1]}`"
+                  <a-tag 
+                    v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
+                    :key="idx"
+                    color="blue"
+                    class="label-tag"
+                    :title="`${entry[0]}: ${entry[1]}`"
                   >
                     {{ entry[0] }}: {{ entry[1] }}
                   </a-tag>
                   <a-button
-                      type="link"
-                      size="small"
-                      @click.stop="toggleLabelsExpand(record)"
+                    type="link"
+                    size="small"
+                    @click.stop="toggleLabelsExpand(record)"
                   >
                     收起
                   </a-button>
@@ -92,7 +92,7 @@
 
             <template slot="pods" slot-scope="text, record">
               <div class="pods-display">
-                <span>{{ record?.pods && record.pods.running !== undefined ? record.pods.running : 0 }} / {{ record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0 }}</span>
+                <span>{{ getPodInfo(record) }}</span>
               </div>
             </template>
 
@@ -112,7 +112,7 @@
 import StatusIndicator from './components/StatusIndicator.vue';
 
 export default {
-  name: 'DeploymentDashboard',
+  name: 'JobsDashboard',
   components: {
     StatusIndicator
   },
@@ -132,10 +132,10 @@ export default {
   },
   data() {
     return {
-      deployments: [],
+      jobs: [],
       loading: false,
       expandedLabels: {},
-      deploymentColumns: [
+      jobColumns: [
         {
           title: '名称',
           key: 'name',
@@ -159,7 +159,7 @@ export default {
         },
         {
           title: 'Pods',
-          dataIndex: 'pods',
+          dataIndex: 'podInfo',
           key: 'pods',
           scopedSlots: { customRender: 'pods' }
         },
@@ -173,7 +173,7 @@ export default {
     };
   },
   mounted() {
-    this.fetchDeployments();
+    this.fetchJobs();
   },
   methods: {
     toggleLabelsExpand(record) {
@@ -185,73 +185,75 @@ export default {
       if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
       return !!this.expandedLabels[record.objectMeta.uid];
     },
-    async fetchDeployments() {
+    getPodInfo(record) {
+      if (!record || !record.podInfo) return '0 / 0';
+      
+      const succeeded = record.podInfo.succeeded || 0;
+      const desired = record.podInfo.desired || 0;
+      
+      return `${succeeded} / ${desired}`;
+    },
+    getJobStatus(record) {
+      if (!record || !record.jobStatus) return 'Unknown';
+      return record.jobStatus.status || 'Unknown';
+    },
+    async fetchJobs() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sDeployments, {
+        const res = await this.$axiosGet(global.API.getK8sJobs, {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          // Only add namespace if it's not 'all'
+          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
         });
+        
         if (res.code === 200) {
-          // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
-          let deployList = res.data && res.data.deployments ? res.data.deployments : [];
-
-          // 处理deployments数据，确保每个项都有必要的属性
-          this.deployments = deployList.map(deploy => {
-            // 如果deploy为null或undefined，返回一个空对象
-            if (!deploy) return { objectMeta: {}, pods: {} };
-
+          // 确保获取Jobs列表数组，并处理数据
+          let jobsList = res.data && res.data.jobs ? res.data.jobs : [];
+          
+          // 处理jobs数据，确保每个项都有必要的属性
+          this.jobs = jobsList.map(job => {
+            // 如果job为null或undefined，返回一个空对象
+            if (!job) return { objectMeta: {}, podInfo: {} };
+            
             // 确保objectMeta存在
-            if (!deploy.objectMeta) deploy.objectMeta = {};
-
-            // 确保pods存在
-            if (!deploy.pods) deploy.pods = {};
-
-            return deploy;
+            if (!job.objectMeta) job.objectMeta = {};
+            
+            // 确保podInfo存在
+            if (!job.podInfo) job.podInfo = {};
+            
+            return job;
           });
-
-          console.log("处理后的deployments数据:", this.deployments);
-
-          // 单独测试第一个对象的数据结构
-          if (this.deployments.length > 0) {
-            const firstDeploy = this.deployments[0];
-            console.log("第一个deployment的数据结构:", {
-              name: firstDeploy.objectMeta?.name,
-              namespace: firstDeploy.objectMeta?.namespace,
-              images: firstDeploy.containerImages,
-              pods: firstDeploy.pods
-            });
-          }
+          
+          console.log("处理后的jobs数据:", this.jobs);
+          
         } else {
-          console.error('Failed to fetch deployments:', res.msg);
-          this.deployments = [];
+          console.error('Failed to fetch jobs:', res.msg);
+          this.jobs = [];
+          this.$message.error(res.msg || 'Failed to fetch jobs');
         }
       } catch (error) {
-        console.error('Error fetching deployments:', error);
-        this.deployments = [];
+        console.error('Error fetching jobs:', error);
+        this.jobs = [];
+        this.$message.error('Error fetching jobs');
       } finally {
         this.loading = false;
       }
     },
-    handleEditDeployment(record) {
-      // TODO: 实现编辑Deployment的逻辑
-      this.$message.info(`编辑Deployment ${record.name} 的功能正在开发中`);
-    },
     getDaysAgo(timestamp) {
       if (!timestamp) return '-';
-
+      
       const date = new Date(timestamp);
       const now = new Date();
-
+      
       // 计算时间差（毫秒）
       const timeDiff = Math.abs(now - date);
-
+      
       // 转换为天数、小时、分钟
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-
+      
       // 根据时间差返回不同格式
       if (days > 0) {
         return `${days}天前`;
@@ -278,13 +280,13 @@ export default {
   },
   watch: {
     selectedNamespace() {
-      this.fetchDeployments();
+      this.fetchJobs();
     },
     clusterId() {
-      this.fetchDeployments();
+      this.fetchJobs();
     },
     serviceId() {
-      this.fetchDeployments();
+      this.fetchJobs();
     }
   }
 };
@@ -293,18 +295,7 @@ export default {
 <style lang="less" scoped>
 @import './styles/k8s-table-styles.less';
 
-.name-text {
-  cursor: pointer;
-  display: inline-block;
-  max-width: 100%;
-
-  &:hover {
-    color: #1890ff;
-    text-decoration: underline;
-  }
-}
-
-.pod-name {
+.job-name {
   cursor: pointer;
   word-break: break-word !important;
   max-width: 100%;
@@ -357,6 +348,10 @@ export default {
   .label-tag {
     margin-right: 0;
   }
+}
+
+.pods-display {
+  font-weight: 500;
 }
 
 /* 覆盖KubernetesDashboard.vue中的样式 */

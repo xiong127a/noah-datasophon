@@ -17,16 +17,15 @@
 
 package com.datasophon.api.controller;
 
-import com.datasophon.api.service.K8sDashboardService;
+import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * K8S仪表盘控制器
@@ -35,17 +34,17 @@ import java.util.Map;
 @RestController
 @RequestMapping("api/k8s/dashboard")
 @Slf4j
-public class K8sDashboardController {
+public class KubernetesDashboardController {
 
     @Autowired
-    private K8sDashboardService k8sDashboardService;
+    private KubernetesDashboardService kubernetesDashboardService;
 
     /**
      * 获取Kubernetes命名空间列表
      */
     @RequestMapping("/namespaces")
     public Result getNamespaces(@RequestParam("clusterId") Integer clusterId) {
-        return k8sDashboardService.getNamespaces(clusterId);
+        return kubernetesDashboardService.getNamespaces(clusterId);
     }
 
     /**
@@ -57,20 +56,25 @@ public class K8sDashboardController {
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
         if (serviceId != null) {
-            return k8sDashboardService.getDeployments(clusterId, serviceId, namespace);
+            return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace);
         } else {
-            return k8sDashboardService.getDeployments(clusterId, namespace);
+            return kubernetesDashboardService.getDeployments(clusterId, namespace);
         }
     }
 
     /**
      * 获取Pods列表
      */
-    @RequestMapping("/pods")
-    public Result getPods(
-            @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getPods(clusterId, namespace);
+    @GetMapping("/pods")
+    public Result getPodsInfo(@RequestParam Integer clusterId,
+            @RequestParam(required = false) String namespace) {
+        try {
+            log.info("获取Pods列表请求：clusterId={}, namespace={}", clusterId, namespace);
+            return kubernetesDashboardService.getPodsInfo(clusterId, namespace);
+        } catch (Exception e) {
+            log.error("获取Pods列表失败", e);
+            return Result.error("获取Pods列表失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -80,7 +84,7 @@ public class K8sDashboardController {
     public Result getServices(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getServices(clusterId, namespace);
+        return kubernetesDashboardService.getServices(clusterId, namespace);
     }
 
     /**
@@ -90,7 +94,7 @@ public class K8sDashboardController {
     public Result getConfigMaps(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getConfigMaps(clusterId, namespace);
+        return kubernetesDashboardService.getConfigMaps(clusterId, namespace);
     }
 
     /**
@@ -100,7 +104,7 @@ public class K8sDashboardController {
     public Result getSecrets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getSecrets(clusterId, namespace);
+        return kubernetesDashboardService.getSecrets(clusterId, namespace);
     }
 
     /**
@@ -109,7 +113,7 @@ public class K8sDashboardController {
     @RequestMapping("/persistentvolumes")
     public Result getPersistentVolumes(
             @RequestParam("clusterId") Integer clusterId) {
-        return k8sDashboardService.getPersistentVolumes(clusterId);
+        return kubernetesDashboardService.getPersistentVolumes(clusterId);
     }
 
     /**
@@ -119,7 +123,7 @@ public class K8sDashboardController {
     public Result getPersistentVolumeClaims(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getPersistentVolumeClaims(clusterId, namespace);
+        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace);
     }
 
     /**
@@ -128,7 +132,7 @@ public class K8sDashboardController {
     @RequestMapping("/storageclasses")
     public Result getStorageClasses(
             @RequestParam("clusterId") Integer clusterId) {
-        return k8sDashboardService.getStorageClasses(clusterId);
+        return kubernetesDashboardService.getStorageClasses(clusterId);
     }
 
     /**
@@ -138,7 +142,7 @@ public class K8sDashboardController {
     public Result getIngresses(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getIngresses(clusterId, namespace);
+        return kubernetesDashboardService.getIngresses(clusterId, namespace);
     }
 
     /**
@@ -147,7 +151,7 @@ public class K8sDashboardController {
     @RequestMapping("/ingressclasses")
     public Result getIngressClasses(
             @RequestParam("clusterId") Integer clusterId) {
-        return k8sDashboardService.getIngressClasses(clusterId);
+        return kubernetesDashboardService.getIngressClasses(clusterId);
     }
 
     /**
@@ -156,8 +160,11 @@ public class K8sDashboardController {
     @RequestMapping("/daemonsets")
     public Result getDaemonSets(
             @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getDaemonSets(clusterId, namespace);
+        return serviceId != null
+                ? kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace)
+                : kubernetesDashboardService.getDaemonSets(clusterId, namespace);
     }
 
     /**
@@ -167,7 +174,7 @@ public class K8sDashboardController {
     public Result getStatefulSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getStatefulSets(clusterId, namespace);
+        return kubernetesDashboardService.getStatefulSets(clusterId, namespace);
     }
 
     /**
@@ -177,7 +184,7 @@ public class K8sDashboardController {
     public Result getReplicaSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getReplicaSets(clusterId, namespace);
+        return kubernetesDashboardService.getReplicaSets(clusterId, namespace);
     }
 
     /**
@@ -187,7 +194,7 @@ public class K8sDashboardController {
     public Result getReplicationControllers(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getReplicationControllers(clusterId, namespace);
+        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace);
     }
 
     /**
@@ -196,8 +203,11 @@ public class K8sDashboardController {
     @RequestMapping("/jobs")
     public Result getJobs(
             @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getJobs(clusterId, namespace);
+        return serviceId != null
+                ? kubernetesDashboardService.getJobs(clusterId, serviceId, namespace)
+                : kubernetesDashboardService.getJobs(clusterId, namespace);
     }
 
     /**
@@ -207,7 +217,7 @@ public class K8sDashboardController {
     public Result getCronJobs(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "namespace", required = false) String namespace) {
-        return k8sDashboardService.getCronJobs(clusterId, namespace);
+        return kubernetesDashboardService.getCronJobs(clusterId, namespace);
     }
 
     /**
@@ -218,7 +228,7 @@ public class K8sDashboardController {
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam("namespace") String namespace,
             @RequestParam("name") String name) {
-        return k8sDashboardService.getDeploymentDetail(clusterId, namespace, name);
+        return kubernetesDashboardService.getDeploymentDetail(clusterId, namespace, name);
     }
 
     /**
@@ -230,7 +240,7 @@ public class K8sDashboardController {
             @RequestParam("namespace") String namespace,
             @RequestParam("kind") String kind,
             @RequestParam("name") String name) {
-        return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
+        return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
     }
 
     /**
@@ -241,7 +251,7 @@ public class K8sDashboardController {
             @RequestParam String namespace,
             @RequestParam String kind,
             @RequestParam String name) {
-        return k8sDashboardService.getResourceEvents(clusterId, namespace, kind, name);
+        return kubernetesDashboardService.getResourceEvents(clusterId, namespace, kind, name);
     }
 
     /**
@@ -264,7 +274,7 @@ public class K8sDashboardController {
             }
 
             // 调用优化后的Service方法，一次性获取所有资源统计数据
-            Result result = k8sDashboardService.getResourceStats(clusterId, serviceId, namespace);
+            Result result = kubernetesDashboardService.getResourceStats(clusterId, serviceId, namespace);
 
             // 日志记录返回结果
             log.info("resource-stats接口返回：code={}, data={}", result.getCode(), result.getData() != null ? "非空" : "空");
@@ -276,37 +286,4 @@ public class K8sDashboardController {
         }
     }
 
-    /**
-     * 从结果中获取资源数量
-     * 提取Result对象中data字段的列表大小
-     * 
-     * @param result 结果对象
-     * @return 资源数量
-     */
-    private int getCountFromResult(Result result) {
-        if (result == null || result.getData() == null) {
-            return 0;
-        }
-
-        Object data = result.getData();
-        if (data instanceof Iterable) {
-            int count = 0;
-            for (Object ignored : (Iterable<?>) data) {
-                count++;
-            }
-            return count;
-        } else if (data instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) data;
-            Object items = map.get("items");
-            if (items instanceof Iterable) {
-                int count = 0;
-                for (Object ignored : (Iterable<?>) items) {
-                    count++;
-                }
-                return count;
-            }
-        }
-
-        return 0;
-    }
 }

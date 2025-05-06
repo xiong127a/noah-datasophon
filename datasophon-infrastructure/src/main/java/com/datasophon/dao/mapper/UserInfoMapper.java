@@ -18,11 +18,14 @@
 package com.datasophon.dao.mapper;
 
 import com.datasophon.dao.entity.UserInfoEntity;
+import com.datasophon.dao.entity.AccessTokenEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.github.yulichang.base.MPJBaseMapper;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 /**
  * 用户信息表
@@ -32,7 +35,14 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface UserInfoMapper extends BaseMapper<UserInfoEntity> {
+public interface UserInfoMapper extends MPJBaseMapper<UserInfoEntity> {
 
-    UserInfoEntity queryUserByToken(@Param("token") String token);
+    default UserInfoEntity queryUserByToken(@Param("token") String token) {
+        return this.selectJoinOne(UserInfoEntity.class,
+                new MPJLambdaWrapper<UserInfoEntity>()
+                        .selectAll(UserInfoEntity.class)
+                        .leftJoin(AccessTokenEntity.class, AccessTokenEntity::getUserId, UserInfoEntity::getId)
+                        .eq(AccessTokenEntity::getToken, token)
+                        .gt(AccessTokenEntity::getExpireTime, new java.util.Date()));
+    }
 }

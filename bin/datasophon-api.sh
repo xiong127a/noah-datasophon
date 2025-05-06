@@ -16,6 +16,10 @@
 #  limitations under the License.
 #
 
+# 设置HotSeconds路径，默认为空
+HOT_SECONDS_PATH=""
+HOT_SECONDS_CONF_PATH=""
+
 usage="Usage: start.sh (start|stop|restart) <command> "
 
 # if no args specified, show usage
@@ -91,7 +95,14 @@ if [ "$command" = "api" ]; then
   CLASS=com.datasophon.api.DataSophonApplicationServer
   JMX="-javaagent:$DDH_HOME/jmx/jmx_prometheus_javaagent-0.16.1.jar=8586:$DDH_HOME/jmx/jmx_exporter_config.yaml"
   HEAP_OPTS="-Xms1g -Xmx1g -Xmn512m"
-  export DDH_OPTS="$HEAP_OPTS $DDH_OPTS $JMX"
+  
+  # 添加HotSeconds相关参数（如果路径已设置）
+  HOT_SECONDS_OPTS=""
+  if [ -n "$HOT_SECONDS_PATH" ] && [ -n "$HOT_SECONDS_CONF_PATH" ]; then
+    HOT_SECONDS_OPTS="-XXaltjvm=dcevm -javaagent:$HOT_SECONDS_PATH/HotSecondsServer.jar=hotconf=$HOT_SECONDS_CONF_PATH/hot-seconds-remote.xml"
+  fi
+  
+  export DDH_OPTS="$HEAP_OPTS $DDH_OPTS $JMX $HOT_SECONDS_OPTS"
 else
   echo "Error: No command named \`$command' was found."
   exit 1

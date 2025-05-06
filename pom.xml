@@ -51,7 +51,7 @@
         <maven-checkstyle-plugin.version>3.1.2</maven-checkstyle-plugin.version>
         <maven-compiler-plugin.version>3.10.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
-        <mybatis-plus.version>3.5.10</mybatis-plus.version>
+        <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
         <mybatis.spring.version>2.0.1</mybatis.spring.version>
         <mybatis-plus-join>1.5.3</mybatis-plus-join>
         <mysql.connector.version>8.0.28</mysql.connector.version>
@@ -296,6 +296,13 @@
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.extensions</groupId>
+                <artifactId>maven-build-cache-extension</artifactId>
+                <version>1.2.0</version>
+            </extension>
+        </extensions>
         <plugins>
 <!--            <plugin>-->
 <!--                <groupId>org.apache.maven.plugins</groupId>-->
