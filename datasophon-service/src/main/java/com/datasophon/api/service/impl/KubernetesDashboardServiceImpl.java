@@ -1313,21 +1313,24 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getReplicationControllers(Integer clusterId, String namespace) {
+    public Result getReplicationControllers(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取ReplicationControllers
-            io.fabric8.kubernetes.api.model.ReplicationControllerList rcList;
-            if (namespace != null && !namespace.isEmpty()) {
-                rcList = client.replicationControllers().inNamespace(namespace).list();
-            } else {
-                rcList = client.replicationControllers().inAnyNamespace().list();
-            }
+            // 使用通用分页方法获取ReplicationControllers列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.ReplicationController> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.ReplicationController.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 获取到分页的ReplicationController列表
+            List<io.fabric8.kubernetes.api.model.ReplicationController> rcList = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> replicationControllers = rcList.getItems().stream()
+            List<Map<String, Object>> replicationControllers = rcList.stream()
                     .map(rc -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -1529,6 +1532,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("status", status);
             result.put("replicationControllers", replicationControllers);
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {

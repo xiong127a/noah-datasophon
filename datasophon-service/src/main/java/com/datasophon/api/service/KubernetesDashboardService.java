@@ -127,17 +127,6 @@ public interface KubernetesDashboardService {
     Result getIngressClasses(Integer clusterId);
 
     /**
-     * 获取DaemonSets列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @param pageNum   当前页码
-     * @param pageSize  每页大小
-     * @return DaemonSets列表（包含分页信息）
-     */
-    Result getDaemonSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
-
-    /**
      * 获取DaemonSets列表（带服务ID）
      * 
      * @param clusterId 集群ID
@@ -170,13 +159,15 @@ public interface KubernetesDashboardService {
     Result getReplicaSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取ReplicationControllers列表
+     * 获取ReplicationControllers列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return ReplicationControllers列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return ReplicationControllers列表（包含分页信息）
      */
-    Result getReplicationControllers(Integer clusterId, String namespace);
+    Result getReplicationControllers(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Jobs列表（带分页）

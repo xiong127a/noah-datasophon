@@ -17,12 +17,13 @@
             :columns="columns"
             :dataSource="replicationControllers"
             :rowKey="rowKey"
-            :pagination="false"
+            :pagination="pagination"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             :zebra-stripes="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
@@ -165,6 +166,16 @@ export default {
       loading: false,
       replicationControllers: [],
       expandedLabels: {}, // 存储每个RC的标签展开状态
+      // 分页相关数据
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showTotal: total => `共 ${total} 项`,
+        showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
+        size: 'default'
+      },
       columns: [
         {
           title: '名称',
@@ -213,12 +224,18 @@ export default {
   },
   watch: {
     selectedNamespace() {
+      // 切换命名空间时重置分页到第一页
+      this.pagination.current = 1;
       this.fetchReplicationControllers();
     },
     clusterId() {
+      // 切换集群时重置分页到第一页
+      this.pagination.current = 1;
       this.fetchReplicationControllers();
     },
     serviceId() {
+      // 切换服务时重置分页到第一页
+      this.pagination.current = 1;
       this.fetchReplicationControllers();
     }
   },
@@ -236,7 +253,10 @@ export default {
         const params = { 
           clusterId: this.clusterId,
           // 仅当命名空间不为'all'时添加命名空间参数
-          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace }),
+          // 添加分页参数
+          pageNum: this.pagination.current,
+          pageSize: this.pagination.pageSize
         };
         
         // 添加serviceId参数（如果提供）
@@ -253,6 +273,14 @@ export default {
         if (res.code === 200 && res.data) { 
           // 处理数据
           this.replicationControllers = res.data.replicationControllers || [];
+          
+          // 更新分页信息
+          if (res.data.total !== undefined) {
+            this.pagination.total = res.data.total;
+          } else {
+            // 如果后端没有返回total，则使用列表长度
+            this.pagination.total = this.replicationControllers.length;
+          }
           
           // 确保每个ReplicationController对象都有必要的属性
           this.replicationControllers = this.replicationControllers.map(rc => {
@@ -300,6 +328,13 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    // 处理表格变化事件（如分页、排序等）
+    handleTableChange(pagination) {
+      console.log('表格变化:', pagination);
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      this.fetchReplicationControllers();
     },
     getShortImageName(image) {
       if (!image) return '';

@@ -171,9 +171,8 @@ public class KubernetesDashboardController {
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return serviceId != null
-                ? kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace, pageNum, pageSize)
-                : kubernetesDashboardService.getDaemonSets(clusterId, namespace, pageNum, pageSize);
+        return kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace, pageNum, pageSize);
+
     }
 
     /**
@@ -199,13 +198,15 @@ public class KubernetesDashboardController {
     }
 
     /**
-     * 获取ReplicationControllers列表
+     * 获取ReplicationControllers列表（带分页）
      */
     @RequestMapping("/replicationcontrollers")
     public Result getReplicationControllers(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
