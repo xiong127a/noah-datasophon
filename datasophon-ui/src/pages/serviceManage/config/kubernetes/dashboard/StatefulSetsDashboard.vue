@@ -138,6 +138,21 @@
               </span>
             </template>
           </a-table>
+          
+          <!-- 添加分页器 -->
+          <div class="pagination-container">
+            <a-pagination
+              v-if="totalItems > 0"
+              :current="pageNum"
+              :pageSize="pageSize"
+              :total="totalItems"
+              :showTotal="total => `共 ${total} 条记录`"
+              :pageSizeOptions="['10', '20', '50', '100']"
+              showSizeChanger
+              @change="onPageChange"
+              @showSizeChange="onShowSizeChange"
+            />
+          </div>
         </a-spin>
       </div>
     </div>
@@ -166,6 +181,10 @@ export default {
     return {
       loading: false,
       statefulSets: [],
+      totalItems: 0,
+      totalPages: 0,
+      pageNum: 1,
+      pageSize: 10,
       expandedLabels: {}, // 存储每个StatefulSet的标签展开状态
       columns: [
         {
@@ -215,9 +234,11 @@ export default {
   },
   watch: {
     selectedNamespace() {
+      this.pageNum = 1; // 切换命名空间时重置页码
       this.fetchStatefulSets();
     },
     clusterId() {
+      this.pageNum = 1; // 切换集群时重置页码
       this.fetchStatefulSets();
     }
   },
@@ -229,13 +250,15 @@ export default {
     },
     async fetchStatefulSets() {
       this.loading = true;
-      console.log('获取StatefulSets，命名空间:', this.selectedNamespace);
+      console.log('获取StatefulSets，命名空间:', this.selectedNamespace, '页码:', this.pageNum, '每页大小:', this.pageSize);
       
       try {
         const params = { 
           clusterId: this.clusterId,
           // 仅当命名空间不为'all'时添加命名空间参数
-          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace }),
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
         };
         
         // 使用全局API对象中定义的getK8sStatefulSets接口
@@ -247,6 +270,8 @@ export default {
         if (res.code === 200 && res.data) { 
           // 处理数据
           this.statefulSets = res.data.statefulSets || [];
+          this.totalItems = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 0;
           
           // 确保每个StatefulSet对象都有必要的属性
           this.statefulSets = this.statefulSets.map(statefulSet => {
@@ -285,15 +310,30 @@ export default {
         } else {
           console.error('获取StatefulSets列表失败:', res && res.msg ? res.msg : '未知错误');
           this.statefulSets = []; // 失败时清空数据
+          this.totalItems = 0;
+          this.totalPages = 0;
           this.$message.error(res && res.msg ? res.msg : '获取StatefulSets列表失败');
         }
       } catch (error) {
         console.error('获取StatefulSets列表异常:', error);
         this.$message.error('获取StatefulSets列表异常');
         this.statefulSets = []; // 出错时清空数据
+        this.totalItems = 0;
+        this.totalPages = 0;
       } finally {
         this.loading = false;
       }
+    },
+    // 页码改变事件处理
+    onPageChange(page) {
+      this.pageNum = page;
+      this.fetchStatefulSets();
+    },
+    // 页面大小改变事件处理
+    onShowSizeChange(current, size) {
+      this.pageNum = 1; // 重置到第一页
+      this.pageSize = size;
+      this.fetchStatefulSets();
     },
     getShortImageName(image) {
       if (!image) return '';
@@ -473,6 +513,12 @@ export default {
       border-radius: 10px;
     }
   }
+}
+
+// 分页器容器样式
+.pagination-container {
+  margin-top: 16px;
+  text-align: right;
 }
 
 /* 覆盖KubernetesDashboard.vue中的样式 */

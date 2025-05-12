@@ -181,8 +181,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/statefulsets")
     public Result getStatefulSets(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getStatefulSets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getStatefulSets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**

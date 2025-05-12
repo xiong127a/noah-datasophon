@@ -43,7 +43,7 @@ import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
-import io.fabric8.kubernetes.api.model.apps.StatefulSetList;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobCondition;
@@ -1085,21 +1085,24 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getStatefulSets(Integer clusterId, String namespace) {
+    public Result getStatefulSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取StatefulSets
-            StatefulSetList statefulSetList;
-            if (namespace != null && !namespace.isEmpty()) {
-                statefulSetList = client.apps().statefulSets().inNamespace(namespace).list();
-            } else {
-                statefulSetList = client.apps().statefulSets().inAnyNamespace().list();
-            }
+            // 使用通用分页方法获取StatefulSet列表
+            PaginatedResult<StatefulSet> paginationResult = paginateResources(
+                    client,
+                    StatefulSet.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 获取到分页的StatefulSet列表
+            List<StatefulSet> statefulSetItems = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> statefulSets = statefulSetList.getItems().stream()
+            List<Map<String, Object>> statefulSets = statefulSetItems.stream()
                     .map(statefulSet -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -1119,7 +1122,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
                         // 类型信息
                         typeMeta.put("kind", "statefulset");
-                        typeMeta.put("scalable", true); // StatefulSet是可缩放的
+                        typeMeta.put("scalable", true);
                         item.put("typeMeta", typeMeta);
 
                         // Pod信息
@@ -1204,6 +1207,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("statefulSets", statefulSets);
             result.put("status", status);
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
