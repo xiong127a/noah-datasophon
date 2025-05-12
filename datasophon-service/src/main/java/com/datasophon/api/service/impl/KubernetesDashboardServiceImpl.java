@@ -39,7 +39,6 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.api.model.SecretList;
-import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
@@ -238,24 +237,27 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getServices(Integer clusterId, String namespace) {
+    public Result getServices(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取Services
-            ServiceList serviceList;
-            if (namespace != null && !namespace.isEmpty()) {
-                serviceList = client.services().inNamespace(namespace).list();
-            } else {
-                serviceList = client.services().inAnyNamespace().list();
-            }
+            // 使用通用分页方法获取Service列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.Service> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.Service.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 获取到分页的Service列表
+            List<io.fabric8.kubernetes.api.model.Service> serviceList = paginationResult.getItems();
 
             // 按照Kubernetes Dashboard的格式构建结果
             Map<String, Object> result = new HashMap<>();
 
             // 构建services列表
-            List<Map<String, Object>> services = serviceList.getItems().stream()
+            List<Map<String, Object>> services = serviceList.stream()
                     .map(service -> {
                         Map<String, Object> item = new HashMap<>();
 
@@ -346,6 +348,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             // 添加errors数组
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {

@@ -17,7 +17,7 @@
             :columns="serviceColumns"
             :dataSource="services"
             :pagination="false"
-            :rowKey="record => record.objectMeta?.uid || `${record.objectMeta?.namespace || '_'}-${record.objectMeta?.name || '_'}-${Math.random().toString(36).substring(2, 10)}`"
+            :rowKey="record => (record.objectMeta && record.objectMeta.uid) || `${(record.objectMeta && record.objectMeta.namespace) || '_'}-${(record.objectMeta && record.objectMeta.name) || '_'}-${Math.random().toString(36).substring(2, 10)}`"
             class="k8s-table"
             :bordered="false"
             :table-layout="'auto'"
@@ -26,19 +26,19 @@
               <div style="display: flex; align-items: center; line-height: normal;">
                 <span class="status-dot status-running"></span>
                 <div class="name-cell">
-                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
-                    {{ record?.objectMeta?.name || '未知' }}
+                  <span class="pod-name" :title="(record && record.objectMeta && record.objectMeta.name) || '未知'">
+                    {{ (record && record.objectMeta && record.objectMeta.name) || '未知' }}
                   </span>
                 </div>
               </div>
             </template>
             
             <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+              <div v-if="record && record.objectMeta && record.objectMeta.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag 
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
-                    :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-label-${entry[0]}-${idx}`" 
+                    :key="`${(record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2, 10)}-label-${entry[0]}-${idx}`" 
                     color="blue"
                     class="label-tag"
                     :title="`${entry[0]}: ${entry[1]}`"
@@ -57,7 +57,7 @@
                 <template v-else>
                   <a-tag 
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels)"
-                    :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-label-expanded-${entry[0]}-${idx}`" 
+                    :key="`${(record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2, 10)}-label-expanded-${entry[0]}-${idx}`" 
                     color="blue"
                     class="label-tag"
                     :title="`${entry[0]}: ${entry[1]}`"
@@ -90,7 +90,7 @@
             
             <template slot="internalEndpoints" slot-scope="text, record">
               <div v-if="record.internalEndpoint && record.internalEndpoint.ports && record.internalEndpoint.ports.length > 0" class="endpoints-container">
-                <div v-for="(port, index) in record.internalEndpoint.ports" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-internal-${port.port}-${port.protocol}-${index}`">
+                <div v-for="(port, index) in record.internalEndpoint.ports" :key="`${(record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2, 10)}-internal-${port.port}-${port.protocol}-${index}`">
                   <div class="internal-endpoint" :title="`${record.internalEndpoint.host}:${port.port} ${port.protocol}`">
                     {{record.internalEndpoint.host}}:{{port.port}} 
                     <a-tag :color="getProtocolColor(port.protocol)" class="protocol-tag">
@@ -110,9 +110,9 @@
             
             <template slot="externalEndpoints" slot-scope="text, record">
               <div v-if="record.externalEndpoints && record.externalEndpoints.length > 0" class="endpoints-container">
-                <div v-for="(endpoint, endpointIndex) in record.externalEndpoints" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-external-ep-${endpointIndex}`">
+                <div v-for="(endpoint, endpointIndex) in record.externalEndpoints" :key="`${(record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2, 10)}-external-ep-${endpointIndex}`">
                   <template v-if="endpoint.ports && endpoint.ports.length > 0">
-                    <div v-for="(port, portIndex) in endpoint.ports" :key="`${record.objectMeta?.uid || Math.random().toString(36).substring(2, 10)}-ext-${endpoint.host}-${port.port || port.nodePort}-${portIndex}`">
+                    <div v-for="(port, portIndex) in endpoint.ports" :key="`${(record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2, 10)}-ext-${endpoint.host}-${port.port || port.nodePort}-${portIndex}`">
                       <a v-if="port.port" :href="`http://${endpoint.host}:${port.port}`" target="_blank" rel="noopener noreferrer" class="external-endpoint" :title="`${endpoint.host}:${port.port}`">
                         {{endpoint.host}}:{{port.port}}
                         <a-icon type="link" class="external-icon" />
@@ -139,11 +139,26 @@
             </template>
             
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(record.objectMeta && record.objectMeta.creationTimestamp)">
+                {{ getDaysAgo(record.objectMeta && record.objectMeta.creationTimestamp) }}
               </span>
             </template>
           </a-table>
+          
+          <!-- 添加分页器 -->
+          <div class="pagination-container">
+            <a-pagination
+              v-if="serviceTotalItems > 0 && totalPages > 1"
+              :current="pageNum"
+              :pageSize="pageSize"
+              :total="serviceTotalItems"
+              :showTotal="total => `共 ${total} 条记录`"
+              :pageSizeOptions="['10', '20', '50', '100']"
+              showSizeChanger
+              @change="onPageChange"
+              @showSizeChange="onShowSizeChange"
+            />
+          </div>
         </a-spin>
       </div>
     </div>
@@ -224,7 +239,10 @@ export default {
           scopedSlots: { customRender: 'creationTime' },
           width: '120px'
         }
-      ]
+      ],
+      pageNum: 1,
+      pageSize: 10,
+      totalPages: 1
     };
   },
   mounted() {
@@ -245,25 +263,34 @@ export default {
     async fetchServices() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sServices, {
+        const params = {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        };
         
-        if (res.code === 200 && res.data) {
-          // 处理服务数据
+        // 使用带分页的API
+        const res = await this.$axiosGet(global.API.getK8sServices, params);
+        
+        if (res.code === 200) {
           this.services = res.data.services || [];
-          this.serviceTotalItems = res.data.listMeta?.totalItems || 0;
+          this.serviceTotalItems = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 1;
+          
+          console.log('获取Services成功:', this.services.length, '条记录');
         } else {
           this.services = [];
           this.serviceTotalItems = 0;
-          console.error('获取服务列表失败:', res.msg);
+          this.totalPages = 1;
+          this.$message.error(res.msg || '获取Services列表失败');
         }
       } catch (error) {
-        console.error('获取服务列表失败:', error);
-        this.$message.error('获取服务列表失败');
+        console.error('获取Services出错:', error);
         this.services = [];
         this.serviceTotalItems = 0;
+        this.totalPages = 1;
+        this.$message.error('获取Services列表异常');
       } finally {
         this.loading = false;
       }
@@ -340,13 +367,26 @@ export default {
         default:
           return 'default';
       }
+    },
+    onPageChange(page) {
+      this.pageNum = page;
+      this.fetchServices();
+    },
+    onShowSizeChange(current, size) {
+      this.pageNum = 1; // 重置到第一页
+      this.pageSize = size;
+      this.fetchServices();
     }
   },
   watch: {
     selectedNamespace() {
+      // 重置分页到第一页
+      this.pageNum = 1;
       this.fetchServices();
     },
     clusterId() {
+      // 重置分页到第一页
+      this.pageNum = 1;
       this.fetchServices();
     }
   }
@@ -461,5 +501,17 @@ export default {
 :deep(.ant-table-tbody > tr > td) {
   white-space: normal !important;
   word-break: break-word !important;
+}
+
+/* 空值样式 */
+.empty-value {
+  color: #999;
+  font-style: italic;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  margin-top: 16px;
+  text-align: right;
 }
 </style> 

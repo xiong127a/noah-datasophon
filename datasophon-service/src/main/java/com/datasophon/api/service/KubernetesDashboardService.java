@@ -58,13 +58,16 @@ public interface KubernetesDashboardService {
     Result getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Services列表
+     * 获取Services列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Services列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Services列表（包含分页信息）
      */
-    Result getServices(Integer clusterId, String namespace);
+    Result getServices(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+
 
     /**
      * 获取ConfigMaps列表

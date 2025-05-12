@@ -90,8 +90,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/services")
     public Result getServices(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getServices(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getServices(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
