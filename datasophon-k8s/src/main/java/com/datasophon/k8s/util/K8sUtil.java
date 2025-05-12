@@ -47,53 +47,11 @@ import java.util.stream.Collectors;
 
 @Slf4j
 public class K8sUtil {
-    /**
-     * 封装的方法，用于在指定 Pod 容器中执行命令。
-     *
-     * @param client     KubernetesClient 实例
-     * @param namespace  Pod 所在的命名空间
-     * @param deployment 指定的 Deployment 名称
-     * @param hostname   Pod 所在的 hostname
-     * @param command    需要执行的命令
-     */
-    public static String executeCommandInPod(KubernetesClient client, String namespace, String deployment, String hostname, String command) {
-        try {
-            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", deployment).list().getItems();
-            Pod targetPod = null;
 
-            for (Pod pod : pods) {
-                if (pod.getStatus().getHostIP().equals(hostname)) {
-                    targetPod = pod;
-                    break;
-                }
-            }
 
-            if (targetPod == null) {
-                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for deployment " + deployment);
-            }
-
-            String podName = targetPod.getMetadata().getName();
-            log.debug("Executing command in Pod: " + podName + " on host: " + hostname);
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            ByteArrayOutputStream err = new ByteArrayOutputStream();
-
-            client.pods().inNamespace(namespace).withName(podName)
-                    .writingOutput(out)
-                    .writingError(err)
-                    .usingListener(new SimpleListener())
-                    .exec("sh", "-c", command);
-
-            return out.toString();
-
-        } catch (Exception e) {
-            log.error("Command execution failed", e);
-            return "Command execution failed: " + e.getMessage();
-        }
-    }
 
     public static ExecResult executeCommand(String namespace, KubernetesClient client, String image, String hostname, List<String> commands) {
-        List<Pod> pods = client.pods().inNamespace(Constant.K8S_NAMESPACE).withLabel("app", image).list().getItems();
+        List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
         ExecResult execResult = new ExecResult();
         List<String> hostList = pods.stream().map(pod -> pod.getSpec().getNodeName()).collect(Collectors.toList());
 
@@ -426,6 +384,52 @@ public class K8sUtil {
         client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .resource(job).create();
+    }
+
+    /**
+     * 上传文件到指定 Pod 容器中。
+     *
+     * @param client     KubernetesClient 实例
+     * @param namespace  Pod 所在的命名空间
+     * @param image 指定的 Deployment 名称
+     * @param hostname   Pod 所在的 hostname
+     * @param localFilePath 本地文件路径
+     * @param remoteFilePath 远程文件路径
+     * @return 上传结果
+     */
+    public static boolean uploadFileToPod(KubernetesClient client, String namespace, String image, String hostname, String localFilePath, String remoteFilePath) {
+        try {
+            List<Pod> pods = client.pods().inNamespace(namespace).withLabel("app", image).list().getItems();
+            Pod targetPod = null;
+
+            for (Pod pod : pods) {
+                if (pod.getStatus().getHostIP().equals(hostname)) {
+                    targetPod = pod;
+                    break;
+                }
+            }
+
+            if (targetPod == null) {
+                throw new RuntimeException("Pod with hostname " + hostname + " not found in namespace " + namespace + " for image " + image);
+            }
+
+            String podName = targetPod.getMetadata().getName();
+            log.debug("Uploading file to Pod: " + podName + " on host: " + hostname);
+
+            // 读取本地文件
+            byte[] fileContent = FileUtil.readBytes(localFilePath);
+
+            // 上传文件到 Pod
+            client.pods().inNamespace(namespace).withName(podName)
+                    .file(remoteFilePath)
+                    .upload(new ByteArrayInputStream(fileContent));
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("File upload failed", e);
+            return false;
+        }
     }
 
     static class SimpleListener implements ExecListener {

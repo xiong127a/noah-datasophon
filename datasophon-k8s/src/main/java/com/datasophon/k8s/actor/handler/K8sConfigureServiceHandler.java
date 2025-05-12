@@ -40,12 +40,14 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.*;
 
+import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
 import static com.datasophon.k8s.util.K8sFreeMakerUtils.*;
 
 @Data
 public class K8sConfigureServiceHandler {
 
     private static final String RANGER_ADMIN = "RangerAdmin";
+    private static final String Prometheus = "Prometheus";
 
     private static final String SH = "sh";
 
@@ -72,6 +74,10 @@ public class K8sConfigureServiceHandler {
                                 String hostName,
                                 String kubeConfig) throws Exception {
         ExecResult execResult = new ExecResult();
+
+        if (Prometheus.equals(serviceRoleName)) {
+            createConfigMap(PROMETHEUS_CONFIG, "", kubeConfig, PROMETHEUS_CONFIG,serviceRoleFullName);
+        }
         try {
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", "{{HOST}}");
@@ -83,9 +89,10 @@ public class K8sConfigureServiceHandler {
                 if (StrUtil.endWith(generators.getFilename(), Constants.K8S_CONFIG_SUFFIX)) {
                     continue;
                 }
-                String dataDir = "";
+
                 Iterator<ServiceConfig> iterator = configs.iterator();
                 ArrayList<ServiceConfig> customConfList = new ArrayList<>();
+
                 while (iterator.hasNext()) {
                     ServiceConfig config = iterator.next();
                     if (StringUtils.isNotBlank(config.getType())) {
@@ -123,10 +130,6 @@ public class K8sConfigureServiceHandler {
                         config.setValue(config.getValue().toString());
                     }
 
-                    if ("dataDir".equals(config.getName())) {
-                        logger.info("Find dataDir : {}", config.getValue());
-                        dataDir = (String) config.getValue();
-                    }
                     if ("TrinoCoordinator".equals(serviceRoleName) && "coordinator".equals(config.getName())) {
                         logger.info("Start config trino coordinator");
                         config.setValue("true");
@@ -212,9 +215,14 @@ public class K8sConfigureServiceHandler {
                     String configMapName = generateConfigMapName(serviceRoleName,generators);
                     createConfigMap(configMapName, "", kubeConfig, generators.getFilename(),serviceRoleFullName);
                 }
+
                 execResult.setExecOut("configure success");
                 logger.info("configure success");
+
             }
+
+//                return execResult;
+//            }
 //            if (RANGER_ADMIN.equals(serviceRoleName) && !setupRangerAdmin(hostName, decompressPackageName)) {
 //                return execResult;
 //            }

@@ -250,6 +250,7 @@ public final class Constants {
         public static final String JOB_MANAGER = "jobmanager";
         public static final String x86_64 = "x86_64";
         public static final String PROMETHEUS = "prometheus";
+        public static final String PROMETHEUS_CONFIG = "prometheus-config";
 
         public static final String XML = "xml";
         public static final String PROPERTIES = "properties";
