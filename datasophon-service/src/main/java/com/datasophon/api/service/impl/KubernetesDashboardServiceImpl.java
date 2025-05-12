@@ -988,8 +988,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 提取容器镜像
                         List<String> containerImages = new ArrayList<>();
                         if (daemonSet.getSpec() != null && daemonSet.getSpec().getTemplate() != null
-                                && daemonSet.getSpec().getTemplate().getSpec() != null
-                                && daemonSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                                && daemonSet.getSpec().getTemplate().getSpec() != null &&
+                                daemonSet.getSpec().getTemplate().getSpec().getContainers() != null) {
                             daemonSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     containerImages.add(container.getImage());
@@ -1001,8 +1001,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 初始化容器镜像
                         List<String> initContainerImages = new ArrayList<>();
                         if (daemonSet.getSpec() != null && daemonSet.getSpec().getTemplate() != null
-                                && daemonSet.getSpec().getTemplate().getSpec() != null
-                                && daemonSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                                && daemonSet.getSpec().getTemplate().getSpec() != null &&
+                                daemonSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
                             daemonSet.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     initContainerImages.add(container.getImage());
@@ -1120,8 +1120,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 提取容器镜像
                         List<String> containerImages = new ArrayList<>();
                         if (statefulSet.getSpec() != null && statefulSet.getSpec().getTemplate() != null
-                                && statefulSet.getSpec().getTemplate().getSpec() != null
-                                && statefulSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                                && statefulSet.getSpec().getTemplate().getSpec() != null &&
+                                statefulSet.getSpec().getTemplate().getSpec().getContainers() != null) {
                             statefulSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     containerImages.add(container.getImage());
@@ -1133,8 +1133,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 初始化容器镜像
                         List<String> initContainerImages = new ArrayList<>();
                         if (statefulSet.getSpec() != null && statefulSet.getSpec().getTemplate() != null
-                                && statefulSet.getSpec().getTemplate().getSpec() != null
-                                && statefulSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                                && statefulSet.getSpec().getTemplate().getSpec() != null &&
+                                statefulSet.getSpec().getTemplate().getSpec().getInitContainers() != null) {
                             statefulSet.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     initContainerImages.add(container.getImage());
@@ -1249,8 +1249,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 提取容器镜像
                         List<String> containerImages = new ArrayList<>();
                         if (replicaSet.getSpec() != null && replicaSet.getSpec().getTemplate() != null
-                                && replicaSet.getSpec().getTemplate().getSpec() != null
-                                && replicaSet.getSpec().getTemplate().getSpec().getContainers() != null) {
+                                && replicaSet.getSpec().getTemplate().getSpec() != null &&
+                                replicaSet.getSpec().getTemplate().getSpec().getContainers() != null) {
                             replicaSet.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     containerImages.add(container.getImage());
@@ -1336,8 +1336,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 提取容器镜像
                         List<String> containerImages = new ArrayList<>();
                         if (rc.getSpec() != null && rc.getSpec().getTemplate() != null
-                                && rc.getSpec().getTemplate().getSpec() != null
-                                && rc.getSpec().getTemplate().getSpec().getContainers() != null) {
+                                && rc.getSpec().getTemplate().getSpec() != null &&
+                                rc.getSpec().getTemplate().getSpec().getContainers() != null) {
                             rc.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     containerImages.add(container.getImage());
@@ -1349,8 +1349,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 初始化容器镜像
                         List<String> initContainerImages = new ArrayList<>();
                         if (rc.getSpec() != null && rc.getSpec().getTemplate() != null
-                                && rc.getSpec().getTemplate().getSpec() != null
-                                && rc.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+                                && rc.getSpec().getTemplate().getSpec() != null &&
+                                rc.getSpec().getTemplate().getSpec().getInitContainers() != null) {
                             rc.getSpec().getTemplate().getSpec().getInitContainers().forEach(container -> {
                                 if (container.getImage() != null) {
                                     initContainerImages.add(container.getImage());
@@ -1807,7 +1807,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getCronJobs(Integer clusterId, String namespace) {
+    public Result getCronJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 获取kubeconfig
             String kubeConfig = getKubeConfig(clusterId);
@@ -1821,12 +1821,55 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("创建Kubernetes客户端失败");
             }
 
-            // 获取CronJobs列表
-            List<io.fabric8.kubernetes.api.model.batch.v1.CronJob> cronJobsList;
+            // 创建ListOptions并设置分页参数
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 获取总记录数（需要单独查询）
+            long totalCronJobs = 0;
             if (namespace != null && !namespace.equals("all")) {
-                cronJobsList = client.batch().v1().cronjobs().inNamespace(namespace).list().getItems();
+                totalCronJobs = client.batch().v1().cronjobs().inNamespace(namespace).list().getItems().size();
             } else {
-                cronJobsList = client.batch().v1().cronjobs().inAnyNamespace().list().getItems();
+                totalCronJobs = client.batch().v1().cronjobs().inAnyNamespace().list().getItems().size();
+            }
+
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            List<io.fabric8.kubernetes.api.model.batch.v1.CronJob> cronJobsList;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                io.fabric8.kubernetes.api.model.batch.v1.CronJobList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.equals("all")) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.batch().v1().cronjobs().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.batch().v1().cronjobs().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的CronJobs
+            io.fabric8.kubernetes.api.model.batch.v1.CronJobList cronJobList;
+            listOptions.setContinue(continueToken);
+            if (namespace != null && !namespace.equals("all")) {
+                cronJobList = client.batch().v1().cronjobs().inNamespace(namespace).list(listOptions);
+                cronJobsList = cronJobList.getItems();
+            } else {
+                cronJobList = client.batch().v1().cronjobs().inAnyNamespace().list(listOptions);
+                cronJobsList = cronJobList.getItems();
             }
 
             // 处理CronJobs数据
@@ -1892,49 +1935,106 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 items.add(cronJobMap);
             }
 
-            // 构建响应数据
-            Map<String, Object> responseData = new HashMap<>();
+            // 应用分页逻辑到数据
+            int fromIndex = (pageNum - 1) * pageSize;
+            int toIndex = Math.min(fromIndex + pageSize, items.size());
 
-            // 列表元数据
-            Map<String, Object> listMeta = new HashMap<>();
-            listMeta.put("totalItems", items.size());
-            responseData.put("listMeta", listMeta);
+            // 确保索引在有效范围内
+            if (fromIndex < items.size()) {
+                List<Map<String, Object>> pagedItems = items.subList(fromIndex, toIndex);
 
-            // 度量指标（暂时为空）
-            List<Map<String, Object>> metrics = new ArrayList<>();
-            Map<String, Object> cpuMetric = new HashMap<>();
-            cpuMetric.put("dataPoints", new ArrayList<>());
-            cpuMetric.put("metricPoints", new ArrayList<>());
-            cpuMetric.put("metricName", "cpu/usage_rate");
-            cpuMetric.put("aggregation", "sum");
-            metrics.add(cpuMetric);
+                // 构建响应数据
+                Map<String, Object> responseData = new HashMap<>();
 
-            Map<String, Object> memoryMetric = new HashMap<>();
-            memoryMetric.put("dataPoints", new ArrayList<>());
-            memoryMetric.put("metricPoints", new ArrayList<>());
-            memoryMetric.put("metricName", "memory/usage");
-            memoryMetric.put("aggregation", "sum");
-            metrics.add(memoryMetric);
+                // 列表元数据
+                Map<String, Object> listMeta = new HashMap<>();
+                listMeta.put("totalItems", pagedItems.size());
+                responseData.put("listMeta", listMeta);
 
-            responseData.put("cumulativeMetrics", metrics);
+                // 度量指标（暂时为空）
+                List<Map<String, Object>> metrics = new ArrayList<>();
+                Map<String, Object> cpuMetric = new HashMap<>();
+                cpuMetric.put("dataPoints", new ArrayList<>());
+                cpuMetric.put("metricPoints", new ArrayList<>());
+                cpuMetric.put("metricName", "cpu/usage_rate");
+                cpuMetric.put("aggregation", "sum");
+                metrics.add(cpuMetric);
 
-            // 添加CronJobs列表
-            responseData.put("items", items);
+                Map<String, Object> memoryMetric = new HashMap<>();
+                memoryMetric.put("dataPoints", new ArrayList<>());
+                memoryMetric.put("metricPoints", new ArrayList<>());
+                memoryMetric.put("metricName", "memory/usage");
+                memoryMetric.put("aggregation", "sum");
+                metrics.add(memoryMetric);
 
-            // 添加状态统计
-            Map<String, Object> status = new HashMap<>();
-            status.put("running", runningCount);
-            status.put("pending", 0);
-            status.put("failed", 0);
-            status.put("succeeded", 0);
-            status.put("unknown", 0);
-            status.put("terminating", 0);
-            responseData.put("status", status);
+                responseData.put("cumulativeMetrics", metrics);
 
-            // 添加错误列表
-            responseData.put("errors", new ArrayList<>());
+                // 添加CronJobs列表
+                responseData.put("items", pagedItems);
 
-            return Result.success().put(Constants.DATA, responseData);
+                // 添加状态统计
+                Map<String, Object> status = new HashMap<>();
+                status.put("running", runningCount);
+                status.put("pending", 0);
+                status.put("failed", 0);
+                status.put("succeeded", 0);
+                status.put("unknown", 0);
+                status.put("terminating", 0);
+                responseData.put("status", status);
+
+                // 添加错误列表
+                responseData.put("errors", new ArrayList<>());
+
+                // 添加分页信息
+                responseData.put("total", totalCronJobs); // 添加总记录数
+                responseData.put("totalPages", (int) Math.ceil((double) totalCronJobs / pageSize)); // 添加总页数
+
+                return Result.success().put(Constants.DATA, responseData);
+            } else {
+                // 当请求的页码超出范围时，返回空数据
+                Map<String, Object> responseData = new HashMap<>();
+
+                // 创建listMeta Map (替换Map.of)
+                Map<String, Object> listMeta = new HashMap<>();
+                listMeta.put("totalItems", 0);
+                responseData.put("listMeta", listMeta);
+
+                responseData.put("items", new ArrayList<>());
+
+                // 创建status Map (替换Map.of)
+                Map<String, Object> statusMap = new HashMap<>();
+                statusMap.put("running", 0);
+                statusMap.put("pending", 0);
+                statusMap.put("failed", 0);
+                statusMap.put("succeeded", 0);
+                statusMap.put("unknown", 0);
+                statusMap.put("terminating", 0);
+                responseData.put("status", statusMap);
+
+                responseData.put("errors", new ArrayList<>());
+                responseData.put("total", totalCronJobs);
+                responseData.put("totalPages", (int) Math.ceil((double) totalCronJobs / pageSize));
+
+                // 创建度量指标（metrics）
+                List<Map<String, Object>> metricsList = new ArrayList<>();
+                Map<String, Object> cpuMetric = new HashMap<>();
+                cpuMetric.put("dataPoints", new ArrayList<>());
+                cpuMetric.put("metricPoints", new ArrayList<>());
+                cpuMetric.put("metricName", "cpu/usage_rate");
+                cpuMetric.put("aggregation", "sum");
+                metricsList.add(cpuMetric);
+
+                Map<String, Object> memoryMetric = new HashMap<>();
+                memoryMetric.put("dataPoints", new ArrayList<>());
+                memoryMetric.put("metricPoints", new ArrayList<>());
+                memoryMetric.put("metricName", "memory/usage");
+                memoryMetric.put("aggregation", "sum");
+                metricsList.add(memoryMetric);
+
+                responseData.put("cumulativeMetrics", metricsList);
+
+                return Result.success().put(Constants.DATA, responseData);
+            }
         } catch (Exception e) {
             logger.error("获取CronJobs列表出错", e);
             return Result.error("获取CronJobs列表出错: " + e.getMessage());

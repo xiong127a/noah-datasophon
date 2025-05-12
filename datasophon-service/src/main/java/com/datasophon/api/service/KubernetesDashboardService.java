@@ -196,13 +196,15 @@ public interface KubernetesDashboardService {
     Result getJobs(Integer clusterId, Integer serviceId, String namespace);
 
     /**
-     * 获取CronJobs列表
+     * 获取CronJobs列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return CronJobs列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return CronJobs列表（包含分页信息）
      */
-    Result getCronJobs(Integer clusterId, String namespace);
+    Result getCronJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Deployment详情
