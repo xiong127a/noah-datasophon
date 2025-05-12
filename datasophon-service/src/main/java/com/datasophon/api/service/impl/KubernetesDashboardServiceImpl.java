@@ -23,11 +23,37 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.k8s.DeploymentInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import io.fabric8.kubernetes.api.model.ConfigMapList;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ListOptions;
+import io.fabric8.kubernetes.api.model.NamespaceList;
+import io.fabric8.kubernetes.api.model.NodeList;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaimList;
+import io.fabric8.kubernetes.api.model.PersistentVolumeList;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ReplicationController;
+import io.fabric8.kubernetes.api.model.SecretList;
+import io.fabric8.kubernetes.api.model.ServiceList;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetList;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobCondition;
+import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
+import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
+import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressClassList;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressList;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
+import io.fabric8.kubernetes.api.model.storage.StorageClassList;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -106,7 +132,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取所有命名空间
-            io.fabric8.kubernetes.api.model.NamespaceList namespaceList = client.namespaces().list();
+            NamespaceList namespaceList = client.namespaces().list();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> namespaces = namespaceList.getItems().stream()
@@ -141,15 +167,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 使用通用分页方法获取Deployment列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.apps.Deployment> paginationResult = paginateResources(
+            PaginatedResult<Deployment> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.apps.Deployment.class,
+                    Deployment.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 获取到分页的Deployment列表
-            List<io.fabric8.kubernetes.api.model.apps.Deployment> deploymentItems = paginationResult.getItems();
+            List<Deployment> deploymentItems = paginationResult.getItems();
 
             // 转换为与原生Kubernetes Dashboard兼容的数据结构
             List<Map<String, Object>> deployments = deploymentItems.stream()
@@ -218,7 +244,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取Services
-            io.fabric8.kubernetes.api.model.ServiceList serviceList;
+            ServiceList serviceList;
             if (namespace != null && !namespace.isEmpty()) {
                 serviceList = client.services().inNamespace(namespace).list();
             } else {
@@ -335,7 +361,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取ConfigMaps
-            io.fabric8.kubernetes.api.model.ConfigMapList configMapList;
+            ConfigMapList configMapList;
             if (namespace != null && !namespace.isEmpty()) {
                 configMapList = client.configMaps().inNamespace(namespace).list();
             } else {
@@ -399,7 +425,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取Secrets
-            io.fabric8.kubernetes.api.model.SecretList secretList;
+            SecretList secretList;
             if (namespace != null && !namespace.isEmpty()) {
                 secretList = client.secrets().inNamespace(namespace).list();
             } else {
@@ -463,7 +489,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取PersistentVolumes
-            io.fabric8.kubernetes.api.model.PersistentVolumeList pvList = client.persistentVolumes().list();
+            PersistentVolumeList pvList = client.persistentVolumes().list();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> items = pvList.getItems().stream()
@@ -550,7 +576,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取PersistentVolumeClaims
-            io.fabric8.kubernetes.api.model.PersistentVolumeClaimList pvcList;
+            PersistentVolumeClaimList pvcList;
             if (namespace != null && !namespace.isEmpty()) {
                 pvcList = client.persistentVolumeClaims().inNamespace(namespace).list();
             } else {
@@ -634,7 +660,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取StorageClasses
-            io.fabric8.kubernetes.api.model.storage.StorageClassList storageClassList = client.storage()
+            StorageClassList storageClassList = client.storage()
                     .storageClasses().list();
 
             // 转换为前端需要的数据结构
@@ -699,7 +725,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             }
 
             // 获取Ingresses
-            io.fabric8.kubernetes.api.model.networking.v1.IngressList ingressList;
+            IngressList ingressList;
             if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
                 ingressList = client.network().v1().ingresses().inNamespace(namespace).list();
             } else {
@@ -732,7 +758,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         List<Map<String, Object>> endpoints = new ArrayList<>();
                         try {
                             // 获取集群所有Worker节点IP
-                            io.fabric8.kubernetes.api.model.NodeList nodeList = client.nodes().list();
+                            NodeList nodeList = client.nodes().list();
                             // 过滤掉master节点，只保留worker节点
                             List<String> nodeIps = nodeList.getItems().stream()
                                     .filter(node -> {
@@ -772,7 +798,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         // 收集Hosts信息
                         List<String> hosts = new ArrayList<>();
                         if (ingress.getSpec() != null && ingress.getSpec().getRules() != null) {
-                            for (io.fabric8.kubernetes.api.model.networking.v1.IngressRule rule : ingress.getSpec()
+                            for (IngressRule rule : ingress.getSpec()
                                     .getRules()) {
                                 if (rule.getHost() != null && !rule.getHost().isEmpty()) {
                                     hosts.add(rule.getHost());
@@ -807,7 +833,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取IngressClasses
-            io.fabric8.kubernetes.api.model.networking.v1.IngressClassList ingressClassList = client.network().v1()
+            IngressClassList ingressClassList = client.network().v1()
                     .ingressClasses().list();
 
             // 转换为前端需要的数据结构
@@ -1065,7 +1091,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取StatefulSets
-            io.fabric8.kubernetes.api.model.apps.StatefulSetList statefulSetList;
+            StatefulSetList statefulSetList;
             if (namespace != null && !namespace.isEmpty()) {
                 statefulSetList = client.apps().statefulSets().inNamespace(namespace).list();
             } else {
@@ -1193,15 +1219,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 使用通用分页方法获取ReplicaSet列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.apps.ReplicaSet> paginationResult = paginateResources(
+            PaginatedResult<ReplicaSet> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.apps.ReplicaSet.class,
+                    ReplicaSet.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 获取到分页的ReplicaSet列表
-            List<io.fabric8.kubernetes.api.model.apps.ReplicaSet> replicaSetItems = paginationResult.getItems();
+            List<ReplicaSet> replicaSetItems = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> replicaSets = replicaSetItems.stream()
@@ -1319,15 +1345,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 使用通用分页方法获取ReplicationControllers列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.ReplicationController> paginationResult = paginateResources(
+            PaginatedResult<ReplicationController> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.ReplicationController.class,
+                    ReplicationController.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 获取到分页的ReplicationController列表
-            List<io.fabric8.kubernetes.api.model.ReplicationController> rcList = paginationResult.getItems();
+            List<ReplicationController> rcList = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
             List<Map<String, Object>> replicationControllers = rcList.stream()
@@ -1416,16 +1442,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     String rcNamespace = rc.getMetadata().getNamespace();
 
                                     // 查找关联的Pod
-                                    List<io.fabric8.kubernetes.api.model.Pod> pods = client.pods()
+                                    List<Pod> pods = client.pods()
                                             .inNamespace(rcNamespace)
                                             .withLabels(rc.getSpec().getSelector())
                                             .list()
                                             .getItems();
 
                                     // 处理每个Pod的警告事件
-                                    for (io.fabric8.kubernetes.api.model.Pod pod : pods) {
+                                    for (Pod pod : pods) {
                                         if (pod.getStatus() != null && pod.getStatus().getContainerStatuses() != null) {
-                                            for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus()
+                                            for (ContainerStatus cs : pod.getStatus()
                                                     .getContainerStatuses()) {
                                                 if (cs.getState() != null && cs.getState().getWaiting() != null) {
                                                     String reason = cs.getState().getWaiting().getReason();
@@ -1551,15 +1577,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 使用通用分页方法获取Job列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.batch.v1.Job> paginationResult = paginateResources(
+            PaginatedResult<Job> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.batch.v1.Job.class,
+                    Job.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 获取到分页的Job列表
-            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList = paginationResult.getItems();
+            List<Job> jobsList = paginationResult.getItems();
 
             // 处理Jobs数据
             List<Map<String, Object>> jobs = new ArrayList<>();
@@ -1572,7 +1598,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             int unknownCount = 0;
             int terminatingCount = 0;
 
-            for (io.fabric8.kubernetes.api.model.batch.v1.Job job : jobsList) {
+            for (Job job : jobsList) {
                 Map<String, Object> jobMap = new HashMap<>();
 
                 // 处理元数据
@@ -1618,7 +1644,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
                 // 查询相关Pod可能的警告信息
                 try {
-                    List<io.fabric8.kubernetes.api.model.Pod> pods = client.pods()
+                    List<Pod> pods = client.pods()
                             .inNamespace(job.getMetadata().getNamespace())
                             .withLabel("job-name", job.getMetadata().getName())
                             .list()
@@ -1628,14 +1654,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     int pendingPods = 0;
 
                     List<Map<String, Object>> warnings = new ArrayList<>();
-                    for (io.fabric8.kubernetes.api.model.Pod pod : pods) {
+                    for (Pod pod : pods) {
                         // 统计pending状态的Pod
                         if (pod.getStatus() != null && "Pending".equals(pod.getStatus().getPhase())) {
                             pendingPods++;
 
                             // 检查容器状态是否有警告
                             if (pod.getStatus().getContainerStatuses() != null) {
-                                for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus()
+                                for (ContainerStatus cs : pod.getStatus()
                                         .getContainerStatuses()) {
                                     if (cs.getState() != null && cs.getState().getWaiting() != null) {
                                         String reason = cs.getState().getWaiting().getReason();
@@ -1685,7 +1711,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         job.getSpec().getTemplate().getSpec() != null &&
                         job.getSpec().getTemplate().getSpec().getContainers() != null) {
 
-                    for (io.fabric8.kubernetes.api.model.Container container : job.getSpec().getTemplate().getSpec()
+                    for (Container container : job.getSpec().getTemplate().getSpec()
                             .getContainers()) {
                         if (container.getImage() != null) {
                             containerImages.add(container.getImage());
@@ -1701,7 +1727,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         job.getSpec().getTemplate().getSpec() != null &&
                         job.getSpec().getTemplate().getSpec().getInitContainers() != null) {
 
-                    for (io.fabric8.kubernetes.api.model.Container container : job.getSpec().getTemplate().getSpec()
+                    for (Container container : job.getSpec().getTemplate().getSpec()
                             .getInitContainers()) {
                         if (container.getImage() != null) {
                             initContainerImages.add(container.getImage());
@@ -1737,7 +1763,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     // 获取条件
                     List<Map<String, Object>> conditions = new ArrayList<>();
                     if (job.getStatus().getConditions() != null) {
-                        for (io.fabric8.kubernetes.api.model.batch.v1.JobCondition condition : job.getStatus()
+                        for (JobCondition condition : job.getStatus()
                                 .getConditions()) {
                             Map<String, Object> conditionMap = new HashMap<>();
                             conditionMap.put("type", condition.getType());
@@ -1888,7 +1914,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec() != null &&
                         cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getContainers() != null) {
 
-                    for (io.fabric8.kubernetes.api.model.Container container : cronJob.getSpec().getJobTemplate()
+                    for (Container container : cronJob.getSpec().getJobTemplate()
                             .getSpec().getTemplate().getSpec().getContainers()) {
                         if (container.getImage() != null) {
                             containerImages.add(container.getImage());
@@ -1960,7 +1986,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取指定的Deployment
-            io.fabric8.kubernetes.api.model.apps.Deployment deployment = client.apps()
+            Deployment deployment = client.apps()
                     .deployments()
                     .inNamespace(namespace)
                     .withName(name)
@@ -1999,12 +2025,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     info.setImage(deployment.getSpec().getTemplate().getSpec().getContainers().get(0).getImage());
 
                     // 提取容器的资源请求和限制
-                    io.fabric8.kubernetes.api.model.Container container = deployment.getSpec().getTemplate().getSpec()
+                    Container container = deployment.getSpec().getTemplate().getSpec()
                             .getContainers().get(0);
                     if (container.getResources() != null) {
                         DeploymentInfo.ResourceQuota resourceQuota = new DeploymentInfo.ResourceQuota();
 
-                        Map<String, io.fabric8.kubernetes.api.model.Quantity> requests = container.getResources()
+                        Map<String, Quantity> requests = container.getResources()
                                 .getRequests();
                         if (requests != null) {
                             resourceQuota
@@ -2013,7 +2039,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     requests.get("memory") != null ? requests.get("memory").toString() : null);
                         }
 
-                        Map<String, io.fabric8.kubernetes.api.model.Quantity> limits = container.getResources()
+                        Map<String, Quantity> limits = container.getResources()
                                 .getLimits();
                         if (limits != null) {
                             resourceQuota.setCpuLimit(limits.get("cpu") != null ? limits.get("cpu").toString() : null);
@@ -2063,10 +2089,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client = getKubernetesClient(clusterId);
 
             // 获取与指定资源相关的事件
-            List<io.fabric8.kubernetes.api.model.Event> events = client.v1().events().inNamespace(namespace).list()
+            List<Event> events = client.v1().events().inNamespace(namespace).list()
                     .getItems().stream()
                     .filter(event -> {
-                        io.fabric8.kubernetes.api.model.ObjectReference involvedObject = event.getInvolvedObject();
+                        ObjectReference involvedObject = event.getInvolvedObject();
                         return involvedObject != null &&
                                 kind.equals(involvedObject.getKind()) &&
                                 name.equals(involvedObject.getName()) &&
@@ -2210,18 +2236,18 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             }
 
             // 2. 使用通用分页方法获取Pod列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.Pod> paginationResult = paginateResources(
+            PaginatedResult<Pod> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.Pod.class,
+                    Pod.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 3. 获取Pod列表
-            List<io.fabric8.kubernetes.api.model.Pod> podList = paginationResult.getItems();
+            List<Pod> podList = paginationResult.getItems();
 
             // 4. 获取Pod指标
-            io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList podMetricsList;
+            PodMetricsList podMetricsList;
             if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
                 podMetricsList = client.top().pods().inNamespace(namespace).metrics();
             } else {
@@ -2229,9 +2255,9 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             }
 
             // 创建一个Map快速查找Pod的指标
-            Map<String, io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics> metricsMap = new HashMap<>();
+            Map<String, PodMetrics> metricsMap = new HashMap<>();
             if (podMetricsList != null && podMetricsList.getItems() != null) {
-                for (io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics metrics : podMetricsList.getItems()) {
+                for (PodMetrics metrics : podMetricsList.getItems()) {
                     String key = metrics.getMetadata().getNamespace() + "/" + metrics.getMetadata().getName();
                     metricsMap.put(key, metrics);
                 }
@@ -2248,7 +2274,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             statusCount.put("terminating", 0);
 
             // 6. 处理Pod列表
-            for (io.fabric8.kubernetes.api.model.Pod pod : podList) {
+            for (Pod pod : podList) {
                 // 提取Pod状态
                 String status = pod.getStatus().getPhase();
 
@@ -2258,7 +2284,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 // 计算重启次数
                 int restartCount = 0;
                 if (pod.getStatus().getContainerStatuses() != null) {
-                    for (io.fabric8.kubernetes.api.model.ContainerStatus cs : pod.getStatus().getContainerStatuses()) {
+                    for (ContainerStatus cs : pod.getStatus()
+                            .getContainerStatuses()) {
                         restartCount += cs.getRestartCount();
                     }
                 }
@@ -2266,7 +2293,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 // 提取容器镜像
                 List<String> containerImages = new ArrayList<>();
                 if (pod.getSpec().getContainers() != null) {
-                    for (io.fabric8.kubernetes.api.model.Container container : pod.getSpec().getContainers()) {
+                    for (Container container : pod.getSpec().getContainers()) {
                         containerImages.add(container.getImage());
                     }
                 }
@@ -2287,14 +2314,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 // 获取Pod指标
                 Map<String, Object> metricsInfo = new HashMap<>();
                 String metricsKey = pod.getMetadata().getNamespace() + "/" + pod.getMetadata().getName();
-                io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics podMetrics = metricsMap.get(metricsKey);
+                PodMetrics podMetrics = metricsMap.get(metricsKey);
 
                 if (podMetrics != null && podMetrics.getContainers() != null) {
                     // 计算CPU和内存使用量
                     int cpuUsageTotal = 0;
                     long memoryUsageTotal = 0;
 
-                    for (io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics containerMetrics : podMetrics
+                    for (ContainerMetrics containerMetrics : podMetrics
                             .getContainers()) {
                         // CPU单位是"n"，表示纳核，我们需要转换为毫核 (1m = 1000000n)
                         String cpuQuantity = containerMetrics.getUsage().get("cpu").getAmount();
