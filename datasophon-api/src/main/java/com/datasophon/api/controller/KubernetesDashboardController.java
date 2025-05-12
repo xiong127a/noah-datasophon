@@ -150,8 +150,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/ingresses")
     public Result getIngresses(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getIngresses(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getIngresses(clusterId, namespace, pageNum, pageSize);
     }
 
     /**

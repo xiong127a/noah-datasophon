@@ -68,7 +68,6 @@ public interface KubernetesDashboardService {
      */
     Result getServices(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
-
     /**
      * 获取ConfigMaps列表
      * 
@@ -111,15 +110,16 @@ public interface KubernetesDashboardService {
      * @return StorageClasses列表
      */
     Result getStorageClasses(Integer clusterId);
-
     /**
-     * 获取Ingresses列表
+     * 获取Ingresses列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Ingresses列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Ingresses列表（包含分页信息）
      */
-    Result getIngresses(Integer clusterId, String namespace);
+    Result getIngresses(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取IngressClasses列表

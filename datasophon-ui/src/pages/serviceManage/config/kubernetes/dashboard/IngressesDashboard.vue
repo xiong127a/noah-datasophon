@@ -106,6 +106,21 @@
                 </span>
             </template>
           </a-table>
+          
+          <!-- 添加分页器 -->
+          <div class="pagination-container">
+            <a-pagination
+              v-if="totalItems > 0 && totalPages > 1"
+              :current="pageNum"
+              :pageSize="pageSize"
+              :total="totalItems"
+              :showTotal="total => `共 ${total} 条记录`"
+              :pageSizeOptions="['10', '20', '50', '100']"
+              showSizeChanger
+              @change="onPageChange"
+              @showSizeChange="onShowSizeChange"
+            />
+          </div>
         </a-spin>
       </div>
     </div>
@@ -134,6 +149,11 @@ export default {
     return {
       loading: false,
       ingresses: [],
+      // 添加分页相关数据
+      pageNum: 1, // 当前页码
+      pageSize: 10, // 每页记录数
+      totalItems: 0, // 总记录数
+      totalPages: 1, // 总页数
       columns: [
         {
           title: '名称',
@@ -180,9 +200,13 @@ export default {
   },
   watch: {
     selectedNamespace() {
+      // 重置分页到第一页
+      this.pageNum = 1;
       this.fetchIngresses();
     },
     clusterId() {
+      // 重置分页到第一页
+      this.pageNum = 1;
       this.fetchIngresses();
     }
   },
@@ -200,10 +224,12 @@ export default {
         const params = { 
             clusterId: this.clusterId,
             // Only add namespace if it's not 'all'
-            ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+            ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace }),
+            pageNum: this.pageNum,
+            pageSize: this.pageSize
         };
         
-        // 使用全局API对象中定义的getK8sIngresses接口
+        // 使用带分页的API
         const res = await this.$axiosGet(global.API.getK8sIngresses, params);
 
         // 打印API返回的原始数据，用于调试
@@ -259,16 +285,24 @@ export default {
             };
           });
           
+          // 更新分页数据
+          this.totalItems = res.data.total || ingressesList.length;
+          this.totalPages = res.data.totalPages || 1;
+          
           console.log('处理后的ingresses数据:', this.ingresses);
         } else {
           console.error('Failed to get Ingress list:', res && res.msg ? res.msg : 'Unknown error');
           this.ingresses = []; // Clear data on failure
+          this.totalItems = 0;
+          this.totalPages = 1;
           this.$message.error(res && res.msg ? res.msg : 'Failed to get Ingress list');
         }
       } catch (error) {
         console.error('Exception while getting Ingress list:', error);
         this.$message.error('Exception while getting Ingress list');
         this.ingresses = []; // Clear data on error
+        this.totalItems = 0;
+        this.totalPages = 1;
       } finally {
         this.loading = false;
       }
@@ -310,7 +344,17 @@ export default {
     isLabelsExpanded(record) {
       if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
       return !!this.expandedLabels[record.objectMeta.uid];
-    }
+    },
+    // 分页事件处理方法
+    onPageChange(page) {
+      this.pageNum = page;
+      this.fetchIngresses();
+    },
+    onShowSizeChange(current, size) {
+      this.pageNum = 1; // 重置到第一页
+      this.pageSize = size;
+      this.fetchIngresses();
+    },
   }
 }
 </script>
@@ -398,5 +442,11 @@ export default {
 .empty-value {
   color: #999;
   font-style: italic;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  margin-top: 16px;
+  text-align: right;
 }
 </style> 

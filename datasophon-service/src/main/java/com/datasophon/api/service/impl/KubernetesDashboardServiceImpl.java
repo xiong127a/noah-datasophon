@@ -50,7 +50,6 @@ import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressClassList;
-import io.fabric8.kubernetes.api.model.networking.v1.IngressList;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.api.model.storage.StorageClassList;
 import io.fabric8.kubernetes.client.Config;
@@ -722,7 +721,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getIngresses(Integer clusterId, String namespace) {
+    public Result getIngresses(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -730,16 +729,51 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("无法创建Kubernetes客户端");
             }
 
-            // 获取Ingresses
-            IngressList ingressList;
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                ingressList = client.network().v1().ingresses().inNamespace(namespace).list();
-            } else {
-                ingressList = client.network().v1().ingresses().inAnyNamespace().list();
+            // 使用通用分页方法获取Ingress列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.networking.v1.Ingress> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.networking.v1.Ingress.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 从分页结果获取Ingress列表
+            List<io.fabric8.kubernetes.api.model.networking.v1.Ingress> ingressList = paginationResult.getItems();
+
+            // 获取集群节点IP列表，用于Endpoints（只获取一次，避免多次调用）
+            final List<String> nodeIps = new ArrayList<>();
+            try {
+                NodeList nodeList = client.nodes().list();
+                // 过滤掉master节点，只保留worker节点
+                nodeIps.addAll(nodeList.getItems().stream()
+                        .filter(node -> {
+                            // 排除具有master标签的节点
+                            if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
+                                Map<String, String> labels = node.getMetadata().getLabels();
+                                return !labels.containsKey("node-role.kubernetes.io/master") &&
+                                        !labels.containsKey("node-role.kubernetes.io/control-plane");
+                            }
+                            return true;
+                        })
+                        .flatMap(node -> {
+                            List<String> ips = new ArrayList<>();
+                            if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
+                                node.getStatus().getAddresses().forEach(address -> {
+                                    if ("InternalIP".equals(address.getType())
+                                            && address.getAddress() != null) {
+                                        ips.add(address.getAddress());
+                                    }
+                                });
+                            }
+                            return ips.stream();
+                        })
+                        .collect(Collectors.toList()));
+            } catch (Exception e) {
+                log.warn("获取节点IP失败: {}", e.getMessage());
             }
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> items = ingressList.getItems().stream()
+            List<Map<String, Object>> items = ingressList.stream()
                     .map(ingress -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -760,52 +794,19 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         typeMeta.put("kind", "ingress");
                         item.put("typeMeta", typeMeta);
 
-                        // 收集Endpoints信息 - 修改为只获取节点IP
+                        // 收集Endpoints信息 - 使用预先获取的节点IP
                         List<Map<String, Object>> endpoints = new ArrayList<>();
-                        try {
-                            // 获取集群所有Worker节点IP
-                            NodeList nodeList = client.nodes().list();
-                            // 过滤掉master节点，只保留worker节点
-                            List<String> nodeIps = nodeList.getItems().stream()
-                                    .filter(node -> {
-                                        // 排除具有master标签的节点
-                                        if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
-                                            Map<String, String> labels = node.getMetadata().getLabels();
-                                            return !labels.containsKey("node-role.kubernetes.io/master") &&
-                                                    !labels.containsKey("node-role.kubernetes.io/control-plane");
-                                        }
-                                        return true;
-                                    })
-                                    .flatMap(node -> {
-                                        List<String> ips = new ArrayList<>();
-                                        if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
-                                            node.getStatus().getAddresses().forEach(address -> {
-                                                if ("InternalIP".equals(address.getType())
-                                                        && address.getAddress() != null) {
-                                                    ips.add(address.getAddress());
-                                                }
-                                            });
-                                        }
-                                        return ips.stream();
-                                    })
-                                    .collect(Collectors.toList());
-
-                            // 为每个节点IP创建一个endpoint对象
-                            for (String ip : nodeIps) {
-                                Map<String, Object> endpointInfo = new HashMap<>();
-                                endpointInfo.put("host", ip);
-                                endpoints.add(endpointInfo);
-                            }
-                        } catch (Exception e) {
-                            log.warn("获取Ingress Endpoints失败: {}", e.getMessage());
+                        for (String ip : nodeIps) {
+                            Map<String, Object> endpointInfo = new HashMap<>();
+                            endpointInfo.put("host", ip);
+                            endpoints.add(endpointInfo);
                         }
                         item.put("endpoints", endpoints);
 
                         // 收集Hosts信息
                         List<String> hosts = new ArrayList<>();
                         if (ingress.getSpec() != null && ingress.getSpec().getRules() != null) {
-                            for (IngressRule rule : ingress.getSpec()
-                                    .getRules()) {
+                            for (IngressRule rule : ingress.getSpec().getRules()) {
                                 if (rule.getHost() != null && !rule.getHost().isEmpty()) {
                                     hosts.add(rule.getHost());
                                 }
@@ -824,6 +825,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("listMeta", listMeta);
             result.put("items", items);
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
