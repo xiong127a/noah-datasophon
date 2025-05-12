@@ -176,24 +176,17 @@ public interface KubernetesDashboardService {
      */
     Result getReplicationControllers(Integer clusterId, String namespace);
 
-    /**
-     * 获取Jobs列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return Jobs列表
-     */
-    Result getJobs(Integer clusterId, String namespace);
 
     /**
-     * 获取Jobs列表（带服务ID）
+     * 获取Jobs列表（带分页）
      * 
      * @param clusterId 集群ID
-     * @param serviceId 服务ID
      * @param namespace 命名空间
-     * @return Jobs列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Jobs列表（包含分页信息）
      */
-    Result getJobs(Integer clusterId, Integer serviceId, String namespace);
+    Result getJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取CronJobs列表（带分页）

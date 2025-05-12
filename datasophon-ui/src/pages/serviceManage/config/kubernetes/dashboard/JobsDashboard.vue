@@ -16,28 +16,38 @@
           <a-table 
             :columns="jobColumns" 
             :dataSource="jobs" 
-            :pagination="false"
-            :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+            :pagination="{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['5', '10', '20', '50'],
+              hideOnSinglePage: totalPages <= 1,
+              showTotal: total => `共 ${total} 条记录`
+            }"
+            :rowKey="record => `${(record && record.objectMeta && record.objectMeta.namespace) || 'unknown'}-${(record && record.objectMeta && record.objectMeta.name) || 'unknown'}`"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             :zebra-stripes="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
                 <StatusIndicator :resource="record" resourceType="job" />
                 <div class="name-cell">
-                  <span class="job-name" :title="record?.objectMeta?.name || '未知'">
-                    {{ record?.objectMeta?.name || '未知' }}
+                  <span class="job-name" :title="(record && record.objectMeta && record.objectMeta.name) || '未知'">
+                    {{ (record && record.objectMeta && record.objectMeta.name) || '未知' }}
                   </span>
                 </div>
               </div>
             </template>
 
             <template slot="image" slot-scope="text, record">
-              <div class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
-                <template v-if="record?.containerImages && record.containerImages.length">
+              <div class="image-cell" :title="(record && record.containerImages) ? record.containerImages.join(', ') : ''">
+                <template v-if="record && record.containerImages && record.containerImages.length">
                   <span class="container-image">
                     {{ record.containerImages[0] }}
                   </span>
@@ -48,7 +58,7 @@
             </template>
 
             <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+              <div v-if="record && record.objectMeta && record.objectMeta.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
@@ -97,8 +107,8 @@
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(record && record.objectMeta && record.objectMeta.creationTimestamp)">
+                {{ getDaysAgo(record && record.objectMeta && record.objectMeta.creationTimestamp) }}
               </span>
             </template>
           </a-table>
@@ -135,6 +145,15 @@ export default {
       jobs: [],
       loading: false,
       expandedLabels: {},
+      totalPages: 1,
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50']
+      },
       jobColumns: [
         {
           title: '名称',
@@ -200,12 +219,16 @@ export default {
     async fetchJobs() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sJobs, {
+        const params = {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
+          pageNum: this.pagination.current,
+          pageSize: this.pagination.pageSize,
           // Only add namespace if it's not 'all'
           ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
-        });
+        };
+        
+        const res = await this.$axiosGet(global.API.getK8sJobs, params);
         
         if (res.code === 200) {
           // 确保获取Jobs列表数组，并处理数据
@@ -225,16 +248,34 @@ export default {
             return job;
           });
           
+          // 更新分页信息 - 从API返回的total和totalPages字段中获取
+          if (res.data) {
+            // 直接使用API返回的total和totalPages
+            this.pagination.total = res.data.total || 0;
+            this.totalPages = res.data.totalPages || 1;
+            
+            console.log("更新分页信息:", { 
+              total: this.pagination.total, 
+              totalPages: this.totalPages,
+              current: this.pagination.current,
+              pageSize: this.pagination.pageSize 
+            });
+          }
+          
           console.log("处理后的jobs数据:", this.jobs);
           
         } else {
           console.error('Failed to fetch jobs:', res.msg);
           this.jobs = [];
+          this.pagination.total = 0;
+          this.totalPages = 1;
           this.$message.error(res.msg || 'Failed to fetch jobs');
         }
       } catch (error) {
         console.error('Error fetching jobs:', error);
         this.jobs = [];
+        this.pagination.total = 0;
+        this.totalPages = 1;
         this.$message.error('Error fetching jobs');
       } finally {
         this.loading = false;
@@ -276,16 +317,25 @@ export default {
         second: '2-digit',
         hour12: false
       });
+    },
+    handleTableChange(pagination) {
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      this.pagination.total = pagination.total;
+      this.fetchJobs();
     }
   },
   watch: {
     selectedNamespace() {
+      this.pagination.current = 1; // 命名空间变化时重置到第一页
       this.fetchJobs();
     },
     clusterId() {
+      this.pagination.current = 1; // 集群变化时重置到第一页
       this.fetchJobs();
     },
     serviceId() {
+      this.pagination.current = 1; // 服务ID变化时重置到第一页
       this.fetchJobs();
     }
   }

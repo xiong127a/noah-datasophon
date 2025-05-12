@@ -1521,7 +1521,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getJobs(Integer clusterId, String namespace) {
+    public Result getJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 获取kubeconfig
             String kubeConfig = getKubeConfig(clusterId);
@@ -1535,12 +1535,56 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("创建Kubernetes客户端失败");
             }
 
-            // 获取Jobs列表
-            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList;
+            // 创建ListOptions并设置分页参数
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 获取总记录数（需要单独查询）
+            long totalJobs = 0;
             if (namespace != null && !namespace.equals("all")) {
-                jobsList = client.batch().v1().jobs().inNamespace(namespace).list().getItems();
+                totalJobs = client.batch().v1().jobs().inNamespace(namespace).list().getItems().size();
             } else {
-                jobsList = client.batch().v1().jobs().inAnyNamespace().list().getItems();
+                totalJobs = client.batch().v1().jobs().inAnyNamespace().list().getItems().size();
+            }
+
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                io.fabric8.kubernetes.api.model.batch.v1.JobList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.equals("all")) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.batch().v1().jobs().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.batch().v1().jobs().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的Jobs
+            io.fabric8.kubernetes.api.model.batch.v1.JobList jobList;
+            listOptions.setContinue(continueToken);
+
+            if (namespace != null && !namespace.equals("all")) {
+                jobList = client.batch().v1().jobs().inNamespace(namespace).list(listOptions);
+                jobsList = jobList.getItems();
+            } else {
+                jobList = client.batch().v1().jobs().inAnyNamespace().list(listOptions);
+                jobsList = jobList.getItems();
             }
 
             // 处理Jobs数据
@@ -1750,15 +1794,27 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 jobs.add(jobMap);
             }
 
+            // 应用分页逻辑
+            int fromIndex = (pageNum - 1) * pageSize;
+            int toIndex = Math.min(fromIndex + pageSize, jobs.size());
+
+            // 确保索引在有效范围内
+            List<Map<String, Object>> pagedJobs;
+            if (fromIndex < jobs.size()) {
+                pagedJobs = jobs.subList(fromIndex, toIndex);
+            } else {
+                pagedJobs = new ArrayList<>();
+            }
+
             // 构建响应数据
             Map<String, Object> responseData = new HashMap<>();
 
             // 列表元数据
             Map<String, Object> listMeta = new HashMap<>();
-            listMeta.put("totalItems", jobs.size());
+            listMeta.put("totalItems", pagedJobs.size());
             responseData.put("listMeta", listMeta);
 
-            // 度量指标（暂时为空）
+            // 度量指标
             List<Map<String, Object>> metrics = new ArrayList<>();
             Map<String, Object> cpuMetric = new HashMap<>();
             cpuMetric.put("dataPoints", new ArrayList<>());
@@ -1787,23 +1843,20 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("status", status);
 
             // 添加Jobs列表
-            responseData.put("jobs", jobs);
+            responseData.put("jobs", pagedJobs);
 
             // 添加错误列表
             responseData.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            responseData.put("total", totalJobs); // 添加总记录数
+            responseData.put("totalPages", (int) Math.ceil((double) totalJobs / pageSize)); // 添加总页数
 
             return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
             logger.error("获取Jobs列表出错", e);
             return Result.error("获取Jobs列表出错: " + e.getMessage());
         }
-    }
-
-    @Override
-    public Result getJobs(Integer clusterId, Integer serviceId, String namespace) {
-        // 直接调用不带serviceId的方法，因为Jobs资源目前不需要根据serviceId进行过滤
-        // 保留serviceId参数是为了保持API一致性
-        return getJobs(clusterId, namespace);
     }
 
     @Override

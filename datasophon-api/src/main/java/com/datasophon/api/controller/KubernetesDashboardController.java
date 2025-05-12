@@ -213,10 +213,10 @@ public class KubernetesDashboardController {
     public Result getJobs(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return serviceId != null
-                ? kubernetesDashboardService.getJobs(clusterId, serviceId, namespace)
-                : kubernetesDashboardService.getJobs(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return  kubernetesDashboardService.getJobs(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
