@@ -500,11 +500,79 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getSecrets(Integer clusterId, String namespace) {
+    public Result getSecrets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
+            Map<String, Object> result = new HashMap<>();
 
+            // 如果支持分页
+            if (pageNum != null && pageSize != null) {
+                try {
+                    // 使用通用分页方法获取Secret列表
+                    PaginatedResult<io.fabric8.kubernetes.api.model.Secret> paginationResult = paginateResources(
+                            client,
+                            io.fabric8.kubernetes.api.model.Secret.class,
+                            namespace,
+                            pageNum,
+                            pageSize);
+
+                    // 获取到分页的Secret列表
+                    List<io.fabric8.kubernetes.api.model.Secret> secretList = paginationResult.getItems();
+
+                    // 转换为前端需要的数据结构
+                    List<Map<String, Object>> secrets = secretList.stream()
+                            .map(secret -> {
+                                Map<String, Object> item = new HashMap<>();
+                                Map<String, Object> objectMeta = new HashMap<>();
+                                Map<String, Object> typeMeta = new HashMap<>();
+
+                                // 基本信息
+                                if (secret.getMetadata() != null) {
+                                    objectMeta.put("name", secret.getMetadata().getName());
+                                    objectMeta.put("namespace", secret.getMetadata().getNamespace());
+                                    objectMeta.put("labels", secret.getMetadata().getLabels());
+                                    objectMeta.put("annotations", secret.getMetadata().getAnnotations());
+                                    objectMeta.put("creationTimestamp", secret.getMetadata().getCreationTimestamp());
+                                    objectMeta.put("uid", secret.getMetadata().getUid());
+                                }
+                                item.put("objectMeta", objectMeta);
+
+                                // 类型信息
+                                typeMeta.put("kind", "secret");
+                                item.put("typeMeta", typeMeta);
+
+                                // Secret类型
+                                item.put("type", secret.getType());
+
+                                return item;
+                            })
+                            .collect(Collectors.toList());
+
+                    // 构建最终结果
+                    Map<String, Object> listMeta = new HashMap<>();
+                    listMeta.put("totalItems", secrets.size());
+                    result.put("listMeta", listMeta);
+                    result.put("secrets", secrets);
+                    result.put("errors", new ArrayList<>());
+
+                    // 添加分页信息
+                    result.put("total", paginationResult.getTotal()); // 添加总记录数
+                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+                    return Result.success().put(Constants.DATA, result);
+                } catch (Exception e) {
+                    log.error("分页获取Secrets列表出错", e);
+                    // 发生错误时返回空列表和错误信息
+                    result.put("secrets", new ArrayList<>());
+                    result.put("errors", Collections.singletonList(e.getMessage()));
+                    result.put("total", 0);
+                    result.put("totalPages", 0);
+                    return Result.success().put(Constants.DATA, result);
+                }
+            }
+
+            // 不使用分页的传统实现（向后兼容）
             // 获取Secrets
             SecretList secretList;
             if (namespace != null && !namespace.isEmpty()) {
@@ -543,12 +611,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     .collect(Collectors.toList());
 
             // 构建最终结果
-            Map<String, Object> result = new HashMap<>();
             Map<String, Object> listMeta = new HashMap<>();
             listMeta.put("totalItems", secrets.size());
             result.put("listMeta", listMeta);
             result.put("secrets", secrets);
             result.put("errors", new ArrayList<>());
+
+            // 添加总数和总页数（非分页情况下，总页数为1）
+            result.put("total", secrets.size());
+            result.put("totalPages", 1);
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {

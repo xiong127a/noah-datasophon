@@ -80,13 +80,15 @@ public interface KubernetesDashboardService {
     Result getConfigMaps(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Secrets列表
+     * 获取Secrets列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Secrets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Secrets列表（包含分页信息）
      */
-    Result getSecrets(Integer clusterId, String namespace);
+    Result getSecrets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取PersistentVolumes列表
