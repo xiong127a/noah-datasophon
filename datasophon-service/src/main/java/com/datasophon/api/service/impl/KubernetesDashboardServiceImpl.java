@@ -362,11 +362,84 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getConfigMaps(Integer clusterId, String namespace) {
+    public Result getConfigMaps(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
+            Map<String, Object> result = new HashMap<>();
 
+            // 如果支持分页
+            if (pageNum != null && pageSize != null) {
+                try {
+                    // 使用通用分页方法获取ConfigMap列表
+                    PaginatedResult<io.fabric8.kubernetes.api.model.ConfigMap> paginationResult = paginateResources(
+                            client,
+                            io.fabric8.kubernetes.api.model.ConfigMap.class,
+                            namespace,
+                            pageNum,
+                            pageSize);
+
+                    // 获取到分页的ConfigMap列表
+                    List<io.fabric8.kubernetes.api.model.ConfigMap> configMapList = paginationResult.getItems();
+
+                    // 按照前端需要的格式构建结果
+                    // 构建items列表
+                    List<Map<String, Object>> items = configMapList.stream()
+                            .filter(configMap -> configMap.getMetadata() != null)
+                            .map(configMap -> {
+                                Map<String, Object> item = new HashMap<>();
+
+                                // 1. objectMeta
+                                Map<String, Object> objectMeta = new HashMap<>();
+                                if (configMap.getMetadata() != null) {
+                                    objectMeta.put("name", configMap.getMetadata().getName());
+                                    objectMeta.put("namespace", configMap.getMetadata().getNamespace());
+                                    objectMeta.put("labels", configMap.getMetadata().getLabels());
+                                    objectMeta.put("creationTimestamp", configMap.getMetadata().getCreationTimestamp());
+                                    objectMeta.put("uid", configMap.getMetadata().getUid());
+
+                                    // 如果有annotations，也添加
+                                    if (configMap.getMetadata().getAnnotations() != null) {
+                                        objectMeta.put("annotations", configMap.getMetadata().getAnnotations());
+                                    }
+                                }
+                                item.put("objectMeta", objectMeta);
+
+                                // 2. typeMeta
+                                Map<String, String> typeMeta = new HashMap<>();
+                                typeMeta.put("kind", "configmap");
+                                item.put("typeMeta", typeMeta);
+
+                                return item;
+                            })
+                            .collect(Collectors.toList());
+
+                    // 构建listMeta
+                    Map<String, Object> listMeta = new HashMap<>();
+                    listMeta.put("totalItems", items.size());
+
+                    // 构建最终结果
+                    result.put("listMeta", listMeta);
+                    result.put("items", items);
+                    result.put("errors", new ArrayList<>());
+
+                    // 添加分页信息
+                    result.put("total", paginationResult.getTotal()); // 添加总记录数
+                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+                    return Result.success().put(Constants.DATA, result);
+                } catch (Exception e) {
+                    log.error("分页获取ConfigMaps列表出错", e);
+                    // 发生错误时返回空列表和错误信息
+                    result.put("items", new ArrayList<>());
+                    result.put("errors", Collections.singletonList(e.getMessage()));
+                    result.put("total", 0);
+                    result.put("totalPages", 0);
+                    return Result.success().put(Constants.DATA, result);
+                }
+            }
+
+            // 不使用分页的传统实现（向后兼容）
             // 获取ConfigMaps
             ConfigMapList configMapList;
             if (namespace != null && !namespace.isEmpty()) {
@@ -374,9 +447,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             } else {
                 configMapList = client.configMaps().inNamespace("datasophon").list();
             }
-
-            // 按照前端需要的格式构建结果
-            Map<String, Object> result = new HashMap<>();
 
             // 构建items列表
             List<Map<String, Object>> items = configMapList.getItems().stream()
@@ -417,6 +487,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("listMeta", listMeta);
             result.put("items", items);
             result.put("errors", new ArrayList<>());
+
+            // 添加总数和总页数（非分页情况下，总页数为1）
+            result.put("total", items.size());
+            result.put("totalPages", 1);
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
