@@ -874,24 +874,65 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace) {
+    public Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
+            Integer pageSize) {
         // 目前serviceId暂时不使用，留作后期扩展使用
-        logger.info("获取DaemonSets列表, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
-        return getDaemonSets(clusterId, namespace);
+        logger.info("获取DaemonSets列表, clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                clusterId, serviceId, namespace, pageNum, pageSize);
+        return getDaemonSets(clusterId, namespace, pageNum, pageSize);
     }
 
     @Override
-    public Result getDaemonSets(Integer clusterId, String namespace) {
+    public Result getDaemonSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
-
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取DaemonSets
-            io.fabric8.kubernetes.api.model.apps.DaemonSetList daemonSetList;
-            if (namespace != null && !namespace.isEmpty()) {
-                daemonSetList = client.apps().daemonSets().inNamespace(namespace).list();
+            // 创建ListOptions并设置分页参数
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 获取总记录数（需要单独查询）
+            long totalDaemonSets = 0;
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                totalDaemonSets = client.apps().daemonSets().inNamespace(namespace).list().getItems().size();
             } else {
-                daemonSetList = client.apps().daemonSets().inAnyNamespace().list();
+                totalDaemonSets = client.apps().daemonSets().inAnyNamespace().list().getItems().size();
+            }
+
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            io.fabric8.kubernetes.api.model.apps.DaemonSetList daemonSetList;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                io.fabric8.kubernetes.api.model.apps.DaemonSetList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().daemonSets().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().daemonSets().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的DaemonSets
+            listOptions.setContinue(continueToken);
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                daemonSetList = client.apps().daemonSets().inNamespace(namespace).list(listOptions);
+            } else {
+                daemonSetList = client.apps().daemonSets().inAnyNamespace().list(listOptions);
             }
 
             // 转换为前端需要的数据结构
@@ -995,6 +1036,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("daemonSets", daemonSets);
             result.put("status", status);
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", totalDaemonSets); // 添加总记录数
+            result.put("totalPages", (int) Math.ceil((double) totalDaemonSets / pageSize)); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {

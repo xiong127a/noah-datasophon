@@ -168,10 +168,12 @@ public class KubernetesDashboardController {
     public Result getDaemonSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         return serviceId != null
-                ? kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace)
-                : kubernetesDashboardService.getDaemonSets(clusterId, namespace);
+                ? kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace, pageNum, pageSize)
+                : kubernetesDashboardService.getDaemonSets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
