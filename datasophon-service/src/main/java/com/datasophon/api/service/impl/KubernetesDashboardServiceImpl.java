@@ -23,14 +23,16 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.k8s.DeploymentInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ListOptions;
-import io.fabric8.kubernetes.api.model.apps.DeploymentList;
+import io.fabric8.kubernetes.api.model.apps.DaemonSet;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -47,12 +49,38 @@ import java.util.stream.Collectors;
  * K8S仪表盘服务实现类
  */
 @Service("kubernetesDashboardService")
+@Slf4j
 public class KubernetesDashboardServiceImpl implements KubernetesDashboardService {
 
-    private static final Logger logger = LoggerFactory.getLogger(KubernetesDashboardServiceImpl.class);
+    /**
+     * 分页结果包装类，提供类型安全的分页结果
+     * 
+     * @param <T> 资源类型
+     */
+    @Data
+    private static class PaginatedResult<T> {
+        private final List<T> items;
+        private final long total;
+        private final int totalPages;
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+        public PaginatedResult(List<T> items, long total, int totalPages) {
+            this.items = items;
+            this.total = total;
+            this.totalPages = totalPages;
+        }
+
+    }
+
+    private final ClusterInfoService clusterInfoService;
+
+    /**
+     * 构造函数注入依赖
+     * 
+     * @param clusterInfoService 集群信息服务
+     */
+    public KubernetesDashboardServiceImpl(ClusterInfoService clusterInfoService) {
+        this.clusterInfoService = clusterInfoService;
+    }
 
     /**
      * 获取集群的kubeconfig配置
@@ -99,7 +127,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取命名空间列表出错", e);
+            log.error("获取命名空间列表出错", e);
             return Result.error("获取命名空间列表出错: " + e.getMessage());
         }
     }
@@ -108,66 +136,23 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     public Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         // 目前serviceId暂时不使用，留作后期扩展使用
-        logger.info("获取Deployments列表, clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
-                clusterId, serviceId, namespace, pageNum, pageSize);
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取总记录数（需要单独查询）
-            int totalCount;
-            if (namespace != null && !namespace.isEmpty()) {
-                totalCount = client.apps().deployments().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalCount = client.apps().deployments().inAnyNamespace().list().getItems().size();
-            }
+            // 使用通用分页方法获取Deployment列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.apps.Deployment> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.apps.Deployment.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 创建ListOptions用于分页
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            List<io.fabric8.kubernetes.api.model.apps.Deployment> pageItems;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                DeploymentList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.isEmpty()) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().deployments().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().deployments().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的Deployments
-            DeploymentList deploymentList;
-            listOptions.setContinue(continueToken);
-
-            if (namespace != null && !namespace.isEmpty()) {
-                deploymentList = client.apps().deployments().inNamespace(namespace).list(listOptions);
-            } else {
-                deploymentList = client.apps().deployments().inAnyNamespace().list(listOptions);
-            }
-
-            pageItems = deploymentList.getItems();
+            // 获取到分页的Deployment列表
+            List<io.fabric8.kubernetes.api.model.apps.Deployment> deploymentItems = paginationResult.getItems();
 
             // 转换为与原生Kubernetes Dashboard兼容的数据结构
-            List<Map<String, Object>> deployments = pageItems.stream()
+            List<Map<String, Object>> deployments = deploymentItems.stream()
                     .map(deployment -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -198,9 +183,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                 deployment.getSpec().getTemplate().getSpec() != null &&
                                 deployment.getSpec().getTemplate().getSpec().getContainers() != null) {
 
-                            deployment.getSpec().getTemplate().getSpec().getContainers().forEach(container -> {
-                                containerImages.add(container.getImage());
-                            });
+                            deployment.getSpec().getTemplate().getSpec().getContainers()
+                                    .forEach(container -> containerImages.add(container.getImage()));
                         }
                         item.put("containerImages", containerImages);
 
@@ -211,14 +195,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 创建结果对象
             Map<String, Object> result = new HashMap<>();
             result.put("deployments", deployments); // Deployments列表
-            result.put("total", totalCount); // 总数
-            // 计算总页数
-            int totalPages = (int) Math.ceil((double) totalCount / pageSize);
-            result.put("totalPages", totalPages); // 总页数
+            result.put("total", paginationResult.getTotal()); // 总数
+            result.put("totalPages", paginationResult.getTotalPages()); // 总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取Deployments列表出错", e);
+            log.error("获取Deployments列表出错", e);
             return Result.error("获取Deployments列表出错: " + e.getMessage());
         }
     }
@@ -341,7 +323,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取Services列表出错", e);
+            log.error("获取Services列表出错", e);
             return Result.error("获取Services列表出错: " + e.getMessage());
         }
     }
@@ -405,7 +387,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取ConfigMaps列表出错", e);
+            log.error("获取ConfigMaps列表出错", e);
             return Result.error("获取ConfigMaps列表出错: " + e.getMessage());
         }
     }
@@ -463,7 +445,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取Secrets列表出错", e);
+            log.error("获取Secrets列表出错", e);
             return Result.error("获取Secrets列表出错: " + e.getMessage());
         }
     }
@@ -553,10 +535,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("items", items);
             result.put("errors", new ArrayList<>());
 
-            logger.info("获取PersistentVolumes列表成功，共{}个PV", items.size());
+            log.info("获取PersistentVolumes列表成功，共{}个PV", items.size());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取PersistentVolumes列表出错", e);
+            log.error("获取PersistentVolumes列表出错", e);
             return Result.error("获取PersistentVolumes列表出错: " + e.getMessage());
         }
     }
@@ -640,7 +622,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取PersistentVolumeClaims列表出错", e);
+            log.error("获取PersistentVolumeClaims列表出错", e);
             return Result.error("获取PersistentVolumeClaims列表出错: " + e.getMessage());
         }
     }
@@ -702,7 +684,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取StorageClasses列表出错", e);
+            log.error("获取StorageClasses列表出错", e);
             return Result.error("获取StorageClasses列表出错: " + e.getMessage());
         }
     }
@@ -783,7 +765,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                 endpoints.add(endpointInfo);
                             }
                         } catch (Exception e) {
-                            logger.warn("获取Ingress Endpoints失败: {}", e.getMessage());
+                            log.warn("获取Ingress Endpoints失败: {}", e.getMessage());
                         }
                         item.put("endpoints", endpoints);
 
@@ -813,7 +795,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取Ingresses列表出错", e);
+            log.error("获取Ingresses列表出错", e);
             return Result.error("获取Ingresses列表出错: " + e.getMessage());
         }
     }
@@ -868,75 +850,103 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取IngressClasses列表出错", e);
+            log.error("获取IngressClasses列表出错", e);
             return Result.error("获取IngressClasses列表出错: " + e.getMessage());
         }
+    }
+
+    /**
+     * 通用资源分页方法
+     * 
+     * @param client        Kubernetes客户端
+     * @param resourceClass 资源类型类
+     * @param namespace     命名空间（null或"all"表示所有命名空间）
+     * @param pageNum       页码
+     * @param pageSize      每页大小
+     * @return 类型安全的分页结果
+     */
+    private <T extends HasMetadata> PaginatedResult<T> paginateResources(
+            KubernetesClient client,
+            Class<T> resourceClass,
+            String namespace,
+            Integer pageNum,
+            Integer pageSize) {
+
+        // 判断是否为特定命名空间的查询
+        boolean isSpecificNamespace = namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace);
+
+        // 获取总记录数
+        long totalItems;
+        if (isSpecificNamespace) {
+            totalItems = client.resources(resourceClass).inNamespace(namespace).list().getItems().size();
+        } else {
+            totalItems = client.resources(resourceClass).inAnyNamespace().list().getItems().size();
+        }
+
+        // 使用limit和continue机制实现分页
+        String continueToken = null;
+        ListOptions listOptions = new ListOptions();
+        listOptions.setLimit((long) pageSize);
+
+        // 如果不是第一页，需要先获取到对应页的continue token
+        if (pageNum > 1) {
+            int currentPage = 1;
+
+            while (currentPage < pageNum) {
+                KubernetesResourceList<T> tempList;
+                if (isSpecificNamespace) {
+                    tempList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
+                } else {
+                    tempList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
+                }
+
+                continueToken = tempList.getMetadata().getContinue();
+                currentPage++;
+
+                // 如果没有更多数据，跳出循环
+                if (continueToken == null || continueToken.isEmpty()) {
+                    break;
+                }
+
+                listOptions.setContinue(continueToken);
+            }
+        }
+
+        // 获取当前页的资源
+        listOptions.setContinue(continueToken);
+        KubernetesResourceList<T> resourceList;
+        if (isSpecificNamespace) {
+            resourceList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
+        } else {
+            resourceList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
+        }
+
+        // 计算总页数
+        int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+
+        // 返回类型安全的分页结果
+        return new PaginatedResult<>(resourceList.getItems(), totalItems, totalPages);
     }
 
     @Override
     public Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         // 目前serviceId暂时不使用，留作后期扩展使用
-        logger.info("获取DaemonSets列表, clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
-                clusterId, serviceId, namespace, pageNum, pageSize);
-        return getDaemonSets(clusterId, namespace, pageNum, pageSize);
-    }
-
-    @Override
-    public Result getDaemonSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 创建ListOptions并设置分页参数
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
+            // 使用通用分页方法获取DaemonSet列表
+            PaginatedResult<DaemonSet> paginationResult = paginateResources(client,
+                    DaemonSet.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 获取总记录数（需要单独查询）
-            long totalDaemonSets = 0;
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                totalDaemonSets = client.apps().daemonSets().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalDaemonSets = client.apps().daemonSets().inAnyNamespace().list().getItems().size();
-            }
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            io.fabric8.kubernetes.api.model.apps.DaemonSetList daemonSetList;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                io.fabric8.kubernetes.api.model.apps.DaemonSetList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().daemonSets().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().daemonSets().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的DaemonSets
-            listOptions.setContinue(continueToken);
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                daemonSetList = client.apps().daemonSets().inNamespace(namespace).list(listOptions);
-            } else {
-                daemonSetList = client.apps().daemonSets().inAnyNamespace().list(listOptions);
-            }
+            // 获取到分页的DaemonSet列表
+            List<DaemonSet> daemonSets = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> daemonSets = daemonSetList.getItems().stream()
+            List<Map<String, Object>> daemonSetDetails = daemonSets.stream()
                     .map(daemonSet -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -1017,11 +1027,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             // 构建状态统计信息
             Map<String, Integer> status = new HashMap<>();
-            status.put("running", (int) daemonSets.stream().filter(ds -> {
+            status.put("running", (int) daemonSetDetails.stream().filter(ds -> {
                 Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
                 return podInfo != null && (int) podInfo.get("ready") > 0;
             }).count());
-            status.put("pending", (int) daemonSets.stream().filter(ds -> {
+            status.put("pending", (int) daemonSetDetails.stream().filter(ds -> {
                 Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
                 return podInfo != null && (int) podInfo.get("unavailable") > 0;
             }).count());
@@ -1031,19 +1041,19 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建最终结果
             Map<String, Object> result = new HashMap<>();
             Map<String, Object> listMeta = new HashMap<>();
-            listMeta.put("totalItems", daemonSets.size());
+            listMeta.put("totalItems", daemonSetDetails.size());
             result.put("listMeta", listMeta);
-            result.put("daemonSets", daemonSets);
+            result.put("daemonSets", daemonSetDetails);
             result.put("status", status);
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", totalDaemonSets); // 添加总记录数
-            result.put("totalPages", (int) Math.ceil((double) totalDaemonSets / pageSize)); // 添加总页数
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取DaemonSets列表出错", e);
+            log.error("获取DaemonSets列表出错", e);
             return Result.error("获取DaemonSets列表出错: " + e.getMessage());
         }
     }
@@ -1171,7 +1181,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取StatefulSets列表出错", e);
+            log.error("获取StatefulSets列表出错", e);
             return Result.error("获取StatefulSets列表出错: " + e.getMessage());
         }
     }
@@ -1182,56 +1192,19 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 创建ListOptions并设置分页参数
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
+            // 使用通用分页方法获取ReplicaSet列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.apps.ReplicaSet> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.apps.ReplicaSet.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 获取总记录数（需要单独查询）
-            long totalReplicaSets = 0;
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                totalReplicaSets = client.apps().replicaSets().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalReplicaSets = client.apps().replicaSets().inAnyNamespace().list().getItems().size();
-            }
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            io.fabric8.kubernetes.api.model.apps.ReplicaSetList replicaSetList;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                io.fabric8.kubernetes.api.model.apps.ReplicaSetList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().replicaSets().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.apps().replicaSets().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的ReplicaSets
-            listOptions.setContinue(continueToken);
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                replicaSetList = client.apps().replicaSets().inNamespace(namespace).list(listOptions);
-            } else {
-                replicaSetList = client.apps().replicaSets().inAnyNamespace().list(listOptions);
-            }
+            // 获取到分页的ReplicaSet列表
+            List<io.fabric8.kubernetes.api.model.apps.ReplicaSet> replicaSetItems = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> replicaSets = replicaSetList.getItems().stream()
+            List<Map<String, Object>> replicaSets = replicaSetItems.stream()
                     .map(replicaSet -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -1329,12 +1302,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            result.put("total", totalReplicaSets); // 添加总记录数
-            result.put("totalPages", (int) Math.ceil((double) totalReplicaSets / pageSize)); // 添加总页数
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取ReplicaSets列表出错", e);
+            log.error("获取ReplicaSets列表出错", e);
             return Result.error("获取ReplicaSets列表出错: " + e.getMessage());
         }
     }
@@ -1491,7 +1464,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     }
                                 }
                             } catch (Exception e) {
-                                logger.warn("获取ReplicationController警告信息失败", e);
+                                log.warn("获取ReplicationController警告信息失败", e);
                             }
 
                             // 更新Pod信息的失败数量
@@ -1559,7 +1532,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取ReplicationControllers列表出错", e);
+            log.error("获取ReplicationControllers列表出错", e);
             return Result.error("获取ReplicationControllers列表出错: " + e.getMessage());
         }
     }
@@ -1567,69 +1540,19 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
-            }
-
             // 创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
-            if (client == null) {
-                return Result.error("创建Kubernetes客户端失败");
-            }
 
-            // 创建ListOptions并设置分页参数
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
+            // 使用通用分页方法获取Job列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.batch.v1.Job> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.batch.v1.Job.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 获取总记录数（需要单独查询）
-            long totalJobs = 0;
-            if (namespace != null && !namespace.equals("all")) {
-                totalJobs = client.batch().v1().jobs().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalJobs = client.batch().v1().jobs().inAnyNamespace().list().getItems().size();
-            }
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                io.fabric8.kubernetes.api.model.batch.v1.JobList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.equals("all")) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.batch().v1().jobs().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.batch().v1().jobs().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的Jobs
-            io.fabric8.kubernetes.api.model.batch.v1.JobList jobList;
-            listOptions.setContinue(continueToken);
-
-            if (namespace != null && !namespace.equals("all")) {
-                jobList = client.batch().v1().jobs().inNamespace(namespace).list(listOptions);
-                jobsList = jobList.getItems();
-            } else {
-                jobList = client.batch().v1().jobs().inAnyNamespace().list(listOptions);
-                jobsList = jobList.getItems();
-            }
+            // 获取到分页的Job列表
+            List<io.fabric8.kubernetes.api.model.batch.v1.Job> jobsList = paginationResult.getItems();
 
             // 处理Jobs数据
             List<Map<String, Object>> jobs = new ArrayList<>();
@@ -1743,7 +1666,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     // 添加警告信息
                     podInfo.put("warnings", warnings);
                 } catch (Exception e) {
-                    logger.error("获取Job相关Pod警告信息失败", e);
+                    log.error("获取Job相关Pod警告信息失败", e);
                 }
 
                 jobMap.put("podInfo", podInfo);
@@ -1838,24 +1761,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 jobs.add(jobMap);
             }
 
-            // 应用分页逻辑
-            int fromIndex = (pageNum - 1) * pageSize;
-            int toIndex = Math.min(fromIndex + pageSize, jobs.size());
-
-            // 确保索引在有效范围内
-            List<Map<String, Object>> pagedJobs;
-            if (fromIndex < jobs.size()) {
-                pagedJobs = jobs.subList(fromIndex, toIndex);
-            } else {
-                pagedJobs = new ArrayList<>();
-            }
-
             // 构建响应数据
             Map<String, Object> responseData = new HashMap<>();
 
             // 列表元数据
             Map<String, Object> listMeta = new HashMap<>();
-            listMeta.put("totalItems", pagedJobs.size());
+            listMeta.put("totalItems", jobs.size());
             responseData.put("listMeta", listMeta);
 
             // 度量指标
@@ -1887,18 +1798,18 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             responseData.put("status", status);
 
             // 添加Jobs列表
-            responseData.put("jobs", pagedJobs);
+            responseData.put("jobs", jobs);
 
             // 添加错误列表
             responseData.put("errors", new ArrayList<>());
 
             // 添加分页信息
-            responseData.put("total", totalJobs); // 添加总记录数
-            responseData.put("totalPages", (int) Math.ceil((double) totalJobs / pageSize)); // 添加总页数
+            responseData.put("total", paginationResult.getTotal()); // 添加总记录数
+            responseData.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
-            logger.error("获取Jobs列表出错", e);
+            log.error("获取Jobs列表出错", e);
             return Result.error("获取Jobs列表出错: " + e.getMessage());
         }
     }
@@ -1906,74 +1817,24 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getCronJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
-            }
-
-            // 创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
-            if (client == null) {
-                return Result.error("创建Kubernetes客户端失败");
-            }
 
-            // 创建ListOptions并设置分页参数
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
+            // 使用通用分页方法获取CronJob列表
+            PaginatedResult<CronJob> paginationResult = paginateResources(
+                    client,
+                    CronJob.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 获取总记录数（需要单独查询）
-            long totalCronJobs = 0;
-            if (namespace != null && !namespace.equals("all")) {
-                totalCronJobs = client.batch().v1().cronjobs().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalCronJobs = client.batch().v1().cronjobs().inAnyNamespace().list().getItems().size();
-            }
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            List<io.fabric8.kubernetes.api.model.batch.v1.CronJob> cronJobsList;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                io.fabric8.kubernetes.api.model.batch.v1.CronJobList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.equals("all")) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.batch().v1().cronjobs().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.batch().v1().cronjobs().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的CronJobs
-            io.fabric8.kubernetes.api.model.batch.v1.CronJobList cronJobList;
-            listOptions.setContinue(continueToken);
-            if (namespace != null && !namespace.equals("all")) {
-                cronJobList = client.batch().v1().cronjobs().inNamespace(namespace).list(listOptions);
-                cronJobsList = cronJobList.getItems();
-            } else {
-                cronJobList = client.batch().v1().cronjobs().inAnyNamespace().list(listOptions);
-                cronJobsList = cronJobList.getItems();
-            }
+            // 获取到分页的CronJob列表
+            List<CronJob> cronJobsList = paginationResult.getItems();
 
             // 处理CronJobs数据
             List<Map<String, Object>> items = new ArrayList<>();
             int runningCount = 0;
 
-            for (io.fabric8.kubernetes.api.model.batch.v1.CronJob cronJob : cronJobsList) {
+            for (CronJob cronJob : cronJobsList) {
                 Map<String, Object> cronJobMap = new HashMap<>();
 
                 // 处理元数据
@@ -2032,108 +1893,55 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 items.add(cronJobMap);
             }
 
-            // 应用分页逻辑到数据
-            int fromIndex = (pageNum - 1) * pageSize;
-            int toIndex = Math.min(fromIndex + pageSize, items.size());
+            // 构建响应数据
+            Map<String, Object> responseData = new HashMap<>();
 
-            // 确保索引在有效范围内
-            if (fromIndex < items.size()) {
-                List<Map<String, Object>> pagedItems = items.subList(fromIndex, toIndex);
+            // 列表元数据
+            Map<String, Object> listMeta = new HashMap<>();
+            listMeta.put("totalItems", items.size());
+            responseData.put("listMeta", listMeta);
 
-                // 构建响应数据
-                Map<String, Object> responseData = new HashMap<>();
+            // 度量指标（暂时为空）
+            List<Map<String, Object>> metrics = new ArrayList<>();
+            Map<String, Object> cpuMetric = new HashMap<>();
+            cpuMetric.put("dataPoints", new ArrayList<>());
+            cpuMetric.put("metricPoints", new ArrayList<>());
+            cpuMetric.put("metricName", "cpu/usage_rate");
+            cpuMetric.put("aggregation", "sum");
+            metrics.add(cpuMetric);
 
-                // 列表元数据
-                Map<String, Object> listMeta = new HashMap<>();
-                listMeta.put("totalItems", pagedItems.size());
-                responseData.put("listMeta", listMeta);
+            Map<String, Object> memoryMetric = new HashMap<>();
+            memoryMetric.put("dataPoints", new ArrayList<>());
+            memoryMetric.put("metricPoints", new ArrayList<>());
+            memoryMetric.put("metricName", "memory/usage");
+            memoryMetric.put("aggregation", "sum");
+            metrics.add(memoryMetric);
 
-                // 度量指标（暂时为空）
-                List<Map<String, Object>> metrics = new ArrayList<>();
-                Map<String, Object> cpuMetric = new HashMap<>();
-                cpuMetric.put("dataPoints", new ArrayList<>());
-                cpuMetric.put("metricPoints", new ArrayList<>());
-                cpuMetric.put("metricName", "cpu/usage_rate");
-                cpuMetric.put("aggregation", "sum");
-                metrics.add(cpuMetric);
+            responseData.put("cumulativeMetrics", metrics);
 
-                Map<String, Object> memoryMetric = new HashMap<>();
-                memoryMetric.put("dataPoints", new ArrayList<>());
-                memoryMetric.put("metricPoints", new ArrayList<>());
-                memoryMetric.put("metricName", "memory/usage");
-                memoryMetric.put("aggregation", "sum");
-                metrics.add(memoryMetric);
+            // 添加CronJobs列表
+            responseData.put("items", items);
 
-                responseData.put("cumulativeMetrics", metrics);
+            // 添加状态统计
+            Map<String, Object> status = new HashMap<>();
+            status.put("running", runningCount);
+            status.put("pending", 0);
+            status.put("failed", 0);
+            status.put("succeeded", 0);
+            status.put("unknown", 0);
+            status.put("terminating", 0);
+            responseData.put("status", status);
 
-                // 添加CronJobs列表
-                responseData.put("items", pagedItems);
+            // 添加错误列表
+            responseData.put("errors", new ArrayList<>());
 
-                // 添加状态统计
-                Map<String, Object> status = new HashMap<>();
-                status.put("running", runningCount);
-                status.put("pending", 0);
-                status.put("failed", 0);
-                status.put("succeeded", 0);
-                status.put("unknown", 0);
-                status.put("terminating", 0);
-                responseData.put("status", status);
+            // 添加分页信息
+            responseData.put("total", paginationResult.getTotal()); // 添加总记录数
+            responseData.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
-                // 添加错误列表
-                responseData.put("errors", new ArrayList<>());
-
-                // 添加分页信息
-                responseData.put("total", totalCronJobs); // 添加总记录数
-                responseData.put("totalPages", (int) Math.ceil((double) totalCronJobs / pageSize)); // 添加总页数
-
-                return Result.success().put(Constants.DATA, responseData);
-            } else {
-                // 当请求的页码超出范围时，返回空数据
-                Map<String, Object> responseData = new HashMap<>();
-
-                // 创建listMeta Map (替换Map.of)
-                Map<String, Object> listMeta = new HashMap<>();
-                listMeta.put("totalItems", 0);
-                responseData.put("listMeta", listMeta);
-
-                responseData.put("items", new ArrayList<>());
-
-                // 创建status Map (替换Map.of)
-                Map<String, Object> statusMap = new HashMap<>();
-                statusMap.put("running", 0);
-                statusMap.put("pending", 0);
-                statusMap.put("failed", 0);
-                statusMap.put("succeeded", 0);
-                statusMap.put("unknown", 0);
-                statusMap.put("terminating", 0);
-                responseData.put("status", statusMap);
-
-                responseData.put("errors", new ArrayList<>());
-                responseData.put("total", totalCronJobs);
-                responseData.put("totalPages", (int) Math.ceil((double) totalCronJobs / pageSize));
-
-                // 创建度量指标（metrics）
-                List<Map<String, Object>> metricsList = new ArrayList<>();
-                Map<String, Object> cpuMetric = new HashMap<>();
-                cpuMetric.put("dataPoints", new ArrayList<>());
-                cpuMetric.put("metricPoints", new ArrayList<>());
-                cpuMetric.put("metricName", "cpu/usage_rate");
-                cpuMetric.put("aggregation", "sum");
-                metricsList.add(cpuMetric);
-
-                Map<String, Object> memoryMetric = new HashMap<>();
-                memoryMetric.put("dataPoints", new ArrayList<>());
-                memoryMetric.put("metricPoints", new ArrayList<>());
-                memoryMetric.put("metricName", "memory/usage");
-                memoryMetric.put("aggregation", "sum");
-                metricsList.add(memoryMetric);
-
-                responseData.put("cumulativeMetrics", metricsList);
-
-                return Result.success().put(Constants.DATA, responseData);
-            }
+            return Result.success().put(Constants.DATA, responseData);
         } catch (Exception e) {
-            logger.error("获取CronJobs列表出错", e);
+            log.error("获取CronJobs列表出错", e);
             return Result.error("获取CronJobs列表出错: " + e.getMessage());
         }
     }
@@ -2229,14 +2037,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     info.setCreateTime(createDate);
                 } catch (ParseException e) {
                     // 转换失败时记录日志并使用当前时间
-                    logger.error("解析创建时间失败: " + e.getMessage());
+                    log.error("解析创建时间失败: " + e.getMessage());
                     info.setCreateTime(new Date());
                 }
             }
 
             return Result.success().put(Constants.DATA, info);
         } catch (Exception e) {
-            logger.error("获取Deployment详情出错", e);
+            log.error("获取Deployment详情出错", e);
             return Result.error("获取Deployment详情出错: " + e.getMessage());
         }
     }
@@ -2261,14 +2069,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, events);
         } catch (Exception e) {
-            logger.error("获取资源事件出错", e);
+            log.error("获取资源事件出错", e);
             return Result.error("获取资源事件出错: " + e.getMessage());
         }
     }
 
     @Override
     public Result getResourceStats(Integer clusterId, Integer serviceId, String namespace) {
-        logger.info("一次性获取所有K8s资源统计, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+        log.info("一次性获取所有K8s资源统计, clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
         try {
             // 使用kubeconfig创建Kubernetes客户端（只创建一次连接）
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -2377,7 +2185,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             return Result.success().put(Constants.DATA, statsMap);
         } catch (Exception e) {
-            logger.error("获取K8s资源统计出错", e);
+            log.error("获取K8s资源统计出错", e);
             return Result.error("获取K8s资源统计出错: " + e.getMessage());
         }
     }
@@ -2385,7 +2193,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     @Override
     public Result getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize) {
         try {
-            logger.info("获取Pods详细信息请求：clusterId={}, namespace={}, pageNum={}, pageSize={}",
+            log.info("获取Pods详细信息请求：clusterId={}, namespace={}, pageNum={}, pageSize={}",
                     clusterId, namespace, pageNum, pageSize);
 
             // 1. 获取Kubernetes客户端
@@ -2394,53 +2202,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return Result.error("无法获取Kubernetes客户端");
             }
 
-            // 2. 创建ListOptions并设置分页参数
-            ListOptions listOptions = new ListOptions();
-            listOptions.setLimit((long) pageSize); // 设置每页数量
+            // 2. 使用通用分页方法获取Pod列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.Pod> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.Pod.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
 
-            // 获取总记录数（需要单独查询）
-            long totalPods = 0;
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                totalPods = client.pods().inNamespace(namespace).list().getItems().size();
-            } else {
-                totalPods = client.pods().inAnyNamespace().list().getItems().size();
-            }
-
-            // 使用limit和continue机制实现分页
-            String continueToken = null;
-            io.fabric8.kubernetes.api.model.PodList podList;
-
-            // 如果不是第一页，需要先获取到对应页的continue token
-            if (pageNum > 1) {
-                int currentPage = 1;
-                io.fabric8.kubernetes.api.model.PodList tempList;
-
-                while (currentPage < pageNum) {
-                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.pods().inNamespace(namespace).list(listOptions);
-                    } else {
-                        listOptions.setContinue(continueToken);
-                        tempList = client.pods().inAnyNamespace().list(listOptions);
-                    }
-
-                    continueToken = tempList.getMetadata().getContinue();
-                    currentPage++;
-
-                    // 如果没有更多数据了，跳出循环
-                    if (continueToken == null || continueToken.isEmpty()) {
-                        break;
-                    }
-                }
-            }
-
-            // 获取当前页的Pods
-            listOptions.setContinue(continueToken);
-            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
-                podList = client.pods().inNamespace(namespace).list(listOptions);
-            } else {
-                podList = client.pods().inAnyNamespace().list(listOptions);
-            }
+            // 3. 获取Pod列表
+            List<io.fabric8.kubernetes.api.model.Pod> podList = paginationResult.getItems();
 
             // 4. 获取Pod指标
             io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList podMetricsList;
@@ -2470,10 +2241,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             statusCount.put("terminating", 0);
 
             // 6. 处理Pod列表
-            for (io.fabric8.kubernetes.api.model.Pod pod : podList.getItems()) {
-                // 处理单个Pod的逻辑，与原方法相同
-                // ...
-
+            for (io.fabric8.kubernetes.api.model.Pod pod : podList) {
                 // 提取Pod状态
                 String status = pod.getStatus().getPhase();
 
@@ -2531,7 +2299,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     long cpuNano = Long.parseLong(cpuQuantity);
                                     cpuUsageTotal += (int) (cpuNano / 1000000);
                                 } catch (NumberFormatException e) {
-                                    logger.warn("无法解析CPU使用量: {}", cpuQuantity, e);
+                                    log.warn("无法解析CPU使用量: {}", cpuQuantity, e);
                                 }
                             } else {
                                 try {
@@ -2539,7 +2307,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     double cores = Double.parseDouble(cpuQuantity);
                                     cpuUsageTotal += (int) (cores * 1000);
                                 } catch (NumberFormatException e) {
-                                    logger.warn("无法解析CPU使用量: {}", cpuQuantity, e);
+                                    log.warn("无法解析CPU使用量: {}", cpuQuantity, e);
                                 }
                             }
                         }
@@ -2565,7 +2333,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     memoryUsageTotal += Long.parseLong(memoryQuantity);
                                 }
                             } catch (NumberFormatException e) {
-                                logger.warn("无法解析内存使用量: {}", memoryQuantity, e);
+                                log.warn("无法解析内存使用量: {}", memoryQuantity, e);
                             }
                         }
                     }
@@ -2590,29 +2358,19 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 podDetails.add(podDetail);
             }
 
-            // 7. 获取Pod总数（用于计算总页数）
-            // totalPods已经在前面计算过了，这里不需要重复计算
-            // long totalPods = 0;
-            // if (namespace != null && !namespace.isEmpty() &&
-            // !"all".equalsIgnoreCase(namespace)) {
-            // totalPods = client.pods().inNamespace(namespace).list().getItems().size();
-            // } else {
-            // totalPods = client.pods().inAnyNamespace().list().getItems().size();
-            // }
-
             // 8. 构建返回结果
             Map<String, Object> result = new HashMap<>();
             result.put("pods", podDetails);
             result.put("status", statusCount);
-            result.put("total", totalPods); // 添加总记录数
-            result.put("totalPages", (int) Math.ceil((double) totalPods / pageSize)); // 添加总页数
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
 
             // 9. 关闭客户端
             client.close();
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            logger.error("获取Pods列表失败", e);
+            log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());
         }
     }
