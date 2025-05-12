@@ -142,7 +142,7 @@
           <!-- 添加分页器 -->
           <div class="pagination-container">
             <a-pagination
-              v-if="totalItems > 0"
+              v-if="totalItems > 0 && totalPages > 1"
               :current="pageNum"
               :pageSize="pageSize"
               :total="totalItems"

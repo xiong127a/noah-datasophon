@@ -174,7 +174,8 @@ export default {
         showTotal: total => `共 ${total} 项`,
         showSizeChanger: true,
         pageSizeOptions: ['10', '20', '50', '100'],
-        size: 'default'
+        size: 'default',
+        hideOnSinglePage: true
       },
       columns: [
         {
