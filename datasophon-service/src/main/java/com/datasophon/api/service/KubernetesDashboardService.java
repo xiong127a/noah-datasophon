@@ -110,6 +110,7 @@ public interface KubernetesDashboardService {
      * @return StorageClasses列表
      */
     Result getStorageClasses(Integer clusterId);
+
     /**
      * 获取Ingresses列表（带分页）
      * 
@@ -122,12 +123,14 @@ public interface KubernetesDashboardService {
     Result getIngresses(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取IngressClasses列表
+     * 获取IngressClasses列表（带分页）
      * 
      * @param clusterId 集群ID
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
      * @return IngressClasses列表
      */
-    Result getIngressClasses(Integer clusterId);
+    Result getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize);
 
     /**
      * 获取DaemonSets列表（带服务ID）

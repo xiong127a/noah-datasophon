@@ -161,8 +161,10 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/ingressclasses")
     public Result getIngressClasses(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getIngressClasses(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getIngressClasses(clusterId, pageNum, pageSize);
     }
 
     /**

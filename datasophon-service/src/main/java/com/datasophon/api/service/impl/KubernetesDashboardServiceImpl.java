@@ -68,6 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * K8S仪表盘服务实现类
@@ -838,12 +840,83 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getIngressClasses(Integer clusterId) {
+    public Result getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize) {
         try {
+            Map<String, Object> result = new HashMap<>();
+
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取IngressClasses
+            // 如果支持分页
+            if (pageNum != null && pageSize != null) {
+                // 使用自定义分页方法获取分页结果
+                try {
+                    PaginatedResult<io.fabric8.kubernetes.api.model.networking.v1.IngressClass> paginationResult = paginateResources(
+                            client,
+                            io.fabric8.kubernetes.api.model.networking.v1.IngressClass.class,
+                            null, // IngressClass不基于命名空间
+                            pageNum,
+                            pageSize);
+
+                    // 获取到分页的IngressClass列表
+                    List<io.fabric8.kubernetes.api.model.networking.v1.IngressClass> ingressClassList = paginationResult
+                            .getItems();
+
+                    // 转换为前端需要的数据结构
+                    List<Map<String, Object>> items = ingressClassList.stream()
+                            .map(ingressClass -> {
+                                Map<String, Object> item = new HashMap<>();
+                                Map<String, Object> objectMeta = new HashMap<>();
+                                Map<String, Object> typeMeta = new HashMap<>();
+
+                                // 基本信息
+                                if (ingressClass.getMetadata() != null) {
+                                    objectMeta.put("name", ingressClass.getMetadata().getName());
+                                    objectMeta.put("labels", ingressClass.getMetadata().getLabels());
+                                    objectMeta.put("annotations", ingressClass.getMetadata().getAnnotations());
+                                    objectMeta.put("creationTimestamp",
+                                            ingressClass.getMetadata().getCreationTimestamp());
+                                    objectMeta.put("uid", ingressClass.getMetadata().getUid());
+                                }
+                                item.put("objectMeta", objectMeta);
+
+                                // 类型信息
+                                typeMeta.put("kind", "ingressclass");
+                                item.put("typeMeta", typeMeta);
+
+                                // 控制器信息
+                                if (ingressClass.getSpec() != null && ingressClass.getSpec().getController() != null) {
+                                    item.put("controller", ingressClass.getSpec().getController());
+                                }
+
+                                return item;
+                            })
+                            .collect(Collectors.toList());
+
+                    // 构建最终结果
+                    Map<String, Object> listMeta = new HashMap<>();
+                    listMeta.put("totalItems", items.size());
+                    result.put("listMeta", listMeta);
+                    result.put("items", items);
+                    result.put("errors", new ArrayList<>());
+
+                    // 添加分页信息
+                    result.put("total", paginationResult.getTotal()); // 添加总记录数
+                    result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+                    return Result.success().put(Constants.DATA, result);
+                } catch (Exception e) {
+                    log.error("分页获取IngressClasses列表出错", e);
+                    // 发生错误时返回空列表和错误信息
+                    result.put("items", new ArrayList<>());
+                    result.put("errors", Collections.singletonList(e.getMessage()));
+                    result.put("total", 0);
+                    result.put("totalPages", 0);
+                    return Result.success().put(Constants.DATA, result);
+                }
+            }
+
+            // 如果不支持分页（向后兼容），获取全部IngressClasses
             IngressClassList ingressClassList = client.network().v1()
                     .ingressClasses().list();
 
@@ -878,91 +951,21 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     .collect(Collectors.toList());
 
             // 构建最终结果
-            Map<String, Object> result = new HashMap<>();
             Map<String, Object> listMeta = new HashMap<>();
             listMeta.put("totalItems", items.size());
             result.put("listMeta", listMeta);
             result.put("items", items);
             result.put("errors", new ArrayList<>());
 
+            // 添加总数和总页数（非分页情况下，总页数为1）
+            result.put("total", items.size());
+            result.put("totalPages", 1);
+
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
             log.error("获取IngressClasses列表出错", e);
             return Result.error("获取IngressClasses列表出错: " + e.getMessage());
         }
-    }
-
-    /**
-     * 通用资源分页方法
-     * 
-     * @param client        Kubernetes客户端
-     * @param resourceClass 资源类型类
-     * @param namespace     命名空间（null或"all"表示所有命名空间）
-     * @param pageNum       页码
-     * @param pageSize      每页大小
-     * @return 类型安全的分页结果
-     */
-    private <T extends HasMetadata> PaginatedResult<T> paginateResources(
-            KubernetesClient client,
-            Class<T> resourceClass,
-            String namespace,
-            Integer pageNum,
-            Integer pageSize) {
-
-        // 判断是否为特定命名空间的查询
-        boolean isSpecificNamespace = namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace);
-
-        // 获取总记录数
-        long totalItems;
-        if (isSpecificNamespace) {
-            totalItems = client.resources(resourceClass).inNamespace(namespace).list().getItems().size();
-        } else {
-            totalItems = client.resources(resourceClass).inAnyNamespace().list().getItems().size();
-        }
-
-        // 使用limit和continue机制实现分页
-        String continueToken = null;
-        ListOptions listOptions = new ListOptions();
-        listOptions.setLimit((long) pageSize);
-
-        // 如果不是第一页，需要先获取到对应页的continue token
-        if (pageNum > 1) {
-            int currentPage = 1;
-
-            while (currentPage < pageNum) {
-                KubernetesResourceList<T> tempList;
-                if (isSpecificNamespace) {
-                    tempList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
-                } else {
-                    tempList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
-                }
-
-                continueToken = tempList.getMetadata().getContinue();
-                currentPage++;
-
-                // 如果没有更多数据，跳出循环
-                if (continueToken == null || continueToken.isEmpty()) {
-                    break;
-                }
-
-                listOptions.setContinue(continueToken);
-            }
-        }
-
-        // 获取当前页的资源
-        listOptions.setContinue(continueToken);
-        KubernetesResourceList<T> resourceList;
-        if (isSpecificNamespace) {
-            resourceList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
-        } else {
-            resourceList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
-        }
-
-        // 计算总页数
-        int totalPages = (int) Math.ceil((double) totalItems / pageSize);
-
-        // 返回类型安全的分页结果
-        return new PaginatedResult<>(resourceList.getItems(), totalItems, totalPages);
     }
 
     @Override
@@ -2454,5 +2457,78 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             default:
                 statusCount.put("unknown", statusCount.get("unknown") + 1);
         }
+    }
+
+    /**
+     * 通用资源分页方法
+     * 
+     * @param client        Kubernetes客户端
+     * @param resourceClass 资源类型类
+     * @param namespace     命名空间（null或"all"表示所有命名空间）
+     * @param pageNum       页码
+     * @param pageSize      每页大小
+     * @return 类型安全的分页结果
+     */
+    private <T extends HasMetadata> PaginatedResult<T> paginateResources(
+            KubernetesClient client,
+            Class<T> resourceClass,
+            String namespace,
+            Integer pageNum,
+            Integer pageSize) {
+
+        // 判断是否为特定命名空间的查询
+        boolean isSpecificNamespace = namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace);
+
+        // 获取总记录数
+        long totalItems;
+        if (isSpecificNamespace) {
+            totalItems = client.resources(resourceClass).inNamespace(namespace).list().getItems().size();
+        } else {
+            totalItems = client.resources(resourceClass).inAnyNamespace().list().getItems().size();
+        }
+
+        // 使用limit和continue机制实现分页
+        String continueToken = null;
+        ListOptions listOptions = new ListOptions();
+        listOptions.setLimit((long) pageSize);
+
+        // 如果不是第一页，需要先获取到对应页的continue token
+        if (pageNum > 1) {
+            int currentPage = 1;
+
+            while (currentPage < pageNum) {
+                KubernetesResourceList<T> tempList;
+                if (isSpecificNamespace) {
+                    tempList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
+                } else {
+                    tempList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
+                }
+
+                continueToken = tempList.getMetadata().getContinue();
+                currentPage++;
+
+                // 如果没有更多数据，跳出循环
+                if (continueToken == null || continueToken.isEmpty()) {
+                    break;
+                }
+
+                listOptions.setContinue(continueToken);
+            }
+        }
+
+        // 获取当前页的资源
+        listOptions.setContinue(continueToken);
+        KubernetesResourceList<T> resourceList;
+        if (isSpecificNamespace) {
+            resourceList = client.resources(resourceClass).inNamespace(namespace).list(listOptions);
+        } else {
+            resourceList = client.resources(resourceClass).inAnyNamespace().list(listOptions);
+        }
+
+        // 计算总页数
+        int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+
+        // 返回类型安全的分页结果
+        return new PaginatedResult<>(resourceList.getItems(), totalItems, totalPages);
     }
 }
