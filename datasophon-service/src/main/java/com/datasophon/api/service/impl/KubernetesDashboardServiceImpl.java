@@ -1177,17 +1177,57 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getReplicaSets(Integer clusterId, String namespace) {
+    public Result getReplicaSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取ReplicaSets
-            io.fabric8.kubernetes.api.model.apps.ReplicaSetList replicaSetList;
-            if (namespace != null && !namespace.isEmpty()) {
-                replicaSetList = client.apps().replicaSets().inNamespace(namespace).list();
+            // 创建ListOptions并设置分页参数
+            ListOptions listOptions = new ListOptions();
+            listOptions.setLimit((long) pageSize); // 设置每页数量
+
+            // 获取总记录数（需要单独查询）
+            long totalReplicaSets = 0;
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                totalReplicaSets = client.apps().replicaSets().inNamespace(namespace).list().getItems().size();
             } else {
-                replicaSetList = client.apps().replicaSets().inAnyNamespace().list();
+                totalReplicaSets = client.apps().replicaSets().inAnyNamespace().list().getItems().size();
+            }
+
+            // 使用limit和continue机制实现分页
+            String continueToken = null;
+            io.fabric8.kubernetes.api.model.apps.ReplicaSetList replicaSetList;
+
+            // 如果不是第一页，需要先获取到对应页的continue token
+            if (pageNum > 1) {
+                int currentPage = 1;
+                io.fabric8.kubernetes.api.model.apps.ReplicaSetList tempList;
+
+                while (currentPage < pageNum) {
+                    if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().replicaSets().inNamespace(namespace).list(listOptions);
+                    } else {
+                        listOptions.setContinue(continueToken);
+                        tempList = client.apps().replicaSets().inAnyNamespace().list(listOptions);
+                    }
+
+                    continueToken = tempList.getMetadata().getContinue();
+                    currentPage++;
+
+                    // 如果没有更多数据了，跳出循环
+                    if (continueToken == null || continueToken.isEmpty()) {
+                        break;
+                    }
+                }
+            }
+
+            // 获取当前页的ReplicaSets
+            listOptions.setContinue(continueToken);
+            if (namespace != null && !namespace.isEmpty() && !"all".equalsIgnoreCase(namespace)) {
+                replicaSetList = client.apps().replicaSets().inNamespace(namespace).list(listOptions);
+            } else {
+                replicaSetList = client.apps().replicaSets().inAnyNamespace().list(listOptions);
             }
 
             // 转换为前端需要的数据结构
@@ -1287,6 +1327,10 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("replicaSets", replicaSets);
             result.put("status", status);
             result.put("errors", new ArrayList<>());
+
+            // 添加分页信息
+            result.put("total", totalReplicaSets); // 添加总记录数
+            result.put("totalPages", (int) Math.ceil((double) totalReplicaSets / pageSize)); // 添加总页数
 
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {

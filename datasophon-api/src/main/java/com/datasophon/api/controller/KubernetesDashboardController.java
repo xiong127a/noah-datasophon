@@ -192,8 +192,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/replicasets")
     public Result getReplicaSets(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getReplicaSets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getReplicaSets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -216,7 +218,7 @@ public class KubernetesDashboardController {
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
-        return  kubernetesDashboardService.getJobs(clusterId, namespace, pageNum, pageSize);
+        return kubernetesDashboardService.getJobs(clusterId, namespace, pageNum, pageSize);
     }
 
     /**

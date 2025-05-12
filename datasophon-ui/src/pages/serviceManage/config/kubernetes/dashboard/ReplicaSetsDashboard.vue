@@ -16,27 +16,37 @@
           <a-table 
             :columns="replicaSetColumns" 
             :dataSource="replicaSets" 
-            :pagination="false"
-            :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+            :pagination="{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['5', '10', '20', '50'],
+              hideOnSinglePage: totalPages <= 1,
+              showTotal: total => `共 ${total} 条记录`
+            }"
+            :rowKey="record => `${(record && record.objectMeta && record.objectMeta.namespace) || 'unknown'}-${(record && record.objectMeta && record.objectMeta.name) || 'unknown'}`"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
                 <StatusIndicator :resource="record" resourceType="replicaSet" />
                 <div class="name-cell">
-                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
-                    {{ record?.objectMeta?.name || '未知' }}
+                  <span class="pod-name" :title="(record && record.objectMeta && record.objectMeta.name) || '未知'">
+                    {{ (record && record.objectMeta && record.objectMeta.name) || '未知' }}
                   </span>
                 </div>
               </div>
             </template>
 
             <template slot="image" slot-scope="text, record">
-              <div class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
-                <template v-if="record?.containerImages && record.containerImages.length">
+              <div class="image-cell" :title="record && record.containerImages ? record.containerImages.join(', ') : ''">
+                <template v-if="record && record.containerImages && record.containerImages.length">
                   <span class="container-image">
                     {{ record.containerImages[0] }}
                   </span>
@@ -47,7 +57,7 @@
             </template>
 
             <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+              <div v-if="record && record.objectMeta && record.objectMeta.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag 
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
@@ -91,13 +101,13 @@
 
             <template slot="pods" slot-scope="text, record">
               <div class="pods-display">
-                <span>{{ record?.podInfo && record.podInfo.running !== undefined ? record.podInfo.running : 0 }} / {{ record?.podInfo && record.podInfo.desired !== undefined ? record.podInfo.desired : 0 }}</span>
+                <span>{{ record && record.podInfo && record.podInfo.running !== undefined ? record.podInfo.running : 0 }} / {{ record && record.podInfo && record.podInfo.desired !== undefined ? record.podInfo.desired : 0 }}</span>
               </div>
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(record && record.objectMeta && record.objectMeta.creationTimestamp)">
+                {{ getDaysAgo(record && record.objectMeta && record.objectMeta.creationTimestamp) }}
               </span>
             </template>
           </a-table>
@@ -134,6 +144,12 @@ export default {
       replicaSets: [],
       loading: false,
       expandedLabels: {},  // 用于存储展开状态的对象
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0
+      },
+      totalPages: 1,
       replicaSetColumns: [
         {
           title: '名称',
@@ -184,14 +200,25 @@ export default {
       if (!record || !record.objectMeta || !record.objectMeta.uid) return false;
       return !!this.expandedLabels[record.objectMeta.uid];
     },
+    handleTableChange(pagination) {
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      this.fetchReplicaSets();
+    },
     async fetchReplicaSets() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sReplicaSets, {
+        const params = {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
+          pageNum: this.pagination.current,
+          pageSize: this.pagination.pageSize,
+          // Only add namespace if it's not 'all'
+          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+        };
+        
+        const res = await this.$axiosGet(global.API.getK8sReplicaSets, params);
+        
         if (res.code === 200) {
           // 确保获取ReplicaSets列表数组
           let replicaSetList = res.data && res.data.replicaSets ? res.data.replicaSets : [];
@@ -209,6 +236,10 @@ export default {
             
             return replicaSet;
           });
+          
+          // 更新分页信息
+          this.pagination.total = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 1;
           
           console.log("处理后的replicaSets数据:", this.replicaSets);
         } else {
@@ -248,16 +279,17 @@ export default {
       }
     },
     formatTime(time) {
-      if (!time) return '-';
-      return new Date(time).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
+      if (!time) return '';
+      
+      const date = new Date(time);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
   },
   watch: {

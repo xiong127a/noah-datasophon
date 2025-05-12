@@ -159,13 +159,15 @@ public interface KubernetesDashboardService {
     Result getStatefulSets(Integer clusterId, String namespace);
 
     /**
-     * 获取ReplicaSets列表
+     * 获取ReplicaSets列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return ReplicaSets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return ReplicaSets列表（包含分页信息）
      */
-    Result getReplicaSets(Integer clusterId, String namespace);
+    Result getReplicaSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取ReplicationControllers列表
@@ -175,7 +177,6 @@ public interface KubernetesDashboardService {
      * @return ReplicationControllers列表
      */
     Result getReplicationControllers(Integer clusterId, String namespace);
-
 
     /**
      * 获取Jobs列表（带分页）
