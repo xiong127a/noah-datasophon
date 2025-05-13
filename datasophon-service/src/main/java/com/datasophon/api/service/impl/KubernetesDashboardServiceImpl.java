@@ -23,6 +23,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.k8s.DeploymentInfo;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapList;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
@@ -30,13 +31,16 @@ import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ListOptions;
+import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceList;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolume;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretList;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -48,6 +52,8 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobCondition;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressClass;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressClassList;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
 import io.fabric8.kubernetes.api.model.storage.StorageClass;
@@ -850,7 +856,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     pageNum,
                     pageSize);
 
-
             // 获取到分页的StorageClass列表
             List<StorageClass> storageClassList = paginationResult.getItems();
 
@@ -922,15 +927,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             }
 
             // 使用通用分页方法获取Ingress列表
-            PaginatedResult<io.fabric8.kubernetes.api.model.networking.v1.Ingress> paginationResult = paginateResources(
+            PaginatedResult<Ingress> paginationResult = paginateResources(
                     client,
-                    io.fabric8.kubernetes.api.model.networking.v1.Ingress.class,
+                    Ingress.class,
                     namespace,
                     pageNum,
                     pageSize);
 
             // 从分页结果获取Ingress列表
-            List<io.fabric8.kubernetes.api.model.networking.v1.Ingress> ingressList = paginationResult.getItems();
+            List<Ingress> ingressList = paginationResult.getItems();
 
             // 获取集群节点IP列表，用于Endpoints（只获取一次，避免多次调用）
             final List<String> nodeIps = new ArrayList<>();
@@ -1041,15 +1046,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             if (pageNum != null && pageSize != null) {
                 // 使用自定义分页方法获取分页结果
                 try {
-                    PaginatedResult<io.fabric8.kubernetes.api.model.networking.v1.IngressClass> paginationResult = paginateResources(
+                    PaginatedResult<IngressClass> paginationResult = paginateResources(
                             client,
-                            io.fabric8.kubernetes.api.model.networking.v1.IngressClass.class,
+                            IngressClass.class,
                             null, // IngressClass不基于命名空间
                             pageNum,
                             pageSize);
 
                     // 获取到分页的IngressClass列表
-                    List<io.fabric8.kubernetes.api.model.networking.v1.IngressClass> ingressClassList = paginationResult
+                    List<IngressClass> ingressClassList = paginationResult
                             .getItems();
 
                     // 转换为前端需要的数据结构
@@ -1258,12 +1263,13 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建状态统计信息
             Map<String, Integer> status = new HashMap<>();
             status.put("running", (int) daemonSetDetails.stream().filter(ds -> {
-                Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
-                return podInfo != null && (int) podInfo.get("ready") > 0;
+                Map<String, Object> podInfo = safeCast(ds.get("podInfo"));
+                return podInfo != null && podInfo.get("ready") instanceof Integer && (int) podInfo.get("ready") > 0;
             }).count());
             status.put("pending", (int) daemonSetDetails.stream().filter(ds -> {
-                Map<String, Object> podInfo = (Map<String, Object>) ds.get("podInfo");
-                return podInfo != null && (int) podInfo.get("unavailable") > 0;
+                Map<String, Object> podInfo = safeCast(ds.get("podInfo"));
+                return podInfo != null && podInfo.get("unavailable") instanceof Integer
+                        && (int) podInfo.get("unavailable") > 0;
             }).count());
             status.put("failed", 0);
             status.put("succeeded", 0);
@@ -1346,18 +1352,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             podInfo.put("current", current);
                             podInfo.put("running", ready);
                             podInfo.put("pending", current - ready); // 当前副本数减去就绪副本数为等待中的副本数
-                            podInfo.put("failed", 0); // 默认没有失败的
-                            podInfo.put("succeeded", 0); // 没有成功完成的概念
-                            podInfo.put("warnings", new ArrayList<>()); // 空警告列表
                         } else {
                             podInfo.put("desired", 0);
                             podInfo.put("current", 0);
                             podInfo.put("running", 0);
                             podInfo.put("pending", 0);
-                            podInfo.put("failed", 0);
-                            podInfo.put("succeeded", 0);
-                            podInfo.put("warnings", new ArrayList<>());
                         }
+                        podInfo.put("failed", 0); // 默认没有失败的
+                        podInfo.put("succeeded", 0); // 没有成功完成的概念
+                        podInfo.put("warnings", new ArrayList<>()); // 空警告列表
                         item.put("podInfo", podInfo);
 
                         // 提取容器镜像
@@ -1393,12 +1396,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建状态统计信息
             Map<String, Integer> status = new HashMap<>();
             status.put("running", (int) statefulSets.stream().filter(sts -> {
-                Map<String, Object> podInfo = (Map<String, Object>) sts.get("podInfo");
-                return podInfo != null && (int) podInfo.get("running") > 0;
+                Map<String, Object> podInfo = safeCast(sts.get("podInfo"));
+                return podInfo != null && podInfo.get("running") instanceof Integer && (int) podInfo.get("running") > 0;
             }).count());
             status.put("pending", (int) statefulSets.stream().filter(sts -> {
-                Map<String, Object> podInfo = (Map<String, Object>) sts.get("podInfo");
-                return podInfo != null && (int) podInfo.get("pending") > 0;
+                Map<String, Object> podInfo = safeCast(sts.get("podInfo"));
+                return podInfo != null && podInfo.get("pending") instanceof Integer && (int) podInfo.get("pending") > 0;
             }).count());
             status.put("failed", 0);
             status.put("succeeded", 0);
@@ -1483,16 +1486,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     ? replicaSet.getStatus().getAvailableReplicas()
                                     : 0;
                             podInfo.put("pending", Math.max(0, current - available));
-                            podInfo.put("failed", 0); // 默认值，需要检查Pod状态计算
-                            podInfo.put("succeeded", 0); // 默认值，需要检查Pod状态计算
                         } else {
                             podInfo.put("desired", 0);
                             podInfo.put("current", 0);
                             podInfo.put("running", 0);
                             podInfo.put("pending", 0);
-                            podInfo.put("failed", 0);
-                            podInfo.put("succeeded", 0);
                         }
+                        podInfo.put("failed", 0); // 默认值，需要检查Pod状态计算
+                        podInfo.put("succeeded", 0); // 默认值，需要检查Pod状态计算
                         podInfo.put("warnings", new ArrayList<>());
                         item.put("podInfo", podInfo);
 
@@ -1517,12 +1518,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建状态统计信息
             Map<String, Integer> status = new HashMap<>();
             status.put("running", (int) replicaSets.stream().filter(rs -> {
-                Map<String, Object> podInfo = (Map<String, Object>) rs.get("podInfo");
-                return podInfo != null && (int) podInfo.get("running") > 0;
+                Map<String, Object> podInfo = safeCast(rs.get("podInfo"));
+                return podInfo != null && podInfo.get("running") instanceof Integer && (int) podInfo.get("running") > 0;
             }).count());
             status.put("pending", (int) replicaSets.stream().filter(rs -> {
-                Map<String, Object> podInfo = (Map<String, Object>) rs.get("podInfo");
-                return podInfo != null && (int) podInfo.get("pending") > 0;
+                Map<String, Object> podInfo = safeCast(rs.get("podInfo"));
+                return podInfo != null && podInfo.get("pending") instanceof Integer && (int) podInfo.get("pending") > 0;
             }).count());
             status.put("failed", 0);
             status.put("succeeded", 0);
@@ -1727,15 +1728,15 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建状态统计信息
             Map<String, Integer> status = new HashMap<>();
             status.put("running", (int) replicationControllers.stream().filter(rc -> {
-                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                Map<String, Object> podInfo = safeCast(rc.get("podInfo"));
                 return podInfo != null && (int) podInfo.get("running") > 0;
             }).count());
             status.put("pending", (int) replicationControllers.stream().filter(rc -> {
-                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                Map<String, Object> podInfo = safeCast(rc.get("podInfo"));
                 return podInfo != null && (int) podInfo.get("pending") > 0;
             }).count());
             status.put("failed", (int) replicationControllers.stream().filter(rc -> {
-                Map<String, Object> podInfo = (Map<String, Object>) rc.get("podInfo");
+                Map<String, Object> podInfo = safeCast(rc.get("podInfo"));
                 return podInfo != null && (int) podInfo.get("failed") > 0;
             }).count());
             status.put("succeeded", 0);
@@ -1914,35 +1915,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 jobMap.put("podInfo", podInfo);
 
                 // 提取容器镜像
-                List<String> containerImages = new ArrayList<>();
-                if (job.getSpec() != null &&
-                        job.getSpec().getTemplate() != null &&
-                        job.getSpec().getTemplate().getSpec() != null &&
-                        job.getSpec().getTemplate().getSpec().getContainers() != null) {
-
-                    for (Container container : job.getSpec().getTemplate().getSpec()
-                            .getContainers()) {
-                        if (container.getImage() != null) {
-                            containerImages.add(container.getImage());
-                        }
-                    }
-                }
+                List<String> containerImages = getContainerImages(job);
                 jobMap.put("containerImages", containerImages);
 
                 // 初始化容器镜像
-                List<String> initContainerImages = new ArrayList<>();
-                if (job.getSpec() != null &&
-                        job.getSpec().getTemplate() != null &&
-                        job.getSpec().getTemplate().getSpec() != null &&
-                        job.getSpec().getTemplate().getSpec().getInitContainers() != null) {
-
-                    for (Container container : job.getSpec().getTemplate().getSpec()
-                            .getInitContainers()) {
-                        if (container.getImage() != null) {
-                            initContainerImages.add(container.getImage());
-                        }
-                    }
-                }
+                List<String> initContainerImages = getInitContainerImages(job);
                 jobMap.put("initContainerImages", initContainerImages.isEmpty() ? null : initContainerImages);
 
                 // 获取并行度
@@ -1970,20 +1947,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     }
 
                     // 获取条件
-                    List<Map<String, Object>> conditions = new ArrayList<>();
-                    if (job.getStatus().getConditions() != null) {
-                        for (JobCondition condition : job.getStatus()
-                                .getConditions()) {
-                            Map<String, Object> conditionMap = new HashMap<>();
-                            conditionMap.put("type", condition.getType());
-                            conditionMap.put("status", condition.getStatus());
-                            conditionMap.put("lastProbeTime", condition.getLastProbeTime());
-                            conditionMap.put("lastTransitionTime", condition.getLastTransitionTime());
-                            conditionMap.put("reason", condition.getReason() != null ? condition.getReason() : "");
-                            conditionMap.put("message", condition.getMessage() != null ? condition.getMessage() : "");
-                            conditions.add(conditionMap);
-                        }
-                    }
+                    List<Map<String, Object>> conditions = getConditions(job);
 
                     jobStatus.put("conditions", conditions.isEmpty() ? null : conditions);
                 }
@@ -1996,8 +1960,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 // 统计各种状态
                 if (status.equals("Unknown")) {
                     unknownCount++;
-                } else if (status.equals("Running") && pendingCount > 0) {
-                    pendingCount++;
                 }
 
                 jobs.add(jobMap);
@@ -2054,6 +2016,58 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             log.error("获取Jobs列表出错", e);
             return Result.error("获取Jobs列表出错: " + e.getMessage());
         }
+    }
+
+    private static List<Map<String, Object>> getConditions(Job job) {
+        List<Map<String, Object>> conditions = new ArrayList<>();
+        if (job.getStatus().getConditions() != null) {
+            for (JobCondition condition : job.getStatus()
+                    .getConditions()) {
+                Map<String, Object> conditionMap = new HashMap<>();
+                conditionMap.put("type", condition.getType());
+                conditionMap.put("status", condition.getStatus());
+                conditionMap.put("lastProbeTime", condition.getLastProbeTime());
+                conditionMap.put("lastTransitionTime", condition.getLastTransitionTime());
+                conditionMap.put("reason", condition.getReason() != null ? condition.getReason() : "");
+                conditionMap.put("message", condition.getMessage() != null ? condition.getMessage() : "");
+                conditions.add(conditionMap);
+            }
+        }
+        return conditions;
+    }
+
+    private static List<String> getInitContainerImages(Job job) {
+        List<String> initContainerImages = new ArrayList<>();
+        if (job.getSpec() != null &&
+                job.getSpec().getTemplate() != null &&
+                job.getSpec().getTemplate().getSpec() != null &&
+                job.getSpec().getTemplate().getSpec().getInitContainers() != null) {
+
+            for (Container container : job.getSpec().getTemplate().getSpec()
+                    .getInitContainers()) {
+                if (container.getImage() != null) {
+                    initContainerImages.add(container.getImage());
+                }
+            }
+        }
+        return initContainerImages;
+    }
+
+    private static List<String> getContainerImages(Job job) {
+        List<String> containerImages = new ArrayList<>();
+        if (job.getSpec() != null &&
+                job.getSpec().getTemplate() != null &&
+                job.getSpec().getTemplate().getSpec() != null &&
+                job.getSpec().getTemplate().getSpec().getContainers() != null) {
+
+            for (Container container : job.getSpec().getTemplate().getSpec()
+                    .getContainers()) {
+                if (container.getImage() != null) {
+                    containerImages.add(container.getImage());
+                }
+            }
+        }
+        return containerImages;
     }
 
     @Override
@@ -2115,21 +2129,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         cronJob.getStatus() != null ? cronJob.getStatus().getLastScheduleTime() : null);
 
                 // 提取容器镜像
-                List<String> containerImages = new ArrayList<>();
-                if (cronJob.getSpec() != null &&
-                        cronJob.getSpec().getJobTemplate() != null &&
-                        cronJob.getSpec().getJobTemplate().getSpec() != null &&
-                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate() != null &&
-                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec() != null &&
-                        cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getContainers() != null) {
-
-                    for (Container container : cronJob.getSpec().getJobTemplate()
-                            .getSpec().getTemplate().getSpec().getContainers()) {
-                        if (container.getImage() != null) {
-                            containerImages.add(container.getImage());
-                        }
-                    }
-                }
+                List<String> containerImages = getContainerImages(cronJob);
                 cronJobMap.put("containerImages", containerImages);
 
                 items.add(cronJobMap);
@@ -2186,6 +2186,25 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             log.error("获取CronJobs列表出错", e);
             return Result.error("获取CronJobs列表出错: " + e.getMessage());
         }
+    }
+
+    private static List<String> getContainerImages(CronJob cronJob) {
+        List<String> containerImages = new ArrayList<>();
+        if (cronJob.getSpec() != null &&
+                cronJob.getSpec().getJobTemplate() != null &&
+                cronJob.getSpec().getJobTemplate().getSpec() != null &&
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate() != null &&
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec() != null &&
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getContainers() != null) {
+
+            for (Container container : cronJob.getSpec().getJobTemplate()
+                    .getSpec().getTemplate().getSpec().getContainers()) {
+                if (container.getImage() != null) {
+                    containerImages.add(container.getImage());
+                }
+            }
+        }
+        return containerImages;
     }
 
     @Override
@@ -2279,7 +2298,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                     info.setCreateTime(createDate);
                 } catch (ParseException e) {
                     // 转换失败时记录日志并使用当前时间
-                    log.error("解析创建时间失败: " + e.getMessage());
+                    log.error("解析创建时间失败: {}", e.getMessage());
                     info.setCreateTime(new Date());
                 }
             }
@@ -2332,95 +2351,55 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 确定目标命名空间
             boolean hasNamespace = namespace != null && !namespace.isEmpty();
 
-            // 1. 获取命名空间数量
-            int namespacesCount = client.namespaces().list().getItems().size();
-            statsMap.put("namespaces", namespacesCount);
+            // 定义所有需要统计的资源类型及其对应的统计名称
+            Map<Class<? extends HasMetadata>, String> namespaceResources = new HashMap<>();
+            Map<Class<? extends HasMetadata>, String> clusterResources = new HashMap<>();
 
-            // 2. 获取Deployments数量
-            int deploymentsCount = hasNamespace
-                    ? client.apps().deployments().inNamespace(namespace).list().getItems().size()
-                    : client.apps().deployments().inAnyNamespace().list().getItems().size();
-            statsMap.put("deployments", deploymentsCount);
+            // 添加带命名空间的资源
+            namespaceResources.put(Deployment.class, "deployments");
+            namespaceResources.put(Pod.class, "pods");
+            namespaceResources.put(io.fabric8.kubernetes.api.model.Service.class, "services");
+            namespaceResources.put(ConfigMap.class, "configMaps");
+            namespaceResources.put(Secret.class, "secrets");
+            namespaceResources.put(PersistentVolumeClaim.class,
+                    "persistentVolumeClaims");
+            namespaceResources.put(Ingress.class, "ingresses");
+            namespaceResources.put(DaemonSet.class, "daemonSets");
+            namespaceResources.put(StatefulSet.class, "statefulSets");
+            namespaceResources.put(ReplicaSet.class, "replicaSets");
+            namespaceResources.put(ReplicationController.class,
+                    "replicationControllers");
+            namespaceResources.put(Job.class, "jobs");
+            namespaceResources.put(CronJob.class, "cronJobs");
 
-            // 3. 获取Pods数量
-            int podsCount = hasNamespace ? client.pods().inNamespace(namespace).list().getItems().size()
-                    : client.pods().inAnyNamespace().list().getItems().size();
-            statsMap.put("pods", podsCount);
+            // 添加集群级资源（不受命名空间限制）
+            clusterResources.put(Namespace.class, "namespaces");
+            clusterResources.put(PersistentVolume.class, "persistentVolumes");
+            clusterResources.put(StorageClass.class, "storageClasses");
+            clusterResources.put(IngressClass.class, "ingressClasses");
 
-            // 4. 获取Services数量
-            int servicesCount = hasNamespace ? client.services().inNamespace(namespace).list().getItems().size()
-                    : client.services().inAnyNamespace().list().getItems().size();
-            statsMap.put("services", servicesCount);
+            // 处理带命名空间的资源
+            for (Map.Entry<Class<? extends HasMetadata>, String> entry : namespaceResources.entrySet()) {
+                Class<? extends HasMetadata> resourceClass = entry.getKey();
+                String statName = entry.getValue();
 
-            // 5. 获取ConfigMaps数量
-            int configMapsCount = hasNamespace ? client.configMaps().inNamespace(namespace).list().getItems().size()
-                    : client.configMaps().inAnyNamespace().list().getItems().size();
-            statsMap.put("configMaps", configMapsCount);
+                int count;
+                if (hasNamespace) {
+                    count = client.resources(resourceClass).inNamespace(namespace).list().getItems().size();
+                } else {
+                    count = client.resources(resourceClass).inAnyNamespace().list().getItems().size();
+                }
+                statsMap.put(statName, count);
+            }
 
-            // 6. 获取Secrets数量
-            int secretsCount = hasNamespace ? client.secrets().inNamespace(namespace).list().getItems().size()
-                    : client.secrets().inAnyNamespace().list().getItems().size();
-            statsMap.put("secrets", secretsCount);
+            // 处理集群级资源
+            for (Map.Entry<Class<? extends HasMetadata>, String> entry : clusterResources.entrySet()) {
+                Class<? extends HasMetadata> resourceClass = entry.getKey();
+                String statName = entry.getValue();
 
-            // 7. 获取PersistentVolumes数量
-            int persistentVolumesCount = client.persistentVolumes().list().getItems().size();
-            statsMap.put("persistentVolumes", persistentVolumesCount);
-
-            // 8. 获取PersistentVolumeClaims数量
-            int pvcsCount = hasNamespace
-                    ? client.persistentVolumeClaims().inNamespace(namespace).list().getItems().size()
-                    : client.persistentVolumeClaims().inAnyNamespace().list().getItems().size();
-            statsMap.put("persistentVolumeClaims", pvcsCount);
-
-            // 9. 获取StorageClasses数量
-            int storageClassesCount = client.storage().storageClasses().list().getItems().size();
-            statsMap.put("storageClasses", storageClassesCount);
-
-            // 10. 获取Ingresses数量
-            int ingressesCount = hasNamespace
-                    ? client.network().v1().ingresses().inNamespace(namespace).list().getItems().size()
-                    : client.network().v1().ingresses().inAnyNamespace().list().getItems().size();
-            statsMap.put("ingresses", ingressesCount);
-
-            // 11. 获取IngressClasses数量
-            int ingressClassesCount = client.network().v1().ingressClasses().list().getItems().size();
-            statsMap.put("ingressClasses", ingressClassesCount);
-
-            // 12. 获取DaemonSets数量
-            int daemonSetsCount = hasNamespace
-                    ? client.apps().daemonSets().inNamespace(namespace).list().getItems().size()
-                    : client.apps().daemonSets().inAnyNamespace().list().getItems().size();
-            statsMap.put("daemonSets", daemonSetsCount);
-
-            // 13. 获取StatefulSets数量
-            int statefulSetsCount = hasNamespace
-                    ? client.apps().statefulSets().inNamespace(namespace).list().getItems().size()
-                    : client.apps().statefulSets().inAnyNamespace().list().getItems().size();
-            statsMap.put("statefulSets", statefulSetsCount);
-
-            // 14. 获取ReplicaSets数量
-            int replicaSetsCount = hasNamespace
-                    ? client.apps().replicaSets().inNamespace(namespace).list().getItems().size()
-                    : client.apps().replicaSets().inAnyNamespace().list().getItems().size();
-            statsMap.put("replicaSets", replicaSetsCount);
-
-            // 15. 获取ReplicationControllers数量
-            int replicationControllersCount = hasNamespace
-                    ? client.replicationControllers().inNamespace(namespace).list().getItems().size()
-                    : client.replicationControllers().inAnyNamespace().list().getItems().size();
-            statsMap.put("replicationControllers", replicationControllersCount);
-
-            // 16. 获取Jobs数量
-            int jobsCount = hasNamespace
-                    ? client.batch().v1().jobs().inNamespace(namespace).list().getItems().size()
-                    : client.batch().v1().jobs().inAnyNamespace().list().getItems().size();
-            statsMap.put("jobs", jobsCount);
-
-            // 17. 获取CronJobs数量
-            int cronJobsCount = hasNamespace
-                    ? client.batch().v1().cronjobs().inNamespace(namespace).list().getItems().size()
-                    : client.batch().v1().cronjobs().inAnyNamespace().list().getItems().size();
-            statsMap.put("cronJobs", cronJobsCount);
+                int count = client.resources(resourceClass).list().getItems().size();
+                statsMap.put(statName, count);
+            }
 
             // 关闭客户端连接
             client.close();
@@ -2718,5 +2697,49 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
         // 返回类型安全的分页结果
         return new PaginatedResult<>(resourceList.getItems(), totalItems, totalPages);
+    }
+
+    /**
+     * 安全地将Object转换为Map<String, Object>类型
+     * 
+     * @param obj 要转换的对象
+     * @return 转换后的Map对象，如果转换失败则返回null
+     */
+    private static Map<String, Object> safeCast(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+
+        if (obj instanceof Map<?, ?>) {
+            // 使用类型安全的逐个元素复制方法
+            return copyToStringObjectMap((Map<?, ?>) obj);
+        }
+
+        return null;
+    }
+
+    /**
+     * 将任意Map安全地复制为Map<String, Object>
+     * 
+     * @param source 源Map
+     * @return 类型安全的Map<String, Object>
+     */
+    private static Map<String, Object> copyToStringObjectMap(Map<?, ?> source) {
+        if (source == null) {
+            return null;
+        }
+
+        // 创建新的类型安全Map
+        Map<String, Object> result = new HashMap<>(source.size());
+
+        // 安全地复制元素，确保键是String类型
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            Object key = entry.getKey();
+            if (key instanceof String) {
+                result.put((String) key, entry.getValue());
+            }
+        }
+
+        return result;
     }
 }
