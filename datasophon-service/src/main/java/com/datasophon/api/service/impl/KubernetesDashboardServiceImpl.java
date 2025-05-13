@@ -34,7 +34,6 @@ import io.fabric8.kubernetes.api.model.NamespaceList;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolume;
-import io.fabric8.kubernetes.api.model.PersistentVolumeClaimList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
@@ -627,7 +626,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
     }
 
-
     @Override
     public Result getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize) {
         try {
@@ -734,21 +732,30 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getPersistentVolumeClaims(Integer clusterId, String namespace) {
+    public Result getPersistentVolumeClaims(Integer clusterId, String namespace, Integer pageNum, Integer pageSize) {
         try {
+            log.info("获取PersistentVolumeClaims列表（分页）：clusterId={}, namespace={}, pageNum={}, pageSize={}",
+                    clusterId, namespace, pageNum, pageSize);
+
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
-
-            // 获取PersistentVolumeClaims
-            PersistentVolumeClaimList pvcList;
-            if (namespace != null && !namespace.isEmpty()) {
-                pvcList = client.persistentVolumeClaims().inNamespace(namespace).list();
-            } else {
-                pvcList = client.persistentVolumeClaims().inAnyNamespace().list();
+            if (client == null) {
+                return Result.error("无法创建Kubernetes客户端");
             }
 
+            // 使用通用分页方法获取PersistentVolumeClaim列表
+            PaginatedResult<io.fabric8.kubernetes.api.model.PersistentVolumeClaim> paginationResult = paginateResources(
+                    client,
+                    io.fabric8.kubernetes.api.model.PersistentVolumeClaim.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 获取到分页的PersistentVolumeClaim列表
+            List<io.fabric8.kubernetes.api.model.PersistentVolumeClaim> pvcList = paginationResult.getItems();
+
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> items = pvcList.getItems().stream()
+            List<Map<String, Object>> items = pvcList.stream()
                     .map(pvc -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -810,10 +817,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("items", items);
             result.put("errors", new ArrayList<>());
 
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+            log.info("获取PersistentVolumeClaims列表（分页）成功，共{}个PVC，总页数：{}", paginationResult.getTotal(),
+                    paginationResult.getTotalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            log.error("获取PersistentVolumeClaims列表出错", e);
-            return Result.error("获取PersistentVolumeClaims列表出错: " + e.getMessage());
+            log.error("获取PersistentVolumeClaims列表（分页）出错", e);
+            return Result.error("获取PersistentVolumeClaims列表（分页）出错: " + e.getMessage());
         }
     }
 

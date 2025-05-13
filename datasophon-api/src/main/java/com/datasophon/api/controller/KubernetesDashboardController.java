@@ -139,8 +139,12 @@ public class KubernetesDashboardController {
     @RequestMapping("/pvcs")
     public Result getPersistentVolumeClaims(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace, pageNum, pageSize);
     }
 
     /**

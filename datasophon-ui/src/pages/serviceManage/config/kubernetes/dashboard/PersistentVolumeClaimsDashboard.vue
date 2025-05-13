@@ -16,12 +16,13 @@
           <a-table 
             :columns="columns" 
             :dataSource="persistentVolumeClaims" 
-            :pagination="false"
-            :rowKey="record => record?.objectMeta?.uid || Math.random().toString(36).substring(2)"
+            :pagination="pagination"
+            :rowKey="record => (record && record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2)"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
@@ -136,6 +137,16 @@ export default {
       persistentVolumeClaims: [],
       loading: false,
       expandedLabels: {},
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showTotal: total => `共 ${total} 条`,
+        showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
+        showQuickJumper: true,
+        hideOnSinglePage: true
+      },
       columns: [
         {
           title: '名称',
@@ -185,12 +196,14 @@ export default {
     this.fetchPersistentVolumeClaims();
   },
   methods: {
-    async fetchPersistentVolumeClaims() {
+    async fetchPersistentVolumeClaims(page = this.pagination.current, pageSize = this.pagination.pageSize) {
       this.loading = true;
       try {
         const params = { 
           clusterId: this.clusterId,
-          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace })
+          ...(this.selectedNamespace !== 'all' && { namespace: this.selectedNamespace }),
+          pageNum: page,
+          pageSize: pageSize
         };
         
         const res = await this.$axiosGet(global.API.getK8sPersistentVolumeClaims, params);
@@ -216,14 +229,21 @@ export default {
             return pvc;
           });
           
+          // 更新分页信息
+          this.pagination.total = res.data.total || this.persistentVolumeClaims.length;
+          this.pagination.current = page;
+          this.pagination.pageSize = pageSize;
+          
           console.log("处理后的persistentVolumeClaims数据:", this.persistentVolumeClaims);
         } else {
           console.error('Failed to fetch PersistentVolumeClaims:', res.msg);
           this.persistentVolumeClaims = [];
+          this.pagination.total = 0;
         }
       } catch (error) {
         console.error('Error fetching PersistentVolumeClaims:', error);
         this.persistentVolumeClaims = [];
+        this.pagination.total = 0;
       } finally {
         this.loading = false;
       }
@@ -273,6 +293,11 @@ export default {
         second: '2-digit',
         hour12: false
       });
+    },
+    // 处理表格分页、排序、筛选变化
+    handleTableChange(pagination, filters, sorter) {
+      console.log('Table change:', pagination, filters, sorter);
+      this.fetchPersistentVolumeClaims(pagination.current, pagination.pageSize);
     }
   },
   watch: {
