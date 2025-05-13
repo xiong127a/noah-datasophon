@@ -91,12 +91,14 @@ public interface KubernetesDashboardService {
     Result getSecrets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取PersistentVolumes列表
+     * 获取PersistentVolumes列表（带分页）
      * 
      * @param clusterId 集群ID
-     * @return PersistentVolumes列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return PersistentVolumes列表（包含分页信息）
      */
-    Result getPersistentVolumes(Integer clusterId);
+    Result getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize);
 
     /**
      * 获取PersistentVolumeClaims列表

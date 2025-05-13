@@ -125,8 +125,12 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/persistentvolumes")
     public Result getPersistentVolumes(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getPersistentVolumes(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getPersistentVolumes(clusterId, pageNum, pageSize);
     }
 
     /**

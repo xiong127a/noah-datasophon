@@ -33,8 +33,8 @@ import io.fabric8.kubernetes.api.model.ListOptions;
 import io.fabric8.kubernetes.api.model.NamespaceList;
 import io.fabric8.kubernetes.api.model.NodeList;
 import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PersistentVolume;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimList;
-import io.fabric8.kubernetes.api.model.PersistentVolumeList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ReplicationController;
@@ -62,14 +62,13 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
-import java.util.Arrays;
-import java.util.Collections;
 
 /**
  * K8S仪表盘服务实现类
@@ -628,23 +627,31 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
     }
 
+
     @Override
-    public Result getPersistentVolumes(Integer clusterId) {
+    public Result getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize) {
         try {
-            // 获取kubeconfig
-            String kubeConfig = getKubeConfig(clusterId);
-            if (kubeConfig == null) {
-                return Result.error("找不到集群Kubernetes配置");
-            }
+            log.info("获取PersistentVolumes列表（分页）：clusterId={}, pageNum={}, pageSize={}", clusterId, pageNum, pageSize);
 
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("无法创建Kubernetes客户端");
+            }
 
-            // 获取PersistentVolumes
-            PersistentVolumeList pvList = client.persistentVolumes().list();
+            // 使用通用分页方法获取PersistentVolume列表
+            PaginatedResult<PersistentVolume> paginationResult = paginateResources(
+                    client,
+                    PersistentVolume.class,
+                    null, // PersistentVolume不是命名空间资源
+                    pageNum,
+                    pageSize);
+
+            // 获取到分页的PersistentVolume列表
+            List<PersistentVolume> pvList = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> items = pvList.getItems().stream()
+            List<Map<String, Object>> items = pvList.stream()
                     .map(pv -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -713,11 +720,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("items", items);
             result.put("errors", new ArrayList<>());
 
-            log.info("获取PersistentVolumes列表成功，共{}个PV", items.size());
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+            log.info("获取PersistentVolumes列表（分页）成功，共{}个PV，总页数：{}", paginationResult.getTotal(),
+                    paginationResult.getTotalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            log.error("获取PersistentVolumes列表出错", e);
-            return Result.error("获取PersistentVolumes列表出错: " + e.getMessage());
+            log.error("获取PersistentVolumes列表（分页）出错", e);
+            return Result.error("获取PersistentVolumes列表（分页）出错: " + e.getMessage());
         }
     }
 
