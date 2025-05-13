@@ -9,9 +9,7 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RedisHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
@@ -38,6 +36,35 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
         List<String> masterHostList = map.get("RedisMaster");
         List<String> workerHostList = map.get("RedisWorker");
 
+
+        List<String> adjustedWorker = new ArrayList<>(workerHostList);
+
+        // 循环位移直到无冲突 或 尝试次数耗尽
+        int maxAttempts = adjustedWorker.size();
+        boolean conflictFound;
+        int attempts = 0;
+
+        do {
+            conflictFound = false;
+            // 检查所有下标
+            for (int i = 0; i < Math.min(masterHostList.size(), adjustedWorker.size()); i++) {
+                if (masterHostList.get(i).equals(adjustedWorker.get(i))) {
+                    conflictFound = true;
+                    break;
+                }
+            }
+
+            // 存在冲突则右移一位
+            if (conflictFound && !adjustedWorker.isEmpty()) {
+                Collections.rotate(adjustedWorker, 1); // 右移
+                attempts++;
+            }
+        } while (conflictFound && attempts < maxAttempts);
+
+        if (adjustedWorker.isEmpty()){
+            adjustedWorker= workerHostList;
+        }
+
         for (ServiceConfig serviceConfig : list) {
             if ("RedisMasterAddr".equals(serviceConfig.getName())) {
                 String masterAddr = masterHostList.stream()
@@ -47,7 +74,7 @@ public class RedisHandlerStrategy extends ServiceHandlerAbstract implements Serv
                 serviceConfig.setValue(masterAddr);
             }
             if ("RedisSlaveAddr".equals(serviceConfig.getName())) {
-                String workerAddr = workerHostList.stream()
+                String workerAddr = adjustedWorker.stream()
                         .map(t -> t + ":" + slavePort)
                         .collect(Collectors.joining(" "));
                 serviceConfig.setRequired(true);
