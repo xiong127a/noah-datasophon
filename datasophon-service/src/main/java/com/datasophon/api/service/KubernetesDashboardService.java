@@ -112,12 +112,14 @@ public interface KubernetesDashboardService {
     Result getPersistentVolumeClaims(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取StorageClasses列表
+     * 获取StorageClasses列表（带分页）
      * 
      * @param clusterId 集群ID
-     * @return StorageClasses列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return StorageClasses列表（包含分页信息）
      */
-    Result getStorageClasses(Integer clusterId);
+    Result getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Ingresses列表（带分页）

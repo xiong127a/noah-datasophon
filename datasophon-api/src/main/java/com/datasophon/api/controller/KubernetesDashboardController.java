@@ -152,8 +152,15 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/storageclasses")
     public Result getStorageClasses(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getStorageClasses(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        log.info("获取StorageClasses列表请求：clusterId={}, pageNum={}, pageSize={}",
+                clusterId, pageNum, pageSize);
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getStorageClasses(clusterId, pageNum, pageSize);
     }
 
     /**

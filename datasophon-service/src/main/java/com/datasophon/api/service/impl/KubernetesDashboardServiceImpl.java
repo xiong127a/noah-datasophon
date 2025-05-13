@@ -50,7 +50,7 @@ import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetricsList;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressClassList;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressRule;
-import io.fabric8.kubernetes.api.model.storage.StorageClassList;
+import io.fabric8.kubernetes.api.model.storage.StorageClass;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -831,17 +831,31 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public Result getStorageClasses(Integer clusterId) {
+    public Result getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize) {
         try {
+            log.info("获取StorageClasses列表（分页）：clusterId={}, pageNum={}, pageSize={}",
+                    clusterId, pageNum, pageSize);
+
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
+            if (client == null) {
+                return Result.error("无法创建Kubernetes客户端");
+            }
 
-            // 获取StorageClasses
-            StorageClassList storageClassList = client.storage()
-                    .storageClasses().list();
+            // 使用通用分页方法获取StorageClass列表
+            PaginatedResult<StorageClass> paginationResult = paginateResources(
+                    client,
+                    StorageClass.class,
+                    null, // StorageClass不是命名空间资源
+                    pageNum,
+                    pageSize);
+
+
+            // 获取到分页的StorageClass列表
+            List<StorageClass> storageClassList = paginationResult.getItems();
 
             // 转换为前端需要的数据结构
-            List<Map<String, Object>> items = storageClassList.getItems().stream()
+            List<Map<String, Object>> items = storageClassList.stream()
                     .map(storageClass -> {
                         Map<String, Object> item = new HashMap<>();
                         Map<String, Object> objectMeta = new HashMap<>();
@@ -885,10 +899,16 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             result.put("items", items);
             result.put("errors", new ArrayList<>());
 
+            // 添加分页信息
+            result.put("total", paginationResult.getTotal()); // 添加总记录数
+            result.put("totalPages", paginationResult.getTotalPages()); // 添加总页数
+
+            log.info("获取StorageClasses列表（分页）成功，共{}个StorageClass，总页数：{}", paginationResult.getTotal(),
+                    paginationResult.getTotalPages());
             return Result.success().put(Constants.DATA, result);
         } catch (Exception e) {
-            log.error("获取StorageClasses列表出错", e);
-            return Result.error("获取StorageClasses列表出错: " + e.getMessage());
+            log.error("获取StorageClasses列表（分页）出错", e);
+            return Result.error("获取StorageClasses列表（分页）出错: " + e.getMessage());
         }
     }
 
@@ -1320,11 +1340,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                             int ready = statefulSet.getStatus().getReadyReplicas() != null
                                     ? statefulSet.getStatus().getReadyReplicas()
                                     : 0;
-                            int running = ready; // 将ready状态的副本视为running
+                            // 将ready状态的副本视为running
 
                             podInfo.put("desired", desired);
                             podInfo.put("current", current);
-                            podInfo.put("running", running);
+                            podInfo.put("running", ready);
                             podInfo.put("pending", current - ready); // 当前副本数减去就绪副本数为等待中的副本数
                             podInfo.put("failed", 0); // 默认没有失败的
                             podInfo.put("succeeded", 0); // 没有成功完成的概念
@@ -1611,14 +1631,13 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                     : 0;
 
                             // 计算状态
-                            int running = ready;
                             int pending = current - ready;
                             int failed = 0;
                             int succeeded = 0;
 
                             podInfo.put("desired", desired);
                             podInfo.put("current", current);
-                            podInfo.put("running", running);
+                            podInfo.put("running", ready);
                             podInfo.put("pending", pending);
                             podInfo.put("failed", failed);
                             podInfo.put("succeeded", succeeded);
@@ -1629,7 +1648,6 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                                 // 获取相关Pod的警告事件
                                 if (rc.getMetadata() != null && rc.getMetadata().getName() != null
                                         && rc.getMetadata().getNamespace() != null) {
-                                    String rcName = rc.getMetadata().getName();
                                     String rcNamespace = rc.getMetadata().getNamespace();
 
                                     // 查找关联的Pod
