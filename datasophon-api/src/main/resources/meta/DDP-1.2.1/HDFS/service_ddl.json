@@ -368,7 +368,10 @@
       "value": "hdfs://${dfs.nameservices}",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "hdfs://${dfs.nameservices}"
+      "defaultValue": "hdfs://${dfs.nameservices}",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.tmp.dir",
@@ -561,7 +564,9 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "NameNode"
     },
     {
       "name": "dfs.namenode.checkpoint.dir",

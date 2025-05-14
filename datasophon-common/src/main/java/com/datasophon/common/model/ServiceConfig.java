@@ -82,4 +82,15 @@ public class ServiceConfig implements Serializable {
 
     private String configTargetRoles;
 
+    private String configCategory;
+
+    private String configGroup;
+
+    private String configLevel;
+
+    /**
+     * 配置项所属的服务名称
+     */
+    private String serviceName;
+
 }

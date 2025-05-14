@@ -41,27 +41,33 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-
 @Service("clusterServiceInstanceConfigService")
 public class ClusterServiceInstanceConfigServiceImpl
         extends
-            ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>
+        ServiceImpl<ClusterServiceInstanceConfigMapper, ClusterServiceInstanceConfigEntity>
         implements
-            ClusterServiceInstanceConfigService {
+        ClusterServiceInstanceConfigService {
 
     @Autowired
     private ClusterServiceRoleGroupConfigService roleGroupConfigService;
 
     @Override
     public Result getServiceInstanceConfig(Integer serviceInstanceId, Integer version, Integer roleGroupId,
-                                           Integer page, Integer pageSize) {
-        ClusterServiceRoleGroupConfig roleGroupConfig =
-                roleGroupConfigService.getConfigByRoleGroupIdAndVersion(roleGroupId, version);
+            Integer page, Integer pageSize) {
+        ClusterServiceRoleGroupConfig roleGroupConfig = roleGroupConfigService
+                .getConfigByRoleGroupIdAndVersion(roleGroupId, version);
         if (Objects.nonNull(roleGroupConfig)) {
             List<ServiceConfig> serviceConfigs = JSON.parseObject(roleGroupConfig.getConfigJson(),
                     new TypeReference<List<ServiceConfig>>() {
                     });
-            Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceConfigs);
+
+            // 设置服务名称，用于排序
+            String serviceName = roleGroupConfig.getServiceName();
+            serviceConfigs.forEach(config -> config.setServiceName(serviceName));
+
+            // 使用服务名称进行分组排序
+            Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils
+                    .groupByConfigTargetRoleOrCommon(serviceConfigs, serviceName);
             return Result.success(roleToConfigMap);
         }
         return Result.success();
@@ -79,8 +85,8 @@ public class ClusterServiceInstanceConfigServiceImpl
     @Override
     public Result getConfigVersion(Integer serviceInstanceId, Integer roleGroupId) {
 
-        List<ClusterServiceRoleGroupConfig> list =
-                roleGroupConfigService.list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
+        List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
+                .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
                         .eq(Constants.ROLE_GROUP_ID, roleGroupId)
                         .orderByDesc(Constants.CONFIG_VERSION));
         List<Integer> versions = list.stream().map(e -> e.getConfigVersion()).collect(Collectors.toList());

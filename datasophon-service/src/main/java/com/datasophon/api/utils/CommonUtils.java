@@ -17,28 +17,20 @@
 
 package com.datasophon.api.utils;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
-import com.alibaba.fastjson.parser.Feature;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.ServiceConfig;
-import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.enums.RoleType;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.function.Function;
+import java.util.AbstractMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.datasophon.common.Constants.COMMON_CONFIG;
-import static com.datasophon.common.Constants.CONFIG_TARGET_ROLES;
 
 public class CommonUtils {
 
@@ -85,8 +77,7 @@ public class CommonUtils {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
-                        (existingValue, newValue) -> COMMON_CONFIG
-                ));
+                        (existingValue, newValue) -> COMMON_CONFIG));
     }
 
     public static List<ServiceConfig> filterByServiceRoleName(List<ServiceConfig> list, String serviceRoleName) {
@@ -94,19 +85,75 @@ public class CommonUtils {
                 .filter(serviceConfig -> serviceRoleName.equals(serviceConfig.getConfigTargetRoles()))
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 将配置项按配置组分组
+     * 
+     * @param list 配置项列表
+     * @return 按配置组分组后的映射
+     */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list) {
-        return list.stream()
+        // 先按原有逻辑分组
+        Map<String, List<ServiceConfig>> unsortedMap = list.stream()
                 .collect(Collectors.groupingBy(
-                        // 如果 configTargetRoles 为空，则使用 COMMON_CONFIG 作为键
-                        config -> config.getConfigTargetRoles() != null
-                                ? config.getConfigTargetRoles()
-                                : COMMON_CONFIG,
-                        // 保持插入顺序（可选）
-                        LinkedHashMap::new,
+                        // 新的分组逻辑
+                        config -> {
+                            // 首先检查是否有新的分组字段
+                            if (config.getConfigCategory() != null && config.getConfigGroup() != null) {
+                                if ("file".equals(config.getConfigCategory())) {
+                                    // 对于文件类配置，根据configLevel使用英文命名并用下划线分隔
+                                    if ("advanced".equals(config.getConfigLevel())) {
+                                        return "advanced_" + config.getConfigGroup();
+                                    } else if ("custom".equals(config.getConfigLevel())) {
+                                        return "custom_" + config.getConfigGroup();
+                                    } else {
+                                        return config.getConfigGroup();
+                                    }
+                                } else if ("role".equals(config.getConfigCategory())) {
+                                    // 对于角色配置，直接使用角色名作为分组
+                                    return config.getConfigGroup();
+                                }
+                            }
+
+                            // 如果没有新字段，回退到原有的分组逻辑
+                            if (config.getConfigTargetRoles() != null) {
+                                return config.getConfigTargetRoles();
+                            } else {
+                                return COMMON_CONFIG;
+                            }
+                        },
                         // 收集为 List<ServiceConfig>
-                        Collectors.toList()
-                ));
+                        Collectors.toList()));
+
+        // 使用一个默认服务名，后续会被覆盖
+        String serviceName = "HDFS";
+
+        // 获取第一个配置项的服务名（如果可能）
+        if (!list.isEmpty() && list.get(0) != null) {
+            // 假设配置项中包含服务名信息
+            ServiceConfig firstConfig = list.get(0);
+            if (firstConfig.getServiceName() != null && !firstConfig.getServiceName().isEmpty()) {
+                serviceName = firstConfig.getServiceName();
+            }
+        }
+
+        // 应用排序和名称替换
+        return ConfigGroupSorter.applySorting(unsortedMap, serviceName);
     }
 
+    /**
+     * 将配置项按配置组分组，支持指定服务名称
+     * 
+     * @param list        配置项列表
+     * @param serviceName 服务名称
+     * @return 按配置组分组后的映射
+     */
+    public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(List<ServiceConfig> list,
+            String serviceName) {
+        // 先使用基本分组方法
+        Map<String, List<ServiceConfig>> unsortedMap = groupByConfigTargetRoleOrCommon(list);
 
+        // 应用排序和名称替换，使用指定的服务名称
+        return ConfigGroupSorter.applySorting(unsortedMap, serviceName);
+    }
 }

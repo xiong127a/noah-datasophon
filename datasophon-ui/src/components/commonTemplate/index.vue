@@ -29,25 +29,79 @@
       <div v-for="(item, index) in testData" :key="index">
         <div class="form-item-container" v-if="!['multipleWithKey', 'multiple', 'multipleSelect'].includes(item.type)">
           <a-form-item :label="item.label">
-            <a-input v-if="item.type==='input'" v-decorator="[
+            <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
+              <template slot="title">
+                <div class="tooltip-content">
+                  <div class="tooltip-header">
+                    <span class="tooltip-label">{{item.label}}</span>
+                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                  </div>
+                  <div class="tooltip-description">{{item.description}}</div>
+                </div>
+              </template>
+              <a-input v-if="item.type==='input'" v-decorator="[
+              `${item.name}`,
+              // { validator: checkName }
+              { initialValue: item.value+'',rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
+            ]" placeholder="请输入" />
+            </a-tooltip>
+            <a-input v-if="item.type==='input' && !item.description" v-decorator="[
             `${item.name}`,
             // { validator: checkName }
             { initialValue: item.value+'',rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
           ]" placeholder="请输入" />
-            <a-slider v-if="item.type==='slider'" :marks="marks(item)" :min="item.minValue" :max="item.maxValue" style="width: 96%;display: inline-block" v-decorator="[`${item.name}`,{initialValue: item.value? Number(item.value) : 0}]" />
-            <a-switch v-if="item.type==='switch'" v-decorator="[`${item.name}`, { valuePropName: 'checked', initialValue: item.value }]"></a-switch>
-            <a-select v-if="item.type==='select'" v-decorator="[
-           `${item.name}`,
-          {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
-        ]" placeholder="请选择">
+            
+            <a-tooltip v-if="item.type==='slider' && item.description" placement="right" overlayClassName="custom-tooltip">
+              <template slot="title">
+                <div class="tooltip-content">
+                  <div class="tooltip-header">
+                    <span class="tooltip-label">{{item.label}}</span>
+                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                  </div>
+                  <div class="tooltip-description">{{item.description}}</div>
+                </div>
+              </template>
+              <a-slider :marks="marks(item)" :min="item.minValue" :max="item.maxValue" style="width: 96%;display: inline-block" v-decorator="[`${item.name}`,{initialValue: item.value? Number(item.value) : 0}]" />
+            </a-tooltip>
+            <a-slider v-if="item.type==='slider' && !item.description" :marks="marks(item)" :min="item.minValue" :max="item.maxValue" style="width: 96%;display: inline-block" v-decorator="[`${item.name}`,{initialValue: item.value? Number(item.value) : 0}]" />
+            
+            <a-tooltip v-if="item.type==='switch' && item.description" placement="right" overlayClassName="custom-tooltip">
+              <template slot="title">
+                <div class="tooltip-content">
+                  <div class="tooltip-header">
+                    <span class="tooltip-label">{{item.label}}</span>
+                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                  </div>
+                  <div class="tooltip-description">{{item.description}}</div>
+                </div>
+              </template>
+              <a-switch v-decorator="[`${item.name}`, { valuePropName: 'checked', initialValue: item.value }]"></a-switch>
+            </a-tooltip>
+            <a-switch v-if="item.type==='switch' && !item.description" v-decorator="[`${item.name}`, { valuePropName: 'checked', initialValue: item.value }]"></a-switch>
+            
+            <a-tooltip v-if="item.type==='select' && item.description" placement="right" overlayClassName="custom-tooltip">
+              <template slot="title">
+                <div class="tooltip-content">
+                  <div class="tooltip-header">
+                    <span class="tooltip-label">{{item.label}}</span>
+                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                  </div>
+                  <div class="tooltip-description">{{item.description}}</div>
+                </div>
+              </template>
+              <a-select v-decorator="[
+              `${item.name}`,
+              {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
+              ]" placeholder="请选择">
+                <a-select-option v-for="(child, childIndex) in item.selectValue" :key="childIndex" :value="child">{{child}}</a-select-option>
+              </a-select>
+            </a-tooltip>
+            <a-select v-if="item.type==='select' && !item.description" v-decorator="[
+            `${item.name}`,
+            {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },
+            ]" placeholder="请选择">
               <a-select-option v-for="(child, childIndex) in item.selectValue" :key="childIndex" :value="child">{{child}}</a-select-option>
             </a-select>
-            <a-tooltip v-if="item.description">
-              <template slot="title">
-                <span>{{item.description}}</span>
-              </template>
-              <a-icon :class="['mgl10','filed-name-tips-icon', item.type === 'slider' ? 'slider-icon' : '']" type="question-circle-o" />
-            </a-tooltip>
           </a-form-item>
           <div class="filed-name-tips">
             <span class="filed-name-tips-word" :title="item.name">{{item.name.replaceAll("!", ".")}}</span>
@@ -56,7 +110,32 @@
         <div v-else>
           <div v-if="['multiple'].includes(item.type)" class="form-item-container">
             <a-form-item v-for="(child, childIndex) in item.value" :key="childIndex" v-bind="childIndex === 0 ? labelCol : formItemLayoutWithOutLabel" :label="(childIndex === 0 || item.value.length === 0) ? item.label : ''">
-              <a-input v-decorator="[
+              <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
+                <template slot="title">
+                  <div class="tooltip-content">
+                    <div class="tooltip-header">
+                      <span class="tooltip-label">{{item.label}}</span>
+                      <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    </div>
+                    <div class="tooltip-description">{{item.description}}</div>
+                  </div>
+                </template>
+                <a-input v-decorator="[
+                  `${item.name+'multiple'+childIndex}`,
+                  {
+                  validateTrigger: ['change', 'blur'],
+                  initialValue: child,
+                  rules: [
+                    {
+                      required: item.required,
+                      whitespace: true,
+                      message: `${item.label}不能为空!`,
+                    },
+                  ],
+                }
+                ]" placeholder="请输入" />
+              </a-tooltip>
+              <a-input v-if="!item.description" v-decorator="[
                 `${item.name+'multiple'+childIndex}`,
                 {
                 validateTrigger: ['change', 'blur'],
@@ -75,7 +154,7 @@
               </span>
             </a-form-item>
             <a-form-item class="form-multiple-item" v-bind="item.value.length === 0 ? labelCol : formItemLayoutWithOutLabel" :label="item.value.length === 0 ? item.label : ''">
-              <a-button type="dashed" @click="() => addMultiple(item.name, 'multiple')">
+              <a-button v-if="item.isCustom || item.configLevel === 'custom' || (item.name && item.name.toLowerCase().includes('custom'))" type="dashed" @click="() => addMultiple(item.name, 'multiple')">
                 <a-icon type="plus" />Add field
               </a-button>
             </a-form-item>
@@ -88,7 +167,32 @@
               <a-row type="flex" style="position: relative">
                 <a-col :span="12">
                   <a-form-item style="width:97%">
-                    <a-input v-decorator="[
+                    <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
+                      <template slot="title">
+                        <div class="tooltip-content">
+                          <div class="tooltip-header">
+                            <span class="tooltip-label">{{item.label}}</span>
+                            <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                          </div>
+                          <div class="tooltip-description">{{item.description}}</div>
+                        </div>
+                      </template>
+                      <a-input v-decorator="[
+                      `${item.name+'arrayWithKey'+childIndex}`,
+                      {
+                      validateTrigger: ['change', 'blur'],
+                      initialValue: child.key,
+                      rules: [
+                        {
+                          required: item.required,
+                          whitespace: true,
+                          message: `${item.label}不能为空!`,
+                        },
+                      ],
+                    }
+                    ]" placeholder="请输入" />
+                    </a-tooltip>
+                    <a-input v-if="!item.description" v-decorator="[
                     `${item.name+'arrayWithKey'+childIndex}`,
                     {
                     validateTrigger: ['change', 'blur'],
@@ -106,7 +210,32 @@
                 </a-col>
                 <a-col :span="12">
                   <a-form-item style="width:97%">
-                    <a-input v-decorator="[
+                    <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
+                      <template slot="title">
+                        <div class="tooltip-content">
+                          <div class="tooltip-header">
+                            <span class="tooltip-label">{{item.label}}</span>
+                            <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                          </div>
+                          <div class="tooltip-description">{{item.description}}</div>
+                        </div>
+                      </template>
+                      <a-input v-decorator="[
+                      `${item.name+'arrayWithValue'+childIndex}`,
+                      {
+                      validateTrigger: ['change', 'blur'],
+                      initialValue: child.value,
+                      rules: [
+                        {
+                          required: item.required,
+                          whitespace: true,
+                          message: `${item.label}不能为空!`,
+                        },
+                      ],
+                    }
+                    ]" placeholder="请输入" />
+                    </a-tooltip>
+                    <a-input v-if="!item.description" v-decorator="[
                     `${item.name+'arrayWithValue'+childIndex}`,
                     {
                     validateTrigger: ['change', 'blur'],
@@ -128,7 +257,7 @@
               </a-row>
             </a-form-item>
             <a-form-item class="form-multiple-item" v-bind="item.value.length === 0 ? labelCol : formItemLayoutWithOutLabel" :label="item.value.length === 0 ? item.label : ''">
-              <a-button type="dashed" @click="() => addMultiple(item.name, 'multipleWithKey')">
+              <a-button v-if="item.isCustom || item.configLevel === 'custom' || (item.name && item.name.toLowerCase().includes('custom'))" type="dashed" @click="() => addMultiple(item.name, 'multipleWithKey')">
                 <a-icon type="plus" />Add field
               </a-button>
             </a-form-item>
@@ -138,15 +267,23 @@
           </div>
           <div v-if="['multipleSelect'].includes(item.type)" class="form-item-container">
             <a-form-item :label="item.label">
-              <a-select mode="multiple" v-decorator="[`${item.name}`, {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },]" placeholder="请选择">
+              <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
+                <template slot="title">
+                  <div class="tooltip-content">
+                    <div class="tooltip-header">
+                      <span class="tooltip-label">{{item.label}}</span>
+                      <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    </div>
+                    <div class="tooltip-description">{{item.description}}</div>
+                  </div>
+                </template>
+                <a-select mode="multiple" v-decorator="[`${item.name}`, {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },]" placeholder="请选择">
+                  <a-select-option v-for="(child, childIndex) in item.selectValue" :key="childIndex" :value="child">{{child}}</a-select-option>
+                </a-select>
+              </a-tooltip>
+              <a-select v-if="!item.description" mode="multiple" v-decorator="[`${item.name}`, {initialValue:item.value, rules: [{ required: item.required, message: `${item.label}不能为空!` }] },]" placeholder="请选择">
                 <a-select-option v-for="(child, childIndex) in item.selectValue" :key="childIndex" :value="child">{{child}}</a-select-option>
               </a-select>
-              <a-tooltip v-if="item.description">
-                <template slot="title">
-                  <span>{{item.description}}</span>
-                </template>
-                <a-icon class="mgl10 filed-name-tips-icon" type="question-circle-o" />
-              </a-tooltip>
             </a-form-item>
             <div class="filed-name-tips">
               <span class="filed-name-tips-word" :title="item.name">{{item.name.replaceAll("!", ".")}}</span>
@@ -324,7 +461,83 @@ export default {
   .mgh160 {
     // margin: 0 110px;
   }
+  
+  /deep/ .custom-tooltip {
+    .ant-tooltip-inner {
+      background-color: white;
+      color: rgba(0, 0, 0, 0.85);
+      padding: 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      
+      .tooltip-content {
+        .tooltip-header {
+          padding: 10px 12px;
+          background-color: #f5f7fa;
+          border-bottom: 1px solid #e4e7ed;
+          
+          .tooltip-label {
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.85);
+          }
+          
+          .tooltip-name {
+            display: block;
+            margin-top: 2px;
+            color: #1890ff;
+            font-family: monospace;
+            font-size: 12px;
+          }
+        }
+        
+        .tooltip-description {
+          padding: 10px 12px;
+          color: rgba(0, 0, 0, 0.65);
+          font-size: 12px;
+          line-height: 1.5;
+          background-color: white;
+        }
+      }
+    }
+    
+    .ant-tooltip-arrow::before {
+      background-color: #f5f7fa;
+    }
+  }
+  
   .form-content {
+    /deep/ .ant-input {
+      background-color: #f5f7fa;
+      max-width: 360px;
+      border: 1px solid #e4e7ed;
+      &:hover, &:focus {
+        border-color: #40a9ff;
+        background-color: #fff;
+      }
+    }
+    
+    /deep/ .ant-select-selection {
+      background-color: #f5f7fa;
+      max-width: 360px;
+      border: 1px solid #e4e7ed;
+      &:hover {
+        border-color: #40a9ff;
+        background-color: #fff;
+      }
+    }
+    
+    /deep/ .ant-slider {
+      max-width: 360px;
+    }
+    
+    /deep/ .ant-switch {
+      background-color: #f5f7fa;
+      &-checked {
+        background-color: #1890ff;
+      }
+    }
+    
     .reduce-icon {
       cursor: pointer;
       font-size: 18px;
@@ -351,6 +564,7 @@ export default {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          color: rgba(0, 0, 0, 0.45);
         }
       }
       .filed-name-tips-icon {
@@ -360,6 +574,60 @@ export default {
         position: relative;
         top: -28px;
       }
+    }
+  }
+}
+</style>
+
+<!-- 添加全局样式覆盖Ant Design默认样式 -->
+<style lang="less">
+/* 自定义tooltip样式，覆盖Ant Design默认样式 */
+html body .custom-tooltip {
+  .ant-tooltip-inner {
+    background-color: white !important;
+    color: rgba(0, 0, 0, 0.85) !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    overflow: hidden !important;
+    max-width: 300px !important;
+    
+    .tooltip-content {
+      .tooltip-header {
+        padding: 10px 12px !important;
+        background-color: #f5f7fa !important;
+        border-bottom: 1px solid #e4e7ed !important;
+        
+        .tooltip-label {
+          font-weight: 500 !important;
+          color: rgba(0, 0, 0, 0.85) !important;
+          display: block !important;
+        }
+        
+        .tooltip-name {
+          display: block !important;
+          margin-top: 2px !important;
+          color: #1890ff !important;
+          font-family: monospace !important;
+          font-size: 12px !important;
+        }
+      }
+      
+      .tooltip-description {
+        padding: 10px 12px !important;
+        color: rgba(0, 0, 0, 0.65) !important;
+        font-size: 12px !important;
+        line-height: 1.5 !important;
+        background-color: white !important;
+      }
+    }
+  }
+  
+  .ant-tooltip-arrow {
+    border-color: #f5f7fa !important;
+    
+    &:before {
+      background-color: #f5f7fa !important;
     }
   }
 }
