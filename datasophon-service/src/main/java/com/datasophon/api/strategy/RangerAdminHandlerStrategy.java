@@ -113,7 +113,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             if ("enableKMSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
                 logger.info("enableKMSPlugin");
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
-//                enableRangerPlugin(clusterId, "HDFS", "NameNode");
+                // enableRangerPlugin(clusterId, "HDFS", "NameNode");
                 TenantRangerCommand kmsRangerCommand = TenantRangerCommand.builder()
                         .serviceName("KMS")
                         .clusterId(clusterId)
@@ -152,27 +152,26 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {
-        ClusterServiceInstanceService serviceInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
-        ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceRoleGroupConfigService roleGroupConfigService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleGroupConfigService.class);
+        ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceInstanceService.class);
+        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringTool.getApplicationContext()
+                .getBean(ClusterServiceRoleGroupConfigService.class);
         ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ServiceInstallService serviceInstallService =
-                SpringTool.getApplicationContext().getBean(ServiceInstallService.class);
+        ServiceInstallService serviceInstallService = SpringTool.getApplicationContext()
+                .getBean(ServiceInstallService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterServiceInstanceEntity serviceInstance =
-                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                .getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
         // 判断是否存在es服务
-        Boolean hasEs =
-                serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
+        Boolean hasEs = serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
         // 查询角色组id
-        List<ClusterServiceRoleInstanceEntity> roleList =
-                roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
 
-        if (Objects.nonNull(roleList) && roleList.size() > 0) {
+        if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
             Integer roleGroupId = roleList.get(0).getRoleGroupId();
 
             ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
@@ -226,7 +225,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             logger.info("Update hdfs enable ranger plugin");
             serviceInstallService.saveServiceConfig(clusterId, serviceInstance.getServiceName(), serviceConfigs,
-                    roleGroupId);
+                    roleGroupId, "(AUTO) Update hdfs enable ranger plugin");
         }
     }
 }

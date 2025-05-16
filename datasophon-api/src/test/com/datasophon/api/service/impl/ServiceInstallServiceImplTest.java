@@ -83,7 +83,8 @@ public class ServiceInstallServiceImplTest {
         clusterInfoEntity.setClusterManagerList(Arrays.asList(userInfoEntity));
         when(mockClusterInfoService.getById(0)).thenReturn(clusterInfoEntity);
 
-        // Configure ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
+        // Configure
+        // ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
         final ClusterServiceInstanceEntity clusterServiceInstanceEntity = new ClusterServiceInstanceEntity();
         clusterServiceInstanceEntity.setId(0);
         clusterServiceInstanceEntity.setClusterId(0);
@@ -101,7 +102,8 @@ public class ServiceInstallServiceImplTest {
         when(mockServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(0, "serviceName")).thenReturn(
                 clusterServiceInstanceEntity);
 
-        // Configure ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
+        // Configure
+        // ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
         final ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = new ClusterServiceInstanceRoleGroup();
         clusterServiceInstanceRoleGroup.setId(0);
         clusterServiceInstanceRoleGroup.setRoleGroupName("默认角色组");
@@ -248,7 +250,8 @@ public class ServiceInstallServiceImplTest {
         final List<ClusterHostEntity> clusterHostEntities = Arrays.asList(clusterHostEntity);
         when(mockHostService.list(any(QueryWrapper.class))).thenReturn(clusterHostEntities);
 
-        // Configure ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
+        // Configure
+        // ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
         final ClusterServiceInstanceEntity clusterServiceInstanceEntity = new ClusterServiceInstanceEntity();
         clusterServiceInstanceEntity.setId(0);
         clusterServiceInstanceEntity.setClusterId(0);
@@ -270,7 +273,8 @@ public class ServiceInstallServiceImplTest {
         when(mockRoleGroupService.save(new ClusterServiceInstanceRoleGroup())).thenReturn(false);
         when(mockGroupConfigService.save(new ClusterServiceRoleGroupConfig())).thenReturn(false);
 
-        // Configure ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
+        // Configure
+        // ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
         final ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = new ClusterServiceInstanceRoleGroup();
         clusterServiceInstanceRoleGroup.setId(0);
         clusterServiceInstanceRoleGroup.setRoleGroupName("默认角色组");
@@ -299,7 +303,8 @@ public class ServiceInstallServiceImplTest {
         when(mockServiceInstanceService.updateById(new ClusterServiceInstanceEntity())).thenReturn(false);
 
         // Run the test
-        final Result result = serviceInstallServiceImplUnderTest.saveServiceConfig(0, "serviceName", list, 0);
+        final Result result = serviceInstallServiceImplUnderTest.saveServiceConfig(0, "serviceName", list, 0,
+                "Test description");
 
         // Verify the results
         assertEquals(expectedResult, result);
@@ -388,7 +393,8 @@ public class ServiceInstallServiceImplTest {
         when(mockVariableService.save(new ClusterVariable())).thenReturn(false);
         when(mockHostService.list(any(QueryWrapper.class))).thenReturn(Collections.emptyList());
 
-        // Configure ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
+        // Configure
+        // ClusterServiceInstanceService.getServiceInstanceByClusterIdAndServiceName(...).
         final ClusterServiceInstanceEntity clusterServiceInstanceEntity = new ClusterServiceInstanceEntity();
         clusterServiceInstanceEntity.setId(0);
         clusterServiceInstanceEntity.setClusterId(0);
@@ -410,7 +416,8 @@ public class ServiceInstallServiceImplTest {
         when(mockRoleGroupService.save(new ClusterServiceInstanceRoleGroup())).thenReturn(false);
         when(mockGroupConfigService.save(new ClusterServiceRoleGroupConfig())).thenReturn(false);
 
-        // Configure ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
+        // Configure
+        // ClusterServiceInstanceRoleGroupService.getRoleGroupByServiceInstanceId(...).
         final ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = new ClusterServiceInstanceRoleGroup();
         clusterServiceInstanceRoleGroup.setId(0);
         clusterServiceInstanceRoleGroup.setRoleGroupName("默认角色组");
@@ -439,7 +446,8 @@ public class ServiceInstallServiceImplTest {
         when(mockServiceInstanceService.updateById(new ClusterServiceInstanceEntity())).thenReturn(false);
 
         // Run the test
-        final Result result = serviceInstallServiceImplUnderTest.saveServiceConfig(0, "serviceName", list, 0);
+        final Result result = serviceInstallServiceImplUnderTest.saveServiceConfig(0, "serviceName", list, 0,
+                "Test description");
 
         // Verify the results
         assertEquals(expectedResult, result);
@@ -612,7 +620,8 @@ public class ServiceInstallServiceImplTest {
         clusterInfoEntity.setClusterManagerList(Arrays.asList(userInfoEntity));
         when(mockClusterInfoService.getById(0)).thenReturn(clusterInfoEntity);
 
-        // Configure ClusterServiceCommandHostCommandService.getHostCommandListByCommandId(...).
+        // Configure
+        // ClusterServiceCommandHostCommandService.getHostCommandListByCommandId(...).
         final ClusterServiceCommandHostCommandEntity clusterServiceCommandHostCommandEntity = new ClusterServiceCommandHostCommandEntity();
         clusterServiceCommandHostCommandEntity.setHostCommandId("hostCommandId");
         clusterServiceCommandHostCommandEntity.setCommandName("commandName");
@@ -670,7 +679,8 @@ public class ServiceInstallServiceImplTest {
         clusterInfoEntity.setClusterManagerList(Arrays.asList(userInfoEntity));
         when(mockClusterInfoService.getById(0)).thenReturn(clusterInfoEntity);
 
-        // Configure ClusterServiceCommandHostCommandService.getHostCommandListByCommandId(...).
+        // Configure
+        // ClusterServiceCommandHostCommandService.getHostCommandListByCommandId(...).
         final ClusterServiceCommandHostCommandEntity clusterServiceCommandHostCommandEntity = new ClusterServiceCommandHostCommandEntity();
         clusterServiceCommandHostCommandEntity.setHostCommandId("hostCommandId");
         clusterServiceCommandHostCommandEntity.setCommandName("commandName");
@@ -773,7 +783,8 @@ public class ServiceInstallServiceImplTest {
 
             // Run the test
             serviceInstallServiceImplUnderTest.downloadPackage("packageName", mockResponse);
-        });}
+        });
+    }
 
     @Test
     public void testGetServiceRoleHostMapping() {

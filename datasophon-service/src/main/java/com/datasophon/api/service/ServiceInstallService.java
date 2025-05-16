@@ -33,7 +33,7 @@ public interface ServiceInstallService {
     Result saveServiceRoleHostMapping(Integer clusterId, List<ServiceRoleHostMapping> list);
 
     Result saveServiceConfig(Integer clusterId, String serviceName, List<ServiceConfig> configJson,
-                             Integer roleGroupId);
+            Integer roleGroupId, String description);
 
     Result saveHostServiceRoleMapping(Integer clusterId, List<HostServiceRoleMapping> list);
 

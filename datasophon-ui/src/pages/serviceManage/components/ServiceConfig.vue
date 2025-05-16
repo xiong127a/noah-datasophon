@@ -24,6 +24,7 @@
  * @FilePath: \datasophon-ui\src\pages\serviceManage\components\ServiceConfig.vue
 -->
 <template>
+  <div>
     <div class="service-config-container">    <!-- 顶部过滤器栏 -->
     <div class="filter-bar">
       <div class="filter-item">
@@ -31,15 +32,23 @@
         <a-select 
           :value="currentVersion" 
           @change="changeVersion"
-          style="width: 150px"
+          style="width: 200px"
           class="filter-select"
         >
           <a-select-option 
-            v-for="(child, childIndex) in verSionList" 
+            v-for="(versionItem, childIndex) in verSionList" 
             :key="childIndex" 
-            :value="child"
+            :value="versionItem.version"
           >
-            {{ child }}
+            <a-tooltip v-if="versionItem.description || versionItem.editTime" placement="right">
+              <template slot="title">
+                <div v-if="versionItem.description">备注: {{ versionItem.description }}</div>
+                <div v-if="versionItem.editTime">编辑时间: {{ versionItem.editTime }}</div>
+                <div v-if="versionItem.editor">编辑者: {{ versionItem.editor }}</div>
+              </template>
+              <span>V{{ versionItem.version }}{{ versionItem.isCurrent ? ' (当前)' : '' }}</span>
+            </a-tooltip>
+            <span v-else>V{{ versionItem.version }}{{ versionItem.isCurrent ? ' (当前)' : '' }}</span>
           </a-select-option>
         </a-select>
       </div>
@@ -113,10 +122,32 @@
         </div>
         
         <div class="footer">
-          <a-button type="primary" @click="handleSubmit">保存</a-button>
+          <a-button type="primary" @click="showSaveDialog">保存</a-button>
         </div>
       </a-spin>
     </div>
+    </div>
+
+    <!-- 添加备注弹框 -->
+    <a-modal
+      v-model="saveDialogVisible"
+      title="保存配置"
+      :maskClosable="false"
+      @ok="confirmSave"
+      okText="确定"
+      cancelText="取消"
+    >
+      <div>
+        <a-form-item label="备注" :labelCol="{ span: 4 }" :wrapperCol="{ span: 20 }">
+          <a-textarea
+            v-model="configDescription"
+            placeholder="请输入配置备注信息"
+            :rows="4"
+            style="width: 100%"
+          />
+        </a-form-item>
+      </div>
+    </a-modal>
   </div>
 </template>
 <script>
@@ -166,7 +197,10 @@ export default {
       },
       value: 0,
       // 新增过滤相关数据
-      filterValue: 'all'
+      filterValue: 'all',
+      // 新增备注弹框相关数据
+      saveDialogVisible: false,
+      configDescription: '',
     };
   },
   computed: {
@@ -425,7 +459,8 @@ export default {
           clusterId: this.clusterId,
           serviceName: this.serviceName,
           serviceConfig: JSON.stringify(filterParam),
-          roleGroupId: this.currentId
+          roleGroupId: this.currentId,
+          description: this.configDescription
         };
 
         // 9. 提交保存
@@ -433,6 +468,8 @@ export default {
         if (res.code === 200) {
           this.$message.success("保存成功");
           this.getConfigVersion();
+          this.saveDialogVisible = false;
+          this.configDescription = '';
         } else {
           this.$message.error(res.msg || "保存失败");
         }
@@ -484,7 +521,7 @@ export default {
         if (res.code === 200) {
           this.verSionList = res.data;
           if (this.verSionList.length > 0) {
-            this.currentVersion = this.verSionList[0];
+            this.currentVersion = this.verSionList[0].version;
             this.getServiceConfigOption(true);
           }
         }
@@ -498,8 +535,8 @@ export default {
         serviceInstanceId: this.serviceId,
         page: 1,
         pageSize: 10000,
-        "version":this.currentVersion||'',
-        "roleGroupId": JSON.stringify(this.currentId)||'',
+        "version": this.currentVersion || '',
+        "roleGroupId": JSON.stringify(this.currentId) || '',
       };
       const res = await this.$axiosPost(global.API.getConfigInfo, params);
 
@@ -563,6 +600,15 @@ export default {
       
       // 默认返回原始名称
       return groupName;
+    },
+    // 显示保存对话框
+    showSaveDialog() {
+      this.saveDialogVisible = true;
+    },
+    
+    // 确认保存配置
+    confirmSave() {
+      this.handleSubmit();
     },
   },
   mounted() {
