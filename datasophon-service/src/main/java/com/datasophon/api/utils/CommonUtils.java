@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.datasophon.common.Constants.COMMON_CONFIG;
+import static com.datasophon.common.Constants.GENERAL;
 
 public class CommonUtils {
 
@@ -68,7 +68,7 @@ public class CommonUtils {
                     if (configTargetRoles == null) {
 
                         return configs.stream()
-                                .map(config -> new AbstractMap.SimpleEntry<>(config.getName(), COMMON_CONFIG));
+                                .map(config -> new AbstractMap.SimpleEntry<>(config.getName(), GENERAL));
                     }
                     return configs.stream()
                             .map(config -> new AbstractMap.SimpleEntry<>(config.getName(), configTargetRoles));
@@ -77,7 +77,7 @@ public class CommonUtils {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
-                        (existingValue, newValue) -> COMMON_CONFIG));
+                        (existingValue, newValue) -> GENERAL));
     }
 
     public static List<ServiceConfig> filterByServiceRoleName(List<ServiceConfig> list, String serviceRoleName) {
@@ -119,7 +119,7 @@ public class CommonUtils {
                             if (config.getConfigTargetRoles() != null) {
                                 return config.getConfigTargetRoles();
                             } else {
-                                return COMMON_CONFIG;
+                                return GENERAL;
                             }
                         },
                         // 收集为 List<ServiceConfig>

@@ -42,7 +42,7 @@ public class ConfigGroupSorter {
         Map<String, Integer> hdfsOrderMap = new HashMap<>();
         hdfsOrderMap.put("NameNode", 1);
         hdfsOrderMap.put("DataNode", 2);
-        hdfsOrderMap.put("CommonConfig", 3);
+        hdfsOrderMap.put("General", 3);
         // 添加高级配置组排序
         hdfsOrderMap.put("advanced_core-site", 4);
         hdfsOrderMap.put("advanced_hdfs-site", 5);

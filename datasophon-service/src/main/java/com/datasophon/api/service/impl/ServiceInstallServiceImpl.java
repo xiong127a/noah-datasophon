@@ -230,7 +230,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                     newRoleGroupConfig.setRoleGroupId(roleGroupConfig.getRoleGroupId());
                     roleGroupService.updateToNeedRestart(roleGroupId);
 
-                    boolean hasCommonConfig = configUpdateRoleSet.contains(COMMON_CONFIG);
+                    boolean hasCommonConfig = configUpdateRoleSet.contains(GENERAL);
                     if (hasCommonConfig) {
                         // 通用配置更新，重启整个角色组
                         roleInstanceService.updateToNeedRestart(roleGroupId);

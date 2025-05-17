@@ -608,8 +608,8 @@
     },
     {
       "name": "dfs.datanode.data.dir",
-      "label": "DataNode数据存储目录",
-      "description": "DataNode数据存储目录，可配置多个，按逗号分隔",
+      "label": "DataNode directories",
+      "description": "确定DFS数据节点应该在本地文件系统上的哪个位置存储其数据块。如果这是一个逗号分隔的目录列表，则数据将存储在所有指定的目录中，通常分布在不同设备上。不存在的目录将被忽略。",
       "configType": "path",
       "required": true,
       "separator": ",",
@@ -619,7 +619,10 @@
       ],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "role",
+      "configGroup": "DataNode",
+      "configLevel": "basic"
     },
     {
       "name": "namenodeHeapSize",
@@ -938,46 +941,55 @@
     {
       "name": "hadoop.security.authentication",
       "label": "集群认证方式",
-      "description": "",
+      "description": "设置集群的认证方式。有效值为: simple或kerberos。",
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
       "type": "input",
       "value": "kerberos",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "kerberos"
+      "hidden": false,
+      "defaultValue": "kerberos",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.security.authorization",
       "label": "启用Hadoop集群授权管理",
-      "description": "",
+      "description": "为不同协议启用授权。",
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
       "type": "switch",
       "value": true,
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": true
+      "hidden": false,
+      "defaultValue": true,
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.security.auth_to_local.mechanism",
       "label": "Kerberos主体到系统用户的映射机制",
-      "description": "",
+      "description": "Kerberos主体到本地OS用户名的映射机制。",
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
       "type": "input",
       "value": "MIT",
       "configurableInWizard": true,
-      "hidden": true,
-      "defaultValue": "MIT"
+      "hidden": false,
+      "defaultValue": "MIT",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.security.auth_to_local",
       "label": "Kerberos主体到系统用户的具体映射规则",
-      "description": "",
+      "description": "Kerberos主体名称到本地OS用户名的映射规则。默认规则为'DEFAULT'，即将所有主体映射到默认域的第一个组件，如'omalley@APACHE.ORG'到'omalley'。规则格式详见图片说明。",
       "configWithKerberos": true,
       "required": false,
       "configType": "kb",
@@ -989,8 +1001,11 @@
         "RULE:[2:$1/$2@$0](jhs\\/.*@HADOOP\\.COM)s/.*/mapred/",
         "DEFAULT"
       ],
-      "hidden": true,
-      "defaultValue": []
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.rpc.protection",
@@ -1008,24 +1023,30 @@
     {
       "name": "hadoop.proxyuser.HTTP.hosts",
       "label": "hadoop.proxyuser.HTTP.hosts",
-      "description": "",
+      "description": "HTTP服务进行代理允许访问的主机列表。",
       "required": true,
       "type": "input",
       "value": "*",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "*"
+      "defaultValue": "*",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "hadoop.proxyuser.HTTP.groups",
       "label": "hadoop.proxyuser.HTTP.groups",
-      "description": "",
+      "description": "HTTP服务允许代理的用户组列表。",
       "required": true,
       "type": "input",
       "value": "*",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "*"
+      "defaultValue": "*",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "advanced"
     },
     {
       "name": "dfs.block.access.token.enable",

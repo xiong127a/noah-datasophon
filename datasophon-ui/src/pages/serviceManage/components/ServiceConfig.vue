@@ -560,7 +560,7 @@ export default {
         const groupKey = originalKey
                 ?.trim() // 去除前后空格
                 .replace(/^"|"$/g, '') // 去除可能存在的引号
-            || 'CommonConfig'; // 空值处理
+            || 'General'; // 空值处理
 
         // 配置项名称转换（保留原始替换逻辑）
         const processedItems = configList.map(item => ({
@@ -577,8 +577,8 @@ export default {
 
 
       // 保证至少存在通用配置组
-      if (!('CommonConfig' in result)) {
-        result.CommonConfig = [];
+      if (!('General' in result)) {
+        result.General = [];
       }
 
       return result;
