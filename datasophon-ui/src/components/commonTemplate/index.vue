@@ -34,7 +34,7 @@
                 <div class="tooltip-content">
                   <div class="tooltip-header">
                     <span class="tooltip-label">{{item.label}}</span>
-                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                   </div>
                   <div class="tooltip-description">{{item.description}}</div>
                 </div>
@@ -56,7 +56,7 @@
                 <div class="tooltip-content">
                   <div class="tooltip-header">
                     <span class="tooltip-label">{{item.label}}</span>
-                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                   </div>
                   <div class="tooltip-description">{{item.description}}</div>
                 </div>
@@ -70,7 +70,7 @@
                 <div class="tooltip-content">
                   <div class="tooltip-header">
                     <span class="tooltip-label">{{item.label}}</span>
-                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                   </div>
                   <div class="tooltip-description">{{item.description}}</div>
                 </div>
@@ -84,7 +84,7 @@
                 <div class="tooltip-content">
                   <div class="tooltip-header">
                     <span class="tooltip-label">{{item.label}}</span>
-                    <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                    <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                   </div>
                   <div class="tooltip-description">{{item.description}}</div>
                 </div>
@@ -115,7 +115,7 @@
                   <div class="tooltip-content">
                     <div class="tooltip-header">
                       <span class="tooltip-label">{{item.label}}</span>
-                      <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                      <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                     </div>
                     <div class="tooltip-description">{{item.description}}</div>
                   </div>
@@ -153,9 +153,9 @@
                 <svg-icon v-if="item.value.length > 1" icon-class="reduce-icon" class="reduce-icon" />
               </span>
             </a-form-item>
-            <a-form-item class="form-multiple-item" v-bind="item.value.length === 0 ? labelCol : formItemLayoutWithOutLabel" :label="item.value.length === 0 ? item.label : ''">
-              <a-button v-if="item.isCustom || item.configLevel === 'custom' || (item.name && item.name.toLowerCase().includes('custom'))" type="dashed" @click="() => addMultiple(item.name, 'multiple')">
-                <a-icon type="plus" />Add field
+            <a-form-item class="form-multiple-item" :wrapper-col="formItemLayoutWithOutLabel.wrapperCol">
+              <a-button type="link" class="add-field-button" @click="() => addMultiple(item.name, 'multiple')">
+                <span class="custom-plus-icon">+</span> 添加属性
               </a-button>
             </a-form-item>
             <div class="filed-name-tips">
@@ -172,7 +172,7 @@
                         <div class="tooltip-content">
                           <div class="tooltip-header">
                             <span class="tooltip-label">{{item.label}}</span>
-                            <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                            <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                           </div>
                           <div class="tooltip-description">{{item.description}}</div>
                         </div>
@@ -215,7 +215,7 @@
                         <div class="tooltip-content">
                           <div class="tooltip-header">
                             <span class="tooltip-label">{{item.label}}</span>
-                            <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                            <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                           </div>
                           <div class="tooltip-description">{{item.description}}</div>
                         </div>
@@ -256,9 +256,9 @@
                 </span>
               </a-row>
             </a-form-item>
-            <a-form-item class="form-multiple-item" v-bind="item.value.length === 0 ? labelCol : formItemLayoutWithOutLabel" :label="item.value.length === 0 ? item.label : ''">
-              <a-button v-if="item.isCustom || item.configLevel === 'custom' || (item.name && item.name.toLowerCase().includes('custom'))" type="dashed" @click="() => addMultiple(item.name, 'multipleWithKey')">
-                <a-icon type="plus" />Add field
+            <a-form-item class="form-multiple-item" :wrapper-col="formItemLayoutWithOutLabel.wrapperCol">
+              <a-button type="link" class="add-field-button" @click="() => addMultiple(item.name, 'multipleWithKey')">
+                <span class="custom-plus-icon">+</span> 添加属性
               </a-button>
             </a-form-item>
             <div class="filed-name-tips">
@@ -272,7 +272,7 @@
                   <div class="tooltip-content">
                     <div class="tooltip-header">
                       <span class="tooltip-label">{{item.label}}</span>
-                      <span class="tooltip-name">{{item.name.replaceAll("!", ".")}}</span>
+                      <span class="tooltip-name" :title="item.name.replaceAll('!', '.')">{{item.name.replaceAll("!", ".")}}</span>
                     </div>
                     <div class="tooltip-description">{{item.description}}</div>
                   </div>
@@ -458,124 +458,149 @@ export default {
 </script>
 <style lang="less" scoped>
 .common-template {
+  width: 100%;
   .mgh160 {
-    // margin: 0 110px;
-  }
-  
-  /deep/ .custom-tooltip {
-    .ant-tooltip-inner {
-      background-color: white;
-      color: rgba(0, 0, 0, 0.85);
-      padding: 0;
-      border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      overflow: hidden;
-      
-      .tooltip-content {
-        .tooltip-header {
-          padding: 10px 12px;
-          background-color: #f5f7fa;
-          border-bottom: 1px solid #e4e7ed;
-          
-          .tooltip-label {
-            font-weight: 500;
-            color: rgba(0, 0, 0, 0.85);
-          }
-          
-          .tooltip-name {
-            display: block;
-            margin-top: 2px;
-            color: #1890ff;
-            font-family: monospace;
-            font-size: 12px;
-          }
-        }
-        
-        .tooltip-description {
-          padding: 10px 12px;
-          color: rgba(0, 0, 0, 0.65);
-          font-size: 12px;
-          line-height: 1.5;
-          background-color: white;
-        }
-      }
-    }
-    
-    .ant-tooltip-arrow::before {
-      background-color: #f5f7fa;
-    }
+    margin-bottom: 0px;
   }
   
   .form-content {
+    position: relative;
     /deep/ .ant-input {
       background-color: #f5f7fa;
-      max-width: 360px;
-      border: 1px solid #e4e7ed;
-      &:hover, &:focus {
-        border-color: #40a9ff;
-        background-color: #fff;
-      }
+      border-radius: 4px;
     }
-    
+    /deep/ .ant-slider-track {
+      background: #1890ff;
+    }
+    /deep/ .ant-checkbox-checked .ant-checkbox-inner {
+      background-color: rgb(19, 94, 249);
+    }
     /deep/ .ant-select-selection {
       background-color: #f5f7fa;
-      max-width: 360px;
-      border: 1px solid #e4e7ed;
-      &:hover {
-        border-color: #40a9ff;
-        background-color: #fff;
-      }
-    }
-    
-    /deep/ .ant-slider {
-      max-width: 360px;
-    }
-    
-    /deep/ .ant-switch {
-      background-color: #f5f7fa;
-      &-checked {
-        background-color: #1890ff;
-      }
     }
     
     .reduce-icon {
+      margin-left: 10px;
+      color: #ff4d4f;
+      font-size: 20px;
       cursor: pointer;
-      font-size: 18px;
-      color: @primary-color;
-      margin-left: 6px;
     }
-    .form-multiple-item:last-child {
-      margin-bottom: 12px;
-    }
-    .form-item-container {
-      position: relative;
-      // margin-bottom: 6px;
-      .filed-name-tips {
+    
+    .form-multiple-item {
+      margin-bottom: 8px !important;
+      margin-top: -4px;
+      padding-left: 7px;
+      display: flex;
+      align-items: center;
+      
+      .add-field-button {
+        padding: 0;
+        margin: 0;
+        color: #1890ff;
+        font-size: 13px;
+        height: 24px;
+        line-height: 24px;
+        border: none;
+        box-shadow: none;
         display: flex;
         align-items: center;
-        position: absolute;
-        font-size: 12px;
-        top: 32px;
-        left: 12px;
-        width: 20%;
-        &-word {
-          display: inline-block;
-          max-width: calc(100% - 0px);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: rgba(0, 0, 0, 0.45);
+        
+        &:hover, &:focus {
+          color: #40a9ff;
+          background: transparent;
+          
+          .custom-plus-icon {
+            background-color: #40a9ff;
+            color: white;
+          }
+        }
+        
+        .custom-plus-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+          margin-right: 5px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background-color: #e6f7ff;
+          color: #1890ff;
+          line-height: 15px;
         }
       }
-      .filed-name-tips-icon {
-          cursor: pointer;
-        }
-      .slider-icon {
-        position: relative;
-        top: -28px;
+    }
+    
+    .form-item-container {
+      position: relative;
+      
+      .filed-name-tips {
+        display: none;
+        position: absolute;
+        width: 300px;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        bottom: -21px;
+        right: 0;
+        text-align: right;
+        color: #8a8e99;
+        font-size: 12px;
+        cursor: pointer;
+      }
+     
+      .filed-name-tips-word {
+        display: inline-block;
       }
     }
   }
+}
+
+.add-field-button {
+  display: none;
+}
+
+.form-multiple-item {
+  display: none;
+}
+
+.tooltip-content {
+  max-width: 100%;
+  width: 100%;
+}
+
+.tooltip-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.tooltip-label {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.tooltip-name {
+  font-size: 12px;
+  color: #1890ff;
+  background: rgba(24, 144, 255, 0.1);
+  padding: 2px 5px;
+  border-radius: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.tooltip-description {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  line-height: 1.5;
 }
 </style>
 
@@ -583,6 +608,8 @@ export default {
 <style lang="less">
 /* 自定义tooltip样式，覆盖Ant Design默认样式 */
 html body .custom-tooltip {
+  max-width: 350px;
+  
   .ant-tooltip-inner {
     background-color: white !important;
     color: rgba(0, 0, 0, 0.85) !important;
@@ -590,9 +617,11 @@ html body .custom-tooltip {
     border-radius: 4px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
     overflow: hidden !important;
-    max-width: 300px !important;
+    width: 100% !important;
+    max-width: 100% !important;
     
     .tooltip-content {
+      width: 100%;
       .tooltip-header {
         padding: 10px 12px !important;
         background-color: #f5f7fa !important;
@@ -602,14 +631,19 @@ html body .custom-tooltip {
           font-weight: 500 !important;
           color: rgba(0, 0, 0, 0.85) !important;
           display: block !important;
+          margin-bottom: 5px !important;
         }
         
         .tooltip-name {
           display: block !important;
-          margin-top: 2px !important;
+          width: 100% !important;
           color: #1890ff !important;
           font-family: monospace !important;
           font-size: 12px !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          word-break: break-all !important;
         }
       }
       
