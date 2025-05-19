@@ -54,23 +54,30 @@ public class KubernetesDashboardController {
     public Result getDeployments(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        if (serviceId != null) {
-            return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace);
-        } else {
-            return kubernetesDashboardService.getDeployments(clusterId, namespace);
-        }
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        log.info("获取Deployments列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                clusterId, serviceId, namespace, pageNum, pageSize);
+
+        return kubernetesDashboardService.getDeployments(clusterId, serviceId, namespace, pageNum, pageSize);
+
     }
 
     /**
      * 获取Pods列表
      */
     @GetMapping("/pods")
-    public Result getPodsInfo(@RequestParam Integer clusterId,
-            @RequestParam(required = false) String namespace) {
+    public Result getPodsInfo(@RequestParam(name = "clusterId") Integer clusterId,
+            @RequestParam(name = "serviceId", required = false) Integer serviceId,
+            @RequestParam(name = "namespace", required = false) String namespace,
+            @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            log.info("获取Pods列表请求：clusterId={}, namespace={}", clusterId, namespace);
-            return kubernetesDashboardService.getPodsInfo(clusterId, namespace);
+            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
+                    clusterId, serviceId, namespace, pageNum, pageSize);
+            return kubernetesDashboardService.getPods(clusterId, serviceId, namespace, pageNum, pageSize);
         } catch (Exception e) {
             log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());
@@ -83,8 +90,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/services")
     public Result getServices(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getServices(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getServices(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -93,8 +102,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/configmaps")
     public Result getConfigMaps(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getConfigMaps(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getConfigMaps(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -103,8 +114,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/secrets")
     public Result getSecrets(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getSecrets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getSecrets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -112,8 +125,12 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/persistentvolumes")
     public Result getPersistentVolumes(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getPersistentVolumes(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getPersistentVolumes(clusterId, pageNum, pageSize);
     }
 
     /**
@@ -122,8 +139,12 @@ public class KubernetesDashboardController {
     @RequestMapping("/pvcs")
     public Result getPersistentVolumeClaims(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getPersistentVolumeClaims(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -131,8 +152,15 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/storageclasses")
     public Result getStorageClasses(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getStorageClasses(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+
+        log.info("获取StorageClasses列表请求：clusterId={}, pageNum={}, pageSize={}",
+                clusterId, pageNum, pageSize);
+
+        // 直接调用支持分页的服务方法
+        return kubernetesDashboardService.getStorageClasses(clusterId, pageNum, pageSize);
     }
 
     /**
@@ -141,8 +169,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/ingresses")
     public Result getIngresses(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getIngresses(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getIngresses(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -150,8 +180,10 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/ingressclasses")
     public Result getIngressClasses(
-            @RequestParam("clusterId") Integer clusterId) {
-        return kubernetesDashboardService.getIngressClasses(clusterId);
+            @RequestParam("clusterId") Integer clusterId,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getIngressClasses(clusterId, pageNum, pageSize);
     }
 
     /**
@@ -161,10 +193,11 @@ public class KubernetesDashboardController {
     public Result getDaemonSets(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return serviceId != null
-                ? kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace)
-                : kubernetesDashboardService.getDaemonSets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getDaemonSets(clusterId, serviceId, namespace, pageNum, pageSize);
+
     }
 
     /**
@@ -173,8 +206,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/statefulsets")
     public Result getStatefulSets(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getStatefulSets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getStatefulSets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -183,18 +218,22 @@ public class KubernetesDashboardController {
     @RequestMapping("/replicasets")
     public Result getReplicaSets(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getReplicaSets(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getReplicaSets(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
-     * 获取ReplicationControllers列表
+     * 获取ReplicationControllers列表（带分页）
      */
     @RequestMapping("/replicationcontrollers")
     public Result getReplicationControllers(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getReplicationControllers(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -204,10 +243,10 @@ public class KubernetesDashboardController {
     public Result getJobs(
             @RequestParam("clusterId") Integer clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return serviceId != null
-                ? kubernetesDashboardService.getJobs(clusterId, serviceId, namespace)
-                : kubernetesDashboardService.getJobs(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getJobs(clusterId, namespace, pageNum, pageSize);
     }
 
     /**
@@ -216,8 +255,10 @@ public class KubernetesDashboardController {
     @RequestMapping("/cronjobs")
     public Result getCronJobs(
             @RequestParam("clusterId") Integer clusterId,
-            @RequestParam(value = "namespace", required = false) String namespace) {
-        return kubernetesDashboardService.getCronJobs(clusterId, namespace);
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        return kubernetesDashboardService.getCronJobs(clusterId, namespace, pageNum, pageSize);
     }
 
     /**

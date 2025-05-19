@@ -34,111 +34,113 @@ public interface KubernetesDashboardService {
     Result getNamespaces(Integer clusterId);
 
     /**
-     * 获取Deployments列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return Deployments列表
-     */
-    Result getDeployments(Integer clusterId, String namespace);
-
-    /**
-     * 获取Deployments列表（带服务ID）
+     * 获取Deployments列表（带服务ID，分页）
      * 
      * @param clusterId 集群ID
      * @param serviceId 服务ID
      * @param namespace 命名空间
-     * @return Deployments列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Deployments列表（包含分页信息）
      */
-    Result getDeployments(Integer clusterId, Integer serviceId, String namespace);
-
+    Result getDeployments(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Pods列表详细信息（包含指标、状态统计等）
+     * 获取Pods列表（带分页）
      * 
      * @param clusterId 集群ID
+     * @param serviceId 服务ID
      * @param namespace 命名空间（null或"all"表示所有命名空间）
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
      * @return 包含Pod列表、状态统计等的详细信息
      */
-    Result getPodsInfo(Integer clusterId, String namespace);
+    Result getPods(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Services列表
+     * 获取Services列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Services列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Services列表（包含分页信息）
      */
-    Result getServices(Integer clusterId, String namespace);
+    Result getServices(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取ConfigMaps列表
+     * 获取ConfigMaps列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return ConfigMaps列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return ConfigMaps列表（包含分页信息）
      */
-    Result getConfigMaps(Integer clusterId, String namespace);
+    Result getConfigMaps(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Secrets列表
+     * 获取Secrets列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Secrets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Secrets列表（包含分页信息）
      */
-    Result getSecrets(Integer clusterId, String namespace);
+    Result getSecrets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取PersistentVolumes列表
+     * 获取PersistentVolumes列表（带分页）
      * 
      * @param clusterId 集群ID
-     * @return PersistentVolumes列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return PersistentVolumes列表（包含分页信息）
      */
-    Result getPersistentVolumes(Integer clusterId);
+    Result getPersistentVolumes(Integer clusterId, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取PersistentVolumeClaims列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return PersistentVolumeClaims列表
-     */
-    Result getPersistentVolumeClaims(Integer clusterId, String namespace);
-
-    /**
-     * 获取StorageClasses列表
-     * 
-     * @param clusterId 集群ID
-     * @return StorageClasses列表
-     */
-    Result getStorageClasses(Integer clusterId);
-
-    /**
-     * 获取Ingresses列表
+     * 获取PersistentVolumeClaims列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Ingresses列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return PersistentVolumeClaims列表（包含分页信息）
      */
-    Result getIngresses(Integer clusterId, String namespace);
+    Result getPersistentVolumeClaims(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取IngressClasses列表
+     * 获取StorageClasses列表（带分页）
      * 
      * @param clusterId 集群ID
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return StorageClasses列表（包含分页信息）
+     */
+    Result getStorageClasses(Integer clusterId, Integer pageNum, Integer pageSize);
+
+    /**
+     * 获取Ingresses列表（带分页）
+     * 
+     * @param clusterId 集群ID
+     * @param namespace 命名空间
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Ingresses列表（包含分页信息）
+     */
+    Result getIngresses(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
+
+    /**
+     * 获取IngressClasses列表（带分页）
+     * 
+     * @param clusterId 集群ID
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
      * @return IngressClasses列表
      */
-    Result getIngressClasses(Integer clusterId);
-
-    /**
-     * 获取DaemonSets列表
-     * 
-     * @param clusterId 集群ID
-     * @param namespace 命名空间
-     * @return DaemonSets列表
-     */
-    Result getDaemonSets(Integer clusterId, String namespace);
+    Result getIngressClasses(Integer clusterId, Integer pageNum, Integer pageSize);
 
     /**
      * 获取DaemonSets列表（带服务ID）
@@ -146,64 +148,66 @@ public interface KubernetesDashboardService {
      * @param clusterId 集群ID
      * @param serviceId 服务ID
      * @param namespace 命名空间
-     * @return DaemonSets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return DaemonSets列表（包含分页信息）
      */
-    Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace);
+    Result getDaemonSets(Integer clusterId, Integer serviceId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取StatefulSets列表
+     * 获取StatefulSets列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return StatefulSets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return StatefulSets列表（包含分页信息）
      */
-    Result getStatefulSets(Integer clusterId, String namespace);
+    Result getStatefulSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取ReplicaSets列表
+     * 获取ReplicaSets列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return ReplicaSets列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return ReplicaSets列表（包含分页信息）
      */
-    Result getReplicaSets(Integer clusterId, String namespace);
+    Result getReplicaSets(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取ReplicationControllers列表
+     * 获取ReplicationControllers列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return ReplicationControllers列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return ReplicationControllers列表（包含分页信息）
      */
-    Result getReplicationControllers(Integer clusterId, String namespace);
+    Result getReplicationControllers(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Jobs列表
+     * 获取Jobs列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return Jobs列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return Jobs列表（包含分页信息）
      */
-    Result getJobs(Integer clusterId, String namespace);
+    Result getJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
-     * 获取Jobs列表（带服务ID）
-     * 
-     * @param clusterId 集群ID
-     * @param serviceId 服务ID
-     * @param namespace 命名空间
-     * @return Jobs列表
-     */
-    Result getJobs(Integer clusterId, Integer serviceId, String namespace);
-
-    /**
-     * 获取CronJobs列表
+     * 获取CronJobs列表（带分页）
      * 
      * @param clusterId 集群ID
      * @param namespace 命名空间
-     * @return CronJobs列表
+     * @param pageNum   当前页码
+     * @param pageSize  每页大小
+     * @return CronJobs列表（包含分页信息）
      */
-    Result getCronJobs(Integer clusterId, String namespace);
+    Result getCronJobs(Integer clusterId, String namespace, Integer pageNum, Integer pageSize);
 
     /**
      * 获取Deployment详情

@@ -65,8 +65,8 @@ public abstract class ServiceHandlerAbstract {
      * @return 更新后的命令行列表
      */
     public List<CommandLineItem> addFinalPrompt(List<CommandLineItem> commandLines, String serviceName,
-                                                String serviceHome,
-                                                String hostname) {
+            String serviceHome,
+            String hostname) {
         // 如果列表为空，创建一个新列表
         if (commandLines == null) {
             commandLines = new ArrayList<>();
@@ -134,7 +134,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithKerberos(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                         List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -145,7 +145,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithHA(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                   List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -156,7 +156,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void removeConfigWithRack(List<ServiceConfig> list, Map<String, ServiceConfig> map,
-                                     List<ServiceConfig> configs) {
+            List<ServiceConfig> configs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 if (map.containsKey(serviceConfig.getName())) {
@@ -176,7 +176,7 @@ public abstract class ServiceHandlerAbstract {
      * @param kbConfigs       需要添加到当前的配置项
      */
     public void addConfigWithKerberos(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                      List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithKerberos()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -185,7 +185,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithHA(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
+            List<ServiceConfig> configs, ArrayList<ServiceConfig> kbConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithHA()) {
                 addConfig(globalVariables, map, kbConfigs, serviceConfig);
@@ -194,7 +194,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfigWithRack(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                                  List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
+            List<ServiceConfig> configs, List<ServiceConfig> rackConfigs) {
         for (ServiceConfig serviceConfig : configs) {
             if (serviceConfig.isConfigWithRack()) {
                 addConfig(globalVariables, map, rackConfigs, serviceConfig);
@@ -203,7 +203,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public void addConfig(Map<String, String> globalVariables, Map<String, ServiceConfig> map,
-                          List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
+            List<ServiceConfig> rackConfigs, ServiceConfig serviceConfig) {
         if (map.containsKey(serviceConfig.getName())) {
             ServiceConfig config = map.get(serviceConfig.getName());
             config.setRequired(true);
@@ -226,7 +226,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableKerberos(Integer clusterId, Map<String, String> globalVariables, boolean enableKerberos,
-                                    ServiceConfig config, String serviceName) {
+            ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableKerberos = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "Kerberos}",
@@ -239,7 +239,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public boolean isEnableHA(Integer clusterId, Map<String, String> globalVariables, boolean enableHA,
-                              ServiceConfig config, String serviceName) {
+            ServiceConfig config, String serviceName) {
         if ((Boolean) config.getValue()) {
             enableHA = true;
             ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enable" + serviceName + "HA}", "true");
@@ -271,15 +271,16 @@ public abstract class ServiceHandlerAbstract {
 
             // 根据模板类型确定文件名
             String fileName;
+            String serviceNameLowerCase = serviceName.toLowerCase();
             switch (templateType) {
                 case "java":
-                    fileName = String.format("%sExample.ftl", serviceName);
+                    fileName = String.format("%s_Example.ftl", serviceNameLowerCase);
                     break;
                 case "python":
-                    fileName = String.format("%s_example.ftl", serviceName.toLowerCase());
+                    fileName = String.format("%s_example.ftl", serviceNameLowerCase);
                     break;
                 case "shell":
-                    fileName = String.format("%s_commands.ftl", serviceName.toLowerCase());
+                    fileName = String.format("%s_commands.ftl", serviceNameLowerCase);
                     break;
                 default:
                     throw new IllegalArgumentException("不支持的模板类型: " + templateType);
@@ -538,7 +539,7 @@ public abstract class ServiceHandlerAbstract {
     }
 
     public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
-                                            Map<String, String> configMap) {
+            Map<String, String> configMap) {
         // 提取服务名称（从子类类名）
         String serviceName = getServiceName(serviceInstanceId);
 
@@ -642,7 +643,7 @@ public abstract class ServiceHandlerAbstract {
      * @return CommandLineItem列表
      */
     protected List<CommandLineItem> parseCommandLines(String commandLines, String serviceName, String serviceHome,
-                                                      String hostname) {
+            String hostname) {
         List<CommandLineItem> commandLineItems = new ArrayList<>();
         if (StringUtils.isBlank(commandLines)) {
             return commandLineItems;

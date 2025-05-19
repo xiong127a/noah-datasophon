@@ -66,6 +66,7 @@
         <pods-dashboard
           v-if="activeResource === 'pods'" 
           :clusterId="clusterId"
+          :serviceId="serviceId"
           :selectedNamespace="selectedNamespace"
         />
 

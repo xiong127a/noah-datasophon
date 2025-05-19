@@ -16,33 +16,43 @@
           <a-table
             :columns="cronJobColumns"
             :dataSource="cronJobs"
-            :pagination="false"
-            :rowKey="record => record?.objectMeta?.uid || Math.random().toString(36).substring(2)"
+            :pagination="{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['5', '10', '20', '50'],
+              hideOnSinglePage: totalPages <= 1,
+              showTotal: total => `共 ${total} 条记录`
+            }"
+            :rowKey="record => (record && record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2)"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
                 <span class="status-dot" :class="record.active > 0 ? 'status-running' : 'status-inactive'"></span>
                 <div class="name-cell">
-                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
-                    {{ record?.objectMeta?.name || '未知' }}
+                  <span class="pod-name" :title="(record && record.objectMeta && record.objectMeta.name) || '未知'">
+                    {{ (record && record.objectMeta && record.objectMeta.name) || '未知' }}
                   </span>
                 </div>
               </div>
             </template>
 
             <template slot="namespace" slot-scope="text, record">
-              <span class="namespace-cell" :title="record?.objectMeta?.namespace || '-'">
-                {{ record?.objectMeta?.namespace || '-' }}
+              <span class="namespace-cell" :title="(record && record.objectMeta && record.objectMeta.namespace) || '-'">
+                {{ (record && record.objectMeta && record.objectMeta.namespace) || '-' }}
               </span>
             </template>
 
             <template slot="image" slot-scope="text, record">
-              <div class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
-                <template v-if="record?.containerImages && record.containerImages.length">
+              <div class="image-cell" :title="(record && record.containerImages) ? record.containerImages.join(', ') : ''">
+                <template v-if="record && record.containerImages && record.containerImages.length">
                   <span class="container-image">
                     {{ record.containerImages[0] }}
                   </span>
@@ -53,7 +63,7 @@
             </template>
 
             <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+              <div v-if="record.objectMeta && record.objectMeta.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag
                     v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
@@ -126,8 +136,8 @@
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(record && record.objectMeta && record.objectMeta.creationTimestamp)">
+                {{ getDaysAgo(record && record.objectMeta && record.objectMeta.creationTimestamp) }}
               </span>
             </template>
           </a-table>
@@ -155,6 +165,15 @@ export default {
       cronJobs: [],
       loading: false,
       expandedLabels: {},
+      totalPages: 1,
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50']
+      },
       cronJobColumns: [
         {
           title: '名称',
@@ -240,20 +259,30 @@ export default {
     async fetchCronJobs() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sCronJobs, {
+        const params = {
           clusterId: this.clusterId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
-        });
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          pageNum: this.pagination.current,
+          pageSize: this.pagination.pageSize
+        };
+        
+        const res = await this.$axiosGet(global.API.getK8sCronJobs, params);
         
         if (res.code === 200 && res.data) {
           this.cronJobs = res.data.items || [];
+          this.pagination.total = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 1;
         } else {
           console.error('Failed to fetch cronJobs:', res.msg);
           this.cronJobs = [];
+          this.pagination.total = 0;
+          this.totalPages = 1;
         }
       } catch (error) {
         console.error('Error fetching cronJobs:', error);
         this.cronJobs = [];
+        this.pagination.total = 0;
+        this.totalPages = 1;
       } finally {
         this.loading = false;
       }
@@ -358,6 +387,11 @@ export default {
         second: '2-digit',
         hour12: false
       });
+    },
+    handleTableChange(pagination) {
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      this.fetchCronJobs();
     }
   },
   watch: {

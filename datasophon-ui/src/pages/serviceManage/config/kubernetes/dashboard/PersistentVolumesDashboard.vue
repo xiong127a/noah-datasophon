@@ -16,12 +16,13 @@
           <a-table 
             :columns="columns" 
             :dataSource="persistentVolumes" 
-            :pagination="false"
-            :rowKey="record => record?.objectMeta?.uid || Math.random().toString(36).substring(2)"
+            :pagination="pagination"
+            :rowKey="record => (record && record.objectMeta && record.objectMeta.uid) || Math.random().toString(36).substring(2)"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
+            @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center;">
@@ -109,6 +110,16 @@ export default {
     return {
       persistentVolumes: [],
       loading: false,
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showTotal: total => `共 ${total} 条`,
+        showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
+        showQuickJumper: true,
+        hideOnSinglePage: true
+      },
       columns: [
         {
           title: '名称',
@@ -171,11 +182,13 @@ export default {
     this.fetchPersistentVolumes();
   },
   methods: {
-    async fetchPersistentVolumes() {
+    async fetchPersistentVolumes(page = this.pagination.current, pageSize = this.pagination.pageSize) {
       this.loading = true;
       try {
         const res = await this.$axiosGet(global.API.getK8sPersistentVolumes, {
-          clusterId: this.clusterId
+          clusterId: this.clusterId,
+          pageNum: page,
+          pageSize: pageSize
         });
         
         if (res.code === 200) {
@@ -205,14 +218,21 @@ export default {
             return pv;
           });
           
+          // 更新分页信息
+          this.pagination.total = res.data.total || this.persistentVolumes.length;
+          this.pagination.current = page;
+          this.pagination.pageSize = pageSize;
+          
           console.log("处理后的PersistentVolumes数据:", this.persistentVolumes);
         } else {
           console.error('Failed to fetch PersistentVolumes:', res.msg);
           this.persistentVolumes = [];
+          this.pagination.total = 0;
         }
       } catch (error) {
         console.error('Error fetching PersistentVolumes:', error);
         this.persistentVolumes = [];
+        this.pagination.total = 0;
       } finally {
         this.loading = false;
       }
@@ -283,6 +303,11 @@ export default {
         second: '2-digit',
         hour12: false
       });
+    },
+    // 处理表格分页、排序、筛选变化
+    handleTableChange(pagination, filters, sorter) {
+      console.log('Table change:', pagination, filters, sorter);
+      this.fetchPersistentVolumes(pagination.current, pagination.pageSize);
     }
   },
   watch: {

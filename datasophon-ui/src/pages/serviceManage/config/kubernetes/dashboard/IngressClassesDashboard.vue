@@ -17,30 +17,45 @@
             :columns="columns" 
             :dataSource="ingressClasses" 
             :pagination="false"
-            :rowKey="record => record?.objectMeta?.uid || Math.random().toString(36).substring(2)"
+            :rowKey="getRowKey"
             class="k8s-table"
             :table-layout="'auto'"
             :bordered="false"
             size="middle"
           >
             <template slot="name" slot-scope="text, record">
-              <span class="name-text" :title="record?.objectMeta?.name || '未知'">
-                {{ record?.objectMeta?.name || '未知' }}
+              <span class="name-text" :title="getObjectMetaName(record) || '未知'">
+                {{ getObjectMetaName(record) || '未知' }}
               </span>
             </template>
 
             <template slot="controller" slot-scope="text, record">
-              <span class="controller-cell" :title="record?.controller || '-'">
-                {{ record?.controller || '-' }}
+              <span class="controller-cell" :title="getControllerName(record) || '-'">
+                {{ getControllerName(record) || '-' }}
               </span>
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(getCreationTimestamp(record))">
+                {{ getDaysAgo(getCreationTimestamp(record)) }}
               </span>
             </template>
           </a-table>
+          
+          <!-- 添加分页器 -->
+          <div class="pagination-container" v-if="totalItems > 0">
+            <a-pagination
+              v-if="totalPages > 1"
+              :current="pageNum"
+              :pageSize="pageSize"
+              :total="totalItems"
+              :showTotal="total => `共 ${total} 条记录`"
+              :pageSizeOptions="['10', '20', '50', '100']"
+              showSizeChanger
+              @change="onPageChange"
+              @showSizeChange="onShowSizeChange"
+            />
+          </div>
         </a-spin>
       </div>
     </div>
@@ -64,6 +79,11 @@ export default {
     return {
       ingressClasses: [],
       loading: false,
+      // 分页相关数据
+      pageNum: 1, // 当前页码
+      pageSize: 10, // 每页记录数
+      totalItems: 0, // 总记录数
+      totalPages: 1, // 总页数
       columns: [
         {
           title: '名称',
@@ -93,9 +113,14 @@ export default {
     async fetchIngressClasses() {
       this.loading = true;
       try {
-        const res = await this.$axiosGet(global.API.getK8sIngressClasses, {
-          clusterId: this.clusterId
-        });
+        // 构建请求参数
+        const params = {
+          clusterId: this.clusterId,
+          pageNum: this.pageNum,
+          pageSize: this.pageSize
+        };
+        
+        const res = await this.$axiosGet(global.API.getK8sIngressClasses, params);
         
         if (res.code === 200) {
           // 确保获取IngressClasses列表数组
@@ -112,18 +137,40 @@ export default {
             return ingressClass;
           });
           
+          // 设置分页相关数据
+          this.totalItems = res.data && res.data.total ? res.data.total : ingressClassesList.length;
+          this.totalPages = res.data && res.data.totalPages ? res.data.totalPages : 1;
+          
           console.log("处理后的ingressClasses数据:", this.ingressClasses);
+          console.log("分页信息:", { pageNum: this.pageNum, pageSize: this.pageSize, totalItems: this.totalItems, totalPages: this.totalPages });
         } else {
           console.error('Failed to fetch IngressClasses:', res.msg);
           this.ingressClasses = [];
+          this.totalItems = 0;
+          this.totalPages = 1;
         }
       } catch (error) {
         console.error('Error fetching IngressClasses:', error);
         this.ingressClasses = [];
+        this.totalItems = 0;
+        this.totalPages = 1;
       } finally {
         this.loading = false;
       }
     },
+    
+    // 分页事件处理方法
+    onPageChange(page) {
+      this.pageNum = page;
+      this.fetchIngressClasses();
+    },
+    
+    onShowSizeChange(current, size) {
+      this.pageNum = 1; // 重置到第一页
+      this.pageSize = size;
+      this.fetchIngressClasses();
+    },
+    
     getDaysAgo(timestamp) {
       if (!timestamp) return '-';
       
@@ -160,10 +207,32 @@ export default {
         second: '2-digit',
         hour12: false
       });
+    },
+    getRowKey(record) {
+      return record && record.objectMeta && record.objectMeta.uid ? 
+             record.objectMeta.uid : 
+             Math.random().toString(36).substring(2);
+    },
+    
+    getObjectMetaName(record) {
+      return record && record.objectMeta ? record.objectMeta.name : null;
+    },
+    
+    getControllerName(record) {
+      return record ? record.controller : null;
+    },
+    
+    getCreationTimestamp(record) {
+      return record && record.objectMeta ? record.objectMeta.creationTimestamp : null;
     }
   },
   watch: {
     clusterId() {
+      this.pageNum = 1; // 重置到第一页
+      this.fetchIngressClasses();
+    },
+    selectedNamespace() {
+      this.pageNum = 1; // 重置到第一页
       this.fetchIngressClasses();
     }
   }
@@ -191,5 +260,11 @@ export default {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 分页容器样式 */
+.pagination-container {
+  margin-top: 16px;
+  text-align: right;
 }
 </style> 

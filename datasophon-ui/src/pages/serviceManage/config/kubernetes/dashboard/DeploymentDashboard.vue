@@ -16,28 +16,37 @@
           <a-table
               :columns="deploymentColumns"
               :dataSource="deployments"
-              :pagination="false"
-              :rowKey="record => `${record?.objectMeta?.namespace || 'unknown'}-${record?.objectMeta?.name || 'unknown'}`"
+              :pagination="{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: ['5', '10', '20', '50'],
+                hideOnSinglePage: totalPages <= 1,
+                showTotal: total => `共 ${total} 条记录`
+              }"
+              :rowKey="getRowKey"
               class="k8s-table"
               :table-layout="'auto'"
               :bordered="false"
-              :zebra-stripes="false"
               size="middle"
+              @change="handleTableChange"
           >
             <template slot="name" slot-scope="text, record">
               <div style="display: flex; align-items: center; line-height: normal;">
                 <StatusIndicator :resource="record" resourceType="deployment" />
                 <div class="name-cell">
-                  <span class="pod-name" :title="record?.objectMeta?.name || '未知'">
-                    {{ record?.objectMeta?.name || '未知' }}
+                  <span class="pod-name" :title="record && record.objectMeta && record.objectMeta.name ? record.objectMeta.name : '未知'">
+                    {{ record && record.objectMeta && record.objectMeta.name ? record.objectMeta.name : '未知' }}
                   </span>
                 </div>
               </div>
             </template>
 
             <template slot="image" slot-scope="text, record">
-              <div class="image-cell" :title="record?.containerImages ? record.containerImages.join(', ') : ''">
-                <template v-if="record?.containerImages && record.containerImages.length">
+              <div class="image-cell" :title="record && record.containerImages ? record.containerImages.join(', ') : ''">
+                <template v-if="record && record.containerImages && record.containerImages.length">
                   <span class="container-image">
                     {{ record.containerImages[0] }}
                   </span>
@@ -48,7 +57,7 @@
             </template>
 
             <template slot="labels" slot-scope="text, record">
-              <div v-if="record.objectMeta?.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
+              <div v-if="record && record.objectMeta && record.objectMeta.labels && Object.keys(record.objectMeta.labels).length > 0" class="labels-container">
                 <template v-if="!isLabelsExpanded(record)">
                   <a-tag
                       v-for="(entry, idx) in Object.entries(record.objectMeta.labels).slice(0, 3)"
@@ -92,13 +101,13 @@
 
             <template slot="pods" slot-scope="text, record">
               <div class="pods-display">
-                <span>{{ record?.pods && record.pods.running !== undefined ? record.pods.running : 0 }} / {{ record?.pods && record.pods.desired !== undefined ? record.pods.desired : 0 }}</span>
+                <span>{{ record && record.pods && record.pods.running !== undefined ? record.pods.running : 0 }} / {{ record && record.pods && record.pods.desired !== undefined ? record.pods.desired : 0 }}</span>
               </div>
             </template>
 
             <template slot="creationTime" slot-scope="text, record">
-              <span class="time-cell" :title="formatTime(record.objectMeta?.creationTimestamp)">
-                {{ getDaysAgo(record.objectMeta?.creationTimestamp) }}
+              <span class="time-cell" :title="formatTime(record && record.objectMeta ? record.objectMeta.creationTimestamp : null)">
+                {{ getDaysAgo(record && record.objectMeta ? record.objectMeta.creationTimestamp : null) }}
               </span>
             </template>
           </a-table>
@@ -132,9 +141,19 @@ export default {
   },
   data() {
     return {
-      deployments: [],
+      deployments: [], // 当前页显示的数据
       loading: false,
       expandedLabels: {},
+      totalPages: 1, // 添加总页数字段
+      // 分页配置
+      pagination: {
+        current: 1,
+        pageSize: 10,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50']
+      },
       deploymentColumns: [
         {
           title: '名称',
@@ -172,6 +191,13 @@ export default {
       ]
     };
   },
+  computed: {
+    getRowKey(record) {
+      const namespace = record && record.objectMeta && record.objectMeta.namespace ? record.objectMeta.namespace : 'unknown';
+      const name = record && record.objectMeta && record.objectMeta.name ? record.objectMeta.name : 'unknown';
+      return `${namespace}-${name}`;
+    }
+  },
   mounted() {
     this.fetchDeployments();
   },
@@ -188,54 +214,60 @@ export default {
     async fetchDeployments() {
       this.loading = true;
       try {
+        // 使用后端分页API
         const res = await this.$axiosGet(global.API.getK8sDeployments, {
           clusterId: this.clusterId,
           serviceId: this.serviceId,
-          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace
+          namespace: this.selectedNamespace === 'all' ? null : this.selectedNamespace,
+          pageNum: this.pagination.current,
+          pageSize: this.pagination.pageSize
         });
+        
         if (res.code === 200) {
-          // 确保获取部署列表数组，并处理数据，确保每个部署对象都有必要的属性
-          let deployList = res.data && res.data.deployments ? res.data.deployments : [];
-
-          // 处理deployments数据，确保每个项都有必要的属性
-          this.deployments = deployList.map(deploy => {
-            // 如果deploy为null或undefined，返回一个空对象
+          // 处理返回的当前页数据
+          this.deployments = (res.data && res.data.deployments ? res.data.deployments : []).map(deploy => {
             if (!deploy) return { objectMeta: {}, pods: {} };
-
-            // 确保objectMeta存在
             if (!deploy.objectMeta) deploy.objectMeta = {};
-
-            // 确保pods存在
             if (!deploy.pods) deploy.pods = {};
-
             return deploy;
           });
-
-          console.log("处理后的deployments数据:", this.deployments);
-
-          // 单独测试第一个对象的数据结构
-          if (this.deployments.length > 0) {
-            const firstDeploy = this.deployments[0];
-            console.log("第一个deployment的数据结构:", {
-              name: firstDeploy.objectMeta?.name,
-              namespace: firstDeploy.objectMeta?.namespace,
-              images: firstDeploy.containerImages,
-              pods: firstDeploy.pods
-            });
-          }
+          
+          // 更新分页信息（使用后端返回的总数和总页数）
+          this.pagination.total = res.data.total || 0;
+          this.totalPages = res.data.totalPages || 1; // 使用后端返回的总页数
+          
+          // 添加调试日志
+          console.log("获取的deployments总数:", this.pagination.total);
+          console.log("总页数:", this.totalPages);
+          console.log("是否应该隐藏分页:", this.totalPages <= 1);
+          
+          // 强制更新视图
+          this.$forceUpdate();
         } else {
           console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
+          this.pagination.total = 0;
+          this.totalPages = 1;
         }
       } catch (error) {
         console.error('Error fetching deployments:', error);
         this.deployments = [];
+        this.pagination.total = 0;
+        this.totalPages = 1;
       } finally {
         this.loading = false;
       }
     },
+    
+    // 处理表格分页变化
+    handleTableChange(pagination, filters, sorter) {
+      this.pagination.current = pagination.current;
+      this.pagination.pageSize = pagination.pageSize;
+      
+      // 调用API获取新页数据
+      this.fetchDeployments();
+    },
     handleEditDeployment(record) {
-      // TODO: 实现编辑Deployment的逻辑
       this.$message.info(`编辑Deployment ${record.name} 的功能正在开发中`);
     },
     getDaysAgo(timestamp) {
@@ -244,15 +276,12 @@ export default {
       const date = new Date(timestamp);
       const now = new Date();
 
-      // 计算时间差（毫秒）
       const timeDiff = Math.abs(now - date);
 
-      // 转换为天数、小时、分钟
       const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
-      // 根据时间差返回不同格式
       if (days > 0) {
         return `${days}天前`;
       } else if (hours > 0) {
@@ -359,8 +388,7 @@ export default {
   }
 }
 
-/* 覆盖KubernetesDashboard.vue中的样式 */
-:deep(.ant-table-tbody > tr > td) {
+/deep/ .ant-table-tbody > tr > td {
   white-space: normal !important;
   word-break: break-word !important;
 }
