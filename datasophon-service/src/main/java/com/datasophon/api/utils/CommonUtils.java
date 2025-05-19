@@ -17,6 +17,7 @@
 
 package com.datasophon.api.utils;
 
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.HostInfo;
@@ -98,6 +99,11 @@ public class CommonUtils {
                 .collect(Collectors.groupingBy(
                         // 新的分组逻辑
                         config -> {
+                            String templateName = config.getTemplateName();
+                            if(StrUtil.isNotBlank(templateName)){
+                                String templateContent = TemplatePathUtils.getTemplateContent(templateName);
+                                config.setTemplateContent(templateContent);
+                            }
                             // 首先检查是否有新的分组字段
                             if (config.getConfigCategory() != null && config.getConfigGroup() != null) {
                                 if ("file".equals(config.getConfigCategory())) {

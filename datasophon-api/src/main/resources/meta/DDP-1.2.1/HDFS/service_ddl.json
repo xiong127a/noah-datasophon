@@ -1312,7 +1312,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "core-site",
+      "configLevel": "custom"
     },
     {
       "name": "custom.httpfs.site.xml",
@@ -1324,7 +1327,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "httpfs.site",
+      "configLevel": "custom"
     },
     {
       "name": "custom.hdfs.site.xml",
@@ -1336,7 +1342,10 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "hdfs-site",
+      "configLevel": "custom"
     },
     {
       "name": "custom.hadoop.env.sh",
@@ -1348,7 +1357,12 @@
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "hadoop.env",
+      "configLevel": "advanced",
+      "templateName": "hadoop-env.ftl",
+      "displayName": "hadoop-env template"
     }
   ]
 }

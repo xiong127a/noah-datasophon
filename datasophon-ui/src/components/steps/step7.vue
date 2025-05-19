@@ -71,8 +71,19 @@
               <CommonTemplate
                   :ref="`CommonTemplateRef_${item}_${groupName}`"
                   :steps4Data="steps4Data"
-                  :templateData="group"
+                  :templateData="group.items"
               />
+                      
+                      <!-- 添加模板内容显示框 -->
+                      <div v-if="group.templateContent" class="template-content-container">
+                        <div class="template-content-title">{{ group.displayName || '模板内容' }}:</div>
+                        <a-textarea
+                          :value="group.templateContent"
+                          :auto-size="{ minRows: 3, maxRows: 10 }"
+                          readonly
+                          class="template-content-textarea"
+                        />
+                      </div>
                     </div>
                   </a-collapse-panel>
                 </a-collapse>
@@ -377,8 +388,16 @@ export default {
             };
           });
         
-        // 保存处理后的配置组
-        processedGroups[groupName] = processedConfigs;
+        // 检查是否有配置项包含模板内容
+        const configWithTemplate = processedConfigs.find(item => item.templateContent && item.templateContent.trim() !== '');
+        
+        // 保存处理后的配置组，并附加模板信息（如果有）
+        processedGroups[groupName] = {
+          items: processedConfigs,
+          // 如果找到了带模板的配置项，则保存模板信息
+          displayName: configWithTemplate?.displayName || '',
+          templateContent: configWithTemplate?.templateContent || ''
+        };
       });
 
       // 初始化分组展开状态
@@ -752,25 +771,10 @@ export default {
         }
       }
       
-      /* 重要：处理折叠面板内容区，防止高度变化影响父容器 */
-      .ant-collapse-content {
-        border-top: 1px solid #e8e8e8;
-        overflow: visible;
-        max-height: none;
-        
-                  .ant-collapse-content-box {
-            padding: 16px;
-            background-color: #fff;
-            min-height: 50px;
-            overflow: visible;
-            /* 移除内部滚动设置 */
-          }
-    }
-
       /* 优化折叠面板标题样式 */
       .ant-collapse-header {
         padding: 8px 40px 8px 16px !important;
-        background-color: #fafafa;
+        background-color: #fff;
         font-weight: normal;
         color: rgba(0, 0, 0, 0.85);
         transition: all 0.3s;
@@ -783,13 +787,29 @@ export default {
         min-height: 36px;
         
         &:hover {
-          background-color: #f0f0f0;
+          background-color: #fafafa;
     }
 
         .ant-collapse-arrow {
           right: 16px !important;
           left: auto !important;
       position: absolute !important;
+        }
+      }
+      
+      /* 重要：处理折叠面板内容区，防止高度变化影响父容器 */
+      .ant-collapse-content {
+        border-top: 1px solid #e8e8e8;
+        overflow: visible;
+        max-height: none;
+        background-color: #f5f7fa;
+        
+        .ant-collapse-content-box {
+          padding: 16px;
+          background-color: #f5f7fa;
+          min-height: 50px;
+          overflow: visible;
+          /* 移除内部滚动设置 */
         }
       }
     }
@@ -901,6 +921,38 @@ export default {
   border-top: 1px solid #f0f0f0;
   padding-bottom: 12px; /* 增加底部内边距 */
   padding-top: 12px; /* 增加顶部内边距 */
+}
+
+/* 添加面板内容区样式，确保与ServiceConfig.vue一致 */
+.panel-content {
+  background-color: #f5f7fa;
+}
+
+/* 添加面板标题文本样式 */
+.panel-header-text {
+  font-weight: normal;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+}
+
+/* 模板内容容器样式 */
+.template-content-container {
+  margin-top: 20px;
+  padding: 12px;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.template-content-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #595959;
+}
+
+.template-content-textarea {
+  background-color: #fafafa;
+  font-family: 'Courier New', Courier, monospace;
+  color: #595959;
 }
 </style>
 
