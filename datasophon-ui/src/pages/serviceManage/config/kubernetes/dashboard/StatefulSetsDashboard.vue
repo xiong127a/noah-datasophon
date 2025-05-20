@@ -308,15 +308,13 @@ export default {
           
           console.log('处理后的statefulSets数据:', this.statefulSets);
         } else {
-          console.error('获取StatefulSets列表失败:', res && res.msg ? res.msg : '未知错误');
+          console.error(res && res.msg ? res.msg : '获取StatefulSets列表失败');
           this.statefulSets = []; // 失败时清空数据
           this.totalItems = 0;
           this.totalPages = 0;
-          this.$message.error(res && res.msg ? res.msg : '获取StatefulSets列表失败');
         }
       } catch (error) {
         console.error('获取StatefulSets列表异常:', error);
-        this.$message.error('获取StatefulSets列表异常');
         this.statefulSets = []; // 出错时清空数据
         this.totalItems = 0;
         this.totalPages = 0;

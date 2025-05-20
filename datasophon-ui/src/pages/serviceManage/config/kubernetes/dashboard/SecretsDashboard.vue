@@ -246,7 +246,7 @@ export default {
         }
       } catch (error) {
         console.error('获取Secrets异常:', error);
-        this.$message.error('获取Secrets列表失败');
+        console.error('获取Secrets列表失败');
         this.secrets = [];
         this.totalItems = 0;
         this.totalPages = 1;

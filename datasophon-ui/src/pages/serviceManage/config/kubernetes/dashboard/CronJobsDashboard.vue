@@ -273,7 +273,7 @@ export default {
           this.pagination.total = res.data.total || 0;
           this.totalPages = res.data.totalPages || 1;
         } else {
-          console.error('Failed to fetch cronJobs:', res.msg);
+          console.error(res.msg || '获取CronJob列表失败');
           this.cronJobs = [];
           this.pagination.total = 0;
           this.totalPages = 1;

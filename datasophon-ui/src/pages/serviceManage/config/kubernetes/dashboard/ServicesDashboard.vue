@@ -283,14 +283,14 @@ export default {
           this.services = [];
           this.serviceTotalItems = 0;
           this.totalPages = 1;
-          this.$message.error(res.msg || '获取Services列表失败');
+          console.error(res.msg || '获取Services列表失败');
         }
       } catch (error) {
         console.error('获取Services出错:', error);
         this.services = [];
         this.serviceTotalItems = 0;
         this.totalPages = 1;
-        this.$message.error('获取Services列表异常');
+        console.error('获取Services列表异常');
       } finally {
         this.loading = false;
       }

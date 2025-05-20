@@ -295,7 +295,7 @@ export default {
           this.ingresses = []; // Clear data on failure
           this.totalItems = 0;
           this.totalPages = 1;
-          this.$message.error(res && res.msg ? res.msg : 'Failed to get Ingress list');
+          console.error(res && res.msg ? res.msg : 'Failed to get Ingress list');
         }
       } catch (error) {
         console.error('Exception while getting Ingress list:', error);
@@ -303,6 +303,7 @@ export default {
         this.ingresses = []; // Clear data on error
         this.totalItems = 0;
         this.totalPages = 1;
+        console.error('Exception while getting Ingress list');
       } finally {
         this.loading = false;
       }
