@@ -507,8 +507,8 @@ export default {
                   const convertedData = Object.keys(rawData).reduce((acc, key) => {
                     // 排除slider辅助输入框的值
                     if (!key.endsWith('_value')) {
-                      const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
-                      acc[newKey] = rawData[key];
+                    const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
+                    acc[newKey] = rawData[key];
                     }
                     return acc;
                   }, {});
