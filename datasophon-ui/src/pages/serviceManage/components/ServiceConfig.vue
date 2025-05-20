@@ -151,9 +151,8 @@
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
+import CommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
 import {mapActions, mapState} from "vuex";
-import RenameGroup from "../renameGroup.vue";
 import {getServiceName} from "@/utils/util";
 import _ from 'lodash';
 

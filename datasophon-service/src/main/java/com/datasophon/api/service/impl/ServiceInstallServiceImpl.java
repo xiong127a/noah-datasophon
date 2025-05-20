@@ -146,7 +146,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.getConfig(clusterId, list);
         }
-        Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName, list);
+        Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName,
+                list);
         return Result.success(roleToConfigMap);
     }
 
@@ -258,7 +259,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-                                                HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -384,7 +385,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
 
         try (FileInputStream inputStream = new FileInputStream(file);
-             OutputStream out = response.getOutputStream()) {
+                OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = inputStream.read(buffer)) != -1) {
@@ -693,33 +694,31 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         roleGroupConfig.setConfigFileJsonMd5(SecureUtil.md5(JSON.toJSONString(configFileMap)));
 
         // 同步保存配置版本详情
-        saveConfigVersionInfo(roleGroupConfig, description);
+        saveConfigVersionInfo(roleGroupConfig, "ROLE_GROUP", roleGroupConfig.getRoleGroupId());
     }
 
     /**
      * 保存配置版本详情信息
      *
      * @param roleGroupConfig 角色组配置
-     * @param description     版本描述
+     * @param refType         版本类型
+     * @param refId           版本ID
      */
-    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String description) {
-        ConfigVersionInfoEntity versionInfo = new ConfigVersionInfoEntity();
-        versionInfo.setVersion(roleGroupConfig.getConfigVersion());
-        versionInfo.setRefType("ROLE_GROUP");
-        versionInfo.setRefId(roleGroupConfig.getRoleGroupId());
-        versionInfo.setDescription(description); // 设置版本描述信息
-        versionInfo.setEditTime(new Date());
-        versionInfo.setIsCurrent(true);
-        versionInfo.setServiceCode(roleGroupConfig.getServiceName());
-
-        // 先将所有版本设为非当前版本
-        configVersionInfoService.updateCurrentVersion(
-                roleGroupConfig.getConfigVersion(),
-                "ROLE_GROUP",
-                roleGroupConfig.getRoleGroupId());
-
-        // 保存新版本信息
-        configVersionInfoService.save(versionInfo);
+    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId) {
+        ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
+        // 获取当前最大版本号并加1
+        Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
+        configVersionInfo.setVersion(currentMaxVersion + 1);
+        configVersionInfo.setRefType(refType);
+        configVersionInfo.setRefId(refId);
+        configVersionInfo.setDescription("Configuration update"); // 使用默认描述
+        configVersionInfo.setEditor("system"); // 使用默认编辑者
+        configVersionInfo.setEditTime(new Date());
+        configVersionInfo.setIsCurrent(true);
+        configVersionInfo.setServiceCode(roleGroupConfig.getServiceName());
+        configVersionInfoService.save(configVersionInfo);
+        // 更新其他版本为非当前版本
+        configVersionInfoService.updateCurrentVersion(configVersionInfo.getVersion(), refType, refId);
     }
 
     private void checkOnSameNode(Integer clusterId, List<ServiceRoleHostMapping> list) {

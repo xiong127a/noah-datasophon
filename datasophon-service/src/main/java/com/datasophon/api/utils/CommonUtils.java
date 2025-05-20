@@ -94,7 +94,8 @@ public class CommonUtils {
      * @param list 配置项列表
      * @return 按配置组分组后的映射
      */
-    public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,List<ServiceConfig> list) {
+    public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
+            List<ServiceConfig> list) {
         // 先按原有逻辑分组
         Map<String, List<ServiceConfig>> unsortedMap = list.stream()
                 .collect(Collectors.groupingBy(config -> {
@@ -107,19 +108,7 @@ public class CommonUtils {
 
                     // 首先检查是否有新的分组字段
                     if (config.getConfigCategory() != null && config.getConfigGroup() != null) {
-                        if ("file".equals(config.getConfigCategory())) {
-                            // 对于文件类配置，根据configLevel使用英文命名并用下划线分隔
-                            if ("advanced".equals(config.getConfigLevel())) {
-                                return "advanced_" + config.getConfigGroup();
-                            } else if ("custom".equals(config.getConfigLevel())) {
-                                return "custom_" + config.getConfigGroup();
-                            } else {
-                                return config.getConfigGroup();
-                            }
-                        } else if ("role".equals(config.getConfigCategory())) {
-                            // 对于角色配置，直接使用角色名作为分组
-                            return config.getConfigGroup();
-                        }
+                        return config.getConfigGroup();
                     }
 
                     // 如果没有新字段，回退到原有的分组逻辑

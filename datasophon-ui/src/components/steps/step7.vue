@@ -100,7 +100,6 @@
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
 import FixedCommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
 import {mapActions, mapState} from "vuex";
 import {de} from "date-fns/locale";

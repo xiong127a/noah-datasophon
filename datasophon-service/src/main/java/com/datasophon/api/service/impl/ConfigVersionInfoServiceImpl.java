@@ -35,42 +35,54 @@ import java.util.List;
  */
 @Service("configVersionInfoService")
 public class ConfigVersionInfoServiceImpl extends ServiceImpl<ConfigVersionInfoMapper, ConfigVersionInfoEntity>
-        implements ConfigVersionInfoService {
+                implements ConfigVersionInfoService {
 
-    @Override
-    public List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Integer refId) {
-        LambdaQueryWrapper<ConfigVersionInfoEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ConfigVersionInfoEntity::getRefType, refType)
-                .eq(ConfigVersionInfoEntity::getRefId, refId)
-                .orderByDesc(ConfigVersionInfoEntity::getVersion);
-        return this.list(queryWrapper);
-    }
+        @Override
+        public List<ConfigVersionInfoEntity> getVersionInfoList(String refType, Integer refId) {
+                LambdaQueryWrapper<ConfigVersionInfoEntity> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(ConfigVersionInfoEntity::getRefType, refType)
+                                .eq(ConfigVersionInfoEntity::getRefId, refId)
+                                .orderByDesc(ConfigVersionInfoEntity::getVersion);
+                return this.list(queryWrapper);
+        }
 
-    @Override
-    public ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Integer refId) {
-        LambdaQueryWrapper<ConfigVersionInfoEntity> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ConfigVersionInfoEntity::getVersion, version)
-                .eq(ConfigVersionInfoEntity::getRefType, refType)
-                .eq(ConfigVersionInfoEntity::getRefId, refId);
-        return this.getOne(queryWrapper);
-    }
+        @Override
+        public ConfigVersionInfoEntity getVersionInfo(Integer version, String refType, Integer refId) {
+                LambdaQueryWrapper<ConfigVersionInfoEntity> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(ConfigVersionInfoEntity::getVersion, version)
+                                .eq(ConfigVersionInfoEntity::getRefType, refType)
+                                .eq(ConfigVersionInfoEntity::getRefId, refId);
+                return this.getOne(queryWrapper);
+        }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public boolean updateCurrentVersion(Integer version, String refType, Integer refId) {
-        // 先将所有版本设置为非当前版本
-        LambdaUpdateWrapper<ConfigVersionInfoEntity> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(ConfigVersionInfoEntity::getRefType, refType)
-                .eq(ConfigVersionInfoEntity::getRefId, refId)
-                .set(ConfigVersionInfoEntity::getIsCurrent, false);
-        this.update(updateWrapper);
+        @Override
+        public Integer getMaxVersion(String refType, Integer refId) {
+                LambdaQueryWrapper<ConfigVersionInfoEntity> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.eq(ConfigVersionInfoEntity::getRefType, refType)
+                                .eq(ConfigVersionInfoEntity::getRefId, refId)
+                                .orderByDesc(ConfigVersionInfoEntity::getVersion)
+                                .last("LIMIT 1");
 
-        // 再将指定版本设置为当前版本
-        updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(ConfigVersionInfoEntity::getVersion, version)
-                .eq(ConfigVersionInfoEntity::getRefType, refType)
-                .eq(ConfigVersionInfoEntity::getRefId, refId)
-                .set(ConfigVersionInfoEntity::getIsCurrent, true);
-        return this.update(updateWrapper);
-    }
+                ConfigVersionInfoEntity latestVersion = this.getOne(queryWrapper);
+                return latestVersion != null ? latestVersion.getVersion() : 0;
+        }
+
+        @Override
+        @Transactional(rollbackFor = Exception.class)
+        public boolean updateCurrentVersion(Integer version, String refType, Integer refId) {
+                // 先将所有版本设置为非当前版本
+                LambdaUpdateWrapper<ConfigVersionInfoEntity> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(ConfigVersionInfoEntity::getRefType, refType)
+                                .eq(ConfigVersionInfoEntity::getRefId, refId)
+                                .set(ConfigVersionInfoEntity::getIsCurrent, false);
+                this.update(updateWrapper);
+
+                // 再将指定版本设置为当前版本
+                updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(ConfigVersionInfoEntity::getVersion, version)
+                                .eq(ConfigVersionInfoEntity::getRefType, refType)
+                                .eq(ConfigVersionInfoEntity::getRefId, refId)
+                                .set(ConfigVersionInfoEntity::getIsCurrent, true);
+                return this.update(updateWrapper);
+        }
 }

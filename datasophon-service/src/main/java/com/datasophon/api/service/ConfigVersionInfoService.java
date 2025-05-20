@@ -57,4 +57,13 @@ public interface ConfigVersionInfoService extends IService<ConfigVersionInfoEnti
      * @return 是否更新成功
      */
     boolean updateCurrentVersion(Integer version, String refType, Integer refId);
+
+    /**
+     * 获取指定引用类型的最大版本号
+     *
+     * @param refType 引用类型
+     * @param refId   引用ID
+     * @return 最大版本号，如果没有记录则返回0
+     */
+    Integer getMaxVersion(String refType, Integer refId);
 }
