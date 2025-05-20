@@ -91,6 +91,7 @@ public class ServiceConfig implements Serializable {
     private String templateName;
     private String templateContent;
     private String displayName;
+    private Integer heightMultiple;
 
     /**
      * 配置项所属的服务名称

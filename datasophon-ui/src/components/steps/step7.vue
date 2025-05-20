@@ -68,7 +68,7 @@
                     </template>
                     
                     <div class="panel-content">
-              <CommonTemplate
+              <FixedCommonTemplate
                   :ref="`CommonTemplateRef_${item}_${groupName}`"
                   :steps4Data="steps4Data"
                   :templateData="group.items"
@@ -82,7 +82,7 @@
                           :auto-size="{ minRows: 3, maxRows: 10 }"
                           readonly
                           class="template-content-textarea"
-                        />
+              />
                       </div>
                     </div>
                   </a-collapse-panel>
@@ -90,23 +90,26 @@
                 
                 <!-- 增加底部空白区域，确保最后一个分组完整显示 -->
                 <div class="bottom-spacer"></div>
-              </div>
             </div>
           </div>
         </div>
-      </a-spin>
+      </div>
+    </a-spin>
       </div>
     <!-- 移除多余的底部填充区域 -->
   </div>
 </template>
 <script>
 import CommonTemplate from "@/components/commonTemplate/index";
+import FixedCommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
 import {mapActions, mapState} from "vuex";
 import {de} from "date-fns/locale";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: {CommonTemplate},
+  components: {
+    FixedCommonTemplate
+  },
   props: {
     steps4Data: Object,
   },
@@ -256,7 +259,16 @@ export default {
                 const formRef = this.$refs[refName]?.[0];
                 if (formRef) {
                   await formRef.form.validateFields();
-                  Object.assign(allFormData, formRef.form.getFieldsValue());
+                  // 获取表单值，同时过滤掉slider相关的辅助表单项
+                  const formValues = formRef.form.getFieldsValue();
+                  const filteredValues = {};
+                  for (const key in formValues) {
+                    // 排除slider辅助输入框的值
+                    if (!key.endsWith('_value')) {
+                      filteredValues[key] = formValues[key];
+                    }
+                  }
+                  Object.assign(allFormData, filteredValues);
                 }
               })
           );
@@ -492,10 +504,13 @@ export default {
                   await formRef.form.validateFields();  // 表单验证
                   const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
 
-                  // 处理字段名（替换"."为"!"）
+                  // 处理字段名（替换"."为"!"）并过滤slider辅助输入框
                   const convertedData = Object.keys(rawData).reduce((acc, key) => {
-                    const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
-                    acc[newKey] = rawData[key];
+                    // 排除slider辅助输入框的值
+                    if (!key.endsWith('_value')) {
+                      const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
+                      acc[newKey] = rawData[key];
+                    }
                     return acc;
                   }, {});
 
@@ -669,7 +684,7 @@ export default {
   box-sizing: border-box;
   padding-bottom: 20px; /* 增加底部间距 */
   margin-bottom: 25px; /* 增加底部外边距 */
-}
+  }
 
 /* 标题样式 */
 .steps-title {
@@ -699,7 +714,7 @@ export default {
   width: 100%;
   height: auto;
   max-height: none; /* 移除最大高度限制，由父容器控制 */
-  display: flex;
+    display: flex;
   flex-direction: column;
   overflow: visible;
   box-sizing: border-box;
@@ -712,7 +727,7 @@ export default {
   width: 100%;
   height: auto;
   background-color: #fff;
-  position: relative;
+    position: relative;
   box-sizing: border-box;
   overflow: visible;
   
@@ -729,8 +744,8 @@ export default {
     padding-bottom: 40px; /* 增加底部内边距 */
     box-sizing: border-box;
     overflow: visible;
-  }
-  
+    }
+
   /* 底部空白区域，提供额外空间 */
   .bottom-spacer {
     height: 40px; /* 增加高度 */
@@ -810,10 +825,10 @@ export default {
           min-height: 50px;
           overflow: visible;
           /* 移除内部滚动设置 */
-        }
       }
     }
   }
+}
 }
 
 /* 标签页相关样式 */
@@ -856,7 +871,7 @@ export default {
       overflow: visible;
       width: 100%;
       height: auto;
-    }
+  }
   }
 
   /* 保存按钮 */
@@ -926,6 +941,8 @@ export default {
 /* 添加面板内容区样式，确保与ServiceConfig.vue一致 */
 .panel-content {
   background-color: #f5f7fa;
+  border-radius: 0 0 4px 4px;
+  padding: 12px;
 }
 
 /* 添加面板标题文本样式 */
@@ -953,6 +970,85 @@ export default {
   background-color: #fafafa;
   font-family: 'Courier New', Courier, monospace;
   color: #595959;
+}
+
+/* 添加面板内容区样式，确保与ServiceConfig.vue一致 */
+.steps7 {
+  .service-config-container {
+    background-color: #fff;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    .content-spin {
+      min-height: 300px;
+    }
+    
+    .config-area {
+      &.hidden {
+        display: none;
+      }
+      
+      .config-collapse {
+        background: transparent;
+        
+        .config-panel {
+          border: 1px solid #ebeef5;
+          border-radius: 4px;
+          margin-bottom: 16px;
+          background-color: #fff;
+          
+          &:last-child {
+            margin-bottom: 0;
+          }
+          
+          .panel-header-text {
+            font-weight: 500;
+            font-size: 15px;
+            color: #333;
+          }
+          
+          .panel-content {
+            padding: 16px;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 确保单位输入框样式与图片一致 */
+.content-wrapper /deep/ .input-with-unit {
+  .ant-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+  }
+  
+  .input-unit-suffix {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    height: 32px;
+    padding: 0 11px;
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+    text-align: center;
+    background-color: #f5f5f5;
+    border: 1px solid #d9d9d9;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  &:hover .input-unit-suffix {
+    border-color: #40a9ff;
+  }
+}
+
+/* 添加底部空间，确保内容不被按钮遮挡 */
+.bottom-spacer {
+  height: 80px;
 }
 </style>
 
