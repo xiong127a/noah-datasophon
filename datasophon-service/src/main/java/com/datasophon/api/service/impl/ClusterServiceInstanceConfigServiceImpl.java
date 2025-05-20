@@ -18,8 +18,6 @@
 package com.datasophon.api.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -28,7 +26,6 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
@@ -74,7 +71,7 @@ public class ClusterServiceInstanceConfigServiceImpl
 
                         // 使用服务名称进行分组排序
                         Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils
-                                        .groupByConfigTargetRoleOrCommon(serviceConfigs, serviceName);
+                                        .groupByConfigTargetRoleOrCommon(serviceName,serviceConfigs);
                         return Result.success(roleToConfigMap);
                 }
                 return Result.success();

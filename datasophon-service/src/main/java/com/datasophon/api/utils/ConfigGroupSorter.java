@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 配置组排序工具类
@@ -37,18 +38,92 @@ public class ConfigGroupSorter {
     // 存储配置组名称替换规则
     private static final Map<String, String> GROUP_NAME_REPLACEMENT_MAP = new ConcurrentHashMap<>();
 
+    // 通用分组类型的优先级
+    private static final int ROLE_GROUP_PRIORITY = 100; // 角色分组最高优先级
+    private static final int GENERAL_GROUP_PRIORITY = 200; // 通用配置中等优先级
+    private static final int ADVANCED_GROUP_PRIORITY = 300; // 高级配置较低优先级
+    private static final int CUSTOM_GROUP_PRIORITY = 400; // 自定义配置最低优先级
+
     static {
         // 为HDFS服务定义默认排序
         Map<String, Integer> hdfsOrderMap = new HashMap<>();
-        hdfsOrderMap.put("NameNode", 1);
-        hdfsOrderMap.put("DataNode", 2);
-        hdfsOrderMap.put("General", 3);
-        // 添加高级配置组排序
-        hdfsOrderMap.put("advanced_core-site", 4);
-        hdfsOrderMap.put("advanced_hdfs-site", 5);
-        hdfsOrderMap.put("custom_core-site", 6);
-        hdfsOrderMap.put("custom_hdfs-site", 7);
+        // 角色分组（优先级最高）
+        hdfsOrderMap.put("NameNode", ROLE_GROUP_PRIORITY + 1);
+        hdfsOrderMap.put("DataNode", ROLE_GROUP_PRIORITY + 2);
+        // 通用配置（中等优先级）
+        hdfsOrderMap.put("General", GENERAL_GROUP_PRIORITY);
+        // 高级配置（较低优先级）
+        hdfsOrderMap.put("advanced_core-site", ADVANCED_GROUP_PRIORITY + 1);
+        hdfsOrderMap.put("advanced_hdfs-site", ADVANCED_GROUP_PRIORITY + 2);
+        hdfsOrderMap.put("advanced_hadoop-env", ADVANCED_GROUP_PRIORITY + 3);
+        hdfsOrderMap.put("advanced_httpfs-site", ADVANCED_GROUP_PRIORITY + 4);
+        // 自定义配置（最低优先级）
+        hdfsOrderMap.put("custom_core-site", CUSTOM_GROUP_PRIORITY + 1);
+        hdfsOrderMap.put("custom_hdfs-site", CUSTOM_GROUP_PRIORITY + 2);
+        hdfsOrderMap.put("custom_httpfs-site", CUSTOM_GROUP_PRIORITY + 3);
         SERVICE_GROUP_ORDER_MAP.put("HDFS", hdfsOrderMap);
+    }
+
+    /**
+     * 获取分组类型的基础优先级
+     * 
+     * @param groupName 分组名称
+     * @return 基础优先级
+     */
+    private static int getBaseGroupPriority(String groupName) {
+        if (groupName == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        if (groupName.startsWith("custom_")) {
+            return CUSTOM_GROUP_PRIORITY;
+        } else if (groupName.startsWith("advanced_")) {
+            return ADVANCED_GROUP_PRIORITY;
+        } else if (groupName.equals("General") || groupName.equals("CommonConfig")) {
+            return GENERAL_GROUP_PRIORITY;
+        } else {
+            // 假设其他都是角色分组
+            return ROLE_GROUP_PRIORITY;
+        }
+    }
+
+    /**
+     * 对配置组进行排序
+     * 
+     * @param serviceName 服务名称
+     * @param groups      配置组集合
+     * @return 排序后的配置组列表
+     */
+    public static List<String> sortGroups(String serviceName, Collection<String> groups) {
+        // 获取服务特定的排序规则
+        Map<String, Integer> serviceSpecificOrder = SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(), new HashMap<>());
+
+        return groups.stream()
+                .sorted((g1, g2) -> {
+                    // 1. 首先按照基础分组类型优先级排序
+                    int basePriority1 = getBaseGroupPriority(g1);
+                    int basePriority2 = getBaseGroupPriority(g2);
+
+                    if (basePriority1 != basePriority2) {
+                        return basePriority1 - basePriority2;
+                    }
+
+                    // 2. 如果基础优先级相同，使用服务特定的排序规则
+                    Integer order1 = serviceSpecificOrder.get(g1);
+                    Integer order2 = serviceSpecificOrder.get(g2);
+
+                    if (order1 != null && order2 != null) {
+                        return order1.compareTo(order2);
+                    } else if (order1 != null) {
+                        return -1;
+                    } else if (order2 != null) {
+                        return 1;
+                    }
+
+                    // 3. 如果都没有特定顺序，按名称字母顺序排序
+                    return g1.compareTo(g2);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
@@ -58,7 +133,7 @@ public class ConfigGroupSorter {
      * @return 排序规则映射表，如果没有定义则返回空映射
      */
     public static Map<String, Integer> getServiceGroupOrder(String serviceName) {
-        return SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName, Collections.emptyMap());
+        return SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(), Collections.emptyMap());
     }
 
     /**
@@ -79,9 +154,8 @@ public class ConfigGroupSorter {
      * @param order       排序顺序（从1开始）
      */
     public static void addGroupOrder(String serviceName, String groupName, int order) {
-        Map<String, Integer> orderMap = SERVICE_GROUP_ORDER_MAP.computeIfAbsent(
-                serviceName, k -> new HashMap<>());
-        orderMap.put(groupName, order);
+        SERVICE_GROUP_ORDER_MAP.computeIfAbsent(serviceName.toUpperCase(), k -> new HashMap<>())
+                .put(groupName, order);
     }
 
     /**
@@ -102,6 +176,23 @@ public class ConfigGroupSorter {
      */
     public static String getReplacedGroupName(String originalName) {
         return GROUP_NAME_REPLACEMENT_MAP.getOrDefault(originalName, originalName);
+    }
+
+    /**
+     * 获取配置组显示名称
+     */
+    public static String getDisplayName(String groupName) {
+        if (groupName == null) {
+            return "";
+        }
+
+        if (groupName.startsWith("advanced_")) {
+            return "高级 " + groupName.substring("advanced_".length());
+        } else if (groupName.startsWith("custom_")) {
+            return "自定义 " + groupName.substring("custom_".length());
+        }
+
+        return GROUP_NAME_REPLACEMENT_MAP.getOrDefault(groupName, groupName);
     }
 
     /**
