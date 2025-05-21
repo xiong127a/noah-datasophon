@@ -8,7 +8,7 @@
         <div v-if="mdContent" class="content-wrapper" ref="contentWrapper">
           <!-- 使用CSS定义的sticky侧边栏 -->
           <div class="sidebar" v-if="tocVisible" ref="tocNav">
-            <div class="custom-nav" v-html="tocHtml"></div>
+            <div class="custom-nav" v-html="tocHtml" ref="tocContainerDiv"></div>
           </div>
           
           <!-- 右侧内容区 -->
@@ -65,6 +65,7 @@ export default {
     }
   },
   mounted() {
+    console.log('[TOC Mounted] Component mounted. Calling getServiceName and fetchDocData.');
     this.getServiceName();
     this.fetchDocData();
     
@@ -208,6 +209,7 @@ export default {
     fetchDocData() {
       // 获取当前路由中的集群ID
       const clusterId = this.$route.params.clusterId || localStorage.getItem('clusterId');
+      console.log('[TOC Data] fetchDocData called. ClusterId:', clusterId, 'ServiceId:', this.serviceId, 'DocType:', this.docType);
       
       // 调用API获取文档
       this.$axiosPost(services.getServiceDoc, {
@@ -215,8 +217,10 @@ export default {
         serviceId: this.serviceId,
         type: this.docType
       }).then(response => {
+        console.log('[TOC Data] fetchDocData - .then() callback. Response received:', response);
         if (response.code === 200 && response.data) {
           this.mdContent = response.data;
+          console.log('[TOC Data] fetchDocData - Got data. mdContent length:', response.data.length);
           
           // 添加TOC标记到文档开头
           const contentWithToc = '[[toc]]\n\n' + response.data;
@@ -238,10 +242,12 @@ export default {
           }
           
           // 添加锚点点击事件处理
-          this.$nextTick(() => {
+          setTimeout(() => {
+            console.log('[TOC Data] fetchDocData - setTimeout: Attempting to call setupTocLinkHandlers.');
             this.setupTocLinkHandlers();
-          });
+          }, 0);
         } else {
+          console.warn('[TOC Data] fetchDocData - No data or error in response. Code:', response.code, 'Data:', response.data);
           this.mdContent = null;
           this.htmlContent = '';
           this.tocHtml = '';
@@ -249,6 +255,7 @@ export default {
         }
         this.loading = false;
       }).catch(error => {
+        console.error('[TOC Data] fetchDocData - .catch() error:', error);
         this.mdContent = null;
         this.htmlContent = '';
         this.tocHtml = '';
@@ -257,9 +264,16 @@ export default {
       });
     },
     setupTocLinkHandlers() {
-      const tocLinks = this.$el.querySelectorAll('.toc-link');
+      console.log('[TOC Setup] setupTocLinkHandlers function CALLED.');
+      if (!this.$refs.tocContainerDiv) {
+        console.warn('[TOC Setup] this.$refs.tocContainerDiv is not available. Cannot find tocLinks.');
+        return;
+      }
+      const tocLinks = this.$refs.tocContainerDiv.querySelectorAll('.toc-link');
+      console.log('[TOC Setup] Found tocLinks elements count (from ref):', tocLinks.length, 'Elements:', tocLinks);
       
       tocLinks.forEach((link, index) => {
+        console.log('[TOC Setup] Loop', index, '- Setting up listener for link:', link);
         // 移除已存在的事件监听器以防止重复
         const oldLink = link.cloneNode(true);
         link.parentNode.replaceChild(oldLink, link);
@@ -268,25 +282,43 @@ export default {
           e.preventDefault();
           
           const href = oldLink.getAttribute('href');
+          console.log('[TOC Click] Original href:', href);
           
           if (href && href.startsWith('#')) {
-            const id = href.substring(1);
-            let targetElement = document.getElementById(id);
+            const idFromHref = decodeURIComponent(href.substring(1)); // 使用 decode
+            console.log('[TOC Click] ID from href (decoded):', idFromHref);
+
+            let targetElement = document.getElementById(idFromHref);
+            console.log('[TOC Click] Target from getElementById with decoded ID:', targetElement);
             
             // 尝试回退方案：如果没找到精确ID，尝试查找内容匹配的标题
             if (!targetElement && this.$refs.contentDiv) {
+              console.log('[TOC Click] Fallback: Searching by text content because getElementById failed.');
               const linkText = oldLink.textContent.trim();
+              console.log('[TOC Click] Fallback: Link text:', linkText);
               
               // 查找所有标题元素
               const headings = this.$refs.contentDiv.querySelectorAll('h1, h2, h3, h4, h5, h6');
               
               // 尝试使用内容匹配
               for (const heading of headings) {
-                if (heading.textContent.trim() === linkText) {
+                const headingText = heading.textContent.trim();
+                const headingId = heading.id;
+                console.log(`[TOC Click] Fallback: Checking heading: Text="${headingText}", Existing ID="${headingId}"`);
+
+                if (headingText === linkText) {
                   targetElement = heading;
+                  console.log('[TOC Click] Fallback: Matched heading by text:', targetElement);
                   // 动态添加ID以便将来引用
                   if (!heading.id) {
-                    heading.id = id;
+                    console.log('[TOC Click] Fallback: Setting ID on matched heading (was empty):', idFromHref);
+                    heading.id = idFromHref;
+                  } else if (heading.id !== idFromHref) {
+                    // 如果ID存在但不匹配从href解码得到的ID，这可能指示slugify逻辑与TOC生成href的逻辑存在不一致
+                    // 或者页面中存在重复的文本标题但对应不同的slug。
+                    // 在这种情况下，我们仍然信任从href派生的ID，因为它与用户点击的链接直接相关。
+                    console.warn(`[TOC Click] Fallback: Matched heading's existing ID ("${heading.id}") does not match ID from href ("${idFromHref}"). Overwriting ID on heading to ensure navigation to the correct link's target.`);
+                    heading.id = idFromHref; 
                   }
                   break;
                 }
@@ -294,6 +326,7 @@ export default {
             }
             
             if (targetElement) {
+              console.log('[TOC Click] Scrolling to target:', targetElement, 'with ID:', targetElement.id);
               // 滚动到目标元素
               targetElement.scrollIntoView({
                 behavior: 'smooth',
@@ -305,6 +338,8 @@ export default {
               setTimeout(() => {
                 targetElement.classList.remove('highlighted');
               }, 2000);
+            } else {
+              console.warn('[TOC Click] Target element not found for href:', href, 'and decoded ID:', idFromHref);
             }
           }
           
