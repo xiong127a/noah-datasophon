@@ -82,21 +82,29 @@ public class DocServiceImpl implements DocService {
 
             // 获取服务名称
             String serviceName = serviceInstance.getServiceName();
+
             if (StrUtil.isBlank(serviceName)) {
                 return Result.error("服务名称不能为空");
             }
 
+            if (StrUtil.equals("DS", serviceName)) {
+                serviceName = "DolphinScheduler";
+            }
+
             // 确定文档类型目录
             String docTypeDir;
+            String suffix;
             if ("component".equals(type)) {
                 docTypeDir = COMPONENT_DOC_DIR;
+                suffix = "-introduce";
             } else if ("guide".equals(type)) {
                 docTypeDir = GUIDE_DOC_DIR;
+                suffix = "-user-guide";
             } else {
                 return Result.error("文档类型错误");
             }
 
-            String docContent = readDocContent(serviceName.toLowerCase(), docTypeDir);
+            String docContent = readDocContent(serviceName.toLowerCase(), docTypeDir, suffix);
 
             if (docContent != null) {
                 return Result.success(docContent);
@@ -116,10 +124,10 @@ public class DocServiceImpl implements DocService {
      * @param docType     文档类型目录
      * @return 文档内容
      */
-    private String readDocContent(String serviceName, String docType) {
+    private String readDocContent(String serviceName, String docType, String suffix) {
         try {
-            // 构建文档路径，如：/docs/components/hdfs.md
-            String docName = String.format("%s.md", serviceName);
+            // 构建文档路径，如：/docs/components/hdfs-introduce.md
+            String docName = String.format("%s.md", serviceName + suffix);
 
             File[] ls = FileUtil.ls(DOC_ROOT_DIR + "/" + docType);
 
