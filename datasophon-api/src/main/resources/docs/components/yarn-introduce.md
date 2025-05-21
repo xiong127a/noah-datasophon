@@ -55,7 +55,7 @@ YARN的资源抽象单位，包含特定数量的CPU、内存等资源，是应�
 - 分配和回收由YARN管理
 - 容器内运行特定的任务或进程
 
-![YARN架构详细图](https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/yarn_architecture.gif)
+![YARN架构详细图](../images/1747818637707-0.png)
 
 ## YARN工作流程
 1. **作业提交** - 客户端向ResourceManager提交应用程序

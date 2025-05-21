@@ -35,7 +35,7 @@ HDFS 作为 Hadoop 生态系统的基础存储层，为上层应用（如 MapRed
 ## 架构说明
 HDFS采用主/从架构，由单个NameNode和多个DataNode组成：
 
-![HDFS架构图](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/images/hdfsarchitecture.png)
+![HDFS架构图](../images/1747818610907-0.png)
 
 ### 主要组件
 
