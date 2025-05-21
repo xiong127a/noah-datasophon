@@ -44,6 +44,7 @@ export default {
   refreshQueues: path + '/cluster/yarn/queue/refreshQueues', // 刷新队列到Yarn
   refreshQueuesYARN : path + '/cluster/queue/capacity/refreshToYarn',
   getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo', // 获取服务连接信息
+  getServiceDoc: path + '/doc/getServiceDoc', // 获取服务文档（组件介绍/用户指南）
   getServiceConfigFiles: path + '/api/service/config/getConfigFiles', // 获取服务配置文件列表
   downloadServiceConfigFile: path + '/api/service/config/downloadFile', // 下载单个配置文件
   downloadAllServiceConfigFiles: path + '/api/service/config/downloadAllFiles', // 打包下载所有配置文件（支持ZIP、TAR、TAR.GZ、TAR.XZ、7Z、GZIP、BZIP2格式，ZIP密码保护需额外安装zip4j库）

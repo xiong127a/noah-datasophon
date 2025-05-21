@@ -1,0 +1,153 @@
+.markdown-content {
+  // 基本样式
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  line-height: 1.8;
+  color: #333;
+  max-width: 100%;
+  overflow-wrap: break-word;
+
+  // 标题样式
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #262626;
+    
+    &.highlighted {
+      background-color: rgba(24, 144, 255, 0.1);
+      border-radius: 4px;
+      padding: 0.5rem;
+      transition: background-color 0.5s;
+    }
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    text-align: center;
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #ebedf0;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #ebedf0;
+    margin-top: 2.5rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    border-left: 4px solid #1890ff;
+    padding-left: 12px;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    margin-top: 1.75rem;
+  }
+
+  // 段落样式
+  p {
+    margin: 1.2rem 0;
+    line-height: 1.8;
+    text-align: justify;
+  }
+
+  // 链接样式
+  a {
+    color: #1890ff;
+    text-decoration: none;
+    transition: color 0.3s;
+    
+    &:hover {
+      color: #40a9ff;
+      text-decoration: underline;
+    }
+  }
+
+  // 列表样式
+  ul, ol {
+    padding-left: 1.5rem;
+    margin: 1.2rem 0;
+    
+    li {
+      margin-bottom: 0.5rem;
+      line-height: 1.7;
+    }
+  }
+
+  // 代码块样式
+  pre {
+    margin: 1.2rem 0;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+    overflow-x: auto;
+    
+    code {
+      background-color: transparent;
+      padding: 0;
+      color: inherit;
+    }
+  }
+  
+  code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    border-radius: 3px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.85em;
+    background-color: rgba(27, 31, 35, 0.05);
+    color: #d56161;
+  }
+
+  // 表格样式
+  table {
+    width: 100%;
+    margin: 1.5rem 0;
+    border-collapse: collapse;
+    border-spacing: 0;
+    border: 1px solid #e8e8e8;
+    
+    th, td {
+      border: 1px solid #e8e8e8;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #fafafa;
+      font-weight: 600;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+  }
+
+  // 引用块样式
+  blockquote {
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    border-left: 4px solid #1890ff;
+    background-color: #f8f9fa;
+    color: #4a4a4a;
+  }
+
+  // 图片样式
+  img {
+    max-width: 100%;
+    margin: 1rem auto;
+    display: block;
+  }
+
+  // 分割线样式
+  hr {
+    height: 1px;
+    border: 0;
+    background-color: #ebedf0;
+    margin: 2rem 0;
+  }
+} 
