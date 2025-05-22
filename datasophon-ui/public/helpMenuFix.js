@@ -35,11 +35,33 @@
           
           if (hasHelpMenu) {
             console.log('告警管理帮助菜单已存在');
+            
+            // 如果已存在，确保它在最后位置
+            const helpMenuIndex = alarmManageModule.children.findIndex(item => item.path === 'help');
+            if (helpMenuIndex !== -1 && helpMenuIndex !== alarmManageModule.children.length - 1) {
+              // 移除当前位置的帮助菜单项
+              const helpMenuItem = alarmManageModule.children.splice(helpMenuIndex, 1)[0];
+              // 添加到末尾
+              alarmManageModule.children.push(helpMenuItem);
+              console.log('已将帮助菜单项移动到最后位置');
+              
+              // 更新本地存储
+              localStorage.setItem('menuData', JSON.stringify(menuData));
+              
+              // 如果当前在告警管理页面，刷新页面
+              if (window.location.pathname.includes('/alarm-manage')) {
+                console.log('正在告警管理页面，刷新页面应用新菜单...');
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1000);
+              }
+            }
+            
             return;
           }
           
-          // 在数组开头添加帮助菜单项
-          alarmManageModule.children.unshift({
+          // 在数组末尾添加帮助菜单项
+          alarmManageModule.children.push({
             path: 'help',
             name: '使用帮助',
             label: '使用帮助',

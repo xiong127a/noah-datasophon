@@ -24,5 +24,64 @@ export default {
 <style lang="less">
 .alarm-management-help {
   width: 100%;
+  
+  // 覆盖MarkdownDocViewer组件中的侧边栏样式
+  .markdown-page .page-container .content-wrapper .sidebar .custom-nav {
+    // 添加滚动条样式
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+    padding-right: 10px;
+    
+    // 隐藏默认滚动条
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    // 滚动条轨道
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    // 滚动条滑块
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      
+      // 悬停时的样式
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+    }
+    
+    // 仅在滚动时显示滚动条
+    &:not(:hover)::-webkit-scrollbar-thumb {
+      background-color: transparent;
+    }
+    
+    // Firefox滚动条支持
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    
+    // 目录项样式优化
+    ul.table-of-contents {
+      padding-left: 15px;
+      
+      li {
+        margin-bottom: 6px;
+        
+        a {
+          display: block;
+          padding: 4px 0;
+          color: rgba(0, 0, 0, 0.65);
+          text-decoration: none;
+          transition: all 0.3s;
+          
+          &:hover, &.active {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+  }
 }
 </style> 

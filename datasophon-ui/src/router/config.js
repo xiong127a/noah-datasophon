@@ -125,15 +125,6 @@ const options = {
           component: PageView,
           children: [
             {
-              path: 'help',
-              meta: {
-                notAlive: false,
-              },
-              name: '使用帮助',
-              label: '使用帮助',
-              component: () => import('@/pages/alarmManage/helpInfo/alarmManagementHelp'),
-            },
-            {
               path: 'notice',
               meta: {
                 notAlive: false,
@@ -159,6 +150,15 @@ const options = {
               name: '告警指标管理',
               label: '告警指标管理',
               component: () => import('@/pages/alarmManage/metric'),
+            },
+            {
+              path: 'help',
+              meta: {
+                notAlive: false,
+              },
+              name: '使用帮助',
+              label: '使用帮助',
+              component: () => import('@/pages/alarmManage/helpInfo/alarmManagementHelp'),
             },
             // {
             //   path: 'user',
