@@ -27,6 +27,8 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -45,6 +47,9 @@ public class DocServiceImpl implements DocService {
     @Autowired
     private ClusterServiceInstanceService serviceInstanceService;
 
+    @Autowired
+    private ResourceLoader resourceLoader;
+
     /**
      * 文档根目录
      */
@@ -59,6 +64,11 @@ public class DocServiceImpl implements DocService {
      * 用户指南文档目录
      */
     private static final String GUIDE_DOC_DIR = "guides";
+
+    /**
+     * 图片目录
+     */
+    private static final String IMAGES_DIR = "images";
 
     @Override
     public Result getServiceDoc(Integer clusterId, Integer serviceId, String type) {
@@ -140,6 +150,54 @@ public class DocServiceImpl implements DocService {
             return null;
         } catch (Exception e) {
             log.error("读取文档出错: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    @Override
+    public Resource getImageResource(String imagePath) {
+        log.info("获取图片资源: {}", imagePath);
+
+        try {
+            // 参数检查
+            if (StrUtil.isBlank(imagePath)) {
+                log.warn("图片路径为空");
+                return null;
+            }
+
+            // 处理HTTP/HTTPS链接
+            if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+                log.info("处理远程图片URL: {}", imagePath);
+                return resourceLoader.getResource(imagePath);
+            }
+
+            // 去除可能的../前缀
+            String normalizedPath = StrUtil.removePrefix(imagePath, "../");
+
+            // 分离路径和文件名
+            String fileName = FileUtil.getName(normalizedPath);
+            String dirPath = StrUtil.removeSuffix(normalizedPath, fileName);
+            dirPath = StrUtil.removeSuffix(dirPath, "/"); // 去除可能的尾部斜杠
+
+            // 构建目录路径
+            String fullDirPath = DOC_ROOT_DIR + "/" + dirPath;
+            log.debug("查找目录: {}, 文件名: {}", fullDirPath, fileName);
+
+            // 列出目录下所有文件
+            File[] files = FileUtil.ls(fullDirPath);
+
+            // 查找匹配的文件
+            for (File file : files) {
+                if (StrUtil.equals(fileName, file.getName())) {
+                    log.info("找到匹配的图片: {}", file.getAbsolutePath());
+                    return resourceLoader.getResource("file:" + file.getAbsolutePath());
+                }
+            }
+
+            log.warn("未找到匹配的图片: {}", fileName);
+            return null;
+        } catch (Exception e) {
+            log.error("获取图片资源出错: {}", e.getMessage(), e);
             return null;
         }
     }

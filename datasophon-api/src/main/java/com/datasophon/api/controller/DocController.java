@@ -19,8 +19,15 @@ package com.datasophon.api.controller;
 
 import com.datasophon.api.service.DocService;
 import com.datasophon.common.utils.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -28,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/doc")
+@Slf4j
 public class DocController {
 
     @Autowired
@@ -44,5 +52,24 @@ public class DocController {
     @RequestMapping("/getServiceDoc")
     public Result getServiceDoc(Integer clusterId, Integer serviceId, String type) {
         return docService.getServiceDoc(clusterId, serviceId, type);
+    }
+
+    /**
+     * 获取文档中引用的图片资源(查询参数方式)
+     *
+     * @param imagePath 图片路径
+     * @return 图片资源
+     */
+    @GetMapping(value = "/image")
+    public ResponseEntity<Resource> getImageByPath(@RequestParam(value = "imagePath") String imagePath) {
+
+        log.info("通过查询参数获取图片, 原始路径: {}", imagePath);
+
+        Resource resource = docService.getImageResource(imagePath);
+
+        return ResponseEntity
+                .ok()
+                .contentType(MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM))
+                .body(resource);
     }
 }

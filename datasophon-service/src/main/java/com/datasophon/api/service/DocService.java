@@ -18,6 +18,7 @@
 package com.datasophon.api.service;
 
 import com.datasophon.common.utils.Result;
+import org.springframework.core.io.Resource;
 
 /**
  * 文档服务接口
@@ -33,4 +34,12 @@ public interface DocService {
      * @return 文档内容
      */
     Result getServiceDoc(Integer clusterId, Integer serviceId, String type);
+
+    /**
+     * 获取文档中引用的图片资源
+     *
+     * @param imagePath 图片路径
+     * @return 图片资源
+     */
+    Resource getImageResource(String imagePath);
 }
