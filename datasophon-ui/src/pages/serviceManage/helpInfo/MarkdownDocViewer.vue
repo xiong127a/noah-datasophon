@@ -67,8 +67,9 @@ export default {
     }
   },
   created() {
-    // 配置图片URL转换处理
+    // 配置图片和iframe的URL转换处理
     this.configureImageRenderer();
+    this.configureIframeRenderer();
   },
   mounted() {
     console.log('[TOC Mounted] Component mounted. Calling getServiceName and fetchDocData.');
@@ -123,6 +124,50 @@ export default {
         
         // 调用默认渲染器处理其他属性
         return defaultRender(tokens, idx, options, env, self);
+      };
+    },
+
+    // 配置iframe URL转换
+    configureIframeRenderer() {
+      // 获取API基础URL
+      const apiBaseUrl = paths.path();
+      
+      // 添加自定义的iframe渲染规则
+      md.renderer.rules.html_block = function(tokens, idx) {
+        const content = tokens[idx].content;
+        
+        // 检查是否包含iframe标签
+        if (content.includes('<iframe')) {
+          try {
+            // 创建临时DOM元素来解析HTML
+            const div = document.createElement('div');
+            div.innerHTML = content;
+            const iframe = div.querySelector('iframe');
+            
+            if (iframe && iframe.hasAttribute('src')) {
+              const originalSrc = iframe.getAttribute('src');
+              console.log('Markdown iframe标签解析 - 原始路径:', originalSrc);
+              
+              // 对路径进行编码
+              const encodedPath = encodeURIComponent(originalSrc);
+              
+              // 使用services中定义的API路径
+              const newSrc = `${apiBaseUrl}${services.getDocImage}?imagePath=${encodedPath}`;
+              
+              // 替换src属性
+              iframe.setAttribute('src', newSrc);
+              console.log('Markdown iframe标签解析 - 转换后路径:', newSrc);
+              
+              // 返回修改后的HTML
+              return div.innerHTML;
+            }
+          } catch (error) {
+            console.error('Markdown iframe标签解析 - 处理出错:', error);
+          }
+        }
+        
+        // 如果不是iframe或处理失败，返回原始内容
+        return content;
       };
     },
     
