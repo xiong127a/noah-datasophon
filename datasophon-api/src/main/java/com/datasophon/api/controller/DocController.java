@@ -29,6 +29,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
+
+import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.InputStream;
 
 /**
  * 文档管理控制器
@@ -46,7 +52,7 @@ public class DocController {
      *
      * @param clusterId 集群ID
      * @param serviceId 服务ID
-     * @param type      文档类型 (component: 组件介绍, guide: 用户指南)
+     * @param type      文档类型 (component: 组件介绍, guide: 用户指南, help: 帮助文档)
      * @return 文档内容
      */
     @RequestMapping("/getServiceDoc")

@@ -18,6 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
@@ -32,6 +33,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -76,6 +78,12 @@ public class DocServiceImpl implements DocService {
             // 检查参数
             if (clusterId == null || serviceId == null || StrUtil.isBlank(type)) {
                 return Result.error("参数错误，请检查参数");
+            }
+
+            // 特殊处理：获取告警管理帮助文档
+            if (serviceId.equals(-991) && "guide".equals(type)) {
+                log.info("获取告警管理帮助文档");
+                return getAlarmManagementHelp();
             }
 
             // 获取集群信息
@@ -124,6 +132,50 @@ public class DocServiceImpl implements DocService {
         } catch (Exception e) {
             log.error("获取服务文档出错", e);
             return Result.error("获取服务文档出错: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取告警管理帮助文档
+     * 
+     * @return 告警管理帮助文档内容
+     */
+    private Result getAlarmManagementHelp() {
+        try {
+            // 尝试从多个位置读取告警管理帮助文档
+            String[] possiblePaths = {
+                    "docs/alarm-management-help.md", // 相对路径
+                    "datasophon-api/src/main/resources/docs/alarm-management-help.md", // 项目结构下的路径
+                    System.getProperty("user.dir") + "/docs/alarm-management-help.md", // 当前用户目录下
+                    System.getProperty("user.dir") + "/datasophon-api/src/main/resources/docs/alarm-management-help.md" // 完整路径
+            };
+
+            for (String path : possiblePaths) {
+                File file = new File(path);
+                if (file.exists()) {
+                    log.info("找到告警管理帮助文档：{}", path);
+                    String content = FileUtil.readString(file, StandardCharsets.UTF_8);
+                    return Result.success(content);
+                }
+            }
+
+            // 作为最后的尝试，直接从类路径资源中加载
+            try (InputStream is = DocServiceImpl.class.getClassLoader()
+                    .getResourceAsStream("docs/alarm-management-help.md")) {
+                if (is != null) {
+                    log.info("从类路径资源加载告警管理帮助文档");
+                    String content = IoUtil.read(is, StandardCharsets.UTF_8);
+                    return Result.success(content);
+                }
+            } catch (Exception e) {
+                log.warn("从类路径资源加载告警管理帮助文档失败：{}", e.getMessage());
+            }
+
+            log.warn("所有路径均未找到告警管理帮助文档");
+            return Result.error("告警管理帮助文档不存在");
+        } catch (Exception e) {
+            log.error("获取告警管理帮助文档出错", e);
+            return Result.error("获取告警管理帮助文档出错: " + e.getMessage());
         }
     }
 
