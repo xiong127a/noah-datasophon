@@ -36,10 +36,11 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
+import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.model.SimpleServiceConfig;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.ClusterAlertHistory;
@@ -59,6 +60,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -222,29 +224,126 @@ public class ClusterServiceInstanceServiceImpl
                 .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
                         .eq(Constants.ROLE_GROUP_ID, roleGroupId)
                         .orderByDesc(Constants.CONFIG_VERSION).last("limit 2"));
-        HashMap<String, List<SimpleServiceConfig>> map = new HashMap<>();
-        if (Objects.nonNull(list) && list.size() == 2) {
-            ClusterServiceRoleGroupConfig newConfig = list.get(0);
-            ClusterServiceRoleGroupConfig oldConfig = list.get(1);
-            String newConfigJson = newConfig.getConfigJson();
-            List<SimpleServiceConfig> newSimpleServiceConfigs = JSONArray.parseArray(newConfigJson,
-                    SimpleServiceConfig.class);
-
-            String oldConfigJson = oldConfig.getConfigJson();
-            List<SimpleServiceConfig> oldSimpleServiceConfigs = JSONArray.parseArray(oldConfigJson,
-                    SimpleServiceConfig.class);
-            map.put("newConfig", newSimpleServiceConfigs);
-            map.put("oldConfig", oldSimpleServiceConfigs);
-
-        } else if (list.size() == 1) {
-            ClusterServiceRoleGroupConfig newConfig = list.get(0);
-            String newConfigJson = newConfig.getConfigJson();
-            List<SimpleServiceConfig> newSimpleServiceConfigs = JSONArray.parseArray(newConfigJson,
-                    SimpleServiceConfig.class);
-            map.put("newConfig", newSimpleServiceConfigs);
-            map.put("oldConfig", newSimpleServiceConfigs);
+        
+        // 如果没有足够的版本进行比较，返回空结果
+        if (list == null || list.size() < 2) {
+            return Result.success(new HashMap<>());
         }
-        return Result.success(map);
+        
+        // 获取配置版本
+        ClusterServiceRoleGroupConfig configA = list.get(0); // 新版本
+        ClusterServiceRoleGroupConfig configB = list.get(1); // 旧版本
+        
+        // 解析配置JSON
+        String configJsonA = configA.getConfigJson();
+        String configJsonB = configB.getConfigJson();
+        List<ServiceConfig> configListA = JSONArray.parseArray(configJsonA, ServiceConfig.class);
+        List<ServiceConfig> configListB = JSONArray.parseArray(configJsonB, ServiceConfig.class);
+        
+        // 创建配置项映射，用于快速查找
+        Map<String, Object> configMapB = new HashMap<>();
+        for (ServiceConfig config : configListB) {
+            configMapB.put(config.getName(), config.getValue());
+        }
+        
+        // 处理configA中的配置项，只保留有差异的项
+        List<ServiceConfig> serviceConfigList = new ArrayList<>();
+        for (ServiceConfig configA_item : configListA) {
+            // 设置服务名称，用于排序
+            configA_item.setServiceName(configA.getServiceName());
+            
+            // 检查是否有差异
+            Object valueB = configMapB.get(configA_item.getName());
+            boolean isDifferent = !Objects.equals(configA_item.getValue(), valueB);
+            
+            // 只有当有差异时，才添加到serviceConfigList
+            if (isDifferent) {
+                serviceConfigList.add(configA_item);
+            }
+        }
+        
+        // 处理configB中有但configA中没有的项（这些项本身就是差异项）
+        for (ServiceConfig configB_item : configListB) {
+            String name = configB_item.getName();
+            // 如果configA中已经包含该项，则跳过
+            if (configListA.stream().anyMatch(c -> c.getName().equals(name))) {
+                continue;
+            }
+            
+            ServiceConfig serviceConfig = new ServiceConfig();
+            serviceConfig.setName(name);
+            serviceConfig.setValue(null); // configA中不存在该项
+            
+            // 复制configB_item中的其他属性
+            serviceConfig.setLabel(configB_item.getLabel());
+            serviceConfig.setDescription(configB_item.getDescription());
+            serviceConfig.setRequired(configB_item.isRequired());
+            serviceConfig.setType(configB_item.getType());
+            serviceConfig.setConfigurableInWizard(configB_item.isConfigurableInWizard());
+            serviceConfig.setDefaultValue(configB_item.getDefaultValue());
+            serviceConfig.setMinValue(configB_item.getMinValue());
+            serviceConfig.setMaxValue(configB_item.getMaxValue());
+            serviceConfig.setUnit(configB_item.getUnit());
+            serviceConfig.setHidden(configB_item.isHidden());
+            serviceConfig.setSelectValue(configB_item.getSelectValue());
+            serviceConfig.setConfigType(configB_item.getConfigType());
+            serviceConfig.setConfigWithKerberos(configB_item.isConfigWithKerberos());
+            serviceConfig.setConfigWithRack(configB_item.isConfigWithRack());
+            serviceConfig.setConfigWithHA(configB_item.isConfigWithHA());
+            serviceConfig.setSeparator(configB_item.getSeparator());
+            serviceConfig.setOpen(configB_item.getOpen());
+            serviceConfig.setClose(configB_item.getClose());
+            serviceConfig.setConfigTargetRoles(configB_item.getConfigTargetRoles());
+            serviceConfig.setConfigCategory(configB_item.getConfigCategory());
+            serviceConfig.setConfigGroup(configB_item.getConfigGroup());
+            serviceConfig.setConfigLevel(configB_item.getConfigLevel());
+            serviceConfig.setTemplateName(configB_item.getTemplateName());
+            serviceConfig.setTemplateContent(configB_item.getTemplateContent());
+            serviceConfig.setDisplayName(configB_item.getDisplayName());
+            serviceConfig.setHeightMultiple(configB_item.getHeightMultiple());
+            
+            // 设置服务名称，用于排序
+            serviceConfig.setServiceName(configA.getServiceName());
+            
+            // 将差异信息和版本值添加到serviceConfigList
+            serviceConfigList.add(serviceConfig);
+        }
+        
+        // 如果没有差异项，返回空结果
+        if (serviceConfigList.isEmpty()) {
+            return Result.success(new HashMap<>());
+        }
+        
+        // 使用公共分组逻辑进行分组
+        String serviceName = configA.getServiceName();
+        Map<String, List<ServiceConfig>> groupedConfigs = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName, serviceConfigList);
+        
+        // 将分组后的数据转换为前端需要的格式
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+        for (Map.Entry<String, List<ServiceConfig>> entry : groupedConfigs.entrySet()) {
+            String groupName = entry.getKey();
+            List<ServiceConfig> configs = entry.getValue();
+            
+            List<Map<String, Object>> configItems = new ArrayList<>();
+            for (ServiceConfig config : configs) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", config.getName());
+                
+                // 设置是否有差异（这里一定是true，因为我们已经过滤了）
+                item.put("isDifferent", true);
+                
+                // 添加版本值
+                Object valueB = configMapB.get(config.getName());
+                item.put(String.valueOf(configA.getConfigVersion()), config.getValue());
+                item.put(String.valueOf(configB.getConfigVersion()), valueB);
+                
+                configItems.add(item);
+            }
+            
+            result.put(groupName, configItems);
+        }
+        
+        return Result.success(result);
     }
 
     @Override

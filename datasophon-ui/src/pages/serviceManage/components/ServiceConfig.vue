@@ -27,114 +27,329 @@
   <div>
     <div class="service-config-container">    <!-- 顶部过滤器栏 -->
     <div class="filter-bar">
-      <div class="filter-item">
-        <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
-          <a-button style="width: 200px" class="filter-select">
-            {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
-            <a-icon type="down" />
-          </a-button>
-          <div slot="overlay" class="version-list-container">
-            <div class="version-list-header">
-              <a-input-search 
-                placeholder="搜索" 
-                style="width: 100%"
-                @change="onVersionSearchChange"
-                v-model="versionSearchKeyword"
-              />
-            </div>
-            <div class="version-list">
-              <div 
-                v-for="(versionItem, index) in filteredVersionList" 
-                :key="index"
-                class="version-item"
-                :class="{ 'version-item-active': currentVersion === versionItem.version }"
-                @click="changeVersion(versionItem.version)"
-              >
-                <div class="version-item-header">
-                  <span class="version-number">版本 {{ versionItem.version }}</span>
-                  <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+      <!-- 对比模式下的过滤器 -->
+      <template v-if="compareMode">
+        <div class="version-compare-container">
+          <div class="version-compare-row">
+            <span class="compare-text">Comparing Changes in:</span>
+            
+            <!-- 第一个版本选择器 -->
+            <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+              <a-button style="width: 120px" class="filter-select">
+                {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+                <a-icon type="down" />
+              </a-button>
+              <div slot="overlay" class="version-list-container">
+                <div class="version-list-header">
+                  <a-input-search 
+                    placeholder="搜索" 
+                    style="width: 100%"
+                    @change="onVersionSearchChange"
+                    v-model="versionSearchKeyword"
+                  />
                 </div>
-                <div class="version-item-description">{{ versionItem.description }}</div>
-                <div class="version-item-footer">
-                  <span>{{ versionItem.editor }}</span>
-                  <span>编辑于 {{ versionItem.editTime }}</span>
+                <div class="version-list">
+                  <div 
+                    v-for="(versionItem, index) in filteredVersionList" 
+                    :key="index"
+                    class="version-item"
+                    :class="{ 'version-item-active': currentVersion === versionItem.version }"
+                  >
+                    <div class="version-item-content" @click="changeVersion(versionItem.version)">
+                      <div class="version-item-header">
+                        <span class="version-number">版本 {{ versionItem.version }}</span>
+                        <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                      </div>
+                      <div class="version-item-description">{{ versionItem.description }}</div>
+                      <div class="version-item-footer">
+                        <span>{{ versionItem.editor }}</span>
+                        <span>编辑于 {{ versionItem.editTime }}</span>
+                      </div>
+                      <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
+                    </div>
+                  </div>
                 </div>
-                <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
+              </div>
+            </a-dropdown>
+            
+            <span class="compare-text">with</span>
+            
+            <!-- 第二个版本选择器 -->
+            <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+              <a-button style="width: 120px" class="filter-select">
+                {{ compareVersion !== undefined ? `版本 ${compareVersion}` : '选择版本' }}
+                <a-icon type="down" />
+              </a-button>
+              <div slot="overlay" class="version-list-container">
+                <div class="version-list-header">
+                  <a-input-search 
+                    placeholder="搜索" 
+                    style="width: 100%"
+                    @change="onCompareVersionSearchChange"
+                    v-model="compareVersionSearchKeyword"
+                  />
+                </div>
+                <div class="version-list">
+                  <div 
+                    v-for="(versionItem, index) in filteredCompareVersionList" 
+                    :key="index"
+                    class="version-item"
+                    :class="{ 'version-item-active': compareVersion === versionItem.version }"
+                  >
+                    <div class="version-item-content" @click="changeCompareVersion(versionItem.version)">
+                      <div class="version-item-header">
+                        <span class="version-number">版本 {{ versionItem.version }}</span>
+                        <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                      </div>
+                      <div class="version-item-description">{{ versionItem.description }}</div>
+                      <div class="version-item-footer">
+                        <span>{{ versionItem.editor }}</span>
+                        <span>编辑于 {{ versionItem.editTime }}</span>
+                      </div>
+                      <a-icon v-if="compareVersion === versionItem.version" type="check" class="version-selected-icon" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a-dropdown>
+            
+            <!-- 关闭对比按钮 -->
+            <a-button 
+              type="link" 
+              class="close-compare-btn"
+              @click="closeCompareMode"
+            >
+              <a-icon type="close" />
+            </a-button>
+          </div>
+        </div>
+        
+        <!-- 角色组和筛选放在下面一行 -->
+        <div class="filter-controls-row">
+          <div class="filter-item">
+            <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
+              <a-button style="width: 200px" class="filter-select">
+                {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+                <a-icon type="down" />
+              </a-button>
+              <div slot="overlay" class="config-group-list-container">
+                <div class="config-group-list">
+                  <div 
+                    v-for="item in GroupList" 
+                    :key="item.id"
+                    class="config-group-item"
+                    :class="{ 'config-group-item-active': currentId === item.id }"
+                    @click="changeConfigGroup(item.id)"
+                  >
+                    <div class="config-group-item-header">
+                      <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
+                    </div>
+                    <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
+                  </div>
+                </div>
+              </div>
+            </a-dropdown>
+          </div>
+          
+          <div class="filter-item">
+            <a-input-search
+              v-model="searchKeyword"
+              placeholder="筛选中"
+              style="width: 200px"
+              class="filter-select"
+              @search="handleSearch"
+              @change="handleInputChange"
+              allowClear
+            />
+          </div>
+        </div>
+      </template>
+      
+      <!-- 非对比模式下的过滤器 -->
+      <template v-else>
+        <div class="filter-item">
+          <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+            <a-button style="width: 200px" class="filter-select">
+              {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+              <a-icon type="down" />
+            </a-button>
+            <div slot="overlay" class="version-list-container">
+              <div class="version-list-header">
+                <a-input-search 
+                  placeholder="搜索" 
+                  style="width: 100%"
+                  @change="onVersionSearchChange"
+                  v-model="versionSearchKeyword"
+                />
+              </div>
+              <div class="version-list">
+                <div 
+                  v-for="(versionItem, index) in filteredVersionList" 
+                  :key="index"
+                  class="version-item"
+                  :class="{ 'version-item-active': currentVersion === versionItem.version }"
+                >
+                  <div class="version-item-content" @click="changeVersion(versionItem.version)">
+                    <div class="version-item-header">
+                      <span class="version-number">版本 {{ versionItem.version }}</span>
+                      <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                    </div>
+                    <div class="version-item-description">{{ versionItem.description }}</div>
+                    <div class="version-item-footer">
+                      <span>{{ versionItem.editor }}</span>
+                      <span>编辑于 {{ versionItem.editTime }}</span>
+                    </div>
+                    <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
+                  </div>
+                  <!-- 添加对比按钮 -->
+                  <a-tooltip title="对比当前版本" placement="top">
+                    <div 
+                      v-if="currentVersion !== versionItem.version" 
+                      class="version-compare-btn"
+                      @click="startCompareWithVersion(versionItem.version)"
+                    >
+                      <a-icon type="swap" />
+                    </div>
+                  </a-tooltip>
+                </div>
               </div>
             </div>
-          </div>
-        </a-dropdown>
-      </div>
-      
-      <div class="filter-item">
-        <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
-          <a-button style="width: 200px" class="filter-select">
-            {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
-            <a-icon type="down" />
-          </a-button>
-          <div slot="overlay" class="config-group-list-container">
-            <div class="config-group-list">
-              <div 
-                v-for="item in GroupList" 
-                :key="item.id"
-                class="config-group-item"
-                :class="{ 'config-group-item-active': currentId === item.id }"
-                @click="changeConfigGroup(item.id)"
-              >
-                <div class="config-group-item-header">
-                  <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
+          </a-dropdown>
+        </div>
+        
+        <div class="filter-item">
+          <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
+            <a-button style="width: 200px" class="filter-select">
+              {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+              <a-icon type="down" />
+            </a-button>
+            <div slot="overlay" class="config-group-list-container">
+              <div class="config-group-list">
+                <div 
+                  v-for="item in GroupList" 
+                  :key="item.id"
+                  class="config-group-item"
+                  :class="{ 'config-group-item-active': currentId === item.id }"
+                  @click="changeConfigGroup(item.id)"
+                >
+                  <div class="config-group-item-header">
+                    <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
+                  </div>
+                  <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
                 </div>
-                <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
               </div>
             </div>
-          </div>
-        </a-dropdown>
-      </div>
-      
-      <div class="filter-item">
-        <a-input-search
-          v-model="searchKeyword"
-          placeholder="筛选中"
-          style="width: 200px"
-          class="filter-select"
-          @search="handleSearch"
-          @change="handleInputChange"
-          allowClear
-        />
-      </div>
+          </a-dropdown>
+        </div>
+        
+        <div class="filter-item">
+          <a-input-search
+            v-model="searchKeyword"
+            placeholder="筛选中"
+            style="width: 200px"
+            class="filter-select"
+            @search="handleSearch"
+            @change="handleInputChange"
+            allowClear
+          />
+        </div>
+      </template>
     </div>
     
     <!-- 配置组区域 - 扁平化设计 -->
     <div class="config-area">
       <a-spin :spinning="loading">
-        <div 
-          v-for="(group, groupName) in filteredTemplateData"
-          :key="groupName"
-          class="config-panel"
-        >
-          <div 
-            class="panel-header" 
-            @click="toggleGroup(groupName)"
-          >
-            {{ convertGroupName(groupName) }}
-            <a-icon 
-              :type="isGroupExpanded[groupName] ? 'up' : 'right'" 
-              class="toggle-icon" 
-            />
+        <!-- 对比模式下的内容 -->
+        <template v-if="compareMode && !loading">
+          <div class="config-panel compare-header-panel">
+            <table class="compare-table">
+              <thead>
+                <tr class="compare-header-row">
+                  <th class="compare-header-cell attribute-header">属性名称</th>
+                  <th class="compare-header-cell">
+                    <div class="version-header">
+                      <span class="version-title">版本 {{ currentVersion }}</span>
+                      <span v-if="isCurrentVersionActive" class="version-tag">当前使用</span>
+                    </div>
+                  </th>
+                  <th class="compare-header-cell">
+                    <div class="version-header">
+                      <span class="version-title">版本 {{ compareVersion }}</span>
+                      <span v-if="isCompareVersionActive" class="version-tag">当前使用</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+            </table>
           </div>
           
-          <div v-show="isGroupExpanded[groupName]" class="panel-content">
-            <CommonTemplate
-                :ref="`template_${groupName}`"
-                :steps4Data="steps4Data"
-                :templateData="group"
-            />
+          <!-- 按分组显示配置项 -->
+          <div 
+            v-for="(group, groupName) in filteredCompareData"
+            :key="groupName"
+            class="config-panel"
+          >
+            <div 
+              class="panel-header" 
+              @click="toggleGroup(groupName)"
+            >
+              {{ groupName }}
+              <a-icon 
+                :type="isGroupExpanded[groupName] ? 'up' : 'right'" 
+                class="toggle-icon" 
+              />
+            </div>
+            
+            <div v-show="isGroupExpanded[groupName]" class="panel-content">
+              <table class="compare-table">
+                <tbody>
+                  <tr 
+                    v-for="(item, index) in group" 
+                    :key="index"
+                    class="compare-row-simple"
+                    :class="{ 'different': item.isDifferent }"
+                  >
+                    <td class="compare-cell-simple attribute-cell">{{ item.name }}</td>
+                    <td class="compare-cell-simple value-cell">{{ item[currentVersion] }}</td>
+                    <td class="compare-cell-simple value-cell">{{ item[compareVersion] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </template>
         
-        <div class="footer">
-          <a-button type="primary" @click="showSaveDialog">保存</a-button>
-        </div>
+        <!-- 非对比模式下的内容 -->
+        <template v-else>
+          <div 
+            v-for="(group, groupName) in filteredTemplateData"
+            :key="groupName"
+            class="config-panel"
+          >
+            <div 
+              class="panel-header" 
+              @click="toggleGroup(groupName)"
+            >
+              {{ convertGroupName(groupName) }}
+              <a-icon 
+                :type="isGroupExpanded[groupName] ? 'up' : 'right'" 
+                class="toggle-icon" 
+              />
+            </div>
+            
+            <div v-show="isGroupExpanded[groupName]" class="panel-content">
+              <CommonTemplate
+                  :ref="`template_${groupName}`"
+                  :steps4Data="steps4Data"
+                  :templateData="group"
+              />
+            </div>
+          </div>
+          
+          <div class="footer">
+            <a-button type="primary" @click="showSaveDialog">保存</a-button>
+          </div>
+        </template>
       </a-spin>
     </div>
     </div>
@@ -190,6 +405,9 @@ export default {
       GroupList: [],
       currentId: undefined,
       currentVersion: undefined,
+      compareMode: false,
+      compareVersion: undefined,
+      compareData: null, // 存储对比数据
       isGroupExpanded: {}, // 存储每个配置组的展开状态
       clusterId: Number(localStorage.getItem("clusterId") || -1),
       labelCol: {
@@ -214,6 +432,9 @@ export default {
       configDescription: '',
       placeholderText: '请输入配置备注信息\n（如不填写，系统将自动生成包含修改内容的备注）',
       versionSearchKeyword: '',
+      compareVersionSearchKeyword: '',
+      isCurrentVersionActive: false, // 当前版本是否为激活版本
+      isCompareVersionActive: false, // 对比版本是否为激活版本
     };
   },
   computed: {
@@ -268,8 +489,60 @@ export default {
         // 将version转换为字符串再进行小写转换
         const label = String(item.version || '').toLowerCase();
         const description = (item.description || '').toLowerCase();
-        return label.includes(keyword) || description.includes(keyword);
+        
+        // 添加过滤条件：在对比模式下过滤掉已选择的compareVersion
+        const matchesKeyword = label.includes(keyword) || description.includes(keyword);
+        const shouldFilter = this.compareMode && this.compareVersion && item.version === this.compareVersion;
+        
+        return matchesKeyword && !shouldFilter;
       });
+    },
+    filteredCompareVersionList() {
+      if (!this.verSionList || this.verSionList.length === 0) {
+        return [];
+      }
+
+      const keyword = this.compareVersionSearchKeyword.toLowerCase();
+      // 过滤掉当前已选择的版本，防止自己和自己比较
+      return this.verSionList.filter(item => {
+        // 将version转换为字符串再进行小写转换
+        const label = String(item.version || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        // 添加过滤条件：排除当前选择的版本
+        return (label.includes(keyword) || description.includes(keyword)) && 
+               item.version !== this.currentVersion;
+      });
+    },
+    // 添加计算属性，用于过滤对比数据
+    filteredCompareData() {
+      if (!this.compareData) return {};
+      
+      // 如果没有搜索关键字，返回原始数据
+      if (!this.searchKeyword) {
+        return this.compareData;
+      }
+      
+      // 过滤符合搜索条件的配置项
+      const keyword = this.searchKeyword.toLowerCase();
+      const result = {};
+      
+      Object.entries(this.compareData).forEach(([groupName, items]) => {
+        const filteredItems = items.filter(item => {
+          const name = (item.name || '').toLowerCase();
+          const valueA = String(item[this.currentVersion] || '').toLowerCase();
+          const valueB = String(item[this.compareVersion] || '').toLowerCase();
+          
+          return name.includes(keyword) || 
+                 valueA.includes(keyword) || 
+                 valueB.includes(keyword);
+        });
+        
+        if (filteredItems.length > 0) {
+          result[groupName] = filteredItems;
+        }
+      });
+      
+      return result;
     }
   },
   methods: {
@@ -592,14 +865,28 @@ export default {
       }
     },
     changeVersion(val) {
+      if (this.currentVersion === val) return;
       this.currentVersion = val;
+      
+      // 检查是否为当前使用版本
+      const versionItem = this.verSionList.find(v => v.version === val);
+      if (versionItem) {
+        this.isCurrentVersionActive = versionItem.isCurrent;
+      }
+      
       // 重置筛选状态
       this.searchKeyword = '';
+      
       // 折叠所有分组
       Object.keys(this.isGroupExpanded).forEach(groupName => {
         this.$set(this.isGroupExpanded, groupName, false);
       });
-      this.getServiceConfigOption();
+      
+      if (this.compareMode && this.compareVersion) {
+        this.loadCompareData();
+      } else {
+        this.getServiceConfigOption(true);
+      }
     },
     changeCasting(val) {
       console.log(val.target.value);
@@ -641,6 +928,13 @@ export default {
           this.verSionList = res.data;
           if (this.verSionList.length > 0) {
             this.currentVersion = this.verSionList[0].version;
+            
+            // 标记当前使用的版本
+            const currentVersionItem = this.verSionList.find(v => v.isCurrent);
+            if (currentVersionItem) {
+              this.isCurrentVersionActive = this.currentVersion === currentVersionItem.version;
+            }
+            
             this.getServiceConfigOption(true);
           }
         }
@@ -737,6 +1031,9 @@ export default {
     onVersionSearchChange(value) {
       this.versionSearchKeyword = value;
     },
+    onCompareVersionSearchChange(value) {
+      this.compareVersionSearchKeyword = value;
+    },
     // 获取配置组名称
     getGroupName(id) {
       if (!this.GroupList || this.GroupList.length === 0) {
@@ -744,6 +1041,82 @@ export default {
       }
       const group = this.GroupList.find(item => item.id === id);
       return group ? group.roleGroupName : '';
+    },
+    handleCompareModeChange(value) {
+      this.compareMode = value;
+      if (!value) {
+        // 退出对比模式时清空对比数据
+        this.compareData = null;
+      }
+    },
+    closeCompareMode() {
+      this.compareMode = false;
+      this.compareData = null;
+    },
+    changeCompareVersion(version) {
+      // 添加验证，防止选择与当前版本相同的版本
+      if (version === this.currentVersion) {
+        this.$message.warning('不能选择相同的版本进行对比');
+        return;
+      }
+      
+      if (this.compareVersion === version) return;
+      this.compareVersion = version;
+      // 检查是否为当前使用版本
+      const versionItem = this.verSionList.find(v => v.version === version);
+      if (versionItem) {
+        this.isCompareVersionActive = versionItem.isCurrent;
+      }
+      this.loadCompareData();
+    },
+    // 加载对比数据
+    loadCompareData() {
+      if (!this.currentVersion || !this.compareVersion) return;
+      
+      this.loading = true;
+      const params = {
+        serviceInstanceId: this.serviceId,
+        roleGroupId: JSON.stringify(this.currentId) || '',
+        versionA: this.currentVersion,
+        versionB: this.compareVersion
+      };
+      
+      this.$axiosPost(global.API.configVersionCompare, params).then(res => {
+        if (res.code === 200) {
+          // 直接使用后端返回的数据
+          this.compareData = res.data;
+          
+          // 自动展开所有分组
+          Object.keys(this.compareData).forEach(groupName => {
+            this.$set(this.isGroupExpanded, groupName, true);
+          });
+        } else {
+          this.$message.error(res.msg || '获取对比数据失败');
+        }
+        this.loading = false;
+      }).catch(error => {
+        console.error('对比数据加载失败:', error);
+        this.$message.error('对比数据加载失败');
+        this.loading = false;
+      });
+    },
+    startCompareWithVersion(version) {
+      // 添加验证，防止选择与当前版本相同的版本
+      if (version === this.currentVersion) {
+        this.$message.warning('不能选择相同的版本进行对比');
+        return;
+      }
+      
+      this.compareMode = true;
+      this.compareVersion = version;
+      
+      // 检查是否为当前使用版本
+      const versionItem = this.verSionList.find(v => v.version === version);
+      if (versionItem) {
+        this.isCompareVersionActive = versionItem.isCurrent;
+      }
+      
+      this.loadCompareData();
     },
   },
   mounted() {
@@ -829,6 +1202,139 @@ export default {
     /deep/ .ant-input-search-button {
       height: 32px;
       border-radius: 0 2px 2px 0;
+    }
+  }
+}
+
+/* 版本对比相关样式 */
+.compare-switch {
+  margin-right: 8px;
+}
+
+.version-compare-container {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.version-compare-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f5f7fa;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.filter-controls-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.compare-text {
+  color: rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+}
+
+.close-compare-btn {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 16px;
+  
+  &:hover {
+    color: rgba(0, 0, 0, 0.65);
+  }
+}
+
+/* 对比模式表头 */
+.compare-header {
+  display: flex;
+  padding: 16px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  font-weight: 500;
+}
+
+.compare-header-item {
+  &.attribute {
+    flex: 2;
+  }
+  
+  &:not(.attribute) {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.version-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  .version-title {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+}
+
+/* 对比内容样式 */
+.compare-header-panel {
+  margin-top: 0;
+  border-top: none;
+  margin-bottom: 16px;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  
+  .compare-header-row {
+    background-color: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    
+    .compare-header-cell {
+      padding: 16px;
+      font-weight: 500;
+      text-align: left;
+      
+      &.attribute-header {
+        width: 30%;
+      }
+    }
+  }
+  
+  .compare-row-simple {
+    border-bottom: 1px solid #f0f0f0;
+    
+    &:nth-child(even) {
+      background-color: #fafafa;
+    }
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+    
+    &.different {
+      background-color: #fffbe6;
+      
+      &:hover {
+        background-color: #fff8d8;
+      }
+    }
+  }
+  
+  .compare-cell-simple {
+    padding: 12px 16px;
+    vertical-align: top;
+    word-break: break-all;
+    
+    &.attribute-cell {
+      width: 30%;
+      font-weight: 500;
+    }
+    
+    &.value-cell {
+      width: 35%;
     }
   }
 }
@@ -947,6 +1453,9 @@ export default {
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   
   &:hover {
     background-color: #f5f5f5;
@@ -954,6 +1463,11 @@ export default {
   
   &-active {
     background-color: #e6f7ff;
+  }
+  
+  &-content {
+    flex: 1;
+    cursor: pointer;
   }
   
   &-header {
@@ -978,8 +1492,9 @@ export default {
 }
 
 .version-number {
-  font-weight: 500;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1890ff;
 }
 
 .version-tag {
@@ -997,6 +1512,23 @@ export default {
   transform: translateY(-50%);
   color: #1890ff;
   font-size: 16px;
+}
+
+.version-compare-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-left: 8px;
+  
+  &:hover {
+    color: #1890ff;
+    border-color: #1890ff;
+  }
 }
 
 /* 配置组下拉列表样式 */
