@@ -360,16 +360,47 @@ export default {
       this.currentId = val;
       // 重置筛选状态
       this.searchKeyword = '';
+      // 折叠所有分组
+      Object.keys(this.isGroupExpanded).forEach(groupName => {
+        this.$set(this.isGroupExpanded, groupName, false);
+      });
       this.getConfigVersion();
     },
     // 新增搜索方法
     handleSearch(value) {
       this.searchKeyword = value;
+      // 搜索后自动展开包含匹配项的分组
+      this.$nextTick(() => {
+        this.expandMatchingGroups();
+      });
     },
     
     // 处理输入变化
     handleInputChange(e) {
       this.searchKeyword = e.target.value;
+      // 输入变化后自动展开包含匹配项的分组
+      this.$nextTick(() => {
+        this.expandMatchingGroups();
+      });
+    },
+    
+    // 展开包含匹配项的分组
+    expandMatchingGroups() {
+      // 如果没有搜索关键字，则折叠所有分组
+      if (!this.searchKeyword) {
+        Object.keys(this.templateData).forEach(groupName => {
+          this.$set(this.isGroupExpanded, groupName, false);
+        });
+        return;
+      }
+      
+      // 获取筛选后的分组
+      const filteredGroups = Object.keys(this.filteredTemplateData);
+      
+      // 展开包含匹配项的分组
+      filteredGroups.forEach(groupName => {
+        this.$set(this.isGroupExpanded, groupName, true);
+      });
     },
     
     handlearrayWithData(a) {
@@ -523,6 +554,10 @@ export default {
       this.currentVersion = val;
       // 重置筛选状态
       this.searchKeyword = '';
+      // 折叠所有分组
+      Object.keys(this.isGroupExpanded).forEach(groupName => {
+        this.$set(this.isGroupExpanded, groupName, false);
+      });
       this.getServiceConfigOption();
     },
     changeCasting(val) {
@@ -530,6 +565,10 @@ export default {
       this.currentId = val.target.value
       // 重置筛选状态
       this.searchKeyword = '';
+      // 折叠所有分组
+      Object.keys(this.isGroupExpanded).forEach(groupName => {
+        this.$set(this.isGroupExpanded, groupName, false);
+      });
       this.getConfigVersion()
     },
 
@@ -585,7 +624,9 @@ export default {
         // 初始化所有分组为收起状态
         Object.keys(this.templateData).forEach(name => {
           if (!(name in this.isGroupExpanded)) {
-            this.$set(this.isGroupExpanded, name, false)
+            this.$set(this.isGroupExpanded, name, false);
+          } else {
+            this.$set(this.isGroupExpanded, name, false);
           }
         });
         
