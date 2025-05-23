@@ -28,51 +28,70 @@
     <div class="service-config-container">    <!-- 顶部过滤器栏 -->
     <div class="filter-bar">
       <div class="filter-item">
-        <span class="filter-label">版本</span>
-        <a-select 
-          :value="currentVersion" 
-          @change="changeVersion"
-          style="width: 200px"
-          class="filter-select"
-        >
-          <a-select-option 
-            v-for="(versionItem, childIndex) in verSionList" 
-            :key="childIndex" 
-            :value="versionItem.version"
-          >
-            <a-tooltip v-if="versionItem.description || versionItem.editTime" placement="right">
-              <template slot="title">
-                <div v-if="versionItem.description">备注: {{ versionItem.description }}</div>
-                <div v-if="versionItem.editTime">编辑时间: {{ versionItem.editTime }}</div>
-                <div v-if="versionItem.editor">编辑者: {{ versionItem.editor }}</div>
-              </template>
-              <span>V{{ versionItem.version }}{{ versionItem.isCurrent ? ' (当前)' : '' }}</span>
-            </a-tooltip>
-            <span v-else>V{{ versionItem.version }}{{ versionItem.isCurrent ? ' (当前)' : '' }}</span>
-          </a-select-option>
-        </a-select>
+        <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+          <a-button style="width: 200px" class="filter-select">
+            {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+            <a-icon type="down" />
+          </a-button>
+          <div slot="overlay" class="version-list-container">
+            <div class="version-list-header">
+              <a-input-search 
+                placeholder="搜索" 
+                style="width: 100%"
+                @change="onVersionSearchChange"
+                v-model="versionSearchKeyword"
+              />
+            </div>
+            <div class="version-list">
+              <div 
+                v-for="(versionItem, index) in filteredVersionList" 
+                :key="index"
+                class="version-item"
+                :class="{ 'version-item-active': currentVersion === versionItem.version }"
+                @click="changeVersion(versionItem.version)"
+              >
+                <div class="version-item-header">
+                  <span class="version-number">版本 {{ versionItem.version }}</span>
+                  <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                </div>
+                <div class="version-item-description">{{ versionItem.description }}</div>
+                <div class="version-item-footer">
+                  <span>{{ versionItem.editor }}</span>
+                  <span>编辑于 {{ versionItem.editTime }}</span>
+                </div>
+                <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
+              </div>
+            </div>
+          </div>
+        </a-dropdown>
       </div>
       
       <div class="filter-item">
-        <span class="filter-label">配置组</span>
-        <a-select 
-          :value="currentId" 
-          @change="changeConfigGroup"
-          style="width: 200px"
-          class="filter-select"
-        >
-          <a-select-option 
-            v-for="item in GroupList" 
-            :key="item.id" 
-            :value="item.id"
-          >
-            {{ item.roleGroupName }}
-          </a-select-option>
-        </a-select>
+        <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
+          <a-button style="width: 200px" class="filter-select">
+            {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+            <a-icon type="down" />
+          </a-button>
+          <div slot="overlay" class="config-group-list-container">
+            <div class="config-group-list">
+              <div 
+                v-for="item in GroupList" 
+                :key="item.id"
+                class="config-group-item"
+                :class="{ 'config-group-item-active': currentId === item.id }"
+                @click="changeConfigGroup(item.id)"
+              >
+                <div class="config-group-item-header">
+                  <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
+                </div>
+                <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
+              </div>
+            </div>
+          </div>
+        </a-dropdown>
       </div>
       
       <div class="filter-item">
-        <span class="filter-label">筛选</span>
         <a-input-search
           v-model="searchKeyword"
           placeholder="筛选中"
@@ -194,6 +213,7 @@ export default {
       saveDialogVisible: false,
       configDescription: '',
       placeholderText: '请输入配置备注信息\n（如不填写，系统将自动生成包含修改内容的备注）',
+      versionSearchKeyword: '',
     };
   },
   computed: {
@@ -237,6 +257,19 @@ export default {
       });
       
       return result;
+    },
+    filteredVersionList() {
+      if (!this.verSionList || this.verSionList.length === 0) {
+        return [];
+      }
+
+      const keyword = this.versionSearchKeyword.toLowerCase();
+      return this.verSionList.filter(item => {
+        // 将version转换为字符串再进行小写转换
+        const label = String(item.version || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        return label.includes(keyword) || description.includes(keyword);
+      });
     }
   },
   methods: {
@@ -701,6 +734,17 @@ export default {
     confirmSave() {
       this.handleSubmit();
     },
+    onVersionSearchChange(value) {
+      this.versionSearchKeyword = value;
+    },
+    // 获取配置组名称
+    getGroupName(id) {
+      if (!this.GroupList || this.GroupList.length === 0) {
+        return '';
+      }
+      const group = this.GroupList.find(item => item.id === id);
+      return group ? group.roleGroupName : '';
+    },
   },
   mounted() {
     this.getServiceRoleType()
@@ -870,5 +914,144 @@ export default {
   font-size: 12px;
   color: #999;
   margin-top: 4px;
+}
+
+/* 版本列表样式 */
+.version-dropdown {
+  width: 500px;
+  
+  .ant-dropdown-menu {
+    padding: 0;
+  }
+}
+
+.version-list-container {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  width: 500px;
+}
+
+.version-list-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.version-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.version-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  position: relative;
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+  
+  &-active {
+    background-color: #e6f7ff;
+  }
+  
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  &-description {
+    color: rgba(0, 0, 0, 0.65);
+    margin-bottom: 8px;
+    word-break: break-all;
+  }
+  
+  &-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+  }
+}
+
+.version-number {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.version-tag {
+  background-color: #52c41a;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 12px;
+}
+
+.version-selected-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #1890ff;
+  font-size: 16px;
+}
+
+/* 配置组下拉列表样式 */
+.config-group-dropdown {
+  width: 300px;
+  
+  .ant-dropdown-menu {
+    padding: 0;
+  }
+}
+
+.config-group-list-container {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  width: 300px;
+}
+
+.config-group-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.config-group-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  position: relative;
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+  
+  &-active {
+    background-color: #e6f7ff;
+  }
+  
+  &-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.config-group-name {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.config-group-selected-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #1890ff;
+  font-size: 16px;
 }
 </style> 
