@@ -30,150 +30,155 @@
       <!-- 对比模式下的过滤器 -->
       <template v-if="compareMode">
         <div class="version-compare-container">
+          <!-- 版本比较行 -->
           <div class="version-compare-row">
-            <span class="compare-text">Comparing Changes in:</span>
-            
-            <!-- 第一个版本选择器 -->
-            <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
-              <a-button style="width: 120px" class="filter-select">
-                {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
-                <a-icon type="down" />
-              </a-button>
-              <div slot="overlay" class="version-list-container">
-                <div class="version-list-header">
-                  <a-input-search 
-                    placeholder="搜索" 
-                    style="width: 100%"
-                    @change="onVersionSearchChange"
-                    v-model="versionSearchKeyword"
-                  />
-                </div>
-                <div class="version-list">
-                  <div 
-                    v-for="(versionItem, index) in filteredVersionList" 
-                    :key="index"
-                    class="version-item"
-                    :class="{ 'version-item-active': currentVersion === versionItem.version }"
-                  >
-                    <div class="version-item-content" @click="changeVersion(versionItem.version)">
-                      <div class="version-item-header">
-                        <span class="version-number">版本 {{ versionItem.version }}</span>
-                        <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+            <div class="compare-header-section">
+              <span class="compare-text">Comparing Changes in:</span>
+              
+              <!-- 第一个版本选择器 -->
+              <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+                <a-button style="width: 120px" class="filter-select">
+                  {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+                  <a-icon type="down" />
+                </a-button>
+                <div slot="overlay" class="version-list-container">
+                  <div class="version-list-header">
+                    <a-input-search 
+                      placeholder="搜索" 
+                      style="width: 100%"
+                      @change="onVersionSearchChange"
+                      v-model="versionSearchKeyword"
+                    />
+                  </div>
+                  <div class="version-list">
+                    <div 
+                      v-for="(versionItem, index) in filteredVersionList" 
+                      :key="index"
+                      class="version-item"
+                      :class="{ 'version-item-active': currentVersion === versionItem.version }"
+                    >
+                      <div class="version-item-content" @click="changeVersion(versionItem.version)">
+                        <div class="version-item-header">
+                          <span class="version-number">版本 {{ versionItem.version }}</span>
+                          <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                        </div>
+                        <div class="version-item-description">{{ versionItem.description }}</div>
+                        <div class="version-item-footer">
+                          <span>{{ versionItem.editor }}</span>
+                          <span>编辑于 {{ versionItem.editTime }}</span>
+                        </div>
+                        <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
                       </div>
-                      <div class="version-item-description">{{ versionItem.description }}</div>
-                      <div class="version-item-footer">
-                        <span>{{ versionItem.editor }}</span>
-                        <span>编辑于 {{ versionItem.editTime }}</span>
-                      </div>
-                      <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
                     </div>
                   </div>
                 </div>
-              </div>
-            </a-dropdown>
-            
-            <span class="compare-text">with</span>
-            
-            <!-- 第二个版本选择器 -->
-            <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
-              <a-button style="width: 120px" class="filter-select">
-                {{ compareVersion !== undefined ? `版本 ${compareVersion}` : '选择版本' }}
-                <a-icon type="down" />
-              </a-button>
-              <div slot="overlay" class="version-list-container">
-                <div class="version-list-header">
-                  <a-input-search 
-                    placeholder="搜索" 
-                    style="width: 100%"
-                    @change="onCompareVersionSearchChange"
-                    v-model="compareVersionSearchKeyword"
-                  />
-                </div>
-                <div class="version-list">
-                  <div 
-                    v-for="(versionItem, index) in filteredCompareVersionList" 
-                    :key="index"
-                    class="version-item"
-                    :class="{ 'version-item-active': compareVersion === versionItem.version }"
-                  >
-                    <div class="version-item-content" @click="changeCompareVersion(versionItem.version)">
-                      <div class="version-item-header">
-                        <span class="version-number">版本 {{ versionItem.version }}</span>
-                        <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+              </a-dropdown>
+              
+              <span class="compare-text">with</span>
+              
+              <!-- 第二个版本选择器 -->
+              <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
+                <a-button style="width: 120px" class="filter-select">
+                  {{ compareVersion !== undefined ? `版本 ${compareVersion}` : '选择版本' }}
+                  <a-icon type="down" />
+                </a-button>
+                <div slot="overlay" class="version-list-container">
+                  <div class="version-list-header">
+                    <a-input-search 
+                      placeholder="搜索" 
+                      style="width: 100%"
+                      @change="onCompareVersionSearchChange"
+                      v-model="compareVersionSearchKeyword"
+                    />
+                  </div>
+                  <div class="version-list">
+                    <div 
+                      v-for="(versionItem, index) in filteredCompareVersionList" 
+                      :key="index"
+                      class="version-item"
+                      :class="{ 'version-item-active': compareVersion === versionItem.version }"
+                    >
+                      <div class="version-item-content" @click="changeCompareVersion(versionItem.version)">
+                        <div class="version-item-header">
+                          <span class="version-number">版本 {{ versionItem.version }}</span>
+                          <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
+                        </div>
+                        <div class="version-item-description">{{ versionItem.description }}</div>
+                        <div class="version-item-footer">
+                          <span>{{ versionItem.editor }}</span>
+                          <span>编辑于 {{ versionItem.editTime }}</span>
+                        </div>
+                        <a-icon v-if="compareVersion === versionItem.version" type="check" class="version-selected-icon" />
                       </div>
-                      <div class="version-item-description">{{ versionItem.description }}</div>
-                      <div class="version-item-footer">
-                        <span>{{ versionItem.editor }}</span>
-                        <span>编辑于 {{ versionItem.editTime }}</span>
-                      </div>
-                      <a-icon v-if="compareVersion === versionItem.version" type="check" class="version-selected-icon" />
                     </div>
                   </div>
                 </div>
-              </div>
-            </a-dropdown>
-            
-            <!-- 关闭对比按钮 -->
-            <a-button 
-              type="link" 
-              class="close-compare-btn"
-              @click="closeCompareMode"
-            >
-              <a-icon type="close" />
-            </a-button>
-          </div>
-        </div>
-        
-        <!-- 角色组和筛选放在下面一行 -->
-        <div class="filter-controls-row">
-          <div class="filter-item">
-            <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
-              <a-button style="width: 200px" class="filter-select">
-                {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
-                <a-icon type="down" />
+              </a-dropdown>
+              
+              <!-- 关闭对比按钮 -->
+              <a-button 
+                type="link" 
+                class="close-compare-btn"
+                @click="closeCompareMode"
+              >
+                <a-icon type="close" />
               </a-button>
-              <div slot="overlay" class="config-group-list-container">
-                <div class="config-group-list">
-                  <div 
-                    v-for="item in GroupList" 
-                    :key="item.id"
-                    class="config-group-item"
-                    :class="{ 'config-group-item-active': currentId === item.id }"
-                    @click="changeConfigGroup(item.id)"
-                  >
-                    <div class="config-group-item-header">
-                      <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
-                    </div>
-                    <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
-                  </div>
-                </div>
-              </div>
-            </a-dropdown>
+            </div>
           </div>
           
-          <!-- 添加显示模式选择 -->
-          <div class="filter-item">
-            <a-radio-group 
-              v-model="showOnlyDifferences" 
-              @change="handleShowModeChange"
-              buttonStyle="solid"
-              size="small"
-            >
-              <a-radio-button :value="true">只显示差异</a-radio-button>
-              <a-radio-button :value="false">显示全部</a-radio-button>
-            </a-radio-group>
-          </div>
-          
-          <div class="filter-item">
-            <a-input-search
-              v-model="searchKeyword"
-              placeholder="筛选中"
-              style="width: 200px"
-              class="filter-select"
-              @search="handleSearch"
-              @change="handleInputChange"
-              allowClear
-            />
+          <!-- 角色组、显示模式和筛选放在下方 -->
+          <div class="filter-controls">
+            <!-- 角色组选择 -->
+            <div class="filter-control-item">
+              <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
+                <a-button style="width: 200px" class="filter-select">
+                  {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+                  <a-icon type="down" />
+                </a-button>
+                <div slot="overlay" class="config-group-list-container">
+                  <div class="config-group-list">
+                    <div 
+                      v-for="item in GroupList" 
+                      :key="item.id"
+                      class="config-group-item"
+                      :class="{ 'config-group-item-active': currentId === item.id }"
+                      @click="changeConfigGroup(item.id)"
+                    >
+                      <div class="config-group-item-header">
+                        <span class="config-group-name">{{ item.roleGroupName }}</span>
+                      </div>
+                      <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
+                    </div>
+                  </div>
+                </div>
+              </a-dropdown>
+            </div>
+            
+            <!-- 显示模式选择 -->
+            <div class="filter-control-item">
+              <a-radio-group 
+                v-model="showOnlyDifferences" 
+                @change="handleShowModeChange"
+                buttonStyle="solid"
+                size="default"
+              >
+                <a-radio-button :value="true">只显示差异</a-radio-button>
+                <a-radio-button :value="false">显示全部</a-radio-button>
+              </a-radio-group>
+            </div>
+            
+            <!-- 筛选框 -->
+            <div class="filter-control-item">
+              <a-input-search
+                v-model="searchKeyword"
+                placeholder="筛选中"
+                style="width: 200px"
+                class="filter-select"
+                @search="handleSearch"
+                @change="handleInputChange"
+                allowClear
+              />
+            </div>
           </div>
         </div>
       </template>
@@ -1232,30 +1237,56 @@ export default {
 
 .version-compare-container {
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .version-compare-row {
   display: flex;
   align-items: center;
-  gap: 8px;
   background-color: #f5f7fa;
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
 }
 
-.filter-controls-row {
+.compare-header-section {
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-controls {
+  padding: 12px 16px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.filter-control-item {
+  display: flex;
+  align-items: center;
+}
+
+.filter-label {
+  width: 70px;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  text-align: right;
 }
 
 .compare-text {
   color: rgba(0, 0, 0, 0.65);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .close-compare-btn {
+  margin-left: auto;
   color: rgba(0, 0, 0, 0.45);
   font-size: 16px;
   
