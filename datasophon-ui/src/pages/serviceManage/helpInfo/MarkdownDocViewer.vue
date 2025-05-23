@@ -36,6 +36,7 @@ import { md } from '@/utils/markdownConfig';
 import services from '@/api/httpApi/services';
 import paths from '@/api/baseUrl'
 import './styles/markdown.less';
+import { throttle } from 'lodash';
 
 export default {
   name: 'MarkdownDocViewer',
@@ -62,20 +63,25 @@ export default {
       htmlContent: '',
       tocHtml: '',
       tocVisible: false,
-      backendBaseUrl: process.env.VUE_APP_API_BASE_URL || '', // 获取后端API基础URL
-      isScrolling: false, // 新增：跟踪滚动状态
-      scrollTimer: null // 新增：用于滚动状态延迟重置
+      backendBaseUrl: process.env.VUE_APP_API_BASE_URL || '',
+      isScrolling: false,
+      scrollTimer: null,
+      // 新增：用于标题观察
+      headingObserver: null,
+      activeHeadingId: null,
+      headingsMap: {}, // 标题ID到TOC链接的映射
+      lastScrollTop: 0, // 记录上次滚动位置，用于判断滚动方向
+      scrollDirection: 'down', // 滚动方向：'up' 或 'down'
+      visibleHeadings: [] // 当前可见的标题
     }
   },
   computed: {
-    // 新增：判断当前文档类型
     isHelpDoc() {
       return this.docType === 'help';
     },
     isGuideOrComponentDoc() {
       return this.docType === 'guide' || this.docType === 'component';
     },
-    // 新增：根据文档类型计算侧边栏样式类
     sidebarClass() {
       return {
         'fixed-sidebar': true,
@@ -86,7 +92,6 @@ export default {
     }
   },
   watch: {
-    // 监听文档类型变化，重新应用样式
     docType: {
       handler(newVal) {
         this.$nextTick(() => {
@@ -95,10 +100,17 @@ export default {
         });
       },
       immediate: true
+    },
+    // 监听活动标题ID变化，更新侧边栏高亮
+    activeHeadingId: {
+      handler(newId) {
+        if (newId) {
+          this.updateActiveTocItem(newId);
+        }
+      }
     }
   },
   created() {
-    // 配置图片和iframe的URL转换处理
     this.configureImageRenderer();
     this.configureIframeRenderer();
   },
@@ -106,26 +118,30 @@ export default {
     console.log('[TOC Mounted] Component mounted. Calling getServiceName and fetchDocData.');
     this.getServiceName();
     this.fetchDocData();
-    
-    // 添加全局返回顶部事件，确保按钮功能正常
     this.setupGlobalScrollToTop();
     
-    // 在组件挂载后设置侧边栏滚动
     this.$nextTick(() => {
       this.setupSidebarScrolling();
     });
   },
   beforeDestroy() {
-    // 移除全局事件
     document.removeEventListener('global-scroll-top', this.handleGlobalScrollTop);
-    
-    // 清理侧边栏滚动事件
     this.cleanupSidebarScrolling();
     
-    // 清除定时器
-    if (this.scrollTimer) {
-      clearTimeout(this.scrollTimer);
+    // 清理标题观察器
+    if (this.headingObserver) {
+      this.headingObserver.disconnect();
+      this.headingObserver = null;
     }
+    
+    // 移除内容滚动监听
+    const contentEl = document.querySelector('.markdown-content') || document.querySelector('.main-content');
+    if (contentEl) {
+      contentEl.removeEventListener('scroll', this.handleContentScroll);
+    }
+    
+    // 移除窗口滚动监听
+    window.removeEventListener('scroll', this.handleContentScroll);
   },
   methods: {
     // 配置图片URL转换
@@ -527,6 +543,306 @@ export default {
           sidebarEl.addEventListener('mouseleave', this.handleSidebarMouseLeave);
         }
       }
+      
+      // 设置内容滚动监听，用于更新目录高亮
+      this.$nextTick(() => {
+        this.setupHeadingObserver();
+      });
+    },
+    
+    // 设置标题观察器
+    setupHeadingObserver() {
+      // 给予更多时间让内容渲染完成
+      setTimeout(() => {
+        try {
+          // 获取所有标题元素，确保选择器正确
+          const headings = document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6');
+          
+          if (headings.length === 0) {
+            console.log('未找到标题元素，无法设置观察器');
+            return;
+          }
+          
+          console.log(`找到 ${headings.length} 个标题元素`);
+          
+          // 构建标题ID到目录链接的映射
+          this.buildHeadingsMap();
+          
+          // 优化IntersectionObserver配置
+          this.headingObserver = new IntersectionObserver(
+            this.handleHeadingIntersection,
+            {
+              root: null, // 使用视口作为根
+              rootMargin: '-10px 0px -90% 0px', // 调整顶部和底部偏移，更容易捕获标题
+              threshold: [0, 0.1] // 减少阈值数量，提高性能
+            }
+          );
+          
+          // 观察所有标题元素
+          headings.forEach(heading => {
+            // 确保每个标题都有ID
+            if (!heading.id) {
+              const id = this.generateHeadingId(heading.textContent.trim());
+              heading.id = id;
+            }
+            this.headingObserver.observe(heading);
+          });
+          
+          // 使用throttle限制滚动事件处理频率
+          const throttledContentScroll = throttle(this.handleContentScroll, 100);
+          window.addEventListener('scroll', throttledContentScroll, { passive: true });
+          
+          // 初始化高亮
+          this.$nextTick(() => {
+            this.updateActiveHeadingOnScroll();
+          });
+        } catch (error) {
+          console.error('设置标题观察器时出错:', error);
+        }
+      }, 800); // 增加延迟，确保内容完全渲染
+    },
+    
+    // 构建标题ID到目录链接的映射
+    buildHeadingsMap() {
+      try {
+        this.headingsMap = {};
+        
+        // 获取所有目录链接
+        const tocLinks = document.querySelectorAll('.toc-link');
+        console.log(`找到 ${tocLinks.length} 个目录链接`);
+        
+        tocLinks.forEach(link => {
+          const href = link.getAttribute('href');
+          if (href && href.startsWith('#')) {
+            // 对URL解码，确保特殊字符处理正确
+            const id = decodeURIComponent(href.substring(1));
+            
+            // 保存链接元素到映射
+            this.headingsMap[id] = link;
+            
+            // 添加调试日志
+            console.log(`映射标题ID: ${id} -> 链接文本: ${link.textContent.trim()}`);
+          }
+        });
+        
+        // 验证映射是否正确
+        const mappedIds = Object.keys(this.headingsMap);
+        console.log(`成功映射 ${mappedIds.length} 个标题ID`);
+        
+        // 检查文档中的标题是否都有对应的映射
+        const headings = document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6');
+        headings.forEach(heading => {
+          if (heading.id && !this.headingsMap[heading.id]) {
+            console.warn(`警告: 标题ID ${heading.id} 没有对应的目录链接`);
+          }
+        });
+      } catch (error) {
+        console.error('构建标题映射时出错:', error);
+      }
+    },
+    
+    // 生成标题ID
+    generateHeadingId(text) {
+      return text
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]/g, '')
+        .replace(/-+/g, '-');
+    },
+    
+    // 处理标题元素交叉
+    handleHeadingIntersection(entries) {
+      // 更新可见标题列表
+      entries.forEach(entry => {
+        const id = entry.target.id;
+        
+        if (entry.isIntersecting) {
+          // 确保不重复添加
+          if (!this.visibleHeadings.includes(id)) {
+            this.visibleHeadings.push(id);
+          }
+        } else {
+          // 从可见列表中移除
+          const index = this.visibleHeadings.indexOf(id);
+          if (index !== -1) {
+            this.visibleHeadings.splice(index, 1);
+          }
+        }
+      });
+      
+      // 如果有可见标题，更新活动标题
+      if (this.visibleHeadings.length > 0) {
+        // 按文档顺序排序可见标题
+        const sortedVisibleHeadings = this.getSortedVisibleHeadings();
+        
+        // 根据滚动方向选择活动标题
+        let activeId;
+        if (this.scrollDirection === 'down') {
+          activeId = sortedVisibleHeadings[0]; // 向下滚动时选择第一个可见标题
+        } else {
+          activeId = sortedVisibleHeadings[sortedVisibleHeadings.length - 1]; // 向上滚动时选择最后一个可见标题
+        }
+        
+        if (activeId && activeId !== this.activeHeadingId) {
+          this.activeHeadingId = activeId;
+        }
+      }
+    },
+    
+    // 新增方法：按文档顺序排序可见标题
+    getSortedVisibleHeadings() {
+      // 获取所有标题元素
+      const allHeadings = Array.from(document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6'));
+      
+      // 过滤出可见的标题
+      const visibleHeadingElements = allHeadings.filter(heading => 
+        heading.id && this.visibleHeadings.includes(heading.id)
+      );
+      
+      // 按文档顺序排序
+      visibleHeadingElements.sort((a, b) => {
+        const position = a.compareDocumentPosition(b);
+        return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+      
+      // 返回排序后的ID数组
+      return visibleHeadingElements.map(heading => heading.id);
+    },
+    
+    // 处理内容滚动
+    handleContentScroll: throttle(function() {
+      // 获取当前滚动位置
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      // 确定滚动方向
+      this.scrollDirection = scrollTop > this.lastScrollTop ? 'down' : 'up';
+      this.lastScrollTop = scrollTop;
+      
+      // 使用requestAnimationFrame优化性能
+      requestAnimationFrame(() => {
+        this.updateActiveHeadingOnScroll();
+      });
+    }, 100),
+    
+    // 根据滚动位置更新活动标题
+    updateActiveHeadingOnScroll() {
+      // 如果没有可见标题，尝试找到最接近的标题
+      if (this.visibleHeadings.length === 0) {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const headings = Array.from(document.querySelectorAll('.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6'));
+        
+        if (headings.length === 0) return;
+        
+        // 按位置排序
+        headings.sort((a, b) => {
+          return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+        });
+        
+        // 找到第一个在视口下方的标题
+        let closestHeading = null;
+        for (const heading of headings) {
+          const rect = heading.getBoundingClientRect();
+          if (rect.top > 0) {
+            closestHeading = heading;
+            break;
+          }
+        }
+        
+        // 如果找不到在视口下方的标题，使用最后一个标题
+        if (!closestHeading && headings.length > 0) {
+          closestHeading = headings[headings.length - 1];
+        }
+        
+        if (closestHeading && closestHeading.id) {
+          this.activeHeadingId = closestHeading.id;
+        }
+      }
+    },
+    
+    // 更新活动目录项
+    updateActiveTocItem(headingId) {
+      // 批量处理DOM操作，减少重排
+      this.$nextTick(() => {
+        try {
+          // 移除所有活动类
+          const allTocLinks = document.querySelectorAll('.toc-link.active');
+          allTocLinks.forEach(link => {
+            link.classList.remove('active');
+          });
+          
+          // 移除所有父级活动类
+          const allParentActiveLinks = document.querySelectorAll('.toc-link.parent-active');
+          allParentActiveLinks.forEach(link => {
+            link.classList.remove('parent-active');
+          });
+          
+          // 添加活动类到匹配的链接
+          const activeLink = this.headingsMap[headingId];
+          if (activeLink) {
+            activeLink.classList.add('active');
+            
+            // 确保活动项在侧边栏可见
+            this.scrollActiveTocItemIntoView(activeLink);
+            
+            // 添加高亮到父级目录项
+            this.highlightParentItems(activeLink);
+          }
+        } catch (error) {
+          console.error('更新活动目录项时出错:', error);
+        }
+      });
+    },
+    
+    // 新增方法：高亮父级目录项
+    highlightParentItems(activeLink) {
+      try {
+        // 查找父级目录项
+        let parent = activeLink.closest('.toc-item');
+        while (parent) {
+          // 查找父级的toc-link
+          const parentLink = parent.querySelector(':scope > .toc-link');
+          if (parentLink && parentLink !== activeLink) {
+            parentLink.classList.add('parent-active');
+          }
+          
+          // 向上查找下一级父项
+          parent = parent.parentElement?.closest('.toc-item');
+        }
+      } catch (error) {
+        console.error('高亮父级目录项时出错:', error);
+      }
+    },
+    
+    // 滚动侧边栏，确保活动项可见
+    scrollActiveTocItemIntoView(activeLink) {
+      const sidebarEl = this.$el.querySelector('.fixed-sidebar');
+      if (!sidebarEl || !this.isHelpDoc) return;
+      
+      try {
+        const linkRect = activeLink.getBoundingClientRect();
+        const sidebarRect = sidebarEl.getBoundingClientRect();
+        
+        const isVisible = (
+          linkRect.top >= sidebarRect.top &&
+          linkRect.bottom <= sidebarRect.bottom
+        );
+        
+        if (!isVisible) {
+          // 使用requestAnimationFrame优化滚动性能
+          requestAnimationFrame(() => {
+            // 计算滚动位置，使活动项在侧边栏中间
+            const scrollTop = activeLink.offsetTop - sidebarEl.offsetTop - (sidebarRect.height / 2) + (linkRect.height / 2);
+            
+            // 平滑滚动
+            sidebarEl.scrollTo({
+              top: scrollTop,
+              behavior: 'smooth'
+            });
+          });
+        }
+      } catch (error) {
+        console.error('滚动目录项到可见区域时出错:', error);
+      }
     },
     
     // 清理侧边栏滚动事件
@@ -688,6 +1004,46 @@ body .markdown-page .content-wrapper .fixed-sidebar {
 /* 强制覆盖所有可能的滚动条样式 */
 * {
   scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+}
+
+/* 目录链接活动状态样式 */
+.toc-link.active,
+a.toc-link.active,
+.toc-item .toc-link.active,
+[class*="toc-link"][class*="active"] {
+  color: #1890ff !important;
+  font-weight: 500 !important;
+  background-color: #e6f7ff !important;
+  border-left-color: #1890ff !important;
+  transition: all 0.3s ease !important;
+}
+
+/* 父级目录项高亮样式 */
+.toc-link.parent-active,
+a.toc-link.parent-active,
+.toc-item .toc-link.parent-active {
+  color: #1890ff !important;
+  border-left-color: #8cc8ff !important;
+  font-weight: 400 !important;
+}
+
+/* 目录链接悬停效果 */
+.toc-link:hover,
+a.toc-link:hover {
+  color: #1890ff !important;
+  background-color: #f0f7ff !important;
+  border-left-color: #8cc8ff !important;
+}
+
+/* 标题高亮效果 */
+.markdown-content h1.highlighted,
+.markdown-content h2.highlighted,
+.markdown-content h3.highlighted,
+.markdown-content h4.highlighted,
+.markdown-content h5.highlighted,
+.markdown-content h6.highlighted {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  transition: background-color 0.5s ease !important;
 }
 </style>
 
