@@ -212,40 +212,48 @@ public class DocServiceImpl implements DocService {
 
     @Override
     public Resource getImageResource(String imagePath) {
+        log.info("获取图片资源: {}", imagePath);
+
         try {
+            // 参数检查
             if (StrUtil.isBlank(imagePath)) {
                 log.warn("图片路径为空");
                 return null;
             }
-            
-            // 处理图片路径
-            String normalizedPath = imagePath;
-            
-            // 如果路径以docs开头，说明是绝对路径，否则认为是相对路径
-            if (!normalizedPath.startsWith(DOC_ROOT_DIR)) {
-                normalizedPath = DOC_ROOT_DIR + "/" + normalizedPath;
+
+            // 处理HTTP/HTTPS链接
+            if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+                log.info("处理远程图片URL: {}", imagePath);
+                return resourceLoader.getResource(imagePath);
             }
-            
-            log.info("查找图片资源: {}", normalizedPath);
-            
-            // 尝试从classpath加载
-            Resource resource = resourceLoader.getResource("classpath:" + normalizedPath);
-            if (resource.exists()) {
-                log.info("从classpath加载图片资源");
-                return resource;
+
+            // 去除可能的../前缀
+            String normalizedPath = StrUtil.removePrefix(imagePath, "../");
+
+            // 分离路径和文件名
+            String fileName = FileUtil.getName(normalizedPath);
+            String dirPath = StrUtil.removeSuffix(normalizedPath, fileName);
+            dirPath = StrUtil.removeSuffix(dirPath, "/"); // 去除可能的尾部斜杠
+
+            // 构建目录路径
+            String fullDirPath = DOC_ROOT_DIR + "/" + dirPath;
+            log.debug("查找目录: {}, 文件名: {}", fullDirPath, fileName);
+
+            // 列出目录下所有文件
+            File[] files = FileUtil.ls(fullDirPath);
+
+            // 查找匹配的文件
+            for (File file : files) {
+                if (StrUtil.equals(fileName, file.getName())) {
+                    log.info("找到匹配的图片: {}", file.getAbsolutePath());
+                    return resourceLoader.getResource("file:" + file.getAbsolutePath());
+                }
             }
-            
-            // 尝试从文件系统加载
-            resource = resourceLoader.getResource("file:" + normalizedPath);
-            if (resource.exists()) {
-                log.info("从文件系统加载图片资源");
-                return resource;
-            }
-            
-            log.warn("图片资源不存在: {}", normalizedPath);
+
+            log.warn("未找到匹配的图片: {}", fileName);
             return null;
         } catch (Exception e) {
-            log.error("获取图片资源出错", e);
+            log.error("获取图片资源出错: {}", e.getMessage(), e);
             return null;
         }
     }
