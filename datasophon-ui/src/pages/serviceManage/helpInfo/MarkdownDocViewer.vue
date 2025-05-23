@@ -7,7 +7,7 @@
       <template v-else>
         <div v-if="mdContent" class="content-wrapper" ref="contentWrapper">
           <!-- 固定侧边栏 - 使用计算属性动态设置类名 -->
-          <div :class="sidebarClass" v-if="tocVisible">
+          <div :class="sidebarClass" v-if="tocVisible" ref="sidebarRef">
             <div class="custom-nav" v-html="tocHtml" ref="tocContainerDiv"></div>
           </div>
           
@@ -85,6 +85,18 @@ export default {
       };
     }
   },
+  watch: {
+    // 监听文档类型变化，重新应用样式
+    docType: {
+      handler(newVal) {
+        this.$nextTick(() => {
+          console.log('文档类型变更为:', newVal);
+          this.setupSidebarScrolling();
+        });
+      },
+      immediate: true
+    }
+  },
   created() {
     // 配置图片和iframe的URL转换处理
     this.configureImageRenderer();
@@ -98,21 +110,17 @@ export default {
     // 添加全局返回顶部事件，确保按钮功能正常
     this.setupGlobalScrollToTop();
     
-    // 新增：为告警管理侧边栏添加滚动监听
+    // 在组件挂载后设置侧边栏滚动
     this.$nextTick(() => {
-      if (this.isHelpDoc && this.$refs.tocContainerDiv) {
-        this.$refs.tocContainerDiv.addEventListener('scroll', this.handleSidebarScroll);
-      }
+      this.setupSidebarScrolling();
     });
   },
   beforeDestroy() {
     // 移除全局事件
     document.removeEventListener('global-scroll-top', this.handleGlobalScrollTop);
     
-    // 新增：移除滚动监听
-    if (this.isHelpDoc && this.$refs.tocContainerDiv) {
-      this.$refs.tocContainerDiv.removeEventListener('scroll', this.handleSidebarScroll);
-    }
+    // 清理侧边栏滚动事件
+    this.cleanupSidebarScrolling();
     
     // 清除定时器
     if (this.scrollTimer) {
@@ -491,23 +499,197 @@ export default {
         });
       });
     },
-    // 新增：处理侧边栏滚动事件
-    handleSidebarScroll() {
+    // 设置侧边栏滚动处理
+    setupSidebarScrolling() {
+      // 先清理之前的事件监听
+      this.cleanupSidebarScrolling();
+      
+      // 获取侧边栏DOM元素
+      const sidebarEl = this.$el.querySelector('.fixed-sidebar');
+      const tocEl = this.$refs.tocContainerDiv;
+      
+      if (this.isHelpDoc && (sidebarEl || tocEl)) {
+        console.log('设置告警管理侧边栏滚动监听');
+        
+        // 直接在DOM元素上设置样式类
+        if (sidebarEl) {
+          sidebarEl.classList.add('help-sidebar');
+          sidebarEl.addEventListener('scroll', this.handleSidebarScroll);
+        }
+        
+        if (tocEl) {
+          tocEl.addEventListener('scroll', this.handleSidebarScroll);
+        }
+        
+        // 添加鼠标进入/离开事件
+        if (sidebarEl) {
+          sidebarEl.addEventListener('mouseenter', this.handleSidebarMouseEnter);
+          sidebarEl.addEventListener('mouseleave', this.handleSidebarMouseLeave);
+        }
+      }
+    },
+    
+    // 清理侧边栏滚动事件
+    cleanupSidebarScrolling() {
+      const sidebarEl = this.$el.querySelector('.fixed-sidebar');
+      const tocEl = this.$refs.tocContainerDiv;
+      
+      if (sidebarEl) {
+        sidebarEl.removeEventListener('scroll', this.handleSidebarScroll);
+        sidebarEl.removeEventListener('mouseenter', this.handleSidebarMouseEnter);
+        sidebarEl.removeEventListener('mouseleave', this.handleSidebarMouseLeave);
+      }
+      
+      if (tocEl) {
+        tocEl.removeEventListener('scroll', this.handleSidebarScroll);
+      }
+      
+      if (this.scrollTimer) {
+        clearTimeout(this.scrollTimer);
+      }
+    },
+    
+    // 处理侧边栏滚动
+    handleSidebarScroll(e) {
+      console.log('侧边栏滚动事件触发');
       this.isScrolling = true;
       
-      // 清除之前的定时器
+      // 直接在DOM上设置类
+      const sidebarEl = e.currentTarget.closest('.fixed-sidebar') || e.currentTarget;
+      if (sidebarEl) {
+        sidebarEl.classList.add('is-scrolling');
+      }
+      
       if (this.scrollTimer) {
         clearTimeout(this.scrollTimer);
       }
       
-      // 设置新的定时器，滚动停止1秒后隐藏滚动条
       this.scrollTimer = setTimeout(() => {
         this.isScrolling = false;
+        if (sidebarEl) {
+          sidebarEl.classList.remove('is-scrolling');
+        }
       }, 1000);
-    }
+    },
+    
+    // 鼠标进入侧边栏
+    handleSidebarMouseEnter(e) {
+      const sidebarEl = e.currentTarget;
+      if (sidebarEl) {
+        sidebarEl.classList.add('is-hovered');
+      }
+    },
+    
+    // 鼠标离开侧边栏
+    handleSidebarMouseLeave(e) {
+      const sidebarEl = e.currentTarget;
+      if (sidebarEl) {
+        sidebarEl.classList.remove('is-hovered');
+        
+        // 如果不是正在滚动，也移除滚动类
+        if (!this.isScrolling) {
+          sidebarEl.classList.remove('is-scrolling');
+        }
+      }
+    },
   }
 }
 </script>
+
+<style lang="less">
+/* 全局样式 - 不使用scoped，确保能覆盖所有样式 */
+
+/* 告警管理侧边栏滚动条样式 - 全局样式确保优先级 */
+.fixed-sidebar.help-sidebar,
+[class*="fixed-sidebar"][class*="help-sidebar"],
+div[class*="fixed-sidebar"] {
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+}
+
+/* 滚动条基础样式 */
+.fixed-sidebar::-webkit-scrollbar,
+[class*="fixed-sidebar"]::-webkit-scrollbar,
+div[class*="fixed-sidebar"]::-webkit-scrollbar {
+  width: 6px !important;
+  background-color: transparent !important;
+}
+
+.fixed-sidebar::-webkit-scrollbar-track,
+[class*="fixed-sidebar"]::-webkit-scrollbar-track,
+div[class*="fixed-sidebar"]::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.fixed-sidebar::-webkit-scrollbar-thumb,
+[class*="fixed-sidebar"]::-webkit-scrollbar-thumb,
+div[class*="fixed-sidebar"]::-webkit-scrollbar-thumb {
+  background: rgba(144, 147, 153, 0.3) !important;
+  border-radius: 6px !important;
+  transition: background-color 0.3s ease !important;
+}
+
+/* 滚动时样式 */
+.fixed-sidebar.is-scrolling::-webkit-scrollbar-thumb,
+.fixed-sidebar:hover::-webkit-scrollbar-thumb,
+[class*="fixed-sidebar"][class*="is-scrolling"]::-webkit-scrollbar-thumb,
+[class*="fixed-sidebar"]:hover::-webkit-scrollbar-thumb,
+div[class*="fixed-sidebar"]:hover::-webkit-scrollbar-thumb {
+  background: rgba(144, 147, 153, 0.5) !important;
+}
+
+/* 悬停效果 */
+.fixed-sidebar::-webkit-scrollbar-thumb:hover,
+[class*="fixed-sidebar"]::-webkit-scrollbar-thumb:hover,
+div[class*="fixed-sidebar"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(144, 147, 153, 0.7) !important;
+}
+
+/* 用户指南和组件介绍侧边栏 */
+.fixed-sidebar.flat-sidebar,
+[class*="fixed-sidebar"][class*="flat-sidebar"] {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+
+/* 直接添加全局样式，不依赖类名 */
+.custom-nav {
+  /* 确保内容容器也有滚动样式 */
+  &::-webkit-scrollbar {
+    width: 6px !important;
+    background-color: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(144, 147, 153, 0.3) !important;
+    border-radius: 6px !important;
+    transition: background-color 0.3s ease !important;
+  }
+  
+  &:hover::-webkit-scrollbar-thumb {
+    background: rgba(144, 147, 153, 0.5) !important;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(144, 147, 153, 0.7) !important;
+  }
+}
+
+/* 添加内联样式到DOM */
+body .markdown-page .content-wrapper .fixed-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+}
+
+/* 强制覆盖所有可能的滚动条样式 */
+* {
+  scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+}
+</style>
 
 <style lang="less" scoped>
 /* 全局添加平滑滚动效果 */
