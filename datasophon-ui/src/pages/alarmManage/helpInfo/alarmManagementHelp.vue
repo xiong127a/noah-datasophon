@@ -1,9 +1,9 @@
 <template>
   <div class="alarm-management-help">
     <a-card class="card-shadow">
-      <markdown-doc-viewer
+      <MarkdownDocViewer
         service-id="-991"
-        doc-type="guide"
+        doc-type="help"
         empty-text="暂无告警管理系统使用帮助信息"
       />
     </a-card>
@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import MarkdownDocViewer from '../../serviceManage/helpInfo/MarkdownDocViewer.vue';
+import MarkdownDocViewer from '../../../pages/serviceManage/helpInfo/MarkdownDocViewer.vue';
 
 export default {
   name: 'AlarmManagementHelp',
@@ -25,8 +25,18 @@ export default {
 .alarm-management-help {
   width: 100%;
   
-  // 覆盖MarkdownDocViewer组件中的侧边栏样式
-  .markdown-page .page-container .content-wrapper .sidebar .custom-nav {
+  // 覆盖目录侧边栏样式
+  :deep(.content-wrapper .sidebar) {
+    // 确保侧边栏固定
+    position: sticky !important;
+    top: 84px !important;
+    align-self: flex-start !important;
+    z-index: 5 !important;
+    background-color: #fff;
+    max-height: calc(100vh - 120px) !important;
+  }
+  
+  :deep(.sidebar .custom-nav) {
     // 添加滚动条样式
     overflow-y: auto;
     max-height: calc(100vh - 200px);

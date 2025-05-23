@@ -13,12 +13,23 @@
     font-weight: 600;
     line-height: 1.25;
     color: #262626;
+    scroll-margin-top: 130px;
     
     &.highlighted {
-      background-color: rgba(24, 144, 255, 0.1);
+      background-color: rgba(24, 144, 255, 0.15);
       border-radius: 4px;
       padding: 0.5rem;
       transition: background-color 0.5s;
+      border-left: 4px solid #1890ff;
+      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+      animation: highlight-pulse 2s ease-in-out;
+    }
+    
+    // 标题序号样式
+    &:not(h1)::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
     }
   }
 
@@ -149,5 +160,21 @@
     border: 0;
     background-color: #ebedf0;
     margin: 2rem 0;
+  }
+}
+
+// 高亮脉冲动画
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(24, 144, 255, 0.3);
+    box-shadow: 0 0 10px rgba(24, 144, 255, 0.4);
+  }
+  50% {
+    background-color: rgba(24, 144, 255, 0.15);
+    box-shadow: 0 0 15px rgba(24, 144, 255, 0.2);
+  }
+  100% {
+    background-color: rgba(24, 144, 255, 0.1);
+    box-shadow: 0 0 8px rgba(24, 144, 255, 0.1);
   }
 } 

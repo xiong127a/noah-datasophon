@@ -44,7 +44,7 @@ export default {
   refreshQueues: path + '/cluster/yarn/queue/refreshQueues', // 刷新队列到Yarn
   refreshQueuesYARN : path + '/cluster/queue/capacity/refreshToYarn',
   getConnectionInfo: path + '/cluster/service/instance/getConnectionInfo', // 获取服务连接信息
-  getServiceDoc: path + '/doc/getServiceDoc', // 获取服务文档（组件介绍/用户指南）
+  getServiceDoc: path + '/doc/getServiceDoc', // 获取服务文档（组件介绍/用户指南/帮助文档）
   getDocImage: path + '/doc/image', // 获取文档中的图片资源
   getServiceConfigFiles: path + '/api/service/config/getConfigFiles', // 获取服务配置文件列表
   downloadServiceConfigFile: path + '/api/service/config/downloadFile', // 下载单个配置文件
@@ -86,5 +86,5 @@ export default {
   getK8sDeploymentEvents: path + '/api/k8s/dashboard/deployment/events', // 获取Deployment事件
   
   // 添加资源统计接口
-  getK8sResourceStats: path + '/api/k8s/dashboard/resource-stats', // 获取K8s资源统计
+  getK8sResourceStats: path + '/api/k8s/dashboard/resource-stats' // 获取K8s资源统计
 }

@@ -18,14 +18,12 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.DocService;
 import com.datasophon.common.utils.Result;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -33,97 +31,88 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 文档服务实现
+ * 文档服务实现类
  */
 @Service
 @Slf4j
 public class DocServiceImpl implements DocService {
+    
+    /**
+     * 文档类型枚举
+     */
+    @Getter
+    private enum DocType {
+        COMPONENT("components", "-introduce"),
+        GUIDE("guides", "-user-guide"),
+        HELP("help", "-help");
+        
+        private final String dirName;
+        private final String suffix;
+        
+        DocType(String dirName, String suffix) {
+            this.dirName = dirName;
+            this.suffix = suffix;
+        }
 
-    @Autowired
-    private ClusterInfoService clusterInfoService;
+        public static DocType fromString(String typeStr) {
+            if (typeStr == null) {
+                return null;
+            }
+            
+            String type = typeStr.toLowerCase();
+            switch (type) {
+                case "component":
+                    return COMPONENT;
+                case "guide":
+                    return GUIDE;
+                case "help":
+                    return HELP;
+                default:
+                    return null;
+            }
+        }
+    }
+    
+    // 特殊服务ID常量
+    private static final int ALARM_MANAGEMENT_SERVICE_ID = -991;
+    
+    // 文档目录常量
+    private static final String DOC_ROOT_DIR = "docs";
+
+    // 依赖注入
 
     @Autowired
     private ClusterServiceInstanceService serviceInstanceService;
-
+    
     @Autowired
     private ResourceLoader resourceLoader;
 
-    /**
-     * 文档根目录
-     */
-    private static final String DOC_ROOT_DIR = "docs";
-
-    /**
-     * 组件介绍文档目录
-     */
-    private static final String COMPONENT_DOC_DIR = "components";
-
-    /**
-     * 用户指南文档目录
-     */
-    private static final String GUIDE_DOC_DIR = "guides";
-
-    /**
-     * 图片目录
-     */
-    private static final String IMAGES_DIR = "images";
-
     @Override
-    public Result getServiceDoc(Integer clusterId, Integer serviceId, String type) {
+    public Result getServiceDoc(Integer clusterId, Integer serviceId, String typeStr) {
         try {
-            // 检查参数
-            if (clusterId == null || serviceId == null || StrUtil.isBlank(type)) {
+            // 检查基本参数
+            if (clusterId == null || serviceId == null || StrUtil.isBlank(typeStr)) {
                 return Result.error("参数错误，请检查参数");
             }
-
-            // 特殊处理：获取告警管理帮助文档
-            if (serviceId.equals(-991) && "guide".equals(type)) {
-                log.info("获取告警管理帮助文档");
-                return getAlarmManagementHelp();
+            
+            // 获取文档类型
+            DocType docType = DocType.fromString(typeStr);
+            if (docType == null) {
+                return Result.error("文档类型错误");
             }
-
-            // 获取集群信息
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-            if (clusterInfo == null) {
-                return Result.error("集群不存在");
-            }
-
-            // 获取服务实例信息
-            ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceId);
-            if (serviceInstance == null) {
-                return Result.error("服务实例不存在");
-            }
-
+            
             // 获取服务名称
-            String serviceName = serviceInstance.getServiceName();
-
+            String serviceName = getServiceName(serviceId);
             if (StrUtil.isBlank(serviceName)) {
                 return Result.error("服务名称不能为空");
             }
-
-            if (StrUtil.equals("DS", serviceName)) {
-                serviceName = "DolphinScheduler";
-            }
-
-            // 确定文档类型目录
-            String docTypeDir;
-            String suffix;
-            if ("component".equals(type)) {
-                docTypeDir = COMPONENT_DOC_DIR;
-                suffix = "-introduce";
-            } else if ("guide".equals(type)) {
-                docTypeDir = GUIDE_DOC_DIR;
-                suffix = "-user-guide";
-            } else {
-                return Result.error("文档类型错误");
-            }
-
-            String docContent = readDocContent(serviceName.toLowerCase(), docTypeDir, suffix);
-
+            
+            // 读取文档内容
+            String docContent = readDocContent(serviceName.toLowerCase(), docType.getDirName(), docType.getSuffix());
+            
             if (docContent != null) {
                 return Result.success(docContent);
             } else {
@@ -134,123 +123,131 @@ public class DocServiceImpl implements DocService {
             return Result.error("获取服务文档出错: " + e.getMessage());
         }
     }
-
+    
     /**
-     * 获取告警管理帮助文档
+     * 获取服务名称
      * 
-     * @return 告警管理帮助文档内容
+     * @param serviceId 服务ID
+     * @return 服务名称
      */
-    private Result getAlarmManagementHelp() {
-        try {
-            // 尝试从多个位置读取告警管理帮助文档
-            String[] possiblePaths = {
-                    "docs/alarm-management-help.md", // 相对路径
-                    "datasophon-api/src/main/resources/docs/alarm-management-help.md", // 项目结构下的路径
-                    System.getProperty("user.dir") + "/docs/alarm-management-help.md", // 当前用户目录下
-                    System.getProperty("user.dir") + "/datasophon-api/src/main/resources/docs/alarm-management-help.md" // 完整路径
-            };
-
-            for (String path : possiblePaths) {
-                File file = new File(path);
-                if (file.exists()) {
-                    log.info("找到告警管理帮助文档：{}", path);
-                    String content = FileUtil.readString(file, StandardCharsets.UTF_8);
-                    return Result.success(content);
-                }
-            }
-
-            // 作为最后的尝试，直接从类路径资源中加载
-            try (InputStream is = DocServiceImpl.class.getClassLoader()
-                    .getResourceAsStream("docs/alarm-management-help.md")) {
-                if (is != null) {
-                    log.info("从类路径资源加载告警管理帮助文档");
-                    String content = IoUtil.read(is, StandardCharsets.UTF_8);
-                    return Result.success(content);
-                }
-            } catch (Exception e) {
-                log.warn("从类路径资源加载告警管理帮助文档失败：{}", e.getMessage());
-            }
-
-            log.warn("所有路径均未找到告警管理帮助文档");
-            return Result.error("告警管理帮助文档不存在");
-        } catch (Exception e) {
-            log.error("获取告警管理帮助文档出错", e);
-            return Result.error("获取告警管理帮助文档出错: " + e.getMessage());
+    private String getServiceName(Integer serviceId) {
+        // 特殊处理：告警管理
+        if (serviceId.equals(ALARM_MANAGEMENT_SERVICE_ID)) {
+            log.info("获取告警管理帮助文档");
+            return "alarm-management";
         }
+        
+        // 获取服务实例信息
+        ClusterServiceInstanceEntity serviceInstance = getServiceInstance(serviceId);
+        if (serviceInstance == null) {
+            return null;
+        }
+        
+        // 获取服务名称
+        String serviceName = serviceInstance.getServiceName();
+        
+        // 处理特殊服务名称
+        if (StrUtil.equals("DS", serviceName)) {
+            serviceName = "DolphinScheduler";
+        }
+        
+        return serviceName;
+    }
+    
+    /**
+     * 获取服务实例
+     * 
+     * @param serviceId 服务ID
+     * @return 服务实例，不存在则返回null
+     */
+    private ClusterServiceInstanceEntity getServiceInstance(Integer serviceId) {
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceId);
+        if (serviceInstance == null) {
+            log.warn("服务实例不存在: serviceId={}", serviceId);
+            return null;
+        }
+        return serviceInstance;
     }
 
     /**
      * 读取文档内容
      *
      * @param serviceName 服务名称
-     * @param docType     文档类型目录
+     * @param docDir 文档目录
+     * @param suffix 文件名后缀
      * @return 文档内容
      */
-    private String readDocContent(String serviceName, String docType, String suffix) {
+    private String readDocContent(String serviceName, String docDir, String suffix) {
         try {
-            // 构建文档路径，如：/docs/components/hdfs-introduce.md
-            String docName = String.format("%s.md", serviceName + suffix);
-
-            File[] ls = FileUtil.ls(DOC_ROOT_DIR + "/" + docType);
-
-            for (File file : ls) {
-                if (StrUtil.equals(docName, file.getName())) {
-                    return FileUtil.readString(file, StandardCharsets.UTF_8);
+            // 构建文档文件路径
+            String docFileName = serviceName + suffix + ".md";
+            String docPath = DOC_ROOT_DIR + "/" + docDir + "/" + docFileName;
+            log.info("查找文档路径: {}", docPath);
+            
+            // 尝试从classpath读取
+            try {
+                Resource resource = resourceLoader.getResource("classpath:" + docPath);
+                if (resource.exists()) {
+                    log.info("从classpath读取文档: {}", docPath);
+                    return FileUtil.readString(resource.getFile(), StandardCharsets.UTF_8);
                 }
+            } catch (Exception e) {
+                log.debug("从classpath读取文档失败: {}", docPath, e);
             }
-            log.warn("文档不存在: {}", docName);
+            
+            // 尝试从文件系统读取
+            File file = new File(docPath);
+            if (file.exists() && file.isFile()) {
+                log.info("从文件系统读取文档: {}", docPath);
+                return FileUtil.readString(file, StandardCharsets.UTF_8);
+            }
+            
+            log.warn("文档不存在: {}", docPath);
             return null;
         } catch (Exception e) {
-            log.error("读取文档出错: {}", e.getMessage(), e);
+            log.error("读取文档内容出错", e);
             return null;
         }
     }
 
     @Override
     public Resource getImageResource(String imagePath) {
-        log.info("获取图片资源: {}", imagePath);
-
         try {
-            // 参数检查
             if (StrUtil.isBlank(imagePath)) {
                 log.warn("图片路径为空");
                 return null;
             }
-
-            // 处理HTTP/HTTPS链接
-            if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
-                log.info("处理远程图片URL: {}", imagePath);
-                return resourceLoader.getResource(imagePath);
+            
+            // 处理图片路径
+            String normalizedPath = imagePath;
+            
+            // 如果路径以docs开头，说明是绝对路径，否则认为是相对路径
+            if (!normalizedPath.startsWith(DOC_ROOT_DIR)) {
+                normalizedPath = DOC_ROOT_DIR + "/" + normalizedPath;
             }
-
-            // 去除可能的../前缀
-            String normalizedPath = StrUtil.removePrefix(imagePath, "../");
-
-            // 分离路径和文件名
-            String fileName = FileUtil.getName(normalizedPath);
-            String dirPath = StrUtil.removeSuffix(normalizedPath, fileName);
-            dirPath = StrUtil.removeSuffix(dirPath, "/"); // 去除可能的尾部斜杠
-
-            // 构建目录路径
-            String fullDirPath = DOC_ROOT_DIR + "/" + dirPath;
-            log.debug("查找目录: {}, 文件名: {}", fullDirPath, fileName);
-
-            // 列出目录下所有文件
-            File[] files = FileUtil.ls(fullDirPath);
-
-            // 查找匹配的文件
-            for (File file : files) {
-                if (StrUtil.equals(fileName, file.getName())) {
-                    log.info("找到匹配的图片: {}", file.getAbsolutePath());
-                    return resourceLoader.getResource("file:" + file.getAbsolutePath());
-                }
+            
+            log.info("查找图片资源: {}", normalizedPath);
+            
+            // 尝试从classpath加载
+            Resource resource = resourceLoader.getResource("classpath:" + normalizedPath);
+            if (resource.exists()) {
+                log.info("从classpath加载图片资源");
+                return resource;
             }
-
-            log.warn("未找到匹配的图片: {}", fileName);
+            
+            // 尝试从文件系统加载
+            resource = resourceLoader.getResource("file:" + normalizedPath);
+            if (resource.exists()) {
+                log.info("从文件系统加载图片资源");
+                return resource;
+            }
+            
+            log.warn("图片资源不存在: {}", normalizedPath);
             return null;
         } catch (Exception e) {
-            log.error("获取图片资源出错: {}", e.getMessage(), e);
+            log.error("获取图片资源出错", e);
             return null;
         }
     }
+
 }

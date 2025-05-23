@@ -6,13 +6,13 @@
       </div>
       <template v-else>
         <div v-if="mdContent" class="content-wrapper" ref="contentWrapper">
-          <!-- 使用CSS定义的sticky侧边栏 -->
-          <div class="sidebar" v-if="tocVisible" ref="tocNav">
+          <!-- 固定侧边栏 - 使用计算属性动态设置类名 -->
+          <div :class="sidebarClass" v-if="tocVisible">
             <div class="custom-nav" v-html="tocHtml" ref="tocContainerDiv"></div>
           </div>
           
-          <!-- 右侧内容区 -->
-          <div class="main-content">
+          <!-- 右侧内容区，增加左边距给侧边栏腾出空间 -->
+          <div class="main-content main-with-sidebar">
             <!-- Markdown内容 -->
             <div class="markdown-content" v-html="htmlContent" ref="contentDiv"></div>
           </div>
@@ -36,7 +36,6 @@ import { md } from '@/utils/markdownConfig';
 import services from '@/api/httpApi/services';
 import paths from '@/api/baseUrl'
 import './styles/markdown.less';
-import './styles/markdownPage.less';
 
 export default {
   name: 'MarkdownDocViewer',
@@ -48,7 +47,7 @@ export default {
     docType: {
       type: String,
       required: true,
-      validator: value => ['component', 'guide'].includes(value)
+      validator: value => ['component', 'guide', 'help'].includes(value)
     },
     emptyText: {
       type: String,
@@ -63,7 +62,27 @@ export default {
       htmlContent: '',
       tocHtml: '',
       tocVisible: false,
-      backendBaseUrl: process.env.VUE_APP_API_BASE_URL || '' // 获取后端API基础URL
+      backendBaseUrl: process.env.VUE_APP_API_BASE_URL || '', // 获取后端API基础URL
+      isScrolling: false, // 新增：跟踪滚动状态
+      scrollTimer: null // 新增：用于滚动状态延迟重置
+    }
+  },
+  computed: {
+    // 新增：判断当前文档类型
+    isHelpDoc() {
+      return this.docType === 'help';
+    },
+    isGuideOrComponentDoc() {
+      return this.docType === 'guide' || this.docType === 'component';
+    },
+    // 新增：根据文档类型计算侧边栏样式类
+    sidebarClass() {
+      return {
+        'fixed-sidebar': true,
+        'help-sidebar': this.isHelpDoc,
+        'flat-sidebar': this.isGuideOrComponentDoc,
+        'is-scrolling': this.isHelpDoc && this.isScrolling
+      };
     }
   },
   created() {
@@ -78,10 +97,27 @@ export default {
     
     // 添加全局返回顶部事件，确保按钮功能正常
     this.setupGlobalScrollToTop();
+    
+    // 新增：为告警管理侧边栏添加滚动监听
+    this.$nextTick(() => {
+      if (this.isHelpDoc && this.$refs.tocContainerDiv) {
+        this.$refs.tocContainerDiv.addEventListener('scroll', this.handleSidebarScroll);
+      }
+    });
   },
   beforeDestroy() {
     // 移除全局事件
     document.removeEventListener('global-scroll-top', this.handleGlobalScrollTop);
+    
+    // 新增：移除滚动监听
+    if (this.isHelpDoc && this.$refs.tocContainerDiv) {
+      this.$refs.tocContainerDiv.removeEventListener('scroll', this.handleSidebarScroll);
+    }
+    
+    // 清除定时器
+    if (this.scrollTimer) {
+      clearTimeout(this.scrollTimer);
+    }
   },
   methods: {
     // 配置图片URL转换
@@ -303,18 +339,18 @@ export default {
     fetchDocData() {
       // 获取当前路由中的集群ID
       const clusterId = this.$route.params.clusterId || localStorage.getItem('clusterId');
-      console.log('[TOC Data] fetchDocData called. ClusterId:', clusterId, 'ServiceId:', this.serviceId, 'DocType:', this.docType);
+      console.log('[DocViewer] fetchDocData called. ClusterId:', clusterId, 'ServiceId:', this.serviceId, 'DocType:', this.docType);
       
       // 调用API获取文档
-      this.$axiosPost(services.getServiceDoc, {
+      this.$axiosJsonPost(services.getServiceDoc, {
         clusterId: clusterId,
         serviceId: this.serviceId,
         type: this.docType
       }).then(response => {
-        console.log('[TOC Data] fetchDocData - .then() callback. Response received:', response);
+        console.log('[DocViewer] API Response:', response);
         if (response.code === 200 && response.data) {
           this.mdContent = response.data;
-          console.log('[TOC Data] fetchDocData - Got data. mdContent length:', response.data.length);
+          console.log('[DocViewer] Content length:', response.data.length);
           
           // Always attempt to generate TOC by adding the marker
           const contentWithTocMarker = '[[toc]]\n\n' + response.data;
@@ -454,6 +490,20 @@ export default {
           oldLink.classList.add('active');
         });
       });
+    },
+    // 新增：处理侧边栏滚动事件
+    handleSidebarScroll() {
+      this.isScrolling = true;
+      
+      // 清除之前的定时器
+      if (this.scrollTimer) {
+        clearTimeout(this.scrollTimer);
+      }
+      
+      // 设置新的定时器，滚动停止1秒后隐藏滚动条
+      this.scrollTimer = setTimeout(() => {
+        this.isScrolling = false;
+      }, 1000);
     }
   }
 }
@@ -469,7 +519,222 @@ export default {
   scroll-behavior: smooth;
 }
 
-/* 固定显示的返回顶部按钮 - 居中显示 */
+/* 布局样式 */
+.markdown-page {
+  padding: 20px;
+  
+  .page-container {
+    min-height: 400px;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #fff;
+    padding: 24px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: visible;
+  }
+  
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+  }
+  
+  .content-wrapper {
+    display: flex; // Ensures sidebar and content are side-by-side
+    margin-top: 20px;
+    position: relative;
+    min-height: 500px;
+    overflow: visible; // Important for sticky positioning
+    gap: 24px; // Adds a gap between sidebar and main content if desired
+    
+    /* 基础侧边栏样式 */
+    .fixed-sidebar {
+      width: 280px;
+      position: sticky; // Changed from fixed to sticky
+      top: 84px; /* 距顶部间距 where it will stick */
+      align-self: flex-start; // Aligns sidebar to the top of the flex container
+      padding-right: 16px; // Adjusted padding
+      z-index: 10; // May or may not be needed with sticky
+      background-color: #fff; // Retained background
+      
+      .custom-nav {
+        width: 100%;
+        padding-bottom: 20px;
+      }
+    }
+    
+    /* 告警管理侧边栏样式 */
+    .help-sidebar {
+      max-height: calc(100vh - 120px); // 保留最大高度限制
+      overflow-y: auto; // 保留滚动功能
+      
+      /* 默认隐藏滚动条 */
+      &::-webkit-scrollbar {
+        width: 6px;
+        background-color: transparent;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: rgba(144, 147, 153, 0.3); // 更美观的灰色半透明滚动条
+        border-radius: 6px;
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+      
+      /* 滚动时显示滚动条 */
+      &.is-scrolling::-webkit-scrollbar-thumb {
+        opacity: 1;
+        background: rgba(144, 147, 153, 0.5); // 滚动时稍微加深颜色
+      }
+      
+      /* 悬停在滚动条上时的效果 */
+      &::-webkit-scrollbar-thumb:hover {
+        background: rgba(144, 147, 153, 0.7); // 悬停时更深的颜色
+      }
+    }
+    
+    /* 用户指南和组件介绍侧边栏样式 */
+    .flat-sidebar {
+      max-height: none; // 移除高度限制
+      overflow-y: visible; // 移除滚动功能
+    }
+    
+    .main-content { // This is the direct sibling in flex
+      flex: 1; // Takes remaining space
+      min-width: 0; // Important for flex item to shrink if necessary
+      min-height: 700px;
+      scroll-margin-top: 130px;
+      
+      h1, h2, h3, h4, h5, h6 {
+        scroll-margin-top: 130px;
+      }
+    }
+  }
+  
+  .no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+  }
+
+  /* TOC styles */
+  :deep(.toc-container) {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent;
+    
+    .toc-list {
+      padding-left: 0;
+      list-style-type: none;
+      margin: 0;
+      
+      .toc-item {
+        margin: 5px 0;
+        
+        .toc-link {
+          display: block;
+          padding: 8px 12px;
+          color: #595959;
+          text-decoration: none;
+          border-radius: 4px;
+          transition: all 0.3s;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 14px;
+          border-left: 3px solid transparent;
+          
+          &:hover {
+            color: #1890ff;
+            background-color: #f0f7ff;
+            border-left-color: #8cc8ff;
+          }
+          
+          &.active {
+            color: #1890ff;
+            font-weight: 500;
+            background-color: #e6f7ff;
+            border-left-color: #1890ff;
+          }
+        }
+        
+        .toc-list {
+          padding-left: 16px;
+          
+          .toc-item .toc-link {
+            padding-left: 24px;
+            font-size: 13px;
+            
+            & + .toc-list .toc-item .toc-link {
+              padding-left: 36px;
+              font-size: 12px;
+              color: #8c8c8c;
+              
+              &.active {
+                color: #1890ff;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  :deep(.highlighted) {
+    background-color: rgba(24, 144, 255, 0.1);
+    transition: background-color 0.5s;
+  } 
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 1200px) {
+  .markdown-page .content-wrapper {
+    .fixed-sidebar {
+      width: 240px; // Adjusted width for medium screens
+      padding-right: 12px; // Adjust padding if needed
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .markdown-page .content-wrapper {
+    flex-direction: column; // Stack elements
+    gap: 20px; // Gap when stacked
+    
+    .fixed-sidebar {
+      position: relative; // Not sticky on mobile
+      width: 100%; // Full width
+      top: auto; // Reset top
+      left: auto; // Reset left
+      margin-bottom: 20px; // Space below TOC when stacked
+      border-right: none;
+      border-bottom: 1px solid #e8e8e8; // Border at the bottom
+      align-self: auto; // Reset align-self
+      padding-right: 0; // Reset padding
+      
+      /* 移动端样式调整 */
+      &.help-sidebar {
+        max-height: 300px; // 限制移动端高度
+      }
+      
+      &.flat-sidebar {
+        max-height: none; // 移动端也不限制高度
+      }
+    }
+  }
+}
+
+/* Fixed Back Top Button - Centered */
 .fixed-back-top {
   position: fixed;
   left: 50%;
