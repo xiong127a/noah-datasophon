@@ -58,7 +58,7 @@
         <a-select 
           :value="currentId" 
           @change="changeConfigGroup"
-          style="width: 150px"
+          style="width: 200px"
           class="filter-select"
         >
           <a-select-option 
@@ -72,24 +72,16 @@
       </div>
       
       <div class="filter-item">
-        <a-tooltip placement="bottom">
-          <template slot="title">
-            <div class="filter-tooltip">
-              <div class="filter-tooltip-title">属性过滤器</div>
-              <div class="filter-tooltip-content">通过属性名称、值或描述输入关键字来过滤属性。</div>
-            </div>
-          </template>
-          <a-select 
-            :value="filterValue" 
-            @change="handleFilter"
-            style="width: 150px"
-            class="filter-select"
-            placeholder="筛选中"
-          >
-            <a-select-option value="all">全部</a-select-option>
-            <a-select-option value="modified">修改过的</a-select-option>
-          </a-select>
-        </a-tooltip>
+        <span class="filter-label">筛选</span>
+        <a-input-search
+          v-model="searchKeyword"
+          placeholder="筛选中"
+          style="width: 200px"
+          class="filter-select"
+          @search="handleSearch"
+          @change="handleInputChange"
+          allowClear
+        />
       </div>
     </div>
     
@@ -97,7 +89,7 @@
     <div class="config-area">
       <a-spin :spinning="loading">
         <div 
-          v-for="(group, groupName) in templateData"
+          v-for="(group, groupName) in filteredTemplateData"
           :key="groupName"
           class="config-panel"
         >
@@ -196,7 +188,7 @@ export default {
       },
       value: 0,
       // 新增过滤相关数据
-      filterValue: 'all',
+      searchKeyword: '',
       // 新增备注弹框相关数据
       saveDialogVisible: false,
       configDescription: '',
@@ -206,6 +198,44 @@ export default {
     ...mapState({
       steps: (state) => state.steps, //深拷贝的意义在于watch里面可以在Watch里面监听他的newval和oldVal的变化
     }),
+    // 添加计算属性，根据筛选条件过滤配置项
+    filteredTemplateData() {
+      if (!this.templateData || Object.keys(this.templateData).length === 0) {
+        return {};
+      }
+
+      // 如果没有搜索关键字，返回原始数据
+      if (!this.searchKeyword) {
+        return this.templateData;
+      }
+
+      const result = {};
+      
+      // 遍历所有配置组
+      Object.entries(this.templateData).forEach(([groupName, configItems]) => {
+        // 过滤符合条件的配置项
+        const filteredItems = configItems.filter(item => {
+          // 搜索label、name、value和description
+          const keyword = this.searchKeyword.toLowerCase();
+          const label = (item.label || '').toLowerCase();
+          const name = (item.name || '').replaceAll('!', '.').toLowerCase();
+          const value = String(item.value || '').toLowerCase();
+          const description = (item.description || '').toLowerCase();
+          
+          return label.includes(keyword) || 
+                 name.includes(keyword) || 
+                 value.includes(keyword) || 
+                 description.includes(keyword);
+        });
+        
+        // 如果过滤后有配置项，添加到结果中
+        if (filteredItems.length > 0) {
+          result[groupName] = filteredItems;
+        }
+      });
+      
+      return result;
+    }
   },
   methods: {
     ...mapActions("steps", ["setCommandType", "setCommandIds"]),
@@ -328,12 +358,18 @@ export default {
     // 新增配置组切换方法
     changeConfigGroup(val) {
       this.currentId = val;
+      // 重置筛选状态
+      this.searchKeyword = '';
       this.getConfigVersion();
     },
-    // 新增过滤方法
-    handleFilter(val) {
-      this.filterValue = val;
-      // 此处可以实现过滤逻辑
+    // 新增搜索方法
+    handleSearch(value) {
+      this.searchKeyword = value;
+    },
+    
+    // 处理输入变化
+    handleInputChange(e) {
+      this.searchKeyword = e.target.value;
     },
     
     handlearrayWithData(a) {
@@ -485,11 +521,15 @@ export default {
     },
     changeVersion(val) {
       this.currentVersion = val;
+      // 重置筛选状态
+      this.searchKeyword = '';
       this.getServiceConfigOption();
     },
     changeCasting(val) {
       console.log(val.target.value);
       this.currentId = val.target.value
+      // 重置筛选状态
+      this.searchKeyword = '';
       this.getConfigVersion()
     },
 
@@ -548,6 +588,9 @@ export default {
             this.$set(this.isGroupExpanded, name, false)
           }
         });
+        
+        // 重置筛选状态，确保数据加载后筛选功能正常工作
+        this.searchKeyword = '';
       }
       this.loading = false;
     },
@@ -644,6 +687,7 @@ export default {
       margin-right: 8px;
       color: rgba(0, 0, 0, 0.85);
       font-size: 14px;
+      min-width: 42px; /* 确保所有标签宽度一致 */
     }
   }
   
@@ -661,6 +705,37 @@ export default {
       .ant-select-selection__rendered {
         line-height: 30px;
       }
+    }
+    
+    /* 添加搜索框样式 */
+    /deep/ .ant-select-search {
+      width: 100%;
+      
+      .ant-select-search__field {
+        padding: 4px 11px;
+        width: 100% !important;
+      }
+    }
+    
+    /* 输入框样式 */
+    /deep/ .ant-input {
+      height: 32px;
+      border-radius: 2px;
+      
+      &:hover {
+        border-color: #40a9ff;
+      }
+      
+      &:focus {
+        border-color: #40a9ff;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+      }
+    }
+    
+    /* 搜索按钮样式 */
+    /deep/ .ant-input-search-button {
+      height: 32px;
+      border-radius: 0 2px 2px 0;
     }
   }
 }
