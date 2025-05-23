@@ -41,13 +41,14 @@
                   {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
                   <a-icon type="down" />
                 </a-button>
-                <div slot="overlay" class="version-list-container">
+                <div slot="overlay" class="version-list-container" @click.stop>
                   <div class="version-list-header">
                     <a-input-search 
                       placeholder="搜索" 
                       style="width: 100%"
                       @change="onVersionSearchChange"
                       v-model="versionSearchKeyword"
+                      @click.stop
                     />
                   </div>
                   <div class="version-list">
@@ -82,13 +83,14 @@
                   {{ compareVersion !== undefined ? `版本 ${compareVersion}` : '选择版本' }}
                   <a-icon type="down" />
                 </a-button>
-                <div slot="overlay" class="version-list-container">
+                <div slot="overlay" class="version-list-container" @click.stop>
                   <div class="version-list-header">
                     <a-input-search 
                       placeholder="搜索" 
                       style="width: 100%"
                       @change="onCompareVersionSearchChange"
                       v-model="compareVersionSearchKeyword"
+                      @click.stop
                     />
                   </div>
                   <div class="version-list">
@@ -135,7 +137,7 @@
                   {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
                   <a-icon type="down" />
                 </a-button>
-                <div slot="overlay" class="config-group-list-container">
+                <div slot="overlay" class="config-group-list-container" @click.stop>
                   <div class="config-group-list">
                     <div 
                       v-for="item in GroupList" 
@@ -191,13 +193,14 @@
               {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
               <a-icon type="down" />
             </a-button>
-            <div slot="overlay" class="version-list-container">
+            <div slot="overlay" class="version-list-container" @click.stop>
               <div class="version-list-header">
                 <a-input-search 
                   placeholder="搜索" 
                   style="width: 100%"
                   @change="onVersionSearchChange"
                   v-model="versionSearchKeyword"
+                  @click.stop
                 />
               </div>
               <div class="version-list">
@@ -241,7 +244,7 @@
               {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
               <a-icon type="down" />
             </a-button>
-            <div slot="overlay" class="config-group-list-container">
+            <div slot="overlay" class="config-group-list-container" @click.stop>
               <div class="config-group-list">
                 <div 
                   v-for="item in GroupList" 
@@ -503,14 +506,35 @@ export default {
         return [];
       }
 
-      const keyword = this.versionSearchKeyword.toLowerCase();
+      // 确保versionSearchKeyword是字符串
+      const searchKeyword = this.versionSearchKeyword || '';
+      const keyword = typeof searchKeyword === 'string' ? searchKeyword.toLowerCase() : '';
+      
+      if (!keyword) {
+        // 如果没有搜索关键字，返回所有版本（除了对比模式下已选择的compareVersion）
+        return this.verSionList.filter(item => {
+          const shouldFilter = this.compareMode && this.compareVersion && item.version === this.compareVersion;
+          return !shouldFilter;
+        });
+      }
+      
       return this.verSionList.filter(item => {
-        // 将version转换为字符串再进行小写转换
-        const label = String(item.version || '').toLowerCase();
+        // 搜索版本号
+        const version = String(item.version || '').toLowerCase();
+        // 搜索描述
         const description = (item.description || '').toLowerCase();
+        // 搜索用户名
+        const editor = (item.editor || '').toLowerCase();
+        // 搜索修改时间
+        const editTime = (item.editTime || '').toLowerCase();
         
         // 添加过滤条件：在对比模式下过滤掉已选择的compareVersion
-        const matchesKeyword = label.includes(keyword) || description.includes(keyword);
+        const matchesKeyword = 
+          version.includes(keyword) || 
+          description.includes(keyword) || 
+          editor.includes(keyword) || 
+          editTime.includes(keyword);
+          
         const shouldFilter = this.compareMode && this.compareVersion && item.version === this.compareVersion;
         
         return matchesKeyword && !shouldFilter;
@@ -521,15 +545,34 @@ export default {
         return [];
       }
 
-      const keyword = this.compareVersionSearchKeyword.toLowerCase();
+      // 确保compareVersionSearchKeyword是字符串
+      const searchKeyword = this.compareVersionSearchKeyword || '';
+      const keyword = typeof searchKeyword === 'string' ? searchKeyword.toLowerCase() : '';
+      
+      if (!keyword) {
+        // 如果没有搜索关键字，返回所有版本（除了当前选择的版本）
+        return this.verSionList.filter(item => item.version !== this.currentVersion);
+      }
+      
       // 过滤掉当前已选择的版本，防止自己和自己比较
       return this.verSionList.filter(item => {
-        // 将version转换为字符串再进行小写转换
-        const label = String(item.version || '').toLowerCase();
+        // 搜索版本号
+        const version = String(item.version || '').toLowerCase();
+        // 搜索描述
         const description = (item.description || '').toLowerCase();
+        // 搜索用户名
+        const editor = (item.editor || '').toLowerCase();
+        // 搜索修改时间
+        const editTime = (item.editTime || '').toLowerCase();
+        
         // 添加过滤条件：排除当前选择的版本
-        return (label.includes(keyword) || description.includes(keyword)) && 
-               item.version !== this.currentVersion;
+        const matchesKeyword = 
+          version.includes(keyword) || 
+          description.includes(keyword) || 
+          editor.includes(keyword) || 
+          editTime.includes(keyword);
+          
+        return matchesKeyword && item.version !== this.currentVersion;
       });
     },
     // 添加计算属性，用于过滤对比数据
@@ -1048,10 +1091,20 @@ export default {
       this.handleSubmit();
     },
     onVersionSearchChange(value) {
-      this.versionSearchKeyword = value;
+      // 检查是否为事件对象，如果是则从event.target.value中提取值
+      if (value && typeof value === 'object' && value.target) {
+        this.versionSearchKeyword = value.target.value;
+      } else {
+        this.versionSearchKeyword = value;
+      }
     },
     onCompareVersionSearchChange(value) {
-      this.compareVersionSearchKeyword = value;
+      // 检查是否为事件对象，如果是则从event.target.value中提取值
+      if (value && typeof value === 'object' && value.target) {
+        this.compareVersionSearchKeyword = value.target.value;
+      } else {
+        this.compareVersionSearchKeyword = value;
+      }
     },
     // 获取配置组名称
     getGroupName(id) {
