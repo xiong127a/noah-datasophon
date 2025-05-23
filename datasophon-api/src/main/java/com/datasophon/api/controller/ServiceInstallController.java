@@ -55,10 +55,10 @@ public class ServiceInstallController {
     @RequestMapping("/saveServiceConfig")
     @UserPermission
     public Result saveServiceConfig(Integer clusterId, String serviceName, String serviceConfig, Integer roleGroupId,
-            String description) {
+            String description, Integer userId, String username) {
         JSONArray jsonArray = JSONArray.parseArray(serviceConfig);
         List<ServiceConfig> list = jsonArray.toJavaList(ServiceConfig.class);
-        return serviceInstallService.saveServiceConfig(clusterId, serviceName, list, roleGroupId, description);
+        return serviceInstallService.saveServiceConfig(clusterId, serviceName, list, roleGroupId, description, userId, username);
     }
 
     /**

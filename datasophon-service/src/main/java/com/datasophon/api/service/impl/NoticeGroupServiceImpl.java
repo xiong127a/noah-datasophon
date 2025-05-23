@@ -134,7 +134,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                     .getConfigByRoleGroupId(roleInstanceEntity.getRoleGroupId());
             List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
             serviceInstallService.saveServiceConfig(roleInstanceEntity.getClusterId(), "ALERTMANAGER", serviceConfig,
-                    roleGroupConfig.getRoleGroupId(), "(AUTO) 生成alertManager 配置信息");
+                    roleGroupConfig.getRoleGroupId(), "(AUTO) 生成alertManager 配置信息",-1,"system");
         }
 
         // 调用配置生成

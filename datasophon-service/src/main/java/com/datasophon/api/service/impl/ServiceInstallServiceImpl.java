@@ -154,7 +154,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     @Override
     public Result saveServiceConfig(
             Integer clusterId, String serviceName, List<ServiceConfig> list,
-            Integer roleGroupId, String description) {
+            Integer roleGroupId, String description, Integer userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ServiceConfigMap.put(clusterInfo.getClusterCode() + UNDERLINE + serviceName + CONFIG,
                 list);
@@ -199,13 +199,28 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceInstanceEntity = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
             ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = saveServiceInstanceRoleGroup(clusterId,
                     serviceName, serviceInstanceEntity);
+            
+            // 如果描述为空，使用默认描述
+            String finalDescription = description;
+            if (StringUtils.isBlank(finalDescription)) {
+                finalDescription = "初始配置";
+            }
+            
             saveServiceRoleGroupConfig(
-                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, description);
+                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, finalDescription, userId, username);
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
                     clusterServiceInstanceRoleGroup.getId());
         } else {
             Set<String> configUpdateRoleSet = new HashSet<>();
+            List<ServiceConfig> originalConfigs = listServiceConfigByServiceInstance(serviceInstanceEntity);
+            
+            // 如果描述为空，生成修改内容的描述
+            String finalDescription = description;
+            if (StringUtils.isBlank(finalDescription)) {
+                finalDescription = generateChangeDescription(originalConfigs, list);
+            }
+            
             configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
             ClusterServiceRoleGroupConfig roleGroupConfig;
             if (Objects.isNull(roleGroupId)) {
@@ -218,7 +233,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
                     roleGroupConfig.getRoleGroupId());
-            if (configUpdateRoleSet.size() > 0) {
+            if (!configUpdateRoleSet.isEmpty()) {
                 ClusterServiceRoleGroupConfig newRoleGroupConfig = new ClusterServiceRoleGroupConfig();
                 if (Objects.isNull(roleGroupId)) {
                     ClusterServiceInstanceRoleGroup roleGroup = saveNewRoleGroup(serviceInstanceEntity);
@@ -247,8 +262,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 newRoleGroupConfig.setCreateTime(new Date());
                 newRoleGroupConfig.setUpdateTime(new Date());
                 newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
-                buildConfig(list, configFileMap, newRoleGroupConfig, description);
+                buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
                 groupConfigService.save(newRoleGroupConfig);
+                // 保存配置版本信息，包含用户信息
+                saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId, username, finalDescription);
             }
             // update service instance
             serviceInstanceEntity.setUpdateTime(new Date());
@@ -259,7 +276,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+                                                HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -385,7 +402,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
 
         try (FileInputStream inputStream = new FileInputStream(file);
-                OutputStream out = response.getOutputStream()) {
+             OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = inputStream.read(buffer)) != -1) {
@@ -508,16 +525,20 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             List<ServiceConfig> list,
             HashMap<Generators, List<ServiceConfig>> configFileMap,
             ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup,
-            String description) {
+            String description,
+            Integer userId,
+            String username) {
         ClusterServiceRoleGroupConfig roleGroupConfig = new ClusterServiceRoleGroupConfig();
         roleGroupConfig.setRoleGroupId(clusterServiceInstanceRoleGroup.getId());
         roleGroupConfig.setClusterId(clusterId);
+        roleGroupConfig.setServiceName(serviceName);
         roleGroupConfig.setCreateTime(new Date());
         roleGroupConfig.setUpdateTime(new Date());
-        roleGroupConfig.setServiceName(serviceName);
         buildConfig(list, configFileMap, roleGroupConfig, description);
         roleGroupConfig.setConfigVersion(1);
         groupConfigService.save(roleGroupConfig);
+        // 保存配置版本信息，包含用户信息
+        saveConfigVersionInfo(roleGroupConfig, "GROUP_CONFIG", roleGroupConfig.getId(), userId, username, description);
     }
 
     private ClusterServiceInstanceRoleGroup saveServiceInstanceRoleGroup(
@@ -694,7 +715,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         roleGroupConfig.setConfigFileJsonMd5(SecureUtil.md5(JSON.toJSONString(configFileMap)));
 
         // 同步保存配置版本详情
-        saveConfigVersionInfo(roleGroupConfig, "ROLE_GROUP", roleGroupConfig.getRoleGroupId());
+        saveConfigVersionInfo(roleGroupConfig, "ROLE_GROUP", roleGroupConfig.getRoleGroupId(), null, "system", description);
     }
 
     /**
@@ -703,16 +724,19 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param roleGroupConfig 角色组配置
      * @param refType         版本类型
      * @param refId           版本ID
+     * @param userId          用户ID
+     * @param username        用户名
      */
-    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId) {
+    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId, Integer userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
         configVersionInfo.setVersion(currentMaxVersion + 1);
         configVersionInfo.setRefType(refType);
         configVersionInfo.setRefId(refId);
-        configVersionInfo.setDescription("Configuration update"); // 使用默认描述
-        configVersionInfo.setEditor("system"); // 使用默认编辑者
+        configVersionInfo.setDescription(description); // 使用传入的描述
+        configVersionInfo.setEditor(username != null ? username : "system"); // 使用用户名作为编辑者，如果为空则使用默认值
+        configVersionInfo.setUserId(userId); // 添加用户ID
         configVersionInfo.setEditTime(new Date());
         configVersionInfo.setIsCurrent(true);
         configVersionInfo.setServiceCode(roleGroupConfig.getServiceName());
@@ -779,6 +803,78 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 .getRoleGroupByServiceInstanceId(serviceInstance.getId());
         ClusterServiceRoleGroupConfig config = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
+    }
+
+    /**
+     * 生成修改内容的描述
+     * 
+     * @param originalConfigs 原始配置
+     * @param newConfigs 新配置
+     * @return 修改内容的描述
+     */
+    private String generateChangeDescription(List<ServiceConfig> originalConfigs, List<ServiceConfig> newConfigs) {
+        // 创建原始配置的Map，便于查找
+        Map<String, ServiceConfig> originalConfigMap = originalConfigs.stream()
+                .collect(Collectors.toMap(ServiceConfig::getName, config -> config, (v1, v2) -> v1));
+        
+        // 创建新配置的Map，便于查找
+        Map<String, ServiceConfig> newConfigMap = newConfigs.stream()
+                .collect(Collectors.toMap(ServiceConfig::getName, config -> config, (v1, v2) -> v1));
+        
+        // 收集修改的配置项
+        List<String> changedConfigs = new ArrayList<>();
+        
+        // 检查修改的配置项
+        for (ServiceConfig newConfig : newConfigs) {
+            String configName = newConfig.getName();
+            Object newValue = newConfig.getValue();
+            
+            if (originalConfigMap.containsKey(configName)) {
+                ServiceConfig originalConfig = originalConfigMap.get(configName);
+                Object originalValue = originalConfig.getValue();
+                
+                // 如果值不相等，添加到修改列表
+                if (!Objects.equals(newValue, originalValue)) {
+                    String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
+                    changedConfigs.add(label);
+                }
+            } else {
+                // 新增的配置项
+                String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
+                changedConfigs.add(label);
+            }
+        }
+        
+        // 检查删除的配置项
+        for (ServiceConfig originalConfig : originalConfigs) {
+            String configName = originalConfig.getName();
+            if (!newConfigMap.containsKey(configName)) {
+                String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel() : configName;
+                changedConfigs.add(label);
+            }
+        }
+        
+        // 如果没有修改，返回默认描述
+        if (changedConfigs.isEmpty()) {
+            return "配置更新";
+        }
+        
+        // 限制最多显示5个修改项
+        int maxItems = Math.min(changedConfigs.size(), 5);
+        StringBuilder sb = new StringBuilder("修改了 ");
+        for (int i = 0; i < maxItems; i++) {
+            sb.append(changedConfigs.get(i));
+            if (i < maxItems - 1) {
+                sb.append(", ");
+            }
+        }
+        
+        // 如果有更多修改项，添加省略号
+        if (changedConfigs.size() > maxItems) {
+            sb.append(" 等");
+        }
+        
+        return sb.toString();
     }
 
 }

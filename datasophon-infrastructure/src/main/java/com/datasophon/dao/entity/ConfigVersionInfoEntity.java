@@ -17,14 +17,13 @@
 
 package com.datasophon.dao.entity;
 
-import java.io.Serializable;
-import java.util.Date;
-
-import lombok.Data;
-
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.IdType;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * 配置版本详情表
@@ -77,4 +76,6 @@ public class ConfigVersionInfoEntity implements Serializable {
      * 服务代码
      */
     private String serviceCode;
+
+    private Integer userId;
 }

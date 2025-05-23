@@ -137,6 +137,7 @@
             :rows="4"
             style="width: 100%"
           />
+          <div class="placeholder-hint">（如不填写，系统将自动生成包含修改内容的备注）</div>
         </a-form-item>
       </div>
     </a-modal>
@@ -192,6 +193,7 @@ export default {
       // 新增备注弹框相关数据
       saveDialogVisible: false,
       configDescription: '',
+      placeholderText: '请输入配置备注信息\n（如不填写，系统将自动生成包含修改内容的备注）',
     };
   },
   computed: {
@@ -520,16 +522,22 @@ export default {
             item => !(!item.required && item.hidden)
         );
 
-        // 8. 构建保存参数
+        // 8. 获取当前用户信息
+        const userStr = localStorage.getItem(process.env.VUE_APP_USER_KEY);
+        const currentUser = userStr ? JSON.parse(userStr) : {};
+
+        // 9. 构建保存参数
         const saveParam = {
           clusterId: this.clusterId,
           serviceName: this.serviceName,
           serviceConfig: JSON.stringify(filterParam),
           roleGroupId: this.currentId,
-          description: this.configDescription
+          description: this.configDescription,
+          userId: currentUser.id, // 添加用户ID
+          username: currentUser.username // 添加用户名
         };
 
-        // 9. 提交保存
+        // 10. 提交保存
         const res = await this.$axiosPost(global.API.saveServiceConfig, saveParam);
         if (res.code === 200) {
           this.$message.success("保存成功");
@@ -856,5 +864,11 @@ export default {
     height: 32px;
     font-size: 14px;
   }
+}
+
+.placeholder-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
 }
 </style> 
