@@ -54,8 +54,8 @@ public class ClusterServiceInstanceController {
      * 获取服务角色类型列表
      */
     @RequestMapping("/configVersionCompare")
-    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId) {
-        return clusterServiceInstanceService.configVersionCompare(serviceInstanceId, roleGroupId);
+    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,Boolean showOnlyDifferences) {
+        return clusterServiceInstanceService.configVersionCompare(serviceInstanceId, roleGroupId,showOnlyDifferences);
     }
 
     /**

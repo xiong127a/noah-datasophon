@@ -42,7 +42,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
 
     Result getServiceRoleType(Integer serviceInstanceId);
 
-    Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId);
+    Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences);
 
     Result delServiceInstance(Integer serviceInstanceId);
 

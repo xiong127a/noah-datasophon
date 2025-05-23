@@ -151,6 +151,19 @@
             </a-dropdown>
           </div>
           
+          <!-- 添加显示模式选择 -->
+          <div class="filter-item">
+            <a-radio-group 
+              v-model="showOnlyDifferences" 
+              @change="handleShowModeChange"
+              buttonStyle="solid"
+              size="small"
+            >
+              <a-radio-button :value="true">只显示差异</a-radio-button>
+              <a-radio-button :value="false">显示全部</a-radio-button>
+            </a-radio-group>
+          </div>
+          
           <div class="filter-item">
             <a-input-search
               v-model="searchKeyword"
@@ -435,6 +448,7 @@ export default {
       compareVersionSearchKeyword: '',
       isCurrentVersionActive: false, // 当前版本是否为激活版本
       isCompareVersionActive: false, // 对比版本是否为激活版本
+      showOnlyDifferences: true, // 是否只显示差异项，默认为true
     };
   },
   computed: {
@@ -1078,7 +1092,8 @@ export default {
         serviceInstanceId: this.serviceId,
         roleGroupId: JSON.stringify(this.currentId) || '',
         versionA: this.currentVersion,
-        versionB: this.compareVersion
+        versionB: this.compareVersion,
+        showOnlyDifferences: this.showOnlyDifferences
       };
       
       this.$axiosPost(global.API.configVersionCompare, params).then(res => {
@@ -1116,6 +1131,10 @@ export default {
         this.isCompareVersionActive = versionItem.isCurrent;
       }
       
+      this.loadCompareData();
+    },
+    handleShowModeChange() {
+      // 重新加载对比数据
       this.loadCompareData();
     },
   },

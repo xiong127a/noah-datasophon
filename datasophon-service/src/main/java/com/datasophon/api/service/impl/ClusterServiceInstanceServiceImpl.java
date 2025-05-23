@@ -219,7 +219,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId) {
+    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences) {
         List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
                 .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
                         .eq(Constants.ROLE_GROUP_ID, roleGroupId)
@@ -246,7 +246,7 @@ public class ClusterServiceInstanceServiceImpl
             configMapB.put(config.getName(), config.getValue());
         }
         
-        // 处理configA中的配置项，只保留有差异的项
+        // 处理configA中的配置项
         List<ServiceConfig> serviceConfigList = new ArrayList<>();
         for (ServiceConfig configA_item : configListA) {
             // 设置服务名称，用于排序
@@ -256,9 +256,12 @@ public class ClusterServiceInstanceServiceImpl
             Object valueB = configMapB.get(configA_item.getName());
             boolean isDifferent = !Objects.equals(configA_item.getValue(), valueB);
             
-            // 只有当有差异时，才添加到serviceConfigList
-            if (isDifferent) {
-                serviceConfigList.add(configA_item);
+            // 根据showOnlyDifferences参数决定是否只添加有差异的配置项
+            if (!Boolean.TRUE.equals(showOnlyDifferences) || isDifferent) {
+                // 添加差异标记
+                ServiceConfig configToAdd = configA_item;
+                configToAdd.setConfigType(isDifferent ? "DIFFERENT" : "SAME"); // 使用configType字段标记差异状态
+                serviceConfigList.add(configToAdd);
             }
         }
         
@@ -270,6 +273,7 @@ public class ClusterServiceInstanceServiceImpl
                 continue;
             }
             
+            // 这些项始终是差异项，无论showOnlyDifferences如何都应该添加
             ServiceConfig serviceConfig = new ServiceConfig();
             serviceConfig.setName(name);
             serviceConfig.setValue(null); // configA中不存在该项
@@ -286,7 +290,7 @@ public class ClusterServiceInstanceServiceImpl
             serviceConfig.setUnit(configB_item.getUnit());
             serviceConfig.setHidden(configB_item.isHidden());
             serviceConfig.setSelectValue(configB_item.getSelectValue());
-            serviceConfig.setConfigType(configB_item.getConfigType());
+            serviceConfig.setConfigType("DIFFERENT"); // 标记为差异项
             serviceConfig.setConfigWithKerberos(configB_item.isConfigWithKerberos());
             serviceConfig.setConfigWithRack(configB_item.isConfigWithRack());
             serviceConfig.setConfigWithHA(configB_item.isConfigWithHA());
@@ -309,7 +313,7 @@ public class ClusterServiceInstanceServiceImpl
             serviceConfigList.add(serviceConfig);
         }
         
-        // 如果没有差异项，返回空结果
+        // 如果没有配置项，返回空结果
         if (serviceConfigList.isEmpty()) {
             return Result.success(new HashMap<>());
         }
@@ -329,8 +333,9 @@ public class ClusterServiceInstanceServiceImpl
                 Map<String, Object> item = new HashMap<>();
                 item.put("name", config.getName());
                 
-                // 设置是否有差异（这里一定是true，因为我们已经过滤了）
-                item.put("isDifferent", true);
+                // 设置是否有差异
+                boolean isDifferent = "DIFFERENT".equals(config.getConfigType());
+                item.put("isDifferent", isDifferent);
                 
                 // 添加版本值
                 Object valueB = configMapB.get(config.getName());
