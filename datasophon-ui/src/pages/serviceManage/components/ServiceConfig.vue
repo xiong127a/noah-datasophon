@@ -384,21 +384,26 @@
             </div>
             
             <div v-show="isGroupExpanded[groupName]" class="panel-content">
-              <CommonTemplate
-                  :ref="`template_${groupName}`"
-                  :steps4Data="steps4Data"
-                  :templateData="Array.isArray(group) ? group : group.items"
-              />
-              
-              <!-- 添加模板内容显示框 -->
-              <div v-if="!Array.isArray(group) && group.templateContent" class="template-content-container">
-                <div class="template-content-title">{{ group.displayName || '模板内容' }}:</div>
-                <a-textarea
-                  :value="group.templateContent"
-                  :auto-size="{ minRows: 3, maxRows: 10 }"
-                  readonly
-                  class="template-content-textarea"
+              <template v-if="Array.isArray(group) || (group.items && Array.isArray(group.items))">
+                <CommonTemplate
+                    :ref="`template_${groupName}`"
+                    :steps4Data="steps4Data"
+                    :templateData="Array.isArray(group) ? group : group.items"
                 />
+                
+                <!-- 添加模板内容显示框 -->
+                <div v-if="!Array.isArray(group) && group.templateContent" class="template-content-container">
+                  <div class="template-content-title">{{ group.displayName || '模板内容' }}:</div>
+                  <a-textarea
+                    :value="group.templateContent"
+                    :auto-size="{ minRows: 3, maxRows: 10 }"
+                    readonly
+                    class="template-content-textarea"
+                  />
+                </div>
+              </template>
+              <div v-else class="config-error-message">
+                配置数据格式错误，无法显示表单
               </div>
             </div>
           </div>
@@ -1115,45 +1120,83 @@ export default {
     handlerTemplate(data) {
       const result = {};
 
-      Object.entries(data).forEach(([originalKey, configList]) => {
-        // 直接使用原始键名，并进行标准化处理
-        const groupKey = originalKey
-                ?.trim() // 去除前后空格
-                .replace(/^"|"$/g, '') // 去除可能存在的引号
-            || 'General'; // 空值处理
-
-        // 配置项名称转换（保留原始替换逻辑）
-        const processedItems = configList.map(item => ({
-          ...item,
-          name: (item.name || '').replaceAll(".", "!")
-        }));
-
-        // 检查是否有配置项包含模板内容
-        const configWithTemplate = processedItems.find(item => item.templateContent && item.templateContent.trim() !== '');
-        
-        // 合并到结果集
-        if (configWithTemplate) {
-          // 如果有模板内容，则保存为对象结构
-          result[groupKey] = {
-            items: [...(result[groupKey]?.items || []), ...processedItems],
-            displayName: configWithTemplate.displayName || '',
-            templateContent: configWithTemplate.templateContent || ''
-          };
-        } else {
-          // 如果没有模板内容，仍然保持数组结构以兼容现有代码
-          if (!result[groupKey]) {
-            result[groupKey] = [...processedItems];
-          } else if (Array.isArray(result[groupKey])) {
-            result[groupKey] = [...result[groupKey], ...processedItems];
-          } else if (result[groupKey].items) {
-            result[groupKey].items = [...result[groupKey].items, ...processedItems];
-          }
+      try {
+        // 检查data是否为有效对象
+        if (!data || typeof data !== 'object') {
+          console.error('Invalid data passed to handlerTemplate:', data);
+          return { General: [] }; // 返回一个默认的空配置组
         }
-      });
 
-      // 保证至少存在通用配置组
-      if (!('General' in result)) {
-        result.General = [];
+        Object.entries(data).forEach(([originalKey, configList]) => {
+          // 检查configList是否为数组
+          if (!Array.isArray(configList)) {
+            console.error(`ConfigList for key ${originalKey} is not an array:`, configList);
+            return; // 跳过此项
+          }
+          
+          // 直接使用原始键名，并进行标准化处理
+          const groupKey = originalKey
+                  ?.trim() // 去除前后空格
+                  .replace(/^"|"$/g, '') // 去除可能存在的引号
+              || 'General'; // 空值处理
+
+          // 配置项名称转换（保留原始替换逻辑）
+          const processedItems = configList.map(item => ({
+            ...item,
+            name: (item.name || '').replaceAll(".", "!")
+          }));
+
+          // 检查是否有配置项包含模板内容
+          const configWithTemplate = processedItems.find(item => item.templateContent && item.templateContent.trim() !== '');
+          
+          // 合并到结果集
+          if (configWithTemplate) {
+            // 如果有模板内容，则保存为对象结构
+            result[groupKey] = {
+              items: [...(result[groupKey]?.items || []), ...processedItems],
+              displayName: configWithTemplate.displayName || '',
+              templateContent: configWithTemplate.templateContent || ''
+            };
+            
+            // 确保items始终是数组
+            if (!Array.isArray(result[groupKey].items)) {
+              result[groupKey].items = [];
+              console.warn(`Fixed non-array items for group ${groupKey}`);
+            }
+          } else {
+            // 如果没有模板内容，仍然保持数组结构以兼容现有代码
+            if (!result[groupKey]) {
+              result[groupKey] = [...processedItems];
+            } else if (Array.isArray(result[groupKey])) {
+              result[groupKey] = [...result[groupKey], ...processedItems];
+            } else if (result[groupKey].items) {
+              // 确保items是数组
+              if (Array.isArray(result[groupKey].items)) {
+                result[groupKey].items = [...result[groupKey].items, ...processedItems];
+              } else {
+                result[groupKey].items = [...processedItems];
+                console.warn(`Fixed non-array items for group ${groupKey}`);
+              }
+            }
+          }
+        });
+
+        // 保证至少存在通用配置组
+        if (!('General' in result)) {
+          result.General = [];
+        }
+        
+        // 最终检查，确保所有组的数据结构正确
+        Object.keys(result).forEach(key => {
+          if (!Array.isArray(result[key]) && (!result[key].items || !Array.isArray(result[key].items))) {
+            console.error(`Invalid structure for group ${key}, resetting to empty array`);
+            result[key] = [];
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in handlerTemplate:', error);
+        return { General: [] }; // 处理异常情况
       }
 
       return result;
@@ -1974,5 +2017,18 @@ export default {
   font-size: 13px;
   line-height: 1.5;
   border-color: #d9d9d9;
+}
+
+/* 错误消息样式 */
+.config-error-message {
+  padding: 12px;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  color: #f5222d;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  margin: 8px 0;
 }
 </style> 
