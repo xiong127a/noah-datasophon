@@ -195,6 +195,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
+        
+        boolean versionCreated = false; // 标记是否创建了新版本
+        
         if (Objects.isNull(serviceInstanceEntity)) {
             serviceInstanceEntity = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
             ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = saveServiceInstanceRoleGroup(clusterId,
@@ -206,11 +209,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 finalDescription = "初始配置";
             }
             
-            saveServiceRoleGroupConfig(
+            boolean initialSaveResult = saveServiceRoleGroupConfig(
                     clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, finalDescription, userId, username);
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
                     clusterServiceInstanceRoleGroup.getId());
+            
+            versionCreated = initialSaveResult; // 只有当成功保存到数据库时才标记为创建了新版本
         } else {
             Set<String> configUpdateRoleSet = new HashSet<>();
             List<ServiceConfig> originalConfigs = listServiceConfigByServiceInstance(serviceInstanceEntity);
@@ -263,16 +268,28 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 newRoleGroupConfig.setUpdateTime(new Date());
                 newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
                 buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
-                groupConfigService.save(newRoleGroupConfig);
-                // 保存配置版本信息，包含用户信息
-                saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId, username, finalDescription);
+                
+                // 保存配置并检查是否成功插入数据库
+                boolean saveResult = groupConfigService.save(newRoleGroupConfig);
+                
+                // 只有当数据库操作确实成功时才标记为创建了新版本
+                if (saveResult) {
+                    // 保存配置版本信息，包含用户信息
+                    saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId, username, finalDescription);
+                    versionCreated = true; // 有配置更新且成功保存到数据库时创建了新版本
+                } else {
+                    logger.warn("Configuration was not updated in database for service: {}, roleGroupId: {}", 
+                               serviceName, newRoleGroupConfig.getRoleGroupId());
+                }
             }
             // update service instance
             serviceInstanceEntity.setUpdateTime(new Date());
             serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
             serviceInstanceService.updateById(serviceInstanceEntity);
         }
-        return Result.success();
+        
+        // 返回是否创建了新版本的信息
+        return Result.success().put("versionCreated", versionCreated);
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
@@ -519,7 +536,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
     }
 
-    private void saveServiceRoleGroupConfig(
+    private boolean saveServiceRoleGroupConfig(
             Integer clusterId,
             String serviceName,
             List<ServiceConfig> list,
@@ -536,9 +553,17 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         roleGroupConfig.setUpdateTime(new Date());
         buildConfig(list, configFileMap, roleGroupConfig, description);
         roleGroupConfig.setConfigVersion(1);
-        groupConfigService.save(roleGroupConfig);
-        // 保存配置版本信息，包含用户信息
-        saveConfigVersionInfo(roleGroupConfig, "GROUP_CONFIG", roleGroupConfig.getId(), userId, username, description);
+        boolean saveResult = groupConfigService.save(roleGroupConfig);
+        
+        if (saveResult) {
+            // 保存配置版本信息，包含用户信息
+            saveConfigVersionInfo(roleGroupConfig, "GROUP_CONFIG", roleGroupConfig.getId(), userId, username, description);
+            return true;
+        } else {
+            logger.warn("Failed to save initial configuration for service: {}, roleGroupId: {}", 
+                      serviceName, roleGroupConfig.getRoleGroupId());
+            return false;
+        }
     }
 
     private ClusterServiceInstanceRoleGroup saveServiceInstanceRoleGroup(
@@ -551,7 +576,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         clusterServiceInstanceRoleGroup.setRoleGroupName("默认");
         clusterServiceInstanceRoleGroup.setServiceName(serviceName);
         clusterServiceInstanceRoleGroup.setRoleGroupType("default");
-        roleGroupService.save(clusterServiceInstanceRoleGroup);
+        boolean saveResult = roleGroupService.save(clusterServiceInstanceRoleGroup);
+        
+        if (!saveResult) {
+            logger.warn("Failed to save role group for service: {}, serviceInstanceId: {}", 
+                       serviceName, serviceInstanceEntity.getId());
+        }
+        
         return clusterServiceInstanceRoleGroup;
     }
 

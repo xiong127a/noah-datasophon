@@ -953,8 +953,20 @@ export default {
 
         // 10. 提交保存
         const res = await this.$axiosPost(global.API.saveServiceConfig, saveParam);
+        console.log("保存配置响应:", res); // 添加日志，方便调试
+        
         if (res.code === 200) {
-          this.$message.success("保存成功");
+          // 根据返回的versionCreated字段确定是否创建了新版本
+          const versionCreated = res.versionCreated;
+          console.log("是否创建新版本:", versionCreated);
+          
+          if (versionCreated === false) {
+            // 配置没有变更，未创建新版本
+            this.$message.info("配置未发生变更，未生成新版本");
+          } else {
+            // 配置有变更，保存成功
+            this.$message.success("保存成功，已生成新版本");
+          }
           this.getConfigVersion();
           this.saveDialogVisible = false;
           this.configDescription = '';
