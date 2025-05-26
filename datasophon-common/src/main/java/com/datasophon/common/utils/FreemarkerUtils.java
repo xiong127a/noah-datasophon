@@ -848,5 +848,4 @@ public class FreemarkerUtils {
 
         return renderFromTemplateContent(templateContent, variables);
     }
-
 }

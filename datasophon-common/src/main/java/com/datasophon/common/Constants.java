@@ -137,7 +137,7 @@ public final class Constants {
         public static final String  K8S_PORT_MAPPING= "portMappings";
         public static final String CONFIG_TARGET_ROLES = "configTargetRoles";
 
-        public static final String COMMON_CONFIG = "CommonConfig";
+        public static final String GENERAL = "General";
 
         private Constants() {
                 throw new IllegalStateException("Constants Exception");

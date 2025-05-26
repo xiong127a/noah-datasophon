@@ -292,11 +292,10 @@ export default defineComponent({
           // 加载资源统计信息
           this.fetchResourceStats();
         } else {
-          this.$message.error('获取命名空间失败：' + (res.msg || '未知错误'));
+          console.error('获取命名空间失败：' + (res.msg || '未知错误'));
         }
       } catch (error) {
         console.error('获取命名空间出错：', error);
-        this.$message.error('获取命名空间失败：' + (error.message || '未知错误'));
       } finally {
         this.namespacesLoading = false;
       }
@@ -392,12 +391,11 @@ export default defineComponent({
           };
           console.log('资源统计数据加载成功:', this.resourceCounts);
         } else {
-          this.$message.error('获取资源统计失败: ' + (res.msg || '未知错误'));
+          console.error('获取资源统计失败: ' + (res.msg || '未知错误'));
           this.resourceCounts = {}; // 清空数据
         }
       } catch (error) {
         console.error('获取资源统计失败:', error);
-        this.$message.error('获取资源统计失败: ' + (error.message || '未知错误'));
         this.resourceCounts = {}; // 清空数据
       }
     },

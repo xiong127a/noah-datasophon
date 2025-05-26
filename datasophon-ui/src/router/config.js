@@ -151,6 +151,15 @@ const options = {
               label: '告警指标管理',
               component: () => import('@/pages/alarmManage/metric'),
             },
+            {
+              path: 'help',
+              meta: {
+                notAlive: false,
+              },
+              name: '使用帮助',
+              label: '使用帮助',
+              component: () => import('@/pages/alarmManage/helpInfo/alarmManagementHelp'),
+            },
             // {
             //   path: 'user',
             //   name: '租户管理',

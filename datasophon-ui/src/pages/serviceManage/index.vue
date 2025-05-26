@@ -13,7 +13,13 @@
       <a-tab-pane :key="4" tab="连接信息" v-if="hasConnectionInfo && isServiceConnectionAvailable">
         <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
       </a-tab-pane>
-      <a-tab-pane v-if="serviceName === 'YARN'" :key="5" tab="资源配置">
+      <a-tab-pane :key="5" tab="组件介绍">
+        <ComponentIntro :serviceId="$route.params.serviceId" />
+      </a-tab-pane>
+      <a-tab-pane :key="6" tab="用户指南">
+        <UserGuide :serviceId="$route.params.serviceId" />
+      </a-tab-pane>
+      <a-tab-pane v-if="serviceName === 'YARN'" :key="7" tab="资源配置">
         <Queue />
       </a-tab-pane>
     </a-tabs>
@@ -40,20 +46,22 @@ const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
 import ConnectInfo from './connectInfo/index.vue'
+import ComponentIntro from './helpInfo/componentIntro.vue'
+import UserGuide from './helpInfo/userGuide.vue'
 
 // 导入连接信息服务检测工具
 import { checkServiceSupport } from './connectInfo/serviceSupport'
 
 export default {
   name: "ServiceList",
-  components: { ExampleList, Setting, OverViewPage, Queue, ConnectInfo },
+  components: { ExampleList, Setting, OverViewPage, Queue, ConnectInfo, ComponentIntro, UserGuide },
 
   data() {
     return {
       tabKey: 1,
       serviceName: '',
       loading: false,
-      tabList: ["总览", "实例", "配置", "连接信息"],
+      tabList: ["总览", "实例", "配置", "连接信息", "组件介绍", "用户指南"],
       serviceId: "",
       webUis: [],
       pageOverview: true,
@@ -102,6 +110,7 @@ export default {
       visibleTabs++; // 实例页签总是显示
       visibleTabs++; // 配置页签总是显示
       if (this.hasConnectionInfo && this.isServiceConnectionAvailable) visibleTabs++;
+      visibleTabs += 2; // 组件介绍和用户指南总是显示
       if (this.serviceName === 'YARN') visibleTabs++;
       
       // 为每个标签分配更合理的空间

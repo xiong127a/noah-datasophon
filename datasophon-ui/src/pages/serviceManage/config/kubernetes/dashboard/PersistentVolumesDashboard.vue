@@ -225,12 +225,12 @@ export default {
           
           console.log("处理后的PersistentVolumes数据:", this.persistentVolumes);
         } else {
-          console.error('Failed to fetch PersistentVolumes:', res.msg);
+          console.error(res.msg || '获取PV列表失败');
           this.persistentVolumes = [];
           this.pagination.total = 0;
         }
       } catch (error) {
-        console.error('Error fetching PersistentVolumes:', error);
+        console.error('获取PV列表异常');
         this.persistentVolumes = [];
         this.pagination.total = 0;
       } finally {

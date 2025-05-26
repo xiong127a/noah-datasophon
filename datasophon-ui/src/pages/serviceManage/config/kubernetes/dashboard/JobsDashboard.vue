@@ -269,14 +269,14 @@ export default {
           this.jobs = [];
           this.pagination.total = 0;
           this.totalPages = 1;
-          this.$message.error(res.msg || 'Failed to fetch jobs');
+          console.error(res.msg || 'Failed to fetch jobs');
         }
       } catch (error) {
         console.error('Error fetching jobs:', error);
         this.jobs = [];
         this.pagination.total = 0;
         this.totalPages = 1;
-        this.$message.error('Error fetching jobs');
+        console.error('Error fetching jobs');
       } finally {
         this.loading = false;
       }

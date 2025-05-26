@@ -182,14 +182,14 @@ export default {
             totalPages: this.totalPages 
           });
         } else {
-          console.error('获取配置映射列表失败:', res ? res.msg : '未知错误或数据格式无效');
+          console.error(res.msg || '获取ConfigMap列表失败');
           this.configMaps = [];
           this.totalItems = 0;
           this.totalPages = 1;
         }
       } catch (error) {
-        console.error('获取配置映射列表异常:', error);
-        this.$message.error('获取配置映射列表失败');
+        console.error('获取ConfigMap列表异常');
+        console.error('获取ConfigMap列表失败');
         this.configMaps = [];
         this.totalItems = 0;
         this.totalPages = 1;

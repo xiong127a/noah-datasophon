@@ -318,13 +318,11 @@ export default {
           
           console.log('处理后的ReplicationControllers数据:', this.replicationControllers);
         } else {
-          console.error('获取ReplicationControllers列表失败:', res && res.msg ? res.msg : '未知错误');
+          console.error(res && res.msg ? res.msg : '获取ReplicationControllers列表失败');
           this.replicationControllers = []; // 失败时清空数据
-          this.$message.error(res && res.msg ? res.msg : '获取ReplicationControllers列表失败');
         }
       } catch (error) {
         console.error('获取ReplicationControllers列表异常:', error);
-        this.$message.error('获取ReplicationControllers列表异常');
         this.replicationControllers = []; // 出错时清空数据
       } finally {
         this.loading = false;

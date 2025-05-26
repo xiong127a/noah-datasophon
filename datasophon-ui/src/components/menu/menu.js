@@ -103,6 +103,10 @@ export default {
     if (this.options.length > 0 && !this.options[0].fullPath) {
       this.formatOptions(this.options, '')
     }
+    
+    // 检查并添加帮助菜单项
+    this.ensureHelpMenuExists()
+    
     // 自定义国际化配置
     if (this.i18n && this.i18n.messages) {
       const messages = this.i18n.messages
@@ -284,7 +288,42 @@ export default {
         matches = (resolve.resolved && resolve.resolved.matched) || matches
       }
       return matches.map(item => item.path)
-    }
+    },
+    ensureHelpMenuExists() {
+      try {
+        // 从localStorage获取菜单数据
+        const menuDataStr = localStorage.getItem('menuData');
+        if (!menuDataStr) return;
+        
+        const menuData = JSON.parse(menuDataStr);
+        
+        // 找到告警管理模块
+        const alarmManageModule = menuData.find(item => item.path === 'alarm-manage');
+        if (!alarmManageModule) return;
+        
+        // 检查是否已存在帮助菜单项
+        const hasHelpMenu = alarmManageModule.children.some(item => item.path === 'help');
+        if (hasHelpMenu) return;
+        
+        // 添加帮助菜单项
+        alarmManageModule.children.unshift({
+          path: 'help',
+          name: '使用帮助',
+          label: '使用帮助',
+          fullPath: '/alarm-manage/help',
+          meta: {
+            notAlive: false,
+            invisible: false
+          }
+        });
+        
+        // 更新localStorage
+        localStorage.setItem('menuData', JSON.stringify(menuData));
+        console.log('已自动添加告警管理帮助菜单项');
+      } catch (error) {
+        console.error('检查/添加帮助菜单项出错:', error);
+      }
+    },
   },
   render(h) {
     return h(
