@@ -128,13 +128,6 @@
           :selectedNamespace="selectedNamespace"
         />
 
-        <jobs-dashboard
-            v-if="activeResource === 'jobs'"
-            :clusterId="clusterId"
-            :serviceId="serviceId"
-            :selectedNamespace="selectedNamespace"
-        />
-
         <!-- Ingresses列表 -->
         <ingresses-dashboard
           v-if="activeResource === 'ingresses'"
@@ -297,9 +290,6 @@ export default defineComponent({
             // 如果不显示选择器，可以通过样式隐藏
             document.querySelector('.namespace-selector').style.display = 'none';
           }
-          
-          // 加载资源统计信息
-          this.fetchResourceStats();
         } else {
           console.error('获取命名空间失败：' + (res.msg || '未知错误'));
         }
@@ -323,7 +313,6 @@ export default defineComponent({
     // 资源类型变化处理
     handleResourceChange(resource) {
       this.activeResource = resource;
-      this.updateResourceData();
     },
     
     // 格式化时间
