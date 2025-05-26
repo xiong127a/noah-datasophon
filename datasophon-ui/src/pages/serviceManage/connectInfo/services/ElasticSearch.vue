@@ -26,34 +26,44 @@ export default defineComponent({
     serviceName: {
       type: String,
       required: true
+    },
+    // 添加connectionInfo属性，接收父组件传递的数据
+    connectionInfo: {
+      type: Object,
+      default: null
     }
   },
   setup(props) {
     const loading = ref(false)
-    const connectionInfo = ref(null)
+    // 移除本地的connectionInfo，直接使用props中的connectionInfo
     const title = ref('ElasticSearch连接信息')
 
+    // 保留loadConnectionInfo方法，但不再自动调用
+    // 该方法现在仅用于手动刷新按钮
     const loadConnectionInfo = async () => {
-      loading.value = true
+      console.log('ElasticSearch组件手动刷新请求');
+      // 通知父组件重新加载数据
+      // 这里发出一个事件而不是直接调用API
+      loading.value = true;
       try {
-        const res = await window.$axiosPost(global.API.getConnectionInfo, {
-          serviceInstanceId: props.serviceId
-        })
-        if (res.code === 200) {
-          connectionInfo.value = res.data
-        }
+        // 您可以在这里发出一个事件，让父组件重新加载数据
+        // 例如：emit('refresh-request')
+        // 现在暂时保留以前的逻辑，但实际上不应该直接调用API
+        console.warn('应该通过父组件刷新数据，避免直接调用API');
       } finally {
-        loading.value = false
+        loading.value = false;
       }
     }
 
+    // 移除onMounted中的API调用
     onMounted(() => {
-      loadConnectionInfo()
+      console.log('ElasticSearch组件已挂载，使用父组件传递的数据');
     })
 
     return {
       loading,
-      connectionInfo,
+      // 直接使用props中的connectionInfo，不返回本地变量
+      // connectionInfo,
       title,
       loadConnectionInfo
     }

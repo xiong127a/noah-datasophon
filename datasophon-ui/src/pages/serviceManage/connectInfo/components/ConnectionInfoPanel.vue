@@ -84,6 +84,9 @@ export default {
     CodeBlock,
     CommandTerminal
   },
+  // 为组件添加清晰的注释，说明它依赖父组件传递的数据
+  // 不再自动调用API，避免重复请求
+  // 在组件挂载或serviceId变化时不会自动获取数据
   props: {
     // 服务ID
     serviceId: {
@@ -227,19 +230,19 @@ export default {
     }
   },
   watch: {
-    // 监听serviceId变化，重新获取连接信息
-    serviceId: {
-      immediate: true,
-      handler(newValue, oldValue) {
-        if (newValue && !this.connectionInfo) {
-          this.fetchConnectionInfo();
-        } else if (newValue !== oldValue) {
-          // 如果serviceId变化，强制重新加载数据
-          this.resetConnectionInfo();
-          this.fetchConnectionInfo();
-        }
-      }
-    },
+    // 禁用serviceId变化自动调用API，完全依赖父组件传递的数据
+    // serviceId: {
+    //   immediate: true,
+    //   handler(newValue, oldValue) {
+    //     if (newValue && !this.connectionInfo) {
+    //       this.fetchConnectionInfo();
+    //     } else if (newValue !== oldValue) {
+    //       // 如果serviceId变化，强制重新加载数据
+    //       this.resetConnectionInfo();
+    //       this.fetchConnectionInfo();
+    //     }
+    //   }
+    // },
     // 监听props连接信息变化
     connectionInfo(newValue) {
       if (newValue) {
@@ -257,14 +260,25 @@ export default {
       this.activeKey = 'basic';
     },
     
-    // 获取服务连接信息
+    // 获取服务连接信息 (这个方法现在只在手动调用时使用，不再自动调用)
     async fetchConnectionInfo() {
+      console.warn('警告：ConnectionInfoPanel.fetchConnectionInfo() 被调用');
+      console.warn('现在应该由父组件统一管理数据获取，避免重复调用API');
+      console.warn('调用堆栈:', new Error().stack);
+      
+      // 如果父组件已经提供了connectionInfo，优先使用
+      if (this.connectionInfo) {
+        console.log('父组件已提供connectionInfo，不再调用API');
+        return;
+      }
+      
       if (!this.serviceId) return;
       
       // 清空旧数据，避免显示过时信息
       this.localConnectionInfo = null;
       this.loading = true;
       try {
+        // 手动调用时仍然可以获取数据
         const response = await this.$axiosPost(global.API.getConnectionInfo, {
           serviceInstanceId: this.serviceId
         });
