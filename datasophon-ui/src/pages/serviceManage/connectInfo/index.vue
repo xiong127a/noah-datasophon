@@ -52,6 +52,7 @@
       :service-name="serviceName"
       :connection-info="connectionInfo"
       @loading-change="handleLoadingChange"
+      @refresh-request="handleRefreshRequest"
     />
     
     <!-- 服务未支持或组件不存在 -->
@@ -119,7 +120,13 @@ export default {
       serviceData: null,
       connectionInfo: null,
       // 存储支持的服务类型列表
-      supportedServiceTypes: Object.keys(SERVICE_COMPONENT_MAP)
+      supportedServiceTypes: Object.keys(SERVICE_COMPONENT_MAP),
+      // 存储最后一次调用的时间戳（修改命名，符合规范）
+      lastCallTimestamp: 0,
+      // 标记数据是否已经加载过，避免重复加载
+      dataAlreadyLoaded: false,
+      // 标记API请求是否正在进行中
+      isRequestInProgress: false
     };
   },
   computed: {
@@ -139,16 +146,47 @@ export default {
     }
   },
   watch: {
-    serviceId: {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) {
-          this.getConnectionInfo();
-        }
-      }
-    }
+    // 注释掉自动触发的watch，改为手动调用
+    // serviceId: {
+    //   immediate: true,
+    //   handler(newVal) {
+    //     if (newVal) {
+    //       this.getConnectionInfo();
+    //     }
+    //   }
+    // }
+  },
+  
+  mounted() {
+    // 只在组件挂载时自动获取数据，避免重复调用
+    console.log("%c ConnectInfo组件挂载完成，等待父组件手动调用getConnectionInfo方法", "color: blue");
+  },
+  
+  // 组件被重新激活时的处理
+  activated() {
+    console.log("%c ConnectInfo组件被激活", "color: purple");
+    // 每次切换回标签页时都重置标志位，允许重新加载数据
+    this.dataAlreadyLoaded = false;
+    
+    // 注意：我们不在这里直接调用getConnectionInfo
+    // 由父组件的callback方法负责调用，避免重复
+    console.log("%c 已重置数据加载状态，等待父组件调用加载方法", "color: purple; font-weight: bold");
+  },
+  
+  // 组件被缓存时的处理
+  deactivated() {
+    console.log("%c ConnectInfo组件被缓存", "color: gray");
+    // 可以在这里做一些清理工作，但保持数据加载状态，避免重复加载
   },
   methods: {
+    // 处理子组件的刷新请求
+    handleRefreshRequest() {
+      console.log('父组件收到子组件的刷新请求');
+      // 重置数据加载状态，允许重新获取数据
+      this.dataAlreadyLoaded = false;
+      this.getConnectionInfo();
+    },
+    
     // 获取服务类型 - 直接从服务名称获取，无需额外调用API
     getServiceType() {
       if (this.serviceType) {
@@ -170,15 +208,45 @@ export default {
       return null;
     },
     
-    // 获取连接信息 - 直接使用原始API
+    // 获取连接信息 - 集中管理API调用
     getConnectionInfo() {
+      console.log("%c getConnectionInfo 被调用，调用堆栈:", "color: blue; font-weight: bold", new Error().stack);
+      
       if (!this.serviceId) {
         console.error("缺少serviceId参数，无法获取连接信息");
         this.$message.warning("服务ID未设置，无法获取连接信息");
         return;
       }
       
-      console.log("开始获取连接信息，serviceId:", this.serviceId, "服务名称:", this.serviceName);
+      // 当从其他标签页切换回来时，dataAlreadyLoaded已在activated钩子中重置为false
+      // 这确保了每次标签页切换都会重新加载数据
+      if (this.dataAlreadyLoaded && this.connectionInfo) {
+        console.log("%c 数据已加载，跳过重复请求", "color: green; font-weight: bold");
+        return;
+      }
+      
+      // 检查是否有请求正在进行中
+      if (this.isRequestInProgress) {
+        console.log("%c 请求正在进行中，跳过重复请求", "color: orange; font-weight: bold");
+        return;
+      }
+      
+      // 添加强化的防抖控制，避免短时间内多次调用
+      const now = Date.now();
+      const DEBOUNCE_TIME = 2000; // 增加到2秒，更保守的防抖时间
+      
+      if (now - this.lastCallTimestamp < DEBOUNCE_TIME) {
+        console.log(`%c 调用过于频繁，距上次调用仅 ${now - this.lastCallTimestamp}ms，已忽略重复请求`, "color: red");
+        return;
+      }
+      
+      console.log(`%c 距上次调用已过 ${now - this.lastCallTimestamp}ms，执行新请求`, "color: green");
+      this.lastCallTimestamp = now;
+      
+      // 设置请求进行中的标志
+      this.isRequestInProgress = true;
+      
+      console.log("%c 开始获取连接信息，serviceId:", "color: blue", this.serviceId, "服务名称:", this.serviceName);
       this.loading = true;
       this.error = false;
       
@@ -243,12 +311,31 @@ export default {
         })
         .finally(() => {
           this.loading = false;
+          this.isRequestInProgress = false;
+          
+          // 标记数据已加载
+          if (this.connectionInfo) {
+            this.dataAlreadyLoaded = true;
+            console.log("%c 数据已成功加载，标记为已加载状态", "color: green; font-weight: bold");
+          }
         });
     },
     
     // 重试加载
     retryLoading() {
+      // 重置加载状态标志，允许重新获取数据
+      this.dataAlreadyLoaded = false;
+      this.isRequestInProgress = false;
+      console.log("%c 手动重试，重置数据加载状态", "color: orange");
       this.getConnectionInfo();
+    },
+    
+    // 重置连接信息状态（供外部调用）
+    resetConnectionInfo() {
+      this.dataAlreadyLoaded = false;
+      this.isRequestInProgress = false;
+      this.connectionInfo = null;
+      console.log("%c 连接信息状态已重置", "color: orange; font-weight: bold");
     },
     
     // 处理子组件的加载状态变化
@@ -257,8 +344,18 @@ export default {
     },
 
     // 为了兼容旧版本callback方法，保留getConnectionInfo方法的命名
+    // 这个方法不应该直接被调用，而是应该由父组件通过callback方法调用getConnectionInfo
     fetchServiceInfo() {
-      console.log('触发fetchServiceInfo方法，调用getConnectionInfo');
+      console.log('%c 触发fetchServiceInfo方法，这是一个向后兼容的方法', 'color: orange; font-weight: bold');
+      console.log('%c 警告：建议直接使用getConnectionInfo方法，避免重复调用', 'color: red');
+      
+      // 如果数据已加载，直接返回
+      if (this.dataAlreadyLoaded && this.connectionInfo) {
+        console.log("%c 数据已加载，跳过重复请求", "color: green; font-weight: bold");
+        return;
+      }
+      
+      // 由于我们已经在父组件中确保了只调用一个方法，这里再调用getConnectionInfo是安全的
       this.getConnectionInfo();
     }
   }

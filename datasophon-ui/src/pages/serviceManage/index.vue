@@ -140,12 +140,20 @@ export default {
         console.log("连接信息标签页激活，serviceId:", this.$route.params.serviceId);
         this.$nextTick(() => {
           if (this.$refs.connectInfoRef) {
-            console.log("手动调用connectInfoRef.getConnectionInfo方法");
+            console.log("手动调用连接信息刷新方法");
             try {
-              if (typeof this.$refs.connectInfoRef.getConnectionInfo === 'function') {
+              // 优先使用 getConnectionInfo 方法，如果不存在则使用 fetchServiceInfo，避免两个都调用
+              const hasGetConnectionInfo = typeof this.$refs.connectInfoRef.getConnectionInfo === 'function';
+              const hasFetchServiceInfo = typeof this.$refs.connectInfoRef.fetchServiceInfo === 'function';
+              
+              if (hasGetConnectionInfo) {
+                console.log("调用 getConnectionInfo 方法");
                 this.$refs.connectInfoRef.getConnectionInfo();
-              } else if (typeof this.$refs.connectInfoRef.fetchServiceInfo === 'function') {
+              } else if (hasFetchServiceInfo) {
+                console.log("调用 fetchServiceInfo 方法");
                 this.$refs.connectInfoRef.fetchServiceInfo();
+              } else {
+                console.warn("连接信息组件没有可用的刷新方法");
               }
             } catch (error) {
               console.error("调用连接信息刷新方法失败:", error);
@@ -187,39 +195,14 @@ export default {
     },
     
     checkConnectionInfoSupport(serviceName) {
+      // 只通过服务名称判断是否支持连接信息，不再调用API
       this.hasConnectionInfo = checkServiceSupport(serviceName);
       
-      if (this.hasConnectionInfo) {
-        this.checkServiceConnectionAvailability();
-      } else {
-        this.isServiceConnectionAvailable = false;
-      }
-    },
-    
-    checkServiceConnectionAvailability() {
-      if (!this.$route.params.serviceId) {
-        this.isServiceConnectionAvailable = false;
-        return;
-      }
+      // 默认将isServiceConnectionAvailable设置为与hasConnectionInfo相同
+      // 这表示如果服务类型支持连接信息，就显示标签页
+      this.isServiceConnectionAvailable = this.hasConnectionInfo;
       
-      this.$axiosPost(global.API.getConnectionInfo, {
-        serviceInstanceId: this.$route.params.serviceId
-      })
-      .then(res => {
-        if (res.code === 200 && res.data) {
-          const hasBasicInfo = res.data.basicInfo && Object.keys(res.data.basicInfo).length > 0;
-          const hasJdbcUrl = res.data.jdbcUrl || (res.data.jdbcUrls && res.data.jdbcUrls.length > 0);
-          const hasCode = res.data.javaCode || res.data.pythonCode;
-          const hasCommands = res.data.beelineCommand || res.data.cliCommand;
-          
-          this.isServiceConnectionAvailable = hasBasicInfo || hasJdbcUrl || hasCode || hasCommands;
-        } else {
-          this.isServiceConnectionAvailable = false;
-        }
-      })
-      .catch(() => {
-        this.isServiceConnectionAvailable = false;
-      });
+      console.log(`服务[${serviceName}]是否支持连接信息: ${this.hasConnectionInfo}`);
     }
   }
 };

@@ -192,7 +192,8 @@ export default {
     };
   },
   mounted() {
-    this.fetchJobs();
+    // 移除对fetchJobs的调用，避免重复请求
+    // this.fetchJobs();
   },
   methods: {
     toggleLabelsExpand(record) {
@@ -334,9 +335,12 @@ export default {
       this.pagination.current = 1; // 集群变化时重置到第一页
       this.fetchJobs();
     },
-    serviceId() {
-      this.pagination.current = 1; // 服务ID变化时重置到第一页
-      this.fetchJobs();
+    serviceId: {
+      handler() {
+        this.pagination.current = 1; // 服务ID变化时重置到第一页
+        this.fetchJobs();
+      },
+      immediate: true // 确保组件创建时立即执行一次
     }
   }
 };

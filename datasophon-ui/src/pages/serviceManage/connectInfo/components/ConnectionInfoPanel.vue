@@ -84,6 +84,9 @@ export default {
     CodeBlock,
     CommandTerminal
   },
+  // 为组件添加清晰的注释，说明它依赖父组件传递的数据
+  // 不再自动调用API，避免重复请求
+  // 在组件挂载或serviceId变化时不会自动获取数据
   props: {
     // 服务ID
     serviceId: {
@@ -95,17 +98,26 @@ export default {
       type: String,
       default: ''
     },
-    // 连接信息（可选，如果不提供则通过API获取）
+    // 连接信息（必须由父组件提供）
     connectionInfo: {
       type: Object,
+      required: true, // 修改为required，强制父组件必须提供数据
       default: null
+    },
+    // 面板标题
+    title: {
+      type: String,
+      default: ''
+    },
+    // 是否处于加载状态
+    loading: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
     return {
-      loading: false,
       activeKey: 'basic',
-      localConnectionInfo: null,
       tabBarStyle: {
         marginBottom: '24px',
         borderBottom: 'none',
@@ -114,9 +126,9 @@ export default {
     };
   },
   computed: {
-    // 处理后的连接信息，优先使用props中的，如果没有则使用本地获取的
+    // 使用父组件提供的connectionInfo
     processedConnectionInfo() {
-      return this.connectionInfo || this.localConnectionInfo || {};
+      return this.connectionInfo || {};
     },
     
     // 分组信息数据，供BasicInfo组件使用
@@ -227,59 +239,20 @@ export default {
     }
   },
   watch: {
-    // 监听serviceId变化，重新获取连接信息
-    serviceId: {
-      immediate: true,
-      handler(newValue, oldValue) {
-        if (newValue && !this.connectionInfo) {
-          this.fetchConnectionInfo();
-        } else if (newValue !== oldValue) {
-          // 如果serviceId变化，强制重新加载数据
-          this.resetConnectionInfo();
-          this.fetchConnectionInfo();
-        }
-      }
-    },
-    // 监听props连接信息变化
+    // 移除对serviceId的监听，完全依赖父组件提供的数据
+    // 保留对connectionInfo的监听
     connectionInfo(newValue) {
       if (newValue) {
-        // 清空本地连接信息，完全使用prop传入的新值
-        this.localConnectionInfo = null;
         // 重置为基本信息标签页
         this.activeKey = 'basic';
       }
     }
   },
   methods: {
-    // 重置连接信息
-    resetConnectionInfo() {
-      this.localConnectionInfo = null;
-      this.activeKey = 'basic';
-    },
-    
-    // 获取服务连接信息
-    async fetchConnectionInfo() {
-      if (!this.serviceId) return;
-      
-      // 清空旧数据，避免显示过时信息
-      this.localConnectionInfo = null;
-      this.loading = true;
-      try {
-        const response = await this.$axiosPost(global.API.getConnectionInfo, {
-          serviceInstanceId: this.serviceId
-        });
-        if (response && response.code === 200) {
-          this.localConnectionInfo = response.data;
-        } else {
-          this.localConnectionInfo = null;
-        }
-      } catch (error) {
-        console.error('获取连接信息失败:', error);
-        this.$message.error('获取连接信息失败');
-        this.localConnectionInfo = null;
-      } finally {
-        this.loading = false;
-      }
+    // 发出刷新事件，通知父组件重新获取数据
+    fetchConnectionInfo() {
+      console.warn('ConnectionInfoPanel请求刷新数据');
+      this.$emit('reload');
     },
     
     // 判断对象是否为空
