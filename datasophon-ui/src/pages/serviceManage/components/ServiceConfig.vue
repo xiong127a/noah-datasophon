@@ -253,10 +253,10 @@
           </a-dropdown>
         </div>
         
-        <!-- 添加保存按钮 -->
+        <!-- 添加保存/恢复按钮 -->
         <div class="filter-item" v-if="currentVersion !== undefined">
-          <a-button @click="showSaveDialog()" class="save-button">
-            保存
+          <a-button @click="handleSaveOrRestore()" class="save-button">
+            {{ isCurrentVersionActive ? '保存' : '恢复' }}
           </a-button>
         </div>
         
@@ -953,8 +953,20 @@ export default {
 
         // 10. 提交保存
         const res = await this.$axiosPost(global.API.saveServiceConfig, saveParam);
+        console.log("保存配置响应:", res); // 添加日志，方便调试
+        
         if (res.code === 200) {
-          this.$message.success("保存成功");
+          // 根据返回的versionCreated字段确定是否创建了新版本
+          const versionCreated = res.versionCreated;
+          console.log("是否创建新版本:", versionCreated);
+          
+          if (versionCreated === false) {
+            // 配置没有变更，未创建新版本
+            this.$message.info("配置未发生变更，未生成新版本");
+          } else {
+            // 配置有变更，保存成功
+            this.$message.success("保存成功，已生成新版本");
+          }
           this.getConfigVersion();
           this.saveDialogVisible = false;
           this.configDescription = '';
@@ -1127,6 +1139,17 @@ export default {
       // 默认返回原始名称
       return groupName;
     },
+    // 处理保存或恢复操作
+    handleSaveOrRestore() {
+      if (this.isCurrentVersionActive) {
+        // 如果是当前版本，则显示保存对话框
+        this.showSaveDialog();
+      } else {
+        // 如果不是当前版本，则显示恢复对话框
+        this.showRestoreDialog(this.currentVersion);
+      }
+    },
+    
     // 显示保存对话框
     showSaveDialog() {
       this.saveDialogVisible = true;
