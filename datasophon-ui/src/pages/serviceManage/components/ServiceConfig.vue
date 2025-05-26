@@ -1442,9 +1442,11 @@ export default {
         this.loading = false;
       }
     },
-  },
-  mounted() {
-    this.getServiceRoleType()
+    // 添加loadData方法，供父组件调用
+    loadData() {
+      console.log('ServiceConfig loadData 被调用，加载配置参数数据');
+      return this.getServiceRoleType();
+    },
   },
   created() {
     console.log('ServiceConfig 创建, serviceId:', this.serviceId);

@@ -1254,200 +1254,226 @@ export default {
     }
   },
   methods: {
-      async fetchK8sResources() {
-        this.loading = true;
-        try {
-          await Promise.all([
-            this.fetchConfigMaps(),
-            this.fetchServices(),
-            this.fetchPvcs(),
-            this.fetchIngresses(),
-            this.fetchIngressClasses(),
-            this.fetchSecrets(),
-            this.fetchPersistentVolumes(),
-            this.fetchStorageClasses(),
-            this.fetchDeployments(), // 新增
-            this.fetchStatefulSets() // 新增
-          ]);
-        } catch (error) {
-          console.error('Error fetching K8s resources:', error);
-        } finally {
-          this.loading = false;
-        }
-      },
-      async fetchConfigMaps() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.configMaps = res.data || [];
-          } else {
-            console.error('Failed to fetch config maps:', res.msg);
-            this.configMaps = [];
-          }
-        } catch (error) {
-          console.error('Error fetching config maps:', error);
+    loadData() {
+      console.log('K8sConfig loadData 被调用，加载Kubernetes仪表盘数据');
+      if (this.serviceId) {
+        return this.fetchK8sResources();
+      } else {
+        console.error('serviceId is required to fetch K8s resources');
+        return Promise.reject(new Error('serviceId is required'));
+      }
+    },
+    async fetchK8sResources() {
+      this.loading = true;
+      try {
+        await Promise.all([
+          this.fetchConfigMaps(),
+          this.fetchServices(),
+          this.fetchPvcs(),
+          this.fetchIngresses(),
+          this.fetchIngressClasses(),
+          this.fetchSecrets(),
+          this.fetchPersistentVolumes(),
+          this.fetchStorageClasses(),
+          this.fetchDeployments(), // 新增
+          this.fetchStatefulSets() // 新增
+        ]);
+      } catch (error) {
+        console.error('Error fetching K8s resources:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async fetchConfigMaps() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sConfigMaps, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.configMaps = res.data || [];
+        } else {
+          console.error('Failed to fetch config maps:', res.msg);
           this.configMaps = [];
         }
-      },
-      async fetchServices() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sServices, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.services = res.data || [];
-          } else {
-            console.error('Failed to fetch services:', res.msg);
-            this.services = [];
-          }
-        } catch (error) {
-          console.error('Error fetching services:', error);
+      } catch (error) {
+        console.error('Error fetching config maps:', error);
+        this.configMaps = [];
+      }
+    },
+    async fetchServices() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sServices, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.services = res.data || [];
+        } else {
+          console.error('Failed to fetch services:', res.msg);
           this.services = [];
         }
-      },
-      async fetchPvcs() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sPvcs, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.pvcs = res.data || [];
-          } else {
-            console.error('Failed to fetch PVCs:', res.msg);
-            this.pvcs = [];
-          }
-        } catch (error) {
-          console.error('Error fetching PVCs:', error);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        this.services = [];
+      }
+    },
+    async fetchPvcs() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sPvcs, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.pvcs = res.data || [];
+        } else {
+          console.error('Failed to fetch PVCs:', res.msg);
           this.pvcs = [];
         }
-      },
-      async fetchIngresses() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sIngresses, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.ingresses = res.data || [];
-          } else {
-            console.error('Failed to fetch ingresses:', res.msg);
-            this.ingresses = [];
-          }
-        } catch (error) {
-          console.error('Error fetching ingresses:', error);
+      } catch (error) {
+        console.error('Error fetching PVCs:', error);
+        this.pvcs = [];
+      }
+    },
+    async fetchIngresses() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sIngresses, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.ingresses = res.data || [];
+        } else {
+          console.error('Failed to fetch ingresses:', res.msg);
           this.ingresses = [];
         }
-      },
-      async fetchIngressClasses() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sIngressClasses, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.ingressClasses = res.data || [];
-          } else {
-            console.error('Failed to fetch ingress classes:', res.msg);
-            this.ingressClasses = [];
-          }
-        } catch (error) {
-          console.error('Error fetching ingress classes:', error);
+      } catch (error) {
+        console.error('Error fetching ingresses:', error);
+        this.ingresses = [];
+      }
+    },
+    async fetchIngressClasses() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sIngressClasses, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.ingressClasses = res.data || [];
+        } else {
+          console.error('Failed to fetch ingress classes:', res.msg);
           this.ingressClasses = [];
         }
-      },
-      async fetchSecrets() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sSecrets, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.secrets = res.data || [];
-          } else {
-            console.error('Failed to fetch secrets:', res.msg);
-            this.secrets = [];
-          }
-        } catch (error) {
-          console.error('Error fetching secrets:', error);
+      } catch (error) {
+        console.error('Error fetching ingress classes:', error);
+        this.ingressClasses = [];
+      }
+    },
+    async fetchSecrets() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sSecrets, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.secrets = res.data || [];
+        } else {
+          console.error('Failed to fetch secrets:', res.msg);
           this.secrets = [];
         }
-      },
-      async fetchPersistentVolumes() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sPersistentVolumes, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.persistentVolumes = res.data || [];
-          } else {
-            console.error('Failed to fetch persistent volumes:', res.msg);
-            this.persistentVolumes = [];
-          }
-        } catch (error) {
-          console.error('Error fetching persistent volumes:', error);
+      } catch (error) {
+        console.error('Error fetching secrets:', error);
+        this.secrets = [];
+      }
+    },
+    async fetchPersistentVolumes() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sPersistentVolumes, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.persistentVolumes = res.data || [];
+        } else {
+          console.error('Failed to fetch persistent volumes:', res.msg);
           this.persistentVolumes = [];
         }
-      },
-      async fetchStorageClasses() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sStorageClasses, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.storageClasses = res.data || [];
-          } else {
-            console.error('Failed to fetch storage classes:', res.msg);
-            this.storageClasses = [];
-          }
-        } catch (error) {
-          console.error('Error fetching storage classes:', error);
+      } catch (error) {
+        console.error('Error fetching persistent volumes:', error);
+        this.persistentVolumes = [];
+      }
+    },
+    async fetchStorageClasses() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sStorageClasses, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.storageClasses = res.data || [];
+        } else {
+          console.error('Failed to fetch storage classes:', res.msg);
           this.storageClasses = [];
         }
-      },
+      } catch (error) {
+        console.error('Error fetching storage classes:', error);
+        this.storageClasses = [];
+      }
+    },
 
-      async fetchDeployments() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sDeployments, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.deployments = res.data || [];
-          } else {
-            console.error('Failed to fetch deployments:', res.msg);
-            this.deployments = [];
-          }
-        } catch (error) {
-          console.error('Error fetching deployments:', error);
+    async fetchDeployments() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sDeployments, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.deployments = res.data || [];
+        } else {
+          console.error('Failed to fetch deployments:', res.msg);
           this.deployments = [];
         }
-      },
+      } catch (error) {
+        console.error('Error fetching deployments:', error);
+        this.deployments = [];
+      }
+    },
 
-      async fetchStatefulSets() {
-        try {
-          const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
-            clusterId: this.clusterId,
-            serviceName: this.serviceName
-          });
-          if (res.code === 200) {
-            this.statefulSets = res.data || [];
-          } else {
-            console.error('Failed to fetch stateful sets:', res.msg);
-            this.statefulSets = [];
-          }
-        } catch (error) {
-          console.error('Error fetching stateful sets:', error);
+    async fetchStatefulSets() {
+      try {
+        const res = await this.$axiosGet(global.API.getK8sStatefulSets, {
+          clusterId: this.clusterId,
+          serviceName: this.serviceName
+        });
+        if (res.code === 200) {
+          this.statefulSets = res.data || [];
+        } else {
+          console.error('Failed to fetch stateful sets:', res.msg);
           this.statefulSets = [];
         }
-      },
+      } catch (error) {
+        console.error('Error fetching stateful sets:', error);
+        this.statefulSets = [];
+      }
     },
+  },
+  mounted() {
+    // 移除自动调用，改为由父组件控制
+    // if (this.serviceId) {
+    //   this.fetchK8sResources();
+    // } else {
+    //   console.error('serviceId is required to fetch K8s resources');
+    // }
+  },
+  watch: {
+    // 移除自动调用，改为由父组件控制
+    // serviceId(newVal) {
+    //   if (newVal) {
+    //     this.fetchK8sResources();
+    //   }
+    // }
+  },
+  methods: {
     // 工作负载处理方法
     handleViewCronJob(record) {
       // TODO: 实现查看CronJob的逻辑
@@ -1514,19 +1540,6 @@ export default {
           return 'default';
       }
     },
-  mounted() {
-    if (this.serviceId) {
-      this.fetchK8sResources();
-    } else {
-      console.error('serviceId is required to fetch K8s resources');
-    }
-  },
-  watch: {
-    serviceId(newVal) {
-      if (newVal) {
-        this.fetchK8sResources();
-      }
-    }
   }
 };
 </script>

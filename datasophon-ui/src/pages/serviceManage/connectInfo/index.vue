@@ -52,6 +52,7 @@
       :service-name="serviceName"
       :connection-info="connectionInfo"
       @loading-change="handleLoadingChange"
+      @refresh-request="handleRefreshRequest"
     />
     
     <!-- 服务未支持或组件不存在 -->
@@ -120,7 +121,7 @@ export default {
       connectionInfo: null,
       // 存储支持的服务类型列表
       supportedServiceTypes: Object.keys(SERVICE_COMPONENT_MAP),
-      // 存储最后一次调用的时间戳
+      // 存储最后一次调用的时间戳（修改命名，符合规范）
       lastCallTimestamp: 0,
       // 标记数据是否已经加载过，避免重复加载
       dataAlreadyLoaded: false,
@@ -178,6 +179,14 @@ export default {
     // 可以在这里做一些清理工作，但保持数据加载状态，避免重复加载
   },
   methods: {
+    // 处理子组件的刷新请求
+    handleRefreshRequest() {
+      console.log('父组件收到子组件的刷新请求');
+      // 重置数据加载状态，允许重新获取数据
+      this.dataAlreadyLoaded = false;
+      this.getConnectionInfo();
+    },
+    
     // 获取服务类型 - 直接从服务名称获取，无需额外调用API
     getServiceType() {
       if (this.serviceType) {
@@ -198,8 +207,6 @@ export default {
       // 如果没有服务类型信息，返回null
       return null;
     },
-    
-
     
     // 获取连接信息 - 集中管理API调用
     getConnectionInfo() {
