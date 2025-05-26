@@ -61,3 +61,4 @@ node/
 /datasophon-service/src/main/resources/rebel-remote.xml
 /datasophon-ui/src/main/resources/rebel-remote.xml
 /datasophon-worker/src/main/resources/rebel-remote.xml
+/datasophon-ui/.yarn/
