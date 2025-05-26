@@ -330,12 +330,12 @@ export default {
           this.pagination.total = 0;
           this.totalPages = 1;
           // 使用项目的消息提示替代ArcoDesign的Message
-          this.$message.error(res && res.msg ? res.msg : 'Failed to get Pod list');
+          console.error(res && res.msg ? res.msg : 'Failed to get Pod list');
         }
       } catch (error) {
         console.error('Exception while getting Pod list:', error);
         // 使用项目的消息提示
-        this.$message.error('Exception while getting Pod list');
+        console.error('Exception while getting Pod list');
         this.pods = []; // Clear data on error
         this.pagination.total = 0;
         this.totalPages = 1;

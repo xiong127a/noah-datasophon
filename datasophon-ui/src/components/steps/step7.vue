@@ -26,58 +26,89 @@
 -->
 <template>
   <div class="steps7 steps">
-    <div class="steps-title flex-bewteen-container">
-      <span>服务配置</span>
+    <div class="service-config-container">
+    <div class="steps-title flex-bewteen-container" style="margin-top: -5px; margin-bottom: 15px;">
+      <span>配置参数</span>
     </div>
-    <a-button class="btn-save" type="primary" @click="handleSubmit">保存</a-button>
-    <a-spin :spinning="loading" style="position: relative;">
-      <a-tabs v-model="serviceNameKey" @change="callback" style="max-width: 1330px; position: relative;">
+      
+    <a-button class="btn-save" type="primary" @click="handleSubmit" style="z-index: 1000; margin-top: 5px;">保存</a-button>
+      
+      <a-spin :spinning="loading" class="content-spin" style="margin-top: 5px;">
+        <div class="main-content-area" style="margin-top: 5px;">
+          <a-tabs v-model="serviceNameKey" @change="callback">
         <a-tab-pane v-for="item in SERVICENAMES" :key="item" :tab="item" :forceRender="true">
-          <!-- <div class="mgt16 steps-body">
-            <CommonTemplate :ref="'CommonTemplateRef'+item" :steps4Data="steps4Data" :templateData="templateProps(item)" />
-          </div>-->
+              <!-- 标签内容由下面的区域控制 -->
         </a-tab-pane>
       </a-tabs>
-      <!-- 修改后的配置组展示区域 -->
+          
+          <!-- 使用Ant Design的Collapse组件重构配置区域 -->
+          <div class="content-wrapper">
       <div
           v-for="item in SERVICENAMES"
           :key="item"
-          :class="['steps-body', serviceNameKey === item ? 'steps-container' : '']"
+              :class="['config-area', serviceNameKey === item ? '' : 'hidden']"
       >
-        <div
-            v-if="serviceNameKey === item"
-            class="config-group-container"
-        >
-          <div
-              v-for="(group, groupName) in groupedTemplateData[item]"
+              <div v-if="serviceNameKey === item" class="config-area-inner">
+                <!-- 使用expandIconPosition="right"确保图标在右侧 -->
+                <a-collapse 
+                  :bordered="false"
+                  expandIconPosition="right"
+                  :defaultActiveKey="getActiveKeys(item)"
+                  class="config-collapse"
+                >
+                  <a-collapse-panel 
+                    v-for="(group, groupName, index) in groupedTemplateData[item]"
               :key="groupName"
-              class="config-group"
-          >
-            <h3 class="group-title" @click="toggleGroup(item, groupName)">
-              {{ groupName }}
-              <span class="arrow" :class="{ 'arrow-up': isGroupExpanded[item]?.[groupName] }">▶</span>
-            </h3>
-            <div v-show="isGroupExpanded[item]?.[groupName]">
-              <CommonTemplate
+                    :showArrow="true"
+                    :forceRender="true"
+                    :class="['config-panel', isLastGroup(item, index) ? 'last-group' : '']"
+                  >
+                    <template slot="header">
+                      <span class="panel-header-text">{{ convertGroupName(groupName) }}</span>
+                    </template>
+                    
+                    <div class="panel-content">
+              <FixedCommonTemplate
                   :ref="`CommonTemplateRef_${item}_${groupName}`"
                   :steps4Data="steps4Data"
-                  :templateData="group"
+                  :templateData="group.items"
               />
+                      
+                      <!-- 添加模板内容显示框 -->
+                      <div v-if="group.templateContent" class="template-content-container">
+                        <div class="template-content-title">{{ group.displayName || '模板内容' }}:</div>
+                        <a-textarea
+                          :value="group.templateContent"
+                          :auto-size="{ minRows: 3, maxRows: 10 }"
+                          readonly
+                          class="template-content-textarea"
+              />
+                      </div>
+                    </div>
+                  </a-collapse-panel>
+                </a-collapse>
+                
+                <!-- 增加底部空白区域，确保最后一个分组完整显示 -->
+                <div class="bottom-spacer"></div>
             </div>
           </div>
         </div>
       </div>
     </a-spin>
+      </div>
+    <!-- 移除多余的底部填充区域 -->
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
+import FixedCommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
 import {mapActions, mapState} from "vuex";
 import {de} from "date-fns/locale";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: {CommonTemplate},
+  components: {
+    FixedCommonTemplate
+  },
   props: {
     steps4Data: Object,
   },
@@ -114,6 +145,18 @@ export default {
     },
   },
   methods: {
+    // 判断是否为最后一个分组
+    isLastGroup(serviceName, index) {
+      const groups = this.groupedTemplateData[serviceName] || {};
+      const groupKeys = Object.keys(groups);
+      return index === groupKeys.length - 1;
+    },
+    // 获取当前服务的初始展开面板key
+    getActiveKeys(serviceName) {
+      if (!this.groupedTemplateData[serviceName]) return [];
+      // 默认全部展开
+      return Object.keys(this.groupedTemplateData[serviceName]);
+    },
     templateProps(item) {
       return this.templateObj[item];
     },
@@ -215,7 +258,16 @@ export default {
                 const formRef = this.$refs[refName]?.[0];
                 if (formRef) {
                   await formRef.form.validateFields();
-                  Object.assign(allFormData, formRef.form.getFieldsValue());
+                  // 获取表单值，同时过滤掉slider相关的辅助表单项
+                  const formValues = formRef.form.getFieldsValue();
+                  const filteredValues = {};
+                  for (const key in formValues) {
+                    // 排除slider辅助输入框的值
+                    if (!key.endsWith('_value')) {
+                      filteredValues[key] = formValues[key];
+                    }
+                  }
+                  Object.assign(allFormData, filteredValues);
                 }
               })
           );
@@ -291,73 +343,97 @@ export default {
         const res = await this.$axiosPost(global.API.getServiceConfigOption, params);
         
         if (res.code === 200) {
-          // 处理对象结构数据
-          const configGroups = res.data || {};
-
-          // 将对象转换为配置项数组
-          const allConfigs = [];
-          Object.keys(configGroups).forEach(groupName => {
-            const groupConfigs = Array.isArray(configGroups[groupName])
-                ? configGroups[groupName]
-                : [];
-            allConfigs.push(...groupConfigs.map(item => ({
-              ...item,
-              configGroup: groupName // 保留分组信息
-            })));
-          });
-
-          this.$set(this.groupedTemplateData, currentService,
-              this.handlerTemplate(currentService, allConfigs)
+          // 直接使用API返回的分组结构
+          this.$set(this.groupedTemplateData, currentService, 
+              this.handlerTemplate(currentService, res.data || {})
           );
+          
+          // 保存原始配置数据以便后续提交
+          // 将所有配置组的配置项合并为一个数组
+          const allConfigs = [];
+          Object.entries(res.data || {}).forEach(([groupName, configs]) => {
+            if (Array.isArray(configs)) {
+              configs.forEach(config => {
+                allConfigs.push({
+                  ...config,
+                  configGroup: groupName
+                });
+          });
+            }
+          });
+          
           this.templateObj[currentService] = allConfigs;
         } else {
           this.$message.error(`获取服务 ${currentService} 配置失败: ${res.msg}`);
         }
       } catch (error) {
         this.$message.error(`获取服务配置异常: ${error.message}`);
+        console.error("获取配置异常:", error);
       } finally {
         this.loading = false;
       }
     },
-    handlerTemplate(serviceName, data) {
-      const validData = (Array.isArray(data) ? data : [])
-          .filter(item => {
-            const isValid = item && typeof item === 'object' && 'name' in item;
-            return isValid;
-          })
-          .map(item => {
+    handlerTemplate(serviceName, configGroups) {
+      // 直接处理API返回的分组对象
+      const processedGroups = {};
+      
+      // 处理每个配置组
+      Object.entries(configGroups).forEach(([groupName, configs]) => {
+        if (!Array.isArray(configs)) {
+          return; // 跳过非数组的值
+        }
+        
+        // 处理每个配置项
+        const processedConfigs = configs.map(item => {
             let value = item.value;
 
+          // 转换开关和布尔类型
             if (item.type === 'switch' || item.type === 'boolean') {
               value = String(value).toLowerCase() === 'true';
             }
 
             return {
               ...item,
-              value, // 转换后的值
-              name: (item.name || '').toString(),
-              configGroup: (item.configGroup || 'CommonConfig').toString()
+            value,
+            name: (item.name || '').toString().replaceAll(".", "!") // 替换名称中的点为感叹号
             };
           });
-      validData.forEach((item) => {
-        item.name = item.name.replaceAll(".", "!");
+        
+        // 检查是否有配置项包含模板内容
+        const configWithTemplate = processedConfigs.find(item => item.templateContent && item.templateContent.trim() !== '');
+        
+        // 保存处理后的配置组，并附加模板信息（如果有）
+        processedGroups[groupName] = {
+          items: processedConfigs,
+          // 如果找到了带模板的配置项，则保存模板信息
+          displayName: configWithTemplate?.displayName || '',
+          templateContent: configWithTemplate?.templateContent || ''
+        };
       });
-      // 后续分组逻辑不变
-      const groupedData = _.groupBy(validData, item =>
-          item.configGroup.replace(/^"+|"+$/g, '').trim() || 'CommonConfig'
-      );
 
+      // 初始化分组展开状态
       this.$set(this.isGroupExpanded, serviceName, {});
-      Object.keys(groupedData).forEach(groupName => {
+      Object.keys(processedGroups).forEach(groupName => {
         this.$set(this.isGroupExpanded[serviceName], groupName, true);
       });
-      return groupedData;
+      
+      return processedGroups;
     },
-    // 新增分组切换方法
-    toggleGroup(serviceName, groupName) {
-      this.$set(this.isGroupExpanded[serviceName], groupName,
-          !this.isGroupExpanded[serviceName][groupName]
-      );
+    // 添加配置组名称转换方法
+    convertGroupName(groupName) {
+      // 处理前缀类型
+      if (groupName.startsWith('advanced_')) {
+        // 提取配置文件名称
+        const configFile = groupName.replace('advanced_', '');
+        return `高级 ${configFile}`;
+      } else if (groupName.startsWith('custom_')) {
+        // 提取配置文件名称
+        const configFile = groupName.replace('custom_', '');
+        return `自定义 ${configFile}`;
+      }
+      
+      // 默认返回原始名称
+      return groupName;
     },
     checkAllForm() {
       const self = this;
@@ -427,10 +503,13 @@ export default {
                   await formRef.form.validateFields();  // 表单验证
                   const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
 
-                  // 处理字段名（替换"."为"!"）
+                  // 处理字段名（替换"."为"!"）并过滤slider辅助输入框
                   const convertedData = Object.keys(rawData).reduce((acc, key) => {
+                    // 排除slider辅助输入框的值
+                    if (!key.endsWith('_value')) {
                     const newKey = key.replace(/\./g, '!'); // 关键转换逻辑
                     acc[newKey] = rawData[key];
+                    }
                     return acc;
                   }, {});
 
@@ -561,97 +640,210 @@ export default {
 };
 </script>
 <style lang="less" scoped>
-
-.config-group-container {
-  padding: 16px 0 !important;  /* 垂直间距保持，去除水平留白 */
-  background: transparent !important;  /* 移除容器背景色 */
+/* 步骤组件样式 - 确保不会干扰父组件的按钮 */
+.steps7.steps {
+  position: relative;
+  height: calc(100vh - 230px); /* 减小高度，给底部按钮留更多空间 */
+  max-height: calc(100vh - 230px);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 保持hidden以控制整体容器边界 */
+  padding-bottom: 20px; /* 增加底部填充 */
+  margin-top: -10px;
 }
 
-.service-title {
-  padding: 0 24px;  /* 保持水平的 padding，但去除底部的间隙 */
-  border-bottom: 1px solid #e9ecef;  /* 底部线条 */
-
-  h2 {
-    font: 500 16px/24px "Helvetica Neue", sans-serif;
-    color: #343a40;
-    margin: 0;  /* 移除外边距 */
-    padding: 0;  /* 去除内边距，确保没有多余的间隙 */
-    line-height: 24px;  /* 保持标题行高一致 */
-  }
-
-  .sub-title {
-    font: 13px/20px "PingFang SC";
-    color: #868e96;
-    letter-spacing: 0.5px;
-  }
+/* 主容器 */
+.service-config-container {
+  position: relative;
+  padding: 0 0 80px 0; /* 增加底部内边距，确保按钮有足够空间 */
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); 
+  box-sizing: border-box;
 }
 
-.config-group {
-  margin-bottom: 0px;  /* 调整配置项之间的间距 */
-  background: #ffffff;
-  padding: 0px;
-  overflow: hidden;  /* 防止出现滚动条 */
+/* 主内容区域容器 */
+.main-content-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0; /* 允许容器缩小 */
+  max-height: calc(100vh - 310px); /* 调整最大高度，确保内容不会溢出 */
+  overflow-y: auto; /* 启用垂直滚动 */
+  overflow-x: hidden;
+  position: relative;
+  box-sizing: border-box;
+  padding-bottom: 20px; /* 增加底部间距 */
+  margin-bottom: 25px; /* 增加底部外边距 */
+  }
 
-  .group-title {
-    background: #F7F9FC;
-    padding: 10px;
-    color: #303133;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 6px;
-    cursor: pointer;
+/* 标题样式 */
+.steps-title {
+  margin-bottom: 5px;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+/* 新增spin组件样式 */
+.content-spin {
+  position: relative; 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden;
+  height: 100%;
+  margin-bottom: 0; /* 移除底部边距，由父容器控制 */
+}
+
+/* 内容包装区域 */
+.content-wrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: auto;
+  max-height: none; /* 移除最大高度限制，由父容器控制 */
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+  flex-direction: column;
+  overflow: visible;
+  box-sizing: border-box;
+  padding-bottom: 10px;
+}
+
+/* 配置面板样式 */
+.config-area {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  background-color: #fff;
     position: relative;
-    transition: background 0.3s ease, transform 0.3s ease;
-    left: 16px;
-
-    /* 左边垂直条 */
-    &::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 3px;
-      height: 18px;
-      background: #1890ff;
-      z-index: 2;
+  box-sizing: border-box;
+  overflow: visible;
+  
+  &.hidden {
+    display: none;
+  }
+  
+  /* 内部容器，确保可以正确滚动 */
+  .config-area-inner {
+    position: relative;
+    height: auto;
+    width: 100%;
+    padding: 0 8px;
+    padding-bottom: 40px; /* 增加底部内边距 */
+    box-sizing: border-box;
+    overflow: visible;
     }
 
-    /* 默认状态下 z-index 设置为 1 */
+  /* 底部空白区域，提供额外空间 */
+  .bottom-spacer {
+    height: 40px; /* 增加高度 */
+    width: 100%;
+    clear: both;
+    flex-shrink: 0;
+    position: relative;
     z-index: 1;
-
-    &:hover {
-      background: #E1E9F7;  /* 更柔和的背景色 */
-      transform: scale(1.02);  /* 悬停时放大 */
-      z-index: 2;  /* 增加 z-index 以确保它显示在最上面 */
+  }
+  
+  /* 使用Ant Design Collapse的自定义样式 */
+  .config-collapse {
+    width: 100%;
+    background: transparent;
+    overflow: visible;
+    max-height: none;
+    
+    /deep/ .ant-collapse-item {
+      margin-bottom: 8px;
+      border: 1px solid #e8e8e8;
+      border-radius: 2px;
+      overflow: visible;
+      
+      &:last-child {
+        margin-bottom: 20px;
+      }
+      
+      /* 特殊处理最后一个分组 */
+      &.last-group {
+        margin-bottom: 30px;
+        
+        .ant-collapse-content {
+          padding-bottom: 5px;
+          
+          .ant-collapse-content-box {
+            padding-bottom: 10px;
+          }
+        }
+      }
+      
+      /* 优化折叠面板标题样式 */
+      .ant-collapse-header {
+        padding: 8px 40px 8px 16px !important;
+        background-color: #fff;
+        font-weight: normal;
+        color: rgba(0, 0, 0, 0.85);
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        word-break: break-all;
+        white-space: normal;
+        position: relative;
+        line-height: 1.5;
+        min-height: 36px;
+        
+        &:hover {
+          background-color: #fafafa;
     }
 
-    &.active {
-      background: #E0F7FF;  /* 激活状态时的柔和蓝色背景 */
-    }
-
-    .arrow {
+        .ant-collapse-arrow {
+          right: 16px !important;
+          left: auto !important;
       position: absolute !important;
-      right: 40px;  /* 修改这里：箭头往左移动24px */
-      top: 50%;
-      transform: translateY(-50%) rotate(0deg);
-      transition: transform 0.3s ease;
-      z-index: 3;  /* 提升箭头的 z-index，确保它在最上层 */
-      color: #909399;
-      &.arrow-up {
-        transform: translateY(-50%) rotate(90deg);  /* 点击后箭头旋转 */
+        }
+      }
+      
+      /* 重要：处理折叠面板内容区，防止高度变化影响父容器 */
+      .ant-collapse-content {
+        border-top: 1px solid #e8e8e8;
+        overflow: visible;
+        max-height: none;
+        background-color: #f5f7fa;
+        
+        .ant-collapse-content-box {
+          padding: 16px;
+          background-color: #f5f7fa;
+          min-height: 50px;
+          overflow: visible;
+          /* 移除内部滚动设置 */
       }
     }
   }
 }
+}
 
+/* 标签页相关样式 */
 .steps7 {
   .ant-tabs {
+    width: 100%;
+    flex-shrink: 0;
+    
+    /deep/ .ant-tabs-bar {
+      margin-bottom: 5px;
+      border-bottom: 1px solid #e8e8e8;
+    }
+    
     /deep/ .ant-tabs-nav {
-      padding: 0 24px !important;
+      padding: 0 16px !important;
+      width: 100%;
 
       .ant-tabs-tab {
         font: 500 13px/1.5 "Helvetica Neue" !important;
@@ -671,20 +863,192 @@ export default {
         height: 2px !important;
       }
     }
+    
+    /* 确保标签页内容不会超出 */
+    /deep/ .ant-tabs-content {
+      flex: 1;
+      overflow: visible;
+      width: 100%;
+      height: auto;
+  }
   }
 
-  .steps-body {
-    border-radius: 8px !important;
-    margin: 0 24px !important;
-  }
-
+  /* 保存按钮 */
   .btn-save {
     position: absolute;
     right: 32px;
-    z-index: 1000;
+    top: -5px;
+    z-index: 1100; /* 提高z-index确保按钮始终可见 */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 }
 
+/* 修复CommonTemplate组件中的样式问题 */
+/deep/ .ant-form-item {
+  margin-bottom: 14px;
+  max-width: 100%;
+  width: 100%;
+  
+  .ant-form-item-label {
+    max-width: 30%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .ant-form-item-control-wrapper {
+    max-width: 70%;
+  }
+  
+  /* 输入控件宽度适应容器 */
+  .ant-input, .ant-select, .ant-input-number, .ant-cascader-picker {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  /* 多行文本框限制高度 */
+  textarea.ant-input {
+    max-height: 150px;
+  }
+  
+  /* 输入框样式调整 */
+  .ant-input {
+    max-width: 100%;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    resize: vertical;
+  }
+}
+
+/* 底部按钮区域样式 */
+/deep/ .steps-action {
+  margin-top: 0;
+  padding: 8px 0;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  text-align: center;
+  background-color: #fff;
+  z-index: 10; /* 提高z-index确保按钮在顶层 */
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  border-top: 1px solid #f0f0f0;
+  padding-bottom: 12px; /* 增加底部内边距 */
+  padding-top: 12px; /* 增加顶部内边距 */
+}
+
+/* 添加面板内容区样式，确保与ServiceConfig.vue一致 */
+.panel-content {
+  background-color: #f5f7fa;
+  border-radius: 0 0 4px 4px;
+  padding: 12px;
+}
+
+/* 添加面板标题文本样式 */
+.panel-header-text {
+  font-weight: normal;
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+}
+
+/* 模板内容容器样式 */
+.template-content-container {
+  margin-top: 20px;
+  padding: 12px;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.template-content-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #595959;
+}
+
+.template-content-textarea {
+  background-color: #fafafa;
+  font-family: 'Courier New', Courier, monospace;
+  color: #595959;
+}
+
+/* 添加面板内容区样式，确保与ServiceConfig.vue一致 */
+.steps7 {
+  .service-config-container {
+    background-color: #fff;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    .content-spin {
+      min-height: 300px;
+    }
+    
+    .config-area {
+      &.hidden {
+        display: none;
+      }
+      
+      .config-collapse {
+        background: transparent;
+        
+        .config-panel {
+          border: 1px solid #ebeef5;
+          border-radius: 4px;
+          margin-bottom: 16px;
+          background-color: #fff;
+          
+          &:last-child {
+            margin-bottom: 0;
+          }
+          
+          .panel-header-text {
+            font-weight: 500;
+            font-size: 15px;
+            color: #333;
+          }
+          
+          .panel-content {
+            padding: 16px;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* 确保单位输入框样式与图片一致 */
+.content-wrapper /deep/ .input-with-unit {
+  .ant-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+  }
+  
+  .input-unit-suffix {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    height: 32px;
+    padding: 0 11px;
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 14px;
+    text-align: center;
+    background-color: #f5f5f5;
+    border: 1px solid #d9d9d9;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  &:hover .input-unit-suffix {
+    border-color: #40a9ff;
+  }
+}
+
+/* 添加底部空间，确保内容不被按钮遮挡 */
+.bottom-spacer {
+  height: 80px;
+}
 </style>
 
 

@@ -236,12 +236,12 @@ export default {
           
           console.log("处理后的persistentVolumeClaims数据:", this.persistentVolumeClaims);
         } else {
-          console.error('Failed to fetch PersistentVolumeClaims:', res.msg);
+          console.error(res.msg || '获取PVC列表失败');
           this.persistentVolumeClaims = [];
           this.pagination.total = 0;
         }
       } catch (error) {
-        console.error('Error fetching PersistentVolumeClaims:', error);
+        console.error('获取PVC列表异常');
         this.persistentVolumeClaims = [];
         this.pagination.total = 0;
       } finally {

@@ -75,8 +75,8 @@ public class ClusterServiceCommandHostCommandServiceImpl
     @Override
     public Result getHostCommandList(String hostname, String commandHostId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
-        List<ClusterServiceCommandHostCommandEntity> list =
-                this.list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
+        List<ClusterServiceCommandHostCommandEntity> list = this
+                .list(new QueryWrapper<ClusterServiceCommandHostCommandEntity>()
                         .eq(Constants.COMMAND_HOST_ID, commandHostId)
                         .orderByDesc(Constants.CREATE_TIME)
                         .last("limit " + offset + "," + pageSize));
@@ -84,8 +84,58 @@ public class ClusterServiceCommandHostCommandServiceImpl
                 .eq(Constants.COMMAND_HOST_ID, commandHostId));
         for (ClusterServiceCommandHostCommandEntity hostCommandEntity : list) {
             hostCommandEntity.setCommandStateCode(hostCommandEntity.getCommandState().getValue());
+
+            // 确保已完成/失败命令有正确的进度显示
+            updateCommandProgress(hostCommandEntity);
         }
         return Result.success(list).put(Constants.TOTAL, total);
+    }
+
+    /**
+     * 更新命令的进度值，确保状态和进度一致
+     * 
+     * @param hostCommandEntity 主机命令实体
+     */
+    private void updateCommandProgress(ClusterServiceCommandHostCommandEntity hostCommandEntity) {
+        try {
+            // 对所有最终状态的命令（成功、失败、取消），进度都应设为100%
+            // 前端通过状态判断颜色（成功-绿色，失败-红色，取消-黄色）
+            if ((CommandState.SUCCESS.equals(hostCommandEntity.getCommandState()) ||
+                    CommandState.FAILED.equals(hostCommandEntity.getCommandState()) ||
+                    CommandState.CANCEL.equals(hostCommandEntity.getCommandState())) &&
+                    (hostCommandEntity.getCommandProgress() == null || hostCommandEntity.getCommandProgress() < 100)) {
+
+                hostCommandEntity.setCommandProgress(100);
+
+                // 更新数据库进度值
+                this.updateById(hostCommandEntity);
+                logger.info("命令 {} 状态为 {}，进度设为100%以保持一致性",
+                        hostCommandEntity.getHostCommandId(),
+                        hostCommandEntity.getCommandState().getDesc());
+            }
+
+            // 确保运行中的命令至少显示一些进度
+            else if (CommandState.RUNNING.equals(hostCommandEntity.getCommandState())
+                    && (hostCommandEntity.getCommandProgress() == null
+                            || hostCommandEntity.getCommandProgress() == 0)) {
+                hostCommandEntity.setCommandProgress(10);
+                // 更新数据库进度值
+                this.updateById(hostCommandEntity);
+            }
+
+            // 确保命令进度不为空
+            if (hostCommandEntity.getCommandProgress() == null) {
+                hostCommandEntity.setCommandProgress(0);
+                // 更新数据库进度值
+                this.updateById(hostCommandEntity);
+            }
+        } catch (Exception e) {
+            logger.error("更新命令进度时出错: " + e.getMessage(), e);
+            // 出错时确保至少有默认进度
+            if (hostCommandEntity.getCommandProgress() == null) {
+                hostCommandEntity.setCommandProgress(0);
+            }
+        }
     }
 
     @Override
@@ -120,8 +170,8 @@ public class ClusterServiceCommandHostCommandServiceImpl
     @Override
     public Result getHostCommandLog(Integer clusterId, String hostCommandId) throws Exception {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        ClusterServiceCommandHostCommandEntity hostCommand =
-                this.getOne(new QueryWrapper<ClusterServiceCommandHostCommandEntity>().eq(Constants.HOST_COMMAND_ID,
+        ClusterServiceCommandHostCommandEntity hostCommand = this
+                .getOne(new QueryWrapper<ClusterServiceCommandHostCommandEntity>().eq(Constants.HOST_COMMAND_ID,
                         hostCommandId));
         ClusterServiceCommandEntity commandEntity = commandService.getCommandById(hostCommand.getCommandId());
 
@@ -145,7 +195,8 @@ public class ClusterServiceCommandHostCommandServiceImpl
             command.setDecompressPackageName("datasophon-worker");
             logger.info("Start to get {} install log from host {}", serviceRoleName, hostCommand.getHostname());
             ActorSelection configActor = ActorUtils.actorSystem
-                    .actorSelection("akka.tcp://datasophon@" + hostCommand.getHostname() + ":2552/user/worker/logActor");
+                    .actorSelection(
+                            "akka.tcp://datasophon@" + hostCommand.getHostname() + ":2552/user/worker/logActor");
             Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
             logResult = (ExecResult) Await.result(logFuture, timeout.duration());
         }

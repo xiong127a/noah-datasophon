@@ -107,7 +107,7 @@ if [ "$command" = "api" ]; then
   # 添加JRebel相关参数（如果路径已设置）
   JREBEL_OPTS=""
   if [ -n "$JREBEL_HOME" ]; then
-    JREBEL_OPTS="-agentpath:$JREBEL_HOME/lib/libjrebel64.so -Drebel.remoting_plugin=true  -Drebel.remoting_port=1099"
+    JREBEL_OPTS="-agentpath:$JREBEL_HOME/lib/libjrebel64.so -Drebel.remoting_plugin=true  -Drebel.remoting_port=1098"
   fi
   
   export DDH_OPTS="$HEAP_OPTS $DDH_OPTS $JMX $HOT_SECONDS_OPTS $JREBEL_OPTS"
