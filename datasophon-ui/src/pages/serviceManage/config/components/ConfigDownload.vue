@@ -255,9 +255,16 @@ export default {
   watch: {
   },
   mounted() {
-    this.fetchConfigFiles();
+    // 移除自动调用，改为由父组件控制
+    // this.fetchConfigFiles();
   },
   methods: {
+    // 添加loadData方法，供父组件调用
+    loadData() {
+      console.log('ConfigDownload loadData 被调用，加载配置文件数据');
+      return this.fetchConfigFiles();
+    },
+    
     // 获取配置文件列表
     async fetchConfigFiles() {
       if (!this.serviceId) {

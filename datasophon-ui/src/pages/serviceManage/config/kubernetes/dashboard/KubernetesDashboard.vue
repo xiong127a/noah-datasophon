@@ -128,13 +128,6 @@
           :selectedNamespace="selectedNamespace"
         />
 
-        <jobs-dashboard
-            v-if="activeResource === 'jobs'"
-            :clusterId="clusterId"
-            :serviceId="serviceId"
-            :selectedNamespace="selectedNamespace"
-        />
-
         <!-- Ingresses列表 -->
         <ingresses-dashboard
           v-if="activeResource === 'ingresses'"
@@ -257,6 +250,13 @@ export default defineComponent({
     // 不再需要初始化API路径
   },
   methods: {
+    // 添加loadData方法，供父组件调用
+    loadData() {
+      console.log('KubernetesDashboard loadData被调用');
+      // 复用fetchK8sResources方法
+      return this.fetchK8sResources();
+    },
+    
     // 移除API路径初始化方法
     async fetchK8sResources() {
       // 获取命名空间列表
@@ -264,6 +264,8 @@ export default defineComponent({
         
       // 根据当前选中的资源类型加载数据
       this.updateResourceData();
+      
+      return Promise.resolve(); // 返回Promise以保持与其他组件一致
     },
     // 获取命名空间
     async fetchNamespaces() {
@@ -288,9 +290,6 @@ export default defineComponent({
             // 如果不显示选择器，可以通过样式隐藏
             document.querySelector('.namespace-selector').style.display = 'none';
           }
-          
-          // 加载资源统计信息
-          this.fetchResourceStats();
         } else {
           console.error('获取命名空间失败：' + (res.msg || '未知错误'));
         }
@@ -314,7 +313,6 @@ export default defineComponent({
     // 资源类型变化处理
     handleResourceChange(resource) {
       this.activeResource = resource;
-      this.updateResourceData();
     },
     
     // 格式化时间
@@ -426,14 +424,15 @@ export default defineComponent({
     // ... 保留其他未迁移的资源加载方法 ...
   },
   mounted() {
-    if (this.serviceId) {
-      // 首先获取所有资源统计数据
-      this.fetchResourceStats();
-      // 然后获取详细资源数据
-      this.fetchK8sResources();
-    } else {
-      console.error('serviceId is required to fetch K8s resources');
-    }
+    // 注释掉自动调用代码，改为由父组件通过loadData方法控制
+    // if (this.serviceId) {
+    //   // 首先获取所有资源统计数据
+    //   this.fetchResourceStats();
+    //   // 然后获取详细资源数据
+    //   this.fetchK8sResources();
+    // } else {
+    //   console.error('serviceId is required to fetch K8s resources');
+    // }
   },
   beforeDestroy() {
     // 清理定时器
@@ -457,9 +456,10 @@ export default defineComponent({
   },
   watch: {
     serviceId(newVal) {
-      if (newVal) {
-        this.fetchK8sResources();
-      }
+      // 注释掉自动调用代码，改为由父组件通过loadData方法控制
+      // if (newVal) {
+      //   this.fetchK8sResources();
+      // }
     },
     activeResource(newVal, oldVal) {
       if (newVal !== oldVal) {

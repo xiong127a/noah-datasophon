@@ -30,6 +30,7 @@
     <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
       <a-tab-pane key="service-config" tab="配置参数" :forceRender="true">
         <ServiceConfig 
+          ref="serviceConfigRef"
           :steps4Data="steps4Data" 
           :serviceId="serviceId" 
           :serviceName="serviceName"
@@ -37,11 +38,20 @@
       </a-tab-pane>
       
       <a-tab-pane key="k8s-config" tab="Kubernetes 仪表盘" :forceRender="true">
-        <K8sConfig :serviceId="serviceId" :serviceName="serviceName" :clusterId="clusterId"/>
+        <K8sConfig 
+          ref="k8sConfigRef"
+          :serviceId="serviceId" 
+          :serviceName="serviceName" 
+          :clusterId="clusterId"
+        />
       </a-tab-pane>
       
       <a-tab-pane key="config-download" tab="配置导出" :forceRender="true">
-        <ConfigDownload :serviceId="serviceId" :serviceName="serviceName" />
+        <ConfigDownload 
+          ref="configDownloadRef"
+          :serviceId="serviceId" 
+          :serviceName="serviceName" 
+        />
       </a-tab-pane>
     </a-tabs>
 
@@ -97,6 +107,36 @@ export default {
           console.warn('无法获取服务名称，使用默认值');
         }
       }
+      
+      // 在标签页切换后加载对应组件的数据
+      this.$nextTick(() => {
+        // 根据激活的标签页调用对应组件的数据加载方法
+        switch (key) {
+          case 'service-config':
+            if (this.$refs.serviceConfigRef) {
+              console.log('调用配置参数组件的loadData方法');
+              this.$refs.serviceConfigRef.loadData();
+            }
+            break;
+            
+          case 'k8s-config':
+            if (this.$refs.k8sConfigRef) {
+              console.log('调用K8s仪表盘组件的loadData方法');
+              this.$refs.k8sConfigRef.loadData();
+            }
+            break;
+            
+          case 'config-download':
+            if (this.$refs.configDownloadRef) {
+              console.log('调用配置导出组件的loadData方法');
+              this.$refs.configDownloadRef.loadData();
+            }
+            break;
+            
+          default:
+            console.warn('未知的标签页:', key);
+        }
+      });
     },
   },
   created() {
@@ -144,6 +184,15 @@ export default {
     
     console.log('设置后的serviceId:', this.serviceId);
     console.log('设置后的serviceName:', this.serviceName);
+    
+    // 在组件创建完成后，确保加载默认标签页(配置参数)的数据
+    this.$nextTick(() => {
+      // 加载默认标签页的数据
+      if (this.activeTabKey === 'service-config' && this.$refs.serviceConfigRef) {
+        console.log('初始化加载配置参数数据');
+        this.$refs.serviceConfigRef.loadData();
+      }
+    });
   },
 };
 </script>
