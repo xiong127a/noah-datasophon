@@ -387,8 +387,19 @@
               <CommonTemplate
                   :ref="`template_${groupName}`"
                   :steps4Data="steps4Data"
-                  :templateData="group"
+                  :templateData="Array.isArray(group) ? group : group.items"
               />
+              
+              <!-- 添加模板内容显示框 -->
+              <div v-if="!Array.isArray(group) && group.templateContent" class="template-content-container">
+                <div class="template-content-title">{{ group.displayName || '模板内容' }}:</div>
+                <a-textarea
+                  :value="group.templateContent"
+                  :auto-size="{ minRows: 3, maxRows: 10 }"
+                  readonly
+                  class="template-content-textarea"
+                />
+              </div>
             </div>
           </div>
         </template>
@@ -523,7 +534,10 @@ export default {
       const result = {};
       
       // 遍历所有配置组
-      Object.entries(this.templateData).forEach(([groupName, configItems]) => {
+      Object.entries(this.templateData).forEach(([groupName, configData]) => {
+        // 处理不同的数据结构
+        const configItems = Array.isArray(configData) ? configData : (configData.items || []);
+        
         // 过滤符合条件的配置项
         const filteredItems = configItems.filter(item => {
           // 搜索label、name、value和description
@@ -541,7 +555,15 @@ export default {
         
         // 如果过滤后有配置项，添加到结果中
         if (filteredItems.length > 0) {
-          result[groupName] = filteredItems;
+          if (Array.isArray(configData)) {
+            result[groupName] = filteredItems;
+          } else {
+            // 保留原有结构
+            result[groupName] = {
+              ...configData,
+              items: filteredItems
+            };
+          }
         }
       });
       
@@ -1106,13 +1128,28 @@ export default {
           name: (item.name || '').replaceAll(".", "!")
         }));
 
+        // 检查是否有配置项包含模板内容
+        const configWithTemplate = processedItems.find(item => item.templateContent && item.templateContent.trim() !== '');
+        
         // 合并到结果集
-        result[groupKey] = [
-          ...(result[groupKey] || []),
-          ...processedItems
-        ];
+        if (configWithTemplate) {
+          // 如果有模板内容，则保存为对象结构
+          result[groupKey] = {
+            items: [...(result[groupKey]?.items || []), ...processedItems],
+            displayName: configWithTemplate.displayName || '',
+            templateContent: configWithTemplate.templateContent || ''
+          };
+        } else {
+          // 如果没有模板内容，仍然保持数组结构以兼容现有代码
+          if (!result[groupKey]) {
+            result[groupKey] = [...processedItems];
+          } else if (Array.isArray(result[groupKey])) {
+            result[groupKey] = [...result[groupKey], ...processedItems];
+          } else if (result[groupKey].items) {
+            result[groupKey].items = [...result[groupKey].items, ...processedItems];
+          }
+        }
       });
-
 
       // 保证至少存在通用配置组
       if (!('General' in result)) {
@@ -1911,5 +1948,31 @@ export default {
   transform: translateY(-50%);
   color: #1890ff;
   font-size: 16px;
+}
+
+/* 模板内容显示相关样式 */
+.template-content-container {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.template-content-title {
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.template-content-textarea {
+  width: 100%;
+  background-color: #f5f5f5;
+  color: rgba(0, 0, 0, 0.65);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  border-color: #d9d9d9;
 }
 </style> 
