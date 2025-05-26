@@ -548,7 +548,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = new ClusterServiceInstanceRoleGroup();
         clusterServiceInstanceRoleGroup.setServiceInstanceId(serviceInstanceEntity.getId());
         clusterServiceInstanceRoleGroup.setClusterId(clusterId);
-        clusterServiceInstanceRoleGroup.setRoleGroupName("默认角色组");
+        clusterServiceInstanceRoleGroup.setRoleGroupName("默认");
         clusterServiceInstanceRoleGroup.setServiceName(serviceName);
         clusterServiceInstanceRoleGroup.setRoleGroupType("default");
         roleGroupService.save(clusterServiceInstanceRoleGroup);

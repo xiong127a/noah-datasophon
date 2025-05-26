@@ -19,7 +19,7 @@
  */
 
 
- * @describe: 服务配置
+ * @describe: 配置参数
  * @Date: 2022-10-27
  * @FilePath: \datasophon-ui\src\pages\serviceManage\components\ServiceConfig.vue
 -->
@@ -38,7 +38,10 @@
               <!-- 第一个版本选择器 -->
               <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
                 <a-button style="width: 120px" class="filter-select">
-                  {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+                  <span v-if="currentVersion !== undefined">
+                    <span class="dropdown-title">版本</span> {{ currentVersion }}
+                  </span>
+                  <span v-else>选择版本</span>
                   <a-icon type="down" />
                 </a-button>
                 <div slot="overlay" class="version-list-container" @click.stop>
@@ -60,7 +63,7 @@
                     >
                       <div class="version-item-content" @click="changeVersion(versionItem.version)">
                         <div class="version-item-header">
-                          <span class="version-number">版本 {{ versionItem.version }}</span>
+                          <span class="version-number"><span class="dropdown-title">版本</span> {{ versionItem.version }}</span>
                           <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
                         </div>
                         <div class="version-item-description">{{ versionItem.description }}</div>
@@ -80,7 +83,10 @@
               <!-- 第二个版本选择器 -->
               <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
                 <a-button style="width: 120px" class="filter-select">
-                  {{ compareVersion !== undefined ? `版本 ${compareVersion}` : '选择版本' }}
+                  <span v-if="compareVersion !== undefined">
+                    <span class="dropdown-title">版本</span> {{ compareVersion }}
+                  </span>
+                  <span v-else>选择版本</span>
                   <a-icon type="down" />
                 </a-button>
                 <div slot="overlay" class="version-list-container" @click.stop>
@@ -102,7 +108,7 @@
                     >
                       <div class="version-item-content" @click="changeCompareVersion(versionItem.version)">
                         <div class="version-item-header">
-                          <span class="version-number">版本 {{ versionItem.version }}</span>
+                          <span class="version-number"><span class="dropdown-title">版本</span> {{ versionItem.version }}</span>
                           <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
                         </div>
                         <div class="version-item-description">{{ versionItem.description }}</div>
@@ -134,7 +140,10 @@
             <div class="filter-control-item">
               <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
                 <a-button style="width: 200px" class="filter-select">
-                  {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+                  <span v-if="currentId !== undefined && getGroupName(currentId)">
+                    <span class="dropdown-title">角色组</span> {{ getGroupName(currentId) }}
+                  </span>
+                  <span v-else>角色组</span>
                   <a-icon type="down" />
                 </a-button>
                 <div slot="overlay" class="config-group-list-container" @click.stop>
@@ -147,7 +156,7 @@
                       @click="changeConfigGroup(item.id)"
                     >
                       <div class="config-group-item-header">
-                        <span class="config-group-name">{{ item.roleGroupName }}</span>
+                        <span class="config-group-name"><span class="dropdown-title">角色组</span> {{ item.roleGroupName }}</span>
                       </div>
                       <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
                     </div>
@@ -190,7 +199,10 @@
         <div class="filter-item">
           <a-dropdown :trigger="['click']" overlayClassName="version-dropdown">
             <a-button style="width: 200px" class="filter-select">
-              {{ currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本' }}
+              <span v-if="currentVersion !== undefined">
+                <span class="dropdown-title">版本</span> {{ currentVersion }}
+              </span>
+              <span v-else>选择版本</span>
               <a-icon type="down" />
             </a-button>
             <div slot="overlay" class="version-list-container" @click.stop>
@@ -212,7 +224,7 @@
                 >
                   <div class="version-item-content" @click="changeVersion(versionItem.version)">
                     <div class="version-item-header">
-                      <span class="version-number">版本 {{ versionItem.version }}</span>
+                      <span class="version-number"><span class="dropdown-title">版本</span> {{ versionItem.version }}</span>
                       <span v-if="versionItem.isCurrent" class="version-tag">当前使用</span>
                     </div>
                     <div class="version-item-description">{{ versionItem.description }}</div>
@@ -222,26 +234,39 @@
                     </div>
                     <a-icon v-if="currentVersion === versionItem.version" type="check" class="version-selected-icon" />
                   </div>
-                  <!-- 添加对比按钮 -->
-                  <a-tooltip title="对比当前版本" placement="top">
-                    <div 
-                      v-if="currentVersion !== versionItem.version" 
-                      class="version-compare-btn"
-                      @click="startCompareWithVersion(versionItem.version)"
-                    >
-                      <a-icon type="swap" />
-                    </div>
-                  </a-tooltip>
+                  <!-- 操作按钮区域 -->
+                  <div class="version-actions">
+                    <!-- 对比按钮 -->
+                    <a-tooltip title="对比当前版本" placement="top">
+                      <div 
+                        v-if="currentVersion !== versionItem.version" 
+                        class="version-action-btn version-compare-btn"
+                        @click="startCompareWithVersion(versionItem.version)"
+                      >
+                        <a-icon type="swap" />
+                      </div>
+                    </a-tooltip>
+                  </div>
                 </div>
               </div>
             </div>
           </a-dropdown>
         </div>
         
+        <!-- 添加保存按钮 -->
+        <div class="filter-item" v-if="currentVersion !== undefined">
+          <a-button @click="showSaveDialog()" class="save-button">
+            保存
+          </a-button>
+        </div>
+        
         <div class="filter-item">
           <a-dropdown :trigger="['click']" overlayClassName="config-group-dropdown">
             <a-button style="width: 200px" class="filter-select">
-              {{ currentId !== undefined && getGroupName(currentId) ? `角色组 ${getGroupName(currentId)}` : '角色组' }}
+              <span v-if="currentId !== undefined && getGroupName(currentId)">
+                <span class="dropdown-title">角色组</span> {{ getGroupName(currentId) }}
+              </span>
+              <span v-else>角色组</span>
               <a-icon type="down" />
             </a-button>
             <div slot="overlay" class="config-group-list-container" @click.stop>
@@ -254,7 +279,7 @@
                   @click="changeConfigGroup(item.id)"
                 >
                   <div class="config-group-item-header">
-                    <span class="config-group-name">角色组 {{ item.roleGroupName }}</span>
+                    <span class="config-group-name"><span class="dropdown-title">角色组</span> {{ item.roleGroupName }}</span>
                   </div>
                   <a-icon v-if="currentId === item.id" type="check" class="config-group-selected-icon" />
                 </div>
@@ -289,13 +314,13 @@
                   <th class="compare-header-cell attribute-header">属性名称</th>
                   <th class="compare-header-cell">
                     <div class="version-header">
-                      <span class="version-title">版本 {{ currentVersion }}</span>
+                      <span class="version-title"><span class="dropdown-title">版本</span> {{ currentVersion }}</span>
                       <span v-if="isCurrentVersionActive" class="version-tag">当前使用</span>
                     </div>
                   </th>
                   <th class="compare-header-cell">
                     <div class="version-header">
-                      <span class="version-title">版本 {{ compareVersion }}</span>
+                      <span class="version-title"><span class="dropdown-title">版本</span> {{ compareVersion }}</span>
                       <span v-if="isCompareVersionActive" class="version-tag">当前使用</span>
                     </div>
                   </th>
@@ -366,10 +391,6 @@
               />
             </div>
           </div>
-          
-          <div class="footer">
-            <a-button type="primary" @click="showSaveDialog">保存</a-button>
-          </div>
         </template>
       </a-spin>
     </div>
@@ -393,6 +414,28 @@
             style="width: 100%"
           />
           <div class="placeholder-hint">（如不填写，系统将自动生成包含修改内容的备注）</div>
+        </a-form-item>
+      </div>
+    </a-modal>
+    
+    <!-- 添加恢复版本弹框 -->
+    <a-modal
+      v-model="restoreDialogVisible"
+      title="恢复版本确认"
+      :maskClosable="false"
+      @ok="confirmRestore"
+      okText="确定"
+      cancelText="取消"
+    >
+      <div>
+        <a-form-item label="备注" :labelCol="{ span: 4 }" :wrapperCol="{ span: 20 }">
+          <a-textarea
+            v-model="restoreDescription"
+            placeholder="请输入恢复版本的备注信息"
+            :rows="4"
+            style="width: 100%"
+          />
+          <div class="placeholder-hint">（如不填写，系统将自动生成包含恢复版本的备注）</div>
         </a-form-item>
       </div>
     </a-modal>
@@ -457,6 +500,9 @@ export default {
       isCurrentVersionActive: false, // 当前版本是否为激活版本
       isCompareVersionActive: false, // 对比版本是否为激活版本
       showOnlyDifferences: true, // 是否只显示差异项，默认为true
+      // 新增恢复版本相关数据
+      restoreDialogVisible: false, // 控制恢复确认对话框的显示
+      restoreDescription: '', // 存储恢复版本的备注
     };
   },
   computed: {
@@ -1195,6 +1241,104 @@ export default {
       // 重新加载对比数据
       this.loadCompareData();
     },
+    showRestoreDialog(version) {
+      this.restoreDialogVisible = true;
+      this.restoreDescription = `从版本 ${version} 创建的恢复版本`;
+    },
+    confirmRestore() {
+      this.loading = true;
+      
+      // 执行与保存相同的逻辑
+      try {
+        // 1. 获取所有配置组表单实例
+        const formRefs = Object.keys(this.templateData)
+            .map(groupName => this.$refs[`template_${groupName}`]?.[0])
+            .filter(Boolean);
+
+        // 2. 并行验证所有表单
+        Promise.all(
+            formRefs.map(form =>
+                new Promise((resolve, reject) => {
+                  form.form.validateFields()
+                      .then(values => resolve(values))
+                      .catch(error => reject(error))
+                })
+            )
+        ).then(() => {
+          // 3. 合并所有配置数据
+          const mergedValues = formRefs.reduce((acc, form) => {
+            return { ...acc, ...form.form.getFieldsValue() };
+          }, {});
+
+          // 4. 转换数据结构
+          const param = _.cloneDeep(this.templateData);
+          const allConfigItems = Object.values(param).flat(); // 转换为扁平化数组
+
+          // 5. 更新配置项值
+          Object.entries(mergedValues).forEach(([name, value]) => {
+            const targetItem = allConfigItems.find(item => item.name === name);
+            if (targetItem) {
+              targetItem.value = value;
+            }
+          });
+
+          // 6. 处理配置项名称
+          const processedItems = allConfigItems.map(item => ({
+            ...item,
+            name: item.name.replaceAll("!", ".")
+          }));
+
+          // 7. 过滤不需要的配置项
+          const filterParam = processedItems.filter(
+              item => !(!item.required && item.hidden)
+          );
+
+          // 8. 获取当前用户信息
+          const userStr = localStorage.getItem(process.env.VUE_APP_USER_KEY);
+          const currentUser = userStr ? JSON.parse(userStr) : {};
+
+          // 9. 构建保存参数
+          const saveParam = {
+            clusterId: this.clusterId,
+            serviceName: this.serviceName,
+            serviceConfig: JSON.stringify(filterParam),
+            roleGroupId: this.currentId,
+            description: this.restoreDescription,
+            userId: currentUser.id,
+            username: currentUser.username
+          };
+
+          // 10. 提交保存
+          this.$axiosPost(global.API.saveServiceConfig, saveParam).then(res => {
+            if (res.code === 200) {
+              this.$message.success("恢复成功");
+              this.getConfigVersion();
+              this.restoreDialogVisible = false;
+              this.restoreDescription = '';
+            } else {
+              this.$message.error(res.msg || "恢复失败");
+            }
+            this.loading = false;
+          }).catch(error => {
+            console.error('恢复失败:', error);
+            this.$message.error('恢复失败');
+            this.loading = false;
+          });
+        }).catch(error => {
+          if (error.errorFields) {
+            const firstError = error.errorFields[0];
+            const fieldPath = firstError.name.join('.');
+            this.$message.error(`配置验证失败：[${fieldPath}] ${firstError.errors[0]}`);
+          } else {
+            this.$message.error(`恢复失败: ${error.message || '未知错误'}`);
+          }
+          this.loading = false;
+        });
+      } catch (error) {
+        this.$message.error(`恢复失败: ${error.message || '未知错误'}`);
+        this.loading = false;
+      }
+    },
   },
   mounted() {
     this.getServiceRoleType()
@@ -1634,6 +1778,52 @@ export default {
   }
 }
 
+/* 版本操作按钮样式 */
+.version-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  cursor: pointer;
+  
+  &:hover {
+    color: #1890ff;
+    border-color: #1890ff;
+  }
+}
+
+.version-restore-btn {
+  &:hover {
+    color: #52c41a;
+    border-color: #52c41a;
+  }
+}
+
+/* 添加保存按钮样式 */
+.save-button {
+  background-color: #fff;
+  color: #1890ff;
+  border: 1px solid #1890ff;
+  font-size: 14px;
+  height: 32px;
+  padding: 0 15px;
+  
+  &:hover, &:focus {
+    background-color: #fff;
+    color: #40a9ff;
+    border-color: #40a9ff;
+  }
+}
+
 /* 配置组下拉列表样式 */
 .config-group-dropdown {
   width: 300px;
@@ -1641,6 +1831,16 @@ export default {
   .ant-dropdown-menu {
     padding: 0;
   }
+}
+
+/* 下拉标题样式 */
+.dropdown-title {
+  color: #1890ff;
+  font-weight: bold;
+  background-color: #e6f7ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 4px;
 }
 
 .config-group-list-container {

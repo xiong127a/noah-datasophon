@@ -28,7 +28,7 @@
   <div class="steps7 steps">
     <div class="service-config-container">
     <div class="steps-title flex-bewteen-container" style="margin-top: -5px; margin-bottom: 15px;">
-      <span>服务配置</span>
+      <span>配置参数</span>
     </div>
       
     <a-button class="btn-save" type="primary" @click="handleSubmit" style="z-index: 1000; margin-top: 5px;">保存</a-button>

@@ -28,7 +28,7 @@
   <div class="service-setting steps">
     <!-- 添加Tab页签 -->
     <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
-      <a-tab-pane key="service-config" tab="服务配置" :forceRender="true">
+      <a-tab-pane key="service-config" tab="配置参数" :forceRender="true">
         <ServiceConfig 
           :steps4Data="steps4Data" 
           :serviceId="serviceId" 
