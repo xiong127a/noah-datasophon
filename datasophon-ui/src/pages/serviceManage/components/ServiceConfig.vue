@@ -253,10 +253,10 @@
           </a-dropdown>
         </div>
         
-        <!-- 添加保存按钮 -->
+        <!-- 添加保存/恢复按钮 -->
         <div class="filter-item" v-if="currentVersion !== undefined">
-          <a-button @click="showSaveDialog()" class="save-button">
-            保存
+          <a-button @click="handleSaveOrRestore()" class="save-button">
+            {{ isCurrentVersionActive ? '保存' : '恢复' }}
           </a-button>
         </div>
         
@@ -1139,6 +1139,17 @@ export default {
       // 默认返回原始名称
       return groupName;
     },
+    // 处理保存或恢复操作
+    handleSaveOrRestore() {
+      if (this.isCurrentVersionActive) {
+        // 如果是当前版本，则显示保存对话框
+        this.showSaveDialog();
+      } else {
+        // 如果不是当前版本，则显示恢复对话框
+        this.showRestoreDialog(this.currentVersion);
+      }
+    },
+    
     // 显示保存对话框
     showSaveDialog() {
       this.saveDialogVisible = true;
