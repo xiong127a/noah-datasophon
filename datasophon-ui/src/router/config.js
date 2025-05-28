@@ -73,6 +73,7 @@ const options = {
               path: 'colony-list',
               meta: {
                 notAlive: true,
+                icon: 'cluster',
               },
               name: '集群管理',
               component: () => import('@/pages/colonyManage/list'),
@@ -80,11 +81,13 @@ const options = {
             {
               path: 'colony-parcel',
               name: '存储库管理',
+              meta: { icon: 'wenjian' },
               component: () => import('@/pages/colonyManage/parcel'),
             },
             {
               path: 'colony-frame',
               name: '集群框架',
+              meta: { icon: 'shangwutubiao-' },
               component: () => import('@/pages/colonyManage/frame'),
             },
           ],
@@ -93,7 +96,7 @@ const options = {
           path: 'security-center',
           name: '用户管理',
           meta: {
-            icon: 'safety-certificate',
+            icon: 'user',
             isCluster: '',
           },
           component: PageView,
@@ -101,6 +104,7 @@ const options = {
             {
               path: 'user',
               name: '用户管理',
+              meta: { icon: 'user' },
               component: () => import('@/pages/securityCenter/user'),
             },
           ],
@@ -128,6 +132,7 @@ const options = {
               path: 'notice',
               meta: {
                 notAlive: false,
+                icon: 'gaojing',
               },
               name: '通知组管理',
               label: '通知组管理',
@@ -137,6 +142,7 @@ const options = {
               path: 'group',
               meta: {
                 notAlive: false,
+                icon: 'gaojing',
               },
               name: '告警组管理',
               label: '告警组管理',
@@ -146,6 +152,7 @@ const options = {
               path: 'metric',
               meta: {
                 notAlive: true,
+                icon: 'yanjiuzhulu',
               },
               name: '告警指标管理',
               label: '告警指标管理',
@@ -155,6 +162,7 @@ const options = {
               path: 'help',
               meta: {
                 notAlive: false,
+                icon: 'zhuye',
               },
               name: '使用帮助',
               label: '使用帮助',
@@ -182,30 +190,35 @@ const options = {
               path: 'tenant',
               name: '租户管理',
               label: '租户管理',
+              meta: { icon: 'user' },
               component: () => import('@/pages/systemCenter/tenant/index'),
             },
             {
               path: 'user',
               name: '用户管理',
               label: '用户管理',
+              meta: { icon: 'user' },
               component: () => import('@/pages/systemCenter/user'),
             },
             {
               path: 'frame',
               name: '机架管理',
               label: '机架管理',
+              meta: { icon: 'shangwutubiao-' },
               component: () => import('@/pages/systemCenter/frame/index'),
             },
             {
               path: 'tag',
               name: '标签管理',
               label: '标签管理',
+              meta: { icon: 'tag' },
               component: () => import('@/pages/systemCenter/tag/index'),
             },
             {
               path: 'log',
               name: '日志审计',
               label: '日志审计',
+              meta: { icon: 'wenjian' },
               component: () => import('@/pages/systemCenter/log/index'),
             },
           ],

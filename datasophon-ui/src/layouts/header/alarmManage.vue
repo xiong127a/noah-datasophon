@@ -1,6 +1,6 @@
 <template>
-  <div class="cluster-setting mgr10 mgl10" style="margin-top: -1px;"   @click="showManage">
-      <svg-icon class="icon-gj" icon-class="gaojing" ></svg-icon>
+  <div class="cluster-setting" @click="showManage">
+      <svg-icon class="icon-gj" icon-class="gaojing"></svg-icon>
   </div>
 </template>
 
@@ -47,9 +47,9 @@ export default {
 <style lang="less" scoped>
 .cluster-setting {
   .icon-gj{
-     color: #fff;
-     width: 16px;
-     height: 16px;
+     color: #222b45;
+     width: 18px;
+     height: 18px;
     cursor: pointer;
   }
 }

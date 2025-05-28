@@ -83,13 +83,14 @@ export default {
   .avatar,
   .name {
     align-self: center;
-    color: #fff;
+    color: #222b45;
+    font-size: 15px;
   }
   .avatar {
     margin-right: 8px;
   }
   .name {
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 .avatar-menu {

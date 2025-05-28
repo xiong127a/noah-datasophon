@@ -28,6 +28,7 @@ export default {
     clusterSettingVisible: false,
     alarmManageVisible:true,
     customTitles,
+    activatedFirstMenuKey: '',
     ...config,
     ...localSetting
   },
@@ -82,24 +83,13 @@ export default {
       }
       return state.isCluster
     },
-    firstMenu(state, getters) {
-      const {menuData} = getters
-      if (menuData.length > 0 && !menuData[0].fullPath) {
-        formatFullPath(menuData)
-      }
-      return menuData.map(item => {
-        const menuItem = {...item}
-        delete menuItem.children
-        return menuItem
-      })
+    firstMenu: state => {
+      return state.menuData.filter(item => !item.meta.invisible)
     },
-    subMenu(state) {
-      const {menuData, activatedFirst} = state
-      if (menuData.length > 0 && !menuData[0].fullPath) {
-        formatFullPath(menuData)
-      }
-      const current = menuData.find(menu => menu.fullPath === activatedFirst)
-      return current && current.children || []
+    subMenu: state => {
+      const activeKey = state.activatedFirstMenuKey || (state.menuData[0] && state.menuData[0].fullPath)
+      const active = state.menuData.find(item => item.fullPath === activeKey)
+      return active && active.children ? active.children : []
     }
   },
   actions: {
@@ -244,8 +234,8 @@ export default {
     setPageWidth(state, pageWidth) {
       state.pageWidth = pageWidth
     },
-    setActivatedFirst(state, activatedFirst) {
-      state.activatedFirst = activatedFirst
+    setActivatedFirst(state, key) {
+      state.activatedFirstMenuKey = key
     },
     setFixedTabs(state, fixedTabs) {
       state.fixedTabs = fixedTabs

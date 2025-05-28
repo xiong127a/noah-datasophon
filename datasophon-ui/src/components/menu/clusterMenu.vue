@@ -25,14 +25,14 @@
  * @FilePath: \ddh-ui\src\components\menu\clusterMenu.vue
 -->
 <template>
-  <a-menu class="cluster-menu" :mode="mode" :inlineCollapsed="collapsed" :theme="menuTheme" :defaultSelectedKeys="['overview']" :selectedKeys="selectedKeys" :openKeys="sOpenKeys" @click="handleClick" @openChange="openChange" :style="{'min-width': collapsed ? '50px' : '',}">
+  <a-menu class="cluster-menu cdh-cluster-menu" :mode="mode" :inlineCollapsed="collapsed" :theme="'light'" :defaultSelectedKeys="['overview']" :selectedKeys="selectedKeys" :openKeys="sOpenKeys" @click="handleClick" @openChange="openChange" :style="{'min-width': collapsed ? '50px' : '', background:'#fff', borderRight:'1px solid #e0e0e0'}">
     <template v-for="(item) in options">
       <template v-if="!item.children.length">
-        <a-menu-item :key="item.fullPath">
+        <a-menu-item :key="item.fullPath" style="height:40px; line-height:40px;">
           <span v-if="collapsed">{{ item.name }}</span>
           <router-link :to="{ path: item.fullPath }">
             <span class="flex-container" v-if="!collapsed">
-              <svg-icon :icon-class="item.meta.icon" class="collapsed-icon anticon" :style="{width: '14px',height: '14px',lineHeight: '0px'}" />
+              <svg-icon :icon-class="item.meta.icon" class="collapsed-icon anticon" :style="{width: '16px',height: '16px',lineHeight: '0px', marginRight:'8px'}" />
               {{ item.name}}
             </span>
           </router-link>
@@ -43,7 +43,7 @@
           <span slot="title">
             <div class="flex-bewteen-container">
               <span class="flex-container">
-                <svg-icon :icon-class="item.meta.icon" class="collapsed-icon anticon" :style="{width: '14px',height: '14px',lineHeight: '0px'}" />
+                <svg-icon :icon-class="item.meta.icon" class="collapsed-icon anticon" :style="{width: '16px',height: '16px',lineHeight: '0px', marginRight:'8px'}" />
                 {{item.name}}
             </span>
             <div v-if="item.path === 'service-manage'">
@@ -51,7 +51,7 @@
             </div>
             </div>
           </span>
-          <a-menu-item v-for="(subItem) in item.children" :key="subItem.fullPath" style="padding-left: 24px" class="cluster-menu-subitem">
+          <a-menu-item v-for="(subItem) in item.children" :key="subItem.fullPath" style="padding-left: 24px; height:38px; line-height:38px;">
             <router-link :to="{ path: subItem.fullPath }">
               <div class="flex-bewteen-container cluster-menu-item">
                 <div class="flex-container cluster-menu-item-left">
@@ -59,17 +59,13 @@
                   <span class="service-name" :style="getServiceClassNameStyle(subItem.meta.obj)" :title="subItem.label">{{subItem.label}}</span>
                 </div>
                 <div v-if="subItem.path.includes('service-list')" class="cluster-menu-item-right">
-                  <!-- 告警 -->
                   <span v-if="subItem.meta.obj && [3,4].includes(subItem.meta.obj.serviceStateCode) && subItem.meta.obj.alertNum > 0" :class="[subItem.meta.obj ? subItem.meta.obj.serviceStateCode === 4 ? 'error-status-color': 'configured-status-color':'']" @click="showGj(subItem.meta.obj)">
                    <span v-show="alarmManageVisible">
                     <svg-icon class="icon-gj" icon-class="gaojing"></svg-icon>
                     {{subItem.meta.obj ? subItem.meta.obj.alertNum ? subItem.meta.obj.alertNum : 0 : 0}}
                    </span>
                   </span>
-                  <!-- 重启 -->
-                  <!-- 服务对比 -->
                   <a-icon v-if="subItem.meta.obj && subItem.meta.obj.needRestart" type="sync" class="menu-sub-icon" @click="textCompare" />
-                  <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
                   <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index" :content="()=> getMoreMenu(subItem)">
                     <a-icon type="more" class="cluster-more menu-sub-icon" />
                   </a-popover>

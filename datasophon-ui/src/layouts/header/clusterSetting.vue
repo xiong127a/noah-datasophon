@@ -68,8 +68,8 @@ export default {
 <style lang="less" scoped>
 .cluster-setting {
   &-icon {
-    color: #fff;
-    font-size: 16px;
+    color: #222b45;
+    font-size: 18px;
     cursor: pointer;
   }
 }
