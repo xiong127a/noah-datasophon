@@ -3,7 +3,7 @@
     <div class="cdh-header-inner">
       <!-- 左侧Logo和常用菜单 -->
       <div class="left-section">
-        <div class="logo">
+        <div class="logo" @click="goToHome">
           <img src="@/assets/img/logo.png" alt style="height:32px; margin-right:8px;"/>
           <h1 style="color:#1976d2; font-size:20px; font-weight:600; margin:0;">{{systemName}}</h1>
         </div>
@@ -13,12 +13,13 @@
               <span v-if="item.meta && item.meta.icon">
                 <svg-icon :icon-class="item.meta.icon" style="margin-right:6px;"/>
               </span>
-              {{item.name}}
-              <span class="dropdown-icon" v-if="hasChildren(item)">
+              <span v-if="item.path === 'service-manage'">主页</span>
+              <span v-else>{{item.name}}</span>
+              <span class="dropdown-icon" v-if="hasChildren(item) && item.path !== 'service-manage'">
                 <a-icon type="caret-down" />
               </span>
               
-              <ul v-show="hoveredMenu === item.fullPath" class="cdh-sub-dropdown" v-if="hasChildren(item)">
+              <ul v-show="hoveredMenu === item.fullPath && item.path !== 'service-manage'" class="cdh-sub-dropdown" v-if="hasChildren(item)">
                 <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}">
                   <a :href="'#' + subItem.fullPath" @click.stop="onSubMenuSelect(subItem, $event)">
                     <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" style="margin-right:6px;"/>
@@ -147,13 +148,13 @@ export default {
     },
     regularMenus() {
       if (!this.firstMenu) return [];
-      // 排除集群管理和用户管理
-      const adminMenuPaths = ['colony-manage', 'security-center'];
-      return this.firstMenu.filter(item => !adminMenuPaths.includes(item.path));
+      // 排除集群管理、用户管理
+      const excludePaths = ['colony-manage', 'security-center'];
+      return this.firstMenu.filter(item => !excludePaths.includes(item.path));
     },
     adminMenus() {
       if (!this.firstMenu) return [];
-      // 仅包含集群管理和用户管理
+      // 仅包含集群管理和用户管理，确保服务管理不会包含在内
       const adminMenuPaths = ['colony-manage', 'security-center'];
       return this.firstMenu.filter(item => adminMenuPaths.includes(item.path));
     },
@@ -187,6 +188,13 @@ export default {
     },
     // 处理菜单点击
     onLeftMenuClick(item) {
+      // 如果是主页菜单，使用与logo点击相同的处理方法
+      if (item.path === 'service-manage') {
+        this.goToHome(); // 直接调用goToHome方法确保行为一致
+        this.$emit('firstMenuSelect', '/service-manage'); // 确保使用完整路径作为参数
+        return;
+      }
+      
       // 如果没有子菜单，直接发出选择事件
       if (!this.hasChildren(item)) {
         this.$emit('firstMenuSelect', item.fullPath);
@@ -204,6 +212,11 @@ export default {
     
     // 检查菜单项是否有子菜单
     hasChildren(item) {
+      // 对于主页菜单，始终返回false
+      if (item.path === 'service-manage') {
+        return false;
+      }
+      
       // 从完整的firstMenu中查找对应项
       const menuItem = this.firstMenu.find(m => m.fullPath === item.fullPath);
       return menuItem && menuItem.children && menuItem.children.length > 0;
@@ -239,12 +252,36 @@ export default {
     changeCluster (val) {
       if (this.clusterId === val.key) return false
       this.setClusterId(val.key)
-      // todo: 是否需要立马去刷新服务列表
+      // 刷新服务列表
       this.$store.dispatch('setting/getRunningClusterList')
-      if (window.location.hash !== '#/overview') this.$router.push("/overview");
+      // 使用goToHome确保行为一致
+      this.goToHome();
     },
     ...mapMutations("setting", ["setLang", "setClusterId"]),
+    goToHome() {
+      // 跳转到主页
+      if (this.$route.path !== '/service-manage') {
+        this.$router.push("/service-manage").catch(err => {
+          // 忽略重复导航错误
+          if (err.name !== 'NavigationDuplicated') {
+            throw err;
+          }
+        });
+      }
+    },
   },
+  created() {
+    if (this.firstMenu && this.firstMenu.length > 0) {
+      this.activeFirstMenuKey = this.firstMenu[0].fullPath
+    }
+    
+    // 添加调试信息
+    console.log('菜单数据:', this.firstMenu);
+    setTimeout(() => {
+      console.log('菜单数据(延迟检查):', this.firstMenu);
+      console.log('regularMenus:', this.regularMenus);
+    }, 1000);
+  }
 };
 </script>
 
@@ -277,7 +314,14 @@ export default {
   display: flex;
   align-items: center;
   margin-right: 32px;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
+
+.logo:hover {
+  opacity: 0.9;
+}
+
 .cdh-header-menu {
   display: flex;
   align-items: center;

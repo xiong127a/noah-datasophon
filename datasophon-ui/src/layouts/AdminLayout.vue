@@ -10,13 +10,7 @@
     <div class="cdh-main">
       <!-- 二级菜单已改为从顶部下拉，移除左侧菜单 -->
       <div class="cdh-content full">
-        <div class="breadcrumb" style="background: #f5f6fa;">
-          <a-breadcrumb>
-            <a-breadcrumb-item :key="index" v-for="(item, index) in breadcrumb">
-              <span>{{item}}</span>
-            </a-breadcrumb-item>
-          </a-breadcrumb>
-        </div>
+        <!-- 删除面包屑导航，更好利用空间 -->
         <div style="position: relative">
           <slot></slot>
         </div>
@@ -68,6 +62,20 @@ export default {
     onFirstMenuSelect(key) {
       this.activeFirstMenuKey = key
       this.setActivatedFirst(key)
+      
+      // 对于service-manage（主页）路径做特殊处理
+      if (key === '/service-manage') {
+        // 直接跳转到主页而不是子菜单
+        if (this.$route.path !== '/service-manage') {
+          this.$router.push('/service-manage').catch(err => {
+            if (err.name !== 'NavigationDuplicated') {
+              throw err;
+            }
+          });
+        }
+        return;
+      }
+      
       // 跳转到第一个可见二级菜单页面，若无则跳转到一级菜单自身
       const firstMenu = this.firstMenu.find(item => item.fullPath === key)
       if (firstMenu) {
@@ -90,7 +98,15 @@ export default {
             targetPath = firstLeaf.fullPath
           }
         }
-        this.$router.push(targetPath)
+        // 避免重复导航
+        if (this.$route.path !== targetPath) {
+          this.$router.push(targetPath).catch(err => {
+            // 忽略导航重复错误
+            if (err.name !== 'NavigationDuplicated') {
+              throw err;
+            }
+          })
+        }
       }
     },
     getRouteBreadcrumb() {
@@ -151,7 +167,7 @@ export default {
 }
 .cdh-content {
   flex: 1;
-  padding: 24px 32px 0 32px;
+  padding: 0 32px 0 32px;
   background: #f5f6fa;
   min-height: 100vh;
   overflow-y: auto;

@@ -25,40 +25,27 @@ const options = {
       path: '/',
       name: '首页',
       component: TabsView,
-      redirect: '/login',
+      redirect: '/service-manage',
       children: [
         {
-          path: 'overview',
-          name: '总览',
-          meta: {
+          path: 'service-manage',
+          name: '主页',
+          meta: { 
             notAlive: true,
-            icon: 'over-view',
-            isCluster: 'isCluster',
+            icon: 'home'
           },
-          component: () => import('@/pages/overview/index'),
-          children: [],
+          component: () => import('@/pages/serviceManage/HomePage'),
         },
         {
-          path: 'service-manage',
-          name: '服务管理',
+          path: 'service-manage/service-list/:serviceId',
+          name: '服务详情',
           meta: {
-            icon: 'service-manage',
-            isCluster: 'isCluster',
-          },
-          component: PageView,
-          children: [
-            {
-              meta: {
-                notAlive: true,
-                params: {
-                  serviceId: '',
-                },
-              },
-              path: 'service-list/:serviceId',
-              name: '服务管理',
-              component: () => import('@/pages/serviceManage/index'),
+            notAlive: true,
+            params: {
+              serviceId: '',
             },
-          ],
+          },
+          component: () => import('@/pages/serviceManage/index'),
         },
         {
           path: 'colony-manage',

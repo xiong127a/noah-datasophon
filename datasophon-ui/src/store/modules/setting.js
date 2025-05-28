@@ -84,7 +84,12 @@ export default {
       return state.isCluster
     },
     firstMenu: state => {
-      return state.menuData.filter(item => !item.meta.invisible)
+      // 过滤掉不可见菜单、隐藏菜单和总览菜单
+      return state.menuData.filter(item => 
+        !item.meta.invisible && 
+        !item.meta.hidden && 
+        item.path !== 'overview'
+      );
     },
     subMenu: state => {
       const activeKey = state.activatedFirstMenuKey || (state.menuData[0] && state.menuData[0].fullPath)
@@ -124,38 +129,43 @@ export default {
         this._vm.$axiosPost(global.API.getServiceListByCluster, {
           clusterId: clusterId,
         }).then((res) => {
-          menuData.forEach((item) => {
-            if (item.path === "service-manage") {
-              item.children = [];
-              res.data.map((serviceItem) => {
-                item.children.push({
-                  name: serviceItem.serviceName,
-                  label:serviceItem.label,
-                  meta: {
-                    notAlive: true,
-                    isCluster: 'isCluster',
-                    params: {
-                      serviceId: serviceItem.id
-                    },
-                    obj: serviceItem,
-                    authority: {
-                      permission: "*",
-                    },
-                    permission: [{
-                      permission: "*",
-                    },
-                    {
-                      permission: "*",
-                    },
-                    ],
+          // 查找服务管理菜单
+          const serviceManageMenu = menuData.find(item => item.path === "service-manage")
+          if (serviceManageMenu) {
+            // 兼容处理原有结构
+            serviceManageMenu.children = [];
+            res.data.map((serviceItem) => {
+              serviceManageMenu.children.push({
+                name: serviceItem.serviceName,
+                label:serviceItem.label,
+                meta: {
+                  notAlive: true,
+                  isCluster: 'isCluster',
+                  params: {
+                    serviceId: serviceItem.id
                   },
-                  fullPath: `/service-manage/service-list/${serviceItem.id}`,
-                  path: `service-list/${serviceItem.id}`,
-                  component: () => import("@/pages/serviceManage/index"),
-                });
+                  obj: serviceItem,
+                  authority: {
+                    permission: "*",
+                  },
+                  permission: [{
+                    permission: "*",
+                  },
+                  {
+                    permission: "*",
+                  },
+                  ],
+                },
+                fullPath: `/service-manage/service-list/${serviceItem.id}`,
+                path: `service-list/${serviceItem.id}`,
+                component: () => import("@/pages/serviceManage/index"),
               });
-            }
-          });
+            });
+          } else {
+            // 服务管理菜单不存在，直接保存服务列表
+            localStorage.setItem('serviceList', JSON.stringify(res.data));
+          }
+          
           commit('setMenuData', menuData)
           timer = setTimeout(() => {
             dispatch('getServiceList')
