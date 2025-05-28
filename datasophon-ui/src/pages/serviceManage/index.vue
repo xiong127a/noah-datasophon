@@ -1,40 +1,47 @@
 <template>
-  <div class="service-list card-shadow">
-    <a-tabs v-model="tabKey" @change="callback">
-      <a-tab-pane :key="1" tab="总览" v-if="pageOverview">
-        <OverViewPage :serviceId="serviceId" />
-      </a-tab-pane>
-      <a-tab-pane :key="2" tab="实例">
-        <ExampleList ref="ExampleListRef" :serviceId="serviceId" />
-      </a-tab-pane>
-      <a-tab-pane :key="3" tab="配置">
-        <Setting />
-      </a-tab-pane>
-      <a-tab-pane :key="4" tab="连接信息" v-if="hasConnectionInfo && isServiceConnectionAvailable">
-        <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
-      </a-tab-pane>
-      <a-tab-pane :key="5" tab="组件介绍">
-        <ComponentIntro :serviceId="$route.params.serviceId" />
-      </a-tab-pane>
-      <a-tab-pane :key="6" tab="用户指南">
-        <UserGuide :serviceId="$route.params.serviceId" />
-      </a-tab-pane>
-      <a-tab-pane v-if="serviceName === 'YARN'" :key="7" tab="资源配置">
-        <Queue />
-      </a-tab-pane>
-    </a-tabs>
-    <a-dropdown class="webui" :style="{left: getWebUILeftPosition()}" v-if="webUis.length > 0">
-      <a-menu slot="overlay" @click="handleMenuClick">
-        <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
-      </a-menu>
-      <div class="mgr12">
+  <div class="service-detail">
+    <div class="service-header" v-if="serviceName">
+      <div class="header-title">
+        <span>{{ serviceName }}</span>
+      </div>
+    </div>
+    <div class="service-content card-shadow">
+      <a-tabs v-model="tabKey" @change="callback">
+        <a-tab-pane :key="1" tab="总览" v-if="pageOverview">
+          <OverViewPage :serviceId="serviceId" />
+        </a-tab-pane>
+        <a-tab-pane :key="2" tab="实例">
+          <ExampleList ref="ExampleListRef" :serviceId="serviceId" />
+        </a-tab-pane>
+        <a-tab-pane :key="3" tab="配置">
+          <Setting />
+        </a-tab-pane>
+        <a-tab-pane :key="4" tab="连接信息" v-if="hasConnectionInfo && isServiceConnectionAvailable">
+          <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
+        </a-tab-pane>
+        <a-tab-pane :key="5" tab="组件介绍">
+          <ComponentIntro :serviceId="$route.params.serviceId" />
+        </a-tab-pane>
+        <a-tab-pane :key="6" tab="用户指南">
+          <UserGuide :serviceId="$route.params.serviceId" />
+        </a-tab-pane>
+        <a-tab-pane v-if="serviceName === 'YARN'" :key="7" tab="资源配置">
+          <Queue />
+        </a-tab-pane>
+      </a-tabs>
+      <a-dropdown class="webui" :style="{left: getWebUILeftPosition()}" v-if="webUis.length > 0">
+        <a-menu slot="overlay" @click="handleMenuClick">
+          <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
+        </a-menu>
+        <div class="mgr12">
+          WebUI
+          <a-icon type="down" />
+        </div>
+      </a-dropdown>
+      <div v-else class="webui" :style="{left: getWebUILeftPosition()}">
         WebUI
         <a-icon type="down" />
       </div>
-    </a-dropdown>
-    <div v-else class="webui" :style="{left: getWebUILeftPosition()}">
-      WebUI
-      <a-icon type="down" />
     </div>
   </div>
 </template>
@@ -86,80 +93,50 @@ export default {
   },
 
   mounted() {
+    this.serviceId = this.$route.params.serviceId;
     this.getWebUis();
-    this.getServiceName()
+    this.getServiceName();
   },
 
   activated () {
-    console.log('每次我只触发一次')
     this.serviceId = this.$route.params.serviceId;
     this.getWebUis();
-    this.getServiceName()
-    console.log(this.$route, 'sdadadasd')
-  },
-
-  deactivated () {
-    console.log('每次我buxiang只触发一次')
+    this.getServiceName();
   },
 
   methods: {
     getWebUILeftPosition() {
-      let visibleTabs = 0;
-      
-      if (this.pageOverview) visibleTabs++;
-      visibleTabs++; // 实例页签总是显示
-      visibleTabs++; // 配置页签总是显示
-      if (this.hasConnectionInfo && this.isServiceConnectionAvailable) visibleTabs++;
-      visibleTabs += 2; // 组件介绍和用户指南总是显示
-      if (this.serviceName === 'YARN') visibleTabs++;
-      
-      // 为每个标签分配更合理的空间
-      const baseWidth = 60;   // 每个标签的基础宽度(减小)
-      const tabSpacing = 16;  // 标签之间的间距(减小到16px，与CSS一致)
-      const totalWidth = visibleTabs * baseWidth + (visibleTabs - 1) * tabSpacing;
-      
-      // 特殊处理某些服务
+      // 在服务详情页中，使用固定位置
+      // 对于KRBCLIENT服务，返回固定位置
       if (this.serviceName === 'KRBCLIENT') return '140px';
       
-      // 添加标准的16px间距，使WebUI与最后一个标签的间距与标签之间的间距一致
-      return (totalWidth + tabSpacing) + 'px';
+      // 对于其他服务，使用固定位置
+      return '540px';
     },
     
-    getWebUIWidth(serviceName) {
-      return this.getWebUILeftPosition();
-    },
     handleMenuClick(item) {
       let url = this.webUis[item.key].webUrl
       window.open(url)
     },
     callback(key) {
-      console.log("Tab changed to:", key, "类型:", typeof key);
       this.tabKey = key;
       
       if (key === 4) {
-        console.log("连接信息标签页激活，serviceId:", this.$route.params.serviceId);
         this.$nextTick(() => {
           if (this.$refs.connectInfoRef) {
-            console.log("手动调用连接信息刷新方法");
             try {
               // 优先使用 getConnectionInfo 方法，如果不存在则使用 fetchServiceInfo，避免两个都调用
               const hasGetConnectionInfo = typeof this.$refs.connectInfoRef.getConnectionInfo === 'function';
               const hasFetchServiceInfo = typeof this.$refs.connectInfoRef.fetchServiceInfo === 'function';
               
               if (hasGetConnectionInfo) {
-                console.log("调用 getConnectionInfo 方法");
                 this.$refs.connectInfoRef.getConnectionInfo();
               } else if (hasFetchServiceInfo) {
-                console.log("调用 fetchServiceInfo 方法");
                 this.$refs.connectInfoRef.fetchServiceInfo();
-              } else {
-                console.warn("连接信息组件没有可用的刷新方法");
               }
             } catch (error) {
               console.error("调用连接信息刷新方法失败:", error);
             }
-          } else {
-            console.error("connectInfoRef不存在");
           }
         });
       }
@@ -199,24 +176,56 @@ export default {
       this.hasConnectionInfo = checkServiceSupport(serviceName);
       
       // 默认将isServiceConnectionAvailable设置为与hasConnectionInfo相同
-      // 这表示如果服务类型支持连接信息，就显示标签页
       this.isServiceConnectionAvailable = this.hasConnectionInfo;
-      
-      console.log(`服务[${serviceName}]是否支持连接信息: ${this.hasConnectionInfo}`);
     }
   }
 };
 </script>
 
 <style lang="less" scoped>
-.service-list {
-  background: #fff;
-  padding: 0 20px 20px;
-  position: relative;
-  .webui {
-    position: absolute;
-    left: 200px;
-    top: 12px;
+.service-detail {
+  padding: 20px;
+  
+  .service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    
+    .header-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #1976d2;
+    }
+  }
+  
+  .service-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    position: relative;
+    
+    .webui {
+      position: absolute;
+      left: 400px;
+      top: 12px;
+      cursor: pointer;
+      color: #1976d2;
+      z-index: 10;
+    }
+  }
+}
+
+/* 额外添加WebUI按钮样式 */
+.mgr12 {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #1976d2;
+  &:hover {
+    background-color: #f0f6ff;
   }
 }
 </style>

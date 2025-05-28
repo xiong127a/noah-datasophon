@@ -34,18 +34,25 @@ const options = {
             notAlive: true,
             icon: 'home'
           },
-          component: () => import('@/pages/serviceManage/HomePage'),
-        },
-        {
-          path: 'service-manage/service-list/:serviceId',
-          name: '服务详情',
-          meta: {
-            notAlive: true,
-            params: {
-              serviceId: '',
+          component: () => import('@/pages/serviceManage/ServiceLayout'),
+          children: [
+            {
+              path: '',
+              name: '服务总览',
+              component: () => import('@/pages/serviceManage/ServiceOverview'),
             },
-          },
-          component: () => import('@/pages/serviceManage/index'),
+            {
+              path: 'service-list/:serviceId',
+              name: '服务详情',
+              meta: {
+                notAlive: true,
+                params: {
+                  serviceId: '',
+                },
+              },
+              component: () => import('@/pages/serviceManage/index'),
+            }
+          ]
         },
         {
           path: 'colony-manage',
