@@ -1,44 +1,70 @@
 <template>
   <div class="cdh-service-page">
-    <!-- 左侧服务列表 -->
-    <div class="service-sidebar">
+    <!-- 左侧服务列表 - CDH风格 -->
+    <div class="service-sidebar cdh-style">
+      <!-- 头部标题区域 -->
       <div class="service-title">
         <span>服务管理</span>
         <service-option class="service-more" />
       </div>
+      
+      <!-- CDH风格的服务列表 -->
       <div class="service-list">
         <div v-for="(service, index) in menuList" :key="index" 
              class="service-item" 
              :class="{'active': isActiveService(service)}"
              @click="selectMenu(service)">
-          <div class="flex-bewteen-container">
-            <div class="flex-container service-item-left">
-              <!-- 状态灯 -->
-              <span :class="['circle-point', service.serviceStateCode === 1 ? 'hide-point' : 
-                             service.serviceStateCode === 2 ? 'success-point': 
-                             service.serviceStateCode === 3 ? 'configured-point': 'error-point']"></span>
-              <div class="service-icon">
-                <svg-icon :icon-class="service.icon || 'service-default'" />
-              </div>
-              <div class="service-name" :style="getServiceClassNameStyle(service)" :title="service.name">{{ service.name }}</div>
+          <!-- 状态指示灯 -->
+          <div class="status-indicator">
+            <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
+            <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
+            <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
+            <span v-else class="status-icon empty"></span>
+          </div>
+          
+          <!-- 服务图标 -->
+          <div class="service-icon">
+            <svg-icon :icon-class="service.icon || 'service-default'" />
+          </div>
+          
+          <!-- 服务名称 -->
+          <div class="service-name">
+            {{ service.name }}
+          </div>
+          
+          <!-- 告警指示器 -->
+          <div class="alert-indicators">
+            <!-- 告警数量 -->
+            <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
+              <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
+              <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
             </div>
-            <div class="service-item-right">
-              <!-- 告警详情 -->
-              <span v-if="[3,4].includes(service.serviceStateCode) && service.alertNum > 0" 
-                    :class="[service.serviceStateCode === 4 ? 'error-status-color': 'configured-status-color']" 
-                    @click.stop="showAlarm(service)">
-                <span>
-                  <svg-icon class="icon-gj" icon-class="gaojing"></svg-icon>
-                  {{service.alertNum || 0}}
-                </span>
-              </span>
-              <!-- 配置变更提示 -->
-              <a-icon v-if="service.needRestart" type="sync" class="menu-sub-icon" @click.stop="showConfigCompare(service)" />
-              <!-- 更多选项 -->
-              <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index" :content="() => getMoreMenu(service)">
-                <a-icon type="more" class="menu-sub-icon" />
-              </a-popover>
+            
+            <!-- 配置变更指示器 -->
+            <a-icon 
+              v-if="service.needRestart" 
+              type="tool" 
+              class="restart-icon"
+              @click.stop="showConfigCompare(service)" 
+            />
+          </div>
+          
+          <!-- 展开按钮 -->
+          <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
+            <div class="cdh-dropdown-btn">
+              <a-icon type="caret-down" />
             </div>
+            <!-- 服务操作菜单 -->
+            <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+              <a class="ant-dropdown-link"></a>
+              <a-menu slot="overlay">
+                <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
+                <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
+                <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
+                <a-menu-divider />
+                <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
+              </a-menu>
+            </a-dropdown>
           </div>
         </div>
       </div>
@@ -61,7 +87,8 @@ export default {
   components: { ServiceOption },
   data() {
     return {
-      menuList: []
+      menuList: [],
+      activeMenu: null
     };
   },
   computed: {
@@ -72,9 +99,27 @@ export default {
   },
   mounted() {
     this.loadMenuData();
+    
+    // 添加点击外部关闭菜单的事件监听
+    document.addEventListener('click', this.closeAllMenus);
+  },
+  beforeDestroy() {
+    // 移除事件监听
+    document.removeEventListener('click', this.closeAllMenus);
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    
+    // 关闭所有菜单
+    closeAllMenus() {
+      if (this.menuList) {
+        this.menuList.forEach(item => {
+          item.menuVisible = false;
+        });
+      }
+    },
+    
+    // 加载菜单数据
     loadMenuData() {
       // 尝试从localStorage获取菜单数据
       const menuData = JSON.parse(localStorage.getItem('menuData') || '[]');
@@ -97,7 +142,8 @@ export default {
             serviceStateCode: item.meta && item.meta.obj ? item.meta.obj.serviceStateCode : 1,
             alertNum: item.meta && item.meta.obj ? item.meta.obj.alertNum : 0,
             needRestart: item.meta && item.meta.obj ? item.meta.obj.needRestart : false,
-            rawData: item.meta && item.meta.obj ? item.meta.obj : {}
+            rawData: item.meta && item.meta.obj ? item.meta.obj : {},
+            menuVisible: false
           };
         });
       } else {
@@ -116,7 +162,8 @@ export default {
                 serviceStateCode: 1,
                 alertNum: 0,
                 needRestart: false,
-                rawData: {}
+                rawData: {},
+                menuVisible: false
               };
             });
           } else {
@@ -133,12 +180,12 @@ export default {
     // 使用默认菜单数据
     useDefaultMenus() {
       this.menuList = [
-        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
-        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
-        { id: '3', name: 'HBase', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
-        { id: '4', name: 'Hive', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
-        { id: '5', name: 'ZooKeeper', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
-        { id: '6', name: 'Spark', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} }
+        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '3', name: 'HBase', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '4', name: 'Hive', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '5', name: 'ZooKeeper', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '6', name: 'Spark', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false }
       ];
     },
     
@@ -335,6 +382,19 @@ export default {
       }
       // 如果没有重启的图标没有告警的图标
       return { 'max-width': '126px' };
+    },
+    
+    // 切换服务操作菜单的可见性
+    toggleServiceMenu(service, event) {
+      event.stopPropagation();
+      service.menuVisible = !service.menuVisible;
+    },
+    
+    // 处理服务操作菜单的可见性变化
+    handleVisibleChange(visible, service) {
+      if (!visible) {
+        service.menuVisible = false;
+      }
     }
   }
 };
@@ -353,143 +413,217 @@ export default {
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
   
-  .service-title {
-    padding: 16px;
-    font-size: 16px;
-    font-weight: 600;
-    border-bottom: 1px solid #e0e0e0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: #fff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  &.cdh-style {
+    background: #f5f7f8;
+    border-right: 1px solid #dde4e5;
     
-    .service-more {
-      margin-left: auto;
-    }
-  }
-  
-  .service-list {
-    padding: 8px 0;
-  }
-  
-  .service-item {
-    display: flex;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background-color: #f0f6ff;
-    }
-    
-    &.active {
-      background-color: #e6f7ff;
-      border-right: 3px solid #1976d2;
-    }
-
-    &-left {
-      .circle-point {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: block;
-        z-index: 1000;
-        margin-right: 10px;
-      }
-      .hide-point {
-        visibility: hidden;
-      }
-      .success-point {
-        background: #52c41a;
-      }
-      .error-point {
-        background: #f5222d;
-      }
-      .configured-point {
-        background: #faad14;
-      }
-    }
-
-    &-right {
-      margin-left: auto;
-      position: relative;
+    .service-title {
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid #dde4e5;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #f5f7f8;
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    
-    .service-icon {
-      margin-right: 12px;
+      color: #333;
       
-      .svg-icon {
-        font-size: 20px;
+      .title-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+      }
+      
+      .service-more {
+        margin-left: auto;
       }
     }
     
-    .service-name {
-      flex: 1;
-      font-size: 14px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+    .service-list {
+      padding: 0;
+    }
+    
+    .service-item {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px 6px 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      position: relative;
+      height: 36px;
+      border-bottom: 1px solid #e8eef0;
+      
+      &:hover {
+        background-color: #edf2f4;
+      }
+      
+      &.active {
+        background-color: #d7e8f7;
+        border-left: 3px solid #1976d2;
+        padding-left: 13px; /* 3px border compensated */
+      }
+      
+      .status-indicator {
+        margin-right: 8px;
+        width: 16px;
+        text-align: center;
+        
+        .status-icon {
+          font-size: 14px;
+          
+          &.success {
+            color: #52c41a;
+          }
+          
+          &.warning {
+            color: #faad14;
+          }
+          
+          &.error {
+            color: #f5222d;
+          }
+          
+          &.empty {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+          }
+        }
+      }
+      
+      .service-icon {
+        margin-right: 8px;
+        width: 20px;
+        text-align: center;
+        
+        .svg-icon {
+          font-size: 16px;
+          color: #555;
+        }
+      }
+      
+      .service-name {
+        flex: 1;
+        font-size: 13px;
+        color: #333;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 8px;
+      }
+      
+      .alert-indicators {
+        display: flex;
+        align-items: center;
+        margin-right: 8px;
+        
+        .alert-badge {
+          display: flex;
+          align-items: center;
+          margin-right: 4px;
+          cursor: pointer;
+          line-height: 1;
+          
+          .error-color {
+            color: #f5222d;
+            font-size: 14px;
+          }
+          
+          .warning-color {
+            color: #faad14;
+            font-size: 14px;
+          }
+          
+          .alert-count {
+            font-size: 14px;
+            margin-left: 2px;
+            font-weight: 500;
+            position: relative;
+            top: 1px;
+            
+            &.warning-color {
+              color: #faad14;
+            }
+            
+            &.error-color {
+              color: #f5222d;
+            }
+          }
+        }
+        
+        .restart-icon {
+          font-size: 14px;
+          color: #faad14;
+          cursor: pointer;
+        }
+      }
+      
+      .expand-icon {
+        font-size: 12px;
+        color: #999;
+        margin-left: 6px;
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        
+        .cdh-dropdown-btn {
+          width: 20px;
+          height: 20px;
+          border-radius: 2px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #f8f8f8;
+          border: 1px solid #ccc;
+          transition: all 0.2s ease;
+          visibility: visible;
+          
+          &:hover {
+            background-color: #e6e6e6;
+            border-color: #adadad;
+          }
+          
+          &:active {
+            background-color: #e6e6e6;
+            border-color: #adadad;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
+          }
+          
+          .anticon {
+            font-size: 11px;
+            color: #337ab7;
+          }
+        }
+        
+        .ant-dropdown {
+          min-width: 120px;
+        }
+      }
     }
   }
+}
+
+:deep(.ant-menu-item) {
+  font-size: 13px;
+  padding: 8px 16px;
+  
+  &:hover {
+    color: #1976d2;
+  }
+}
+
+:deep(.ant-dropdown-menu) {
+  padding: 4px 0;
+  border-radius: 2px;
 }
 
 .service-content {
   flex: 1;
   overflow: auto;
   background: #f5f6fa;
-}
-
-.flex-container {
-  display: flex;
-  align-items: center;
-}
-
-.flex-bewteen-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.menu-sub-icon {
-  margin: 0 6px 0 8px;
-  cursor: pointer;
-}
-
-.error-status-color {
-  color: #f5222d;
-}
-
-.configured-status-color {
-  color: #faad14;
-}
-
-.icon-gj {
-  position: relative;
-  top: -2px;
-}
-
-.popover-index {
-  .more-menu-btn {
-    font-size: 14px;
-    color: #555555;
-    letter-spacing: 0.39px;
-    line-height: 32px;
-    font-weight: 400;
-    &:hover {
-      color: #2F7FD1;
-    }
-  }
-}
-
-:deep(.ant-popover-inner-content) {
-  text-align: left;
-  padding: 12px 16px;
 }
 </style> 

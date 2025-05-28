@@ -26,8 +26,10 @@
 -->
 <template>
   <div @click.stop>
-    <a-popover trigger="hover" placement="rightTop" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
-      <a-icon type="more" class="cluster-more" style="top: -28px" />
+    <a-popover trigger="click" placement="bottomRight" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
+      <button class="more-btn">
+        <a-icon type="caret-down" />
+      </button>
     </a-popover>
     <!-- 配置集群的modal -->
     <a-modal v-if="visible" title :visible="visible" class="service-option-modal" :maskClosable="false" :closable="false" :width="1576" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
@@ -191,6 +193,38 @@ export default {
     padding: 12px 16px;
   }
 }
+
+.more-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border: 1px solid #ccc;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #e6e6e6;
+    border-color: #adadad;
+  }
+  
+  &:active {
+    background-color: #e6e6e6;
+    border-color: #adadad;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
+  }
+  
+  .anticon {
+    font-size: 11px;
+    color: #337ab7;
+  }
+}
+
 .service-option-modal {
   /deep/ .ant-modal {
     top: 61px;
