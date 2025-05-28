@@ -4,6 +4,7 @@
       :firstMenu="firstMenu"
       :activeFirstMenuKey="activeFirstMenuKey"
       @firstMenuSelect="onFirstMenuSelect"
+      @routeChanged="onRouteChanged"
       :class="['cdh-header', {'fixed-tabs': fixedTabs, 'fixed-header': fixedHeader, 'multi-page': multiPage}]"
     />
     <div class="cdh-main">
@@ -57,6 +58,13 @@ export default {
   },
   methods: {
     ...mapMutations('setting', ['setActivatedFirst']),
+    onRouteChanged(path) {
+      console.log('路由已变更到:', path);
+      // 手动刷新视图
+      this.$nextTick(() => {
+        this.$forceUpdate();
+      });
+    },
     onFirstMenuSelect(key) {
       this.activeFirstMenuKey = key
       this.setActivatedFirst(key)

@@ -19,9 +19,11 @@
               </span>
               
               <ul v-show="hoveredMenu === item.fullPath" class="cdh-sub-dropdown" v-if="hasChildren(item)">
-                <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}" @click="onSubMenuSelect(subItem)">
-                  <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" style="margin-right:6px;"/>
-                  {{subItem.name || subItem.label}}
+                <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}">
+                  <a :href="'#' + subItem.fullPath" @click.stop="onSubMenuSelect(subItem, $event)">
+                    <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" style="margin-right:6px;"/>
+                    {{subItem.name || subItem.label}}
+                  </a>
                 </li>
               </ul>
             </li>
@@ -47,9 +49,11 @@
               </span>
             </div>
             <ul v-show="hoveredMenu === item.fullPath" class="admin-sub-dropdown" v-if="hasChildren(item)">
-              <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}" @click="onSubMenuSelect(subItem)">
-                <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" style="margin-right:6px;"/>
-                {{subItem.name || subItem.label}}
+              <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}">
+                <a :href="'#' + subItem.fullPath" @click.stop="onSubMenuSelect(subItem, $event)">
+                  <svg-icon :icon-class="subItem.meta && subItem.meta.icon ? subItem.meta.icon : 'menu-default'" style="margin-right:6px;"/>
+                  {{subItem.name || subItem.label}}
+                </a>
               </li>
             </ul>
           </li>
@@ -186,14 +190,14 @@ export default {
       // 如果没有子菜单，直接发出选择事件
       if (!this.hasChildren(item)) {
         this.$emit('firstMenuSelect', item.fullPath);
-      } else if (this.hoveredMenu !== item.fullPath) {
-        // 如果有子菜单但未展开，则展开
-        this.hoveredMenu = item.fullPath;
       } else {
-        // 如果有子菜单且已展开，则默认点击第一个子菜单
-        const children = this.getMenuChildren(item);
-        if (children && children.length > 0) {
-          this.onSubMenuSelect(children[0]);
+        // 如果有子菜单，只处理下拉菜单的展开/折叠
+        if (this.hoveredMenu !== item.fullPath) {
+          // 如果下拉菜单未展开，则展开
+          this.hoveredMenu = item.fullPath;
+        } else {
+          // 如果下拉菜单已展开，则折叠
+          this.hoveredMenu = '';
         }
       }
     },
@@ -213,14 +217,12 @@ export default {
     },
     
     // 处理子菜单点击
-    onSubMenuSelect(subItem) {
+    onSubMenuSelect(subItem, event) {
+      // 打印完整的子菜单项对象，以便调试
+      console.log('子菜单项:', subItem.name, subItem.fullPath);
+      
       // 关闭所有下拉菜单
       this.hoveredMenu = '';
-      
-      // 如果有有效路径，则导航
-      if (subItem.fullPath) {
-        this.$router.push(subItem.fullPath);
-      }
       
       // 设置当前激活的一级菜单
       const parentMenu = this.firstMenu.find(item => 
@@ -229,6 +231,9 @@ export default {
       if (parentMenu) {
         this.$emit('firstMenuSelect', parentMenu.fullPath);
       }
+      
+      // 通知父组件路由已经改变
+      this.$emit('routeChanged', subItem.fullPath);
     },
     // 切换运行中的集群
     changeCluster (val) {
@@ -469,5 +474,15 @@ li.active .dropdown-icon .anticon {
 
 .action-item:hover .dropdown-icon .anticon {
   transform: scale(0.9) rotate(180deg);
+}
+
+.cdh-sub-dropdown li a,
+.admin-sub-dropdown li a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
 }
 </style>
