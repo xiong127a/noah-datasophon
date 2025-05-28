@@ -4,67 +4,138 @@
     <div class="service-sidebar cdh-style">
       <!-- 头部标题区域 -->
       <div class="service-title">
-        <span>服务管理</span>
+        <span>{{ clusterInfo }}</span>
         <service-option class="service-more" />
       </div>
       
-      <!-- CDH风格的服务列表 -->
-      <div class="service-list">
-        <div v-for="(service, index) in menuList" :key="index" 
-             class="service-item" 
-             :class="{'active': isActiveService(service)}"
-             @click="selectMenu(service)">
-          <!-- 状态指示灯 -->
-          <div class="status-indicator">
-            <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
-            <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
-            <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
-            <span v-else class="status-icon empty"></span>
-          </div>
-          
-          <!-- 服务图标 -->
-          <div class="service-icon">
-            <svg-icon :icon-class="service.icon || 'service-default'" />
-          </div>
-          
-          <!-- 服务名称 -->
-          <div class="service-name">
-            {{ service.name }}
-          </div>
-          
-          <!-- 告警指示器 -->
-          <div class="alert-indicators">
-            <!-- 告警数量 -->
-            <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
-              <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
-              <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
+      <!-- 核心服务组 -->
+      <div class="service-group">
+        <div class="group-title">
+          <span>Core Service</span>
+        </div>
+        <div class="service-list">
+          <div v-for="(service, index) in coreServices" :key="index" 
+               class="service-item" 
+               :class="{'active': isActiveService(service)}"
+               @click="selectMenu(service)">
+            <!-- 状态指示灯 -->
+            <div class="status-indicator">
+              <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
+              <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
+              <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
+              <span v-else class="status-icon empty"></span>
             </div>
             
-            <!-- 配置变更指示器 -->
-            <a-icon 
-              v-if="service.needRestart" 
-              type="tool" 
-              class="restart-icon"
-              @click.stop="showConfigCompare(service)" 
-            />
-          </div>
-          
-          <!-- 展开按钮 -->
-          <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
-            <div class="cdh-dropdown-btn">
-              <a-icon type="caret-down" />
+            <!-- 服务图标 -->
+            <div class="service-icon">
+              <svg-icon :icon-class="service.icon || 'service-default'" />
             </div>
-            <!-- 服务操作菜单 -->
-            <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
-              <a class="ant-dropdown-link"></a>
-              <a-menu slot="overlay">
-                <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
-                <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
-                <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
-              </a-menu>
-            </a-dropdown>
+            
+            <!-- 服务名称 -->
+            <div class="service-name">
+              {{ service.name }}
+            </div>
+            
+            <!-- 告警指示器 -->
+            <div class="alert-indicators">
+              <!-- 告警数量 -->
+              <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
+                <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
+                <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
+              </div>
+              
+              <!-- 配置变更指示器 -->
+              <a-icon 
+                v-if="service.needRestart" 
+                type="tool" 
+                class="restart-icon"
+                @click.stop="showConfigCompare(service)" 
+              />
+            </div>
+            
+            <!-- 展开按钮 -->
+            <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
+              <div class="cdh-dropdown-btn">
+                <a-icon type="caret-down" />
+              </div>
+              <!-- 服务操作菜单 -->
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+                <a class="ant-dropdown-link"></a>
+                <a-menu slot="overlay">
+                  <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
+                  <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
+                  <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
+                </a-menu>
+              </a-dropdown>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 管理服务组 -->
+      <div class="service-group management-group" v-if="managementServices.length > 0">
+        <div class="group-title">
+          <span>Management Service</span>
+        </div>
+        <div class="service-list">
+          <div v-for="(service, index) in managementServices" :key="'mgmt-'+index" 
+               class="service-item" 
+               :class="{'active': isActiveService(service)}"
+               @click="selectMenu(service)">
+            <!-- 状态指示灯 -->
+            <div class="status-indicator">
+              <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
+              <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
+              <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
+              <span v-else class="status-icon empty"></span>
+            </div>
+            
+            <!-- 服务图标 -->
+            <div class="service-icon">
+              <svg-icon :icon-class="service.icon || 'service-default'" />
+            </div>
+            
+            <!-- 服务名称 -->
+            <div class="service-name">
+              {{ service.name }}
+            </div>
+            
+            <!-- 告警指示器 -->
+            <div class="alert-indicators">
+              <!-- 告警数量 -->
+              <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
+                <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
+                <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
+              </div>
+              
+              <!-- 配置变更指示器 -->
+              <a-icon 
+                v-if="service.needRestart" 
+                type="tool" 
+                class="restart-icon"
+                @click.stop="showConfigCompare(service)" 
+              />
+            </div>
+            
+            <!-- 展开按钮 -->
+            <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
+              <div class="cdh-dropdown-btn">
+                <a-icon type="caret-down" />
+              </div>
+              <!-- 服务操作菜单 -->
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+                <a class="ant-dropdown-link"></a>
+                <a-menu slot="overlay">
+                  <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
+                  <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
+                  <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
+                </a-menu>
+              </a-dropdown>
+            </div>
           </div>
         </div>
       </div>
@@ -88,16 +159,31 @@ export default {
   data() {
     return {
       menuList: [],
-      activeMenu: null
+      activeMenu: null,
+      clusterData: null,
+      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY']
     };
   },
   computed: {
     ...mapState('setting', ['menuData', 'alarmManageVisible', 'clusterId']),
     currentServiceId() {
       return this.$route.params.serviceId;
+    },
+    clusterInfo() {
+      if (this.clusterData) {
+        return `${this.clusterData.clusterName} (${this.clusterData.clusterFrame}, ${this.clusterData.depType.toLowerCase()})`;
+      }
+      return '加载中...';
+    },
+    coreServices() {
+      return this.menuList.filter(service => !this.managementServiceNames.includes(service.name.toUpperCase()));
+    },
+    managementServices() {
+      return this.menuList.filter(service => this.managementServiceNames.includes(service.name.toUpperCase()));
     }
   },
   mounted() {
+    this.getClusterInfo();
     this.loadMenuData();
     
     // 添加点击外部关闭菜单的事件监听
@@ -109,6 +195,35 @@ export default {
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    
+    // 获取集群信息
+    getClusterInfo() {
+      // 由于API可能无法在开发环境直接访问，我们模拟一个集群数据
+      // 在生产环境可以替换为实际API调用
+      // this.$axios.get('/ddh/api/cluster/runningClusterList')
+      
+      // 模拟API返回的数据
+      const mockClusterData = {
+        id: 1,
+        clusterName: "bdp",
+        clusterCode: "bdp",
+        clusterFrame: "DDP-1.2.1",
+        depType: "PVM",
+        clusterState: "正在运行"
+      };
+      
+      this.clusterData = mockClusterData;
+      
+      /* 实际环境使用下面的代码
+      this.$axiosGet('/ddh/api/cluster/runningClusterList').then(res => {
+        if (res.code === 200 && res.data && res.data.length > 0) {
+          this.clusterData = res.data[0]; // 获取第一个集群数据
+        }
+      }).catch(error => {
+        console.error('获取集群数据失败:', error);
+      });
+      */
+    },
     
     // 关闭所有菜单
     closeAllMenus() {
@@ -408,7 +523,7 @@ export default {
 }
 
 .service-sidebar {
-  width: 220px;
+  width: 240px; /* 增加宽度以显示完整服务名称 */
   background: #fff;
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
@@ -429,17 +544,21 @@ export default {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      color: #333;
-      
-      .title-actions {
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-      }
+      color: #0076ce; /* 使用CDH风格的蓝色 */
       
       .service-more {
         margin-left: auto;
       }
+    }
+    
+    .group-title {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      background-color: #e8eef0;
+      color: #333;
+      border-bottom: 1px solid #dde4e5;
+      border-top: 1px solid #dde4e5;
     }
     
     .service-list {
@@ -462,7 +581,7 @@ export default {
       
       &.active {
         background-color: #d7e8f7;
-        border-left: 3px solid #1976d2;
+        border-left: 3px solid #0076ce; /* CDH风格的蓝色边框 */
         padding-left: 13px; /* 3px border compensated */
       }
       
@@ -479,11 +598,11 @@ export default {
           }
           
           &.warning {
-            color: #faad14;
+            color: #f0a400; /* CDH风格的警告黄色 */
           }
           
           &.error {
-            color: #f5222d;
+            color: #db1d00; /* CDH风格的错误红色 */
           }
           
           &.empty {
@@ -508,7 +627,7 @@ export default {
       .service-name {
         flex: 1;
         font-size: 13px;
-        color: #333;
+        color: #0076ce; /* 服务名称使用CDH风格的蓝色 */
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -528,12 +647,12 @@ export default {
           line-height: 1;
           
           .error-color {
-            color: #f5222d;
+            color: #db1d00; /* CDH风格的错误红色 */
             font-size: 14px;
           }
           
           .warning-color {
-            color: #faad14;
+            color: #f0a400; /* CDH风格的警告黄色 */
             font-size: 14px;
           }
           
@@ -545,18 +664,18 @@ export default {
             top: 1px;
             
             &.warning-color {
-              color: #faad14;
+              color: #f0a400; /* CDH风格的警告黄色 */
             }
             
             &.error-color {
-              color: #f5222d;
+              color: #db1d00; /* CDH风格的错误红色 */
             }
           }
         }
         
         .restart-icon {
           font-size: 14px;
-          color: #faad14;
+          color: #f0a400; /* CDH风格的警告黄色 */
           cursor: pointer;
         }
       }
@@ -595,7 +714,7 @@ export default {
           
           .anticon {
             font-size: 11px;
-            color: #337ab7;
+            color: #0076ce; /* CDH风格的蓝色 */
           }
         }
         
@@ -612,7 +731,7 @@ export default {
   padding: 8px 16px;
   
   &:hover {
-    color: #1976d2;
+    color: #0076ce; /* CDH风格的蓝色 */
   }
 }
 

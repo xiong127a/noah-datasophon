@@ -221,7 +221,7 @@ export default {
   
   .anticon {
     font-size: 11px;
-    color: #337ab7;
+    color: #0076ce; /* CDH风格的蓝色 */
   }
 }
 
