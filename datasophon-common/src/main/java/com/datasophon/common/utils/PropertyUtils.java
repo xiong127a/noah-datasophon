@@ -16,14 +16,14 @@
  */
 package com.datasophon.common.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * property utils
@@ -50,13 +50,13 @@ public class PropertyUtils {
             InputStream fis = null;
             try {
                 fis = PropertyUtils.class.getResourceAsStream(fileName);
-                properties.load(fis);
+                if(fis != null) {
+                    properties.load(fis);
+                }
 
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
-                if (fis != null) {
-                    IOUtils.closeQuietly(fis);
-                }
+                IOUtils.closeQuietly(fis);
                 System.exit(1);
             } finally {
                 IOUtils.closeQuietly(fis);
