@@ -14,7 +14,9 @@
                 <svg-icon :icon-class="item.meta.icon" style="margin-right:6px;"/>
               </span>
               {{item.name}}
-              <svg-icon icon-class="arrow-down" style="margin-left:4px; font-size: 12px;" v-if="hasChildren(item)" />
+              <span class="dropdown-icon" v-if="hasChildren(item)">
+                <a-icon type="caret-down" />
+              </span>
               
               <ul v-show="hoveredMenu === item.fullPath" class="cdh-sub-dropdown" v-if="hasChildren(item)">
                 <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}" @click="onSubMenuSelect(subItem)">
@@ -40,7 +42,9 @@
                 <svg-icon icon-class="user_manager" style="margin-right:6px;"/>
               </template>
               <span>{{item.name}}</span>
-              <svg-icon v-if="hasChildren(item)" icon-class="arrow-down" style="margin-left:4px; font-size: 12px;" />
+              <span class="dropdown-icon">
+                <a-icon type="caret-down" />
+              </span>
             </div>
             <ul v-show="hoveredMenu === item.fullPath" class="admin-sub-dropdown" v-if="hasChildren(item)">
               <li v-for="subItem in getMenuChildren(item)" :key="subItem.fullPath" :class="{'active': $route.path.includes(subItem.fullPath)}" @click="onSubMenuSelect(subItem)">
@@ -56,7 +60,9 @@
           <a-dropdown class="cluster-selector">
             <span class="action-item">
               {{ currentCluster.name || 'bdp' }}
-              <a-icon type="down" />
+              <span class="dropdown-icon">
+                <a-icon type="caret-down" />
+              </span>
             </span>
             <a-menu slot="overlay">
               <a-menu-item v-for="item in runningCluster" :key="item.value" @click="changeCluster({key: item.value})">
@@ -428,5 +434,40 @@ export default {
       margin-right: 8px;
     }
   }
+}
+
+.dropdown-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  transition: all 0.3s;
+  
+  .anticon {
+    font-size: 10px;
+    transform: scale(0.9);
+    transition: transform 0.3s;
+  }
+}
+
+li:hover .dropdown-icon,
+li.active .dropdown-icon {
+  opacity: 1;
+}
+
+li:hover .dropdown-icon .anticon,
+li.active .dropdown-icon .anticon {
+  transform: scale(0.9) rotate(180deg);
+}
+
+.action-item:hover .dropdown-icon {
+  opacity: 1;
+}
+
+.action-item:hover .dropdown-icon .anticon {
+  transform: scale(0.9) rotate(180deg);
 }
 </style>
