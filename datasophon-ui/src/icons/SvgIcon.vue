@@ -40,6 +40,7 @@ export default {
   },
   computed: {
     iconName() {
+      console.log('图标类名:', this.iconClass, '处理后:', `#icon-${this.iconClass.toLowerCase()}`);
       return `#icon-${this.iconClass.toLowerCase()}`;
     },
     svgClass() {

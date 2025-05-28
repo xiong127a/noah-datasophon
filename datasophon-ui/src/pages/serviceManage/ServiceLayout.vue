@@ -26,14 +26,17 @@
               <span v-else class="status-icon empty"></span>
             </div>
             
-            <!-- 服务图标 -->
-            <div class="service-icon">
-              <svg-icon :icon-class="service.icon || 'service-default'" />
-            </div>
-            
-            <!-- 服务名称 -->
-            <div class="service-name">
-              {{ service.name }}
+            <!-- 服务名称(带图标) -->
+            <div class="service-name-container">
+              <!-- 服务图标 -->
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || 'service-default'" />
+              </div>
+              
+              <!-- 服务名称 -->
+              <div class="service-name">
+                {{ service.name }}
+              </div>
             </div>
             
             <!-- 告警指示器 -->
@@ -92,14 +95,17 @@
               <span v-else class="status-icon empty"></span>
             </div>
             
-            <!-- 服务图标 -->
-            <div class="service-icon">
-              <svg-icon :icon-class="service.icon || 'service-default'" />
-            </div>
-            
-            <!-- 服务名称 -->
-            <div class="service-name">
-              {{ service.name }}
+            <!-- 服务名称(带图标) -->
+            <div class="service-name-container">
+              <!-- 服务图标 -->
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || 'service-default'" />
+              </div>
+              
+              <!-- 服务名称 -->
+              <div class="service-name">
+                {{ service.name }}
+              </div>
             </div>
             
             <!-- 告警指示器 -->
@@ -247,11 +253,18 @@ export default {
       if (serviceMenus.length > 0 && serviceMenus[0].children) {
         // 从菜单数据中提取服务列表
         this.menuList = serviceMenus[0].children.map((item, index) => {
+          // 添加控制台日志以便调试
+          console.log('服务名称:', item.name, '图标名称:', (item.meta && item.meta.icon) || 'service-default');
+          
+          // 将服务名称转为小写作为图标名称
+          const iconName = item.name ? item.name.toLowerCase() : 'service-default';
+          console.log('使用图标名称:', iconName);
+          
           return {
             id: String(index + 1),
             name: item.name,
             path: item.fullPath,
-            icon: (item.meta && item.meta.icon) || 'service-default',
+            icon: iconName, // 使用小写服务名称作为图标名
             serviceId: (item.meta && item.meta.params && item.meta.params.serviceId) || '',
             // 添加服务状态相关的属性
             serviceStateCode: item.meta && item.meta.obj ? item.meta.obj.serviceStateCode : 1,
@@ -297,11 +310,18 @@ export default {
       this.menuList = [
         { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
         { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-        { id: '3', name: 'HBase', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-        { id: '4', name: 'Hive', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-        { id: '5', name: 'ZooKeeper', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-        { id: '6', name: 'Spark', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false }
+        { id: '3', name: 'HBASE', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '4', name: 'HIVE', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '5', name: 'ZOOKEEPER', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '6', name: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '7', name: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '8', name: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '9', name: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
+        { id: '10', name: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
       ];
+      
+      // 打印默认图标配置
+      console.log('默认菜单数据:', this.menuList);
     },
     
     // 判断当前服务是否激活
@@ -613,25 +633,34 @@ export default {
         }
       }
       
-      .service-icon {
-        margin-right: 8px;
-        width: 20px;
-        text-align: center;
-        
-        .svg-icon {
-          font-size: 16px;
-          color: #555;
-        }
-      }
-      
-      .service-name {
+      .service-name-container {
         flex: 1;
-        font-size: 13px;
-        color: #0076ce; /* 服务名称使用CDH风格的蓝色 */
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        padding-right: 8px;
+        display: flex;
+        align-items: center;
+        
+        .service-icon {
+          margin-right: 8px;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          
+          .svg-icon {
+            font-size: 20px;
+            color: #0076ce;
+          }
+        }
+        
+        .service-name {
+          flex: 1;
+          font-size: 13px;
+          color: #0076ce; /* 服务名称使用CDH风格的蓝色 */
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          padding-right: 8px;
+        }
       }
       
       .alert-indicators {
