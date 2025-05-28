@@ -2,16 +2,44 @@
   <div class="cdh-service-page">
     <!-- 左侧服务列表 -->
     <div class="service-sidebar">
-      <div class="service-title">服务管理</div>
+      <div class="service-title">
+        <span>服务管理</span>
+        <service-option class="service-more" />
+      </div>
       <div class="service-list">
         <div v-for="(service, index) in menuList" :key="index" 
              class="service-item" 
              :class="{'active': isActiveService(service)}"
              @click="selectMenu(service)">
-          <div class="service-icon">
-            <svg-icon :icon-class="service.icon || 'service-default'" />
+          <div class="flex-bewteen-container">
+            <div class="flex-container service-item-left">
+              <!-- 状态灯 -->
+              <span :class="['circle-point', service.serviceStateCode === 1 ? 'hide-point' : 
+                             service.serviceStateCode === 2 ? 'success-point': 
+                             service.serviceStateCode === 3 ? 'configured-point': 'error-point']"></span>
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || 'service-default'" />
+              </div>
+              <div class="service-name" :style="getServiceClassNameStyle(service)" :title="service.name">{{ service.name }}</div>
+            </div>
+            <div class="service-item-right">
+              <!-- 告警详情 -->
+              <span v-if="[3,4].includes(service.serviceStateCode) && service.alertNum > 0" 
+                    :class="[service.serviceStateCode === 4 ? 'error-status-color': 'configured-status-color']" 
+                    @click.stop="showAlarm(service)">
+                <span>
+                  <svg-icon class="icon-gj" icon-class="gaojing"></svg-icon>
+                  {{service.alertNum || 0}}
+                </span>
+              </span>
+              <!-- 配置变更提示 -->
+              <a-icon v-if="service.needRestart" type="sync" class="menu-sub-icon" @click.stop="showConfigCompare(service)" />
+              <!-- 更多选项 -->
+              <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index" :content="() => getMoreMenu(service)">
+                <a-icon type="more" class="menu-sub-icon" />
+              </a-popover>
+            </div>
           </div>
-          <div class="service-name">{{ service.name }}</div>
         </div>
       </div>
     </div>
@@ -25,17 +53,19 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
+import { mapState, mapMutations } from 'vuex';
+import ServiceOption from '@/components/menu/serviceOption.vue';
 
 export default {
   name: "ServiceLayout",
+  components: { ServiceOption },
   data() {
     return {
       menuList: []
     };
   },
   computed: {
-    ...mapState('setting', ['menuData']),
+    ...mapState('setting', ['menuData', 'alarmManageVisible', 'clusterId']),
     currentServiceId() {
       return this.$route.params.serviceId;
     }
@@ -44,6 +74,7 @@ export default {
     this.loadMenuData();
   },
   methods: {
+    ...mapMutations("setting", ["showClusterSetting"]),
     loadMenuData() {
       // 尝试从localStorage获取菜单数据
       const menuData = JSON.parse(localStorage.getItem('menuData') || '[]');
@@ -61,7 +92,12 @@ export default {
             name: item.name,
             path: item.fullPath,
             icon: (item.meta && item.meta.icon) || 'service-default',
-            serviceId: (item.meta && item.meta.params && item.meta.params.serviceId) || ''
+            serviceId: (item.meta && item.meta.params && item.meta.params.serviceId) || '',
+            // 添加服务状态相关的属性
+            serviceStateCode: item.meta && item.meta.obj ? item.meta.obj.serviceStateCode : 1,
+            alertNum: item.meta && item.meta.obj ? item.meta.obj.alertNum : 0,
+            needRestart: item.meta && item.meta.obj ? item.meta.obj.needRestart : false,
+            rawData: item.meta && item.meta.obj ? item.meta.obj : {}
           };
         });
       } else {
@@ -75,7 +111,12 @@ export default {
                 name: item.serviceName,
                 icon: item.serviceName.toLowerCase(),
                 serviceId: item.id,
-                path: `/service-manage/service-list/${item.id}`
+                path: `/service-manage/service-list/${item.id}`,
+                // 添加服务状态相关的默认属性
+                serviceStateCode: 1,
+                alertNum: 0,
+                needRestart: false,
+                rawData: {}
               };
             });
           } else {
@@ -92,12 +133,12 @@ export default {
     // 使用默认菜单数据
     useDefaultMenus() {
       this.menuList = [
-        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1' },
-        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2' },
-        { id: '3', name: 'HBase', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3' },
-        { id: '4', name: 'Hive', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4' },
-        { id: '5', name: 'ZooKeeper', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5' },
-        { id: '6', name: 'Spark', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6' }
+        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
+        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
+        { id: '3', name: 'HBase', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
+        { id: '4', name: 'Hive', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
+        { id: '5', name: 'ZooKeeper', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} },
+        { id: '6', name: 'Spark', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {} }
       ];
     },
     
@@ -126,6 +167,174 @@ export default {
           }
         });
       }
+    },
+    
+    // 显示告警详情
+    showAlarm(service) {
+      // 显示告警详情弹窗
+      if (!service.serviceId) return;
+      
+      const AlarmModal = () => import('@/components/alarmModal/index.vue');
+      
+      this.$confirm({
+        width: 1000,
+        title: "告警详情",
+        content: h => h(AlarmModal, {
+          props: {
+            serviceInstanceId: service.serviceId
+          }
+        }),
+        closable: true,
+        icon: () => {
+          return <div />;
+        },
+      });
+    },
+    
+    // 显示配置变更
+    showConfigCompare(service) {
+      // 显示配置变更对比弹窗
+      if (!service.serviceId) return;
+
+      const TextCompare = () => import('@/components/menu/commponents/textCompare.vue');
+      
+      this.$confirm({
+        width: 1200,
+        title: "服务版本对比",
+        content: h => h(TextCompare, {
+          props: {
+            serviceId: {
+              id: service.serviceId
+            },
+            callBack: () => this.loadMenuData()
+          }
+        }),
+        closable: true,
+        icon: () => {
+          return <div />;
+        },
+      });
+    },
+    
+    // 更多菜单选项
+    getMoreMenu(service) {
+      const arr = [
+        { name: "启动", key: "start" },
+        { name: "停止", key: "stop" },
+        { name: "重启", key: "restart" },
+        { name: "删除", key: "del" }
+      ];
+      
+      return arr.map((item, index) => {
+        return (
+          <div key={index}>
+            <a
+              class="more-menu-btn"
+              style="border-width:0px;min-width:100px;"
+              onClick={() => this.handleServiceAction(item, service)}
+            >
+              {item.name}
+            </a>
+          </div>
+        );
+      });
+    },
+    
+    // 处理服务操作
+    handleServiceAction(action, service) {
+      this.$confirm({
+        width: 450,
+        title: () => {
+          return (
+            <div style="font-size: 22px;">
+              <a-icon
+                type="question-circle"
+                style="color:#2F7FD1 !important;margin-right:10px"
+              />
+              提示
+            </div>
+          );
+        },
+        content: (
+          <div style="margin-top:20px">
+            <div style="padding:0 65px;font-size: 16px;color: #555555;">
+              {'确认' + (action.key=='start'?'开启':action.key=='stop'?'停止':action.key=='restart'?'重启':action.key=='del'?'删除':"") + service.name +'吗？'}
+            </div>
+            <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
+              <a-button
+                style="margin-right:10px;"
+                type="primary"
+                onClick={() => this.executeServiceAction(action, service)}
+              >
+                确定
+              </a-button>
+              <a-button
+                style="margin-right:10px;"
+                onClick={() => this.$destroyAll()}
+              >
+                取消
+              </a-button>
+            </div>
+          </div>
+        ),
+        icon: () => {
+          return <div />;
+        },
+        closable: true,
+      });
+    },
+    
+    // 执行服务操作
+    executeServiceAction(action, service) {
+      if (action.key === "del") {
+        if (!service.serviceId) return;
+        
+        this.$axiosPost('/ddh/cluster/service/instance/delete', {
+          serviceInstanceId: service.serviceId,
+        }).then((res) => {
+          if (res.code === 200) {
+            this.$message.success("操作成功");
+            this.$destroyAll();
+            this.$router.push("/service-manage");
+            this.loadMenuData();
+          }
+        });
+        return;
+      }
+      
+      if (!service.serviceId) return;
+      
+      const params = {
+        clusterId: this.clusterId,
+        commandType: action.key === "stop" ? "STOP_SERVICE" : action.key === "start" ? "START_SERVICE" : "RESTART_SERVICE",
+        serviceInstanceIds: service.serviceId,
+      };
+      
+      this.$axiosPost(global.API.generateServiceCommand, params).then((res) => {
+        if (res.code === 200) {
+          this.$message.success("操作成功");
+          this.$destroyAll();
+          this.showClusterSetting(true);
+        }
+      });
+    },
+    
+    // 计算服务名称的样式
+    getServiceClassNameStyle(service) {
+      // 如果有重启的图标没有告警的图标
+      if (service.needRestart && (![3,4].includes(service.serviceStateCode) && service.alertNum === 0)) {
+        return { 'max-width': '116px' };
+      }
+      // 如果没有重启的图标有告警的图标
+      if (!service.needRestart && ([3,4].includes(service.serviceStateCode) && service.alertNum > 0)) {
+        return { 'max-width': '116px' };
+      }
+      // 如果有重启的图标有告警的图标
+      if (service.needRestart && ([3,4].includes(service.serviceStateCode) && service.alertNum > 0)) {
+        return { 'max-width': '106px' };
+      }
+      // 如果没有重启的图标没有告警的图标
+      return { 'max-width': '126px' };
     }
   }
 };
@@ -153,6 +362,13 @@ export default {
     top: 0;
     z-index: 10;
     background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .service-more {
+      margin-left: auto;
+    }
   }
   
   .service-list {
@@ -161,7 +377,6 @@ export default {
   
   .service-item {
     display: flex;
-    align-items: center;
     padding: 12px 16px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -173,6 +388,37 @@ export default {
     &.active {
       background-color: #e6f7ff;
       border-right: 3px solid #1976d2;
+    }
+
+    &-left {
+      .circle-point {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: block;
+        z-index: 1000;
+        margin-right: 10px;
+      }
+      .hide-point {
+        visibility: hidden;
+      }
+      .success-point {
+        background: #52c41a;
+      }
+      .error-point {
+        background: #f5222d;
+      }
+      .configured-point {
+        background: #faad14;
+      }
+    }
+
+    &-right {
+      margin-left: auto;
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     
     .service-icon {
@@ -186,6 +432,9 @@ export default {
     .service-name {
       flex: 1;
       font-size: 14px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
   }
 }
@@ -194,5 +443,53 @@ export default {
   flex: 1;
   overflow: auto;
   background: #f5f6fa;
+}
+
+.flex-container {
+  display: flex;
+  align-items: center;
+}
+
+.flex-bewteen-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.menu-sub-icon {
+  margin: 0 6px 0 8px;
+  cursor: pointer;
+}
+
+.error-status-color {
+  color: #f5222d;
+}
+
+.configured-status-color {
+  color: #faad14;
+}
+
+.icon-gj {
+  position: relative;
+  top: -2px;
+}
+
+.popover-index {
+  .more-menu-btn {
+    font-size: 14px;
+    color: #555555;
+    letter-spacing: 0.39px;
+    line-height: 32px;
+    font-weight: 400;
+    &:hover {
+      color: #2F7FD1;
+    }
+  }
+}
+
+:deep(.ant-popover-inner-content) {
+  text-align: left;
+  padding: 12px 16px;
 }
 </style> 
