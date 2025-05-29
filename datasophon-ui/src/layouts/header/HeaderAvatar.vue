@@ -9,10 +9,6 @@
         <a-icon type="user" />
         <span>个人中心</span>
       </a-menu-item>
-      <a-menu-item v-if="isCluster === 'isCluster'" @click="toCluster">
-        <svg-icon icon-class="colony"></svg-icon>
-        <span style="margin-left: 8px">集群管理</span>
-      </a-menu-item>
       <a-menu-divider />
       <a-menu-item @click="logout">
         <a-icon style="margin-right: 8px" type="poweroff" />
