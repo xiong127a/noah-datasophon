@@ -38,6 +38,21 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: true
+      initContainers:
+        - name: init-sysctl
+          image: "${dockerImage}"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              sysctl -w fs.file-max=1000000
+              sysctl -w fs.inotify.max_user_watches=524288
+              sysctl -w fs.inotify.max_user_instances=524288
+              echo "* soft nofile 1000000" >> /etc/security/limits.conf
+              echo "* hard nofile 1000000" >> /etc/security/limits.conf
+              echo "* soft nproc 65535" >> /etc/security/limits.conf
+              echo "* hard nproc 65535" >> /etc/security/limits.conf
+          securityContext:
+            privileged: true
       containers:
         - env:
             - name: USER
@@ -51,7 +66,13 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              ulimit -n 1000000
+              ulimit -u 65535
+              sysctl -w fs.file-max=1000000
+              sysctl -w fs.inotify.max_user_watches=524288
+              sysctl -w fs.inotify.max_user_instances=524288
+              ${startCommand}
           readinessProbe:
             exec:
               command:
@@ -73,6 +94,25 @@ spec:
               cpu: "2"
           securityContext:
             privileged: true
+            capabilities:
+              add: ["SYS_RESOURCE"]
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            seLinuxOptions:
+              level: "s0:c123,c456"
+            windowsOptions:
+              runAsUserName: "ContainerAdministrator"
+            sysctls:
+              - name: fs.file-max
+                value: "1000000"
+              - name: fs.inotify.max_user_watches
+                value: "524288"
+              - name: fs.inotify.max_user_instances
+                value: "524288"
           volumeMounts:
             <#list volumePathSet as item>
             - name: "${item.name}"
