@@ -93,15 +93,8 @@ const options = {
             icon: 'user',
             isCluster: '',
           },
-          component: PageView,
-          children: [
-            {
-              path: 'user',
-              name: '用户管理',
-              meta: { icon: 'user' },
-              component: () => import('@/pages/securityCenter/user'),
-            },
-          ],
+          component: () => import('@/pages/securityCenter/user'),
+          children: []
         },
         {
           path: 'host-manage',
@@ -126,7 +119,6 @@ const options = {
               path: 'notice',
               meta: {
                 notAlive: false,
-                icon: 'gaojing',
               },
               name: '通知组管理',
               label: '通知组管理',
@@ -136,7 +128,6 @@ const options = {
               path: 'group',
               meta: {
                 notAlive: false,
-                icon: 'gaojing',
               },
               name: '告警组管理',
               label: '告警组管理',

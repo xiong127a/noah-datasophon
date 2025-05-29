@@ -48,7 +48,7 @@
                 <svg-icon icon-class="user_manager" style="margin-right:6px;"/>
               </template>
               <span>{{item.name}}</span>
-              <span class="dropdown-icon">
+              <span class="dropdown-icon" v-if="hasChildren(item)">
                 <a-icon type="caret-down" />
               </span>
             </div>
