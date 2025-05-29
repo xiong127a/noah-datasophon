@@ -201,7 +201,11 @@ export default {
       // 如果有serviceId并且路径包含服务列表
       if (serviceId && this.$route.path.includes('/service-manage/service-list/')) {
         const serviceData = this.getCachedServiceData(serviceId);
-        return serviceData && serviceData.service ? serviceData.service.name : '';
+        // 优先使用displayName，然后是name，最后是serviceName
+        if (serviceData && serviceData.service) {
+          return serviceData.service.displayName || serviceData.service.name || '';
+        }
+        return '';
       }
       return '';
     },
@@ -211,8 +215,12 @@ export default {
       
       if (serviceId && this.$route.path.includes('/service-manage/service-list/')) {
         const serviceData = this.getCachedServiceData(serviceId);
-        // 使用服务名称小写作为图标名
-        return serviceData && serviceData.service ? (serviceData.service.name || '').toLowerCase() : 'service-default';
+        if (serviceData && serviceData.service) {
+          // 优先使用serviceName，因为图标通常基于技术名称
+          const iconName = serviceData.service.serviceName || serviceData.service.name || '';
+          return iconName.toLowerCase() || 'service-default';
+        }
+        return 'service-default';
       }
       return 'service-default';
     },
@@ -279,6 +287,7 @@ export default {
           );
           
           console.log('找到服务:', service ? service.name : '未找到');
+          console.log('服务完整数据:', service);
           
           // 如果没有找到匹配的服务，尝试使用字符串匹配
           if (!service && serviceId) {
@@ -289,18 +298,41 @@ export default {
             
             if (serviceWithStringId) {
               console.log('通过字符串匹配找到服务:', serviceWithStringId.name);
+              console.log('服务label:', serviceWithStringId.label);
+              
+              // 优先使用label作为显示名称
+              const displayName = serviceWithStringId.label || serviceWithStringId.name;
+              
+              // 创建一个新对象，避免修改原始数据
+              const serviceWithLabel = {...serviceWithStringId, displayName};
+              
               this.cachedServiceData = {
                 serviceId,
-                service: serviceWithStringId
+                service: serviceWithLabel
               };
               return this.cachedServiceData;
             }
           }
           
-          this.cachedServiceData = {
-            serviceId,
-            service: service
-          };
+          if (service) {
+            console.log('服务label:', service.label);
+            
+            // 优先使用label作为显示名称
+            const displayName = service.label || service.name;
+            
+            // 创建一个新对象，避免修改原始数据
+            const serviceWithLabel = {...service, displayName};
+            
+            this.cachedServiceData = {
+              serviceId,
+              service: serviceWithLabel
+            };
+          } else {
+            this.cachedServiceData = {
+              serviceId,
+              service: null
+            };
+          }
         } else {
           console.log('服务管理菜单不存在或没有子菜单');
           // 尝试直接从serviceList获取
@@ -312,10 +344,16 @@ export default {
               const service = serviceList.find(item => item.id && item.id.toString() === serviceId.toString());
               if (service) {
                 console.log('从serviceList找到服务:', service.serviceName);
+                console.log('服务label:', service.label);
+                
+                // 优先使用label字段作为显示名称
+                const displayName = service.label || service.serviceName;
+                
                 this.cachedServiceData = {
                   serviceId,
                   service: {
-                    name: service.serviceName,
+                    name: displayName, // 使用label作为显示名称
+                    serviceName: service.serviceName, // 保存原始serviceName
                     meta: { obj: { serviceStateCode: service.serviceStateCode || 1 } }
                   }
                 };
