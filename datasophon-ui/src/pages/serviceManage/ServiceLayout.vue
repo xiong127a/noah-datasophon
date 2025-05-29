@@ -10,10 +10,11 @@
       
       <!-- 核心服务组 -->
       <div class="service-group">
-        <div class="group-title">
+        <div class="group-title" @click="toggleGroupCollapse('core')">
           <span>Core Service</span>
+          <a-icon :type="coreGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
         </div>
-        <div class="service-list">
+        <div class="service-list" v-show="!coreGroupCollapsed">
           <div v-for="(service, index) in coreServices" :key="index" 
                class="service-item" 
                :class="{'active': isActiveService(service)}"
@@ -79,10 +80,11 @@
       
       <!-- 管理服务组 -->
       <div class="service-group management-group" v-if="managementServices.length > 0">
-        <div class="group-title">
+        <div class="group-title" @click="toggleGroupCollapse('management')">
           <span>Management Service</span>
+          <a-icon :type="managementGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
         </div>
-        <div class="service-list">
+        <div class="service-list" v-show="!managementGroupCollapsed">
           <div v-for="(service, index) in managementServices" :key="'mgmt-'+index" 
                class="service-item" 
                :class="{'active': isActiveService(service)}"
@@ -167,7 +169,9 @@ export default {
       menuList: [],
       activeMenu: null,
       clusterData: null,
-      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY']
+      managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY'],
+      coreGroupCollapsed: false,
+      managementGroupCollapsed: false
     };
   },
   computed: {
@@ -201,6 +205,15 @@ export default {
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    
+    // 切换服务组的折叠状态
+    toggleGroupCollapse(groupType) {
+      if (groupType === 'core') {
+        this.coreGroupCollapsed = !this.coreGroupCollapsed;
+      } else if (groupType === 'management') {
+        this.managementGroupCollapsed = !this.managementGroupCollapsed;
+      }
+    },
     
     // 获取集群信息
     getClusterInfo() {
@@ -548,33 +561,29 @@ export default {
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
   
-  /* 默认隐藏滚动条，悬停时显示 */
+  /* 完全隐藏滚动条 */
   &::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
+    width: 0 !important;
+    height: 0 !important;
     background-color: transparent !important;
+    display: none !important;
   }
   
   &::-webkit-scrollbar-track {
     background-color: transparent !important;
+    display: none !important;
   }
   
   &::-webkit-scrollbar-thumb {
-    border-radius: 10px !important;
-    background-color: rgba(192, 196, 204, 0.5) !important;
-    opacity: 0 !important;
-    transition: opacity 0.3s ease !important;
+    display: none !important;
   }
   
   &::-webkit-scrollbar-button {
-    height: 0px !important;
-    width: 0px !important;
-    background-color: transparent !important;
+    display: none !important;
   }
   
-  &:hover::-webkit-scrollbar-thumb {
-    opacity: 1 !important;
-  }
+  /* Firefox兼容 */
+  scrollbar-width: none !important;
   
   &.cdh-style {
     background: #f5f7f8;
@@ -607,6 +616,19 @@ export default {
       color: #333;
       border-bottom: 1px solid #dde4e5;
       border-top: 1px solid #dde4e5;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      
+      &:hover {
+        background-color: #dde4e5;
+      }
+      
+      .collapse-icon {
+        font-size: 12px;
+        color: #666;
+      }
     }
     
     .service-list {
