@@ -97,7 +97,7 @@ const options = {
             icon: 'user',
             isCluster: '',
           },
-          component: () => import('@/pages/securityCenter/user'),
+              component: () => import('@/pages/securityCenter/user'),
           children: []
         },
         {

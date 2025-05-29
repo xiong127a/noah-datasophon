@@ -28,10 +28,16 @@
             :visible="sidebarCollapsed && service.popoverVisible"
             overlayClassName="service-popover"
             @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
+            :mouseEnterDelay="0.3"
+            :mouseLeaveDelay="0.5"
             :title="null"
           >
             <template slot="content">
-              <div class="service-popover-content">
+              <div 
+                class="service-popover-content"
+                @mouseenter="handlePopoverContentEnter(service)"
+                @mouseleave="handlePopoverContentLeave(service)"
+              >
                 <div class="service-popover-header">
                   <div class="service-popover-icon">
                     <svg-icon :icon-class="service.icon || 'service-default'" />
@@ -41,6 +47,7 @@
                     <div class="service-popover-version" v-if="service.rawData && service.rawData.version">{{ service.rawData.version }}</div>
                   </div>
                 </div>
+                
                 <div class="service-popover-info">
                   <div class="service-popover-status">
                     <span class="info-label">状态：</span>
@@ -49,80 +56,111 @@
                     <span v-else-if="service.serviceStateCode === 4" class="info-value error">异常</span>
                     <span v-else class="info-value">未知</span>
                   </div>
+                  
                   <div class="service-popover-alerts" v-if="service.alertNum > 0">
                     <span class="info-label">告警：</span>
-                    <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
+                    <div class="info-value-with-action">
+                      <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
+                      <a-button type="link" size="small" class="action-button" @click.stop="showAlarm(service)">
+                        <a-icon type="eye" /> 查看
+                      </a-button>
+                    </div>
                   </div>
+                  
                   <div class="service-popover-config" v-if="service.needRestart">
                     <span class="info-label">配置变更：</span>
-                    <span class="info-value warning">需要重启</span>
+                    <div class="info-value-with-action">
+                      <span class="info-value warning">需要重启</span>
+                      <a-button type="link" size="small" class="action-button" @click.stop="showConfigCompare(service)">
+                        <a-icon type="eye" /> 查看
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="service-popover-actions">
+                  <div class="button-row">
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'start'}, service)">
+                      <a-icon type="caret-right" />启动
+                    </a-button>
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'stop'}, service)">
+                      <a-icon type="pause" />停止
+                    </a-button>
+                  </div>
+                  <div class="button-row">
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'restart'}, service)">
+                      <a-icon type="reload" />重启
+                    </a-button>
+                    <a-button type="danger" size="small" @click.stop="handleServiceAction({key: 'del'}, service)">
+                      <a-icon type="delete" />删除
+                    </a-button>
                   </div>
                 </div>
               </div>
             </template>
             <div 
-              class="service-item" 
-              :class="{'active': isActiveService(service)}"
+               class="service-item" 
+               :class="{'active': isActiveService(service)}"
               @click="handleServiceItemClick(service)"
               @mouseenter="sidebarCollapsed && handleServiceMouseEnter(service)"
               @mouseleave="sidebarCollapsed && handleServiceMouseLeave(service)"
             >
-              <!-- 状态指示灯 -->
-              <div class="status-indicator">
-                <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
-                <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
-                <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
-                <span v-else class="status-icon empty"></span>
+            <!-- 状态指示灯 -->
+            <div class="status-indicator">
+              <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
+              <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
+              <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
+              <span v-else class="status-icon empty"></span>
+            </div>
+            
+            <!-- 服务名称(带图标) -->
+            <div class="service-name-container">
+              <!-- 服务图标 -->
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || 'service-default'" />
               </div>
               
-              <!-- 服务名称(带图标) -->
-              <div class="service-name-container">
-                <!-- 服务图标 -->
-                <div class="service-icon">
-                  <svg-icon :icon-class="service.icon || 'service-default'" />
-                </div>
-                
-                <!-- 服务名称 -->
+              <!-- 服务名称 -->
                 <div class="service-name" v-if="!sidebarCollapsed">
-                  {{ service.name }}
-                </div>
-              </div>
-              
-              <!-- 告警指示器 -->
-              <div class="alert-indicators">
-                <!-- 告警数量 -->
-                <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
-                  <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
-                  <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
-                </div>
-                
-                <!-- 配置变更指示器 -->
-                <a-icon 
-                  v-if="service.needRestart" 
-                  type="tool" 
-                  class="restart-icon"
-                  @click.stop="showConfigCompare(service)" 
-                />
-              </div>
-              
-              <!-- 展开按钮 -->
-              <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
-                <div class="cdh-dropdown-btn">
-                  <a-icon type="caret-down" />
-                </div>
-                <!-- 服务操作菜单 -->
-                <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
-                  <a class="ant-dropdown-link"></a>
-                  <a-menu slot="overlay">
-                    <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
-                    <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
-                    <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
-                    <a-menu-divider />
-                    <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
-                  </a-menu>
-                </a-dropdown>
+                {{ service.name }}
               </div>
             </div>
+            
+            <!-- 告警指示器 -->
+            <div class="alert-indicators">
+              <!-- 告警数量 -->
+              <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
+                <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
+                <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
+              </div>
+              
+              <!-- 配置变更指示器 -->
+              <a-icon 
+                v-if="service.needRestart" 
+                type="tool" 
+                class="restart-icon"
+                @click.stop="showConfigCompare(service)" 
+              />
+            </div>
+            
+            <!-- 展开按钮 -->
+            <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
+              <div class="cdh-dropdown-btn">
+                <a-icon type="caret-down" />
+              </div>
+              <!-- 服务操作菜单 -->
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+                <a class="ant-dropdown-link"></a>
+                <a-menu slot="overlay">
+                  <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
+                  <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
+                  <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
+                </a-menu>
+              </a-dropdown>
+            </div>
+          </div>
           </a-popover>
         </div>
       </div>
@@ -142,10 +180,16 @@
             :visible="sidebarCollapsed && service.popoverVisible"
             overlayClassName="service-popover"
             @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
+            :mouseEnterDelay="0.3"
+            :mouseLeaveDelay="0.5"
             :title="null"
           >
             <template slot="content">
-              <div class="service-popover-content">
+              <div 
+                class="service-popover-content"
+                @mouseenter="handlePopoverContentEnter(service)"
+                @mouseleave="handlePopoverContentLeave(service)"
+              >
                 <div class="service-popover-header">
                   <div class="service-popover-icon">
                     <svg-icon :icon-class="service.icon || 'service-default'" />
@@ -155,6 +199,7 @@
                     <div class="service-popover-version" v-if="service.rawData && service.rawData.version">{{ service.rawData.version }}</div>
                   </div>
                 </div>
+                
                 <div class="service-popover-info">
                   <div class="service-popover-status">
                     <span class="info-label">状态：</span>
@@ -163,80 +208,111 @@
                     <span v-else-if="service.serviceStateCode === 4" class="info-value error">异常</span>
                     <span v-else class="info-value">未知</span>
                   </div>
+                  
                   <div class="service-popover-alerts" v-if="service.alertNum > 0">
                     <span class="info-label">告警：</span>
-                    <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
+                    <div class="info-value-with-action">
+                      <span :class="['info-value', service.serviceStateCode === 4 ? 'error' : 'warning']">{{ service.alertNum }}个</span>
+                      <a-button type="link" size="small" class="action-button" @click.stop="showAlarm(service)">
+                        <a-icon type="eye" /> 查看
+                      </a-button>
+                    </div>
                   </div>
+                  
                   <div class="service-popover-config" v-if="service.needRestart">
                     <span class="info-label">配置变更：</span>
-                    <span class="info-value warning">需要重启</span>
+                    <div class="info-value-with-action">
+                      <span class="info-value warning">需要重启</span>
+                      <a-button type="link" size="small" class="action-button" @click.stop="showConfigCompare(service)">
+                        <a-icon type="eye" /> 查看
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="service-popover-actions">
+                  <div class="button-row">
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'start'}, service)">
+                      <a-icon type="caret-right" />启动
+                    </a-button>
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'stop'}, service)">
+                      <a-icon type="pause" />停止
+                    </a-button>
+                  </div>
+                  <div class="button-row">
+                    <a-button type="primary" size="small" @click.stop="handleServiceAction({key: 'restart'}, service)">
+                      <a-icon type="reload" />重启
+                    </a-button>
+                    <a-button type="danger" size="small" @click.stop="handleServiceAction({key: 'del'}, service)">
+                      <a-icon type="delete" />删除
+                    </a-button>
                   </div>
                 </div>
               </div>
             </template>
             <div 
-              class="service-item" 
-              :class="{'active': isActiveService(service)}"
+               class="service-item" 
+               :class="{'active': isActiveService(service)}"
               @click="handleServiceItemClick(service)"
               @mouseenter="sidebarCollapsed && handleServiceMouseEnter(service)"
               @mouseleave="sidebarCollapsed && handleServiceMouseLeave(service)"
             >
-              <!-- 状态指示灯 -->
-              <div class="status-indicator">
-                <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
-                <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
-                <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
-                <span v-else class="status-icon empty"></span>
+            <!-- 状态指示灯 -->
+            <div class="status-indicator">
+              <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
+              <a-icon v-else-if="service.serviceStateCode === 3" type="warning" theme="filled" class="status-icon warning" />
+              <a-icon v-else-if="service.serviceStateCode === 4" type="close-circle" theme="filled" class="status-icon error" />
+              <span v-else class="status-icon empty"></span>
+            </div>
+            
+            <!-- 服务名称(带图标) -->
+            <div class="service-name-container">
+              <!-- 服务图标 -->
+              <div class="service-icon">
+                <svg-icon :icon-class="service.icon || 'service-default'" />
               </div>
               
-              <!-- 服务名称(带图标) -->
-              <div class="service-name-container">
-                <!-- 服务图标 -->
-                <div class="service-icon">
-                  <svg-icon :icon-class="service.icon || 'service-default'" />
-                </div>
-                
-                <!-- 服务名称 -->
+              <!-- 服务名称 -->
                 <div class="service-name" v-if="!sidebarCollapsed">
-                  {{ service.name }}
-                </div>
-              </div>
-              
-              <!-- 告警指示器 -->
-              <div class="alert-indicators">
-                <!-- 告警数量 -->
-                <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
-                  <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
-                  <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
-                </div>
-                
-                <!-- 配置变更指示器 -->
-                <a-icon 
-                  v-if="service.needRestart" 
-                  type="tool" 
-                  class="restart-icon"
-                  @click.stop="showConfigCompare(service)" 
-                />
-              </div>
-              
-              <!-- 展开按钮 -->
-              <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
-                <div class="cdh-dropdown-btn">
-                  <a-icon type="caret-down" />
-                </div>
-                <!-- 服务操作菜单 -->
-                <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
-                  <a class="ant-dropdown-link"></a>
-                  <a-menu slot="overlay">
-                    <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
-                    <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
-                    <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
-                    <a-menu-divider />
-                    <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
-                  </a-menu>
-                </a-dropdown>
+                {{ service.name }}
               </div>
             </div>
+            
+            <!-- 告警指示器 -->
+            <div class="alert-indicators">
+              <!-- 告警数量 -->
+              <div v-if="service.alertNum > 0" class="alert-badge" @click.stop="showAlarm(service)">
+                <a-icon type="exclamation-circle" theme="filled" :class="service.serviceStateCode === 4 ? 'error-color' : 'warning-color'" />
+                <span :class="['alert-count', service.serviceStateCode === 4 ? 'error-color' : 'warning-color']">{{ service.alertNum }}</span>
+              </div>
+              
+              <!-- 配置变更指示器 -->
+              <a-icon 
+                v-if="service.needRestart" 
+                type="tool" 
+                class="restart-icon"
+                @click.stop="showConfigCompare(service)" 
+              />
+            </div>
+            
+            <!-- 展开按钮 -->
+            <div class="expand-icon" @click.stop="toggleServiceMenu(service, $event)">
+              <div class="cdh-dropdown-btn">
+                <a-icon type="caret-down" />
+              </div>
+              <!-- 服务操作菜单 -->
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+                <a class="ant-dropdown-link"></a>
+                <a-menu slot="overlay">
+                  <a-menu-item key="start" @click.stop="handleServiceAction({key: 'start'}, service)">启动</a-menu-item>
+                  <a-menu-item key="stop" @click.stop="handleServiceAction({key: 'stop'}, service)">停止</a-menu-item>
+                  <a-menu-item key="restart" @click.stop="handleServiceAction({key: 'restart'}, service)">重启</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="delete" @click.stop="handleServiceAction({key: 'del'}, service)">删除</a-menu-item>
+                </a-menu>
+              </a-dropdown>
+            </div>
+          </div>
           </a-popover>
         </div>
       </div>
@@ -265,7 +341,8 @@ export default {
       managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY'],
       coreGroupCollapsed: false,
       managementGroupCollapsed: false,
-      sidebarCollapsed: false
+      sidebarCollapsed: false,
+      popoverTimeoutMap: {} // 用于存储popover延迟隐藏的定时器
     };
   },
   computed: {
@@ -392,7 +469,8 @@ export default {
             needRestart: item.meta && item.meta.obj ? item.meta.obj.needRestart : false,
             rawData: item.meta && item.meta.obj ? item.meta.obj : {},
             menuVisible: false,
-            popoverVisible: false // 添加提示框可见性控制
+            popoverVisible: false, // 提示框可见性控制
+            popoverInContent: false // 标记鼠标是否在提示框内容区域
           };
         });
       } else {
@@ -413,7 +491,8 @@ export default {
                 needRestart: false,
                 rawData: {},
                 menuVisible: false,
-                popoverVisible: false // 添加提示框可见性控制
+                popoverVisible: false, // 提示框可见性控制
+                popoverInContent: false // 标记鼠标是否在提示框内容区域
               };
             });
           } else {
@@ -430,16 +509,16 @@ export default {
     // 使用默认菜单数据
     useDefaultMenus() {
       this.menuList = [
-        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '3', name: 'HBASE', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '4', name: 'HIVE', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '5', name: 'ZOOKEEPER', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '6', name: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '7', name: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '8', name: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '9', name: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
-        { id: '10', name: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false },
+        { id: '1', name: 'HDFS', icon: 'hdfs', path: '/service-manage/service-list/1', serviceId: '1', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '2', name: 'YARN', icon: 'yarn', path: '/service-manage/service-list/2', serviceId: '2', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '3', name: 'HBASE', icon: 'hbase', path: '/service-manage/service-list/3', serviceId: '3', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '4', name: 'HIVE', icon: 'hive', path: '/service-manage/service-list/4', serviceId: '4', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '5', name: 'ZOOKEEPER', icon: 'zookeeper', path: '/service-manage/service-list/5', serviceId: '5', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '6', name: 'SPARK', icon: 'spark', path: '/service-manage/service-list/6', serviceId: '6', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '7', name: 'ALERTMANAGER', icon: 'alertmanager', path: '/service-manage/service-list/7', serviceId: '7', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '8', name: 'PROMETHEUS', icon: 'prometheus', path: '/service-manage/service-list/8', serviceId: '8', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '9', name: 'GRAFANA', icon: 'grafana', path: '/service-manage/service-list/9', serviceId: '9', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
+        { id: '10', name: 'PUSHGATEWAY', icon: 'pushgateway', path: '/service-manage/service-list/10', serviceId: '10', serviceStateCode: 2, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false, popoverVisible: false, popoverInContent: false },
       ];
       
       // 打印默认图标配置
@@ -464,7 +543,7 @@ export default {
         // 直接同步设置serviceId
         this.$store.commit('setting/setServiceId', menu.serviceId);
         
-        // 导航到对应的服务详情页面
+      // 导航到对应的服务详情页面
         const targetPath = menu.path || `/service-manage/service-list/${menu.serviceId}`;
         this.$router.push(targetPath).catch(err => {
           if (err.name !== 'NavigationDuplicated') {
@@ -475,10 +554,10 @@ export default {
         // 没有serviceId，直接导航
         if (menu.path) {
           this.$router.push(menu.path).catch(err => {
-            if (err.name !== 'NavigationDuplicated') {
-              throw err;
-            }
-          });
+          if (err.name !== 'NavigationDuplicated') {
+            throw err;
+          }
+        });
         }
       }
     },
@@ -680,19 +759,59 @@ export default {
     
     // 处理服务项鼠标进入事件
     handleServiceMouseEnter(service) {
+      // 清除已存在的定时器
+      if (this.popoverTimeoutMap[service.id]) {
+        clearTimeout(this.popoverTimeoutMap[service.id]);
+        delete this.popoverTimeoutMap[service.id];
+      }
+      
       // 设置当前服务的popoverVisible为true
       service.popoverVisible = true;
     },
     
     // 处理服务项鼠标离开事件
     handleServiceMouseLeave(service) {
-      // 设置当前服务的popoverVisible为false
-      service.popoverVisible = false;
+      // 设置延迟关闭
+      this.popoverTimeoutMap[service.id] = setTimeout(() => {
+        if (!service.popoverInContent) {
+          service.popoverVisible = false;
+        }
+        delete this.popoverTimeoutMap[service.id];
+      }, 300);
     },
     
     // 处理Popover可见性变化
     handlePopoverVisibleChange(visible, service) {
-      service.popoverVisible = visible;
+      if (!visible && !service.popoverInContent) {
+        service.popoverVisible = visible;
+      }
+    },
+    
+    // 处理Popover内容进入事件
+    handlePopoverContentEnter(service) {
+      // 清除已存在的定时器
+      if (this.popoverTimeoutMap[service.id]) {
+        clearTimeout(this.popoverTimeoutMap[service.id]);
+        delete this.popoverTimeoutMap[service.id];
+      }
+      
+      // 标记鼠标在内容区域
+      service.popoverInContent = true;
+      
+      // 保持popover可见
+      service.popoverVisible = true;
+    },
+    
+    // 处理Popover内容离开事件
+    handlePopoverContentLeave(service) {
+      // 标记鼠标离开内容区域
+      service.popoverInContent = false;
+      
+      // 延迟300ms关闭，避免鼠标在popover和触发元素之间移动时闪烁
+      this.popoverTimeoutMap[service.id] = setTimeout(() => {
+        service.popoverVisible = false;
+        delete this.popoverTimeoutMap[service.id];
+      }, 300);
     }
   }
 };
@@ -1111,18 +1230,26 @@ export default {
   .ant-popover-inner-content {
     padding: 0;
   }
+  
+  .ant-popover-inner {
+    border-radius: 8px;
+    box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 
+                0 9px 28px 0 rgba(0, 0, 0, 0.05), 
+                0 12px 48px 16px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+  }
 }
 
 .service-popover-content {
-  width: 230px;
+  width: 260px;
   background: #fff;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
 .service-popover-header {
   display: flex;
-  padding: 12px 16px;
+  padding: 12px;
   align-items: center;
   background-color: #f5f7fa;
   border-bottom: 1px solid #e8e8e8;
@@ -1132,7 +1259,7 @@ export default {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  border-radius: 4px;
+  border-radius: 8px;
   background-color: #e6effc;
   display: flex;
   align-items: center;
@@ -1162,12 +1289,12 @@ export default {
 }
 
 .service-popover-info {
-  padding: 12px 16px;
+  padding: 12px;
   
   .service-popover-status, 
   .service-popover-alerts,
   .service-popover-config {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     
@@ -1179,7 +1306,7 @@ export default {
   .info-label {
     font-size: 13px;
     color: #5f6369;
-    margin-right: 4px;
+    margin-right: 8px;
     width: 70px;
     flex-shrink: 0;
   }
@@ -1198,6 +1325,68 @@ export default {
     
     &.error {
       color: #db1d00;
+    }
+  }
+  
+  .info-value-with-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    
+    .action-button {
+      padding: 0 8px;
+      height: 24px;
+      font-size: 12px;
+      line-height: 24px;
+      border-radius: 12px;
+      background-color: #f0f6ff;
+      color: #0076ce;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: #d7e8f7;
+        color: #0057a6;
+      }
+    }
+  }
+}
+
+.service-popover-actions {
+  padding: 12px;
+  background-color: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
+  .button-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    
+    .ant-btn {
+      flex: 1;
+      font-size: 12px;
+      height: 28px;
+      padding: 0 8px;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      
+      &:active {
+        transform: translateY(0);
+      }
+      
+      .anticon {
+        font-size: 12px;
+        margin-right: 4px;
+      }
     }
   }
 }
