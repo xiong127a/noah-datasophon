@@ -28,7 +28,7 @@
   <div @click.stop>
     <a-popover trigger="click" placement="bottomRight" class="popover-service" overlayClassName="popover-service" :content="()=> getMoreOptions()">
       <button class="more-btn">
-        <a-icon type="caret-down" />
+        <a-icon type="ellipsis" />
       </button>
     </a-popover>
     <!-- 配置集群的modal -->
@@ -195,32 +195,30 @@ export default {
 }
 
 .more-btn {
-  width: 20px;
-  height: 20px;
-  border-radius: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f8f8f8;
-  border: 1px solid #ccc;
+  background-color: transparent;
+  border: none;
   transition: all 0.2s ease;
   padding: 0;
   outline: none;
   cursor: pointer;
   
   &:hover {
-    background-color: #e6e6e6;
-    border-color: #adadad;
+    background-color: #f0f6ff;
   }
   
   &:active {
     background-color: #e6e6e6;
-    border-color: #adadad;
-    box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
+    box-shadow: none;
   }
   
   .anticon {
-    font-size: 11px;
+    font-size: 16px;
     color: #0076ce; /* CDH风格的蓝色 */
   }
 }

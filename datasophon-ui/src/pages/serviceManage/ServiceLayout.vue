@@ -1,16 +1,22 @@
 <template>
   <div class="cdh-service-page">
     <!-- 左侧服务列表 - CDH风格 -->
-    <div class="service-sidebar cdh-style">
+    <div class="service-sidebar cdh-style" :class="{'collapsed': sidebarCollapsed}">
       <!-- 头部标题区域 -->
       <div class="service-title">
-        <span>{{ clusterInfo }}</span>
-        <service-option class="service-more" />
+        <span v-if="!sidebarCollapsed">{{ clusterInfo }}</span>
+        <div class="sidebar-controls">
+          <service-option class="service-more" v-if="!sidebarCollapsed" />
+          <div class="sidebar-collapse-btn" @click.stop="toggleSidebar">
+            <a-icon :type="sidebarCollapsed ? 'menu-unfold' : 'menu-fold'" />
+          </div>
+        </div>
       </div>
       
       <!-- 核心服务组 -->
       <div class="service-group">
-        <div class="group-title" @click="toggleGroupCollapse('core')">
+        <div class="group-title" @click="toggleGroupCollapse('core')" :title="sidebarCollapsed ? 'Core Service' : ''">
+          <a-icon type="appstore" class="group-icon" />
           <span>Core Service</span>
           <a-icon :type="coreGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
         </div>
@@ -18,7 +24,7 @@
           <div v-for="(service, index) in coreServices" :key="index" 
                class="service-item" 
                :class="{'active': isActiveService(service)}"
-               @click="selectMenu(service)">
+               @click="handleServiceItemClick(service)">
             <!-- 状态指示灯 -->
             <div class="status-indicator">
               <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
@@ -30,12 +36,12 @@
             <!-- 服务名称(带图标) -->
             <div class="service-name-container">
               <!-- 服务图标 -->
-              <div class="service-icon">
+              <div class="service-icon" :title="sidebarCollapsed ? service.name : ''">
                 <svg-icon :icon-class="service.icon || 'service-default'" />
               </div>
               
               <!-- 服务名称 -->
-              <div class="service-name">
+              <div class="service-name" v-if="!sidebarCollapsed">
                 {{ service.name }}
               </div>
             </div>
@@ -80,7 +86,8 @@
       
       <!-- 管理服务组 -->
       <div class="service-group management-group" v-if="managementServices.length > 0">
-        <div class="group-title" @click="toggleGroupCollapse('management')">
+        <div class="group-title" @click="toggleGroupCollapse('management')" :title="sidebarCollapsed ? 'Management Service' : ''">
+          <a-icon type="control" class="group-icon" />
           <span>Management Service</span>
           <a-icon :type="managementGroupCollapsed ? 'right' : 'down'" class="collapse-icon" />
         </div>
@@ -88,7 +95,7 @@
           <div v-for="(service, index) in managementServices" :key="'mgmt-'+index" 
                class="service-item" 
                :class="{'active': isActiveService(service)}"
-               @click="selectMenu(service)">
+               @click="handleServiceItemClick(service)">
             <!-- 状态指示灯 -->
             <div class="status-indicator">
               <a-icon v-if="service.serviceStateCode === 2" type="check-circle" theme="filled" class="status-icon success" />
@@ -100,12 +107,12 @@
             <!-- 服务名称(带图标) -->
             <div class="service-name-container">
               <!-- 服务图标 -->
-              <div class="service-icon">
+              <div class="service-icon" :title="sidebarCollapsed ? service.name : ''">
                 <svg-icon :icon-class="service.icon || 'service-default'" />
               </div>
               
               <!-- 服务名称 -->
-              <div class="service-name">
+              <div class="service-name" v-if="!sidebarCollapsed">
                 {{ service.name }}
               </div>
             </div>
@@ -171,7 +178,8 @@ export default {
       clusterData: null,
       managementServiceNames: ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY'],
       coreGroupCollapsed: false,
-      managementGroupCollapsed: false
+      managementGroupCollapsed: false,
+      sidebarCollapsed: false
     };
   },
   computed: {
@@ -196,6 +204,12 @@ export default {
     this.getClusterInfo();
     this.loadMenuData();
     
+    // 从 localStorage 加载折叠状态
+    const savedCollapsedState = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsedState !== null) {
+      this.sidebarCollapsed = savedCollapsedState === 'true';
+    }
+    
     // 添加点击外部关闭菜单的事件监听
     document.addEventListener('click', this.closeAllMenus);
   },
@@ -205,6 +219,13 @@ export default {
   },
   methods: {
     ...mapMutations("setting", ["showClusterSetting"]),
+    
+    // 切换侧边栏折叠状态
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+      // 保存折叠状态到 localStorage
+      localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
+    },
     
     // 切换服务组的折叠状态
     toggleGroupCollapse(groupType) {
@@ -553,6 +574,20 @@ export default {
       if (!visible) {
         service.menuVisible = false;
       }
+    },
+    
+    // 处理服务项点击事件
+    handleServiceItemClick(service) {
+      // 保持折叠状态
+      const wasSidebarCollapsed = this.sidebarCollapsed;
+      
+      // 调用原有的服务选择方法
+      this.selectMenu(service);
+      
+      // 恢复原有的折叠状态
+      this.$nextTick(() => {
+        this.sidebarCollapsed = wasSidebarCollapsed;
+      });
     }
   }
 };
@@ -574,6 +609,55 @@ export default {
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
   flex-shrink: 0;
+  transition: width 0.3s ease;
+  
+  /* 折叠状态 */
+  &.collapsed {
+    width: 64px;
+    
+    .service-title {
+      padding: 12px 8px;
+      justify-content: center;
+    }
+    
+    .group-title {
+      padding: 10px 8px;
+      justify-content: center;
+      
+      span, .collapse-icon {
+        display: none;
+      }
+      
+      .group-icon {
+        margin-right: 0;
+        font-size: 18px; /* 折叠状态下稍微增大图标尺寸 */
+      }
+    }
+    
+    .service-item {
+      padding: 6px 8px;
+      justify-content: center;
+      
+      .status-indicator, 
+      .alert-indicators, 
+      .expand-icon {
+        display: none !important; /* 强制隐藏这些元素 */
+      }
+      
+      &.active {
+        padding-left: 5px;
+      }
+      
+      .service-name-container {
+        justify-content: center;
+        margin-right: 0; /* 移除右侧边距 */
+      }
+      
+      .service-icon {
+        margin-right: 0; /* 移除图标右侧边距 */
+      }
+    }
+  }
   
   /* 允许侧边栏滚动但使用玻璃效果滚动条 */
   &::-webkit-scrollbar {
@@ -637,6 +721,12 @@ export default {
       
       &:hover {
         background-color: #dde4e5;
+      }
+      
+      .group-icon {
+        font-size: 16px;
+        color: #0076ce;
+        margin-right: 8px;
       }
       
       .collapse-icon {
@@ -845,6 +935,13 @@ export default {
   max-width: calc(100% - 240px);
   width: calc(100% - 240px);
   position: relative;
+  transition: width 0.3s ease, max-width 0.3s ease;
+  
+  /* 折叠时调整右侧内容区域 */
+  .collapsed + & {
+    max-width: calc(100% - 64px);
+    width: calc(100% - 64px);
+  }
   
   /* 隐藏所有滚动条 */
   &::-webkit-scrollbar {
@@ -875,5 +972,32 @@ export default {
   
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+}
+
+/* 侧边栏控制样式 */
+.sidebar-controls {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-collapse-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f6ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #0076ce;
+  
+  &:hover {
+    background-color: #d7e8f7;
+  }
+  
+  .anticon {
+    font-size: 16px;
+  }
 }
 </style> 
