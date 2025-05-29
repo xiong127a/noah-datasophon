@@ -789,20 +789,20 @@ export default {
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: #f8f8f8;
-          border: 1px solid #ccc;
+          background-color: transparent;
+          border: none;
           transition: all 0.2s ease;
-          visibility: visible;
+          opacity: 0; /* 默认隐藏 */
           
           &:hover {
-            background-color: #e6e6e6;
-            border-color: #adadad;
+            background-color: transparent;
+            border-color: transparent;
           }
           
           &:active {
-            background-color: #e6e6e6;
-            border-color: #adadad;
-            box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
+            background-color: transparent;
+            border-color: transparent;
+            box-shadow: none;
           }
           
           .anticon {
@@ -815,6 +815,11 @@ export default {
           min-width: 120px;
         }
       }
+    }
+    
+    /* 当鼠标悬停在服务项上时显示下拉按钮 */
+    .service-item:hover .expand-icon .cdh-dropdown-btn {
+      opacity: 1;
     }
   }
 }
