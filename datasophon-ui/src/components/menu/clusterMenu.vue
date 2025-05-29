@@ -318,7 +318,7 @@ export default {
         clusterId: this.clusterId,
       }).then((res) => {
         changeRouter(res.data, this.clusterId)
-        this.$router.push("/overview");
+        this.$router.push("/service-manage");
       });
     },
     optServices(item, props) {

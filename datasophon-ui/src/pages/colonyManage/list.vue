@@ -97,7 +97,7 @@ export default {
         clusterId: row.id,
       }).then((res) => {
         changeRouter(res.data, row.id)
-        this.$router.push("/overview");
+        this.$router.push("/service-manage");
       });
     },
     addColony(obj) {
