@@ -16,14 +16,14 @@
  */
 package com.datasophon.common.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * property utils
@@ -50,13 +50,12 @@ public class PropertyUtils {
             InputStream fis = null;
             try {
                 fis = PropertyUtils.class.getResourceAsStream(fileName);
-                properties.load(fis);
-
+                if (fis != null) {
+                    properties.load(fis);
+                }
             } catch (IOException e) {
                 logger.error(e.getMessage(), e);
-                if (fis != null) {
-                    IOUtils.closeQuietly(fis);
-                }
+                IOUtils.closeQuietly(fis);
                 System.exit(1);
             } finally {
                 IOUtils.closeQuietly(fis);
@@ -87,7 +86,7 @@ public class PropertyUtils {
     /**
      * get property value
      *
-     * @param key property name
+     * @param key        property name
      * @param defaultVal default value
      * @return property value
      */
@@ -100,15 +99,14 @@ public class PropertyUtils {
      * get property value
      *
      * @param key property name
-     * @return  get property int value , if key == null, then return -1
+     * @return get property int value , if key == null, then return -1
      */
     public static int getInt(String key) {
         return getInt(key, -1);
     }
 
     /**
-     *
-     * @param key key
+     * @param key          key
      * @param defaultValue default value
      * @return property value
      */
@@ -144,7 +142,7 @@ public class PropertyUtils {
     /**
      * get property value
      *
-     * @param key property name
+     * @param key          property name
      * @param defaultValue default value
      * @return property value
      */
@@ -159,7 +157,8 @@ public class PropertyUtils {
 
     /**
      * get property long value
-     * @param key key
+     *
+     * @param key        key
      * @param defaultVal default value
      * @return property value
      */
@@ -169,7 +168,6 @@ public class PropertyUtils {
     }
 
     /**
-     *
      * @param key key
      * @return property value
      */
@@ -178,8 +176,7 @@ public class PropertyUtils {
     }
 
     /**
-     *
-     * @param key key
+     * @param key        key
      * @param defaultVal default value
      * @return property value
      */
@@ -189,9 +186,10 @@ public class PropertyUtils {
     }
 
     /**
-     *  get array
-     * @param key       property name
-     * @param splitStr  separator
+     * get array
+     *
+     * @param key      property name
+     * @param splitStr separator
      * @return property value through array
      */
     public static String[] getArray(String key, String splitStr) {
@@ -209,12 +207,11 @@ public class PropertyUtils {
     }
 
     /**
-     *
-     * @param key key
-     * @param type type
+     * @param key          key
+     * @param type         type
      * @param defaultValue default value
-     * @param <T> T
-     * @return  get enum value
+     * @param <T>          T
+     * @return get enum value
      */
     public <T extends Enum<T>> T getEnum(String key, Class<T> type,
                                          T defaultValue) {
@@ -224,6 +221,7 @@ public class PropertyUtils {
 
     /**
      * get all properties with specified prefix, like: fs.
+     *
      * @param prefix prefix to search
      * @return all properties with specified prefix
      */
