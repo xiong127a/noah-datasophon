@@ -3,22 +3,27 @@
   filter: invert(80%);
 }
 .beauty-scroll{
-  scrollbar-color: #1976d2 #f5f6fa;
+  scrollbar-color: rgba(192, 196, 204, 0.5) transparent;
   scrollbar-width: thin;
   -ms-overflow-style:none;
   position: relative;
   &::-webkit-scrollbar{
-    width: 4px;
-    height: 1px;
+    width: 8px;
+    height: 8px;
   }
   &::-webkit-scrollbar-thumb {
-    border-radius: 3px;
-    background: #1976d2;
+    border-radius: 10px;
+    background: rgba(192, 196, 204, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   &::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 1px rgba(0,0,0,0);
     border-radius: 3px;
-    background: #f5f6fa;
+    background: transparent;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
   }
 }
 .split-right{

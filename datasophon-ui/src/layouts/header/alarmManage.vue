@@ -1,6 +1,6 @@
 <template>
   <div class="cluster-setting" @click="showManage">
-      <svg-icon class="icon-gj" icon-class="gaojing"></svg-icon>
+      <svg-icon class="icon-gj" icon-class="gaojing_info"></svg-icon>
   </div>
 </template>
 
@@ -48,9 +48,9 @@ export default {
 .cluster-setting {
   .icon-gj{
      color: #222b45;
-     width: 18px;
-     height: 18px;
-    cursor: pointer;
+     width: 16px;
+     height: 16px;
+     cursor: pointer;
   }
 }
 </style>

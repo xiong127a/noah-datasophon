@@ -548,6 +548,34 @@ export default {
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
   
+  /* 默认隐藏滚动条，悬停时显示 */
+  &::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+    background-color: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background-color: transparent !important;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    border-radius: 10px !important;
+    background-color: rgba(192, 196, 204, 0.5) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+  }
+  
+  &::-webkit-scrollbar-button {
+    height: 0px !important;
+    width: 0px !important;
+    background-color: transparent !important;
+  }
+  
+  &:hover::-webkit-scrollbar-thumb {
+    opacity: 1 !important;
+  }
+  
   &.cdh-style {
     background: #f5f7f8;
     border-right: 1px solid #dde4e5;

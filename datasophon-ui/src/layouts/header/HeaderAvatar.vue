@@ -1,8 +1,7 @@
 <template>
   <a-dropdown>
     <div class="header-avatar" style="cursor: pointer">
-      <!-- <a-avatar class="avatar" size="small" shape="circle" src="../../assets/img/logo3.svg"/> -->
-      <!-- <img width="32" class="mgr6" src="@/assets/img/avatar.svg" /> -->
+      <svg-icon icon-class="avatar" class="avatar-icon" />
       <span class="name">{{ user.username }}</span>
     </div>
     <a-menu :class="['avatar-menu']" slot="overlay">
@@ -80,6 +79,16 @@ export default {
 <style lang="less">
 .header-avatar {
   display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  margin-left: 8px;
+  
+  .avatar-icon {
+    font-size: 18px;
+    margin-right: 8px;
+    color: #222b45;
+  }
+  
   .avatar,
   .name {
     align-self: center;

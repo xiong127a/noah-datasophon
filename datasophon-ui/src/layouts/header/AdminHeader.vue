@@ -392,12 +392,12 @@ export default {
 .action-buttons {
   display: flex;
   align-items: center;
-  padding-left: 16px;
+  padding-left: 20px;
   border-left: 1px solid #e0e0e0;
 }
 
 .cluster-selector {
-  margin-right: 16px;
+  margin-right: 20px;
   cursor: pointer;
 
   .action-item {
@@ -408,7 +408,7 @@ export default {
 
     .anticon {
       font-size: 12px;
-      margin-left: 4px;
+      margin-left: 6px;
     }
 
     &:hover {
@@ -418,7 +418,7 @@ export default {
 }
 
 .cluster-setting, .alarm-manage {
-  margin: 0 8px;
+  margin: 0 12px;
   display: flex;
   align-items: center;
 }

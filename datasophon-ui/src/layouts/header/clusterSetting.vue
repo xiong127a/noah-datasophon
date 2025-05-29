@@ -26,7 +26,9 @@
 -->
 <template>
   <div class="cluster-setting mgr10">
-    <a-icon class="cluster-setting-icon" type="setting" @click="showSetting" />
+    <div class="icon-wrapper" @click="showSetting">
+      <svg-icon class="cluster-setting-icon" icon-class="setting" />
+    </div>
     <!-- 配置集群的modal -->
     <a-modal v-if="clusterSettingVisible" title :visible="clusterSettingVisible" :maskClosable="false" :closable="false" :width="1344" :confirm-loading="confirmLoading" @cancel="handleCancel" :footer="null">
       <Steps8 :clusterId="clusterId" stepsType="cluster-setting" />
@@ -60,6 +62,7 @@ export default {
       this.showClusterSetting(false)
     },
     showSetting () {
+      console.log('点击设置图标');
       this.showClusterSetting(true)
     }
   }
@@ -69,8 +72,21 @@ export default {
 .cluster-setting {
   &-icon {
     color: #222b45;
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  .icon-wrapper {
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
   }
 }
 </style>
