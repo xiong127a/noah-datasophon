@@ -10,10 +10,13 @@
         <div class="cdh-header-menu">
           <ul class="cdh-top-menu">
             <li v-for="item in regularMenus" :key="item.fullPath" :class="{'active': item.fullPath === activeFirstMenuKey}" @click="onLeftMenuClick(item)" @mouseenter="handleMenuEnter(item)" @mouseleave="handleMenuLeave(item)">
-              <span v-if="item.meta && item.meta.icon">
+              <span v-if="item.meta && item.meta.icon && item.path !== 'service-manage'">
                 <svg-icon :icon-class="item.meta.icon" style="margin-right:6px;"/>
               </span>
-              <span v-if="item.path === 'service-manage'">主页</span>
+              <span v-if="item.path === 'service-manage'">
+                <svg-icon icon-class="home" style="margin-right:6px;"/>
+                主页
+              </span>
               <span v-else>{{item.name}}</span>
               <span class="dropdown-icon" v-if="hasChildren(item) && item.path !== 'service-manage'">
                 <a-icon type="caret-down" />
