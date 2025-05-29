@@ -29,7 +29,7 @@
             overlayClassName="service-popover"
             @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
             :mouseEnterDelay="0.3"
-            :mouseLeaveDelay="0.5"
+            :mouseLeaveDelay="0.1"
             :title="null"
           >
             <template slot="content">
@@ -181,7 +181,7 @@
             overlayClassName="service-popover"
             @visibleChange="(visible) => handlePopoverVisibleChange(visible, service)"
             :mouseEnterDelay="0.3"
-            :mouseLeaveDelay="0.5"
+            :mouseLeaveDelay="0.1"
             :title="null"
           >
             <template slot="content">
@@ -342,7 +342,8 @@ export default {
       coreGroupCollapsed: false,
       managementGroupCollapsed: false,
       sidebarCollapsed: false,
-      popoverTimeoutMap: {} // 用于存储popover延迟隐藏的定时器
+      popoverTimeoutMap: {}, // 用于存储popover延迟隐藏的定时器
+      switchingService: false // 标记是否正在切换服务，防止在切换过程中显示悬浮窗
     };
   },
   computed: {
@@ -383,6 +384,16 @@ export default {
     
     // 添加点击外部关闭菜单的事件监听
     document.addEventListener('click', this.closeAllMenus);
+    
+    // 添加路由变化监听，关闭所有悬浮窗
+    this.$watch('$route', () => {
+      this.closeAllPopovers();
+      // 设置切换锁定，防止在切换过程中显示悬浮窗
+      this.switchingService = true;
+      setTimeout(() => {
+        this.switchingService = false;
+      }, 100);
+    });
   },
   beforeDestroy() {
     // 移除事件监听
@@ -792,20 +803,36 @@ export default {
     
     // 处理服务项点击事件
     handleServiceItemClick(service) {
+      // 立即关闭所有服务的悬浮窗
+      this.closeAllPopovers();
+      
+      // 设置切换锁定，防止在切换过程中显示悬浮窗
+      this.switchingService = true;
+      
       // 保持折叠状态
       const wasSidebarCollapsed = this.sidebarCollapsed;
       
       // 调用原有的服务选择方法
       this.selectMenu(service);
       
-      // 恢复原有的折叠状态
+      // 恢复原有的折叠状态，并在切换完成后解除锁定
       this.$nextTick(() => {
         this.sidebarCollapsed = wasSidebarCollapsed;
+        
+        // 延迟100ms解除锁定，确保切换过程完成
+        setTimeout(() => {
+          this.switchingService = false;
+        }, 100);
       });
     },
     
     // 处理服务项鼠标进入事件
     handleServiceMouseEnter(service) {
+      // 如果正在切换服务，不显示悬浮窗
+      if (this.switchingService) {
+        return;
+      }
+      
       // 清除已存在的定时器
       if (this.popoverTimeoutMap[service.id]) {
         clearTimeout(this.popoverTimeoutMap[service.id]);
@@ -818,18 +845,30 @@ export default {
     
     // 处理服务项鼠标离开事件
     handleServiceMouseLeave(service) {
+      // 如果正在切换服务，立即关闭悬浮窗
+      if (this.switchingService) {
+        service.popoverVisible = false;
+        return;
+      }
+      
       // 设置延迟关闭
       this.popoverTimeoutMap[service.id] = setTimeout(() => {
         if (!service.popoverInContent) {
           service.popoverVisible = false;
         }
         delete this.popoverTimeoutMap[service.id];
-      }, 300);
+      }, 100);
     },
     
     // 处理Popover可见性变化
     handlePopoverVisibleChange(visible, service) {
-      if (!visible && !service.popoverInContent) {
+      // 如果正在切换服务或不可见，强制关闭悬浮窗
+      if (this.switchingService || !visible) {
+        service.popoverVisible = false;
+        return;
+      }
+      
+      if (!service.popoverInContent) {
         service.popoverVisible = visible;
       }
     },
@@ -851,14 +890,38 @@ export default {
     
     // 处理Popover内容离开事件
     handlePopoverContentLeave(service) {
+      // 如果正在切换服务，立即关闭悬浮窗
+      if (this.switchingService) {
+        service.popoverVisible = false;
+        service.popoverInContent = false;
+        return;
+      }
+      
       // 标记鼠标离开内容区域
       service.popoverInContent = false;
       
-      // 延迟300ms关闭，避免鼠标在popover和触发元素之间移动时闪烁
+      // 延迟100ms关闭
       this.popoverTimeoutMap[service.id] = setTimeout(() => {
         service.popoverVisible = false;
         delete this.popoverTimeoutMap[service.id];
-      }, 300);
+      }, 100);
+    },
+    
+    // 关闭所有服务的悬浮窗
+    closeAllPopovers() {
+      // 清除所有计时器
+      Object.keys(this.popoverTimeoutMap).forEach(id => {
+        clearTimeout(this.popoverTimeoutMap[id]);
+        delete this.popoverTimeoutMap[id];
+      });
+      
+      // 关闭所有服务的悬浮窗
+      if (this.menuList && this.menuList.length > 0) {
+        this.menuList.forEach(service => {
+          service.popoverVisible = false;
+          service.popoverInContent = false;
+        });
+      }
     }
   }
 };
