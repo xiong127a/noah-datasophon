@@ -20,7 +20,7 @@
 
 
 import Vue from 'vue'
-import App from './App.vue'
+import App from './App'
 import {initRouter} from './router'
 import './icons/index'
 import './assets/less/index.less'

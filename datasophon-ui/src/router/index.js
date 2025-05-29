@@ -21,6 +21,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import { formatRoutes } from '@/utils/routerUtil'
+import store from '@/store'
 // import _this from '../main.js'
 //  console.log('_this', _this)
 Vue.use(Router)
@@ -49,6 +50,21 @@ function initRouter(isAsync) {
     ? require('./config-cluster').default
     : require('./config').default
   formatRoutes(options.routes)
-  return new Router({...options,mode:'hash'})
+  const router = new Router({...options,mode:'hash'})
+
+  // 路由守卫
+  router.beforeEach((to, from, next) => {
+    // 如果路由是服务详情页面，更新serviceId
+    if (to.path.includes('/service-manage/service-list/') && to.params.serviceId) {
+      // 直接同步设置serviceId，不使用setTimeout
+      console.log('路由守卫直接设置serviceId:', to.params.serviceId);
+      store.commit('setting/setServiceId', to.params.serviceId);
+    }
+    
+    // 继续路由导航
+    next();
+  })
+
+  return router
 }
 export { loginIgnore, initRouter }

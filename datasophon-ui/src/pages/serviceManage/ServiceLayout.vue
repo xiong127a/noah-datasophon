@@ -348,19 +348,29 @@ export default {
     
     // 选择服务菜单
     selectMenu(menu) {
-      // 导航到对应的服务详情页面
-      if (menu.path) {
-        this.$router.push(menu.path).catch(err => {
+      // 更新Vuex中的serviceId
+      if (menu.serviceId) {
+        console.log('选择服务菜单 - 设置serviceId:', menu.serviceId, '服务名称:', menu.name);
+        
+        // 直接同步设置serviceId
+        this.$store.commit('setting/setServiceId', menu.serviceId);
+        
+        // 导航到对应的服务详情页面
+        const targetPath = menu.path || `/service-manage/service-list/${menu.serviceId}`;
+        this.$router.push(targetPath).catch(err => {
           if (err.name !== 'NavigationDuplicated') {
             throw err;
           }
         });
-      } else if (menu.serviceId) {
-        this.$router.push(`/service-manage/service-list/${menu.serviceId}`).catch(err => {
-          if (err.name !== 'NavigationDuplicated') {
-            throw err;
-          }
-        });
+      } else {
+        // 没有serviceId，直接导航
+        if (menu.path) {
+          this.$router.push(menu.path).catch(err => {
+            if (err.name !== 'NavigationDuplicated') {
+              throw err;
+            }
+          });
+        }
       }
     },
     

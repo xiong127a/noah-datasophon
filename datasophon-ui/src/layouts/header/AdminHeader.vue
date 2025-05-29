@@ -35,6 +35,27 @@
         </div>
       </div>
 
+      <!-- 中间服务组件名称显示区 -->
+      <transition name="fade">
+        <div class="service-title-container" v-show="shouldShowTitle">
+          <div class="service-title-content">
+            <div class="service-title-text">
+              <svg-icon v-if="isOverviewPage" icon-class="dashboard" class="service-icon" />
+              <svg-icon v-else-if="currentServiceIcon !== 'service-default'" :icon-class="currentServiceIcon" class="service-icon" />
+              <span class="service-name">{{ displayTitle }}</span>
+              <div v-if="!isOverviewPage && currentServiceName" class="service-status" :class="{'running': currentServiceStatus === 2, 'warning': currentServiceStatus === 3, 'error': currentServiceStatus === 4}"></div>
+            </div>
+            <div class="service-title-decoration">
+              <div class="decoration-line left"></div>
+              <div class="decoration-dot left"></div>
+              <div class="decoration-pulse"></div>
+              <div class="decoration-dot right"></div>
+              <div class="decoration-line right"></div>
+            </div>
+          </div>
+        </div>
+      </transition>
+
       <!-- 右侧管理菜单和功能按钮 -->
       <div class="right-section">
         <!-- 右侧管理菜单 -->
@@ -110,6 +131,8 @@ export default {
       searchActive: false,
       hoveredMenu: '', // 当前鼠标悬浮的菜单
       menuTimeouts: {}, // 存储菜单延迟关闭的定时器
+      cachedServiceData: null, // 缓存服务数据
+      cachedMenuData: null, // 缓存菜单数据
     };
   },
   computed: {
@@ -121,6 +144,7 @@ export default {
       "systemName",
       "lang",
       "pageWidth",
+      "serviceId"
     ]),
     headerTheme() {
       if (
@@ -161,8 +185,153 @@ export default {
       const adminMenuPaths = ['colony-manage', 'security-center'];
       return this.firstMenu.filter(item => adminMenuPaths.includes(item.path));
     },
+    currentServiceName() {
+      // 首先尝试从Vuex中获取serviceId
+      let serviceId = this.serviceId;
+      
+      // 如果Vuex中没有，尝试从路由参数中获取
+      if (!serviceId && this.$route.params && this.$route.params.serviceId) {
+        serviceId = this.$route.params.serviceId;
+        // 在计算属性外部更新Vuex
+        this.$nextTick(() => {
+          this.$store.commit('setting/setServiceId', serviceId);
+        });
+      }
+      
+      // 如果有serviceId并且路径包含服务列表
+      if (serviceId && this.$route.path.includes('/service-manage/service-list/')) {
+        const serviceData = this.getCachedServiceData(serviceId);
+        return serviceData && serviceData.service ? serviceData.service.name : '';
+      }
+      return '';
+    },
+    currentServiceIcon() {
+      // 获取当前服务图标
+      let serviceId = this.serviceId || (this.$route.params && this.$route.params.serviceId);
+      
+      if (serviceId && this.$route.path.includes('/service-manage/service-list/')) {
+        const serviceData = this.getCachedServiceData(serviceId);
+        // 使用服务名称小写作为图标名
+        return serviceData && serviceData.service ? (serviceData.service.name || '').toLowerCase() : 'service-default';
+      }
+      return 'service-default';
+    },
+    currentServiceStatus() {
+      // 获取当前服务状态
+      let serviceId = this.serviceId || (this.$route.params && this.$route.params.serviceId);
+      
+      if (serviceId && this.$route.path.includes('/service-manage/service-list/')) {
+        const serviceData = this.getCachedServiceData(serviceId);
+        return serviceData && serviceData.service && serviceData.service.meta && serviceData.service.meta.obj 
+          ? serviceData.service.meta.obj.serviceStateCode 
+          : 1;
+      }
+      return 1;
+    },
+    shouldShowTitle() {
+      // 当为总览页面或有服务名称时显示标题
+      return this.isOverviewPage || !!this.currentServiceName;
+    },
+    displayTitle() {
+      if (this.isOverviewPage) {
+        return '集群总览';
+      }
+      // 如果是服务详情页，显示服务名称
+      if (this.$route.path.includes('/service-manage/service-list/') && this.currentServiceName) {
+        return this.currentServiceName;
+      }
+      return '';
+    },
+    shouldShowServiceTitle() {
+      return !!this.currentServiceName && this.$route.path.includes('/service-manage/service-list/');
+    },
+    isOverviewPage() {
+      return this.$route.path === '/service-manage' || this.$route.path === '/service-manage/';
+    }
   },
   methods: {
+    // 获取缓存的菜单数据
+    getCachedMenuData() {
+      if (!this.cachedMenuData) {
+        this.cachedMenuData = JSON.parse(localStorage.getItem('menuData')) || [];
+      }
+      return this.cachedMenuData;
+    },
+    
+    // 获取缓存的服务数据
+    getCachedServiceData(serviceId) {
+      console.log('获取服务数据 - serviceId:', serviceId);
+      
+      // 如果缓存不存在或者serviceId变化，则重新获取
+      if (!this.cachedServiceData || this.cachedServiceData.serviceId !== serviceId) {
+        const menuData = this.getCachedMenuData();
+        console.log('菜单数据长度:', menuData.length);
+        
+        const serviceManageMenu = menuData.find(item => item.path === 'service-manage');
+        console.log('服务管理菜单:', serviceManageMenu ? '存在' : '不存在');
+        
+        if (serviceManageMenu && serviceManageMenu.children) {
+          console.log('服务子菜单数量:', serviceManageMenu.children.length);
+          
+          // 直接查找匹配的服务
+          const service = serviceManageMenu.children.find(
+            item => item.meta && item.meta.params && item.meta.params.serviceId === serviceId
+          );
+          
+          console.log('找到服务:', service ? service.name : '未找到');
+          
+          // 如果没有找到匹配的服务，尝试使用字符串匹配
+          if (!service && serviceId) {
+            const serviceWithStringId = serviceManageMenu.children.find(
+              item => item.meta && item.meta.params && item.meta.params.serviceId && 
+                     item.meta.params.serviceId.toString() === serviceId.toString()
+            );
+            
+            if (serviceWithStringId) {
+              console.log('通过字符串匹配找到服务:', serviceWithStringId.name);
+              this.cachedServiceData = {
+                serviceId,
+                service: serviceWithStringId
+              };
+              return this.cachedServiceData;
+            }
+          }
+          
+          this.cachedServiceData = {
+            serviceId,
+            service: service
+          };
+        } else {
+          console.log('服务管理菜单不存在或没有子菜单');
+          // 尝试直接从serviceList获取
+          try {
+            const serviceList = JSON.parse(localStorage.getItem('serviceList') || '[]');
+            console.log('从serviceList获取, 长度:', serviceList.length);
+            
+            if (serviceList.length > 0) {
+              const service = serviceList.find(item => item.id && item.id.toString() === serviceId.toString());
+              if (service) {
+                console.log('从serviceList找到服务:', service.serviceName);
+                this.cachedServiceData = {
+                  serviceId,
+                  service: {
+                    name: service.serviceName,
+                    meta: { obj: { serviceStateCode: service.serviceStateCode || 1 } }
+                  }
+                };
+                return this.cachedServiceData;
+              }
+            }
+          } catch (e) {
+            console.error('获取serviceList失败:', e);
+          }
+        }
+      }
+      
+      console.log('返回缓存服务数据:', this.cachedServiceData);
+      return this.cachedServiceData;
+    },
+    
     toggleCollapse() {
       this.$emit("toggleCollapse");
     },
@@ -278,12 +447,81 @@ export default {
       this.activeFirstMenuKey = this.firstMenu[0].fullPath
     }
     
+    // 如果当前路径是服务详情页面，预加载服务数据
+    if (this.$route.path.includes('/service-manage/service-list/') && this.$route.params.serviceId) {
+      const serviceId = this.$route.params.serviceId;
+      console.log('组件创建时加载服务数据 - serviceId:', serviceId);
+      
+      // 确保serviceId已设置
+      if (this.serviceId !== serviceId) {
+        this.$store.commit('setting/setServiceId', serviceId);
+      }
+      
+      // 预加载服务数据
+      this.getCachedServiceData(serviceId);
+    }
+    
     // 添加调试信息
     console.log('菜单数据:', this.firstMenu);
+    console.log('当前路径:', this.$route.path);
+    console.log('当前serviceId:', this.serviceId);
+    console.log('路由参数:', this.$route.params);
+    
     setTimeout(() => {
       console.log('菜单数据(延迟检查):', this.firstMenu);
       console.log('regularMenus:', this.regularMenus);
+      console.log('当前服务名称:', this.currentServiceName);
+      console.log('当前服务图标:', this.currentServiceIcon);
+      console.log('当前服务状态:', this.currentServiceStatus);
     }, 1000);
+  },
+  watch: {
+    '$route': {
+      handler(to) {
+        console.log('路由变化:', to.path);
+        
+        // 如果路由是服务详情页面，刷新serviceId
+        if (to.path.includes('/service-manage/service-list/') && to.params.serviceId) {
+          const serviceId = to.params.serviceId;
+          console.log('路由监听器发现serviceId变化:', serviceId);
+          
+          // 如果当前serviceId不同，则更新
+          if (this.serviceId !== serviceId) {
+            console.log('路由监听器更新serviceId:', serviceId);
+            this.$store.commit('setting/setServiceId', serviceId);
+          }
+          
+          // 强制刷新计算属性
+          this.cachedServiceData = null;
+          this.cachedMenuData = null;
+          
+          // 预加载服务数据
+          this.$nextTick(() => {
+            const serviceData = this.getCachedServiceData(serviceId);
+            console.log('路由变化后的服务数据:', serviceData);
+            console.log('当前服务名称:', this.currentServiceName);
+          });
+        }
+      },
+      immediate: true
+    },
+    // 监听serviceId变化
+    serviceId: {
+      handler(newVal, oldVal) {
+        console.log('serviceId变化:', oldVal, '->', newVal);
+        if (newVal && newVal !== oldVal) {
+          // 清除缓存，强制重新获取服务数据
+          this.cachedServiceData = null;
+          
+          // 预加载服务数据
+          this.$nextTick(() => {
+            const serviceData = this.getCachedServiceData(newVal);
+            console.log('serviceId变化后的服务数据:', serviceData);
+            console.log('当前服务名称:', this.currentServiceName);
+          });
+        }
+      }
+    }
   }
 };
 </script>
@@ -313,6 +551,229 @@ export default {
   align-items: center;
   margin-left: auto;
 }
+
+/* 服务标题容器样式 */
+.service-title-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  z-index: 5;
+}
+
+.service-title-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 30px;
+  height: 36px;
+}
+
+.service-title-text {
+  background: linear-gradient(135deg, rgba(0,126,255,0.1) 0%, rgba(0,97,219,0.15) 100%);
+  border-radius: 18px;
+  padding: 0 20px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,83,210,0.1);
+  border: 1px solid rgba(0,126,255,0.2);
+  backdrop-filter: blur(5px);
+}
+
+.service-icon {
+  font-size: 18px;
+  margin-right: 8px;
+  color: #1976d2;
+}
+
+.service-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  text-shadow: 0 0 1px rgba(25,118,210,0.3);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #1976d2, #3f9eeb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+}
+
+.service-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 10px;
+  background-color: #aaa;
+  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  
+  &.running {
+    background-color: #52c41a;
+    box-shadow: 0 0 8px rgba(82,196,26,0.5);
+    animation: pulse-green 2s infinite;
+  }
+  
+  &.warning {
+    background-color: #faad14;
+    box-shadow: 0 0 8px rgba(250,173,20,0.5);
+    animation: pulse-yellow 2s infinite;
+  }
+  
+  &.error {
+    background-color: #f5222d;
+    box-shadow: 0 0 8px rgba(245,34,45,0.5);
+    animation: pulse-red 2s infinite;
+  }
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(82,196,26,0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(82,196,26,0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(82,196,26,0);
+  }
+}
+
+@keyframes pulse-yellow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(250,173,20,0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(250,173,20,0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(250,173,20,0);
+  }
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245,34,45,0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(245,34,45,0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245,34,45,0);
+  }
+}
+
+.service-name::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #1976d2);
+}
+
+.service-name::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: linear-gradient(90deg, #1976d2, transparent);
+}
+
+.service-title-decoration {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.decoration-line {
+  position: absolute;
+  height: 1px;
+  bottom: 5px;
+  background: linear-gradient(90deg, transparent, rgba(25,118,210,0.5), transparent);
+  animation: glow 2s infinite alternate;
+}
+
+.decoration-line.left {
+  left: 0;
+  width: 30px;
+}
+
+.decoration-line.right {
+  right: 0;
+  width: 30px;
+}
+
+.decoration-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  bottom: 3.5px;
+  background: #1976d2;
+  box-shadow: 0 0 4px #1976d2;
+  animation: glow 2s infinite alternate;
+}
+
+.decoration-dot.left {
+  left: 30px;
+}
+
+.decoration-dot.right {
+  right: 30px;
+}
+
+.decoration-pulse {
+  position: absolute;
+  width: 100%;
+  height: 3px;
+  bottom: 4px;
+  overflow: hidden;
+  
+  &:before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 1px;
+    background: rgba(25,118,210,0.5);
+    left: -30px;
+    animation: pulse-move 4s infinite linear;
+  }
+}
+
+@keyframes pulse-move {
+  0% {
+    left: -30px;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes glow {
+  0% {
+    opacity: 0.5;
+    box-shadow: 0 0 2px rgba(25,118,210,0.3);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(25,118,210,0.6);
+  }
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -531,5 +992,14 @@ li.active .dropdown-icon .anticon {
   height: 100%;
   color: inherit;
   text-decoration: none;
+}
+
+/* 添加fade动画样式 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
