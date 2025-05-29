@@ -553,6 +553,9 @@ export default {
   display: flex;
   height: calc(100vh - 56px);
   background: #f5f6fa;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible !important;
 }
 
 .service-sidebar {
@@ -560,30 +563,31 @@ export default {
   background: #fff;
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
+  flex-shrink: 0;
   
-  /* 完全隐藏滚动条 */
+  /* 允许侧边栏滚动但使用玻璃效果滚动条 */
   &::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    background-color: transparent !important;
-    display: none !important;
+    width: 8px;
+    height: 8px;
   }
   
   &::-webkit-scrollbar-track {
-    background-color: transparent !important;
-    display: none !important;
+    background: transparent;
   }
   
   &::-webkit-scrollbar-thumb {
-    display: none !important;
+    background: rgba(180, 180, 180, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
   }
   
-  &::-webkit-scrollbar-button {
-    display: none !important;
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(180, 180, 180, 0.5);
   }
   
   /* Firefox兼容 */
-  scrollbar-width: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
   
   &.cdh-style {
     background: #f5f7f8;
@@ -821,7 +825,40 @@ export default {
 
 .service-content {
   flex: 1;
-  overflow: auto;
+  overflow: visible !important;
   background: #f5f6fa;
+  max-width: calc(100% - 240px);
+  width: calc(100% - 240px);
+  position: relative;
+  
+  /* 隐藏所有滚动条 */
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* 重写所有内部元素的滚动行为 */
+/deep/ .ant-tabs-content, 
+/deep/ .ant-tabs-tabpane, 
+/deep/ .service-detail, 
+/deep/ .service-content, 
+/deep/ .example-page, 
+/deep/ .service-setting,
+/deep/ .overview-page {
+  overflow: visible !important;
+  
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 </style> 

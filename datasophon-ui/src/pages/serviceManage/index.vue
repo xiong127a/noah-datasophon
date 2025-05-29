@@ -1,10 +1,5 @@
 <template>
   <div class="service-detail">
-    <div class="service-header" v-if="serviceName">
-      <div class="header-title">
-        <span>{{ serviceName }}</span>
-      </div>
-    </div>
     <div class="service-content card-shadow">
       <a-tabs v-model="tabKey" @change="callback">
         <a-tab-pane :key="1" tab="总览" v-if="pageOverview">
@@ -184,28 +179,51 @@ export default {
 
 <style lang="less" scoped>
 .service-detail {
-  padding: 20px;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow: auto;
+  display: block;
+  position: relative;
   
-  .service-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e0e0e0;
-    
-    .header-title {
-      font-size: 22px;
-      font-weight: 600;
-      color: #1976d2;
-    }
+  /* 玻璃效果滚动条 - 最外层 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    right: 0;
   }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(180, 180, 180, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(180, 180, 180, 0.5);
+  }
+  
+  /* Firefox兼容 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
   
   .service-content {
     background: #fff;
     padding: 20px;
-    border-radius: 4px;
+    border-radius: 0;
     position: relative;
+    height: 100%;
+    width: 100%;
+    box-shadow: none;
+    
+    /* 隐藏内部滚动条 */
+    overflow: visible;
     
     .webui {
       position: absolute;
@@ -226,6 +244,31 @@ export default {
   color: #1976d2;
   &:hover {
     background-color: #f0f6ff;
+  }
+}
+
+/* 隐藏tabs内容区域的滚动条 */
+/deep/ .ant-tabs-content {
+  height: calc(100vh - 180px);
+  overflow: visible;
+  
+  /* 隐藏滚动条 */
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* 修复tabs样式 */
+/deep/ .ant-tabs {
+  width: 100%;
+  
+  .ant-tabs-bar {
+    margin-bottom: 15px;
   }
 }
 </style>

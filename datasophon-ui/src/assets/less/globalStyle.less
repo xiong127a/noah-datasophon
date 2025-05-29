@@ -164,6 +164,11 @@
 body {
   font-family: SourceHanSansCN !important;
   // font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"!important;
+  width: 100vw !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  margin: 0;
+  padding: 0;
 }
 // 服务管理的菜单
 .cluster-menu-item {
@@ -325,4 +330,120 @@ body {
   box-shadow: none !important;
   border: 1px solid #e0e0e0;
   margin-bottom: 24px;
+}
+
+/* 最外层滚动条玻璃效果 */
+#popContainer.beauty-scroll {
+  overflow-y: auto !important; /* 启用垂直滚动 */
+  width: 100vw !important;
+  max-width: 100% !important;
+  
+  /* 玻璃效果滚动条 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    position: fixed;
+    right: 0;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(180, 180, 180, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(180, 180, 180, 0.5);
+  }
+  
+  /* Firefox兼容 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
+}
+
+/* 为html添加相同的滚动条样式，以确保全局一致性 */
+html.beauty-scroll {
+  width: 100vw !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+  
+  /* 玻璃效果滚动条 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    position: fixed;
+    right: 0;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(180, 180, 180, 0.3);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(180, 180, 180, 0.5);
+  }
+  
+  /* Firefox兼容 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
+}
+
+/* 全局禁用内部滚动条 */
+.cdh-layout, 
+.cdh-content, 
+.cdh-main, 
+.service-detail, 
+.service-content, 
+.ant-tabs-content, 
+.ant-tabs-tabpane, 
+.overview-page, 
+.overview-container, 
+.overview-iframe {
+  overflow: visible !important;
+  
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* 保留表格滚动条样式 */
+.ant-table-body, 
+.ant-table-fixed {
+  overflow: auto !important;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(180, 180, 180, 0.3);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(180, 180, 180, 0.5);
+  }
+  
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
 }

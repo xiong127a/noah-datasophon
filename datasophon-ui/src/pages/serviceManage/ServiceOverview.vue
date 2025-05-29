@@ -1,10 +1,6 @@
 <template>
   <div class="service-overview">
-    <div class="service-header">
-      <div class="header-title">
-        <span>集群总览</span>
-      </div>
-    </div>
+    <!-- 仪表盘内容 -->
     <div class="service-dashboard">
       <OverViewComponent :dashboardUrl="dashboardUrl" />
     </div>
@@ -27,29 +23,15 @@ export default {
 
 <style lang="less" scoped>
 .service-overview {
-  padding: 20px;
-  
-  .service-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e0e0e0;
-    
-    .header-title {
-      font-size: 22px;
-      font-weight: 600;
-      color: #1976d2;
-    }
-  }
+  padding: 0;
+  height: 100%;
   
   .service-dashboard {
     position: relative;
-    height: calc(100vh - 140px);
+    height: 100vh;
     background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
   }
 }

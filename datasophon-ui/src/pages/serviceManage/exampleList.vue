@@ -691,7 +691,19 @@ export default {
 .example-page {
   position: relative;
   background: #fff;
-  // padding: 20px;
+  height: 100%;
+  overflow: visible;
+  
+  /* 隐藏内部滚动条 */
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
   .circle-point {
     width: 8px;
     height: 8px;
@@ -725,6 +737,35 @@ export default {
   top: 61px;
   .ant-modal-content {
     border-radius: 4px;
+  }
+}
+
+/* 表格样式优化 */
+/deep/ .ant-table-wrapper {
+  /* 表格滚动条样式 - 保留表格内部滚动，但使用玻璃效果 */
+  .ant-table-body {
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(180, 180, 180, 0.3);
+      border-radius: 4px;
+      backdrop-filter: blur(10px);
+    }
+    
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(180, 180, 180, 0.5);
+    }
+    
+    /* Firefox兼容 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180, 180, 180, 0.3) transparent;
   }
 }
 </style>

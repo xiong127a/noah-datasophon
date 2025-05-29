@@ -39,6 +39,10 @@ const options = {
             {
               path: '',
               name: '服务总览',
+              meta: {
+                invisible: true,
+                notShow: true
+              },
               component: () => import('@/pages/serviceManage/ServiceOverview'),
             },
             {

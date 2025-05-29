@@ -147,36 +147,66 @@ export default {
 }
 </script>
 
-<style lang="less" scoped>
+<style lang="less">
 .cdh-layout {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: #f5f6fa;
+  width: 100vw;
+  max-width: 100%;
+  overflow-x: hidden;
+
+  .cdh-header {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    position: relative;
+    z-index: 10;
+    
+    /* 隐藏总览标签 */
+    .tabs-view-content {
+      a[href="/service-manage"],
+      a[href="/service-manage/"],
+      div.tab:has(> div.title:contains("总览")),
+      div:has(> span:contains("总览")) {
+        display: none !important;
+      }
+    }
+  }
+
+  .cdh-main {
+    flex: 1;
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+
+    .cdh-content {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      
+      &.full {
+        margin: 0;
+        padding: 0;
+        overflow: visible !important; /* 确保内容区域不产生自己的滚动条 */
+      }
+    }
+  }
 }
-.cdh-main {
-  display: flex;
-  flex: 1;
-  height: 100%;
-}
-.cdh-side-menu {
-  width: 200px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
-  height: 100vh;
-}
-.cdh-content {
-  flex: 1;
-  padding: 0 32px 0 32px;
-  background: #f5f6fa;
-  min-height: 100vh;
-  overflow-y: auto;
-}
-.cdh-content.full {
-  padding-left: 0;
+
+/* 确保页面宽度固定并禁用内部滚动 */
+#app, .router-view {
   width: 100%;
+  height: 100%;
+  overflow: visible !important;
 }
-.breadcrumb {
-  margin-bottom: 16px;
+
+/* 移除所有内部滚动，只在最外层显示滚动条 */
+.cdh-content, .service-detail, .ant-tabs-content, .ant-tabs-tabpane {
+  overflow: visible !important;
+}
+
+/* 保留表格滚动行为 */
+.ant-table-body {
+  overflow: auto !important;
 }
 </style>
