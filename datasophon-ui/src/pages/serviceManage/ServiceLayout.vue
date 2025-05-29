@@ -145,18 +145,26 @@
             
             <!-- 展开按钮 -->
             <div class="expand-icon" @click="toggleServiceMenu(service, $event)">
-              <div class="cdh-dropdown-btn">
-                <a-icon type="caret-down" />
+              <div class="modern-action-btn">
+                <a-icon type="more" />
               </div>
               <!-- 服务操作菜单 -->
-              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)" :trigger="['click']" overlayClassName="modern-dropdown">
                 <a class="ant-dropdown-link"></a>
-                <a-menu slot="overlay">
-                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">启动</a-menu-item>
-                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">停止</a-menu-item>
-                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">重启</a-menu-item>
+                <a-menu slot="overlay" class="modern-dropdown-menu">
+                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">
+                    <a-icon type="caret-right" />启动
+                  </a-menu-item>
+                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">
+                    <a-icon type="pause" />停止
+                  </a-menu-item>
+                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">
+                    <a-icon type="reload" />重启
+                  </a-menu-item>
                   <a-menu-divider />
-                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)">删除</a-menu-item>
+                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)" class="danger-item">
+                    <a-icon type="delete" />删除
+                  </a-menu-item>
                 </a-menu>
               </a-dropdown>
             </div>
@@ -297,18 +305,26 @@
             
             <!-- 展开按钮 -->
             <div class="expand-icon" @click="toggleServiceMenu(service, $event)">
-              <div class="cdh-dropdown-btn">
-                <a-icon type="caret-down" />
+              <div class="modern-action-btn">
+                <a-icon type="more" />
               </div>
               <!-- 服务操作菜单 -->
-              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)">
+              <a-dropdown :visible="service.menuVisible" placement="bottomRight" @visibleChange="(visible) => handleVisibleChange(visible, service)" :trigger="['click']" overlayClassName="modern-dropdown">
                 <a class="ant-dropdown-link"></a>
-                <a-menu slot="overlay">
-                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">启动</a-menu-item>
-                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">停止</a-menu-item>
-                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">重启</a-menu-item>
+                <a-menu slot="overlay" class="modern-dropdown-menu">
+                  <a-menu-item key="start" @click="handleServiceAction({key: 'start'}, service, $event)">
+                    <a-icon type="caret-right" />启动
+                  </a-menu-item>
+                  <a-menu-item key="stop" @click="handleServiceAction({key: 'stop'}, service, $event)">
+                    <a-icon type="pause" />停止
+                  </a-menu-item>
+                  <a-menu-item key="restart" @click="handleServiceAction({key: 'restart'}, service, $event)">
+                    <a-icon type="reload" />重启
+                  </a-menu-item>
                   <a-menu-divider />
-                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)">删除</a-menu-item>
+                  <a-menu-item key="delete" @click="handleServiceAction({key: 'del'}, service, $event)" class="danger-item">
+                    <a-icon type="delete" />删除
+                  </a-menu-item>
                 </a-menu>
               </a-dropdown>
             </div>
@@ -791,7 +807,22 @@ export default {
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
+      
+      // 关闭所有其他菜单
+      this.menuList.forEach(item => {
+        if (item !== service) {
+          item.menuVisible = false;
+        }
+      });
+      
+      // 切换当前菜单的可见性
       service.menuVisible = !service.menuVisible;
+      
+      // 如果菜单变为可见，确保任何可能的悬浮窗都被关闭
+      if (service.menuVisible) {
+        service.popoverVisible = false;
+        service.popoverInContent = false;
+      }
     },
     
     // 处理服务操作菜单的可见性变化
@@ -1206,10 +1237,10 @@ export default {
         display: flex;
         align-items: center;
         
-        .cdh-dropdown-btn {
-          width: 20px;
-          height: 20px;
-          border-radius: 2px;
+        .modern-action-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1219,30 +1250,30 @@ export default {
           opacity: 0; /* 默认隐藏 */
           
           &:hover {
-            background-color: transparent;
-            border-color: transparent;
+            background-color: rgba(0, 118, 206, 0.08);
+            transform: translateY(-1px);
           }
           
           &:active {
-            background-color: transparent;
-            border-color: transparent;
-            box-shadow: none;
+            background-color: rgba(0, 118, 206, 0.12);
+            transform: translateY(0);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
           }
           
           .anticon {
-            font-size: 11px;
-            color: #0076ce; /* CDH风格的蓝色 */
+            font-size: 16px;
+            color: #0076ce;
           }
         }
         
         .ant-dropdown {
-          min-width: 120px;
+          min-width: 140px;
         }
       }
     }
     
     /* 当鼠标悬停在服务项上时显示下拉按钮 */
-    .service-item:hover .expand-icon .cdh-dropdown-btn {
+    .service-item:hover .expand-icon .modern-action-btn {
       opacity: 1;
     }
   }
@@ -1257,9 +1288,87 @@ export default {
   }
 }
 
+/* 现代化下拉菜单样式 */
+:deep(.modern-dropdown-menu) {
+  border-radius: 10px;
+  overflow: hidden;
+  background: transparent;
+  
+  .ant-menu-item {
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 12px 16px;
+    height: auto;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(240, 240, 240, 0.8);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: transparent;
+      transition: all 0.3s ease;
+    }
+    
+    .anticon {
+      margin-right: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: rgba(0, 118, 206, 0.08);
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0076ce;
+    }
+    
+    &:hover {
+      background: rgba(240, 246, 255, 0.9);
+      color: #0076ce;
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0, 118, 206, 0.1);
+      
+      &::before {
+        background: #0076ce;
+      }
+      
+      .anticon {
+        transform: scale(1.1);
+        background: rgba(0, 118, 206, 0.15);
+      }
+    }
+    
+    &:active {
+      background-color: rgba(230, 239, 252, 0.9);
+      transform: scale(0.98) translateX(4px);
+      box-shadow: 0 2px 8px rgba(0, 118, 206, 0.08);
+    }
+  }
+  
+  .ant-menu-item-divider {
+    margin: 8px 0;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.08), transparent);
+    height: 1px;
+  }
+}
+
 :deep(.ant-dropdown-menu) {
   padding: 4px 0;
-  border-radius: 2px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .service-content {
@@ -1498,6 +1607,185 @@ export default {
         margin-right: 4px;
       }
     }
+  }
+}
+
+/* 添加动画和过渡效果 */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.scale-enter, .scale-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+/* 按钮悬停动画 */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 118, 206, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(0, 118, 206, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 118, 206, 0);
+  }
+}
+
+/* 现代化的按钮悬停效果 */
+.modern-action-btn:hover {
+  animation: pulse 1.5s infinite;
+}
+
+/* 现代化下拉菜单容器 */
+:deep(.modern-dropdown) {
+  .ant-dropdown-menu {
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 
+                0 9px 28px 0 rgba(0, 0, 0, 0.08), 
+                0 12px 48px 16px rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    animation: dropdown-zoom-in 0.2s ease;
+    background: linear-gradient(145deg, #ffffff, #f8faff);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transform-origin: top right !important;
+    margin-left: 40px !important;
+  }
+}
+
+@keyframes dropdown-zoom-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+@keyframes menu-item-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 菜单项出现动画 */
+:deep(.modern-dropdown-menu) {
+  .ant-menu-item:nth-child(1) {
+    animation: menu-item-appear 0.3s ease forwards;
+    animation-delay: 0.05s;
+  }
+  
+  .ant-menu-item:nth-child(2) {
+    animation: menu-item-appear 0.3s ease forwards;
+    animation-delay: 0.1s;
+  }
+  
+  .ant-menu-item:nth-child(3) {
+    animation: menu-item-appear 0.3s ease forwards;
+    animation-delay: 0.15s;
+  }
+  
+  .ant-menu-item:nth-child(5) {
+    animation: menu-item-appear 0.3s ease forwards;
+    animation-delay: 0.2s;
+  }
+}
+
+/* 增强现代感的额外样式 */
+.service-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    transform: translateX(2px);
+  }
+  
+  &.active {
+    box-shadow: 0 2px 8px rgba(0, 118, 206, 0.15);
+  }
+}
+
+/* 增强按钮的现代感 */
+.modern-action-btn {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(0, 118, 206, 0.3);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%, -50%);
+    transform-origin: 50% 50%;
+  }
+  
+  &:hover::after {
+    animation: ripple 1s ease-out;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* 危险操作按钮样式 */
+:deep(.modern-dropdown-menu) .ant-menu-item.danger-item {
+  color: #555;
+  
+  .anticon {
+    background: rgba(255, 77, 79, 0.08);
+    color: #ff4d4f;
+  }
+  
+  &:hover {
+    background-color: rgba(255, 241, 240, 0.9);
+    color: #ff4d4f;
+    
+    &::before {
+      background: #ff4d4f;
+    }
+    
+    .anticon {
+      color: #ff4d4f;
+      background: rgba(255, 77, 79, 0.15);
+    }
+  }
+  
+  &:active {
+    background-color: rgba(255, 204, 199, 0.9);
   }
 }
 </style> 
