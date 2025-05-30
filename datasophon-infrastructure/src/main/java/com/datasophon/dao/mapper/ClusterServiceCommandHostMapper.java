@@ -17,16 +17,13 @@
 
 package com.datasophon.dao.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-
+import com.github.yulichang.base.MPJBaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
-
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 集群服务操作指令主机表
@@ -45,21 +42,17 @@ public interface ClusterServiceCommandHostMapper extends MPJBaseMapper<ClusterSe
      * @return 总进度
      */
     default Integer getCommandHostTotalProgressByCommandId(@Param("commandId") String commandId) {
-        // 使用聚合函数sum
-        LambdaQueryWrapper<ClusterServiceCommandHostEntity> wrapper = Wrappers
-                .<ClusterServiceCommandHostEntity>lambdaQuery()
-                .select(ClusterServiceCommandHostEntity::getCommandProgress, a -> "sum(command_progress) as total")
-                .eq(ClusterServiceCommandHostEntity::getCommandId, commandId);
+        QueryWrapper<ClusterServiceCommandHostEntity> wrapper = new QueryWrapper<>();
+        // 直接指定聚合函数和别名，避免 Lambda 表达式解析问题
+        wrapper.select("SUM(command_progress) AS total")
+                .eq("command_id", commandId);  // 确保字段名与数据库列名一致（如 command_id）
 
-        // 使用selectMaps查询聚合结果
         Map<String, Object> result = selectMaps(wrapper).stream().findFirst().orElse(null);
 
-        // 提取结果或返回0
         if (result != null && result.containsKey("total")) {
             Object total = result.get("total");
             return total == null ? 0 : Integer.parseInt(total.toString());
         }
-
         return 0;
     }
 }

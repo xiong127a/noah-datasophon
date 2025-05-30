@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
+
 
 @Data
 public class K8sYamlDeploymentHandler {
@@ -97,19 +99,6 @@ public class K8sYamlDeploymentHandler {
         }
     }
 
-    public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, int count, String configFilePath) {
-        // 创建新的 ServiceConfigVolume 对象
-        ServiceConfigVolume fileConfig = new ServiceConfigVolume();
-
-        // 设置名字为 "config" + fileCount
-        fileConfig.setName("config" + count);
-
-        // 设置文件路径
-        fileConfig.setValue(configFilePath);
-
-        // 将新的 ServiceConfigVolume 对象添加到 volumePathSet
-        volumePathSet.add(fileConfig);
-    }
 
     public static void addConfigFile(Set<ServiceConfigVolume> volumePathSet, String configFileName, String configFilePath) {
         // 创建新的 ServiceConfigVolume 对象
@@ -318,6 +307,21 @@ public class K8sYamlDeploymentHandler {
             }
 
         }
+
+        if ("PROMETHEUS".equals(serviceName)) {
+            // 创建新的 ServiceConfigVolume 对象
+            ServiceConfigVolume fileConfig = new ServiceConfigVolume();
+
+            // 设置名字为 "config" + fileCount
+            fileConfig.setName(PROMETHEUS_CONFIG);
+
+            // 设置文件路径
+            fileConfig.setValue("/opt/datasophon/prometheus-2.17.2/configs");
+
+            volumeConfigMapSet.add(fileConfig);
+        }
+
+
         if ("RANGER".equals(serviceName)) {
             volumePathSet.clear();
             addConfigFile(volumePathSet, "rangerdir", "/opt/datasophon/ranger-2.1.0");

@@ -46,6 +46,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
+import com.datasophon.k8s.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
@@ -90,13 +91,19 @@ public class PrometheusActor extends UntypedActor {
             HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
 
             HashMap<String, List<String>> roleMap = new HashMap<>();
+            int index = 0;
             for (ClusterServiceRoleInstanceEntity roleInstanceEntity : roleInstanceList) {
+                String hostname = roleInstanceEntity.getHostname();
+                if (Constants.K8S_MODE.equals(depType)) {
+                    hostname = CommonUtil.generateServiceRoleFullName(roleInstanceEntity.getServiceName(), roleInstanceEntity.getServiceRoleName()) + "-" + index;
+                    index++;
+                }
                 if (roleMap.containsKey(roleInstanceEntity.getServiceRoleName())) {
                     List<String> list = roleMap.get(roleInstanceEntity.getServiceRoleName());
-                    list.add(roleInstanceEntity.getHostname());
+                    list.add(hostname);
                 } else {
                     List<String> list = new ArrayList<>();
-                    list.add(roleInstanceEntity.getHostname());
+                    list.add(hostname);
                     roleMap.put(roleInstanceEntity.getServiceRoleName(), list);
                 }
             }
@@ -211,7 +218,7 @@ public class PrometheusActor extends UntypedActor {
 
                 configFileMap.put(workerGenerators, workerServiceConfigs);
                 configFileMap.put(nodeGenerators, nodeServiceConfigs);
-                configFileMap.put(masterGenerators,masterServiceConfigs);
+                configFileMap.put(masterGenerators, masterServiceConfigs);
 
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                 serviceRoleInfo.setName("Prometheus");
