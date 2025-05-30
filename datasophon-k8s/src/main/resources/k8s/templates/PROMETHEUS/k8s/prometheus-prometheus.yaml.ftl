@@ -1,5 +1,5 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
@@ -37,7 +37,7 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: true
+      hostNetwork: false
       initContainers:
         - name: init-sysctl
           image: "${dockerImage}"
@@ -114,10 +114,6 @@ spec:
               - name: fs.inotify.max_user_instances
                 value: "524288"
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -127,6 +123,8 @@ spec:
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
+            - name: "hosts"
+              mountPath: "/etc/hosts"
       nodeSelector:
         ${serviceRoleFullName}: "true"
       terminationGracePeriodSeconds: 30
@@ -136,11 +134,9 @@ spec:
           configMap:
             name: "${item.name}"
         </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
-        </#list>
         - name: "timezone"
           hostPath:
             path: "/etc/localtime"
+        - name: "hosts"
+          hostPath:
+            path: "/etc/hosts"

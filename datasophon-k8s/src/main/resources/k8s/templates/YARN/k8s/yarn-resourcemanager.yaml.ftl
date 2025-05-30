@@ -37,7 +37,7 @@ spec:
                 - "${namespace}"
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
-      hostNetwork: true
+      hostNetwork: false
       containers:
         - env:
             - name: USER

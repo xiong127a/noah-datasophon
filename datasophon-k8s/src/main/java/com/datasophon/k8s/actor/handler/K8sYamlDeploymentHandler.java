@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
+import static com.datasophon.common.Constants.PrometheusFullName;
 
 
 @Data
@@ -258,6 +259,7 @@ public class K8sYamlDeploymentHandler {
 
         populateDataWithConfig(configFileMap, "dataDir", "dataDir");
 
+        
         data.putAll(k8sConfigMap);
         CONFIG_CACHE.clear();
         CacheUtils.put(serviceRoleFullName + "_" + Constant.ROLE_NODE_CNT, roleNodeCnt);
@@ -269,8 +271,13 @@ public class K8sYamlDeploymentHandler {
         for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
             Generators generators = entry.getKey();
             if (StrUtil.endWith(generators.getFilename(), "." + Constants.K8S_MODE.toLowerCase())) {
-                return;
+                continue;
             }
+
+            if (StrUtil.endWith(generators.getFilename(), ".json") && PrometheusFullName.equals(serviceRoleFullName) ) {
+                continue;
+            }
+
             boolean containsHost = entry.getValue().stream().anyMatch(serviceConfig -> serviceConfig.getValue().equals("{{HOST}}"));
 
             String configFilePath;

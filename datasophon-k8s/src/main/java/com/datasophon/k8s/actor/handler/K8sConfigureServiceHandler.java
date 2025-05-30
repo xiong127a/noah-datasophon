@@ -40,14 +40,13 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.*;
 
-import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
 import static com.datasophon.k8s.util.K8sFreeMakerUtils.*;
 
 @Data
 public class K8sConfigureServiceHandler {
 
     private static final String RANGER_ADMIN = "RangerAdmin";
-    private static final String Prometheus = "Prometheus";
+
 
     private static final String SH = "sh";
 
@@ -75,9 +74,6 @@ public class K8sConfigureServiceHandler {
                                 String kubeConfig) throws Exception {
         ExecResult execResult = new ExecResult();
 
-        if (Prometheus.equals(serviceRoleName)) {
-            createConfigMap(PROMETHEUS_CONFIG, "", kubeConfig, PROMETHEUS_CONFIG,serviceRoleFullName);
-        }
         try {
             HashMap<String, String> paramMap = new HashMap<>();
             paramMap.put("${host}", "{{HOST}}");

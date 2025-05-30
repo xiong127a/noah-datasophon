@@ -46,13 +46,15 @@ import java.io.StringWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
+import static com.datasophon.common.Constants.PrometheusFullName;
+
+
 @UtilityClass
 @Slf4j
 public class K8sFreeMakerUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
-
-
 
 
     public static void generateConfigFile(Generators generators,
@@ -195,31 +197,50 @@ public class K8sFreeMakerUtils {
         if (StrUtil.endWith(fileName, Constants.K8S_CONFIG_SUFFIX)) {
             return;
         }
-        // 获取 Kubernetes 客户端
-        KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-        // 创建 ConfigMap 对象
-        ConfigMap configMap = new ConfigMap();
-        configMap.setMetadata(new ObjectMeta());
-        configMap.getMetadata().setName(configMapName);  // 设置 ConfigMap 名称
-        configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE); // 设置 ConfigMap 命名空间
-        if (StrUtil.isNotBlank(serviceRoleFullName)) {
-            Map<String, String> labels = configMap.getMetadata().getLabels();
-            labels.put("app", serviceRoleFullName);
-        }
-        if (generatedContent.contains("{{HOST}}")) {
-            fileName += ".example";
-        }
-        // 将渲染后的内容加入到 ConfigMap 的 data 中
-        configMap.setData(Collections.singletonMap(fileName, generatedContent));
 
-        // 创建新的 ConfigMap
-        try {
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).serverSideApply();
-        } catch (Exception e) {
-            log.error("Error creating ConfigMap: {}", e.getMessage());
-            throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());
+        if (PrometheusFullName.equals(serviceRoleFullName) && fileName.endsWith(".json")) {
+            configMapName=PROMETHEUS_CONFIG;
         }
-        log.info("ConfigMap {} created in namespace " + Constant.K8S_NAMESPACE + ".", configMapName);
+
+        KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
+
+        ConfigMap existingConfigMap = client.configMaps()
+                .inNamespace(Constant.K8S_NAMESPACE)
+                .withName(configMapName)
+                .get();
+
+            if (existingConfigMap != null) {
+                Map<String, String> data = existingConfigMap.getData();
+                if (data == null) {
+                    data = new HashMap<>();
+                }
+                data.put(fileName, generatedContent);
+                existingConfigMap.setData(data);
+                
+                // 使用Server-Side Apply方式更新
+                client.configMaps()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .resource(existingConfigMap)
+                        .patch(); // 替换edit()为patch()
+                log.info("ConfigMap {} updated in namespace {}", configMapName, Constant.K8S_NAMESPACE);
+            } else {
+                ConfigMap configMap = new ConfigMap();
+                configMap.setMetadata(new ObjectMeta());
+                configMap.getMetadata().setName(configMapName);
+                configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE);
+                if (StrUtil.isNotBlank(serviceRoleFullName)) {
+                    Map<String, String> labels = configMap.getMetadata().getLabels();
+                    labels.put("app", serviceRoleFullName);
+                }
+                configMap.setData(Collections.singletonMap(fileName, generatedContent));
+                
+                // 使用ServerSideApplyOptions指定fieldManager
+                client.configMaps()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .resource(configMap)
+                        .serverSideApply();
+                log.info("ConfigMap {} created in namespace {}", configMapName, Constant.K8S_NAMESPACE);
+            }
 
     }
 
