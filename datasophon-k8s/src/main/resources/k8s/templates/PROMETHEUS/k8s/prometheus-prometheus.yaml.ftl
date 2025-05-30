@@ -121,7 +121,9 @@ spec:
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
+              <#if item.fileName?? && item.fileName != "">
               subPath: "${item.fileName}"
+              </#if>
             </#list>
             - name: "timezone"
               mountPath: "/etc/localtime"
