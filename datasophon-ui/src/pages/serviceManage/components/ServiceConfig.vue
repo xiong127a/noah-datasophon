@@ -387,15 +387,7 @@
             <div v-show="isGroupExpanded[groupName]" class="panel-content">
               <!-- 处理新的数据结构：同时包含常规配置和Kubernetes配置的角色分组 -->
               <template v-if="Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig">
-                <!-- 先显示常规配置 -->
-                <CommonTemplate
-                  :ref="`template_${groupName}`"
-                  :steps4Data="steps4Data"
-                  :templateData="group[0].regularConfigs"
-                  v-if="group[0].regularConfigs && group[0].regularConfigs.length > 0"
-                />
-                
-                <!-- 再显示Kubernetes配置（使用标签页）-->
+                <!-- 先显示Kubernetes配置（使用标签页）-->
                 <div class="kubernetes-section" v-if="group[0].kubernetesSubGroups && Object.keys(group[0].kubernetesSubGroups).length > 0">
                   <div class="kubernetes-tabs-header">
                     Kubernetes 配置
@@ -420,6 +412,14 @@
                     </a-tab-pane>
                   </a-tabs>
                 </div>
+                
+                <!-- 再显示常规配置 -->
+                <CommonTemplate
+                  :ref="`template_${groupName}`"
+                  :steps4Data="steps4Data"
+                  :templateData="group[0].regularConfigs"
+                  v-if="group[0].regularConfigs && group[0].regularConfigs.length > 0"
+                />
               </template>
               <!-- 处理常规配置 -->
               <template v-else-if="Array.isArray(group) || (group.items && Array.isArray(group.items))">
@@ -558,6 +558,21 @@ export default {
       restoreDialogVisible: false, // 控制恢复确认对话框的显示
       restoreDescription: '', // 存储恢复版本的备注
       activeKubernetesTabs: {}, // 存储每个角色组的Kubernetes标签页激活状态
+      k8sSubGroupChineseNames: { // Copied from step7.vue
+        'persistentVolumeClaims': '持久卷声明',
+        'resources': '资源规格',
+        'services': '服务暴露',
+        'nodePortMappings': '节点端口映射',
+        'clusterPortMappings': '集群端口映射',
+        'requestsMemory': '内存请求',
+        'requestsCpu': 'CPU请求',
+        'limitsMemory': '内存限制',
+        'limitsCpu': 'CPU限制',
+        'storageClasses': '存储类',
+        'mountPath': '挂载路径',
+        'storage': '存储容量',
+        // Add more mappings as needed
+      },
     };
   },
   computed: {
@@ -834,25 +849,30 @@ export default {
       return result;
     },
     filteredVisibleGroups() {
-      const groups = this.nonKubernetesGroups || {};
+      const groups = this.filteredTemplateData || {}; // Changed from this.nonKubernetesGroups
       return Object.entries(groups)
         .filter(([groupName, group]) => {
           // 1. 处理新格式：同时包含常规配置和Kubernetes配置的角色分组
           if (Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig) {
-            // 检查regularConfigs是否有非隐藏项
-            const regularConfigs = group[0].regularConfigs || [];
-            const hasVisibleRegularConfigs = regularConfigs.some(item => !item.hidden);
+            const roleGroup = group[0];
+            const hasVisibleRegularConfigs = (roleGroup.regularConfigs || []).some(item => !item.hidden);
             
-            // 如果常规配置中有可见项，则显示该分组
-            return hasVisibleRegularConfigs;
+            let hasVisibleK8sConfigs = false;
+            if (roleGroup.kubernetesSubGroups) {
+              hasVisibleK8sConfigs = Object.values(roleGroup.kubernetesSubGroups).some(configs => 
+                (configs || []).some(item => !item.hidden)
+              );
+            }
+            return hasVisibleRegularConfigs || hasVisibleK8sConfigs;
           }
           
-          // 2. 处理旧格式：Kubernetes配置组
+          // 2. 处理旧格式：Kubernetes配置组 (isKubernetesGroup flag)
+          // This case might become redundant if handlerTemplate standardizes everything
+          // to the new hasKubernetesConfig structure, but keep for now for safety.
           else if (group && group.isKubernetesGroup) {
-            // 检查所有子组是否有可见配置项
             let hasVisibleConfig = false;
             Object.values(group.subGroups || {}).forEach(configs => {
-              if (configs.some(item => !item.hidden)) {
+              if ((configs || []).some(item => !item.hidden)) {
                 hasVisibleConfig = true;
               }
             });
@@ -876,7 +896,7 @@ export default {
           acc[key] = value;
           return acc;
         }, {});
-    }
+    },
   },
   methods: {
     ...mapActions("steps", ["setCommandType", "setCommandIds"]),
@@ -1380,173 +1400,96 @@ export default {
       this.loading = false;
     },
     handlerTemplate(data) {
-      const result = {};
-      const kubernetesConfigsByRole = {}; // 用于存储各角色组的Kubernetes配置
+      const finalResult = {};
+      const kubernetesConfigsByBaseRole = {}; // { "ZkServer": { "k8s.config.pvc": [...] } }
+      const regularConfigsByBaseRole = {};  // { "ZkServer": [...], "General": [...] }
 
       try {
-        // 检查data是否为有效对象
         if (!data || typeof data !== 'object') {
           console.error('Invalid data passed to handlerTemplate:', data);
-          return { General: [] }; // 返回一个默认的空配置组
+          return { General: [] };
         }
 
+        // Phase 1: Collect and categorize configs
         Object.entries(data).forEach(([originalKey, configList]) => {
-          // 检查configList是否为数组或特殊的结构（包含regularConfigs和kubernetesSubGroups）
-          if (!Array.isArray(configList) && 
-              !(configList.length === 1 && configList[0].hasKubernetesConfig)) {
-            console.error(`ConfigList for key ${originalKey} is not a valid format:`, configList);
-            return; // 跳过此项
-          }
+          const cleanedOriginalKey = originalKey?.trim().replace(/^"|"$/g, '') || 'UnknownGroup';
           
-          // 直接使用原始键名，并进行标准化处理
-          const groupKey = originalKey
-                  ?.trim() // 去除前后空格
-                  .replace(/^"|"$/g, '') // 去除可能存在的引号
-              || 'General'; // 空值处理
-
-          // 处理特殊结构：同时包含regularConfigs和kubernetesSubGroups的角色分组
-          if (Array.isArray(configList) && configList.length === 1 && configList[0].hasKubernetesConfig) {
-            // 直接将特殊结构添加到结果中
-            result[groupKey] = configList;
-            
-            // 对regularConfigs中的每个配置项进行名称转换
-            if (configList[0].regularConfigs) {
-              configList[0].regularConfigs.forEach(item => {
-                if (item.name) {
-                  item.name = item.name.replaceAll(".", "!");
-                }
-              });
-            }
-            
-            // 对kubernetesSubGroups中的每个配置项进行名称转换
-            if (configList[0].kubernetesSubGroups) {
-              Object.values(configList[0].kubernetesSubGroups).forEach(configs => {
-                configs.forEach(item => {
-                  if (item.name) {
-                    item.name = item.name.replaceAll(".", "!");
-                  }
-                });
-              });
-            }
-            
-            return; // 处理完毕，直接返回
+          if (!Array.isArray(configList)) {
+            console.error(`ConfigList for key ${cleanedOriginalKey} is not an array:`, configList);
+            return; 
           }
 
-          // 以下是处理常规配置数组的逻辑
-
-          // 配置项名称转换（保留原始替换逻辑）
-          const processedItems = configList.map(item => ({
+          const processedConfigList = configList.map(item => ({
             ...item,
             name: (item.name || '').replaceAll(".", "!")
           }));
 
-          // 分离Kubernetes配置项和普通配置项
-          const roleConfigs = processedItems.filter(item => 
-            item.configCategory === 'role' && 
-            (!item.configGroup || !item.configGroup.startsWith('kubernetes.config.'))
-          );
-          
-          const kubernetesConfigs = processedItems.filter(item => 
-            item.configCategory === 'role' && 
-            item.configGroup && 
-            item.configGroup.startsWith('kubernetes.config.')
-          );
-          
-          // 存储普通配置项
-          if (roleConfigs.length > 0) {
-          // 检查是否有配置项包含模板内容
-            const configWithTemplate = roleConfigs.find(item => item.templateContent && item.templateContent.trim() !== '');
-          
-          // 合并到结果集
-          if (configWithTemplate) {
-            // 如果有模板内容，则保存为对象结构
-            result[groupKey] = {
-                items: [...(result[groupKey]?.items || []), ...roleConfigs],
-              displayName: configWithTemplate.displayName || '',
-              templateContent: configWithTemplate.templateContent || ''
-            };
+          if (cleanedOriginalKey.startsWith('kubernetes.config.')) {
+            const parts = cleanedOriginalKey.split('.');
+            const baseRoleName = parts[parts.length - 1]; // Assumes format k8s.config.subgroup.Role
+            const k8sSubGroupName = parts.slice(0, -1).join('.'); // e.g., kubernetes.config.persistentVolumeClaims
             
-            // 确保items始终是数组
-            if (!Array.isArray(result[groupKey].items)) {
-              result[groupKey].items = [];
-              console.warn(`Fixed non-array items for group ${groupKey}`);
+            if (!kubernetesConfigsByBaseRole[baseRoleName]) {
+              kubernetesConfigsByBaseRole[baseRoleName] = {};
             }
+            if (!kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName]) {
+              kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName] = [];
+            }
+            kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName].push(...processedConfigList);
           } else {
-            // 如果没有模板内容，仍然保持数组结构以兼容现有代码
-            if (!result[groupKey]) {
-                result[groupKey] = [...roleConfigs];
-            } else if (Array.isArray(result[groupKey])) {
-                result[groupKey] = [...result[groupKey], ...roleConfigs];
-            } else if (result[groupKey].items) {
-              // 确保items是数组
-              if (Array.isArray(result[groupKey].items)) {
-                  result[groupKey].items = [...result[groupKey].items, ...roleConfigs];
-              } else {
-                  result[groupKey].items = [...roleConfigs];
-                console.warn(`Fixed non-array items for group ${groupKey}`);
-              }
+            // Regular group or role-specific regular configs
+            const baseRoleName = cleanedOriginalKey;
+            const configWithTemplate = processedConfigList.find(item => item.templateContent && item.templateContent.trim() !== '');
+            if (configWithTemplate) {
+              regularConfigsByBaseRole[baseRoleName] = {
+                items: processedConfigList,
+                displayName: configWithTemplate.displayName || '',
+                templateContent: configWithTemplate.templateContent || ''
+              };
+            } else {
+              regularConfigsByBaseRole[baseRoleName] = processedConfigList;
             }
-          }
-          }
-          
-          // 处理kubernetes配置项
-          if (kubernetesConfigs.length > 0) {
-            // 为每个角色组创建一个kubernetes配置组
-            if (!kubernetesConfigsByRole[groupKey]) {
-              kubernetesConfigsByRole[groupKey] = {};
-            }
-            
-            // 按kubernetes.config.xxx分组
-            kubernetesConfigs.forEach(config => {
-              const subGroupKey = config.configGroup;
-              if (!kubernetesConfigsByRole[groupKey][subGroupKey]) {
-                kubernetesConfigsByRole[groupKey][subGroupKey] = [];
-              }
-              kubernetesConfigsByRole[groupKey][subGroupKey].push(config);
-            });
           }
         });
 
-        // 添加Kubernetes配置到结果集
-        Object.entries(kubernetesConfigsByRole).forEach(([roleKey, subGroups]) => {
-          // 为每个角色创建一个Kubernetes主分组
-          const k8sGroupKey = `${roleKey}_Kubernetes`;
-          result[k8sGroupKey] = {
-            isKubernetesGroup: true,
-            role: roleKey,
-            subGroups: subGroups
-          };
+        // Phase 2: Assemble finalResult
+        const allBaseRoleNames = new Set([
+          ...Object.keys(regularConfigsByBaseRole),
+          ...Object.keys(kubernetesConfigsByBaseRole)
+        ]);
+
+        allBaseRoleNames.forEach(baseRoleName => {
+          const k8sSubGroups = kubernetesConfigsByBaseRole[baseRoleName];
+          const regularContent = regularConfigsByBaseRole[baseRoleName];
+
+          if (k8sSubGroups) {
+            let regs = [];
+            if (regularContent) {
+              regs = Array.isArray(regularContent) ? regularContent : (regularContent.items || []);
+            }
+            finalResult[baseRoleName] = [{
+              hasKubernetesConfig: true,
+              roleGroupName: baseRoleName,
+              regularConfigs: regs,
+              kubernetesSubGroups: k8sSubGroups
+            }];
+          } else if (regularContent) {
+            finalResult[baseRoleName] = regularContent; // This is already an array or {items, templateContent}
+          } else {
+            // Should not happen if keys are from collected data, but as a fallback:
+            finalResult[baseRoleName] = []; 
+          }
         });
 
-        // 保证至少存在通用配置组
-        if (!('General' in result)) {
-          result.General = [];
+        if (!('General' in finalResult)) {
+          finalResult.General = [];
         }
-        
-        // 最终检查，确保所有组的数据结构正确
-        Object.keys(result).forEach(key => {
-          // 跳过Kubernetes主分组的检查，因为它有特殊结构
-          if (result[key] && result[key].isKubernetesGroup) {
-            return;
-          }
-          
-          // 跳过特殊结构（包含regularConfigs和kubernetesSubGroups的角色分组）
-          if (Array.isArray(result[key]) && result[key].length === 1 && result[key][0].hasKubernetesConfig) {
-            return;
-          }
-          
-          if (!Array.isArray(result[key]) && (!result[key].items || !Array.isArray(result[key].items))) {
-            console.error(`Invalid structure for group ${key}, resetting to empty array`);
-            result[key] = [];
-          }
-        });
-        
+
       } catch (error) {
         console.error('Error in handlerTemplate:', error);
-        return { General: [] }; // 处理异常情况
+        return { General: [] }; // Fallback
       }
-
-      return result;
+      return finalResult;
     },
     // 添加配置组名称转换方法
     convertGroupName(groupName) {
@@ -1823,81 +1766,53 @@ export default {
       console.log('ServiceConfig loadData 被调用，加载配置参数数据');
       return this.getServiceRoleType();
     },
-    formatSubGroupName(subGroupName) {
-      // 处理 kubernetes.config.XXX 格式的名称
-      if (subGroupName && subGroupName.startsWith('kubernetes.config.')) {
-        // 提取最后一个部分并格式化
-        const parts = subGroupName.split('.');
-        const lastPart = parts[parts.length - 1];
-        
-        // 定义行内样式 - 加粗中文文本，英文使用较小字体和浅色
-        const mainTextStyle = 'font-weight: bold; color: #000000; font-size: 14px;';
-        const smallTextStyle = 'font-size: 12px; color: #999999; font-weight: normal; margin-left: 4px;';
-        
-        // 格式化英文显示：将驼峰式转换为空格分隔，首字母大写
-        const formatEnglishText = (text) => {
-          return text
-            .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
-            .replace(/^./, match => match.toUpperCase()) // 首字母大写
-            .trim(); // 移除前后空格
-        };
-        
-        // 转换为友好名称
-        const nameMapping = {
-          'persistentVolumeClaims': '持久卷声明',
-          'services': '服务',
-          'resources': '资源配置',
-          'pods': '容器组'
-        };
-        
-        if (nameMapping[lastPart]) {
-          return `<span style="${mainTextStyle}">${nameMapping[lastPart]}</span><span style="${smallTextStyle}">(${formatEnglishText(lastPart)})</span>`;
-        }
-        
-        // 将驼峰式或下划线式转换为空格分隔的单词，并首字母大写
-        const formattedName = lastPart
-          .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
-          .replace(/[-_]/g, ' ')      // 将连字符和下划线替换为空格
-          .replace(/^\s+/, '')        // 移除开头的空格
-          .split(' ')                 // 分割成单词
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // 首字母大写
-          .join(' ');                 // 重新组合为字符串
-          
-        return `<span style="${mainTextStyle}">${formattedName}</span><span style="${smallTextStyle}">(${formatEnglishText(lastPart)})</span>`;
-      }
-      
-      // 如果没有前缀，检查是否为已知的配置类型
-      if (!subGroupName) return '未知';
-      
-      // 移除前缀（处理可能没有前缀的情况）
-      const cleanName = subGroupName.replace('kubernetes.config.', '');
-      
-      // 定义行内样式 - 加粗中文文本
-      const mainTextStyle = 'font-weight: bold; color: #000000; font-size: 14px;';
-      
-      // 转换为友好名称
-      const nameMapping = {
-        'persistentVolumeClaims': '持久卷声明',
-        'services': '服务',
-        'resources': '资源配置',
-        'pods': '容器组'
-      };
-      
-      return `<span style="${mainTextStyle}">${nameMapping[cleanName] || cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>`;
-    },
     // 更新activeKubernetesTabs, 确保所有角色组都有活动的Tab
     updateActiveKubernetesTabs() {
-      const kubernetesGroups = this.kubernetesGroups || {};
+      const kubernetesAwareGroups = this.kubernetesGroups || {}; // Uses the computed property
       
-      Object.entries(kubernetesGroups).forEach(([groupName, group]) => {
-        const role = group.role;
-        const subGroups = Object.keys(group.subGroups || {});
-        
-        // 如果角色没有活动的Tab，则设置第一个Tab为活动
-        if (!this.activeKubernetesTabs[role] && subGroups.length > 0) {
-          this.$set(this.activeKubernetesTabs, role, subGroups[0]);
+      Object.entries(kubernetesAwareGroups).forEach(([roleName, groupArray]) => {
+        // groupArray is expected to be like [{ hasKubernetesConfig: true, kubernetesSubGroups: {...} }]
+        if (Array.isArray(groupArray) && groupArray.length === 1 && groupArray[0].hasKubernetesConfig) {
+          const k8sData = groupArray[0];
+          if (k8sData.kubernetesSubGroups) {
+            const subGroupNames = Object.keys(k8sData.kubernetesSubGroups);
+            // Set the first subGroup as active if no tab is currently active for this roleName
+            if (!this.activeKubernetesTabs[roleName] && subGroupNames.length > 0) {
+              this.$set(this.activeKubernetesTabs, roleName, subGroupNames[0]);
+            }
+          }
         }
       });
+    },
+    // Correctly placed and updated formatSubGroupName
+    formatSubGroupName(subGroupName) {
+      // 预期 subGroupName 格式为 "kubernetes.config.actualSubGroupName"
+      // 或直接是 "actualSubGroupName" (如果已预处理)
+      let actualSubGroupName = subGroupName;
+      if (subGroupName && subGroupName.startsWith('kubernetes.config.')) {
+        const parts = subGroupName.split('.');
+        actualSubGroupName = parts[parts.length - 1];
+      }
+
+      // 将驼峰式或帕斯卡式的英文名转换为空格分隔的标题式英文名
+      let readableEnglishName = actualSubGroupName
+        .replace(/([A-Z])/g, " $1") // 在大写字母前添加空格
+        .replace(/^./, (str) => str.toUpperCase()) // 首字母大写
+        .trim();
+      if (!readableEnglishName && actualSubGroupName) readableEnglishName = actualSubGroupName; 
+      else if (!readableEnglishName && !actualSubGroupName) readableEnglishName = 'Unknown';
+
+      const chineseName = this.k8sSubGroupChineseNames[actualSubGroupName];
+
+      let displayText;
+      if (chineseName) {
+        displayText = chineseName;
+      } else {
+        // 如果没有特定的中文翻译，使用处理后的英文名作为主要的"中文"部分
+        displayText = readableEnglishName; 
+      }
+      // 返回HTML字符串，其中英文部分用特定class包裹
+      return `${displayText} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
     },
   },
   created() {
@@ -2619,5 +2534,18 @@ export default {
 
 .toggle-icon {
   font-size: 12px;
+}
+
+.k8s-subgroup-en {
+  font-size: 0.8em;
+  color: #999;
+}
+
+/* Kubernetes子组Tab英文名样式 (类似 step7.vue) */
+/deep/ .k8s-subgroup-en {
+  color: #E6A23C; /* 浅橙色 */
+  font-size: 0.9em;   /* 辅助字体稍小 */
+  font-weight: normal; /* 非粗体 */
+  margin-left: 4px;    /* 括号前的空格 */
 }
 </style> 
