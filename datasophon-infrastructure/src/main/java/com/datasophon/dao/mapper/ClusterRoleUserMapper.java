@@ -48,7 +48,7 @@ public interface ClusterRoleUserMapper extends MPJBaseMapper<ClusterRoleUserEnti
         return selectJoinList(UserInfoEntity.class,
                 new MPJLambdaWrapper<ClusterRoleUserEntity>()
                         .selectAll(UserInfoEntity.class)
-                        .leftJoin(UserInfoEntity.class, UserInfoEntity::getId, ClusterRoleUserEntity::getUserId));
-                        //.eq(ClusterRoleUserEntity::getClusterId, clusterId));
+                        .leftJoin(UserInfoEntity.class, UserInfoEntity::getId, ClusterRoleUserEntity::getUserId)
+                        .eq(ClusterRoleUserEntity::getClusterId, clusterId));
     }
 }

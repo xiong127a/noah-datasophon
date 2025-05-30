@@ -17,13 +17,17 @@
 
 package com.datasophon.dao.mapper;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.github.yulichang.base.MPJBaseMapper;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
+import java.util.Objects;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 集群服务操作指令主机指令表
@@ -42,23 +46,25 @@ public interface ClusterServiceCommandHostCommandMapper extends MPJBaseMapper<Cl
      * @param commandHostId 命令主机ID
      * @return 总进度
      */
-    default Integer getHostCommandTotalProgressByHostnameAndCommandHostId(
-            @Param("hostname") String hostname,
+    default Integer getHostCommandTotalProgressByHostnameAndCommandHostId(@Param("hostname") String hostname,
             @Param("commandHostId") String commandHostId) {
+        // 使用聚合函数sum
+        LambdaQueryWrapper<ClusterServiceCommandHostCommandEntity> wrapper = Wrappers
+                .<ClusterServiceCommandHostCommandEntity>lambdaQuery()
+                .select(ClusterServiceCommandHostCommandEntity::getCommandProgress,
+                        a -> "sum(command_progress) as total")
+                .eq(ClusterServiceCommandHostCommandEntity::getHostname, hostname)
+                .eq(ClusterServiceCommandHostCommandEntity::getCommandHostId, commandHostId);
 
-        QueryWrapper<ClusterServiceCommandHostCommandEntity> wrapper = new QueryWrapper<>();
-        // 直接指定聚合函数和别名
-        wrapper.select("SUM(command_progress) AS total")
-                // 确保字段名与数据库列名匹配（注意驼峰转下划线）
-                .eq("hostname", hostname)
-                .eq("command_host_id", commandHostId);
-
+        // 使用selectMaps查询聚合结果
         Map<String, Object> result = selectMaps(wrapper).stream().findFirst().orElse(null);
 
+        // 提取结果或返回0
         if (result != null && result.containsKey("total")) {
             Object total = result.get("total");
             return total == null ? 0 : Integer.parseInt(total.toString());
         }
+
         return 0;
     }
 }

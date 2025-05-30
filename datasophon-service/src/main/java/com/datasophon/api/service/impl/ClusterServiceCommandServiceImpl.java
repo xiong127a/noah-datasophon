@@ -354,7 +354,7 @@ public class ClusterServiceCommandServiceImpl
             // 如果需要更新数据库且状态发生了变化或者是结束状态
             if (updateDb && (stateChanged || allCompleted)) {
                 this.updateById(commandEntity);
-                logger.info("命令 {} 实时计算状态后更新数据库，状态: {}",
+                logger.trace("命令 {} 实时计算状态后更新数据库，状态: {}",
                         commandEntity.getCommandId(), commandEntity.getCommandState());
             }
         } catch (Exception e) {
