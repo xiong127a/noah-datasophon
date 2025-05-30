@@ -20,7 +20,6 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
@@ -28,7 +27,6 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
@@ -40,12 +38,20 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.api.utils.ConfigGroupSorter;
 import com.datasophon.api.utils.CommonUtils;
+import com.datasophon.api.utils.ConfigGroupSorter;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
-import com.datasophon.common.model.*;
+import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.model.DAG;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.HostServiceRoleMapping;
+import com.datasophon.common.model.ServiceConfig;
+import com.datasophon.common.model.ServiceInfo;
+import com.datasophon.common.model.ServiceNode;
+import com.datasophon.common.model.ServiceNodeEdge;
+import com.datasophon.common.model.ServiceRoleHostMapping;
+import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.Result;
@@ -886,6 +892,60 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     }
 
     /**
+     * Determines if a config is a Kubernetes configuration
+     */
+    private boolean isKubernetesConfig(ServiceConfig config) {
+        return config != null && config.getConfigGroup() != null &&
+                config.getConfigGroup().startsWith("kubernetes.config.");
+    }
+
+    /**
+     * Extracts the Kubernetes subgroup from a config group name
+     * E.g., from "kubernetes.config.persistentVolumeClaims.ZkServer" returns
+     * "persistentVolumeClaims"
+     */
+    private String getKubernetesSubgroup(String configGroup) {
+        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+            return null;
+        }
+
+        String[] parts = configGroup.split("\\.");
+        if (parts.length >= 3) {
+            return parts[2];
+        }
+        return null;
+    }
+
+    /**
+     * Extracts the role name from a kubernetes config group
+     * E.g., from "kubernetes.config.persistentVolumeClaims.ZkServer" returns
+     * "ZkServer"
+     */
+    private String getKubernetesRole(String configGroup) {
+        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+            return null;
+        }
+
+        String[] parts = configGroup.split("\\.");
+        if (parts.length >= 4) {
+            return parts[3];
+        }
+        return null;
+    }
+
+    /**
+     * 获取Kubernetes子组的友好显示名称
+     */
+    private String getFriendlySubgroupName(String subgroup) {
+        Map<String, String> friendlyNames = new HashMap<>();
+        friendlyNames.put("persistentVolumeClaims", "存储");
+        friendlyNames.put("resources", "资源");
+        friendlyNames.put("services", "服务");
+
+        return friendlyNames.getOrDefault(subgroup, subgroup);
+    }
+
+    /**
      * 生成修改内容的描述
      * 
      * @param originalConfigs 原始配置
@@ -902,7 +962,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 .collect(Collectors.toMap(ServiceConfig::getName, config -> config, (v1, v2) -> v1));
 
         // 收集修改的配置项
-        List<String> changedConfigs = new ArrayList<>();
+        List<String> regularChangedConfigs = new ArrayList<>();
+        Map<String, Set<String>> k8sChangedConfigsByRole = new HashMap<>(); // Role -> Set of subgroups
 
         // 检查修改的配置项
         for (ServiceConfig newConfig : newConfigs) {
@@ -915,13 +976,44 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
                 // 如果值不相等，添加到修改列表
                 if (!Objects.equals(newValue, originalValue)) {
-                    String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
-                    changedConfigs.add(label);
+                    if (isKubernetesConfig(newConfig)) {
+                        // 处理Kubernetes配置
+                        String configGroup = newConfig.getConfigGroup();
+                        String role = getKubernetesRole(configGroup);
+                        String subgroup = getKubernetesSubgroup(configGroup);
+
+                        if (role != null && subgroup != null) {
+                            k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                        } else {
+                            // 如果无法确定角色或子组，作为常规配置处理
+                            String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel()
+                                    : configName;
+                            regularChangedConfigs.add(label);
+                        }
+                    } else {
+                        // 处理常规配置
+                        String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
+                        regularChangedConfigs.add(label);
+                    }
                 }
             } else {
                 // 新增的配置项
-                String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
-                changedConfigs.add(label);
+                if (isKubernetesConfig(newConfig)) {
+                    // 处理Kubernetes配置
+                    String configGroup = newConfig.getConfigGroup();
+                    String role = getKubernetesRole(configGroup);
+                    String subgroup = getKubernetesSubgroup(configGroup);
+
+                    if (role != null && subgroup != null) {
+                        k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                    } else {
+                        String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
+                        regularChangedConfigs.add(label);
+                    }
+                } else {
+                    String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
+                    regularChangedConfigs.add(label);
+                }
             }
         }
 
@@ -929,30 +1021,90 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         for (ServiceConfig originalConfig : originalConfigs) {
             String configName = originalConfig.getName();
             if (!newConfigMap.containsKey(configName)) {
-                String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel()
-                        : configName;
-                changedConfigs.add(label);
+                if (isKubernetesConfig(originalConfig)) {
+                    // 处理Kubernetes配置
+                    String configGroup = originalConfig.getConfigGroup();
+                    String role = getKubernetesRole(configGroup);
+                    String subgroup = getKubernetesSubgroup(configGroup);
+
+                    if (role != null && subgroup != null) {
+                        k8sChangedConfigsByRole.computeIfAbsent(role, k -> new HashSet<>()).add(subgroup);
+                    } else {
+                        String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel()
+                                : configName;
+                        regularChangedConfigs.add(label);
+                    }
+                } else {
+                    String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel()
+                            : configName;
+                    regularChangedConfigs.add(label);
+                }
             }
         }
 
+        // 构建描述
+        StringBuilder sb = new StringBuilder();
+
         // 如果没有修改，返回默认描述
-        if (changedConfigs.isEmpty()) {
+        if (regularChangedConfigs.isEmpty() && k8sChangedConfigsByRole.isEmpty()) {
             return "配置更新";
         }
 
-        // 限制最多显示5个修改项
-        int maxItems = Math.min(changedConfigs.size(), 5);
-        StringBuilder sb = new StringBuilder("修改了 ");
-        for (int i = 0; i < maxItems; i++) {
-            sb.append(changedConfigs.get(i));
-            if (i < maxItems - 1) {
-                sb.append(", ");
+        // 1. 先添加Kubernetes配置的变更
+        if (!k8sChangedConfigsByRole.isEmpty()) {
+            sb.append("修改了 ");
+            int roleCount = 0;
+            for (Map.Entry<String, Set<String>> entry : k8sChangedConfigsByRole.entrySet()) {
+                String role = entry.getKey();
+                Set<String> subgroups = entry.getValue();
+
+                if (roleCount > 0) {
+                    sb.append(", ");
+                }
+
+                sb.append(role).append(" 的 ");
+
+                // 映射子组名称为更友好的显示名称
+                List<String> friendlySubgroupNames = subgroups.stream()
+                        .map(this::getFriendlySubgroupName)
+                        .collect(Collectors.toList());
+
+                for (int i = 0; i < friendlySubgroupNames.size(); i++) {
+                    if (i > 0) {
+                        sb.append("、");
+                    }
+                    sb.append(friendlySubgroupNames.get(i));
+                }
+                sb.append("配置");
+
+                roleCount++;
+                if (roleCount >= 2) { // 最多只显示2个角色的Kubernetes配置变更
+                    break;
+                }
             }
         }
 
-        // 如果有更多修改项，添加省略号
-        if (changedConfigs.size() > maxItems) {
-            sb.append(" 等");
+        // 2. 再添加常规配置的变更
+        if (!regularChangedConfigs.isEmpty()) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            } else {
+                sb.append("修改了 ");
+            }
+
+            // 限制最多显示3个常规配置项
+            int maxItems = Math.min(regularChangedConfigs.size(), 3);
+            for (int i = 0; i < maxItems; i++) {
+                sb.append(regularChangedConfigs.get(i));
+                if (i < maxItems - 1) {
+                    sb.append(", ");
+                }
+            }
+
+            // 如果有更多修改项，添加省略号
+            if (regularChangedConfigs.size() > maxItems) {
+                sb.append(" 等");
+            }
         }
 
         return sb.toString();
