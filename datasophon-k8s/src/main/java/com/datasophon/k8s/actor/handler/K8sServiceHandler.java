@@ -92,12 +92,11 @@ public class K8sServiceHandler {
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-             InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
 
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
             logger.info("kind: {}", kind);
-
 
             if (DEPLOYMENT.equals(kind)) {
                 handleDeployment(client, yamlData, yamlInputStream, configFileMap);
@@ -106,7 +105,6 @@ public class K8sServiceHandler {
             } else {
                 throw new IllegalArgumentException("Unsupported resource kind: " + kind);
             }
-
 
         } catch (IOException e) {
             handleException(execResult, "文件操作时发生异常", e);
@@ -147,56 +145,75 @@ public class K8sServiceHandler {
             return null;
         }
 
-        // 定位端口映射配置项
-        ServiceConfig portMappingConfig = svcConfigs.stream()
-                .filter(config -> K8S_PORT_MAPPING.equals(config.getName()))
-                .findFirst()
-                .orElseGet(() -> {
-                    logger.warn("Missing portMappings config in {}", K8S_SVC_CONF);
-                    return null;
-                });
+        ArrayList<ServicePort> servicePorts = new ArrayList<>();
+        Gson gson = new Gson();
+        Type listType = new TypeToken<List<Map<String, String>>>() {
+        }.getType();
 
-        if (portMappingConfig == null || portMappingConfig.getValue() == null) {
-            return null;
+        // 处理NodePort端口映射
+        ServiceConfig nodePortMappingConfig = svcConfigs.stream()
+                .filter(config -> K8S_NODEPORT_MAPPING.equals(config.getName()))
+                .findFirst()
+                .orElse(null);
+
+        if (nodePortMappingConfig != null && nodePortMappingConfig.getValue() != null) {
+            try {
+                List<Map<String, String>> portMappings = gson.fromJson(
+                        nodePortMappingConfig.getValue().toString(),
+                        listType);
+
+                int index = 0;
+                for (Map<String, String> mapping : portMappings) {
+                    for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                        ServicePort servicePort = new ServicePort();
+                        int port = Integer.parseInt(entry.getKey());
+                        int nodePort = Integer.parseInt(entry.getValue());
+
+                        servicePort.setPort(port);
+                        servicePort.setTargetPort(new IntOrString(port));
+                        servicePort.setName("nodeport-" + index++);
+                        servicePort.setNodePort(nodePort);
+
+                        servicePorts.add(servicePort);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Failed to parse nodePortMappings: {}", e.getMessage());
+            }
         }
 
-        // 解析JSON配置
-        Gson gson = new Gson();
-        Type listType = new TypeToken<List<Map<String, String>>>(){}.getType();
-        ArrayList<ServicePort> servicePorts = new ArrayList<>();
+        // 处理ClusterIP端口映射
+        ServiceConfig clusterPortMappingConfig = svcConfigs.stream()
+                .filter(config -> K8S_CLUSTERIP_MAPPING.equals(config.getName()))
+                .findFirst()
+                .orElse(null);
 
-        try {
-            List<Map<String, String>> portMappings = gson.fromJson(
-                    portMappingConfig.getValue().toString(),
-                    listType
-            );
+        if (clusterPortMappingConfig != null && clusterPortMappingConfig.getValue() != null) {
+            try {
+                List<Map<String, String>> portMappings = gson.fromJson(
+                        clusterPortMappingConfig.getValue().toString(),
+                        listType);
 
-            int index = 0;
-            for (Map<String, String> mapping : portMappings) {
-                for (Map.Entry<String, String> entry : mapping.entrySet()) {
-                    ServicePort servicePort = new ServicePort();
-                    int port = Integer.parseInt(entry.getKey());
-                    int nodePort = Integer.parseInt(entry.getValue());
+                int index = 0;
+                for (Map<String, String> mapping : portMappings) {
+                    for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                        ServicePort servicePort = new ServicePort();
+                        int port = Integer.parseInt(entry.getKey());
 
-                    servicePort.setPort(port);
-                    servicePort.setTargetPort(new IntOrString(port));
-                    servicePort.setName("port-" + index++);
+                        servicePort.setPort(port);
+                        servicePort.setTargetPort(new IntOrString(port));
+                        servicePort.setName("clusterport-" + index++);
 
-                    if (nodePort != port) {
-                        servicePort.setNodePort(nodePort);
+                        servicePorts.add(servicePort);
                     }
-
-                    servicePorts.add(servicePort);
                 }
+            } catch (Exception e) {
+                logger.error("Failed to parse clusterPortMappings: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            logger.error("Failed to parse portMappings: {}", e.getMessage());
-            return null;
         }
 
         return servicePorts;
     }
-
 
     // 通用方法：获取并解析目标配置
     public Map<Integer, Integer> getTargetValues(List<ServiceConfig> serviceConfigs, String targetKey) {
@@ -242,8 +259,8 @@ public class K8sServiceHandler {
     }
 
     private void handleNewSvc(ArrayList<ServicePort> servicePorts,
-                              String kind,
-                              KubernetesClient client) {
+            String kind,
+            KubernetesClient client) {
         if (servicePorts == null || servicePorts.isEmpty()) {
             return;
         }
@@ -254,7 +271,7 @@ public class K8sServiceHandler {
         for (ServicePort originalPort : servicePorts) {
             // 创建基础服务端口副本
             ServicePort basePort = cloneServicePort(originalPort);
-            basePort.setNodePort(null);  // 基础服务不使用NodePort
+            basePort.setNodePort(null); // 基础服务不使用NodePort
 
             // 根据工作负载类型添加到对应集合
             if (STATEFULSET.equals(kind)) {
@@ -293,8 +310,6 @@ public class K8sServiceHandler {
         copy.setNodePort(original.getNodePort());
         return copy;
     }
-
-
 
     // 创建 Headless Service（StatefulSet）
     private void createHeadlessService(List<ServicePort> ports, KubernetesClient client) {
@@ -382,7 +397,6 @@ public class K8sServiceHandler {
         }
     }
 
-
     private Map<String, Object> loadYamlData(String yamlFile) {
         try (InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
             Yaml yaml = new Yaml();
@@ -392,21 +406,25 @@ public class K8sServiceHandler {
         }
     }
 
-    private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream, Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+    private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
+            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().deployments()
                 .inNamespace(Constant.K8S_NAMESPACE)
                 .withName(serviceRoleFullName), DEPLOYMENT, configFileMap);
 
     }
 
-    private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream, Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+    private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
+            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().statefulSets()
                 .inNamespace(Constant.K8S_NAMESPACE)
                 .withName(serviceRoleFullName), STATEFULSET, configFileMap);
     }
 
-    private <T extends HasMetadata> void handleResource(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
-                                                        RollableScalableResource<T> resource, String resourceKind, Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+    private <T extends HasMetadata> void handleResource(KubernetesClient client, Map<String, Object> yamlData,
+            InputStream yamlInputStream,
+            RollableScalableResource<T> resource, String resourceKind,
+            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         T existingResource = resource.get();
         boolean isExistingResource = existingResource != null;
 
@@ -426,9 +444,11 @@ public class K8sServiceHandler {
         }
     }
 
-
-    private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client, Deployment existingDeployment) throws IOException {
-        Integer replicas = existingDeployment.getSpec().getReplicas() != null ? existingDeployment.getSpec().getReplicas() : 0;
+    private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
+            Deployment existingDeployment) throws IOException {
+        Integer replicas = existingDeployment.getSpec().getReplicas() != null
+                ? existingDeployment.getSpec().getReplicas()
+                : 0;
         logger.info("当前 Deployment: {} Replicas: {}", serviceRoleFullName, replicas);
 
         updateField(yamlData, "spec.replicas", replicas + 1);
@@ -441,8 +461,11 @@ public class K8sServiceHandler {
         }
     }
 
-    private void handleExistingStatefulSet(Map<String, Object> yamlData, KubernetesClient client, StatefulSet existingStatefulSet) throws IOException {
-        Integer replicas = existingStatefulSet.getSpec().getReplicas() != null ? existingStatefulSet.getSpec().getReplicas() : 0;
+    private void handleExistingStatefulSet(Map<String, Object> yamlData, KubernetesClient client,
+            StatefulSet existingStatefulSet) throws IOException {
+        Integer replicas = existingStatefulSet.getSpec().getReplicas() != null
+                ? existingStatefulSet.getSpec().getReplicas()
+                : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
 
         updateField(yamlData, "spec.replicas", replicas + 1);
@@ -455,8 +478,8 @@ public class K8sServiceHandler {
         }
     }
 
-
-    private <T extends HasMetadata> void handleNewResource(KubernetesClient client, InputStream yamlInputStream, RollableScalableResource<T> resource) {
+    private <T extends HasMetadata> void handleNewResource(KubernetesClient client, InputStream yamlInputStream,
+            RollableScalableResource<T> resource) {
 
         logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
@@ -468,13 +491,11 @@ public class K8sServiceHandler {
         logger.info(resource.getLog());
     }
 
-
     private void handleException(ExecResult execResult, String message, Exception e) {
         logger.error("{}: {}", message, e.getMessage(), e);
         execResult.setExecErrOut(message + ": " + e.getMessage());
         execResult.setExecResult(false);
     }
-
 
     public ExecResult stop(String kubeConfig) {
         ExecResult execResult = new ExecResult();
@@ -492,7 +513,7 @@ public class K8sServiceHandler {
         } else {
             logger.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-                 FileInputStream fis = new FileInputStream(yamlFileObj)) {
+                    FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
                         .inNamespace(Constant.K8S_NAMESPACE)
                         .delete();
@@ -510,7 +531,6 @@ public class K8sServiceHandler {
         }
         return execResult;
     }
-
 
     private void addProcessStatus() {
         Integer nodeCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);

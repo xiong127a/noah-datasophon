@@ -89,10 +89,24 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           ports:
+          <#if nodePortMappings??>
+          <#list nodePortMappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if clusterPortMappings??>
+          <#list clusterPortMappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if portMappings??>
           <#list portMappings as item>
             - containerPort: ${(item?keys[0])}
               name: port-${item?index + 1}
           </#list>
+          </#if>
           imagePullPolicy: Always
           command:
             - "/bin/bash"

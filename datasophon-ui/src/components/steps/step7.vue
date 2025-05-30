@@ -49,25 +49,90 @@
               :class="['config-area', serviceNameKey === item ? '' : 'hidden']"
       >
               <div v-if="serviceNameKey === item" class="config-area-inner">
-                <!-- 使用expandIconPosition="right"确保图标在右侧 -->
+                <!-- 仅显示通用的Kubernetes配置（不属于特定角色的） -->
+                <div v-if="kubernetesGroups[item] && Object.keys(kubernetesGroups[item]).length > 0" class="kubernetes-config-section">
+                  <div class="kubernetes-tabs-header">Kubernetes 配置</div>
+                  <a-tabs v-model="activeKubernetesTabs[item]">
+                    <a-tab-pane 
+                      v-for="(subGroup, subGroupName) in kubernetesGroups[item]"
+                      :key="subGroupName"
+                    >
+                      <template slot="tab">
+                        <span v-html="formatSubGroupName(subGroupName)"></span>
+                      </template>
+                      <FixedCommonTemplate
+                        :ref="`CommonTemplateRef_${item}_Kubernetes_${subGroupName}`"
+                        :steps4Data="steps4Data"
+                        :templateData="subGroup.items"
+                      />
+                      
+                      <!-- 添加模板内容显示框 -->
+                      <div v-if="subGroup.templateContent" class="template-content-container">
+                        <div class="template-content-title">{{ subGroup.displayName || '模板内容' }}:</div>
+                        <a-textarea
+                          :value="subGroup.templateContent"
+                          :auto-size="{ minRows: 3, maxRows: 10 }"
+                          readonly
+                          class="template-content-textarea"
+                        />
+                      </div>
+                    </a-tab-pane>
+                  </a-tabs>
+                </div>
+                
+                <!-- 非Kubernetes配置组 -->
                 <a-collapse 
+                  v-for="(group, groupName) in nonKubernetesGroups[item]"
+                  :key="groupName"
                   :bordered="false"
                   expandIconPosition="right"
                   :defaultActiveKey="getActiveKeys(item)"
                   class="config-collapse"
                 >
                   <a-collapse-panel 
-                    v-for="(group, groupName, index) in groupedTemplateData[item]"
               :key="groupName"
                     :showArrow="true"
                     :forceRender="true"
-                    :class="['config-panel', isLastGroup(item, index) ? 'last-group' : '']"
+                    :class="['config-panel', isLastGroup(item, groupName) ? 'last-group' : '']"
                   >
                     <template slot="header">
                       <span class="panel-header-text">{{ convertGroupName(groupName) }}</span>
                     </template>
                     
                     <div class="panel-content">
+                      <!-- 如果该组有Kubernetes配置，显示其Kubernetes配置在顶部 -->
+                      <div v-if="group.hasKubernetesConfig && group.kubernetesSubGroups && Object.keys(group.kubernetesSubGroups).length > 0" 
+                           class="group-kubernetes-section">
+                        <div class="kubernetes-tabs-header">Kubernetes 配置</div>
+                        <a-tabs v-model="activeKubernetesTabs[`${item}_${groupName}`]">
+                          <a-tab-pane 
+                            v-for="(subGroup, subGroupName) in group.kubernetesSubGroups"
+                            :key="subGroupName"
+                          >
+                            <template slot="tab">
+                              <span v-html="formatSubGroupName(subGroupName)"></span>
+                            </template>
+                            <FixedCommonTemplate
+                              :ref="`CommonTemplateRef_${item}_${groupName}_${subGroupName}`"
+                              :steps4Data="steps4Data"
+                              :templateData="subGroup.items"
+                            />
+                            
+                            <!-- 添加模板内容显示框 -->
+                            <div v-if="subGroup.templateContent" class="template-content-container">
+                              <div class="template-content-title">{{ subGroup.displayName || '模板内容' }}:</div>
+                              <a-textarea
+                                :value="subGroup.templateContent"
+                                :auto-size="{ minRows: 3, maxRows: 10 }"
+                                readonly
+                                class="template-content-textarea"
+                              />
+                            </div>
+                          </a-tab-pane>
+                        </a-tabs>
+                      </div>
+                      
+                      <!-- 常规配置表单 -->
               <FixedCommonTemplate
                   :ref="`CommonTemplateRef_${item}_${groupName}`"
                   :steps4Data="steps4Data"
@@ -125,7 +190,21 @@ export default {
       groupedTemplateData: {},  // 按服务分组的配置数据 { service1: { group1: [], group2: [] }, ... }
       isGroupExpanded: {},      // 分组展开状态 { service1: { group1: true, group2: false }, ... }
       selectKeys: [],
-      // serviceContainerHeight: 0,
+      activeKubernetesTabs: {}, // 存储每个服务的Kubernetes Tab激活状态
+      k8sSubGroupChineseNames: {
+        'persistentVolumeClaims': '持久卷声明',
+        'resources': '资源规格',
+        'services': '服务暴露',
+        'nodePortMappings': '节点端口映射',
+        'clusterPortMappings': '集群端口映射',
+        'requestsMemory': '内存请求',
+        'requestsCpu': 'CPU请求',
+        'limitsMemory': '内存限制',
+        'limitsCpu': 'CPU限制',
+        'storageClasses': '存储类',
+        'mountPath': '挂载路径',
+        'storage': '存储容量'
+      },
     };
   },
   watch: {
@@ -143,13 +222,81 @@ export default {
       const height = document.getElementsByClassName(className)[0];
       return height;
     },
+    // 分离Kubernetes和非Kubernetes分组
+    nonKubernetesGroups() {
+      const result = {};
+      
+      // 遍历每个服务的配置组
+      Object.entries(this.groupedTemplateData).forEach(([serviceName, groups]) => {
+        if (!result[serviceName]) {
+          result[serviceName] = {};
+        }
+        
+        // 处理常规分组（不是特殊的Kubernetes分组）
+        Object.entries(groups).forEach(([groupName, group]) => {
+          if (groupName !== 'Kubernetes') { // 排除专用的Kubernetes分组
+            result[serviceName][groupName] = group;
+          }
+        });
+      });
+      
+      return result;
+    },
+    
+    // 获取每个服务的通用Kubernetes配置组
+    kubernetesGroups() {
+      const result = {};
+      
+      // 遍历每个服务的配置组
+      Object.entries(this.groupedTemplateData).forEach(([serviceName, groups]) => {
+        // 初始化该服务的Kubernetes配置结果对象
+        result[serviceName] = {};
+        
+        // 首先添加专用的Kubernetes分组内容
+        if (groups['Kubernetes'] && groups['Kubernetes'].subGroups) {
+          result[serviceName] = {...groups['Kubernetes'].subGroups};
+        }
+        
+        // 然后添加角色分组中的Kubernetes配置
+        Object.entries(groups).forEach(([groupName, group]) => {
+          // 跳过专用的Kubernetes分组
+          if (groupName !== 'Kubernetes' && group && group.hasKubernetesConfig && group.kubernetesSubGroups) {
+            // 为每个角色分组添加标记，以在UI中区分
+            Object.entries(group.kubernetesSubGroups).forEach(([subGroupName, subGroup]) => {
+              // 如果是角色分组的K8s配置，添加角色信息
+              if (subGroup.items && subGroup.items.length > 0) {
+                subGroup.roleGroup = groupName;
+              }
+            });
+          }
+        });
+      });
+      
+      return result;
+    },
+    
+    // 判断每个服务是否有通用Kubernetes配置
+    hasKubernetesGroups() {
+      const result = {};
+      
+      // 遍历每个服务的配置组
+      Object.entries(this.groupedTemplateData).forEach(([serviceName, groups]) => {
+        if (groups['Kubernetes'] && groups['Kubernetes'].subGroups) {
+          result[serviceName] = Object.keys(groups['Kubernetes'].subGroups).length > 0;
+        } else {
+          result[serviceName] = false;
+        }
+      });
+      
+      return result;
+    }
   },
   methods: {
     // 判断是否为最后一个分组
-    isLastGroup(serviceName, index) {
+    isLastGroup(serviceName, groupName) {
       const groups = this.groupedTemplateData[serviceName] || {};
       const groupKeys = Object.keys(groups);
-      return index === groupKeys.length - 1;
+      return groupKeys[groupKeys.length - 1] === groupName;
     },
     // 获取当前服务的初始展开面板key
     getActiveKeys(serviceName) {
@@ -174,6 +321,19 @@ export default {
       let str1 = str.replace(reg, "");
       let str2 = str1.replace(key, "");
       return str2;
+    },
+    convertGroupName(groupName) {
+      if (groupName && typeof groupName === 'string') {
+        if (groupName.startsWith('advanced_')) {
+          return '高级 ' + groupName.substring('advanced_'.length);
+        } else if (groupName.startsWith('custom_')) {
+          return '自定义 ' + groupName.substring('custom_'.length);
+        }
+      }
+      // 默认返回原始名称或稍作处理（例如，如果它是角色名）
+      // 这里可以根据需要添加更多针对特定角色名的转换逻辑
+      // 例如：if (groupName === 'ZkServer') return 'ZooKeeper 服务器';
+      return groupName;
     },
     handlearrayWithData(a) {
       let obj = {};
@@ -252,8 +412,10 @@ export default {
         const allFormData = {};
         // 1. 收集所有分组表单数据（新版结构）
         if (this.groupedTemplateData[currentService]) {
-          await Promise.all(
-              Object.keys(this.groupedTemplateData[currentService]).map(async (groupName) => {
+          for (const groupName of Object.keys(this.groupedTemplateData[currentService])) {
+            const group = this.groupedTemplateData[currentService][groupName];
+            
+            // 处理常规配置表单
                 const refName = `CommonTemplateRef_${currentService}_${groupName}`;
                 const formRef = this.$refs[refName]?.[0];
                 if (formRef) {
@@ -269,15 +431,56 @@ export default {
                   }
                   Object.assign(allFormData, filteredValues);
                 }
-              })
-          );
+            
+            // 处理该分组内的Kubernetes配置
+            if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
+              for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
+                const k8sRefName = `CommonTemplateRef_${currentService}_${groupName}_${subGroupName}`;
+                const k8sFormRef = this.$refs[k8sRefName]?.[0];
+                if (k8sFormRef) {
+                  await k8sFormRef.form.validateFields();
+                  // 获取表单值并过滤
+                  const k8sFormValues = k8sFormRef.form.getFieldsValue();
+                  const filteredK8sValues = {};
+                  for (const key in k8sFormValues) {
+                    if (!key.endsWith('_value')) {
+                      filteredK8sValues[key] = k8sFormValues[key];
+                    }
+                  }
+                  Object.assign(allFormData, filteredK8sValues);
+                }
+              }
+            }
+          }
+          
+          // 处理通用Kubernetes配置组
+          if (this.kubernetesGroups[currentService]) {
+            for (const subGroupName of Object.keys(this.kubernetesGroups[currentService])) {
+              const k8sRefName = `CommonTemplateRef_${currentService}_Kubernetes_${subGroupName}`;
+              const k8sFormRef = this.$refs[k8sRefName]?.[0];
+              if (k8sFormRef) {
+                await k8sFormRef.form.validateFields();
+                // 获取表单值并过滤
+                const k8sFormValues = k8sFormRef.form.getFieldsValue();
+                const filteredK8sValues = {};
+                for (const key in k8sFormValues) {
+                  if (!key.endsWith('_value')) {
+                    filteredK8sValues[key] = k8sFormValues[key];
+                  }
+                }
+                Object.assign(allFormData, filteredK8sValues);
+              }
+            }
+          }
         }
+        
         // 2. 处理复合数据结构
         const mergedData = {
           ...allFormData,
           ...this.handlearrayWithData(allFormData),
           ...this.handleMultipleData(allFormData)
         };
+        
         // 3. 安全更新配置项
         const param = (this.templateObj[currentService] || []).map(item => {
           if (item?.name) {
@@ -289,10 +492,12 @@ export default {
           }
           return item;
         });
+        
         // 4. 过滤有效参数
         let filterParam = param.filter(
             (item) => !(!item.required && item.hidden)
         );
+        
         // 5. 提交保存
         const saveParam = {
           clusterId: this.setting.clusterId || this.clusterId,
@@ -374,66 +579,104 @@ export default {
       }
     },
     handlerTemplate(serviceName, configGroups) {
-      // 直接处理API返回的分组对象
       const processedGroups = {};
       
-      // 处理每个配置组
       Object.entries(configGroups).forEach(([groupName, configs]) => {
-        if (!Array.isArray(configs)) {
-          return; // 跳过非数组的值
-        }
+        // 如果不是数组，跳过处理
+        if (!Array.isArray(configs)) return;
         
-        // 处理每个配置项
-        const processedConfigs = configs.map(item => {
-            let value = item.value;
+        // 只有当配置组中至少有一项不是hidden时才处理该组
+        const visibleConfigs = configs.filter(item => !item.hidden);
+        if (visibleConfigs.length === 0) return;
+        
+        // 处理配置项
+        const processedConfigs = visibleConfigs.map(item => ({
+          ...item,
+          value: item.type === 'switch' || item.type === 'boolean' 
+            ? String(item.value).toLowerCase() === 'true'
+            : item.value,
+          name: (item.name || '').toString().replaceAll(".", "!")
+        }));
+        
+        // 检测是否为Kubernetes配置组
+        if (groupName.startsWith('kubernetes.config.')) {
+          let subGroupName = groupName;
+          let targetRole = 'General'; 
 
-          // 转换开关和布尔类型
-            if (item.type === 'switch' || item.type === 'boolean') {
-              value = String(value).toLowerCase() === 'true';
+          const parts = groupName.split('.');
+          
+          if (parts.length >= 4) { 
+            const potentialRoleCandidate = parts[parts.length - 1];
+            const baseK8sGroupName = parts.slice(0, parts.length - 1).join('.'); 
+
+            if (parts.length > 3 && potentialRoleCandidate.match(/^[A-Z]/) && parts[0]==='kubernetes' && parts[1]==='config') {
+                 targetRole = potentialRoleCandidate;
+                 subGroupName = baseK8sGroupName; 
+            } else {
+                 targetRole = 'General';
+                 subGroupName = groupName; 
             }
+          } else {
+             targetRole = 'General';
+             subGroupName = groupName; 
+          }
 
-            return {
-              ...item,
-            value,
-            name: (item.name || '').toString().replaceAll(".", "!") // 替换名称中的点为感叹号
+          if (targetRole !== 'General') {
+            if (!processedGroups[targetRole]) {
+              processedGroups[targetRole] = { items: [], displayName: targetRole, templateContent: null, hasKubernetesConfig: true, kubernetesSubGroups: {} };
+            } else {
+               if (!processedGroups[targetRole].hasKubernetesConfig) processedGroups[targetRole].hasKubernetesConfig = true;
+               if (!processedGroups[targetRole].kubernetesSubGroups) processedGroups[targetRole].kubernetesSubGroups = {};
+            }
+            
+            const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
+            processedGroups[targetRole].kubernetesSubGroups[shortSubGroupNameWithoutK8sPrefix] = {
+              items: processedConfigs,
+              displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
+              templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
             };
-          });
-        
-        // 检查是否有配置项包含模板内容
-        const configWithTemplate = processedConfigs.find(item => item.templateContent && item.templateContent.trim() !== '');
-        
-        // 保存处理后的配置组，并附加模板信息（如果有）
-        processedGroups[groupName] = {
-          items: processedConfigs,
-          // 如果找到了带模板的配置项，则保存模板信息
-          displayName: configWithTemplate?.displayName || '',
-          templateContent: configWithTemplate?.templateContent || ''
-        };
-      });
-
-      // 初始化分组展开状态
-      this.$set(this.isGroupExpanded, serviceName, {});
-      Object.keys(processedGroups).forEach(groupName => {
-        this.$set(this.isGroupExpanded[serviceName], groupName, true);
+          } else { 
+            if (!processedGroups['Kubernetes']) {
+              processedGroups['Kubernetes'] = { isKubernetesGroup: true, subGroups: {} };
+            }
+            const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
+            processedGroups['Kubernetes'].subGroups[shortSubGroupNameWithoutK8sPrefix] = {
+              items: processedConfigs,
+              displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
+              templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
+            };
+          }
+        } else {
+          processedGroups[groupName] = {
+            items: processedConfigs,
+            displayName: groupName, 
+            templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
+          };
+        }
       });
       
       return processedGroups;
     },
-    // 添加配置组名称转换方法
-    convertGroupName(groupName) {
-      // 处理前缀类型
-      if (groupName.startsWith('advanced_')) {
-        // 提取配置文件名称
-        const configFile = groupName.replace('advanced_', '');
-        return `高级 ${configFile}`;
-      } else if (groupName.startsWith('custom_')) {
-        // 提取配置文件名称
-        const configFile = groupName.replace('custom_', '');
-        return `自定义 ${configFile}`;
+    // 辅助方法：格式化子组名称
+    formatSubGroupName(subGroupName) {
+      // 将驼峰式或帕斯卡式的英文名转换为空格分隔的标题式英文名
+      let readableEnglishName = subGroupName
+        .replace(/([A-Z])/g, " $1") // 在大写字母前添加空格
+        .replace(/^./, (str) => str.toUpperCase()) // 首字母大写
+        .trim();
+      if (!readableEnglishName && subGroupName) readableEnglishName = subGroupName; 
+      else if (!readableEnglishName && !subGroupName) readableEnglishName = 'Unknown'; // 处理 subGroupName 为 null 或 undefined 的情况
+
+      const chineseName = this.k8sSubGroupChineseNames[subGroupName];
+
+      let displayText;
+      if (chineseName) {
+        displayText = chineseName;
+      } else {
+        // 如果没有特定的中文翻译，使用处理后的英文名作为主要的"中文"部分
+        displayText = readableEnglishName; 
       }
-      
-      // 默认返回原始名称
-      return groupName;
+      return `${displayText} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
     },
     checkAllForm() {
       const self = this;
@@ -446,15 +689,13 @@ export default {
 
         // 遍历每个配置组
         for (const groupName of Object.keys(groups)) {
-          // 生成正确的 Ref 名称
+          const group = groups[groupName];
+          
+          // 验证常规配置表单
           const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
           const formComponent = self.$refs[refName]?.[0];
 
-          if (!formComponent) {
-            console.warn(`找不到表单组件: ${refName}`);
-            continue;
-          }
-
+          if (formComponent) {
           // 执行表单校验
           formComponent.form.validateFields((err) => {
             if (err) {
@@ -465,8 +706,57 @@ export default {
 
           if (hasError) break;
         }
+          
+          // 验证角色分组内的Kubernetes配置表单
+          if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
+            for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
+              const k8sRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+              const k8sFormComponent = self.$refs[k8sRefName]?.[0];
+              
+              if (k8sFormComponent) {
+                k8sFormComponent.form.validateFields((err) => {
+                  if (err) {
+                    hasError = true;
+                    self.serviceNameKey = serviceName; // 切换到错误页签
+                    // 确保展开包含错误的配置组
+                    self.$set(self.isGroupExpanded, `${serviceName}_${groupName}`, true);
+                    // 设置激活的Kubernetes标签页
+                    self.$set(self.activeKubernetesTabs, `${serviceName}_${groupName}`, subGroupName);
+                  }
+                });
 
         if (hasError) break;
+              }
+            }
+            
+            if (hasError) break;
+          }
+        }
+
+        if (hasError) break;
+        
+        // 验证通用Kubernetes配置
+        if (self.kubernetesGroups[serviceName]) {
+          for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
+            const k8sRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
+            const k8sFormComponent = self.$refs[k8sRefName]?.[0];
+            
+            if (k8sFormComponent) {
+              k8sFormComponent.form.validateFields((err) => {
+                if (err) {
+                  hasError = true;
+                  self.serviceNameKey = serviceName; // 切换到错误页签
+                  // 设置激活的Kubernetes标签页
+                  self.$set(self.activeKubernetesTabs, serviceName, subGroupName);
+                }
+              });
+              
+              if (hasError) break;
+            }
+          }
+          
+          if (hasError) break;
+        }
       }
 
       return hasError;
@@ -488,17 +778,14 @@ export default {
 
                 // 遍历每个配置组（`groupName`）
                 for (const groupName of Object.keys(groups)) {
-                  // 动态生成表单组件的引用名
-                  const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
+                  const group = groups[groupName];
 
+                  // 处理常规配置表单
+                  const refName = `CommonTemplateRef_${serviceName}_${groupName}`;
                   const formRef = self.$refs[refName]?.[0]; // 获取表单组件的引用
 
-                  // 如果找不到表单组件，输出警告并跳过该组
-                  if (!formRef) {
-                    console.warn(`[${serviceName}] 缺失表单组件: ${refName}`);
-                    continue;
-                  }
-
+                  // 如果找到表单组件，处理表单数据
+                  if (formRef) {
                   // 验证表单数据并收集字段值
                   await formRef.form.validateFields();  // 表单验证
                   const rawData = formRef.form.getFieldsValue(); // 获取表单字段值
@@ -515,6 +802,59 @@ export default {
 
                   // 合并所有表单数据
                   Object.assign(allFormData, convertedData);
+                  }
+                  
+                  // 处理角色分组内的Kubernetes配置表单
+                  if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
+                    for (const subGroupName of Object.keys(group.kubernetesSubGroups)) {
+                      const k8sRefName = `CommonTemplateRef_${serviceName}_${groupName}_${subGroupName}`;
+                      const k8sFormRef = self.$refs[k8sRefName]?.[0];
+                      
+                      if (k8sFormRef) {
+                        // 验证并收集表单数据
+                        await k8sFormRef.form.validateFields();
+                        const k8sRawData = k8sFormRef.form.getFieldsValue();
+                        
+                        // 处理字段名并过滤
+                        const convertedK8sData = Object.keys(k8sRawData).reduce((acc, key) => {
+                          if (!key.endsWith('_value')) {
+                            const newKey = key.replace(/\./g, '!');
+                            acc[newKey] = k8sRawData[key];
+                          }
+                          return acc;
+                        }, {});
+                        
+                        // 合并数据
+                        Object.assign(allFormData, convertedK8sData);
+                      }
+                    }
+                  }
+                }
+                
+                // 处理通用Kubernetes配置
+                if (self.kubernetesGroups[serviceName]) {
+                  for (const subGroupName of Object.keys(self.kubernetesGroups[serviceName])) {
+                    const k8sRefName = `CommonTemplateRef_${serviceName}_Kubernetes_${subGroupName}`;
+                    const k8sFormRef = self.$refs[k8sRefName]?.[0];
+                    
+                    if (k8sFormRef) {
+                      // 验证并收集表单数据
+                      await k8sFormRef.form.validateFields();
+                      const k8sRawData = k8sFormRef.form.getFieldsValue();
+                      
+                      // 处理字段名并过滤
+                      const convertedK8sData = Object.keys(k8sRawData).reduce((acc, key) => {
+                        if (!key.endsWith('_value')) {
+                          const newKey = key.replace(/\./g, '!');
+                          acc[newKey] = k8sRawData[key];
+                        }
+                        return acc;
+                      }, {});
+                      
+                      // 合并数据
+                      Object.assign(allFormData, convertedK8sData);
+                    }
+                  }
                 }
 
                 // 处理复合数据，调用外部函数处理数组和多重数据
@@ -627,6 +967,8 @@ export default {
         this.templateObj[`${item}`] = [];
         // 初始化分组展开状态对象
         this.$set(this.isGroupExpanded, item, {});
+        // 初始化服务级别的Kubernetes标签页激活状态
+        this.$set(this.activeKubernetesTabs, item, '');
       });
     } else {
       this.$message.warning("未选择任何服务，请返回步骤4选择服务");
@@ -635,7 +977,22 @@ export default {
     }
   },
   mounted() {
-    this.getServiceConfigOption();
+    this.getServiceConfigOption().then(() => {
+      // 数据加载完成后，初始化角色分组级别的Kubernetes标签页激活状态
+      this.SERVICENAMES.forEach(serviceName => {
+        const groups = this.groupedTemplateData[serviceName] || {};
+        Object.keys(groups).forEach(groupName => {
+          const group = groups[groupName];
+          if (group && group.hasKubernetesConfig && group.kubernetesSubGroups) {
+            const subGroupKeys = Object.keys(group.kubernetesSubGroups);
+            if (subGroupKeys.length > 0) {
+              // 初始化该角色分组的Kubernetes标签页激活状态
+              this.$set(this.activeKubernetesTabs, `${serviceName}_${groupName}`, subGroupKeys[0]);
+            }
+          }
+        });
+      });
+    });
   },
 };
 </script>
@@ -1048,6 +1405,315 @@ export default {
 /* 添加底部空间，确保内容不被按钮遮挡 */
 .bottom-spacer {
   height: 80px;
+}
+
+/* 添加Kubernetes配置区域样式 */
+.kubernetes-config-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  
+  .kubernetes-tabs-header {
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  :deep(.ant-tabs-nav) {
+    margin-bottom: 16px;
+  }
+  
+  :deep(.ant-tabs-tab) {
+    padding: 8px 16px;
+    transition: all 0.3s;
+    
+    &:hover {
+      color: #1890ff;
+    }
+  }
+  
+  :deep(.ant-tabs-tab-active) {
+    .ant-tabs-tab-btn {
+      color: #1890ff;
+      font-weight: 500;
+    }
+  }
+  
+  :deep(.ant-tabs-ink-bar) {
+    background: #1890ff;
+  }
+}
+
+/* 确保模板内容显示正确 */
+.template-content-container {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+  
+  .template-content-title {
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.85);
+  }
+  
+  .template-content-textarea {
+    background: #fff;
+  }
+}
+
+/* 添加角色分组内Kubernetes配置区域样式 */
+.group-kubernetes-section {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 4px;
+  border: 1px solid #ebedf0;
+  
+  .kubernetes-tabs-header {
+    font-size: 15px;
+    font-weight: 500;
+    color: #196cca;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e6f7ff;
+  }
+  
+  :deep(.ant-tabs-nav) {
+    margin-bottom: 15px;
+  }
+  
+  :deep(.ant-tabs-tab) {
+    padding: 8px 16px;
+    transition: all 0.3s;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-right: 10px;
+    border-radius: 4px;
+    
+    &:hover {
+      color: #196cca;
+      background-color: rgba(25, 108, 202, 0.05);
+    }
+    
+    .ant-tabs-tab-btn {
+      display: flex;
+      align-items: center;
+      
+      span {
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+  }
+  
+  :deep(.ant-tabs-tab-active) {
+    background-color: rgba(25, 108, 202, 0.08);
+    
+    .ant-tabs-tab-btn {
+      color: #196cca;
+      font-weight: 500;
+    }
+  }
+  
+  :deep(.ant-tabs-ink-bar) {
+    background: #196cca;
+    height: 3px;
+  }
+  
+  .template-content-container {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+}
+
+/* 顶部Kubernetes配置区域样式 */
+.kubernetes-config-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 4px;
+  border: 1px solid #ebedf0;
+  
+  .kubernetes-tabs-header {
+    font-size: 16px;
+    font-weight: 500;
+    color: #196cca;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e6f7ff;
+  }
+  
+  :deep(.ant-tabs-nav) {
+    margin-bottom: 15px;
+  }
+  
+  :deep(.ant-tabs-tab) {
+    padding: 8px 16px;
+    transition: all 0.3s;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-right: 10px;
+    border-radius: 4px;
+    
+    &:hover {
+      color: #196cca;
+      background-color: rgba(25, 108, 202, 0.05);
+    }
+    
+    .ant-tabs-tab-btn {
+      display: flex;
+      align-items: center;
+      
+      span {
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+  }
+  
+  :deep(.ant-tabs-tab-active) {
+    background-color: rgba(25, 108, 202, 0.08);
+    
+    .ant-tabs-tab-btn {
+      color: #196cca;
+      font-weight: 500;
+    }
+  }
+  
+  :deep(.ant-tabs-ink-bar) {
+    background: #196cca;
+    height: 3px;
+  }
+}
+
+/* 确保标签页内小字体正确显示 */
+:deep(.ant-tabs-tab) {
+  .ant-tabs-tab-btn {
+    span {
+      display: inline-block;
+    }
+  }
+}
+
+/* 设置英文部分的字体样式 */
+.small-text {
+  font-size: 60%;
+  color: #aaa;
+  font-weight: normal;
+  font-family: Arial, sans-serif;
+  margin-left: 4px;
+  letter-spacing: 0;
+  position: relative;
+  top: -1px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+/* 新增：Kubernetes子组Tab英文名样式 */
+.steps7 /deep/ .ant-tabs-tab .k8s-subgroup-en {
+  color: #E6A23C; /* 浅橙色 */
+  font-size: 0.9em;   /* 辅助字体稍小 */
+  font-weight: normal; /* 非粗体 */
+  margin-left: 4px;    /* 括号前的空格 */
+}
+
+/* 确保标签页内容样式 */
+:deep(.ant-tabs-tab) {
+  .ant-tabs-tab-btn {
+    span {
+      display: inline-block;
+      
+      /* 强化中文部分的样式 */
+      &:not(.small-text) {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+      }
+    }
+  }
+}
+
+/* 设置中文部分的字体样式 */
+.main-text {
+  font-weight: 600;
+  color: #000;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+/* Kubernetes配置区域样式 */
+.group-kubernetes-section {
+  background-color: #f9fafc;
+  border-radius: 8px;
+  border: 1px solid #e8eaf1;
+  margin-bottom: 24px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.kubernetes-tabs-header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1890ff;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8eaf1;
+  display: flex;
+  align-items: center;
+}
+
+.kubernetes-tabs-header::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #1890ff;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+/* 标签页样式优化 */
+/deep/ .ant-tabs-nav .ant-tabs-tab {
+  padding: 12px 16px;
+  transition: all 0.3s;
+}
+
+/deep/ .ant-tabs-nav .ant-tabs-tab-active {
+  background-color: #e6f7ff;
+  border-radius: 4px 4px 0 0;
+}
+
+/* 美化端口映射配置区域 */
+/deep/ .ant-form-item-label label[title="Kubernetes NodePort端口映射"] {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 14px;
+}
+
+/deep/ .ant-form-item-children input[placeholder*="containerPort"] {
+  border-color: #1890ff;
+  border-radius: 4px;
+}
+
+/* 添加端口映射按钮美化 */
+/deep/ .ant-btn-dashed.ant-btn-sm {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+/deep/ .ant-btn-dashed.ant-btn-sm:hover {
+  border-color: #40a9ff;
+  color: #40a9ff;
 }
 </style>
 

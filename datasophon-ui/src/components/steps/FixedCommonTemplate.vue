@@ -19,7 +19,7 @@
  */
 -->
 <template>
-  <div class="common-template steps">
+  <div class="common-template steps" :class="{'orb-animation-active': isAnimationActive}">
     <a-form :label-col="labelCol" :wrapper-col="wrapperCol" :form="form" class="form-content mgh160">
       <div v-for="(item, index) in testData" :key="index">
         <div class="form-item-container" v-if="!['multipleWithKey', 'multiple', 'multipleSelect'].includes(item.type)">
@@ -250,9 +250,18 @@
           </div>
           <div v-if="['multipleWithKey'].includes(item.type)" class="form-item-container">
             <a-form-item v-for="(child, childIndex) in item.value" style="margin-bottom: 0px" :key="childIndex" :required="item.required" v-bind="childIndex === 0 ? labelCol : formItemLayoutWithOutLabel" :label="childIndex === 0 || item.value.length === 0  ? item.label : ''">
-              <a-row type="flex" style="position: relative">
-                <a-col :span="12">
-                  <a-form-item style="width:97%">
+              <a-row type="flex" style="position: relative; margin-bottom: 16px; align-items: center; justify-content: space-between;">
+                <!-- 左侧输入框 -->
+                <a-col :span="9" style="position: relative; z-index: 2;">
+                  <div v-if="childIndex === 0" class="port-label-container">
+                    <div class="port-label-left">
+                      <template v-if="item.configType === 'custom'">配置名</template>
+                      <template v-else-if="item.name === 'nodePortMappings'">容器端口</template>
+                      <template v-else-if="item.name === 'clusterPortMappings'">集群内部端口</template>
+                      <template v-else>键</template>
+                    </div>
+                  </div>
+                  <a-form-item style="width:100%; margin-bottom: 0;">
                     <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
                       <template slot="title">
                         <div class="tooltip-content">
@@ -263,6 +272,7 @@
                           <div class="tooltip-description">{{item.description}}</div>
                         </div>
                       </template>
+                      <div style="position: relative; overflow: visible;">
                       <a-input v-decorator="[
                       `${item.name+'arrayWithKey'+childIndex}`,
                       {
@@ -276,26 +286,30 @@
                         },
                       ],
                     }
-                    ]" placeholder="请输入" />
+                      ]" :placeholder="item.configType === 'custom' ? '请输入配置名' : (item.name === 'nodePortMappings' ? '容器内部端口' : (item.name === 'clusterPortMappings' ? '集群内部端口' : '请输入键'))" class="container-port-input" />
+                        <!-- 左侧光球 -->
+                        <div v-if="item.configType !== 'custom'" class="port-mapping-orb left-orb" :style="{'--orb-color': item.name === 'nodePortMappings' ? '#1890ff' : '#52c41a'}"></div>
+                      </div>
                     </a-tooltip>
-                    <a-input v-if="!item.description" v-decorator="[
-                    `${item.name+'arrayWithKey'+childIndex}`,
-                    {
-                    validateTrigger: ['change', 'blur'],
-                    initialValue: child.key,
-                    rules: [
-                      {
-                        required: item.required,
-                        whitespace: true,
-                        message: `${item.label}不能为空!`,
-                      },
-                    ],
-                  }
-                  ]" placeholder="请输入" />
                   </a-form-item>
                 </a-col>
-                <a-col :span="12">
-                  <a-form-item style="width:97%">
+                
+                <!-- 空白间隔列 -->
+                <a-col :span="6" style="position: relative; text-align: center;">
+                  <span v-if="item.configType !== 'custom'" style="font-size: 18px; color: #aaa;">→</span>
+                </a-col>
+                
+                <!-- 右侧输入框 -->
+                <a-col :span="9" style="position: relative; z-index: 2;">
+                  <div v-if="childIndex === 0" class="port-label-container">
+                    <div class="port-label-right">
+                      <template v-if="item.configType === 'custom'">配置值</template>
+                      <template v-else-if="item.name === 'nodePortMappings'">节点端口</template>
+                      <template v-else-if="item.name === 'clusterPortMappings'">集群端口</template>
+                      <template v-else>值</template>
+                    </div>
+                  </div>
+                  <a-form-item style="width:100%; margin-bottom: 0;">
                     <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
                       <template slot="title">
                         <div class="tooltip-content">
@@ -306,6 +320,7 @@
                           <div class="tooltip-description">{{item.description}}</div>
                         </div>
                       </template>
+                      <div style="position: relative; overflow: visible;">
                       <a-input v-decorator="[
                       `${item.name+'arrayWithValue'+childIndex}`,
                       {
@@ -319,32 +334,25 @@
                         },
                       ],
                     }
-                    ]" placeholder="请输入" />
+                      ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name === 'nodePortMappings' ? '节点暴露端口' : (item.name === 'clusterPortMappings' ? '集群端口' : '请输入值'))" class="nodeport-input" />
+                        <!-- 右侧光球 -->
+                        <div v-if="item.configType !== 'custom'" class="port-mapping-orb right-orb" :style="{'--orb-color': item.name === 'nodePortMappings' ? '#1890ff' : '#52c41a'}"></div>
+                      </div>
                     </a-tooltip>
-                    <a-input v-if="!item.description" v-decorator="[
-                    `${item.name+'arrayWithValue'+childIndex}`,
-                    {
-                    validateTrigger: ['change', 'blur'],
-                    initialValue: child.value,
-                    rules: [
-                      {
-                        required: item.required,
-                        whitespace: true,
-                        message: `${item.label}不能为空!`,
-                      },
-                    ],
-                  }
-                  ]" placeholder="请输入" />
                   </a-form-item>
                 </a-col>
-                <span style="position: absolute; right: 0px" @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')">
+                <span style="position: absolute; right: 0px; z-index: 20" @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')">
                   <svg-icon v-if="item.value.length > 1" icon-class="reduce-icon" class="reduce-icon" />
                 </span>
               </a-row>
             </a-form-item>
             <a-form-item class="form-multiple-item" :wrapper-col="formItemLayoutWithOutLabel.wrapperCol">
               <a-button type="link" class="add-field-button" @click="() => addMultiple(item.name, 'multipleWithKey')">
-                <span class="custom-plus-icon">+</span> 添加属性
+                <span class="custom-plus-icon">+</span> 
+                <template v-if="item.configType === 'custom'">添加自定义配置</template>
+                <template v-else-if="item.name === 'nodePortMappings'">添加NodePort端口映射</template>
+                <template v-else-if="item.name === 'clusterPortMappings'">添加集群内部端口</template>
+                <template v-else>添加键值对</template>
               </a-button>
             </a-form-item>
             <div class="filed-name-tips">
@@ -389,6 +397,7 @@ export default {
     const self = this
     return {
       testData: this.templateData,
+      animationStartTime: Date.now(),
       labelCol: {
         xs: { span: 24 },
         sm: { span: 7 },
@@ -459,6 +468,7 @@ export default {
           }
         },
       }),
+      isAnimationActive: false,
     };
   },
   watch: {
@@ -470,6 +480,14 @@ export default {
       deep: true,
       immediate: true,
     },
+  },
+  mounted() {
+    // 记录动画开始时间
+    this.animationStartTime = Date.now();
+    // 在组件挂载后启动动画
+    this.$nextTick(() => {
+      this.isAnimationActive = true;
+    });
   },
   methods: {
     getInputHeightStyle(item) {
@@ -540,6 +558,30 @@ export default {
         [`${item.maxValue}`]: item.maxValue,
       };
     },
+    getAnimationDelay() {
+      const now = Date.now();
+      const elapsed = now - this.animationStartTime;
+      const cycleDuration = 3000; // 3秒一个周期
+      const remaining = cycleDuration - (elapsed % cycleDuration);
+      return `${remaining}ms`;
+    },
+    resetOrbAnimations() {
+      // 获取所有光球元素
+      const orbs = document.querySelectorAll('.port-mapping-orb');
+      
+      // 移除动画类
+      orbs.forEach(orb => {
+        const style = orb.style;
+        const animation = style.animation;
+        style.animation = 'none';
+        
+        // 触发重排
+        void orb.offsetWidth;
+        
+        // 重新添加动画
+        style.animation = animation;
+      });
+    },
     addMultiple(name, type) {
       this.testData.forEach((item) => {
         if (item.name === name) {
@@ -552,6 +594,11 @@ export default {
             item.value.push("");
           }
         }
+      });
+      
+      // 等待DOM更新后重置所有光球动画
+      this.$nextTick(() => {
+        this.resetOrbAnimations();
       });
     },
     reduceMultiple(name, childIndex, type) {
@@ -611,6 +658,34 @@ export default {
       }
     /deep/ .ant-select-selection {
       background-color: #ffffff;
+    }
+    
+    /deep/ .container-port-input,
+    /deep/ .container-port-form-item .ant-input {
+      border-color: #1890ff !important;
+      background-color: rgba(24, 144, 255, 0.05) !important;
+    }
+    
+    /deep/ .container-port-input:hover,
+    /deep/ .container-port-input:focus,
+    /deep/ .container-port-form-item .ant-input:hover,
+    /deep/ .container-port-form-item .ant-input:focus {
+      border-color: #40a9ff !important;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+    }
+    
+    /deep/ .nodeport-input,
+    /deep/ .nodeport-form-item .ant-input {
+      border-color: #52c41a !important;
+      background-color: rgba(82, 196, 26, 0.05) !important;
+    }
+    
+    /deep/ .nodeport-input:hover,
+    /deep/ .nodeport-input:focus,
+    /deep/ .nodeport-form-item .ant-input:hover,
+    /deep/ .nodeport-form-item .ant-input:focus {
+      border-color: #73d13d !important;
+      box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2) !important;
     }
     
     .reduce-icon {
@@ -793,6 +868,120 @@ export default {
 .input-with-unit .ant-input {
   flex-grow: 1;
 }
+
+/* 端口映射相关样式 */
+.port-mapping-labels {
+  display: flex;
+  margin-bottom: 8px;
+  padding: 0;
+  width: 100%;
+}
+
+.port-label-container {
+  margin-bottom: 5px;
+  padding-left: 10px;
+}
+
+.port-label-left {
+  color: #1890ff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.port-label-right {
+  color: #52c41a;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 光球动画相关样式 */
+.port-mapping-orb {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--orb-color, #1890ff);
+  box-shadow: 0 0 5px var(--orb-color, #1890ff),
+              0 0 8px var(--orb-color, #1890ff);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.left-orb {
+  right: 8px;
+  animation: left-orb-moving 3s infinite ease-in-out;
+}
+
+.right-orb {
+  left: 8px;
+  animation: right-orb-moving 3s infinite ease-in-out;
+}
+
+@keyframes left-orb-moving {
+  0%, 50%, 100% {
+    opacity: 0;
+    right: 80%;
+  }
+  5%, 45% {
+    opacity: 1;
+  }
+  5% {
+    right: 80%;
+  }
+  45% {
+    right: 8px;
+  }
+  50% {
+    right: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes right-orb-moving {
+  0%, 50%, 100% {
+    opacity: 0;
+    left: 0;
+  }
+  55%, 95% {
+    opacity: 1;
+  }
+  55% {
+    left: 0;
+  }
+  95% {
+    left: 90%;
+    opacity: 1;
+  }
+  100% {
+    left: 90%;
+    opacity: 0;
+  }
+}
+
+/* 全局动画控制类 */
+.orb-animation-active .port-mapping-orb {
+  animation-play-state: running;
+}
+
+/* 清理其他箭头相关样式，但保留我们需要的样式 */
+.port-arrow-wrapper,
+.arrow-container,
+.arrow-container-first,
+.arrow-line,
+.arrow-head,
+.arrow-animation,
+.port-arrow-inline,
+.arrow-head-inline,
+.arrow-wrapper,
+.arrow-line-connector,
+.arrow-head-connector,
+.arrow-absolute-container,
+.arrow-absolute-line,
+.arrow-absolute-head,
+.arrow-absolute-animation {
+  display: none;
+}
 </style>
 
 <!-- 添加全局样式覆盖Ant Design默认样式 -->
@@ -854,6 +1043,55 @@ html body .custom-tooltip {
     &:before {
       background-color: #f5f7fa !important;
     }
+  }
+}
+
+/* 端口映射相关全局样式 */
+.container-port-form-item .ant-input,
+.container-port-input {
+  border-color: #1890ff !important;
+  
+  &:hover, &:focus {
+    border-color: #40a9ff !important;
+  }
+}
+
+.nodeport-form-item .ant-input,
+.nodeport-input {
+  border-color: #52c41a !important;
+  
+  &:hover, &:focus {
+    border-color: #73d13d !important;
+  }
+}
+
+/* 端口映射动画效果 */
+.port-mapping-arrow-container {
+  .port-mapping-arrow {
+    .arrow-line {
+      position: relative;
+      overflow: hidden;
+      
+      &:after {
+        content: '';
+        position: absolute;
+        height: 100%;
+        width: 10px;
+        background-color: rgba(255, 255, 255, 0.5);
+        left: -10px;
+        top: 0;
+        animation: flowing 1.2s infinite linear;
+      }
+    }
+  }
+}
+
+@keyframes flowing {
+  0% {
+    left: -10px;
+  }
+  100% {
+    left: 100%;
   }
 }
 </style> 

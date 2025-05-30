@@ -28,9 +28,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.GENERAL;
@@ -96,45 +100,74 @@ public class CommonUtils {
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
             List<ServiceConfig> list) {
-        // 先按原有逻辑分组
-        Map<String, List<ServiceConfig>> unsortedMap = list.stream()
-                .collect(Collectors.groupingBy(config -> {
-                    // 处理模板内容
-                    String templateName = config.getTemplateName();
-                    if (StrUtil.isNotBlank(templateName)) {
-                        String templateContent = TemplatePathUtils.getTemplateContent(templateName);
-                        config.setTemplateContent(templateContent);
-                    }
+        // 最终返回结果
+        Map<String, List<ServiceConfig>> resultMap = new LinkedHashMap<>();
 
-                    // 首先检查是否有新的分组字段
-                    if (config.getConfigCategory() != null && config.getConfigGroup() != null) {
-                        return config.getConfigGroup();
-                    }
-
-                    // 如果没有新字段，回退到原有的分组逻辑
-                    if (config.getConfigTargetRoles() != null) {
-                        return config.getConfigTargetRoles();
-                    } else {
-                        return GENERAL;
-                    }
-                }));
-
-        // 获取所有分组名称
-        List<String> groupNames = new ArrayList<>(unsortedMap.keySet());
-
-        // 使用ConfigGroupSorter对分组进行排序
-        List<String> sortedGroups = ConfigGroupSorter.sortGroups(serviceName, groupNames);
-
-        // 创建有序的LinkedHashMap来保持排序
-        Map<String, List<ServiceConfig>> sortedMap = new LinkedHashMap<>();
-
-        // 按照排序后的顺序重建map
-        for (String groupName : sortedGroups) {
-            if (unsortedMap.containsKey(groupName)) {
-                sortedMap.put(groupName, unsortedMap.get(groupName));
+        // 先处理所有配置项的模板内容
+        for (ServiceConfig config : list) {
+            String templateName = config.getTemplateName();
+            if (StrUtil.isNotBlank(templateName)) {
+                String templateContent = TemplatePathUtils.getTemplateContent(templateName);
+                config.setTemplateContent(templateContent);
             }
         }
 
-        return sortedMap;
+        // 分组存储配置
+        Map<String, List<ServiceConfig>> groupedConfigs = new HashMap<>();
+
+        // 处理所有配置
+        for (ServiceConfig config : list) {
+            String groupKey;
+
+            // 判断是否为Kubernetes配置
+            if (config.getConfigGroup() != null && config.getConfigGroup().startsWith("kubernetes.config.")) {
+                // 对于K8s配置，其 configGroup 属性应该已经是期望的、可能带有角色后缀的最终形态。
+                // (e.g., "kubernetes.config.pvc.ZkServer" or "kubernetes.config.general")
+                // 因此，直接使用它作为 groupKey。
+                groupKey = config.getConfigGroup();
+            }
+            // 非Kubernetes配置
+            else {
+                String configCategory = config.getConfigCategory();
+                String configLevel = config.getConfigLevel();
+                String actualConfigGroup = config.getConfigGroup();
+
+                if ("file".equals(configCategory) &&
+                        ("custom".equalsIgnoreCase(configLevel) || "advanced".equalsIgnoreCase(configLevel)) &&
+                        StrUtil.isNotBlank(actualConfigGroup)) {
+
+                    String levelPrefix = configLevel.toLowerCase() + "_";
+                    if (actualConfigGroup.startsWith(levelPrefix)) {
+                        groupKey = actualConfigGroup;
+                    } else {
+                        groupKey = levelPrefix + actualConfigGroup;
+                    }
+                }
+                // Fallback to existing logic if the above condition is not met
+                else if (configCategory != null && actualConfigGroup != null) {
+                    groupKey = actualConfigGroup;
+                } else if (config.getConfigTargetRoles() != null) {
+                    groupKey = config.getConfigTargetRoles();
+                } else {
+                    groupKey = GENERAL;
+                }
+            }
+
+            // 将配置添加到对应分组
+            groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
+        }
+
+        // 使用ConfigGroupSorter对分组进行排序
+        List<String> sortedGroups = ConfigGroupSorter.sortGroups(serviceName, groupedConfigs.keySet());
+
+        // 按照排序后的顺序重建map
+        for (String groupName : sortedGroups) {
+            List<ServiceConfig> configs = groupedConfigs.get(groupName);
+            if (configs != null && !configs.isEmpty()) {
+                resultMap.put(groupName, configs);
+            }
+        }
+
+        return resultMap;
     }
 }

@@ -96,7 +96,8 @@ public class ConfigGroupSorter {
      */
     public static List<String> sortGroups(String serviceName, Collection<String> groups) {
         // 获取服务特定的排序规则
-        Map<String, Integer> serviceSpecificOrder = SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(), new HashMap<>());
+        Map<String, Integer> serviceSpecificOrder = SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(),
+                new HashMap<>());
 
         return groups.stream()
                 .sorted((g1, g2) -> {
@@ -233,5 +234,64 @@ public class ConfigGroupSorter {
         });
 
         return sortedMap;
+    }
+
+    /**
+     * 对配置组进行排序，将kubernetes配置组放在前面
+     *
+     * @param serviceName 服务名称
+     * @param groupNames  配置组名称列表
+     * @return 排序后的配置组名称列表
+     */
+    public static List<String> sortGroups(String serviceName, List<String> groupNames) {
+        if (groupNames == null || groupNames.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 提取以"kubernetes.config."开头的组和其他组
+        List<String> kubernetesGroups = groupNames.stream()
+                .filter(name -> name.endsWith("_Kubernetes"))
+                .collect(Collectors.toList());
+
+        List<String> nonKubernetesGroups = groupNames.stream()
+                .filter(name -> !name.endsWith("_Kubernetes"))
+                .collect(Collectors.toList());
+
+        // 对非Kubernetes组进行排序
+        nonKubernetesGroups.sort((g1, g2) -> {
+            // 自定义排序规则
+            if ("General".equals(g1))
+                return -1;
+            if ("General".equals(g2))
+                return 1;
+            return g1.compareTo(g2);
+        });
+
+        // 将Kubernetes组和其他组合并，Kubernetes组在前面
+        List<String> sortedGroups = new ArrayList<>(kubernetesGroups);
+        sortedGroups.addAll(nonKubernetesGroups);
+
+        return sortedGroups;
+    }
+
+    /**
+     * 为Kubernetes配置项的名称添加角色前缀
+     *
+     * @param roleName    角色名称
+     * @param configName  配置项名称
+     * @param configGroup 配置分组
+     * @return 添加了角色前缀的配置项名称
+     */
+    public static String addRolePrefixForKubernetesConfig(String roleName, String configName, String configGroup) {
+        if (roleName == null || configName == null) {
+            return configName;
+        }
+
+        // 如果配置组是Kubernetes相关的，添加角色前缀
+        if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+            return roleName + "_" + configName;
+        }
+
+        return configName;
     }
 }

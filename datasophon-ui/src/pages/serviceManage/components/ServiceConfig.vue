@@ -367,8 +367,9 @@
         
         <!-- 非对比模式下的内容 -->
         <template v-else>
+          <!-- 渲染角色分组，包括常规配置和Kubernetes配置 -->
           <div 
-            v-for="(group, groupName) in filteredTemplateData"
+            v-for="(group, groupName) in filteredVisibleGroups"
             :key="groupName"
             class="config-panel"
           >
@@ -384,7 +385,44 @@
             </div>
             
             <div v-show="isGroupExpanded[groupName]" class="panel-content">
-              <template v-if="Array.isArray(group) || (group.items && Array.isArray(group.items))">
+              <!-- 处理新的数据结构：同时包含常规配置和Kubernetes配置的角色分组 -->
+              <template v-if="Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig">
+                <!-- 先显示常规配置 -->
+                <CommonTemplate
+                  :ref="`template_${groupName}`"
+                  :steps4Data="steps4Data"
+                  :templateData="group[0].regularConfigs"
+                  v-if="group[0].regularConfigs && group[0].regularConfigs.length > 0"
+                />
+                
+                <!-- 再显示Kubernetes配置（使用标签页）-->
+                <div class="kubernetes-section" v-if="group[0].kubernetesSubGroups && Object.keys(group[0].kubernetesSubGroups).length > 0">
+                  <div class="kubernetes-tabs-header">
+                    Kubernetes 配置
+                  </div>
+                  
+                  <a-tabs 
+                    v-model="activeKubernetesTabs[groupName]" 
+                    class="kubernetes-tabs"
+                  >
+                    <a-tab-pane 
+                      v-for="(configs, subGroupName) in group[0].kubernetesSubGroups" 
+                      :key="subGroupName" 
+                    >
+                      <template slot="tab">
+                        <span v-html="formatSubGroupName(subGroupName)"></span>
+                      </template>
+                      <CommonTemplate
+                        :ref="`template_${groupName}_${subGroupName}`"
+                        :steps4Data="steps4Data"
+                        :templateData="configs"
+                      />
+                    </a-tab-pane>
+                  </a-tabs>
+                </div>
+              </template>
+              <!-- 处理常规配置 -->
+              <template v-else-if="Array.isArray(group) || (group.items && Array.isArray(group.items))">
                 <CommonTemplate
                     :ref="`template_${groupName}`"
                     :steps4Data="steps4Data"
@@ -519,6 +557,7 @@ export default {
       // 新增恢复版本相关数据
       restoreDialogVisible: false, // 控制恢复确认对话框的显示
       restoreDescription: '', // 存储恢复版本的备注
+      activeKubernetesTabs: {}, // 存储每个角色组的Kubernetes标签页激活状态
     };
   },
   computed: {
@@ -540,6 +579,94 @@ export default {
       
       // 遍历所有配置组
       Object.entries(this.templateData).forEach(([groupName, configData]) => {
+        // 检查配置组的数据结构
+        if (Array.isArray(configData) && configData.length === 1 && configData[0].hasKubernetesConfig) {
+          // 这是一个包含常规配置和Kubernetes配置的角色分组
+          const roleGroup = configData[0];
+          const regularConfigs = roleGroup.regularConfigs || [];
+          const kubernetesSubGroups = roleGroup.kubernetesSubGroups || {};
+          
+          // 过滤常规配置
+          const filteredRegularConfigs = regularConfigs.filter(item => {
+            const keyword = this.searchKeyword.toLowerCase();
+            const label = (item.label || '').toLowerCase();
+            const name = (item.name || '').replaceAll('!', '.').toLowerCase();
+            const value = String(item.value || '').toLowerCase();
+            const description = (item.description || '').toLowerCase();
+            
+            return label.includes(keyword) || 
+                   name.includes(keyword) || 
+                   value.includes(keyword) || 
+                   description.includes(keyword);
+          });
+          
+          // 过滤Kubernetes配置
+          const filteredK8sSubGroups = {};
+          let hasMatchingK8sConfig = false;
+          
+          Object.entries(kubernetesSubGroups).forEach(([subGroupName, configs]) => {
+            const filteredConfigs = configs.filter(item => {
+              const keyword = this.searchKeyword.toLowerCase();
+              const label = (item.label || '').toLowerCase();
+              const name = (item.name || '').replaceAll('!', '.').toLowerCase();
+              const value = String(item.value || '').toLowerCase();
+              const description = (item.description || '').toLowerCase();
+              
+              return label.includes(keyword) || 
+                     name.includes(keyword) || 
+                     value.includes(keyword) || 
+                     description.includes(keyword);
+            });
+            
+            if (filteredConfigs.length > 0) {
+              filteredK8sSubGroups[subGroupName] = filteredConfigs;
+              hasMatchingK8sConfig = true;
+            }
+          });
+          
+          // 如果有匹配的配置项，则添加到结果中
+          if (filteredRegularConfigs.length > 0 || hasMatchingK8sConfig) {
+            result[groupName] = [{
+              hasKubernetesConfig: true,
+              regularConfigs: filteredRegularConfigs,
+              kubernetesSubGroups: filteredK8sSubGroups
+            }];
+          }
+        } else if (configData && configData.isKubernetesGroup) {
+          // 处理旧格式的Kubernetes配置组（向后兼容）
+          const filteredSubGroups = {};
+          let hasMatchingConfig = false;
+          
+          // 过滤每个子组内的配置项
+          Object.entries(configData.subGroups).forEach(([subGroupName, configs]) => {
+            const filteredConfigs = configs.filter(item => {
+              const keyword = this.searchKeyword.toLowerCase();
+              const label = (item.label || '').toLowerCase();
+              const name = (item.name || '').replaceAll('!', '.').toLowerCase();
+              const value = String(item.value || '').toLowerCase();
+              const description = (item.description || '').toLowerCase();
+              
+              return label.includes(keyword) || 
+                     name.includes(keyword) || 
+                     value.includes(keyword) || 
+                     description.includes(keyword);
+            });
+            
+            if (filteredConfigs.length > 0) {
+              filteredSubGroups[subGroupName] = filteredConfigs;
+              hasMatchingConfig = true;
+            }
+          });
+          
+          // 如果至少有一个子组内有匹配的配置项，则添加到结果中
+          if (hasMatchingConfig) {
+            result[groupName] = {
+              ...configData,
+              subGroups: filteredSubGroups
+            };
+          }
+        } else {
+          // 处理普通配置组
         // 处理不同的数据结构
         const configItems = Array.isArray(configData) ? configData : (configData.items || []);
         
@@ -568,11 +695,38 @@ export default {
               ...configData,
               items: filteredItems
             };
+            }
           }
         }
       });
       
       return result;
+    },
+    // 将配置组分为kubernetes配置和非kubernetes配置
+    kubernetesGroups() {
+      const groups = this.filteredTemplateData || {};
+      return Object.entries(groups)
+        .filter(([_, group]) => group && 
+                (Array.isArray(group) ? 
+                  (group.length === 1 && group[0].hasKubernetesConfig) : 
+                  group.isKubernetesGroup))
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {});
+    },
+    // 非kubernetes配置组
+    nonKubernetesGroups() {
+      const groups = this.filteredTemplateData || {};
+      return Object.entries(groups)
+        .filter(([_, group]) => !group || 
+                (Array.isArray(group) ? 
+                  !(group.length === 1 && group[0].hasKubernetesConfig) : 
+                  !group.isKubernetesGroup))
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {});
     },
     filteredVersionList() {
       if (!this.verSionList || this.verSionList.length === 0) {
@@ -678,6 +832,50 @@ export default {
       });
       
       return result;
+    },
+    filteredVisibleGroups() {
+      const groups = this.nonKubernetesGroups || {};
+      return Object.entries(groups)
+        .filter(([groupName, group]) => {
+          // 1. 处理新格式：同时包含常规配置和Kubernetes配置的角色分组
+          if (Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig) {
+            // 检查regularConfigs是否有非隐藏项
+            const regularConfigs = group[0].regularConfigs || [];
+            const hasVisibleRegularConfigs = regularConfigs.some(item => !item.hidden);
+            
+            // 如果常规配置中有可见项，则显示该分组
+            return hasVisibleRegularConfigs;
+          }
+          
+          // 2. 处理旧格式：Kubernetes配置组
+          else if (group && group.isKubernetesGroup) {
+            // 检查所有子组是否有可见配置项
+            let hasVisibleConfig = false;
+            Object.values(group.subGroups || {}).forEach(configs => {
+              if (configs.some(item => !item.hidden)) {
+                hasVisibleConfig = true;
+              }
+            });
+            return hasVisibleConfig;
+          }
+          
+          // 3. 处理普通数组格式的配置组
+          else if (Array.isArray(group)) {
+            // 只有当配置组中至少有一项不是hidden时才显示该组
+            return group.some(item => !item.hidden);
+          }
+          
+          // 4. 处理包含items属性的配置组
+          else if (group && group.items && Array.isArray(group.items)) {
+            return group.items.some(item => !item.hidden);
+          }
+          
+          return false;
+        })
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {});
     }
   },
   methods: {
@@ -919,14 +1117,48 @@ export default {
     // 单个标签页的保存
     async handleSubmit() {
       try {
-        // 1. 获取所有配置组表单实例
-        const formRefs = Object.keys(this.templateData)
-            .map(groupName => this.$refs[`template_${groupName}`]?.[0])
-            .filter(Boolean);
+        // 1. 获取所有表单引用
+        const allFormRefs = [];
+        
+        // 处理所有配置组
+        Object.entries(this.templateData).forEach(([groupName, group]) => {
+          // 处理新结构：同时包含常规配置和Kubernetes配置的角色分组
+          if (Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig) {
+            // 添加常规配置表单
+            const regularFormRef = this.$refs[`template_${groupName}`]?.[0];
+            if (regularFormRef) {
+              allFormRefs.push(regularFormRef);
+            }
+            
+            // 添加Kubernetes配置表单
+            Object.keys(group[0].kubernetesSubGroups).forEach(subGroupName => {
+              const k8sFormRef = this.$refs[`template_${groupName}_${subGroupName}`]?.[0];
+              if (k8sFormRef) {
+                allFormRefs.push(k8sFormRef);
+              }
+            });
+          } 
+          // 处理旧结构：独立的Kubernetes配置组
+          else if (group && group.isKubernetesGroup) {
+            Object.keys(group.subGroups).forEach(subGroupName => {
+              const ref = this.$refs[`template_${groupName}_${subGroupName}`]?.[0];
+              if (ref) {
+                allFormRefs.push(ref);
+              }
+            });
+          } 
+          // 处理常规配置组
+          else {
+            const formRef = this.$refs[`template_${groupName}`]?.[0];
+            if (formRef) {
+              allFormRefs.push(formRef);
+            }
+          }
+        });
 
         // 2. 并行验证所有表单
         await Promise.all(
-            formRefs.map(form =>
+            allFormRefs.map(form =>
                 new Promise((resolve, reject) => {
                   form.form.validateFields()
                       .then(values => resolve(values))
@@ -936,13 +1168,38 @@ export default {
         );
 
         // 3. 合并所有配置数据
-        const mergedValues = formRefs.reduce((acc, form) => {
+        const mergedValues = allFormRefs.reduce((acc, form) => {
           return { ...acc, ...form.form.getFieldsValue() };
         }, {});
 
-        // 4. 转换数据结构（修复核心问题）
-        const param = _.cloneDeep(this.templateData);
-        const allConfigItems = Object.values(param).flat(); // 转换为扁平化数组
+        // 4. 准备所有配置项
+        const allConfigItems = [];
+        
+        // 收集所有配置项
+        Object.entries(this.templateData).forEach(([groupName, group]) => {
+          // 处理新结构：同时包含常规配置和Kubernetes配置的角色分组
+          if (Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig) {
+            // 添加常规配置
+            allConfigItems.push(...group[0].regularConfigs);
+            
+            // 添加Kubernetes配置
+            Object.values(group[0].kubernetesSubGroups).forEach(configs => {
+              allConfigItems.push(...configs);
+            });
+          } 
+          // 处理旧结构：独立的Kubernetes配置组
+          else if (group && group.isKubernetesGroup) {
+            Object.values(group.subGroups).forEach(configs => {
+              allConfigItems.push(...configs);
+            });
+          } 
+          // 处理常规配置组
+          else if (Array.isArray(group)) {
+            allConfigItems.push(...group);
+          } else if (group && group.items && Array.isArray(group.items)) {
+            allConfigItems.push(...group.items);
+          }
+        });
 
         // 5. 更新配置项值
         Object.entries(mergedValues).forEach(([name, value]) => {
@@ -974,13 +1231,13 @@ export default {
           serviceConfig: JSON.stringify(filterParam),
           roleGroupId: this.currentId,
           description: this.configDescription,
-          userId: currentUser.id, // 添加用户ID
-          username: currentUser.username // 添加用户名
+          userId: currentUser.id,
+          username: currentUser.username
         };
 
         // 10. 提交保存
         const res = await this.$axiosPost(global.API.saveServiceConfig, saveParam);
-        console.log("保存配置响应:", res); // 添加日志，方便调试
+        console.log("保存配置响应:", res);
         
         if (res.code === 200) {
           // 根据返回的versionCreated字段确定是否创建了新版本
@@ -1114,11 +1371,17 @@ export default {
         
         // 重置筛选状态，确保数据加载后筛选功能正常工作
         this.searchKeyword = '';
+        
+        // 初始化Kubernetes Tab状态
+        this.$nextTick(() => {
+          this.updateActiveKubernetesTabs();
+        });
       }
       this.loading = false;
     },
     handlerTemplate(data) {
       const result = {};
+      const kubernetesConfigsByRole = {}; // 用于存储各角色组的Kubernetes配置
 
       try {
         // 检查data是否为有效对象
@@ -1128,9 +1391,10 @@ export default {
         }
 
         Object.entries(data).forEach(([originalKey, configList]) => {
-          // 检查configList是否为数组
-          if (!Array.isArray(configList)) {
-            console.error(`ConfigList for key ${originalKey} is not an array:`, configList);
+          // 检查configList是否为数组或特殊的结构（包含regularConfigs和kubernetesSubGroups）
+          if (!Array.isArray(configList) && 
+              !(configList.length === 1 && configList[0].hasKubernetesConfig)) {
+            console.error(`ConfigList for key ${originalKey} is not a valid format:`, configList);
             return; // 跳过此项
           }
           
@@ -1140,20 +1404,64 @@ export default {
                   .replace(/^"|"$/g, '') // 去除可能存在的引号
               || 'General'; // 空值处理
 
+          // 处理特殊结构：同时包含regularConfigs和kubernetesSubGroups的角色分组
+          if (Array.isArray(configList) && configList.length === 1 && configList[0].hasKubernetesConfig) {
+            // 直接将特殊结构添加到结果中
+            result[groupKey] = configList;
+            
+            // 对regularConfigs中的每个配置项进行名称转换
+            if (configList[0].regularConfigs) {
+              configList[0].regularConfigs.forEach(item => {
+                if (item.name) {
+                  item.name = item.name.replaceAll(".", "!");
+                }
+              });
+            }
+            
+            // 对kubernetesSubGroups中的每个配置项进行名称转换
+            if (configList[0].kubernetesSubGroups) {
+              Object.values(configList[0].kubernetesSubGroups).forEach(configs => {
+                configs.forEach(item => {
+                  if (item.name) {
+                    item.name = item.name.replaceAll(".", "!");
+                  }
+                });
+              });
+            }
+            
+            return; // 处理完毕，直接返回
+          }
+
+          // 以下是处理常规配置数组的逻辑
+
           // 配置项名称转换（保留原始替换逻辑）
           const processedItems = configList.map(item => ({
             ...item,
             name: (item.name || '').replaceAll(".", "!")
           }));
 
+          // 分离Kubernetes配置项和普通配置项
+          const roleConfigs = processedItems.filter(item => 
+            item.configCategory === 'role' && 
+            (!item.configGroup || !item.configGroup.startsWith('kubernetes.config.'))
+          );
+          
+          const kubernetesConfigs = processedItems.filter(item => 
+            item.configCategory === 'role' && 
+            item.configGroup && 
+            item.configGroup.startsWith('kubernetes.config.')
+          );
+          
+          // 存储普通配置项
+          if (roleConfigs.length > 0) {
           // 检查是否有配置项包含模板内容
-          const configWithTemplate = processedItems.find(item => item.templateContent && item.templateContent.trim() !== '');
+            const configWithTemplate = roleConfigs.find(item => item.templateContent && item.templateContent.trim() !== '');
           
           // 合并到结果集
           if (configWithTemplate) {
             // 如果有模板内容，则保存为对象结构
             result[groupKey] = {
-              items: [...(result[groupKey]?.items || []), ...processedItems],
+                items: [...(result[groupKey]?.items || []), ...roleConfigs],
               displayName: configWithTemplate.displayName || '',
               templateContent: configWithTemplate.templateContent || ''
             };
@@ -1166,19 +1474,48 @@ export default {
           } else {
             // 如果没有模板内容，仍然保持数组结构以兼容现有代码
             if (!result[groupKey]) {
-              result[groupKey] = [...processedItems];
+                result[groupKey] = [...roleConfigs];
             } else if (Array.isArray(result[groupKey])) {
-              result[groupKey] = [...result[groupKey], ...processedItems];
+                result[groupKey] = [...result[groupKey], ...roleConfigs];
             } else if (result[groupKey].items) {
               // 确保items是数组
               if (Array.isArray(result[groupKey].items)) {
-                result[groupKey].items = [...result[groupKey].items, ...processedItems];
+                  result[groupKey].items = [...result[groupKey].items, ...roleConfigs];
               } else {
-                result[groupKey].items = [...processedItems];
+                  result[groupKey].items = [...roleConfigs];
                 console.warn(`Fixed non-array items for group ${groupKey}`);
               }
             }
           }
+          }
+          
+          // 处理kubernetes配置项
+          if (kubernetesConfigs.length > 0) {
+            // 为每个角色组创建一个kubernetes配置组
+            if (!kubernetesConfigsByRole[groupKey]) {
+              kubernetesConfigsByRole[groupKey] = {};
+            }
+            
+            // 按kubernetes.config.xxx分组
+            kubernetesConfigs.forEach(config => {
+              const subGroupKey = config.configGroup;
+              if (!kubernetesConfigsByRole[groupKey][subGroupKey]) {
+                kubernetesConfigsByRole[groupKey][subGroupKey] = [];
+              }
+              kubernetesConfigsByRole[groupKey][subGroupKey].push(config);
+            });
+          }
+        });
+
+        // 添加Kubernetes配置到结果集
+        Object.entries(kubernetesConfigsByRole).forEach(([roleKey, subGroups]) => {
+          // 为每个角色创建一个Kubernetes主分组
+          const k8sGroupKey = `${roleKey}_Kubernetes`;
+          result[k8sGroupKey] = {
+            isKubernetesGroup: true,
+            role: roleKey,
+            subGroups: subGroups
+          };
         });
 
         // 保证至少存在通用配置组
@@ -1188,6 +1525,16 @@ export default {
         
         // 最终检查，确保所有组的数据结构正确
         Object.keys(result).forEach(key => {
+          // 跳过Kubernetes主分组的检查，因为它有特殊结构
+          if (result[key] && result[key].isKubernetesGroup) {
+            return;
+          }
+          
+          // 跳过特殊结构（包含regularConfigs和kubernetesSubGroups的角色分组）
+          if (Array.isArray(result[key]) && result[key].length === 1 && result[key][0].hasKubernetesConfig) {
+            return;
+          }
+          
           if (!Array.isArray(result[key]) && (!result[key].items || !Array.isArray(result[key].items))) {
             console.error(`Invalid structure for group ${key}, resetting to empty array`);
             result[key] = [];
@@ -1353,14 +1700,28 @@ export default {
       
       // 执行与保存相同的逻辑
       try {
-        // 1. 获取所有配置组表单实例
-        const formRefs = Object.keys(this.templateData)
+        // 1. 获取所有常规配置组表单实例
+        const normalFormRefs = Object.keys(this.nonKubernetesGroups)
             .map(groupName => this.$refs[`template_${groupName}`]?.[0])
             .filter(Boolean);
 
-        // 2. 并行验证所有表单
+        // 2. 获取所有Kubernetes配置组表单实例
+        const kubernetesFormRefs = [];
+        Object.entries(this.kubernetesGroups).forEach(([groupName, group]) => {
+          Object.keys(group.subGroups).forEach(subGroupName => {
+            const ref = this.$refs[`template_${groupName}_${subGroupName}`]?.[0];
+            if (ref) {
+              kubernetesFormRefs.push(ref);
+            }
+          });
+        });
+        
+        // 3. 合并所有表单引用
+        const allFormRefs = [...normalFormRefs, ...kubernetesFormRefs];
+
+        // 4. 并行验证所有表单
         Promise.all(
-            formRefs.map(form =>
+            allFormRefs.map(form =>
                 new Promise((resolve, reject) => {
                   form.form.validateFields()
                       .then(values => resolve(values))
@@ -1368,16 +1729,31 @@ export default {
                 })
             )
         ).then(() => {
-          // 3. 合并所有配置数据
-          const mergedValues = formRefs.reduce((acc, form) => {
+          // 5. 合并所有配置数据
+          const mergedValues = allFormRefs.reduce((acc, form) => {
             return { ...acc, ...form.form.getFieldsValue() };
           }, {});
 
-          // 4. 转换数据结构
-          const param = _.cloneDeep(this.templateData);
-          const allConfigItems = Object.values(param).flat(); // 转换为扁平化数组
+          // 6. 准备所有配置项
+          const allConfigItems = [];
+          
+          // 添加非kubernetes配置
+          Object.values(this.nonKubernetesGroups).forEach(group => {
+            if (Array.isArray(group)) {
+              allConfigItems.push(...group);
+            } else if (group.items && Array.isArray(group.items)) {
+              allConfigItems.push(...group.items);
+            }
+          });
+          
+          // 添加kubernetes配置
+          Object.values(this.kubernetesGroups).forEach(group => {
+            Object.values(group.subGroups).forEach(configList => {
+              allConfigItems.push(...configList);
+            });
+          });
 
-          // 5. 更新配置项值
+          // 7. 更新配置项值
           Object.entries(mergedValues).forEach(([name, value]) => {
             const targetItem = allConfigItems.find(item => item.name === name);
             if (targetItem) {
@@ -1385,22 +1761,22 @@ export default {
             }
           });
 
-          // 6. 处理配置项名称
+          // 8. 处理配置项名称
           const processedItems = allConfigItems.map(item => ({
             ...item,
             name: item.name.replaceAll("!", ".")
           }));
 
-          // 7. 过滤不需要的配置项
+          // 9. 过滤不需要的配置项
           const filterParam = processedItems.filter(
               item => !(!item.required && item.hidden)
           );
 
-          // 8. 获取当前用户信息
+          // 10. 获取当前用户信息
           const userStr = localStorage.getItem(process.env.VUE_APP_USER_KEY);
           const currentUser = userStr ? JSON.parse(userStr) : {};
 
-          // 9. 构建保存参数
+          // 11. 构建保存参数
           const saveParam = {
             clusterId: this.clusterId,
             serviceName: this.serviceName,
@@ -1411,7 +1787,7 @@ export default {
             username: currentUser.username
           };
 
-          // 10. 提交保存
+          // 12. 提交保存
           this.$axiosPost(global.API.saveServiceConfig, saveParam).then(res => {
             if (res.code === 200) {
               this.$message.success("恢复成功");
@@ -1446,6 +1822,82 @@ export default {
     loadData() {
       console.log('ServiceConfig loadData 被调用，加载配置参数数据');
       return this.getServiceRoleType();
+    },
+    formatSubGroupName(subGroupName) {
+      // 处理 kubernetes.config.XXX 格式的名称
+      if (subGroupName && subGroupName.startsWith('kubernetes.config.')) {
+        // 提取最后一个部分并格式化
+        const parts = subGroupName.split('.');
+        const lastPart = parts[parts.length - 1];
+        
+        // 定义行内样式 - 加粗中文文本，英文使用较小字体和浅色
+        const mainTextStyle = 'font-weight: bold; color: #000000; font-size: 14px;';
+        const smallTextStyle = 'font-size: 12px; color: #999999; font-weight: normal; margin-left: 4px;';
+        
+        // 格式化英文显示：将驼峰式转换为空格分隔，首字母大写
+        const formatEnglishText = (text) => {
+          return text
+            .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
+            .replace(/^./, match => match.toUpperCase()) // 首字母大写
+            .trim(); // 移除前后空格
+        };
+        
+        // 转换为友好名称
+        const nameMapping = {
+          'persistentVolumeClaims': '持久卷声明',
+          'services': '服务',
+          'resources': '资源配置',
+          'pods': '容器组'
+        };
+        
+        if (nameMapping[lastPart]) {
+          return `<span style="${mainTextStyle}">${nameMapping[lastPart]}</span><span style="${smallTextStyle}">(${formatEnglishText(lastPart)})</span>`;
+        }
+        
+        // 将驼峰式或下划线式转换为空格分隔的单词，并首字母大写
+        const formattedName = lastPart
+          .replace(/([A-Z])/g, ' $1') // 在大写字母前添加空格
+          .replace(/[-_]/g, ' ')      // 将连字符和下划线替换为空格
+          .replace(/^\s+/, '')        // 移除开头的空格
+          .split(' ')                 // 分割成单词
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // 首字母大写
+          .join(' ');                 // 重新组合为字符串
+          
+        return `<span style="${mainTextStyle}">${formattedName}</span><span style="${smallTextStyle}">(${formatEnglishText(lastPart)})</span>`;
+      }
+      
+      // 如果没有前缀，检查是否为已知的配置类型
+      if (!subGroupName) return '未知';
+      
+      // 移除前缀（处理可能没有前缀的情况）
+      const cleanName = subGroupName.replace('kubernetes.config.', '');
+      
+      // 定义行内样式 - 加粗中文文本
+      const mainTextStyle = 'font-weight: bold; color: #000000; font-size: 14px;';
+      
+      // 转换为友好名称
+      const nameMapping = {
+        'persistentVolumeClaims': '持久卷声明',
+        'services': '服务',
+        'resources': '资源配置',
+        'pods': '容器组'
+      };
+      
+      return `<span style="${mainTextStyle}">${nameMapping[cleanName] || cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>`;
+    },
+    // 更新activeKubernetesTabs, 确保所有角色组都有活动的Tab
+    updateActiveKubernetesTabs() {
+      const kubernetesGroups = this.kubernetesGroups || {};
+      
+      Object.entries(kubernetesGroups).forEach(([groupName, group]) => {
+        const role = group.role;
+        const subGroups = Object.keys(group.subGroups || {});
+        
+        // 如果角色没有活动的Tab，则设置第一个Tab为活动
+        if (!this.activeKubernetesTabs[role] && subGroups.length > 0) {
+          this.$set(this.activeKubernetesTabs, role, subGroups[0]);
+        }
+      });
     },
   },
   created() {
@@ -1595,6 +2047,71 @@ export default {
   &:hover {
     color: rgba(0, 0, 0, 0.65);
   }
+}
+
+/* Kubernetes配置区域样式 */
+.kubernetes-section {
+  background-color: #f9fafc;
+  border-radius: 8px;
+  border: 1px solid #e8eaf1;
+  margin-bottom: 24px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.kubernetes-tabs-header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1890ff;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8eaf1;
+  display: flex;
+  align-items: center;
+}
+
+.kubernetes-tabs-header::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #1890ff;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+/* 标签页样式优化 */
+/deep/ .ant-tabs-nav .ant-tabs-tab {
+  padding: 12px 16px;
+  transition: all 0.3s;
+}
+
+/deep/ .ant-tabs-nav .ant-tabs-tab-active {
+  background-color: #e6f7ff;
+  border-radius: 4px 4px 0 0;
+}
+
+/* 美化端口映射配置区域 */
+/deep/ .ant-form-item-label label[title="Kubernetes NodePort端口映射"] {
+  font-weight: bold;
+  color: #1890ff;
+  font-size: 14px;
+}
+
+/deep/ .ant-form-item-children input[placeholder*="containerPort"] {
+  border-color: #1890ff;
+  border-radius: 4px;
+}
+
+/* 添加端口映射按钮美化 */
+/deep/ .ant-btn-dashed.ant-btn-sm {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+/deep/ .ant-btn-dashed.ant-btn-sm:hover {
+  border-color: #40a9ff;
+  color: #40a9ff;
 }
 
 /* 对比模式表头 */
@@ -2032,5 +2549,75 @@ export default {
   line-height: 1.5;
   text-align: center;
   margin: 8px 0;
+}
+
+/* Kubernetes配置相关样式 */
+.kubernetes-config-panel {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.kubernetes-tabs-header {
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.kubernetes-tabs {
+  margin-top: 16px;
+}
+
+.kubernetes-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.kubernetes-tabs .ant-tabs-tab {
+  padding: 8px 16px;
+}
+
+.kubernetes-section {
+  margin-top: 20px;
+  border-top: 1px solid #e8e8e8;
+  padding-top: 15px;
+}
+
+.kubernetes-tabs-header {
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #1890ff;
+}
+
+.kubernetes-tabs {
+  margin-bottom: 15px;
+}
+
+.config-panel {
+  margin-bottom: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 10px 15px;
+  background-color: #f9f9f9;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-content {
+  padding: 15px;
+}
+
+.toggle-icon {
+  font-size: 12px;
 }
 </style> 

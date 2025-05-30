@@ -20,9 +20,15 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.*;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONException;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
@@ -34,9 +40,11 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.CommonUtils;
-import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.api.utils.ConfigGroupSorter;
+import com.datasophon.api.utils.CommonUtils;
+import com.datasophon.api.utils.ProcessUtils;
+import com.datasophon.common.Constants;
 import com.datasophon.common.model.*;
 import com.datasophon.common.utils.CollectionUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -60,7 +68,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.CacheOperateUtils.putRemoteServiceConfigMap;
-import static com.datasophon.api.utils.ProcessUtils.getDepMode;
 import static com.datasophon.common.Constants.*;
 
 @Service("serviceInstallService")
@@ -108,7 +115,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param clusterId 集群ID
      */
     public static void processConfigList(List<ServiceConfig> list, Integer clusterId) {
-        if (Constants.K8S_MODE.equals(getDepMode(clusterId))) {
+        if (Constants.K8S_MODE.equals(ProcessUtils.getDepMode(clusterId))) {
             for (ServiceConfig config : list) {
                 if (Constants.K8S_MODE.toLowerCase().equals(config.getConfigType())) {
                     config.setHidden(false);
@@ -131,9 +138,9 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         if (Objects.nonNull(serviceInstance)) {
             list = listServiceConfigByServiceInstance(serviceInstance);
         } else {
-            FrameServiceEntity frameService = this.frameService.getServiceByFrameCodeAndServiceName(
+            FrameServiceEntity frameServiceEntity = this.frameService.getServiceByFrameCodeAndServiceName(
                     clusterInfo.getClusterFrame(), serviceName);
-            String serviceConfig = frameService.getServiceConfig();
+            String serviceConfig = frameServiceEntity.getServiceConfig();
             serviceConfig = PlaceholderUtils.replacePlaceholders(
                     serviceConfig, globalVariables, Constants.REGEX_VARIABLE);
 
@@ -146,6 +153,24 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.getConfig(clusterId, list);
         }
+
+        // Pre-process the list to append role to configGroup for role-specific
+        // Kubernetes configs
+        if (list != null) { // Ensure list is not null before processing
+            for (ServiceConfig config : list) {
+                String configGroup = config.getConfigGroup();
+                String configTargetRoles = config.getConfigTargetRoles();
+                if (configGroup != null && configGroup.startsWith("kubernetes.config.") &&
+                        StrUtil.isNotBlank(configTargetRoles) && !Constants.GENERAL.equals(configTargetRoles)) {
+
+                    String suffix = "." + configTargetRoles;
+                    if (!configGroup.endsWith(suffix)) {
+                        config.setConfigGroup(configGroup + suffix);
+                    }
+                }
+            }
+        }
+
         Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName,
                 list);
         return Result.success(roleToConfigMap);
@@ -168,12 +193,31 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.handlerConfig(clusterId, list);
         }
+
+        // 获取角色名称，用于Kubernetes配置项前缀
+        String roleName = null;
+        if (roleGroupId != null) {
+            ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getById(roleGroupId);
+            if (roleGroup != null) {
+                roleName = roleGroup.getRoleGroupName();
+            }
+        }
+
         // add variable
         FrameServiceEntity frameServiceEntity = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
 
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
+
+            // 处理Kubernetes配置项，添加角色前缀
+            if (roleName != null && serviceConfig.getConfigGroup() != null &&
+                    serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
+                configName = ConfigGroupSorter.addRolePrefixForKubernetesConfig(
+                        roleName, configName, serviceConfig.getConfigGroup());
+                serviceConfig.setName(configName);
+            }
+
             String variableName = "${" + configName + "}";
             String variableValue = String.valueOf(serviceConfig.getValue());
             // add to global variable
@@ -195,37 +239,38 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
-        
+
         boolean versionCreated = false; // 标记是否创建了新版本
-        
+
         if (Objects.isNull(serviceInstanceEntity)) {
             serviceInstanceEntity = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
             ClusterServiceInstanceRoleGroup clusterServiceInstanceRoleGroup = saveServiceInstanceRoleGroup(clusterId,
                     serviceName, serviceInstanceEntity);
-            
+
             // 如果描述为空，使用默认描述
             String finalDescription = description;
             if (StringUtils.isBlank(finalDescription)) {
                 finalDescription = "初始配置";
             }
-            
+
             boolean initialSaveResult = saveServiceRoleGroupConfig(
-                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, finalDescription, userId, username);
+                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroup, finalDescription,
+                    userId, username);
             CacheUtils.put(
                     "UseRoleGroup_" + serviceInstanceEntity.getId(),
                     clusterServiceInstanceRoleGroup.getId());
-            
+
             versionCreated = initialSaveResult; // 只有当成功保存到数据库时才标记为创建了新版本
         } else {
             Set<String> configUpdateRoleSet = new HashSet<>();
             List<ServiceConfig> originalConfigs = listServiceConfigByServiceInstance(serviceInstanceEntity);
-            
+
             // 如果描述为空，生成修改内容的描述
             String finalDescription = description;
             if (StringUtils.isBlank(finalDescription)) {
                 finalDescription = generateChangeDescription(originalConfigs, list);
             }
-            
+
             configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
             ClusterServiceRoleGroupConfig roleGroupConfig;
             if (Objects.isNull(roleGroupId)) {
@@ -268,18 +313,19 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 newRoleGroupConfig.setUpdateTime(new Date());
                 newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
                 buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
-                
+
                 // 保存配置并检查是否成功插入数据库
                 boolean saveResult = groupConfigService.save(newRoleGroupConfig);
-                
+
                 // 只有当数据库操作确实成功时才标记为创建了新版本
                 if (saveResult) {
                     // 保存配置版本信息，包含用户信息
-                    saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId, username, finalDescription);
+                    saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId,
+                            username, finalDescription);
                     versionCreated = true; // 有配置更新且成功保存到数据库时创建了新版本
                 } else {
-                    logger.warn("Configuration was not updated in database for service: {}, roleGroupId: {}", 
-                               serviceName, newRoleGroupConfig.getRoleGroupId());
+                    logger.warn("Configuration was not updated in database for service: {}, roleGroupId: {}",
+                            serviceName, newRoleGroupConfig.getRoleGroupId());
                 }
             }
             // update service instance
@@ -287,13 +333,13 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
             serviceInstanceService.updateById(serviceInstanceEntity);
         }
-        
+
         // 返回是否创建了新版本的信息
         return Result.success().put("versionCreated", versionCreated);
     }
 
     private void buildConfigFileMapAlertManager(String serviceName, ClusterInfoEntity clusterInfo,
-                                                HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
+            HashMap<String, ServiceConfig> map, HashMap<Generators, List<ServiceConfig>> configFileMap) {
 
     }
 
@@ -419,7 +465,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         response.setHeader("Content-Disposition", "attachment;filename=" + packageName);
 
         try (FileInputStream inputStream = new FileInputStream(file);
-             OutputStream out = response.getOutputStream()) {
+                OutputStream out = response.getOutputStream()) {
             byte[] buffer = new byte[1024];
             int length;
             while ((length = inputStream.read(buffer)) != -1) {
@@ -554,14 +600,15 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         buildConfig(list, configFileMap, roleGroupConfig, description);
         roleGroupConfig.setConfigVersion(1);
         boolean saveResult = groupConfigService.save(roleGroupConfig);
-        
+
         if (saveResult) {
             // 保存配置版本信息，包含用户信息
-            saveConfigVersionInfo(roleGroupConfig, "GROUP_CONFIG", roleGroupConfig.getId(), userId, username, description);
+            saveConfigVersionInfo(roleGroupConfig, "GROUP_CONFIG", roleGroupConfig.getId(), userId, username,
+                    description);
             return true;
         } else {
-            logger.warn("Failed to save initial configuration for service: {}, roleGroupId: {}", 
-                      serviceName, roleGroupConfig.getRoleGroupId());
+            logger.warn("Failed to save initial configuration for service: {}, roleGroupId: {}",
+                    serviceName, roleGroupConfig.getRoleGroupId());
             return false;
         }
     }
@@ -577,12 +624,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         clusterServiceInstanceRoleGroup.setServiceName(serviceName);
         clusterServiceInstanceRoleGroup.setRoleGroupType("default");
         boolean saveResult = roleGroupService.save(clusterServiceInstanceRoleGroup);
-        
+
         if (!saveResult) {
-            logger.warn("Failed to save role group for service: {}, serviceInstanceId: {}", 
-                       serviceName, serviceInstanceEntity.getId());
+            logger.warn("Failed to save role group for service: {}, serviceInstanceId: {}",
+                    serviceName, serviceInstanceEntity.getId());
         }
-        
+
         return clusterServiceInstanceRoleGroup;
     }
 
@@ -746,7 +793,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         roleGroupConfig.setConfigFileJsonMd5(SecureUtil.md5(JSON.toJSONString(configFileMap)));
 
         // 同步保存配置版本详情
-        saveConfigVersionInfo(roleGroupConfig, "ROLE_GROUP", roleGroupConfig.getRoleGroupId(), null, "system", description);
+        saveConfigVersionInfo(roleGroupConfig, "ROLE_GROUP", roleGroupConfig.getRoleGroupId(), null, "system",
+                description);
     }
 
     /**
@@ -758,7 +806,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * @param userId          用户ID
      * @param username        用户名
      */
-    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId, Integer userId, String username, String description) {
+    private void saveConfigVersionInfo(ClusterServiceRoleGroupConfig roleGroupConfig, String refType, Integer refId,
+            Integer userId, String username, String description) {
         ConfigVersionInfoEntity configVersionInfo = new ConfigVersionInfoEntity();
         // 获取当前最大版本号并加1
         Integer currentMaxVersion = configVersionInfoService.getMaxVersion(refType, refId);
@@ -840,30 +889,30 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
      * 生成修改内容的描述
      * 
      * @param originalConfigs 原始配置
-     * @param newConfigs 新配置
+     * @param newConfigs      新配置
      * @return 修改内容的描述
      */
     private String generateChangeDescription(List<ServiceConfig> originalConfigs, List<ServiceConfig> newConfigs) {
         // 创建原始配置的Map，便于查找
         Map<String, ServiceConfig> originalConfigMap = originalConfigs.stream()
                 .collect(Collectors.toMap(ServiceConfig::getName, config -> config, (v1, v2) -> v1));
-        
+
         // 创建新配置的Map，便于查找
         Map<String, ServiceConfig> newConfigMap = newConfigs.stream()
                 .collect(Collectors.toMap(ServiceConfig::getName, config -> config, (v1, v2) -> v1));
-        
+
         // 收集修改的配置项
         List<String> changedConfigs = new ArrayList<>();
-        
+
         // 检查修改的配置项
         for (ServiceConfig newConfig : newConfigs) {
             String configName = newConfig.getName();
             Object newValue = newConfig.getValue();
-            
+
             if (originalConfigMap.containsKey(configName)) {
                 ServiceConfig originalConfig = originalConfigMap.get(configName);
                 Object originalValue = originalConfig.getValue();
-                
+
                 // 如果值不相等，添加到修改列表
                 if (!Objects.equals(newValue, originalValue)) {
                     String label = StringUtils.isNotBlank(newConfig.getLabel()) ? newConfig.getLabel() : configName;
@@ -875,21 +924,22 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 changedConfigs.add(label);
             }
         }
-        
+
         // 检查删除的配置项
         for (ServiceConfig originalConfig : originalConfigs) {
             String configName = originalConfig.getName();
             if (!newConfigMap.containsKey(configName)) {
-                String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel() : configName;
+                String label = StringUtils.isNotBlank(originalConfig.getLabel()) ? originalConfig.getLabel()
+                        : configName;
                 changedConfigs.add(label);
             }
         }
-        
+
         // 如果没有修改，返回默认描述
         if (changedConfigs.isEmpty()) {
             return "配置更新";
         }
-        
+
         // 限制最多显示5个修改项
         int maxItems = Math.min(changedConfigs.size(), 5);
         StringBuilder sb = new StringBuilder("修改了 ");
@@ -899,12 +949,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 sb.append(", ");
             }
         }
-        
+
         // 如果有更多修改项，添加省略号
         if (changedConfigs.size() > maxItems) {
             sb.append(" 等");
         }
-        
+
         return sb.toString();
     }
 
