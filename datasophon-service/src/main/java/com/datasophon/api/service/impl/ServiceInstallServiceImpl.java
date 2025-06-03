@@ -200,15 +200,6 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceRoleHandler.handlerConfig(clusterId, list);
         }
 
-        // 获取角色名称，用于Kubernetes配置项前缀
-        String roleName = null;
-        if (roleGroupId != null) {
-            ClusterServiceInstanceRoleGroup roleGroup = roleGroupService.getById(roleGroupId);
-            if (roleGroup != null) {
-                roleName = roleGroup.getRoleGroupName();
-            }
-        }
-
         // add variable
         FrameServiceEntity frameServiceEntity = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
@@ -217,11 +208,18 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             String configName = serviceConfig.getName();
 
             // 处理Kubernetes配置项，添加角色前缀
-            if (roleName != null && serviceConfig.getConfigGroup() != null &&
-                    serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
-                configName = ConfigGroupSorter.addRolePrefixForKubernetesConfig(
-                        roleName, configName, serviceConfig.getConfigGroup());
-                serviceConfig.setName(configName);
+            if (serviceConfig.getConfigGroup() != null
+                    && serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
+                // 从配置组名称中提取角色名
+                String extractedRoleName = getKubernetesRole(serviceConfig.getConfigGroup());
+                if (extractedRoleName != null) {
+                    // 检查是否已经添加了前缀，只有未添加时才添加
+                    if (!configName.startsWith(extractedRoleName + "_")) {
+                        configName = ConfigGroupSorter.addRolePrefixForKubernetesConfig(
+                                extractedRoleName, configName, serviceConfig.getConfigGroup());
+                        serviceConfig.setName(configName);
+                    }
+                }
             }
 
             String variableName = "${" + configName + "}";
