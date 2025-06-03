@@ -62,10 +62,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import static com.datasophon.common.Constants.GENERAL;
 
 @Service("clusterServiceInstanceService")
 @Transactional
@@ -218,136 +222,208 @@ public class ClusterServiceInstanceServiceImpl
         return Result.success(list);
     }
 
+    /**
+     * 判断是否为Kubernetes配置
+     */
+    private boolean isKubernetesConfig(ServiceConfig config) {
+        return config != null && config.getConfigGroup() != null &&
+                config.getConfigGroup().startsWith("kubernetes.config.");
+    }
+
+    /**
+     * 从Kubernetes配置名称中提取基础名称（去除角色前缀）
+     * 例如：从 "ZkServer_默认_storageClasses" 提取出 "storageClasses"
+     */
+    private String extractK8sBaseConfigName(String fullName) {
+        if (fullName == null)
+            return null;
+
+        // 查找最后一个下划线
+        int lastUnderscoreIndex = fullName.lastIndexOf("_");
+        if (lastUnderscoreIndex > 0) {
+            return fullName.substring(lastUnderscoreIndex + 1);
+        }
+        return fullName;
+    }
+
+    /**
+     * 从Kubernetes配置组获取角色名称
+     */
+    private String getKubernetesRole(String configGroup) {
+        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+            return null;
+        }
+
+        String[] parts = configGroup.split("\\.");
+        if (parts.length >= 4) {
+            return parts[3]; // 返回角色名称，如"ZkServer"
+        }
+        return null;
+    }
+
+    /**
+     * 从Kubernetes配置组获取子组名称
+     */
+    private String getKubernetesSubgroup(String configGroup) {
+        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
+            return null;
+        }
+
+        String[] parts = configGroup.split("\\.");
+        if (parts.length >= 3) {
+            return parts[2]; // 返回子组名称，如"persistentVolumeClaims"
+        }
+        return null;
+    }
+
     @Override
     public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences) {
         List<ClusterServiceRoleGroupConfig> list = roleGroupConfigService
                 .list(new QueryWrapper<ClusterServiceRoleGroupConfig>()
                         .eq(Constants.ROLE_GROUP_ID, roleGroupId)
                         .orderByDesc(Constants.CONFIG_VERSION).last("limit 2"));
-        
+
         // 如果没有足够的版本进行比较，返回空结果
         if (list == null || list.size() < 2) {
             return Result.success(new HashMap<>());
         }
-        
+
         // 获取配置版本
         ClusterServiceRoleGroupConfig configA = list.get(0); // 新版本
         ClusterServiceRoleGroupConfig configB = list.get(1); // 旧版本
-        
+
         // 解析配置JSON
         String configJsonA = configA.getConfigJson();
         String configJsonB = configB.getConfigJson();
         List<ServiceConfig> configListA = JSONArray.parseArray(configJsonA, ServiceConfig.class);
         List<ServiceConfig> configListB = JSONArray.parseArray(configJsonB, ServiceConfig.class);
-        
-        // 创建配置项映射，用于快速查找
-        Map<String, Object> configMapB = new HashMap<>();
-        for (ServiceConfig config : configListB) {
-            configMapB.put(config.getName(), config.getValue());
-        }
-        
-        // 处理configA中的配置项
-        List<ServiceConfig> serviceConfigList = new ArrayList<>();
-        for (ServiceConfig configA_item : configListA) {
-            // 设置服务名称，用于排序
-            configA_item.setServiceName(configA.getServiceName());
-            
-            // 检查是否有差异
-            Object valueB = configMapB.get(configA_item.getName());
-            boolean isDifferent = !Objects.equals(configA_item.getValue(), valueB);
-            
-            // 根据showOnlyDifferences参数决定是否只添加有差异的配置项
-            if (!Boolean.TRUE.equals(showOnlyDifferences) || isDifferent) {
-                // 添加差异标记
-                ServiceConfig configToAdd = configA_item;
-                configToAdd.setConfigType(isDifferent ? "DIFFERENT" : "SAME"); // 使用configType字段标记差异状态
-                serviceConfigList.add(configToAdd);
+
+        // 创建配置项映射，用于快速查找（使用规范化的Kubernetes配置名称）
+        Map<String, ServiceConfig> configMapA = new HashMap<>();
+        Map<String, ServiceConfig> configMapB = new HashMap<>();
+
+        // 处理configA
+        for (ServiceConfig config : configListA) {
+            if (isKubernetesConfig(config)) {
+                // 对于Kubernetes配置，使用组合键（role.subgroup.baseConfigName）
+                String configGroup = config.getConfigGroup();
+                String role = getKubernetesRole(configGroup);
+                String subgroup = getKubernetesSubgroup(configGroup);
+
+                if (role != null && subgroup != null) {
+                    String baseConfigName = extractK8sBaseConfigName(config.getName());
+                    String keyName = role + "." + subgroup + "." + baseConfigName;
+                    config.setConfigCategory("k8s"); // 标记为Kubernetes配置
+                    configMapA.put(keyName, config);
+                } else {
+                    configMapA.put(config.getName(), config);
+                }
+            } else {
+                configMapA.put(config.getName(), config);
             }
         }
-        
-        // 处理configB中有但configA中没有的项（这些项本身就是差异项）
-        for (ServiceConfig configB_item : configListB) {
-            String name = configB_item.getName();
-            // 如果configA中已经包含该项，则跳过
-            if (configListA.stream().anyMatch(c -> c.getName().equals(name))) {
+
+        // 处理configB
+        for (ServiceConfig config : configListB) {
+            if (isKubernetesConfig(config)) {
+                String configGroup = config.getConfigGroup();
+                String role = getKubernetesRole(configGroup);
+                String subgroup = getKubernetesSubgroup(configGroup);
+
+                if (role != null && subgroup != null) {
+                    String baseConfigName = extractK8sBaseConfigName(config.getName());
+                    String keyName = role + "." + subgroup + "." + baseConfigName;
+                    config.setConfigCategory("k8s"); // 标记为Kubernetes配置
+                    configMapB.put(keyName, config);
+                } else {
+                    configMapB.put(config.getName(), config);
+                }
+            } else {
+                configMapB.put(config.getName(), config);
+            }
+        }
+
+        // 合并所有配置项键
+        Set<String> allConfigKeys = new HashSet<>();
+        allConfigKeys.addAll(configMapA.keySet());
+        allConfigKeys.addAll(configMapB.keySet());
+
+        // 结果映射：分组名 -> 配置项列表
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+
+        // 处理每个配置项
+        for (String key : allConfigKeys) {
+            ServiceConfig configA_item = configMapA.get(key);
+            ServiceConfig configB_item = configMapB.get(key);
+
+            // 检查是否有差异
+            boolean isDifferent = configA_item == null || configB_item == null ||
+                    !Objects.equals(configA_item.getValue(), configB_item.getValue());
+
+            // 如果只显示差异项且没有差异，则跳过
+            if (Boolean.TRUE.equals(showOnlyDifferences) && !isDifferent) {
                 continue;
             }
-            
-            // 这些项始终是差异项，无论showOnlyDifferences如何都应该添加
-            ServiceConfig serviceConfig = new ServiceConfig();
-            serviceConfig.setName(name);
-            serviceConfig.setValue(null); // configA中不存在该项
-            
-            // 复制configB_item中的其他属性
-            serviceConfig.setLabel(configB_item.getLabel());
-            serviceConfig.setDescription(configB_item.getDescription());
-            serviceConfig.setRequired(configB_item.isRequired());
-            serviceConfig.setType(configB_item.getType());
-            serviceConfig.setConfigurableInWizard(configB_item.isConfigurableInWizard());
-            serviceConfig.setDefaultValue(configB_item.getDefaultValue());
-            serviceConfig.setMinValue(configB_item.getMinValue());
-            serviceConfig.setMaxValue(configB_item.getMaxValue());
-            serviceConfig.setUnit(configB_item.getUnit());
-            serviceConfig.setHidden(configB_item.isHidden());
-            serviceConfig.setSelectValue(configB_item.getSelectValue());
-            serviceConfig.setConfigType("DIFFERENT"); // 标记为差异项
-            serviceConfig.setConfigWithKerberos(configB_item.isConfigWithKerberos());
-            serviceConfig.setConfigWithRack(configB_item.isConfigWithRack());
-            serviceConfig.setConfigWithHA(configB_item.isConfigWithHA());
-            serviceConfig.setSeparator(configB_item.getSeparator());
-            serviceConfig.setOpen(configB_item.getOpen());
-            serviceConfig.setClose(configB_item.getClose());
-            serviceConfig.setConfigTargetRoles(configB_item.getConfigTargetRoles());
-            serviceConfig.setConfigCategory(configB_item.getConfigCategory());
-            serviceConfig.setConfigGroup(configB_item.getConfigGroup());
-            serviceConfig.setConfigLevel(configB_item.getConfigLevel());
-            serviceConfig.setTemplateName(configB_item.getTemplateName());
-            serviceConfig.setTemplateContent(configB_item.getTemplateContent());
-            serviceConfig.setDisplayName(configB_item.getDisplayName());
-            serviceConfig.setHeightMultiple(configB_item.getHeightMultiple());
-            
-            // 设置服务名称，用于排序
-            serviceConfig.setServiceName(configA.getServiceName());
-            
-            // 将差异信息和版本值添加到serviceConfigList
-            serviceConfigList.add(serviceConfig);
-        }
-        
-        // 如果没有配置项，返回空结果
-        if (serviceConfigList.isEmpty()) {
-            return Result.success(new HashMap<>());
-        }
-        
-        // 使用公共分组逻辑进行分组
-        String serviceName = configA.getServiceName();
-        Map<String, List<ServiceConfig>> groupedConfigs = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName, serviceConfigList);
-        
-        // 将分组后的数据转换为前端需要的格式
-        Map<String, List<Map<String, Object>>> result = new HashMap<>();
-        for (Map.Entry<String, List<ServiceConfig>> entry : groupedConfigs.entrySet()) {
-            String groupName = entry.getKey();
-            List<ServiceConfig> configs = entry.getValue();
-            
-            List<Map<String, Object>> configItems = new ArrayList<>();
-            for (ServiceConfig config : configs) {
-                Map<String, Object> item = new HashMap<>();
-                item.put("name", config.getName());
-                
-                // 设置是否有差异
-                boolean isDifferent = "DIFFERENT".equals(config.getConfigType());
-                item.put("isDifferent", isDifferent);
-                
-                // 添加版本值
-                Object valueB = configMapB.get(config.getName());
-                item.put(String.valueOf(configA.getConfigVersion()), config.getValue());
-                item.put(String.valueOf(configB.getConfigVersion()), valueB);
-                
-                configItems.add(item);
+
+            // 确定此配置项的分组
+            String groupName;
+            boolean isK8sConfig = false;
+
+            if (configA_item != null && "k8s".equals(configA_item.getConfigCategory())) {
+                isK8sConfig = true;
+                // 从组合键中提取角色和子组
+                String[] parts = key.split("\\.");
+                if (parts.length >= 3) {
+                    String role = parts[0];
+                    String subgroup = parts[1];
+                    groupName = "kubernetes.config." + subgroup + "." + role;
+                } else {
+                    // 如果键格式异常，使用configGroup
+                    groupName = configA_item.getConfigGroup();
+                }
+            } else if (configB_item != null && "k8s".equals(configB_item.getConfigCategory())) {
+                isK8sConfig = true;
+                // 从组合键中提取角色和子组
+                String[] parts = key.split("\\.");
+                if (parts.length >= 3) {
+                    String role = parts[0];
+                    String subgroup = parts[1];
+                    groupName = "kubernetes.config." + subgroup + "." + role;
+                } else {
+                    // 如果键格式异常，使用configGroup
+                    groupName = configB_item.getConfigGroup();
+                }
+            } else {
+                // 普通配置项，使用configTargetRoles或GENERAL作为分组
+                ServiceConfig config = configA_item != null ? configA_item : configB_item;
+                groupName = config.getConfigTargetRoles() != null ? config.getConfigTargetRoles() : Constants.GENERAL;
             }
-            
-            result.put(groupName, configItems);
+
+            // 创建对比项
+            Map<String, Object> compareItem = new HashMap<>();
+
+            // 设置名称（对于Kubernetes配置，使用不带前缀的基础名称）
+            if (isK8sConfig) {
+                String baseConfigName = key.substring(key.lastIndexOf('.') + 1);
+                compareItem.put("name", baseConfigName);
+            } else {
+                ServiceConfig config = configA_item != null ? configA_item : configB_item;
+                compareItem.put("name", config.getName());
+            }
+
+            // 添加差异标记
+            compareItem.put("isDifferent", isDifferent);
+
+            // 添加版本值
+            compareItem.put(String.valueOf(configA.getConfigVersion()),
+                    configA_item != null ? configA_item.getValue() : null);
+            compareItem.put(String.valueOf(configB.getConfigVersion()),
+                    configB_item != null ? configB_item.getValue() : null);
+
+            // 添加到对应分组
+            result.computeIfAbsent(groupName, k -> new ArrayList<>()).add(compareItem);
         }
-        
+
         return Result.success(result);
     }
 

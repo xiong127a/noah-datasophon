@@ -250,9 +250,9 @@
           </div>
           <div v-if="['multipleWithKey'].includes(item.type)" class="form-item-container">
             <a-form-item v-for="(child, childIndex) in item.value" style="margin-bottom: 0px" :key="childIndex" :required="item.required" v-bind="childIndex === 0 ? labelCol : formItemLayoutWithOutLabel" :label="childIndex === 0 || item.value.length === 0  ? item.label : ''">
-              <a-row type="flex" style="position: relative; margin-bottom: 16px; align-items: center; justify-content: space-between;">
+              <a-row type="flex" class="port-mapping-row" style="position: relative; margin-bottom: 16px; align-items: center; justify-content: space-between; width: 100%;">
                 <!-- 左侧输入框 -->
-                <a-col :span="9" style="position: relative; z-index: 2;">
+                <a-col :span="10" class="port-input-left" style="display: flex; justify-content: flex-end; padding-right: 20px;">
                   <div v-if="childIndex === 0" class="port-label-container">
                     <div class="port-label-left">
                       <template v-if="item.configType === 'custom'">配置名</template>
@@ -287,20 +287,23 @@
                       ],
                     }
                       ]" :placeholder="item.configType === 'custom' ? '请输入配置名' : (item.name === 'nodePortMappings' ? '容器内部端口' : (item.name === 'clusterPortMappings' ? '集群内部端口' : '请输入键'))" class="container-port-input" />
-                        <!-- 左侧光球 -->
-                        <div v-if="item.configType !== 'custom'" class="port-mapping-orb left-orb" :style="{'--orb-color': item.name === 'nodePortMappings' ? '#1890ff' : '#52c41a'}"></div>
                       </div>
                     </a-tooltip>
                   </a-form-item>
                 </a-col>
                 
-                <!-- 空白间隔列 -->
-                <a-col :span="6" style="position: relative; text-align: center;">
-                  <span v-if="item.configType !== 'custom'" style="font-size: 18px; color: #aaa;">→</span>
+                <!-- 独立的箭头列 -->
+                <a-col :span="4" class="arrow-column">
+                  <div class="enhanced-arrow-container" style="transform: translateX(-60px);">
+                    <div class="enhanced-arrow-line">
+                      <div class="enhanced-flow-effect"></div>
+                    </div>
+                    <div class="enhanced-arrow-head"></div>
+                  </div>
                 </a-col>
                 
                 <!-- 右侧输入框 -->
-                <a-col :span="9" style="position: relative; z-index: 2;">
+                <a-col :span="10" class="port-input-right" style="display: flex; justify-content: flex-start; padding-left: 20px;">
                   <div v-if="childIndex === 0" class="port-label-container">
                     <div class="port-label-right">
                       <template v-if="item.configType === 'custom'">配置值</template>
@@ -309,7 +312,7 @@
                       <template v-else>值</template>
                     </div>
                   </div>
-                  <a-form-item style="width:100%; margin-bottom: 0;">
+                  <a-form-item style="width:100%; margin-bottom: 0; position: relative;">
                     <a-tooltip v-if="item.description" placement="right" overlayClassName="custom-tooltip">
                       <template slot="title">
                         <div class="tooltip-content">
@@ -321,33 +324,74 @@
                         </div>
                       </template>
                       <div style="position: relative; overflow: visible;">
-                      <a-input v-decorator="[
-                      `${item.name+'arrayWithValue'+childIndex}`,
-                      {
-                      validateTrigger: ['change', 'blur'],
-                      initialValue: child.value,
-                      rules: [
-                        {
-                          required: item.required,
-                          whitespace: true,
-                          message: `${item.label}不能为空!`,
-                        },
-                      ],
-                    }
-                      ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name === 'nodePortMappings' ? '节点暴露端口' : (item.name === 'clusterPortMappings' ? '集群端口' : '请输入值'))" class="nodeport-input" />
-                        <!-- 右侧光球 -->
-                        <div v-if="item.configType !== 'custom'" class="port-mapping-orb right-orb" :style="{'--orb-color': item.name === 'nodePortMappings' ? '#1890ff' : '#52c41a'}"></div>
+                        <div style="display: flex; align-items: center; width: 100%;">
+                          <a-input v-decorator="[
+                            `${item.name+'arrayWithValue'+childIndex}`,
+                            {
+                              validateTrigger: ['change', 'blur'],
+                              initialValue: child.value,
+                              rules: [
+                                {
+                                  required: item.required,
+                                  whitespace: true,
+                                  message: `${item.label}不能为空!`,
+                                },
+                              ],
+                            }
+                          ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name === 'nodePortMappings' ? '节点暴露端口' : (item.name === 'clusterPortMappings' ? '集群端口' : '请输入值'))" class="nodeport-input" style="flex: 1;" />
+                          
+                          <!-- 内嵌删除按钮 -->
+                          <a-button 
+                            v-if="item.value.length > 1" 
+                            type="danger" 
+                            shape="circle" 
+                            size="small" 
+                            icon="minus" 
+                            class="inline-delete-button" 
+                            @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')" 
+                          />
+                        </div>
                       </div>
                     </a-tooltip>
+                    
+                    <!-- 没有tooltip时的输入框和按钮 -->
+                    <div v-if="!item.description" style="position: relative; overflow: visible;">
+                      <div style="display: flex; align-items: center; width: 100%;">
+                        <a-input v-decorator="[
+                          `${item.name+'arrayWithValue'+childIndex}`,
+                          {
+                            validateTrigger: ['change', 'blur'],
+                            initialValue: child.value,
+                            rules: [
+                              {
+                                required: item.required,
+                                whitespace: true,
+                                message: `${item.label}不能为空!`,
+                              },
+                            ],
+                          }
+                        ]" :placeholder="item.configType === 'custom' ? '请输入配置值' : (item.name === 'nodePortMappings' ? '节点暴露端口' : (item.name === 'clusterPortMappings' ? '集群端口' : '请输入值'))" class="nodeport-input" style="flex: 1;" />
+                        
+                        <!-- 内嵌删除按钮 -->
+                        <a-button 
+                          v-if="item.value.length > 1" 
+                          type="danger" 
+                          shape="circle" 
+                          size="small" 
+                          icon="minus" 
+                          class="inline-delete-button" 
+                          @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')" 
+                        />
+                      </div>
+                    </div>
                   </a-form-item>
                 </a-col>
-                <span style="position: absolute; right: 0px; z-index: 20" @click="() => reduceMultiple(item.name, childIndex, 'multipleWithKey')">
-                  <svg-icon v-if="item.value.length > 1" icon-class="reduce-icon" class="reduce-icon" />
-                </span>
               </a-row>
             </a-form-item>
+
+            <!-- 添加按钮移回各自部分内 -->
             <a-form-item class="form-multiple-item" :wrapper-col="formItemLayoutWithOutLabel.wrapperCol">
-              <a-button type="link" class="add-field-button" @click="() => addMultiple(item.name, 'multipleWithKey')">
+              <a-button type="link" :class="['add-field-button', item.name === 'nodePortMappings' ? 'add-node-port-btn' : 'add-cluster-port-btn']" @click="() => addMultiple(item.name, 'multipleWithKey')">
                 <span class="custom-plus-icon">+</span> 
                 <template v-if="item.configType === 'custom'">添加自定义配置</template>
                 <template v-else-if="item.name === 'nodePortMappings'">添加NodePort端口映射</template>
@@ -355,6 +399,10 @@
                 <template v-else>添加键值对</template>
               </a-button>
             </a-form-item>
+
+            <!-- 只在NodePort映射的末尾添加分隔线 -->
+            <div v-if="item.name === 'nodePortMappings'" class="separator-line"></div>
+            
             <div class="filed-name-tips">
               <span class="filed-name-tips-word" :title="item.name">{{item.name.replaceAll("!", ".")}}</span>
             </div>
@@ -695,6 +743,20 @@ export default {
       cursor: pointer;
     }
     
+    .delete-icon-wrapper {
+      position: absolute;
+      right: -44px; /* 调整删除图标位置 */
+      top: 50%;
+      transform: translateY(-50%);
+      height: 32px;
+      width: 30px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    
     .form-multiple-item {
       margin-bottom: 8px !important;
       margin-top: -4px;
@@ -895,6 +957,7 @@ export default {
 }
 
 /* 光球动画相关样式 */
+/* 
 .port-mapping-orb {
   position: absolute;
   width: 5px;
@@ -958,11 +1021,14 @@ export default {
     opacity: 0;
   }
 }
+*/
 
 /* 全局动画控制类 */
+/*
 .orb-animation-active .port-mapping-orb {
   animation-play-state: running;
 }
+*/
 
 /* 清理其他箭头相关样式，但保留我们需要的样式 */
 .port-arrow-wrapper,
@@ -981,6 +1047,313 @@ export default {
 .arrow-absolute-head,
 .arrow-absolute-animation {
   display: none;
+}
+
+.port-mapping-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  background-color: transparent;
+  transition: all 0.3s;
+  border-radius: 4px;
+}
+
+.port-mapping-arrow:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.port-arrow-icon {
+  color: #8c8c8c;
+  font-size: 16px;
+  animation: arrow-pulse 2s infinite;
+}
+
+@keyframes arrow-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+}
+
+// 删除旧的箭头样式，添加新的细长箭头和流动动画
+
+.port-mapping-arrow-container {
+  width: 80%;
+  height: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.port-mapping-arrow-line {
+  height: 2px;
+  width: 100%;
+  background-color: rgba(24, 144, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+}
+
+.arrow-flow-effect {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 20px;
+  background: linear-gradient(to right, rgba(24, 144, 255, 0), rgba(24, 144, 255, 0.8), rgba(24, 144, 255, 0));
+  animation: flow-animation 1.5s infinite linear;
+}
+
+.port-mapping-arrow-head {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid rgba(24, 144, 255, 0.5);
+  margin-left: 0;
+}
+
+@keyframes flow-animation {
+  0% {
+    left: -20px;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+// 修复表单项对齐问题
+.form-item-container .ant-form-item {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.form-item-container .ant-row {
+  width: 100%;
+}
+
+// 确保所有表单项高度一致
+.form-item-container input.ant-input {
+  height: 32px;
+}
+
+// 添加port-mapping-row的样式
+.port-mapping-row {
+  position: relative;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  width: calc(100% - 40px); /* 给删除图标留出空间 */
+}
+
+.port-input-left, .port-input-right {
+  position: relative;
+  z-index: 2;
+}
+
+.arrow-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0;
+}
+
+.port-label-container {
+  margin-bottom: 5px;
+  padding-left: 10px;
+  height: auto;
+  position: absolute;
+  top: -28px;  /* 增加与输入框的距离 */
+  left: 0;
+}
+
+// 重新添加增强版箭头样式
+.enhanced-arrow-container {
+  width: 100%;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.enhanced-arrow-line {
+  height: 3px;
+  width: 100%;
+  background-color: rgba(24, 144, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  box-shadow: 0 0 3px rgba(24, 144, 255, 0.5);
+  border-radius: 1.5px;
+}
+
+.enhanced-flow-effect {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50px;
+  background: linear-gradient(to right, rgba(24, 144, 255, 0), rgba(24, 144, 255, 1), rgba(24, 144, 255, 0));
+  animation: enhanced-flow-animation 1s infinite linear;
+  box-shadow: 0 0 15px rgba(24, 144, 255, 0.9);
+  filter: blur(0.5px);
+}
+
+.enhanced-arrow-head {
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid rgba(24, 144, 255, 0.8);
+  margin-left: 0;
+  filter: drop-shadow(0 0 4px rgba(24, 144, 255, 0.9));
+}
+
+@keyframes enhanced-flow-animation {
+  0% {
+    left: -50px;
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0.7;
+  }
+}
+
+// 添加内联删除按钮样式
+.inline-delete-button {
+  margin-left: 8px;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 100 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: relative !important;
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+.inline-delete-button:hover {
+  background-color: #ff7875 !important;
+  border-color: #ff7875 !important;
+}
+
+.inline-delete-button i {
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+// 隐藏旧的删除按钮样式
+.delete-button-container, 
+.delete-mapping-btn,
+.delete-btn,
+.delete-icon-absolute,
+.delete-icon-wrapper-container,
+.delete-icon-wrapper,
+.inline-delete-btn {
+  display: none !important;
+}
+
+// 添加虚线分隔符样式
+.separator-line {
+  width: 100%;
+  height: 1px;
+  border-top: 1px dashed #d9d9d9;
+  margin: 16px 0 24px 0;
+}
+
+// 添加端口映射按钮样式
+.add-node-port-btn {
+  color: #52c41a !important;
+  font-weight: 500;
+  border-bottom: 1px dashed #52c41a;
+  margin-bottom: 10px;
+}
+
+.add-node-port-btn .custom-plus-icon {
+  background-color: #52c41a !important;
+  color: #ffffff !important;
+}
+
+.add-node-port-btn:hover {
+  color: #73d13d !important;
+  border-bottom-color: #73d13d;
+}
+
+.add-node-port-btn:hover .custom-plus-icon {
+  background-color: #73d13d !important;
+}
+
+.add-cluster-port-btn {
+  color: #52c41a !important;
+  font-weight: 500;
+  border-bottom: 1px dashed #52c41a;
+  margin-bottom: 10px;
+}
+
+.add-cluster-port-btn .custom-plus-icon {
+  background-color: #52c41a !important;
+  color: #ffffff !important;
+}
+
+.add-cluster-port-btn:hover {
+  color: #73d13d !important;
+  border-bottom-color: #73d13d;
+}
+
+.add-cluster-port-btn:hover .custom-plus-icon {
+  background-color: #73d13d !important;
+}
+
+// 自定义加号图标通用样式
+.custom-plus-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  margin-right: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  line-height: 15px;
+}
+
+// 单独的删除按钮容器
+.delete-button-container {
+  position: absolute;
+  right: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: block !important;
+}
+
+.delete-mapping-btn {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 </style>
 

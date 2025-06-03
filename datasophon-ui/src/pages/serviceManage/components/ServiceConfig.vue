@@ -339,7 +339,7 @@
               class="panel-header" 
               @click="toggleGroup(groupName)"
             >
-              {{ groupName }}
+              {{ isKubernetesConfig(groupName) ? formatK8sGroupTitle(groupName) : convertGroupName(groupName) }}
               <a-icon 
                 :type="isGroupExpanded[groupName] ? 'up' : 'right'" 
                 class="toggle-icon" 
@@ -1813,6 +1813,27 @@ export default {
       }
       // 返回HTML字符串，其中英文部分用特定class包裹
       return `${displayText} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
+    },
+    isKubernetesConfig(groupName) {
+      return groupName && groupName.startsWith('kubernetes.config.');
+    },
+    formatK8sGroupTitle(groupName) {
+      if (!groupName || !groupName.startsWith('kubernetes.config.')) {
+        return groupName;
+      }
+      
+      const parts = groupName.split('.');
+      if (parts.length < 4) {
+        return groupName;
+      }
+      
+      const subgroupName = parts[2]; // persistentVolumeClaims, resources, services 等
+      const roleName = parts[3]; // ZkServer 等
+      
+      // 获取中文显示名称
+      const chineseName = this.k8sSubGroupChineseNames[subgroupName] || subgroupName;
+      
+      return `${roleName} 的 ${chineseName}配置`;
     },
   },
   created() {
