@@ -698,12 +698,78 @@ public class ProcessUtils {
         Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(),
                 new TypeReference<Map<JSONObject, JSONArray>>() {
                 }, Feature.SupportAutoType);
+
+        // 第一步：收集所有角色名(configCategory为role的配置的configGroup)
+        Set<String> roleNames = new HashSet<>();
+        for (JSONObject fileJson : map.keySet()) {
+            List<ServiceConfig> configs = map.get(fileJson).toJavaList(ServiceConfig.class);
+            for (ServiceConfig serviceConfig : configs) {
+                if ("role".equals(serviceConfig.getConfigCategory()) && serviceConfig.getConfigGroup() != null) {
+                    roleNames.add(serviceConfig.getConfigGroup());
+                }
+            }
+        }
+
+        logger.info("收集到的角色名: {}", roleNames);
+
+        // 如果没有找到角色名，无法添加前缀，直接处理并返回
+        if (roleNames.isEmpty()) {
+            logger.warn("没有找到任何角色名，无法为Kubernetes配置添加前缀");
+
+            for (JSONObject fileJson : map.keySet()) {
+                Generators generators = fileJson.toJavaObject(Generators.class);
+                List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
+
+                // replace variable
+                replaceVariable(serviceConfigs, clusterId);
+                configFileMap.put(generators, serviceConfigs);
+            }
+
+            return;
+        }
+
         for (JSONObject fileJson : map.keySet()) {
             Generators generators = fileJson.toJavaObject(Generators.class);
-            List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
+            List<ServiceConfig> originalConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
+
+            // 收集需要处理的Kubernetes配置
+            List<ServiceConfig> k8sConfigs = new ArrayList<>();
+            List<ServiceConfig> nonK8sConfigs = new ArrayList<>();
+
+            for (ServiceConfig serviceConfig : originalConfigs) {
+                if (serviceConfig.getConfigGroup() != null
+                        && serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
+                    k8sConfigs.add(serviceConfig);
+                } else {
+                    nonK8sConfigs.add(serviceConfig);
+                }
+            }
+
+            // 为每个角色生成带前缀的Kubernetes配置
+            List<ServiceConfig> allConfigs = new ArrayList<>(nonK8sConfigs);
+
+            for (String roleName : roleNames) {
+                for (ServiceConfig k8sConfig : k8sConfigs) {
+                    // 创建配置副本
+                    ServiceConfig newConfig = new ServiceConfig();
+                    BeanUtil.copyProperties(k8sConfig, newConfig);
+
+                    // 添加角色前缀到名称 - 使用小写下划线格式
+                    // 例如: zk_server_storage_classes
+                    String configName = newConfig.getName();
+                    // 将roleName转为小写并将驼峰转为下划线格式
+                    String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+                    if (!configName.startsWith(normRoleName + "_")) {
+                        newConfig.setName(normRoleName + "_" + configName);
+                    }
+
+                    allConfigs.add(newConfig);
+                }
+            }
+
             // replace variable
-            replaceVariable(serviceConfigs, clusterId);
-            configFileMap.put(generators, serviceConfigs);
+            replaceVariable(allConfigs, clusterId);
+            configFileMap.put(generators, allConfigs);
         }
     }
 

@@ -289,7 +289,9 @@ public class ConfigGroupSorter {
 
         // 如果配置组是Kubernetes相关的，添加角色前缀
         if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
-            return roleName + "_" + configName;
+            // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
+            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+            return normRoleName + "_" + configName;
         }
 
         return configName;

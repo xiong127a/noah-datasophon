@@ -11,27 +11,48 @@ import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceBuilder;
+import io.fabric8.kubernetes.api.model.ServicePort;
+import io.fabric8.kubernetes.api.model.ServiceSpec;
+import io.fabric8.kubernetes.api.model.ServiceSpecBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import lombok.Data;
-import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.datasophon.common.Constants.*;
+import static com.datasophon.common.Constants.DATASOPHON;
+import static com.datasophon.common.Constants.DEPLOYMENT;
+import static com.datasophon.common.Constants.K8S_CLUSTERIP_MAPPING;
+import static com.datasophon.common.Constants.K8S_CLUSTER_IP;
+import static com.datasophon.common.Constants.K8S_NODEPORT_MAPPING;
+import static com.datasophon.common.Constants.K8S_NODE_PORT;
+import static com.datasophon.common.Constants.K8S_SVC_CONF;
+import static com.datasophon.common.Constants.STATEFULSET;
 
 @Data
 public class K8sServiceHandler {
@@ -178,7 +199,7 @@ public class K8sServiceHandler {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Failed to parse nodePortMappings: {}", e.getMessage());
+                logger.error("Failed to parse node_port_mappings: {}", e.getMessage());
             }
         }
 
@@ -208,7 +229,7 @@ public class K8sServiceHandler {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Failed to parse clusterPortMappings: {}", e.getMessage());
+                logger.error("Failed to parse cluster_port_mappings: {}", e.getMessage());
             }
         }
 

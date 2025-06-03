@@ -133,9 +133,8 @@ public final class Constants {
 
         public static final String K8S_CONFIG_SUFFIX = ".k8s";
 
-        public static final String K8S_PORT_MAPPING = "portMappings";
-        public static final String K8S_NODEPORT_MAPPING = "nodePortMappings";
-        public static final String K8S_CLUSTERIP_MAPPING = "clusterPortMappings";
+        public static final String K8S_NODEPORT_MAPPING = "node_port_mappings";
+        public static final String K8S_CLUSTERIP_MAPPING = "cluster_port_mappings";
         public static final String CONFIG_TARGET_ROLES = "configTargetRoles";
 
         public static final String GENERAL = "General";

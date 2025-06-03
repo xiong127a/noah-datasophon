@@ -232,7 +232,7 @@ public class ClusterServiceInstanceServiceImpl
 
     /**
      * 从Kubernetes配置名称中提取基础名称（去除角色前缀）
-     * 例如：从 "ZkServer_默认_storageClasses" 提取出 "storageClasses"
+     * 例如：从 "ZkServer_默认_storage_classes" 提取出 "storage_classes"
      */
     private String extractK8sBaseConfigName(String fullName) {
         if (fullName == null)

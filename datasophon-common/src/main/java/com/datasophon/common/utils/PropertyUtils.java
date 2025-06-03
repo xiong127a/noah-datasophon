@@ -38,6 +38,32 @@ public class PropertyUtils {
 
     private static final Properties properties = new Properties();
 
+    /**
+     * 配置提供者接口，用于从外部获取配置值
+     */
+    public interface ConfigProvider {
+        /**
+         * 获取指定键的配置值
+         *
+         * @param key 配置键名
+         * @return 配置值，如果不存在则返回null
+         */
+        String getProperty(String key);
+
+        /**
+         * 获取指定前缀的所有配置
+         *
+         * @param prefix 配置键前缀
+         * @return 匹配前缀的配置键值对
+         */
+        Map<String, String> getPrefixedProperties(String prefix);
+    }
+
+    /**
+     * 注册的配置提供者
+     */
+    private static ConfigProvider configProvider = null;
+
     private PropertyUtils() {
         throw new UnsupportedOperationException("Construct PropertyUtils");
     }
@@ -45,7 +71,7 @@ public class PropertyUtils {
     private static final String COMMON_PROPERTIES_PATH = "/common.properties";
 
     static {
-        String[] propertyFiles = new String[]{COMMON_PROPERTIES_PATH};
+        String[] propertyFiles = new String[] { COMMON_PROPERTIES_PATH };
         for (String fileName : propertyFiles) {
             InputStream fis = null;
             try {
@@ -64,23 +90,61 @@ public class PropertyUtils {
     }
 
     /**
+     * 注册配置提供者
+     *
+     * @param provider 配置提供者
+     */
+    public static void registerConfigProvider(ConfigProvider provider) {
+        configProvider = provider;
+        logger.info("Registered custom config provider: {}", provider != null ? provider.getClass().getName() : "null");
+    }
+
+    /**
+     * 尝试从注册的提供者或properties文件中获取配置值
+     *
+     * @param key 配置键名
+     * @return 配置值
+     */
+    private static String getFromProviderOrProperties(String key) {
+        if (key == null) {
+            return null;
+        }
+
+        // 首先尝试从注册的提供者获取
+        if (configProvider != null) {
+            try {
+                String value = configProvider.getProperty(key);
+                if (value != null) {
+                    return value;
+                }
+            } catch (Exception e) {
+                logger.debug("Failed to get property from config provider: {}", key, e);
+            }
+        }
+
+        // 回退到properties文件
+        return properties.getProperty(key.trim());
+    }
+
+    /**
      * get property value
      *
      * @param key property name
      * @return property value
      */
     public static String getString(String key) {
-        return properties.getProperty(key.trim());
+        return getFromProviderOrProperties(key);
     }
 
     /**
      * get property value with upper case
      *
      * @param key property name
-     * @return property value  with upper case
+     * @return property value with upper case
      */
     public static String getUpperCaseString(String key) {
-        return properties.getProperty(key.trim()).toUpperCase();
+        String value = getFromProviderOrProperties(key);
+        return value != null ? value.toUpperCase() : null;
     }
 
     /**
@@ -91,7 +155,7 @@ public class PropertyUtils {
      * @return property value
      */
     public static String getString(String key, String defaultVal) {
-        String val = properties.getProperty(key.trim());
+        String val = getFromProviderOrProperties(key);
         return val == null ? defaultVal : val;
     }
 
@@ -131,7 +195,7 @@ public class PropertyUtils {
      * @return property value
      */
     public static boolean getBoolean(String key) {
-        String value = properties.getProperty(key.trim());
+        String value = getFromProviderOrProperties(key);
         if (null != value) {
             return Boolean.parseBoolean(value);
         }
@@ -147,7 +211,7 @@ public class PropertyUtils {
      * @return property value
      */
     public static Boolean getBoolean(String key, boolean defaultValue) {
-        String value = properties.getProperty(key.trim());
+        String value = getFromProviderOrProperties(key);
         if (null != value) {
             return Boolean.parseBoolean(value);
         }
@@ -214,7 +278,7 @@ public class PropertyUtils {
      * @return get enum value
      */
     public <T extends Enum<T>> T getEnum(String key, Class<T> type,
-                                         T defaultValue) {
+            T defaultValue) {
         String val = getString(key);
         return val == null ? defaultValue : Enum.valueOf(type, val);
     }
@@ -227,6 +291,20 @@ public class PropertyUtils {
      */
     public static Map<String, String> getPrefixedProperties(String prefix) {
         Map<String, String> matchedProperties = new HashMap<>();
+
+        // 首先尝试从注册的提供者获取
+        if (configProvider != null) {
+            try {
+                Map<String, String> providerProperties = configProvider.getPrefixedProperties(prefix);
+                if (providerProperties != null && !providerProperties.isEmpty()) {
+                    return providerProperties;
+                }
+            } catch (Exception e) {
+                logger.debug("Failed to get prefixed properties from config provider: {}", prefix, e);
+            }
+        }
+
+        // 回退到properties文件
         for (String propName : properties.stringPropertyNames()) {
             if (propName.startsWith(prefix)) {
                 matchedProperties.put(propName, properties.getProperty(propName));
@@ -236,10 +314,9 @@ public class PropertyUtils {
     }
 
     /**
-     *
+     * Set a property value
      */
     public static void setValue(String key, String value) {
         properties.setProperty(key, value);
     }
-
 }

@@ -84,7 +84,7 @@
           </div>
           <div class="menu-item" :class="{ active: activeResource === 'storageclass' }" @click="activeResource = 'storageclass'">
             <span class="item-text">Storage Classes</span>
-            <span class="item-count">{{ storageClasses && storageClasses.length || 0 }}</span>
+            <span class="item-count">{{ storage_classes && storage_classes.length || 0 }}</span>
           </div>
         </div>
       </div>
@@ -335,7 +335,7 @@
           <a-spin :spinning="loading">
             <a-table
               :columns="storageClassColumns"
-              :dataSource="storageClasses"
+              :dataSource="storage_classes"
               :pagination="false"
               :rowKey="record => record.name"
               class="k8s-table"
@@ -666,7 +666,7 @@ export default {
       ingressClasses: [],
       secrets: [],
       persistentVolumes: [],
-      storageClasses: [],
+      storage_classes: [],
       loading: false,
       // 工作负载表格列配置
       cronJobColumns: [
@@ -1274,7 +1274,7 @@ export default {
           this.fetchIngressClasses(),
           this.fetchSecrets(),
           this.fetchPersistentVolumes(),
-          this.fetchStorageClasses(),
+          this.fetchstorage_classes(),
           this.fetchDeployments(), // 新增
           this.fetchStatefulSets() // 新增
         ]);
@@ -1403,21 +1403,21 @@ export default {
         this.persistentVolumes = [];
       }
     },
-    async fetchStorageClasses() {
+    async fetchstorage_classes() {
       try {
-        const res = await this.$axiosGet(global.API.getK8sStorageClasses, {
+        const res = await this.$axiosGet(global.API.getK8sstorage_classes, {
           clusterId: this.clusterId,
           serviceName: this.serviceName
         });
         if (res.code === 200) {
-          this.storageClasses = res.data || [];
+          this.storage_classes = res.data || [];
         } else {
           console.error('Failed to fetch storage classes:', res.msg);
-          this.storageClasses = [];
+          this.storage_classes = [];
         }
       } catch (error) {
         console.error('Error fetching storage classes:', error);
-        this.storageClasses = [];
+        this.storage_classes = [];
       }
     },
 

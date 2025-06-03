@@ -1,7 +1,7 @@
 package com.datasophon.k8s.util;
 
-import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.utils.IOUtils;
+import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ public class DockerImageUtils {
             try {
                 fis = DockerImageUtils.class.getResourceAsStream(fileName);
                 properties.load(fis);
-                String imageRegistry = SpringUtil.getProperty("IMAGE_REGISTRY");
+                String imageRegistry = PropertyUtils.getString("IMAGE_REGISTRY");
                 // 遍历所有配置项并替换 $IMAGE_REGISTRY 占位符
                 for (String key : properties.stringPropertyNames()) {
                     String value = properties.getProperty(key);

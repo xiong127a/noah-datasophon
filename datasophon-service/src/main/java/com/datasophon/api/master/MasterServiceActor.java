@@ -99,6 +99,7 @@ public class MasterServiceActor extends UntypedActor {
                             (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
                     ClusterServiceRoleGroupConfig config =
                             roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    // TODO 获取角色组配置
                     ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
                     ClusterServiceRoleGroupConfig config =

@@ -52,13 +52,10 @@ public class K8sFreeMakerUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(K8sFreeMakerUtils.class);
 
-
-
-
     public static void generateConfigFile(Generators generators,
-                                          List<ServiceConfig> configs,
-                                          String serviceRoleName,
-                                          String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
+            List<ServiceConfig> configs,
+            String serviceRoleName,
+            String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
         generateConfigFile(generators, configs, serviceRoleName, null, kubeConfig, serviceRoleFullName);
     }
 
@@ -74,13 +71,14 @@ public class K8sFreeMakerUtils {
      */
 
     public static void generateConfigFile(Generators generators,
-                                          List<ServiceConfig> configs,
-                                          String serviceRoleName,
-                                          String extPath,
-                                          String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
+            List<ServiceConfig> configs,
+            String serviceRoleName,
+            String extPath,
+            String kubeConfig, String serviceRoleFullName) throws IOException, TemplateException {
         // 1.加载模板
         // 创建核心配置对象
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
+        // 使用方括号语法替代后，不再需要特别设置命名约定
         // 设置加载的目录
         List<TemplateLoader> loaderList = new ArrayList<>();
         loaderList.add(new ClassTemplateLoader(K8sFreeMakerUtils.class, "/worker/templates"));
@@ -121,7 +119,6 @@ public class K8sFreeMakerUtils {
         String configMapName = generateConfigMapName(serviceRoleName, generators);
         writeToConfigMap(template, data, configMapName, generators.getFilename(), kubeConfig, serviceRoleFullName);
     }
-
 
     /**
      * 将数据写入模板并生成输出文件
@@ -170,7 +167,8 @@ public class K8sFreeMakerUtils {
      * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
      * @throws TemplateException 当模板处理过程中发生模板错误时抛出
      */
-    public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName, String fileName, String kubeConfig, String serviceRoleFullName)
+    public static void writeToConfigMap(Template template, Map<String, Object> data, String configMapName,
+            String fileName, String kubeConfig, String serviceRoleFullName)
             throws IOException, TemplateException {
         // 使用 StringWriter 合并模板和数据
         StringWriter stringWriter = new StringWriter();
@@ -191,7 +189,8 @@ public class K8sFreeMakerUtils {
      * @param generatedContent 渲染后的配置内容
      * @throws IOException 创建或更新ConfigMap过程中发生I/O错误时抛出
      */
-    public static void createConfigMap(String configMapName, String generatedContent, String kubeConfig, String fileName, String serviceRoleFullName) {
+    public static void createConfigMap(String configMapName, String generatedContent, String kubeConfig,
+            String fileName, String serviceRoleFullName) {
         if (StrUtil.endWith(fileName, Constants.K8S_CONFIG_SUFFIX)) {
             return;
         }
@@ -200,7 +199,7 @@ public class K8sFreeMakerUtils {
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
-        configMap.getMetadata().setName(configMapName);  // 设置 ConfigMap 名称
+        configMap.getMetadata().setName(configMapName); // 设置 ConfigMap 名称
         configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE); // 设置 ConfigMap 命名空间
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();
@@ -224,7 +223,6 @@ public class K8sFreeMakerUtils {
     }
 
     // 获取或创建缓存客户端[8](@ref)
-
 
     public static String generateConfigMapName(String serviceRoleName, Generators generators) {
         if (serviceRoleName == null || generators == null) {
