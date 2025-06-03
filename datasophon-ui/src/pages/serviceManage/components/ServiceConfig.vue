@@ -353,11 +353,26 @@
                     v-for="(item, index) in group" 
                     :key="index"
                     class="compare-row-simple"
-                    :class="{ 'different': item.isDifferent }"
+                    :class="{ 
+                      'different': item.isDifferent,
+                      'k8s-config-divider': item.isDivider,
+                      'k8s-config-first-divider': item.isFirstDivider
+                    }"
                   >
-                    <td class="compare-cell-simple attribute-cell">{{ item.name }}</td>
-                    <td class="compare-cell-simple value-cell">{{ item[currentVersion] }}</td>
-                    <td class="compare-cell-simple value-cell">{{ item[compareVersion] }}</td>
+                    <!-- 如果是分隔符，显示分隔标题 -->
+                    <template v-if="item.isDivider || item.isFirstDivider">
+                      <td colspan="3" class="k8s-config-divider-cell">
+                        <div class="k8s-divider-label" v-html="item.dividerLabel">
+                        </div>
+                      </td>
+                    </template>
+                    
+                    <!-- 如果是普通配置项，显示正常的比较行 -->
+                    <template v-else>
+                      <td class="compare-cell-simple attribute-cell">{{ item.name }}</td>
+                      <td class="compare-cell-simple value-cell">{{ item[currentVersion] }}</td>
+                      <td class="compare-cell-simple value-cell">{{ item[compareVersion] }}</td>
+                    </template>
                   </tr>
                 </tbody>
               </table>
@@ -1595,8 +1610,8 @@ export default {
       
       this.$axiosPost(global.API.configVersionCompare, params).then(res => {
         if (res.code === 200) {
-          // 直接使用后端返回的数据
-          this.compareData = res.data;
+          // 预处理数据，合并同一服务的k8s配置
+          this.compareData = this.preprocessCompareGroups(res.data);
           
           // 自动展开所有分组
           Object.keys(this.compareData).forEach(groupName => {
@@ -1827,13 +1842,100 @@ export default {
         return groupName;
       }
       
-      const subgroupName = parts[2]; // persistentVolumeClaims, resources, services 等
-      const roleName = parts[3]; // ZkServer 等
+      // 提取角色名（服务名），如ZkServer
+      const roleName = parts[3]; 
       
-      // 获取中文显示名称
-      const chineseName = this.k8sSubGroupChineseNames[subgroupName] || subgroupName;
+      // 返回简化的标题，只按服务分组
+      return `${roleName}的Kubernetes配置`;
+    },
+    // 添加辅助方法，用于对比时预处理分组
+    preprocessCompareGroups(data) {
+      if (!data) return {};
       
-      return `${roleName} 的 ${chineseName}配置`;
+      const result = {};
+      const roleBasedGroups = {}; // 按服务名（角色）分组
+      
+      // 第一步：收集所有k8s配置，按服务名分组
+      Object.entries(data).forEach(([groupName, items]) => {
+        if (this.isKubernetesConfig(groupName)) {
+          const parts = groupName.split('.');
+          if (parts.length >= 4) {
+            const configType = parts[2]; // 配置类型，如persistentVolumeClaims
+            const roleName = parts[3]; // 提取服务名，如ZkServer
+            
+            if (!roleBasedGroups[roleName]) {
+              roleBasedGroups[roleName] = {};
+            }
+            
+            if (!roleBasedGroups[roleName][configType]) {
+              roleBasedGroups[roleName][configType] = [];
+            }
+            
+            // 为每个配置项添加类型标记
+            const itemsWithType = items.map(item => ({
+              ...item,
+              k8sConfigType: configType,
+              k8sConfigTypeLabel: this.k8sSubGroupChineseNames[configType] || configType
+            }));
+            
+            roleBasedGroups[roleName][configType].push(...itemsWithType);
+          } else {
+            // 如果解析失败，保持原样
+            result[groupName] = items;
+          }
+        } else {
+          // 非k8s配置保持原样
+          result[groupName] = items;
+        }
+      });
+      
+      // 第二步：将收集的k8s配置添加到结果中，并添加分隔符项
+      Object.entries(roleBasedGroups).forEach(([roleName, configTypes]) => {
+        const newGroupName = `kubernetes.config.combined.${roleName}`;
+        const combinedItems = [];
+        
+        // 按配置类型添加配置项，并在不同类型间添加分隔标记
+        Object.entries(configTypes).forEach(([configType, items], index) => {
+          // 格式化英文配置类型名称
+          const readableEnglishName = configType
+            .replace(/([A-Z])/g, " $1") // 在大写字母前添加空格
+            .replace(/^./, (str) => str.toUpperCase()) // 首字母大写
+            .trim();
+            
+          // 获取中文显示名称
+          const chineseName = this.k8sSubGroupChineseNames[configType] || readableEnglishName;
+          
+          // 组合显示标签
+          const dividerLabel = `${chineseName} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
+          
+          // 如果不是第一个配置类型，添加分隔符
+          if (index > 0) {
+            combinedItems.push({
+              name: `k8s-divider-${configType}`,
+              isDivider: true,
+              dividerLabel,
+              [this.currentVersion]: '',
+              [this.compareVersion]: '',
+            });
+          } else {
+            // 第一个配置类型也添加标签，但不显示分隔线
+            combinedItems.push({
+              name: `k8s-divider-${configType}`,
+              isFirstDivider: true,
+              dividerLabel,
+              [this.currentVersion]: '',
+              [this.compareVersion]: '',
+            });
+          }
+          
+          // 添加该类型的所有配置项
+          combinedItems.push(...items);
+        });
+        
+        result[newGroupName] = combinedItems;
+      });
+      
+      return result;
     },
   },
   created() {
@@ -2568,5 +2670,43 @@ export default {
   font-size: 0.9em;   /* 辅助字体稍小 */
   font-weight: normal; /* 非粗体 */
   margin-left: 4px;    /* 括号前的空格 */
+}
+
+/* 分隔符样式 */
+.k8s-config-divider-cell {
+  text-align: left;
+  padding: 10px 16px;
+  background-color: #f5f7fa;
+}
+
+/* 分隔符标签样式 */
+.k8s-divider-label {
+  padding: 4px 0;
+  font-weight: 500;
+  color: #1890ff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.k8s-divider-label::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  background-color: #1890ff;
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+/* 分隔符样式 */
+.k8s-config-divider {
+  background-color: transparent;
+  border-top: 1px dashed #d9d9d9;
+}
+
+/* 第一个配置类型标题样式 */
+.k8s-config-first-divider {
+  background-color: transparent;
 }
 </style> 
