@@ -60,8 +60,38 @@
   ],
   "configWriter": {
     "generators": [
+      {
+        "filename": "svc.config.k8s",
+        "fileDescription": "Grafana Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "Grafana",
+        "outputDirectory": "",
+        "includeParams": [
+          "portMappings"
+        ]
+      }
     ]
   },
   "parameters": [
+    {
+      "name": "portMappings",
+      "label": "端口映射 (portMappings)",
+      "description": "定义容器与主机之间的端口映射关系，用于网络通信。key 表示 port 和 targetPort（port 和 targetPort 使用同一个端口），value 表示 nodePort。如果 value 为空，则表示不开放 nodePort。",
+      "configType": "k8s",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [
+        {
+          "3000": "30003"
+        }
+      ],
+      "configurableInWizard": true,
+      "hidden": true,
+      "defaultValue": [
+        {
+          "3000": "30003"
+        }
+      ]
+    }
   ]
 }

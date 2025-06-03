@@ -252,6 +252,8 @@ public final class Constants {
         public static final String PROMETHEUS = "prometheus";
         public static final String PROMETHEUS_CONFIG = "prometheus-config";
 
+        public static final String PrometheusFullName = "prometheus-prometheus";
+
         public static final String XML = "xml";
         public static final String PROPERTIES = "properties";
         public static final String PROPERTIES2 = "properties2";

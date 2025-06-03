@@ -1,5 +1,6 @@
 package com.datasophon.k8s.actor.handler;
 
+import com.alibaba.fastjson.JSONObject;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
@@ -509,6 +510,23 @@ public class K8sServiceHandler {
         logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
 
         resource.waitUntilReady(20, TimeUnit.MINUTES);
+
+        // 获取Pod列表（新增代码）
+        List<Pod> pods = client.pods()
+                .inNamespace(Constant.K8S_NAMESPACE)
+                .withLabel("app", serviceRoleFullName) // 与Service/Deployment共享的标签
+                .list()
+                .getItems();
+
+        // 提取Pod名称
+        List<String> podNames = pods.stream()
+                .map(pod -> pod.getMetadata().getName())
+                .collect(Collectors.toList());
+
+        logger.info("已启动的Pod列表: {}", podNames);
+
+        CacheUtils.put(serviceRoleFullName + "_" + Constant.POD_NAME, podNames);
+
         logger.info(resource.getLog());
     }
 

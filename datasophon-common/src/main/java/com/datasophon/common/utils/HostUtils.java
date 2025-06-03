@@ -153,6 +153,6 @@ public class HostUtils {
     }
 
     public static List<String> generateHosts(List<String> host, String serviceRoleFullName) {
-        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON).collect(Collectors.toList());
+        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i).collect(Collectors.toList());
     }
 }

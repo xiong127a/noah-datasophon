@@ -9,5 +9,7 @@ public class Constant {
     public static final String ROLE_NODE_CNT = "roleNodeCnt";
 
     public static final String CURRENT_NODE_CNT = "currentNodeCnt";
+    public static final String POD_NAME = "podName";
+
 
 }

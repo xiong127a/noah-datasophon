@@ -68,7 +68,7 @@ spec:
               name: root
               readOnly: true
 
-      hostNetwork: true
+      hostNetwork: false
       hostPID: false
       nodeSelector:
         kubernetes.io/os: linux
