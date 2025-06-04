@@ -1,6 +1,5 @@
 package com.datasophon.k8s.actor.handler;
 
-
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.impl.TimedCache;
 import cn.hutool.core.convert.Convert;
@@ -43,7 +42,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.PROMETHEUS_CONFIG;
-
 
 @Data
 public class K8sYamlDeploymentHandler {
@@ -242,6 +240,18 @@ public class K8sYamlDeploymentHandler {
             ServiceRoleRunner statusRunner, Integer roleNodeCnt, String appHome, Set<ServiceConfigVolume> volumePathSet,
             Set<ServiceConfigVolume> volumeConfigMapSet, Map<Generators, List<ServiceConfig>> configFileMap,
             String masterHost, Boolean enableKerberos, Boolean enableRangerPlugin) {
+        // 在这里处理configFileMap中的配置值，添加单位
+        for (List<ServiceConfig> configs : configFileMap.values()) {
+            for (ServiceConfig config : configs) {
+                Object value = config.getValue();
+                String unit = config.getUnit();
+
+                // 如果值是数字类型且有单位，将值和单位组合
+                if (StrUtil.isNotBlank(unit)) {
+                    config.setValue(value + unit);
+                }
+            }
+        }
         data = new HashMap<>();
         data.put("volumePathSet", new ArrayList<>(volumePathSet));
         data.put("volumeConfigMapSet", new ArrayList<>(volumeConfigMapSet));
@@ -271,6 +281,7 @@ public class K8sYamlDeploymentHandler {
         if (CONFIG_CACHE.isEmpty()) {
             loadConfigToCache(configFileMap);
         }
+
 
         // 获取 journalNodeDir 和 nameNodeDir
         populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "namenodeDir");
@@ -412,17 +423,14 @@ public class K8sYamlDeploymentHandler {
     // 提取出一个通用方法，用于从配置中提取目录
     private void populateDataWithConfig(Map<Generators, List<ServiceConfig>> configFileMap, String configName,
             String targetDataKey) {
-
         ServiceConfig serviceConfig = CONFIG_CACHE.get(configName);
         if (ObjUtil.isNull(serviceConfig)) {
             return;
         }
-
         Object value = serviceConfig.getValue();
         if (ObjUtil.isNull(value)) {
             return;
         }
-
         data.put(targetDataKey, value);
     }
 
