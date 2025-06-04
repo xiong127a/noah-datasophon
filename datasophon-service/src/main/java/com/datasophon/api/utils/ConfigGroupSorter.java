@@ -35,9 +35,6 @@ public class ConfigGroupSorter {
     // 存储每个服务的配置组排序规则
     private static final Map<String, Map<String, Integer>> SERVICE_GROUP_ORDER_MAP = new ConcurrentHashMap<>();
 
-    // 存储配置组名称替换规则
-    private static final Map<String, String> GROUP_NAME_REPLACEMENT_MAP = new ConcurrentHashMap<>();
-
     // 通用分组类型的优先级
     private static final int ROLE_GROUP_PRIORITY = 100; // 角色分组最高优先级
     private static final int GENERAL_GROUP_PRIORITY = 200; // 通用配置中等优先级
@@ -98,11 +95,16 @@ public class ConfigGroupSorter {
      * @return 排序后的配置组列表
      */
     public static List<String> sortGroups(String serviceName, Collection<String> groups) {
+        if (groups == null || groups.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         // 获取服务特定的排序规则
         Map<String, Integer> serviceSpecificOrder = SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(),
                 new HashMap<>());
 
-        return groups.stream()
+        // 首先按照基础规则排序
+        List<String> initialSortedGroups = groups.stream()
                 .sorted((g1, g2) -> {
                     // 1. 首先按照基础分组类型优先级排序
                     int basePriority1 = getBaseGroupPriority(g1);
@@ -128,153 +130,23 @@ public class ConfigGroupSorter {
                     return g1.compareTo(g2);
                 })
                 .collect(Collectors.toList());
-    }
 
-    /**
-     * 获取指定服务的配置组排序规则
-     * 
-     * @param serviceName 服务名称
-     * @return 排序规则映射表，如果没有定义则返回空映射
-     */
-    public static Map<String, Integer> getServiceGroupOrder(String serviceName) {
-        return SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(), Collections.emptyMap());
-    }
-
-    /**
-     * 为指定服务设置配置组排序规则
-     * 
-     * @param serviceName   服务名称
-     * @param groupOrderMap 配置组排序规则
-     */
-    public static void setServiceGroupOrder(String serviceName, Map<String, Integer> groupOrderMap) {
-        SERVICE_GROUP_ORDER_MAP.put(serviceName, groupOrderMap);
-    }
-
-    /**
-     * 添加或更新单个配置组的排序
-     * 
-     * @param serviceName 服务名称
-     * @param groupName   配置组名称
-     * @param order       排序顺序（从1开始）
-     */
-    public static void addGroupOrder(String serviceName, String groupName, int order) {
-        SERVICE_GROUP_ORDER_MAP.computeIfAbsent(serviceName.toUpperCase(), k -> new HashMap<>())
-                .put(groupName, order);
-    }
-
-    /**
-     * 替换配置组名称
-     * 
-     * @param originalName 原始名称
-     * @param newName      新名称
-     */
-    public static void replaceGroupName(String originalName, String newName) {
-        GROUP_NAME_REPLACEMENT_MAP.put(originalName, newName);
-    }
-
-    /**
-     * 获取替换后的配置组名称
-     * 
-     * @param originalName 原始名称
-     * @return 替换后的名称，如果没有替换规则则返回原始名称
-     */
-    public static String getReplacedGroupName(String originalName) {
-        return GROUP_NAME_REPLACEMENT_MAP.getOrDefault(originalName, originalName);
-    }
-
-    /**
-     * 获取配置组显示名称
-     */
-    public static String getDisplayName(String groupName) {
-        if (groupName == null) {
-            return "";
-        }
-
-        if (groupName.startsWith("advanced_")) {
-            return "高级 " + groupName.substring("advanced_".length());
-        } else if (groupName.startsWith("custom_")) {
-            return "自定义 " + groupName.substring("custom_".length());
-        }
-
-        return GROUP_NAME_REPLACEMENT_MAP.getOrDefault(groupName, groupName);
-    }
-
-    /**
-     * 应用排序规则和名称替换，返回有序的配置组映射
-     * 
-     * @param unsortedMap 未排序的配置组映射
-     * @param serviceName 服务名称
-     * @return 排序后的配置组映射
-     */
-    public static <T> Map<String, T> applySorting(Map<String, T> unsortedMap, String serviceName) {
-        // 获取服务的排序规则
-        final Map<String, Integer> orderMap = getServiceGroupOrder(serviceName.toUpperCase());
-
-        // 创建一个排序的映射表
-        Map<String, T> sortedMap = new TreeMap<>((g1, g2) -> {
-            // 替换配置组名称
-            String name1 = getReplacedGroupName(g1);
-            String name2 = getReplacedGroupName(g2);
-
-            // 获取排序值
-            Integer order1 = orderMap.getOrDefault(name1, Integer.MAX_VALUE);
-            Integer order2 = orderMap.getOrDefault(name2, Integer.MAX_VALUE);
-
-            // 优先比较排序值
-            int result = order1.compareTo(order2);
-            if (result != 0) {
-                return result;
-            }
-
-            // 如果排序值相同，按名称字母顺序排序
-            return name1.compareTo(name2);
-        });
-
-        // 将未排序的映射表复制到排序的映射表中，并替换组名
-        unsortedMap.forEach((groupName, value) -> {
-            String newGroupName = getReplacedGroupName(groupName);
-            sortedMap.put(newGroupName, value);
-        });
-
-        return sortedMap;
-    }
-
-    /**
-     * 对配置组进行排序，将kubernetes配置组放在前面
-     *
-     * @param serviceName 服务名称
-     * @param groupNames  配置组名称列表
-     * @return 排序后的配置组名称列表
-     */
-    public static List<String> sortGroups(String serviceName, List<String> groupNames) {
-        if (groupNames == null || groupNames.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        // 提取以"kubernetes.config."开头的组和其他组
-        List<String> kubernetesGroups = groupNames.stream()
-                .filter(name -> name.endsWith("_Kubernetes"))
+        // 特殊处理：Kubernetes相关配置组始终排在最前面
+        // 提取kubernetes相关的组和非kubernetes组
+        List<String> kubernetesGroups = initialSortedGroups.stream()
+                .filter(name -> name.endsWith("_Kubernetes") || name.startsWith("kubernetes.config."))
                 .collect(Collectors.toList());
 
-        List<String> nonKubernetesGroups = groupNames.stream()
-                .filter(name -> !name.endsWith("_Kubernetes"))
+        List<String> nonKubernetesGroups = initialSortedGroups.stream()
+                .filter(name -> !name.endsWith("_Kubernetes") && !name.startsWith("kubernetes.config."))
                 .collect(Collectors.toList());
 
-        // 对非Kubernetes组进行排序
-        nonKubernetesGroups.sort((g1, g2) -> {
-            // 自定义排序规则
-            if ("General".equals(g1))
-                return -1;
-            if ("General".equals(g2))
-                return 1;
-            return g1.compareTo(g2);
-        });
+        // 合并结果，保持kubernetes组在前面
+        List<String> finalSortedGroups = new ArrayList<>(kubernetesGroups);
+        finalSortedGroups.addAll(nonKubernetesGroups);
 
-        // 将Kubernetes组和其他组合并，Kubernetes组在前面
-        List<String> sortedGroups = new ArrayList<>(kubernetesGroups);
-        sortedGroups.addAll(nonKubernetesGroups);
-
-        return sortedGroups;
+        logger.info("最终排序后的配置组顺序: {}", finalSortedGroups);
+        return finalSortedGroups;
     }
 
     /**
