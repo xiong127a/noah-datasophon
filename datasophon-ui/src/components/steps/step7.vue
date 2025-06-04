@@ -27,27 +27,42 @@
 <template>
   <div class="steps7 steps">
     <div class="service-config-container">
-    <div class="steps-title flex-bewteen-container" style="margin-top: -5px; margin-bottom: 15px;">
-      <span>配置参数</span>
-    </div>
-      
-    <a-button class="btn-save" type="primary" @click="handleSubmit" style="z-index: 1000; margin-top: 5px;">保存</a-button>
+      <div class="steps-title flex-bewteen-container" style="margin-top: -5px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 2px 0;">
+        <div style="display: flex; align-items: center;">
+          <span>配置参数</span>
+          <a-button 
+            size="small" 
+            style="margin-left: 8px;"
+            @click="toggleAllGroups"
+          >
+            <a-icon :type="isAllExpanded ? 'shrink' : 'arrows-alt'" style="font-size: 14px;" />
+          </a-button>
+        </div>
+        <a-button 
+          class="btn-save" 
+          type="primary" 
+          @click="handleSubmit" 
+          style="display: flex; align-items: center; justify-content: center; height: 32px; line-height: 1; margin-top: 4px;"
+        >
+          保存
+        </a-button>
+      </div>
       
       <a-spin :spinning="loading" class="content-spin" style="margin-top: 5px;">
         <div class="main-content-area" style="margin-top: 5px;">
           <a-tabs v-model="serviceNameKey" @change="callback">
-        <a-tab-pane v-for="item in SERVICENAMES" :key="item" :tab="item" :forceRender="true">
+            <a-tab-pane v-for="item in SERVICENAMES" :key="item" :tab="item" :forceRender="true">
               <!-- 标签内容由下面的区域控制 -->
-        </a-tab-pane>
-      </a-tabs>
+            </a-tab-pane>
+          </a-tabs>
           
           <!-- 使用Ant Design的Collapse组件重构配置区域 -->
           <div class="content-wrapper">
-      <div
-          v-for="item in SERVICENAMES"
-          :key="item"
+            <div
+              v-for="item in SERVICENAMES"
+              :key="item"
               :class="['config-area', serviceNameKey === item ? '' : 'hidden']"
-      >
+            >
               <div v-if="serviceNameKey === item" class="config-area-inner">
                 <!-- 仅显示通用的Kubernetes配置（不属于特定角色的） -->
                 <div v-if="kubernetesGroups[item] && Object.keys(kubernetesGroups[item]).length > 0" class="kubernetes-config-section">
@@ -86,11 +101,12 @@
                   :key="groupName"
                   :bordered="false"
                   expandIconPosition="right"
-                  :defaultActiveKey="getActiveKeys(item)"
+                  :activeKey="expandedKeys[item] || getActiveKeys(item)"
                   class="config-collapse"
+                  @change="onCollapseChange($event, item)"
                 >
                   <a-collapse-panel 
-              :key="groupName"
+                    :key="groupName"
                     :showArrow="true"
                     :forceRender="true"
                     :class="['config-panel', isLastGroup(item, groupName) ? 'last-group' : '']"
@@ -133,11 +149,11 @@
                       </div>
                       
                       <!-- 常规配置表单 -->
-              <FixedCommonTemplate
-                  :ref="`CommonTemplateRef_${item}_${groupName}`"
-                  :steps4Data="steps4Data"
-                  :templateData="group.items"
-              />
+                      <FixedCommonTemplate
+                        :ref="`CommonTemplateRef_${item}_${groupName}`"
+                        :steps4Data="steps4Data"
+                        :templateData="group.items"
+                      />
                       
                       <!-- 添加模板内容显示框 -->
                       <div v-if="group.templateContent" class="template-content-container">
@@ -147,7 +163,7 @@
                           :auto-size="{ minRows: 3, maxRows: 10 }"
                           readonly
                           class="template-content-textarea"
-              />
+                        />
                       </div>
                     </div>
                   </a-collapse-panel>
@@ -155,13 +171,12 @@
                 
                 <!-- 增加底部空白区域，确保最后一个分组完整显示 -->
                 <div class="bottom-spacer"></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </a-spin>
-      </div>
-    <!-- 移除多余的底部填充区域 -->
+      </a-spin>
+    </div>
   </div>
 </template>
 <script>
@@ -205,6 +220,9 @@ export default {
         'mount_path': '挂载路径',
         'storage': '存储容量'
       },
+      // 存储每个服务的配置组展开状态
+      expandedKeys: {},
+      isAllExpanded: false,
     };
   },
   watch: {
@@ -416,21 +434,21 @@ export default {
             const group = this.groupedTemplateData[currentService][groupName];
             
             // 处理常规配置表单
-                const refName = `CommonTemplateRef_${currentService}_${groupName}`;
-                const formRef = this.$refs[refName]?.[0];
-                if (formRef) {
-                  await formRef.form.validateFields();
-                  // 获取表单值，同时过滤掉slider相关的辅助表单项
-                  const formValues = formRef.form.getFieldsValue();
-                  const filteredValues = {};
-                  for (const key in formValues) {
-                    // 排除slider辅助输入框的值
-                    if (!key.endsWith('_value')) {
-                      filteredValues[key] = formValues[key];
-                    }
-                  }
-                  Object.assign(allFormData, filteredValues);
+            const refName = `CommonTemplateRef_${currentService}_${groupName}`;
+            const formRef = this.$refs[refName]?.[0];
+            if (formRef) {
+              await formRef.form.validateFields();
+              // 获取表单值，同时过滤掉slider相关的辅助表单项
+              const formValues = formRef.form.getFieldsValue();
+              const filteredValues = {};
+              for (const key in formValues) {
+                // 排除slider辅助输入框的值
+                if (!key.endsWith('_value')) {
+                  filteredValues[key] = formValues[key];
                 }
+              }
+              Object.assign(allFormData, filteredValues);
+            }
             
             // 处理该分组内的Kubernetes配置
             if (group.hasKubernetesConfig && group.kubernetesSubGroups) {
@@ -954,6 +972,35 @@ export default {
       }
       // 如果所有的表单校验成功了 那么就把所有的tab页去保存一下
       this.submitAllServices(callback);
+    },
+    // 处理折叠面板变化
+    onCollapseChange(activeKeys, serviceName) {
+      this.$set(this.expandedKeys, serviceName, activeKeys);
+    },
+    // 全部展开
+    expandAllGroups() {
+      const currentService = this.serviceNameKey;
+      if (currentService && this.nonKubernetesGroups[currentService]) {
+        const allKeys = Object.keys(this.nonKubernetesGroups[currentService]);
+        this.$set(this.expandedKeys, currentService, allKeys);
+        this.isAllExpanded = true;
+      }
+    },
+    // 全部折叠
+    collapseAllGroups() {
+      const currentService = this.serviceNameKey;
+      if (currentService) {
+        this.$set(this.expandedKeys, currentService, []);
+        this.isAllExpanded = false;
+      }
+    },
+    toggleAllGroups() {
+      this.isAllExpanded = !this.isAllExpanded;
+      if (this.isAllExpanded) {
+        this.expandAllGroups();
+      } else {
+        this.collapseAllGroups();
+      }
     },
   },
   created() {
