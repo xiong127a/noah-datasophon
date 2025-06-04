@@ -142,6 +142,15 @@ public class K8sFreeMakerUtils {
         K8sMinaUtils.writeUtf8String(hostname, generatedContent, outputFile);
     }
 
+    /**
+     * 将数据写入模板并生成本地文件
+     *
+     * @param template   模板对象
+     * @param data       数据映射
+     * @param outputFile 输出文件路径
+     * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
+     * @throws TemplateException 当模板处理过程中发生模板错误时抛出
+     */
     public static void writeToTemplateLocal(Template template, Map<String, Object> data, String outputFile)
             throws IOException, TemplateException {
         // 创建文件对象
