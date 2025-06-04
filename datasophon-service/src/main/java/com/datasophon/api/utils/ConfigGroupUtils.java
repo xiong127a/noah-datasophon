@@ -100,7 +100,7 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        logger.info("开始预处理Kubernetes配置，服务: {}, 框架: {}, 配置项数量: {}", serviceName, frameCode, list.size());
+        logger.debug("开始预处理Kubernetes配置，服务: {}, 框架: {}, 配置项数量: {}", serviceName, frameCode, list.size());
 
         // 1. 获取服务定义中的所有配置文件及其角色列表
         Map<String, Set<String>> configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
@@ -110,7 +110,7 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        logger.info("获取到的配置文件角色映射: {}", configFileToRolesMap);
+        logger.debug("获取到的配置文件角色映射: {}", configFileToRolesMap);
 
         // 2. 对配置进行分类
         List<ServiceConfig> processedConfigs = new ArrayList<>();
@@ -138,7 +138,7 @@ public class ConfigGroupUtils {
             String k8sConfigType = entry.getKey();
             List<ServiceConfig> configs = entry.getValue();
 
-            logger.info("处理K8S配置类型: {}, 配置数量: {}", k8sConfigType, configs.size());
+            logger.debug("处理K8S配置类型: {}, 配置数量: {}", k8sConfigType, configs.size());
 
             // 获取该类型配置的角色集合
             Set<String> targetRoles = getTargetRolesForConfigType(configFileToRolesMap, k8sConfigType);
@@ -147,7 +147,7 @@ public class ConfigGroupUtils {
                 logger.warn("无法确定K8S配置类型 {} 的目标角色，将使用通用角色", k8sConfigType);
                 targetRoles.add(GENERAL);
             } else {
-                logger.info("K8S配置类型 {} 的目标角色: {}", k8sConfigType, targetRoles);
+                logger.debug("K8S配置类型 {} 的目标角色: {}", k8sConfigType, targetRoles);
             }
 
             // 为每个角色创建每个配置的副本
@@ -176,7 +176,7 @@ public class ConfigGroupUtils {
         // 添加非K8S配置到结果列表
         processedConfigs.addAll(nonK8sConfigs);
 
-        logger.info("完成Kubernetes配置预处理，处理后配置数量: {}", processedConfigs.size());
+        logger.debug("完成Kubernetes配置预处理，处理后配置数量: {}", processedConfigs.size());
         return processedConfigs;
     }
 
@@ -245,7 +245,7 @@ public class ConfigGroupUtils {
 
                     // 重要：将filename映射到对应的角色列表
                     filenameToRolesMap.put(filename, roles);
-                    logger.info("找到K8S配置文件: {}，角色: {}", filename, roles);
+                    logger.debug("找到K8S配置文件: {}，角色: {}", filename, roles);
                 }
             }
 
@@ -264,7 +264,7 @@ public class ConfigGroupUtils {
                         if (roles != null && !roles.isEmpty()) {
                             // 将configGroup映射到对应的角色
                             result.put(configGroup, roles);
-                            logger.info("为配置组 {} 找到角色: {}", configGroup, roles);
+                            logger.debug("为配置组 {} 找到角色: {}", configGroup, roles);
 
                             // 同时将参数名映射到角色
                             String paramName = parameter.getString("name");
@@ -381,12 +381,7 @@ public class ConfigGroupUtils {
                 String configLevel = config.getConfigLevel();
                 String configTargetRoles = config.getConfigTargetRoles();
                 String groupKey = GENERAL;
-                String actualConfigGroup = configGroup;
 
-                // 处理非空的configGroup
-                if (StrUtil.isNotBlank(configGroup) && configGroup.contains(".")) {
-                    actualConfigGroup = configGroup.substring(configGroup.lastIndexOf(".") + 1);
-                }
 
                 // 处理kubernetes.config类型的配置组
                 if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith("kubernetes.config.")) {
@@ -403,14 +398,21 @@ public class ConfigGroupUtils {
                 // 处理配置级别为"custom"或"advanced"的情况
                 else if (StrUtil.isNotBlank(configLevel) &&
                         ("custom".equalsIgnoreCase(configLevel) || "advanced".equalsIgnoreCase(configLevel)) &&
-                        StrUtil.isNotBlank(actualConfigGroup)) {
+                        StrUtil.isNotBlank(configGroup)) {
 
                     String levelPrefix = configLevel.toLowerCase() + "_";
-                    if (actualConfigGroup.startsWith(levelPrefix)) {
-                        groupKey = actualConfigGroup;
+
+                    // 直接将configLevel和configGroup用下划线连接
+                    if (configGroup.startsWith(levelPrefix)) {
+                        groupKey = configGroup;
                     } else {
-                        groupKey = levelPrefix + actualConfigGroup;
+                        groupKey = levelPrefix + configGroup;
                     }
+
+                    // 记录分组处理日志
+                    logger.debug("配置分组处理: 级别={}, 组={}, 最终分组键={}",
+                            configLevel, configGroup, groupKey);
+
                     // 将配置添加到对应分组
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
@@ -423,11 +425,11 @@ public class ConfigGroupUtils {
                 }
                 // 处理至少有一个字段不为空的情况
                 else if (StrUtil.isNotBlank(configCategory) ||
-                        StrUtil.isNotBlank(actualConfigGroup) ||
+                        StrUtil.isNotBlank(configGroup) ||
                         StrUtil.isNotBlank(configLevel)) {
                     // 优先使用configGroup作为分组键
-                    if (StrUtil.isNotBlank(actualConfigGroup)) {
-                        groupKey = actualConfigGroup;
+                    if (StrUtil.isNotBlank(configGroup)) {
+                        groupKey = configGroup;
                     }
                     // 如果configGroup为空但configCategory不为空，使用configCategory
                     else if (StrUtil.isNotBlank(configCategory)) {
@@ -442,6 +444,16 @@ public class ConfigGroupUtils {
                 // 只有当三个字段都为空时，才归入General分组
                 else {
                     groupKey = GENERAL;
+                    // 为空字段设置默认值
+                    if (StrUtil.isBlank(configCategory)) {
+                        config.setConfigCategory("role");
+                    }
+                    if (StrUtil.isBlank(configGroup)) {
+                        config.setConfigGroup("General");
+                    }
+                    if (StrUtil.isBlank(configLevel)) {
+                        config.setConfigLevel("advanced");
+                    }
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
             }
@@ -450,10 +462,23 @@ public class ConfigGroupUtils {
         // 排序分组键并构建结果
         List<String> sortedGroups = ConfigGroupSorter.sortGroups(serviceName, new ArrayList<>(groupedConfigs.keySet()));
 
-        logger.info("按服务{}排序后的配置组顺序: {}", serviceName, sortedGroups);
+        logger.debug("按服务{}排序后的配置组顺序: {}", serviceName, sortedGroups);
 
+        // 确保General组总是存在，哪怕是空的
+        if (!groupedConfigs.containsKey(GENERAL)) {
+            groupedConfigs.put(GENERAL, new ArrayList<>());
+        }
+
+        // 首先添加General组
+        if (groupedConfigs.containsKey(GENERAL)) {
+            resultMap.put(GENERAL, groupedConfigs.get(GENERAL));
+        }
+
+        // 然后按排序添加其他组
         for (String group : sortedGroups) {
-            resultMap.put(group, groupedConfigs.get(group));
+            if (!GENERAL.equals(group)) { // 避免重复添加General组
+                resultMap.put(group, groupedConfigs.get(group));
+            }
         }
 
         return resultMap;
