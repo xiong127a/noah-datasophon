@@ -39,7 +39,7 @@ public class ConfigGroupUtils {
 
     /**
      * 统一的配置角色分组处理方法
-     * 
+     *
      * @param configTargetRoles 目标角色配置字符串
      * @return 分割后的角色名称集合
      */
@@ -71,7 +71,7 @@ public class ConfigGroupUtils {
 
     /**
      * 从generators收集所有角色名
-     * 
+     *
      * @param generators generators列表
      * @return 收集到的角色名集合
      */
@@ -88,14 +88,14 @@ public class ConfigGroupUtils {
 
     /**
      * 预处理配置列表，处理Kubernetes配置的角色分组
-     * 
+     *
      * @param list        配置列表
      * @param frameCode   框架代码
      * @param serviceName 服务名称
      * @return 处理后的配置列表
      */
     public static List<ServiceConfig> preprocessKubernetesConfigs(List<ServiceConfig> list, String frameCode,
-            String serviceName) {
+                                                                  String serviceName) {
         if (list == null || list.isEmpty()) {
             return list;
         }
@@ -182,7 +182,7 @@ public class ConfigGroupUtils {
 
     /**
      * 从服务定义中获取所有配置文件及其目标角色
-     * 
+     *
      * @param frameCode   框架代码
      * @param serviceName 服务名称
      * @return 配置文件到角色集合的映射
@@ -285,13 +285,13 @@ public class ConfigGroupUtils {
 
     /**
      * 根据配置类型获取目标角色
-     * 
+     *
      * @param configFileToRolesMap 配置文件到角色集合的映射
      * @param configType           配置类型
      * @return 目标角色集合
      */
     private static Set<String> getTargetRolesForConfigType(Map<String, Set<String>> configFileToRolesMap,
-            String configType) {
+                                                           String configType) {
         Set<String> result = new HashSet<>();
 
         // 完整的configGroup
@@ -317,7 +317,7 @@ public class ConfigGroupUtils {
 
     /**
      * 提取K8S配置类型
-     * 
+     *
      * @param configGroup 配置组
      * @return K8S配置类型（如persistentVolumeClaims或resources）
      */
@@ -332,7 +332,7 @@ public class ConfigGroupUtils {
 
     /**
      * 添加角色前缀到配置名称
-     * 
+     *
      * @param config   配置项
      * @param roleName 角色名
      */
@@ -350,13 +350,13 @@ public class ConfigGroupUtils {
 
     /**
      * 将配置项按配置组分组
-     * 
+     *
      * @param serviceName 服务名称
      * @param list        配置项列表
      * @return 按配置组分组后的映射
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
-            List<ServiceConfig> list) {
+                                                                                   List<ServiceConfig> list) {
         // 最终返回结果
         Map<String, List<ServiceConfig>> resultMap = new LinkedHashMap<>();
 
@@ -415,6 +415,19 @@ public class ConfigGroupUtils {
 
                     // 将配置添加到对应分组
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
+                } else if (StrUtil.isAllBlank(configCategory, configGroup, configLevel)) {
+                    groupKey = GENERAL;
+                    // 为空字段设置默认值
+                    if (StrUtil.isBlank(configCategory)) {
+                        config.setConfigCategory("role");
+                    }
+                    if (StrUtil.isBlank(configGroup)) {
+                        config.setConfigGroup("General");
+                    }
+                    if (StrUtil.isBlank(configLevel)) {
+                        config.setConfigLevel("advanced");
+                    }
+                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
                 // 处理configTargetRoles情况
                 else if (configTargetRoles != null) {
@@ -438,21 +451,6 @@ public class ConfigGroupUtils {
                     // 如果前两者都为空但configLevel不为空，使用configLevel
                     else {
                         groupKey = configLevel;
-                    }
-                    groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
-                }
-                // 只有当三个字段都为空时，才归入General分组
-                else {
-                    groupKey = GENERAL;
-                    // 为空字段设置默认值
-                    if (StrUtil.isBlank(configCategory)) {
-                        config.setConfigCategory("role");
-                    }
-                    if (StrUtil.isBlank(configGroup)) {
-                        config.setConfigGroup("General");
-                    }
-                    if (StrUtil.isBlank(configLevel)) {
-                        config.setConfigLevel("advanced");
                     }
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
@@ -486,13 +484,13 @@ public class ConfigGroupUtils {
 
     /**
      * 为Kubernetes配置生成角色前缀的配置映射
-     * 
+     *
      * @param configFileMap 结果配置映射
      * @param config        角色组配置
      * @param clusterId     集群ID
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleGroupConfig config, Integer clusterId) {
+                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
         Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(),
                 new TypeReference<Map<JSONObject, JSONArray>>() {
                 }, Feature.SupportAutoType);
@@ -598,7 +596,7 @@ public class ConfigGroupUtils {
 
     /**
      * 替换配置中的变量
-     * 
+     *
      * @param serviceConfigs 配置列表
      * @param clusterId      集群ID
      */
@@ -619,7 +617,7 @@ public class ConfigGroupUtils {
 
     /**
      * 根据角色名构建配置名称到角色的映射
-     * 
+     *
      * @param configFileMap 配置文件映射
      * @return 配置名称到角色的映射
      */
@@ -659,7 +657,7 @@ public class ConfigGroupUtils {
 
     /**
      * 创建ServiceConfig的深拷贝
-     * 
+     *
      * @param source 源配置对象
      * @return 克隆的配置对象
      */

@@ -145,7 +145,7 @@ public class ConfigGroupSorter {
         List<String> finalSortedGroups = new ArrayList<>(kubernetesGroups);
         finalSortedGroups.addAll(nonKubernetesGroups);
 
-        logger.info("最终排序后的配置组顺序: {}", finalSortedGroups);
+        logger.debug("最终排序后的配置组顺序: {}", finalSortedGroups);
         return finalSortedGroups;
     }
 
