@@ -20,7 +20,6 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -38,8 +37,8 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.ConfigGroupSorter;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -155,29 +154,18 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             processConfigList(list, clusterId);
         }
 
+        // 预处理Kubernetes配置
+        if (list != null) {
+            // 使用ConfigGroupUtils处理Kubernetes配置
+            list = ConfigGroupUtils.preprocessKubernetesConfigs(list, clusterInfo.getClusterFrame(), serviceName);
+        }
+
         ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.getConfig(clusterId, list);
         }
 
-        // Pre-process the list to append role to configGroup for role-specific
-        // Kubernetes configs
-        if (list != null) { // Ensure list is not null before processing
-            for (ServiceConfig config : list) {
-                String configGroup = config.getConfigGroup();
-                String configTargetRoles = config.getConfigTargetRoles();
-                if (configGroup != null && configGroup.startsWith("kubernetes.config.") &&
-                        StrUtil.isNotBlank(configTargetRoles) && !Constants.GENERAL.equals(configTargetRoles)) {
-
-                    String suffix = "." + configTargetRoles;
-                    if (!configGroup.endsWith(suffix)) {
-                        config.setConfigGroup(configGroup + suffix);
-                    }
-                }
-            }
-        }
-
-        Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils.groupByConfigTargetRoleOrCommon(serviceName,
+        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(serviceName,
                 list);
         return Result.success(roleToConfigMap);
     }
@@ -1106,6 +1094,47 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 创建ServiceConfig的深拷贝
+     * 
+     * @param source 源配置对象
+     * @return 克隆的配置对象
+     */
+    private ServiceConfig cloneServiceConfig(ServiceConfig source) {
+        ServiceConfig target = new ServiceConfig();
+        // 复制基本字段
+        target.setName(source.getName());
+        target.setValue(source.getValue());
+        target.setLabel(source.getLabel());
+        target.setDescription(source.getDescription());
+        target.setRequired(source.isRequired());
+        target.setType(source.getType());
+        target.setConfigurableInWizard(source.isConfigurableInWizard());
+        target.setDefaultValue(source.getDefaultValue());
+        target.setMinValue(source.getMinValue());
+        target.setMaxValue(source.getMaxValue());
+        target.setUnit(source.getUnit());
+        target.setHidden(source.isHidden());
+        target.setSelectValue(source.getSelectValue() != null ? new ArrayList<>(source.getSelectValue()) : null);
+        target.setConfigType(source.getConfigType());
+        target.setConfigWithKerberos(source.isConfigWithKerberos());
+        target.setConfigWithRack(source.isConfigWithRack());
+        target.setConfigWithHA(source.isConfigWithHA());
+        target.setSeparator(source.getSeparator());
+        target.setOpen(source.getOpen());
+        target.setClose(source.getClose());
+        target.setConfigCategory(source.getConfigCategory());
+        target.setConfigGroup(source.getConfigGroup());
+        target.setConfigLevel(source.getConfigLevel());
+        target.setTemplateName(source.getTemplateName());
+        target.setTemplateContent(source.getTemplateContent());
+        target.setDisplayName(source.getDisplayName());
+        target.setHeightMultiple(source.getHeightMultiple());
+        target.setServiceName(source.getServiceName());
+        // configTargetRoles 需要在调用处单独设置
+        return target;
     }
 
 }

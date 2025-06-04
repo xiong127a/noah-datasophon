@@ -28,10 +28,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
-import com.alibaba.fastjson.parser.Feature;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.k8s.handler.K8sDeploymentYamlHandler;
 import com.datasophon.api.k8s.handler.K8sHostCancelTagHandler;
@@ -55,17 +52,7 @@ import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.master.handler.service.ServiceInstallHandler;
 import com.datasophon.api.master.handler.service.ServiceStartHandler;
 import com.datasophon.api.master.handler.service.ServiceStopHandler;
-import com.datasophon.api.service.ClusterAlertHistoryService;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.api.service.ClusterServiceInstanceConfigService;
-import com.datasophon.api.service.ClusterServiceInstanceRoleGroupService;
-import com.datasophon.api.service.ClusterServiceInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.api.service.ClusterVariableService;
-import com.datasophon.api.service.ClusterZkService;
-import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
@@ -88,21 +75,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import com.datasophon.dao.entity.ClusterAlertHistory;
-import com.datasophon.dao.entity.ClusterHostDO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceConfigEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
-import com.datasophon.dao.entity.ClusterServiceRoleGroupConfig;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.dao.entity.ClusterServiceRoleInstanceWebuis;
-import com.datasophon.dao.entity.ClusterVariable;
-import com.datasophon.dao.entity.ClusterZk;
-import com.datasophon.dao.entity.FrameServiceEntity;
+import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.AlertLevel;
 import com.datasophon.dao.enums.CommandState;
 import com.datasophon.dao.enums.NeedRestart;
@@ -695,97 +668,7 @@ public class ProcessUtils {
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
             ClusterServiceRoleGroupConfig config, Integer clusterId) {
-        Map<JSONObject, JSONArray> map = JSONObject.parseObject(config.getConfigFileJson(),
-                new TypeReference<Map<JSONObject, JSONArray>>() {
-                }, Feature.SupportAutoType);
-
-        // 第一步：收集所有角色名(configCategory为role的配置的configGroup)
-        Set<String> roleNames = new HashSet<>();
-        for (JSONObject fileJson : map.keySet()) {
-            List<ServiceConfig> configs = map.get(fileJson).toJavaList(ServiceConfig.class);
-            for (ServiceConfig serviceConfig : configs) {
-                if ("role".equals(serviceConfig.getConfigCategory()) && serviceConfig.getConfigGroup() != null) {
-                    roleNames.add(serviceConfig.getConfigGroup());
-                }
-            }
-        }
-
-        logger.info("收集到的角色名: {}", roleNames);
-
-        // 如果没有找到角色名，无法添加前缀，直接处理并返回
-        if (roleNames.isEmpty()) {
-            logger.warn("没有找到任何角色名，无法为Kubernetes配置添加前缀");
-
-            for (JSONObject fileJson : map.keySet()) {
-                Generators generators = fileJson.toJavaObject(Generators.class);
-                List<ServiceConfig> serviceConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
-
-                // replace variable
-                replaceVariable(serviceConfigs, clusterId);
-                configFileMap.put(generators, serviceConfigs);
-            }
-
-            return;
-        }
-
-        for (JSONObject fileJson : map.keySet()) {
-            Generators generators = fileJson.toJavaObject(Generators.class);
-            List<ServiceConfig> originalConfigs = map.get(fileJson).toJavaList(ServiceConfig.class);
-
-            // 收集需要处理的Kubernetes配置
-            List<ServiceConfig> k8sConfigs = new ArrayList<>();
-            List<ServiceConfig> nonK8sConfigs = new ArrayList<>();
-
-            for (ServiceConfig serviceConfig : originalConfigs) {
-                if (serviceConfig.getConfigGroup() != null
-                        && serviceConfig.getConfigGroup().startsWith("kubernetes.config.")) {
-                    k8sConfigs.add(serviceConfig);
-                } else {
-                    nonK8sConfigs.add(serviceConfig);
-                }
-            }
-
-            // 为每个角色生成带前缀的Kubernetes配置
-            List<ServiceConfig> allConfigs = new ArrayList<>(nonK8sConfigs);
-
-            for (String roleName : roleNames) {
-                for (ServiceConfig k8sConfig : k8sConfigs) {
-                    // 创建配置副本
-                    ServiceConfig newConfig = new ServiceConfig();
-                    BeanUtil.copyProperties(k8sConfig, newConfig);
-
-                    // 添加角色前缀到名称 - 使用小写下划线格式
-                    // 例如: zk_server_storage_classes
-                    String configName = newConfig.getName();
-                    // 将roleName转为小写并将驼峰转为下划线格式
-                    String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
-                    if (!configName.startsWith(normRoleName + "_")) {
-                        newConfig.setName(normRoleName + "_" + configName);
-                    }
-
-                    allConfigs.add(newConfig);
-                }
-            }
-
-            // replace variable
-            replaceVariable(allConfigs, clusterId);
-            configFileMap.put(generators, allConfigs);
-        }
-    }
-
-    private static void replaceVariable(List<ServiceConfig> serviceConfigs, Integer clusterId) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        for (ServiceConfig serviceConfig : serviceConfigs) {
-            if (Constants.INPUT.equals(serviceConfig.getType())) {
-                String name = PlaceholderUtils.replacePlaceholders(serviceConfig.getName(), globalVariables,
-                        Constants.REGEX_VARIABLE);
-                serviceConfig.setName(name);
-
-                String value = PlaceholderUtils.replacePlaceholders((String) serviceConfig.getValue(), globalVariables,
-                        Constants.REGEX_VARIABLE);
-                serviceConfig.setValue(value);
-            }
-        }
+        ConfigGroupUtils.generateConfigFileMap(configFileMap, config, clusterId);
     }
 
     public static List<ServiceConfig> getServiceConfig(ClusterServiceRoleGroupConfig config) {

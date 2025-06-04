@@ -48,6 +48,23 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           imagePullPolicy: "Always"
+          <#if journalnode_node_port_mappings?? || journalnode_cluster_port_mappings??>
+          ports:
+          <#if journalnode_node_port_mappings??>
+          <#assign mappings = journalnode_node_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: nodeport-${item?index + 1}
+          </#list>
+          </#if>
+          <#if journalnode_cluster_port_mappings??>
+          <#assign mappings = journalnode_cluster_port_mappings>
+          <#list mappings as item>
+            - containerPort: ${(item?keys[0])}
+              name: clusterport-${item?index + 1}
+          </#list>
+          </#if>
+          </#if>
           command:
             - "/bin/bash"
             - "-c"
@@ -81,11 +98,11 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "1"
+              memory: <#if journalnode_requests_memory??>${journalnode_requests_memory}<#else>2Gi</#if>
+              cpu: <#if journalnode_requests_cpu??>${journalnode_requests_cpu}<#else>1</#if>
             limits:
-              memory: "4Gi"
-              cpu: "2"
+              memory: <#if journalnode_limits_memory??>${journalnode_limits_memory}<#else>4Gi</#if>
+              cpu: <#if journalnode_limits_cpu??>${journalnode_limits_cpu}<#else>2</#if>
           securityContext:
             privileged: true
           volumeMounts:

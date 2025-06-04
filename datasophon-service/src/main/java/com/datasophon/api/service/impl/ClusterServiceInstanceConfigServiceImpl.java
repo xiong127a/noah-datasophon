@@ -24,7 +24,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ConfigVersionInfoService;
-import com.datasophon.api.utils.CommonUtils;
+import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.Result;
@@ -70,7 +70,7 @@ public class ClusterServiceInstanceConfigServiceImpl
                         serviceConfigs.forEach(config -> config.setServiceName(serviceName));
 
                         // 使用服务名称进行分组排序
-                        Map<String, List<ServiceConfig>> roleToConfigMap = CommonUtils
+                        Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils
                                         .groupByConfigTargetRoleOrCommon(serviceName,serviceConfigs);
                         return Result.success(roleToConfigMap);
                 }

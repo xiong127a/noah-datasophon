@@ -50,6 +50,9 @@ public class ConfigGroupSorter {
         // 角色分组（优先级最高）
         hdfsOrderMap.put("NameNode", ROLE_GROUP_PRIORITY + 1);
         hdfsOrderMap.put("DataNode", ROLE_GROUP_PRIORITY + 2);
+        hdfsOrderMap.put("JournalNode", ROLE_GROUP_PRIORITY + 3);
+        hdfsOrderMap.put("ZKFC", ROLE_GROUP_PRIORITY + 4);
+        hdfsOrderMap.put("HttpFs", ROLE_GROUP_PRIORITY + 5);
         // 通用配置（中等优先级）
         hdfsOrderMap.put("General", GENERAL_GROUP_PRIORITY);
         // 高级配置（较低优先级）
