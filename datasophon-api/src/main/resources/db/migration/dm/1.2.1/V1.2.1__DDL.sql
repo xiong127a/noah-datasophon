@@ -407,7 +407,7 @@ CREATE TABLE "DATASOPHON"."t_ddh_operation_log"
  "host_ids" VARCHAR(30) NULL,
  "service_name" VARCHAR(30) NULL,
  "service_role_instances_ids" VARCHAR(30) NULL,
- "param" TEXT NULL,
+ "param" LONGTEXT NULL,
  "return_code" INT NULL,
  "return_msg" TEXT NULL,
  "operate_user" VARCHAR(128) NULL,
