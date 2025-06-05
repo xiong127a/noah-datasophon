@@ -239,7 +239,7 @@ public class DocServiceImpl implements DocService {
             log.debug("查找目录: {}, 文件名: {}", fullDirPath, fileName);
 
             // 列出目录下所有文件
-            File file = FileUtil.file(fullDirPath);
+            File file = FileUtil.file(fullDirPath+"/"+fileName);
 
             log.info("找到匹配的图片: {}", file.getAbsolutePath());
             return resourceLoader.getResource("file:" + file.getAbsolutePath());
