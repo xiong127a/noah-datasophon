@@ -231,10 +231,10 @@ CREATE TABLE "DATASOPHON"."t_ddh_cluster_service_role_group_config"
 (
  "id" INT IDENTITY(1,1) NOT NULL,
  "role_group_id" INT NULL,
- "config_json" TEXT NULL,
+ "config_json" LONGTEXT NULL,
  "config_json_md5" VARCHAR(255) NULL,
  "config_version" INT NULL,
- "config_file_json" TEXT NULL,
+ "config_file_json" LONGTEXT NULL,
  "config_file_json_md5" VARCHAR(255) NULL,
  "cluster_id" INT NULL,
  "create_time" TIMESTAMP(0) NULL,
