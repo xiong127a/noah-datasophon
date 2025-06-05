@@ -190,7 +190,7 @@ public class OperationLogAspect {
                 op.setEndTime(new Date());
             }
             //将该对象insert到数据库中，这里使用log打印该对象数据
-            log.info("api-log :{}", JSONObject.toJSONString(op));
+            log.debug("api-log :{}", JSONObject.toJSONString(op));
             operationLogService.save(op);
         }
         return object;
