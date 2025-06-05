@@ -37,7 +37,6 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.ConfigGroupSorter;
 import com.datasophon.api.utils.ConfigGroupUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
@@ -203,7 +202,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 if (extractedRoleName != null) {
                     // 检查是否已经添加了前缀，只有未添加时才添加
                     if (!configName.startsWith(extractedRoleName + "_")) {
-                        configName = ConfigGroupSorter.addRolePrefixForKubernetesConfig(
+                        configName = ConfigGroupUtils.addRolePrefixForKubernetesConfig(
                                 extractedRoleName, configName, serviceConfig.getConfigGroup());
                         serviceConfig.setName(configName);
                     }

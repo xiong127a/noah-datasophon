@@ -748,7 +748,7 @@ export default {
     // 非kubernetes配置组
     nonKubernetesGroups() {
       const groups = this.filteredTemplateData || {};
-      return Object.entries(groups)
+      const filteredGroups = Object.entries(groups)
         .filter(([_, group]) => !group || 
                 (Array.isArray(group) ? 
                   !(group.length === 1 && group[0].hasKubernetesConfig) : 
@@ -757,6 +757,24 @@ export default {
           acc[key] = value;
           return acc;
         }, {});
+      
+      // 对分组进行排序
+      const sortedGroups = {};
+      
+      // 获取所有分组键
+      const allKeys = Object.keys(filteredGroups);
+      
+      // 对分组键进行排序
+      const sortedKeys = this.sortConfigGroups(allKeys);
+      
+      // 按排序后的顺序构建结果
+      sortedKeys.forEach(key => {
+        if (filteredGroups[key]) {
+          sortedGroups[key] = filteredGroups[key];
+        }
+      });
+      
+      return sortedGroups;
     },
     filteredVersionList() {
       if (!this.verSionList || this.verSionList.length === 0) {
@@ -1936,6 +1954,48 @@ export default {
       });
       
       return result;
+    },
+    // 添加配置组排序方法
+    sortConfigGroups(groupNames) {
+      // 将分组分类
+      const roleGroups = [];
+      const generalGroups = [];
+      const advancedGroups = [];
+      const customGroups = [];
+      const otherGroups = [];
+      
+      // 对组名进行分类
+      groupNames.forEach(name => {
+        if (name === 'General' || name === 'CommonConfig') {
+          generalGroups.push(name);
+        } else if (name.startsWith('advanced_')) {
+          advancedGroups.push(name);
+        } else if (name.startsWith('custom_')) {
+          customGroups.push(name);
+        } else if (name.startsWith('kubernetes.config.')) {
+          // Kubernetes配置组已经在前面单独处理了
+          otherGroups.push(name);
+        } else {
+          // 假设其他都是角色分组
+          roleGroups.push(name);
+        }
+      });
+      
+      // 对每个分组内部进行字母序排序
+      roleGroups.sort();
+      generalGroups.sort();
+      advancedGroups.sort();
+      customGroups.sort();
+      otherGroups.sort();
+      
+      // 按照优先级顺序合并结果：角色 > 通用 > 高级 > 自定义 > 其他
+      return [
+        ...roleGroups,
+        ...generalGroups,
+        ...advancedGroups,
+        ...customGroups,
+        ...otherGroups
+      ];
     },
   },
   created() {

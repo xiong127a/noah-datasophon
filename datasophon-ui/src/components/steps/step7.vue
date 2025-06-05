@@ -682,7 +682,64 @@ export default {
         );
       });
       
-      return processedGroups;
+      // 对配置组进行排序
+      const sortedGroups = {};
+      
+      // 获取所有分组键
+      const allKeys = Object.keys(processedGroups);
+      
+      // 对分组键进行排序
+      const sortedKeys = this.sortConfigGroups(allKeys);
+      
+      // 按排序后的顺序构建结果
+      sortedKeys.forEach(key => {
+        sortedGroups[key] = processedGroups[key];
+      });
+      
+      return sortedGroups;
+    },
+    
+    // 添加一个配置组排序方法
+    sortConfigGroups(groupNames) {
+      // 将分组分类
+      const roleGroups = [];
+      const generalGroups = [];
+      const advancedGroups = [];
+      const customGroups = [];
+      const otherGroups = [];
+      
+      // 对组名进行分类
+      groupNames.forEach(name => {
+        if (name === 'General' || name === 'CommonConfig') {
+          generalGroups.push(name);
+        } else if (name.startsWith('advanced_')) {
+          advancedGroups.push(name);
+        } else if (name.startsWith('custom_')) {
+          customGroups.push(name);
+        } else if (name.startsWith('kubernetes.config.')) {
+          // Kubernetes配置组已经在前面单独处理了
+          otherGroups.push(name);
+        } else {
+          // 假设其他都是角色分组
+          roleGroups.push(name);
+        }
+      });
+      
+      // 对每个分组内部进行字母序排序
+      roleGroups.sort();
+      generalGroups.sort();
+      advancedGroups.sort();
+      customGroups.sort();
+      otherGroups.sort();
+      
+      // 按照优先级顺序合并结果：角色 > 通用 > 高级 > 自定义 > 其他
+      return [
+        ...roleGroups,
+        ...generalGroups,
+        ...advancedGroups,
+        ...customGroups,
+        ...otherGroups
+      ];
     },
     // 辅助方法：格式化子组名称
     formatSubGroupName(subGroupName) {

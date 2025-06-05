@@ -100,8 +100,6 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        logger.debug("开始预处理Kubernetes配置，服务: {}, 框架: {}, 配置项数量: {}", serviceName, frameCode, list.size());
-
         // 1. 获取服务定义中的所有配置文件及其角色列表
         Map<String, Set<String>> configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
 
@@ -109,8 +107,6 @@ public class ConfigGroupUtils {
             logger.warn("无法获取服务 {} 的配置文件角色映射，将保持原始配置", serviceName);
             return list;
         }
-
-        logger.debug("获取到的配置文件角色映射: {}", configFileToRolesMap);
 
         // 2. 对配置进行分类
         List<ServiceConfig> processedConfigs = new ArrayList<>();
@@ -123,7 +119,6 @@ public class ConfigGroupUtils {
             if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
                 // 提取K8S配置类型（如persistentVolumeClaims或resources）
                 String k8sConfigType = extractK8sConfigType(configGroup);
-                logger.debug("发现K8S配置: {}, 类型: {}, 组: {}", config.getName(), k8sConfigType, configGroup);
 
                 // 添加到相应类型的列表
                 k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
@@ -138,21 +133,16 @@ public class ConfigGroupUtils {
             String k8sConfigType = entry.getKey();
             List<ServiceConfig> configs = entry.getValue();
 
-            logger.debug("处理K8S配置类型: {}, 配置数量: {}", k8sConfigType, configs.size());
-
             // 获取该类型配置的角色集合
             Set<String> targetRoles = getTargetRolesForConfigType(configFileToRolesMap, k8sConfigType);
 
             if (targetRoles.isEmpty()) {
                 logger.warn("无法确定K8S配置类型 {} 的目标角色，将使用通用角色", k8sConfigType);
                 targetRoles.add(GENERAL);
-            } else {
-                logger.debug("K8S配置类型 {} 的目标角色: {}", k8sConfigType, targetRoles);
             }
 
             // 为每个角色创建每个配置的副本
             for (String roleName : targetRoles) {
-                logger.debug("为角色 {} 创建配置副本", roleName);
                 for (ServiceConfig config : configs) {
                     // 创建配置副本
                     ServiceConfig copy = cloneServiceConfig(config);
@@ -168,7 +158,6 @@ public class ConfigGroupUtils {
 
                     // 添加到处理后的配置列表
                     processedConfigs.add(copy);
-                    logger.debug("创建的配置副本: name={}, group={}", copy.getName(), copy.getConfigGroup());
                 }
             }
         }
@@ -176,7 +165,6 @@ public class ConfigGroupUtils {
         // 添加非K8S配置到结果列表
         processedConfigs.addAll(nonK8sConfigs);
 
-        logger.debug("完成Kubernetes配置预处理，处理后配置数量: {}", processedConfigs.size());
         return processedConfigs;
     }
 
@@ -245,7 +233,6 @@ public class ConfigGroupUtils {
 
                     // 重要：将filename映射到对应的角色列表
                     filenameToRolesMap.put(filename, roles);
-                    logger.debug("找到K8S配置文件: {}，角色: {}", filename, roles);
                 }
             }
 
@@ -264,7 +251,6 @@ public class ConfigGroupUtils {
                         if (roles != null && !roles.isEmpty()) {
                             // 将configGroup映射到对应的角色
                             result.put(configGroup, roles);
-                            logger.debug("为配置组 {} 找到角色: {}", configGroup, roles);
 
                             // 同时将参数名映射到角色
                             String paramName = parameter.getString("name");
@@ -357,11 +343,6 @@ public class ConfigGroupUtils {
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
             List<ServiceConfig> list) {
-        // 最终返回结果
-        Map<String, List<ServiceConfig>> resultMap = new LinkedHashMap<>();
-
-        logger.debug("开始处理配置项，服务名: {}, 配置项数量: {}", serviceName, list != null ? list.size() : 0);
-
         // 先处理所有配置项的模板内容
         if (list != null) {
             for (ServiceConfig config : list) {
@@ -374,10 +355,9 @@ public class ConfigGroupUtils {
         }
 
         // 存储分组结果
-        Map<String, List<ServiceConfig>> groupedConfigs = new HashMap<>();
-
-        // 用于收集kubernetes配置组和角色的映射关系
-        Map<String, String> k8sConfigToRoleMap = new HashMap<>();
+        Map<String, List<ServiceConfig>> groupedConfigs = new LinkedHashMap<>();
+        // 收集从Kubernetes配置中提取的角色名
+        Set<String> k8sRoles = new HashSet<>();
 
         if (list != null) {
             for (ServiceConfig config : list) {
@@ -387,34 +367,22 @@ public class ConfigGroupUtils {
                 String configTargetRoles = config.getConfigTargetRoles();
                 String groupKey = GENERAL;
 
-                logger.debug("处理配置项: name={}, category={}, group={}, level={}, targetRoles={}",
-                        config.getName(), configCategory, configGroup, configLevel, configTargetRoles);
-
                 // 处理kubernetes.config类型的配置组
                 if (StrUtil.isNotBlank(configGroup) && configGroup.startsWith("kubernetes.config.")) {
-                    // 尝试从配置组中提取角色名
-                    String roleName = extractRoleFromK8sConfigGroup(configGroup);
-
-                    if (StrUtil.isNotBlank(roleName)) {
-                        // 如果从配置组中提取到了角色名，使用该角色名作为分组键
-                        groupKey = roleName;
-                        logger.debug("从Kubernetes配置组中提取角色名: {}，分组键: {}", configGroup, groupKey);
-
-                        // 记录该Kubernetes配置组与角色的映射关系
-                        k8sConfigToRoleMap.put(configGroup, roleName);
-                    } else {
-                        // 如果无法从配置组中提取角色名，使用完整的configGroup作为键
-                        groupKey = configGroup;
-                        logger.debug("无法从Kubernetes配置组中提取角色名，使用完整配置组: {}", groupKey);
-                    }
-
+                    // 特殊处理kubernetes配置，使用完整的configGroup作为键
+                    groupKey = configGroup;
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
+
+                    // 从Kubernetes配置组名中提取角色名
+                    String roleName = extractRoleFromK8sConfigGroup(configGroup);
+                    if (StrUtil.isNotBlank(roleName)) {
+                        k8sRoles.add(roleName);
+                    }
                 }
                 // 处理角色配置
                 else if ("role".equals(configCategory) && configGroup != null) {
                     // 使用configGroup作为分组键，这样角色配置会被正确地分到各自的角色组
                     groupKey = configGroup;
-                    logger.debug("识别为角色配置组: {}", groupKey);
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
                 // 处理配置级别为"custom"或"advanced"的情况
@@ -431,10 +399,6 @@ public class ConfigGroupUtils {
                         groupKey = levelPrefix + configGroup;
                     }
 
-                    // 记录分组处理日志
-                    logger.debug("识别为高级/自定义配置组: 级别={}, 组={}, 最终分组键={}",
-                            configLevel, configGroup, groupKey);
-
                     // 将配置添加到对应分组
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 } else if (StrUtil.isAllBlank(configCategory, configGroup, configLevel)) {
@@ -449,13 +413,11 @@ public class ConfigGroupUtils {
                     if (StrUtil.isBlank(configLevel)) {
                         config.setConfigLevel("advanced");
                     }
-                    logger.debug("识别为通用配置组(所有字段为空): {}", groupKey);
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
                 // 处理configTargetRoles情况
                 else if (configTargetRoles != null) {
                     Set<String> roleNames = parseRoleNames(configTargetRoles);
-                    logger.debug("根据targetRoles处理配置: {}, 角色: {}", config.getName(), roleNames);
                     for (String roleName : roleNames) {
                         groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>()).add(config);
                     }
@@ -476,64 +438,34 @@ public class ConfigGroupUtils {
                     else {
                         groupKey = configLevel;
                     }
-                    logger.debug("根据非空字段处理配置: {}, 最终分组键: {}", config.getName(), groupKey);
                     groupedConfigs.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(config);
                 }
             }
         }
 
-        logger.debug("初始分组结果，分组数: {}, 分组键: {}", groupedConfigs.size(), groupedConfigs.keySet());
-        logger.debug("Kubernetes配置组与角色的映射关系: {}", k8sConfigToRoleMap);
-
-        // 排序分组键并构建结果
-        List<String> sortedGroups = ConfigGroupSorter.sortGroups(serviceName, new ArrayList<>(groupedConfigs.keySet()));
-
-        logger.debug("按服务 {} 排序后的配置组顺序: {}", serviceName, sortedGroups);
-
-        // 确保General组总是存在，哪怕是空的
-        if (!groupedConfigs.containsKey(GENERAL)) {
-            groupedConfigs.put(GENERAL, new ArrayList<>());
+        // 为从K8S配置组中提取的角色创建空角色分组（如果尚不存在）
+        for (String roleName : k8sRoles) {
+            groupedConfigs.computeIfAbsent(roleName, k -> new ArrayList<>());
         }
 
-        // 首先添加General组
-        if (groupedConfigs.containsKey(GENERAL)) {
-            resultMap.put(GENERAL, groupedConfigs.get(GENERAL));
-            logger.debug("添加General组到结果映射");
-        }
-
-        // 然后按排序添加其他组
-        for (String group : sortedGroups) {
-            if (!GENERAL.equals(group)) { // 避免重复添加General组
-                resultMap.put(group, groupedConfigs.get(group));
-                logger.debug("添加分组 {} 到结果映射", group);
-            }
-        }
-
-        logger.debug("最终结果映射中的分组: {}", resultMap.keySet());
-        return resultMap;
+        return groupedConfigs;
     }
 
     /**
      * 从Kubernetes配置组名中提取角色名
-     * 例如：从 "kubernetes.config.persistentVolumeClaims.ZkServer" 提取 "ZkServer"
-     *
+     * 例如从 "kubernetes.config.persistentVolumeClaims.DataNode" 提取 "DataNode"
+     * 
      * @param configGroup Kubernetes配置组名
      * @return 提取的角色名，如果无法提取则返回null
      */
     private static String extractRoleFromK8sConfigGroup(String configGroup) {
-        if (configGroup == null) {
+        if (configGroup == null || !configGroup.startsWith("kubernetes.config.")) {
             return null;
         }
 
         String[] parts = configGroup.split("\\.");
-        // kubernetes.config.type.roleName 格式
         if (parts.length >= 4) {
-            String roleName = parts[3];
-
-            // 如果角色名是驼峰格式并且首字母大写，很可能是一个有效的角色名
-            if (roleName.length() > 0 && Character.isUpperCase(roleName.charAt(0))) {
-                return roleName;
-            }
+            return parts[3]; // 返回第四部分作为角色名
         }
 
         return null;
@@ -560,8 +492,6 @@ public class ConfigGroupUtils {
         }
 
         Set<String> roleNames = collectRoleNamesFromGenerators(generatorsList);
-
-        logger.info("收集到的角色名: {}", roleNames);
 
         // 如果没有找到角色名，无法添加前缀，直接处理并返回
         if (roleNames.isEmpty()) {
@@ -753,5 +683,28 @@ public class ConfigGroupUtils {
         target.setServiceName(source.getServiceName());
 
         return target;
+    }
+
+    /**
+     * 为Kubernetes配置项的名称添加角色前缀
+     *
+     * @param roleName    角色名称
+     * @param configName  配置项名称
+     * @param configGroup 配置分组
+     * @return 添加了角色前缀的配置项名称
+     */
+    public static String addRolePrefixForKubernetesConfig(String roleName, String configName, String configGroup) {
+        if (roleName == null || configName == null) {
+            return configName;
+        }
+
+        // 如果配置组是Kubernetes相关的，添加角色前缀
+        if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+            // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
+            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+            return normRoleName + "_" + configName;
+        }
+
+        return configName;
     }
 }
