@@ -43,7 +43,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.DATASOPHON;
@@ -509,7 +508,7 @@ public class K8sServiceHandler {
         String resourceName = metadata.get(0).getMetadata().getName();
         logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
 
-        resource.waitUntilReady(20, TimeUnit.MINUTES);
+//        resource.waitUntilReady(10, TimeUnit.MINUTES);
 
         // 获取Pod列表（新增代码）
         List<Pod> pods = client.pods()

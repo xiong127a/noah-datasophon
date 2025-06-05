@@ -222,7 +222,7 @@ public class K8sFreeMakerUtils {
 
         // 创建新的 ConfigMap
         try {
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).serverSideApply();
+            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).createOrReplace();
         } catch (Exception e) {
             log.error("Error creating ConfigMap: {}", e.getMessage());
             throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());

@@ -31,12 +31,10 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
-import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
@@ -97,13 +95,7 @@ public class ClusterServiceCommandServiceImpl
     private ClusterServiceCommandService commandService;
 
     @Autowired
-    private ClusterHostService hostService;
-
-    @Autowired
     private ClusterServiceInstanceService serviceInstanceService;
-
-    @Autowired
-    private ClusterServiceInstanceConfigService serviceInstanceConfigService;
 
     @Autowired
     private ClusterServiceRoleInstanceService roleInstanceService;
@@ -116,7 +108,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<String>();
+        List<String> commandIds = new ArrayList<>();
 
         Map<String, List<String>> serviceRoleHostMap = CacheOperateUtils
                 .getWithType(clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING,
@@ -148,7 +140,6 @@ public class ClusterServiceCommandServiceImpl
                     List<String> hosts = serviceRoleHostMap.get(serviceRole.getServiceRoleName());
                     for (String hostname : hosts) {
                         if (alreadyExistsServiceRole(serviceRole.getServiceRoleName(), hostname, clusterId)) {
-                            continue;
                         } else {
                             ClusterServiceCommandHostEntity commandHost;
                             if (map.containsKey(hostname)) {
@@ -195,8 +186,8 @@ public class ClusterServiceCommandServiceImpl
                 .eq(Constants.CLUSTER_ID, clusterId));
         for (ClusterServiceCommandEntity commandEntity : list) {
             // 实时聚合命令进度和状态，并更新数据库
-            calculateCommandActualProgress(commandEntity, true);
-            calculateRealTimeCommandState(commandEntity, true);
+            calculateCommandActualProgress(commandEntity);
+            calculateRealTimeCommandState(commandEntity);
             // 设置状态码用于前端显示
             commandEntity.setCommandStateCode(commandEntity.getCommandState().getValue());
             // 计算实际时间
@@ -215,31 +206,30 @@ public class ClusterServiceCommandServiceImpl
     /**
      * 计算命令的实际进度
      * 通过查询主机命令进度计算命令的整体进度
-     * 
+     *
      * @param commandEntity 命令实体
-     * @param updateDb      是否更新数据库
      */
-    private void calculateCommandActualProgress(ClusterServiceCommandEntity commandEntity, boolean updateDb) {
+    private void calculateCommandActualProgress(ClusterServiceCommandEntity commandEntity) {
         try {
             Long oldProgress = commandEntity.getCommandProgress();
 
             if (CommandState.SUCCESS.equals(commandEntity.getCommandState())) {
                 commandEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
+                if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
                     logger.info("命令 {} 状态已成功，进度设为100%并更新数据库", commandEntity.getCommandId());
                 }
                 return;
             } else if (CommandState.FAILED.equals(commandEntity.getCommandState())) {
                 commandEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
+                if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
                     logger.info("命令 {} 状态已失败，进度设为100%并更新数据库", commandEntity.getCommandId());
                 }
                 return;
             } else if (CommandState.CANCEL.equals(commandEntity.getCommandState())) {
                 commandEntity.setCommandProgress(100L);
-                if (updateDb && (oldProgress == null || oldProgress != 100L)) {
+                if ((oldProgress == null || oldProgress != 100L)) {
                     this.updateById(commandEntity);
                     logger.info("命令 {} 状态已取消，进度设为100%并更新数据库", commandEntity.getCommandId());
                 }
@@ -251,7 +241,7 @@ public class ClusterServiceCommandServiceImpl
                             .eq("command_id", commandEntity.getCommandId()));
             if (hostCommands == null || hostCommands.isEmpty()) {
                 commandEntity.setCommandProgress(0L);
-                if (updateDb && (oldProgress == null || oldProgress != 0L)) {
+                if ((oldProgress == null || oldProgress != 0L)) {
                     this.updateById(commandEntity);
                     logger.info("命令 {} 无主机命令，进度设为0%并更新数据库", commandEntity.getCommandId());
                 }
@@ -262,7 +252,7 @@ public class ClusterServiceCommandServiceImpl
             int totalCount = hostCommands.size();
             for (ClusterServiceCommandHostEntity hostCommand : hostCommands) {
                 // 实时聚合主机命令进度
-                commandHostService.calculateHostCommandActualProgress(hostCommand, updateDb);
+                commandHostService.calculateHostCommandActualProgress(hostCommand, true);
                 if (hostCommand.getCommandProgress() != null) {
                     totalProgress += hostCommand.getCommandProgress();
                     if (CommandState.SUCCESS.equals(hostCommand.getCommandState())) {
@@ -270,13 +260,13 @@ public class ClusterServiceCommandServiceImpl
                     }
                 }
             }
-            long avgProgress = totalCount > 0 ? totalProgress / totalCount : 0;
-            long completedProgress = totalCount > 0 ? (completedCount * 100L) / totalCount : 0;
+            long avgProgress = totalProgress / totalCount;
+            long completedProgress = completedCount * 100L / totalCount;
             long finalProgress = Math.max(avgProgress, completedProgress);
             commandEntity.setCommandProgress(finalProgress);
 
             // 如果需要更新数据库且进度有变化
-            if (updateDb && (oldProgress == null || oldProgress != finalProgress)) {
+            if ((oldProgress == null || oldProgress != finalProgress)) {
                 this.updateById(commandEntity);
                 logger.info("命令 {} 进度更新为 {}% 并更新数据库", commandEntity.getCommandId(), finalProgress);
             }
@@ -288,11 +278,10 @@ public class ClusterServiceCommandServiceImpl
     /**
      * 实时计算命令状态（从内层计算外层状态）
      * 该方法可以选择是否更新数据库
-     * 
+     *
      * @param commandEntity 命令实体
-     * @param updateDb      是否更新数据库
      */
-    private void calculateRealTimeCommandState(ClusterServiceCommandEntity commandEntity, boolean updateDb) {
+    private void calculateRealTimeCommandState(ClusterServiceCommandEntity commandEntity) {
         try {
             List<ClusterServiceCommandHostEntity> hostCommands = commandHostService.list(
                     new QueryWrapper<ClusterServiceCommandHostEntity>()
@@ -308,7 +297,7 @@ public class ClusterServiceCommandServiceImpl
             int successCount = 0;
             for (ClusterServiceCommandHostEntity hostCommand : hostCommands) {
                 // 实时聚合主机命令状态
-                commandHostService.calculateRealTimeHostCommandState(hostCommand, updateDb);
+                commandHostService.calculateRealTimeHostCommandState(hostCommand, true);
                 if (CommandState.RUNNING.equals(hostCommand.getCommandState())) {
                     allCompleted = false;
                 } else if (CommandState.FAILED.equals(hostCommand.getCommandState())) {
@@ -352,7 +341,7 @@ public class ClusterServiceCommandServiceImpl
             }
 
             // 如果需要更新数据库且状态发生了变化或者是结束状态
-            if (updateDb && (stateChanged || allCompleted)) {
+            if ((stateChanged || allCompleted)) {
                 this.updateById(commandEntity);
                 logger.trace("命令 {} 实时计算状态后更新数据库，状态: {}",
                         commandEntity.getCommandId(), commandEntity.getCommandState());
@@ -367,23 +356,19 @@ public class ClusterServiceCommandServiceImpl
      * 2、生成主机指令
      * 3、生产主机上操作指令
      *
-     * @param clusterId
-     * @param commandType
-     * @param serviceInstanceIds
-     * @return
      */
     @Override
     public Result generateServiceCommand(Integer clusterId, CommandType commandType, List<String> serviceInstanceIds) {
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<String>();
+        List<String> commandIds = new ArrayList<>();
         for (String serviceInstanceId : serviceInstanceIds) {
             int id = Integer.parseInt(serviceInstanceId);
             // 查询服务对应的服务角色实例
             List<ClusterServiceRoleInstanceEntity> roleInstanceList = roleInstanceService
                     .getServiceRoleInstanceListByServiceId(id);
-            if (Objects.isNull(roleInstanceList) || roleInstanceList.size() == 0) {
+            if (Objects.isNull(roleInstanceList) || roleInstanceList.isEmpty()) {
                 continue;
             }
             ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(id);
@@ -410,7 +395,7 @@ public class ClusterServiceCommandServiceImpl
                 map.put(roleInstance.getHostname(), commandHost);
             }
         }
-        if (list.size() > 0) {
+        if (!list.isEmpty()) {
             commandService.saveBatch(list);
             commandHostService.saveBatch(commandHostList);
             hostCommandService.saveBatch(hostCommandList);
@@ -439,7 +424,7 @@ public class ClusterServiceCommandServiceImpl
         List<ClusterServiceCommandEntity> list = new ArrayList<>();
         List<ClusterServiceCommandHostEntity> commandHostList = new ArrayList<>();
         List<ClusterServiceCommandHostCommandEntity> hostCommandList = new ArrayList<>();
-        List<String> commandIds = new ArrayList<String>();
+        List<String> commandIds = new ArrayList<>();
 
         ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceInstanceId);
         ClusterServiceCommandEntity commandEntity = ProcessUtils.generateCommandEntity(clusterId, commandType,
