@@ -67,7 +67,6 @@ public class AkkaUtils {
         try {
             // 创建请求消息
             TemplateRequestMessage request = new TemplateRequestMessage();
-            request.setRequestType(TemplateRequestMessage.RequestType.CONTENT);
             request.setTemplateName(templateName);
 
             // 获取模板服务Actor
@@ -81,7 +80,7 @@ public class AkkaUtils {
                     Duration.create(timeoutSeconds, TimeUnit.SECONDS));
 
             // 处理响应
-            if (response.isSuccess() && response.getResponseType() == TemplateResponseMessage.ResponseType.CONTENT) {
+            if (response.isSuccess()) {
                 log.info("成功从Master获取模板: {}, 内容长度: {}", templateName,
                         response.getTemplateContent() == null ? 0 : response.getTemplateContent().length());
                 return response.getTemplateContent();
