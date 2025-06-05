@@ -36,7 +36,8 @@ public class ConfigGroupSorter {
     private static final Map<String, Map<String, Integer>> SERVICE_GROUP_ORDER_MAP = new ConcurrentHashMap<>();
 
     // 通用分组类型的优先级
-    private static final int ROLE_GROUP_PRIORITY = 100; // 角色分组最高优先级
+    private static final int KUBERNETES_GROUP_PRIORITY = 50; // Kubernetes配置最高优先级
+    private static final int ROLE_GROUP_PRIORITY = 100; // 角色分组次高优先级
     private static final int GENERAL_GROUP_PRIORITY = 200; // 通用配置中等优先级
     private static final int ADVANCED_GROUP_PRIORITY = 300; // 高级配置较低优先级
     private static final int CUSTOM_GROUP_PRIORITY = 400; // 自定义配置最低优先级
@@ -75,16 +76,23 @@ public class ConfigGroupSorter {
             return Integer.MAX_VALUE;
         }
 
-        if (groupName.startsWith("custom_")) {
-            return CUSTOM_GROUP_PRIORITY;
+        int priority;
+        if (groupName.startsWith("kubernetes.config.")) {
+            // Kubernetes配置组有最高优先级
+            priority = KUBERNETES_GROUP_PRIORITY;
+        } else if (groupName.startsWith("custom_")) {
+            priority = CUSTOM_GROUP_PRIORITY;
         } else if (groupName.startsWith("advanced_")) {
-            return ADVANCED_GROUP_PRIORITY;
+            priority = ADVANCED_GROUP_PRIORITY;
         } else if (groupName.equals("General") || groupName.equals("CommonConfig")) {
-            return GENERAL_GROUP_PRIORITY;
+            priority = GENERAL_GROUP_PRIORITY;
         } else {
             // 假设其他都是角色分组
-            return ROLE_GROUP_PRIORITY;
+            priority = ROLE_GROUP_PRIORITY;
         }
+
+        logger.debug("分组 [{}] 的基础优先级为: {}", groupName, priority);
+        return priority;
     }
 
     /**
@@ -99,16 +107,23 @@ public class ConfigGroupSorter {
             return new ArrayList<>();
         }
 
+        logger.debug("开始排序配置组，服务名: {}, 原始分组: {}", serviceName, groups);
+
         // 获取服务特定的排序规则
         Map<String, Integer> serviceSpecificOrder = SERVICE_GROUP_ORDER_MAP.getOrDefault(serviceName.toUpperCase(),
                 new HashMap<>());
 
+        logger.debug("服务特定排序规则: {}", serviceSpecificOrder);
+
         // 首先按照基础规则排序
-        List<String> initialSortedGroups = groups.stream()
+        List<String> sortedGroups = groups.stream()
                 .sorted((g1, g2) -> {
                     // 1. 首先按照基础分组类型优先级排序
                     int basePriority1 = getBaseGroupPriority(g1);
                     int basePriority2 = getBaseGroupPriority(g2);
+
+                    logger.debug("分组比较: {} (优先级: {}) vs {} (优先级: {})",
+                            g1, basePriority1, g2, basePriority2);
 
                     if (basePriority1 != basePriority2) {
                         return basePriority1 - basePriority2;
@@ -118,6 +133,9 @@ public class ConfigGroupSorter {
                     Integer order1 = serviceSpecificOrder.get(g1);
                     Integer order2 = serviceSpecificOrder.get(g2);
 
+                    logger.debug("基础优先级相同，使用服务特定规则: {} (顺序: {}) vs {} (顺序: {})",
+                            g1, order1, g2, order2);
+
                     if (order1 != null && order2 != null) {
                         return order1.compareTo(order2);
                     } else if (order1 != null) {
@@ -126,27 +144,39 @@ public class ConfigGroupSorter {
                         return 1;
                     }
 
-                    // 3. 如果都没有特定顺序，按名称字母顺序排序
+                    // 3. 对于kubernetes.config.类型的配置组，进一步按配置类型排序
+                    if (g1.startsWith("kubernetes.config.") && g2.startsWith("kubernetes.config.")) {
+                        String[] parts1 = g1.split("\\.");
+                        String[] parts2 = g2.split("\\.");
+
+                        // 比较配置类型部分 (第3部分)
+                        if (parts1.length >= 3 && parts2.length >= 3) {
+                            String type1 = parts1[2];
+                            String type2 = parts2[2];
+                            logger.debug("Kubernetes配置类型比较: {} vs {}", type1, type2);
+                            int typeCompare = type1.compareTo(type2);
+                            if (typeCompare != 0) {
+                                return typeCompare;
+                            }
+                        }
+                    }
+
+                    // 4. 如果都没有特定顺序，按名称字母顺序排序
+                    logger.debug("无特定排序规则，按字母排序: {} vs {}", g1, g2);
                     return g1.compareTo(g2);
                 })
                 .collect(Collectors.toList());
 
-        // 特殊处理：Kubernetes相关配置组始终排在最前面
-        // 提取kubernetes相关的组和非kubernetes组
-        List<String> kubernetesGroups = initialSortedGroups.stream()
-                .filter(name -> name.endsWith("_Kubernetes") || name.startsWith("kubernetes.config."))
-                .collect(Collectors.toList());
+        logger.debug("排序后的配置组顺序: {}", sortedGroups);
 
-        List<String> nonKubernetesGroups = initialSortedGroups.stream()
-                .filter(name -> !name.endsWith("_Kubernetes") && !name.startsWith("kubernetes.config."))
-                .collect(Collectors.toList());
+        // 确保General组总是第一个
+        if (sortedGroups.contains("General") && sortedGroups.indexOf("General") > 0) {
+            sortedGroups.remove("General");
+            sortedGroups.add(0, "General");
+            logger.debug("将General组移到首位: {}", sortedGroups);
+        }
 
-        // 合并结果，保持kubernetes组在前面
-        List<String> finalSortedGroups = new ArrayList<>(kubernetesGroups);
-        finalSortedGroups.addAll(nonKubernetesGroups);
-
-        logger.debug("最终排序后的配置组顺序: {}", finalSortedGroups);
-        return finalSortedGroups;
+        return sortedGroups;
     }
 
     /**
