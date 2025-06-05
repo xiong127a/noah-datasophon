@@ -144,6 +144,34 @@ export default {
     window.removeEventListener('scroll', this.handleContentScroll);
   },
   methods: {
+    // 解析可能嵌套的URL，获取真实的图片路径
+    extractRealImagePath(url) {
+      // 如果不是字符串，直接返回
+      if (typeof url !== 'string') {
+        return url;
+      }
+      
+      // 检查是否包含嵌套的imagePath参数
+      const nestedUrlRegex = /\/doc\/image\?imagePath=(.+)/i;
+      const match = url.match(nestedUrlRegex);
+      
+      if (match && match[1]) {
+        try {
+          // 尝试解码路径参数
+          const decodedPath = decodeURIComponent(match[1]);
+          console.log('提取的嵌套URL路径:', decodedPath);
+          
+          // 递归处理，因为可能有多层嵌套
+          return this.extractRealImagePath(decodedPath);
+        } catch (e) {
+          console.error('解析嵌套URL失败:', e);
+        }
+      }
+      
+      // 没有嵌套或解析失败，返回原始URL
+      return url;
+    },
+    
     // 配置图片URL转换
     configureImageRenderer() {
       // 保存默认的图片渲染器
@@ -153,6 +181,10 @@ export default {
       
       // 获取API基础URL
       const apiBaseUrl = paths.path();
+      const docImageApi = `${apiBaseUrl}${services.getDocImage}`;
+      
+      // 创建检测嵌套URL的正则表达式
+      const nestedUrlRegex = /\/doc\/image\?imagePath=/i;
       
       // 重写图片渲染器
       md.renderer.rules.image = (tokens, idx, options, env, self) => {
@@ -167,11 +199,46 @@ export default {
               const src = token.attrs[srcIndex][1];
               console.log('Markdown图片标签解析 - 原始路径:', src);
               
+              // 增强检测逻辑：检查是否已经处理过，或者是否包含嵌套的imagePath参数
+              if (src.indexOf(docImageApi) === 0 || nestedUrlRegex.test(src)) {
+                console.log('Markdown图片标签解析 - 路径已处理或包含嵌套URL，跳过:', src);
+                
+                // 对于嵌套URL，尝试提取真实路径并重新处理
+                if (nestedUrlRegex.test(src)) {
+                  const realPath = this.extractRealImagePath(src);
+                  
+                  // 如果提取出的路径与原始路径不同，且不再包含嵌套结构
+                  if (realPath !== src && !nestedUrlRegex.test(realPath)) {
+                    console.log('Markdown图片标签解析 - 提取到真实路径:', realPath);
+                    
+                    // 对提取出的真实路径进行编码
+                    const encodedPath = encodeURIComponent(realPath);
+                    const newSrc = `${docImageApi}?imagePath=${encodedPath}`;
+                    
+                    // 替换为新的非嵌套URL
+                    token.attrs[srcIndex][1] = newSrc;
+                    console.log('Markdown图片标签解析 - 修正后路径:', newSrc);
+                  }
+                }
+                
+                // 已经是处理过的URL，直接返回
+                return defaultRender(tokens, idx, options, env, self);
+              }
+              
+              // 处理相对路径
+              let pathToEncode = src;
+              
+              // 如果路径是以../images/开头的相对路径，直接使用这个路径
+              // 不需要再次添加API前缀，只需编码后传递给后端
+              if (src.startsWith('../')) {
+                console.log('Markdown图片标签解析 - 检测到相对路径:', src);
+              }
+              
               // 对路径进行编码
-              const encodedPath = encodeURIComponent(src);
+              const encodedPath = encodeURIComponent(pathToEncode);
               
               // 使用services中定义的API路径
-              const newSrc = `${apiBaseUrl}${services.getDocImage}?imagePath=${encodedPath}`;
+              const newSrc = `${docImageApi}?imagePath=${encodedPath}`;
               
               // 替换原始路径
               token.attrs[srcIndex][1] = newSrc;
@@ -191,9 +258,13 @@ export default {
     configureIframeRenderer() {
       // 获取API基础URL
       const apiBaseUrl = paths.path();
+      const docImageApi = `${apiBaseUrl}${services.getDocImage}`;
+      
+      // 创建检测嵌套URL的正则表达式
+      const nestedUrlRegex = /\/doc\/image\?imagePath=/i;
       
       // 添加自定义的iframe渲染规则
-      md.renderer.rules.html_block = function(tokens, idx) {
+      md.renderer.rules.html_block = (tokens, idx) => {
         const content = tokens[idx].content;
         
         // 检查是否包含iframe标签
@@ -208,11 +279,48 @@ export default {
               const originalSrc = iframe.getAttribute('src');
               console.log('Markdown iframe标签解析 - 原始路径:', originalSrc);
               
+              // 增强检测逻辑：检查是否已经处理过，或者是否包含嵌套的imagePath参数
+              if (originalSrc.indexOf(docImageApi) === 0 || nestedUrlRegex.test(originalSrc)) {
+                console.log('Markdown iframe标签解析 - 路径已处理或包含嵌套URL，跳过:', originalSrc);
+                
+                // 对于嵌套URL，尝试提取真实路径并重新处理
+                if (nestedUrlRegex.test(originalSrc)) {
+                  const realPath = this.extractRealImagePath(originalSrc);
+                  
+                  // 如果提取出的路径与原始路径不同，且不再包含嵌套结构
+                  if (realPath !== originalSrc && !nestedUrlRegex.test(realPath)) {
+                    console.log('Markdown iframe标签解析 - 提取到真实路径:', realPath);
+                    
+                    // 对提取出的真实路径进行编码
+                    const encodedPath = encodeURIComponent(realPath);
+                    const newSrc = `${docImageApi}?imagePath=${encodedPath}`;
+                    
+                    // 替换为新的非嵌套URL
+                    iframe.setAttribute('src', newSrc);
+                    console.log('Markdown iframe标签解析 - 修正后路径:', newSrc);
+                    
+                    // 返回修改后的HTML
+                    return div.innerHTML;
+                  }
+                }
+                
+                // 已经是处理过的URL，直接返回原内容
+                return content;
+              }
+              
+              // 处理相对路径
+              let pathToEncode = originalSrc;
+              
+              // 如果路径是以../images/开头的相对路径，直接使用这个路径
+              if (originalSrc.startsWith('../')) {
+                console.log('Markdown iframe标签解析 - 检测到相对路径:', originalSrc);
+              }
+              
               // 对路径进行编码
-              const encodedPath = encodeURIComponent(originalSrc);
+              const encodedPath = encodeURIComponent(pathToEncode);
               
               // 使用services中定义的API路径
-              const newSrc = `${apiBaseUrl}${services.getDocImage}?imagePath=${encodedPath}`;
+              const newSrc = `${docImageApi}?imagePath=${encodedPath}`;
               
               // 替换src属性
               iframe.setAttribute('src', newSrc);

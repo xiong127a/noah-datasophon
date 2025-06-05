@@ -1,10 +1,13 @@
 package com.datasophon.k8s.util;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import com.datasophon.common.utils.IOUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -19,14 +22,15 @@ public class DockerImageUtils {
         throw new UnsupportedOperationException("Construct PropertyUtils");
     }
 
-    private static final String IMAGE_PROPERTIES_PATH = "/dockerImage.properties";
+    private static final String IMAGE_PROPERTIES_PATH = "dockerImage.properties";
 
     static {
         String[] propertyFiles = new String[]{IMAGE_PROPERTIES_PATH};
         for (String fileName : propertyFiles) {
             InputStream fis = null;
             try {
-                fis = DockerImageUtils.class.getResourceAsStream(fileName);
+                File file = FileUtil.file(fileName);
+                fis = IoUtil.toStream(file);
                 properties.load(fis);
                 String imageRegistry = PropertyUtils.getString("IMAGE_REGISTRY");
                 // 遍历所有配置项并替换 $IMAGE_REGISTRY 占位符
