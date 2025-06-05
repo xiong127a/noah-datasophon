@@ -17,9 +17,9 @@
 
 package com.datasophon.common.model;
 
-import java.io.Serializable;
-
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * 模板请求消息
@@ -31,22 +31,8 @@ public class TemplateRequestMessage implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 请求类型: CONTENT - 获取模板内容, LIST - 获取模板列表
-     */
-    private RequestType requestType;
-
-    /**
      * 模板名称，当requestType=CONTENT时必须提供
      */
     private String templateName;
 
-    /**
-     * 请求类型枚举
-     */
-    public enum RequestType {
-        /** 获取模板内容 */
-        CONTENT,
-        /** 获取模板列表 */
-        LIST
-    }
 }

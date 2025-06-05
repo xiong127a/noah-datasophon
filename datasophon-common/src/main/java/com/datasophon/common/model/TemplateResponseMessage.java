@@ -17,10 +17,9 @@
 
 package com.datasophon.common.model;
 
-import java.io.Serializable;
-import java.util.List;
-
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * 模板响应消息
@@ -37,11 +36,6 @@ public class TemplateResponseMessage implements Serializable {
     private boolean success;
 
     /**
-     * 响应类型: CONTENT-模板内容, LIST-模板列表
-     */
-    private ResponseType responseType;
-
-    /**
      * 错误消息，当success=false时提供
      */
     private String errorMessage;
@@ -51,18 +45,5 @@ public class TemplateResponseMessage implements Serializable {
      */
     private String templateContent;
 
-    /**
-     * 模板名称列表，当responseType=LIST时提供
-     */
-    private List<String> templateList;
 
-    /**
-     * 响应类型枚举
-     */
-    public enum ResponseType {
-        /** 模板内容 */
-        CONTENT,
-        /** 模板列表 */
-        LIST
-    }
 }

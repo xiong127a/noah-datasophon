@@ -1,15 +1,11 @@
 package com.datasophon.api.utils;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.ObjUtil;
 import lombok.experimental.UtilityClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -36,39 +32,7 @@ public class TemplatePathUtils {
     }
 
     public static File getTemplateFile(String path, String templateName) {
-        File[] files = FileUtil.ls(path);
-        List<File> filteredFiles = CollUtil.newArrayList(files);
-        CollUtil.filter(filteredFiles, file -> file.isFile() && file.getName().equals(templateName));
-
-        File file = CollUtil.isEmpty(filteredFiles) ? null : filteredFiles.get(0);
-        if (ObjUtil.isNull(file) || !FileUtil.exist(file)) {
-            logger.error("模板文件不存在: {}", templateName);
-            return null;
-        }
-        return file;
-    }
-
-
-    /**
-     * 获取所有可用的模板文件名列表
-     *
-     * @return 模板文件名列表
-     */
-    public static List<String> getTemplateList() {
-
-
-        File[] templates = FileUtil.ls(PATH);
-
-        List<String> templateList = new ArrayList<>();
-        if (templates != null) {
-            for (File template : templates) {
-                if (template.isFile()) {
-                    templateList.add(template.getName());
-                }
-            }
-        }
-
-        return templateList;
+        return FileUtil.file(path+"/"+templateName);
     }
 
     /**
