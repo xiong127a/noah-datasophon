@@ -65,7 +65,7 @@
             >
               <div v-if="serviceNameKey === item" class="config-area-inner">
                 <!-- 仅显示通用的Kubernetes配置（不属于特定角色的） -->
-                <div v-if="kubernetesGroups[item] && Object.keys(kubernetesGroups[item]).length > 0" class="kubernetes-config-section">
+                <div v-if="false && kubernetesGroups[item] && Object.keys(kubernetesGroups[item]).length > 0" class="kubernetes-config-section">
                   <div class="kubernetes-tabs-header">Kubernetes 配置</div>
                   <a-tabs v-model="activeKubernetesTabs[item]">
                     <a-tab-pane 
@@ -270,20 +270,23 @@ export default {
         // 初始化该服务的Kubernetes配置结果对象
         result[serviceName] = {};
         
-        // 首先添加专用的Kubernetes分组内容
-        if (groups['Kubernetes'] && groups['Kubernetes'].subGroups) {
-          result[serviceName] = {...groups['Kubernetes'].subGroups};
-        }
-        
-        // 然后添加角色分组中的Kubernetes配置
+        // 遍历所有角色分组，收集它们的Kubernetes配置
         Object.entries(groups).forEach(([groupName, group]) => {
-          // 跳过专用的Kubernetes分组
-          if (groupName !== 'Kubernetes' && group && group.hasKubernetesConfig && group.kubernetesSubGroups) {
-            // 为每个角色分组添加标记，以在UI中区分
+          // 如果角色组有Kubernetes配置，则处理
+          if (group && group.hasKubernetesConfig && group.kubernetesSubGroups) {
+            
+            // 为每个子组添加roleGroup信息，并将其添加到结果中
             Object.entries(group.kubernetesSubGroups).forEach(([subGroupName, subGroup]) => {
-              // 如果是角色分组的K8s配置，添加角色信息
-              if (subGroup.items && subGroup.items.length > 0) {
-                subGroup.roleGroup = groupName;
+              // 确保subGroup有items
+              if (subGroup && subGroup.items && subGroup.items.length > 0) {
+                // 添加roleGroup信息
+                const enrichedSubGroup = {
+                  ...subGroup,
+                  roleGroup: groupName
+                };
+                
+                // 将该子组添加到结果中
+                result[serviceName][subGroupName] = enrichedSubGroup;
               }
             });
           }
@@ -566,10 +569,9 @@ export default {
         const res = await this.$axiosPost(global.API.getServiceConfigOption, params);
         
         if (res.code === 200) {
-          // 直接使用API返回的分组结构
-          this.$set(this.groupedTemplateData, currentService, 
-              this.handlerTemplate(currentService, res.data || {})
-          );
+          // 处理配置数据
+          const processedGroups = this.handlerTemplate(currentService, res.data || {});
+          this.$set(this.groupedTemplateData, currentService, processedGroups);
           
           // 保存原始配置数据以便后续提交
           // 将所有配置组的配置项合并为一个数组
@@ -599,13 +601,40 @@ export default {
     handlerTemplate(serviceName, configGroups) {
       const processedGroups = {};
       
+      // 首先创建所有非Kubernetes配置组，确保它们已经存在于processedGroups中
       Object.entries(configGroups).forEach(([groupName, configs]) => {
-        // 如果不是数组，跳过处理
-        if (!Array.isArray(configs)) return;
+        if (!groupName.startsWith('kubernetes.config.') && Array.isArray(configs)) {
+          const visibleConfigs = configs.filter(item => !item.hidden);
+          if (visibleConfigs.length > 0) {
+            const processedConfigs = visibleConfigs.map(item => ({
+              ...item,
+              value: item.type === 'switch' || item.type === 'boolean' 
+                ? String(item.value).toLowerCase() === 'true'
+                : item.value,
+              name: (item.name || '').toString().replaceAll(".", "!")
+            }));
+            
+            processedGroups[groupName] = {
+              items: processedConfigs,
+              displayName: groupName, 
+              templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
+            };
+          }
+        }
+      });
+      
+      // 然后处理Kubernetes配置组
+      Object.entries(configGroups).forEach(([groupName, configs]) => {
+        // 如果不是数组或不是Kubernetes配置组，跳过处理
+        if (!Array.isArray(configs) || !groupName.startsWith('kubernetes.config.')) {
+          return;
+        }
         
         // 只有当配置组中至少有一项不是hidden时才处理该组
         const visibleConfigs = configs.filter(item => !item.hidden);
-        if (visibleConfigs.length === 0) return;
+        if (visibleConfigs.length === 0) {
+          return;
+        }
         
         // 处理配置项
         const processedConfigs = visibleConfigs.map(item => ({
@@ -616,61 +645,41 @@ export default {
           name: (item.name || '').toString().replaceAll(".", "!")
         }));
         
-        // 检测是否为Kubernetes配置组
-        if (groupName.startsWith('kubernetes.config.')) {
-          let subGroupName = groupName;
-          let targetRole = 'General'; 
-
-          const parts = groupName.split('.');
-          
-          if (parts.length >= 4) { 
-            const potentialRoleCandidate = parts[parts.length - 1];
-            const baseK8sGroupName = parts.slice(0, parts.length - 1).join('.'); 
-
-            if (parts.length > 3 && potentialRoleCandidate.match(/^[A-Z]/) && parts[0]==='kubernetes' && parts[1]==='config') {
-                 targetRole = potentialRoleCandidate;
-                 subGroupName = baseK8sGroupName; 
-            } else {
-                 targetRole = 'General';
-                 subGroupName = groupName; 
-            }
-          } else {
-             targetRole = 'General';
-             subGroupName = groupName; 
-          }
-
-          if (targetRole !== 'General') {
-            if (!processedGroups[targetRole]) {
-              processedGroups[targetRole] = { items: [], displayName: targetRole, templateContent: null, hasKubernetesConfig: true, kubernetesSubGroups: {} };
-            } else {
-               if (!processedGroups[targetRole].hasKubernetesConfig) processedGroups[targetRole].hasKubernetesConfig = true;
-               if (!processedGroups[targetRole].kubernetesSubGroups) processedGroups[targetRole].kubernetesSubGroups = {};
-            }
-            
-            const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
-            processedGroups[targetRole].kubernetesSubGroups[shortSubGroupNameWithoutK8sPrefix] = {
-              items: processedConfigs,
-              displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
-              templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
-            };
-          } else { 
-            if (!processedGroups['Kubernetes']) {
-              processedGroups['Kubernetes'] = { isKubernetesGroup: true, subGroups: {} };
-            }
-            const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
-            processedGroups['Kubernetes'].subGroups[shortSubGroupNameWithoutK8sPrefix] = {
-              items: processedConfigs,
-              displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
-              templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
-            };
-          }
-        } else {
-          processedGroups[groupName] = {
-            items: processedConfigs,
-            displayName: groupName, 
-            templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
+        // 直接从配置组名中提取角色名
+        const parts = groupName.split('.');
+        const targetRole = parts[parts.length - 1]; // 直接使用最后一部分作为角色名
+        const subGroupName = parts.slice(0, parts.length - 1).join('.'); // 使用前面的部分作为子组名
+        
+        // 确保目标角色分组已经存在
+        if (!processedGroups[targetRole]) {
+          processedGroups[targetRole] = { 
+            items: [], 
+            displayName: targetRole, 
+            templateContent: null
           };
         }
+        
+        // 确保hasKubernetesConfig和kubernetesSubGroups属性存在
+        if (!processedGroups[targetRole].hasKubernetesConfig) {
+          this.$set(processedGroups[targetRole], 'hasKubernetesConfig', true);
+        }
+        
+        if (!processedGroups[targetRole].kubernetesSubGroups) {
+          this.$set(processedGroups[targetRole], 'kubernetesSubGroups', {});
+        }
+        
+        const shortSubGroupNameWithoutK8sPrefix = subGroupName.replace('kubernetes.config.', ''); 
+        
+        // 使用Vue的响应式方法添加子组
+        this.$set(
+          processedGroups[targetRole].kubernetesSubGroups, 
+          shortSubGroupNameWithoutK8sPrefix, 
+          {
+            items: processedConfigs,
+            displayName: this.formatSubGroupName(shortSubGroupNameWithoutK8sPrefix), 
+            templateContent: processedConfigs.find(item => item.templateContent)?.templateContent
+          }
+        );
       });
       
       return processedGroups;
