@@ -1,20 +1,25 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
-  strategy:
-    type: "RollingUpdate"
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
+  volumeClaimTemplates:
+    - metadata:
+        name: namenode-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: ${storage_classes}
+        resources:
+          requests:
+            storage: ${storage}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   template:
@@ -41,6 +46,17 @@ spec:
       initContainers:
         - name: namenode-format
           image: "${dockerImage}"
+          env:
+            - name: USER
+              value: ${runAs}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           args:
             - "/bin/bash"
             - "-c"
@@ -83,12 +99,22 @@ spec:
                 echo "formatted......."
               fi
           volumeMounts:
-            <#list itemList as item>
-            - mountPath: "${item.value}"
-              name: "${item.name}"
+            - name: namenode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
+            <#list volumePathSet as item>
+            <#if !item.value?contains(namenodeDir)>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+            </#if>
             </#list>
-            - mountPath: "/etc/localtime"
-              name: "timezone"
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
+            - name: "timezone"
+              mountPath: "/etc/localtime"
       containers:
         - env:
             - name: USER
@@ -97,6 +123,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
@@ -156,21 +190,26 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 1
+            timeoutSeconds: 5
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if requests_memory??>${requests_memory}<#else>2Gi</#if>
-              cpu: <#if requests_cpu??>${requests_cpu}<#else>1</#if>
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: <#if limits_memory??>${limits_memory}<#else>4Gi</#if>
-              cpu: <#if limits_cpu??>${limits_cpu}<#else>2</#if>
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
+            - name: namenode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumePathSet as item>
+            <#if !item.value?contains(namenodeDir)>
             - name: "${item.name}"
               mountPath: "${item.value}"
+            </#if>
             </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
@@ -189,9 +228,11 @@ spec:
             name: "${item.name}"
         </#list>
         <#list volumePathSet as item>
+        <#if !item.value?contains(namenodeDir)>
         - name: "${item.name}"
           hostPath:
             path: "${item.value}"
+        </#if>
         </#list>
         - name: "timezone"
           hostPath:

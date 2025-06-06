@@ -1,15 +1,25 @@
 apiVersion: "apps/v1"
-kind: "Deployment"
+kind: "StatefulSet"
 metadata:
   labels:
     name: "${serviceRoleFullName}"
   name: "${serviceRoleFullName}"
   namespace: ${namespace}
 spec:
+  serviceName: "${serviceRoleFullName}"
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
       app: "${serviceRoleFullName}"
+  volumeClaimTemplates:
+    - metadata:
+        name: journalnode-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: ${storage_classes}
+        resources:
+          requests:
+            storage: ${storage}
   strategy:
     type: "RollingUpdate"
     rollingUpdate:
@@ -46,6 +56,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
@@ -86,29 +104,39 @@ spec:
               else
                 echo "Kerberos is not enabled. Skipping Kerberos setup.";
               fi
+              # 如果JournalNode目录不在持久卷中，则创建
+              if [ ! -d ${journalnodeDir} ]; then
+                mkdir -p ${journalnodeDir}
+                chown -R ${runAs}:${runAs} ${journalnodeDir}
+              fi
               ${startCommand}
           readinessProbe:
             tcpSocket:
               port: 8485
             failureThreshold: 3
-            initialDelaySeconds: 3
-            periodSeconds: 30
+            initialDelaySeconds: 10
+            periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 15
+            timeoutSeconds: 5
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if requests_memory??>${requests_memory}<#else>2Gi</#if>
-              cpu: <#if requests_cpu??>${requests_cpu}<#else>1</#if>
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: <#if limits_memory??>${limits_memory}<#else>4Gi</#if>
-              cpu: <#if limits_cpu??>${limits_cpu}<#else>2</#if>
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
+            - name: journalnode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumePathSet as item>
+            <#if !item.value?contains(journalnodeDir)>
             - name: "${item.name}"
               mountPath: "${item.value}"
+            </#if>
             </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
@@ -127,9 +155,11 @@ spec:
             name: "${item.name}"
         </#list>
         <#list volumePathSet as item>
+        <#if !item.value?contains(journalnodeDir)>
         - name: "${item.name}"
           hostPath:
             path: "${item.value}"
+        </#if>
         </#list>
         - name: "timezone"
           hostPath:

@@ -46,6 +46,14 @@ spec:
               valueFrom:
                 resourceFieldRef:
                   resource: limits.memory
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
@@ -76,18 +84,18 @@ spec:
                 - "-c"
                 - "${statusCommand}"
             failureThreshold: 3
-            initialDelaySeconds: 3
-            periodSeconds: 30
+            initialDelaySeconds: 10
+            periodSeconds: 10
             successThreshold: 1
-            timeoutSeconds: 15
+            timeoutSeconds: 5
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if requests_memory??>${requests_memory}<#else>2Gi</#if>
-              cpu: <#if requests_cpu??>${requests_cpu}<#else>1</#if>
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: <#if limits_memory??>${limits_memory}<#else>4Gi</#if>
-              cpu: <#if limits_cpu??>${limits_cpu}<#else>2</#if>
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
