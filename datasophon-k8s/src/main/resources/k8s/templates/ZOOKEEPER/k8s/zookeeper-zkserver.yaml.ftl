@@ -16,10 +16,10 @@ spec:
         name: nfs-pvc
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: <#if zkserver_storage_classes??>${zkserver_storage_classes}<#else>standard</#if>
+        storageClassName: <#if storage_classes??>${storage_classes}<#else>standard</#if>
         resources:
           requests:
-            storage: <#if zkserver_storage??>${zkserver_storage}<#else>10Gi</#if>
+            storage: <#if storage??>${storage}<#else>10Gi</#if>
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
@@ -55,7 +55,7 @@ spec:
               echo $((MY_ID + 1)) > ${dataDir}/myid
           volumeMounts:
             - name: nfs-pvc
-              mountPath: <#if zkserver_mount_path??>${zkserver_mount_path}<#else>/data</#if>
+              mountPath: <#if mount_path??>${mount_path}<#else>/data</#if>
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       affinity:
         podAntiAffinity:
@@ -89,15 +89,15 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           ports:
-          <#if zkserver_node_port_mappings??>
-          <#assign mappings = zkserver_node_port_mappings>
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: nodeport-${item?index + 1}
           </#list>
           </#if>
-          <#if zkserver_cluster_port_mappings??>
-          <#assign mappings = zkserver_cluster_port_mappings>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: clusterport-${item?index + 1}
@@ -119,16 +119,16 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if zkserver_requests_memory??>${zkserver_requests_memory}<#else>512Mi</#if>
-              cpu: <#if zkserver_requests_cpu??>${zkserver_requests_cpu}<#else>0.5</#if>
+              memory: <#if requests_memory??>${requests_memory}<#else>512Mi</#if>
+              cpu: <#if requests_cpu??>${requests_cpu}<#else>0.5</#if>
             limits:
-              memory: <#if zkserver_limits_memory??>${zkserver_limits_memory}<#else>1024Mi</#if>
-              cpu: <#if zkserver_limits_cpu??>${zkserver_limits_cpu}<#else>1</#if>
+              memory: <#if limits_memory??>${limits_memory}<#else>1024Mi</#if>
+              cpu: <#if limits_cpu??>${limits_cpu}<#else>1</#if>
           securityContext:
             privileged: true
           volumeMounts:
             - name: nfs-pvc
-              mountPath: <#if zkserver_mount_path??>${zkserver_mount_path}<#else>/data</#if>
+              mountPath: <#if mount_path??>${mount_path}<#else>/data</#if>
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"

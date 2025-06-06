@@ -364,7 +364,7 @@
         "filename": "kubernetes.config.services",
         "fileDescription": "HDFS Kubernetes网络服务配置，定义端口",
         "configFormat": "properties",
-        "configTargetRoles": "NameNode",
+        "configTargetRoles": "NameNode,DataNode,JournalNode,ZKFC,HttpFs",
         "outputDirectory": "",
         "includeParams": [
           "node_port_mappings",

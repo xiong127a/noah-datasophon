@@ -48,17 +48,17 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           imagePullPolicy: "Always"
-          <#if zkfc_node_port_mappings?? || zkfc_cluster_port_mappings??>
+          <#if node_port_mappings?? || cluster_port_mappings??>
           ports:
-          <#if zkfc_node_port_mappings??>
-          <#assign mappings = zkfc_node_port_mappings>
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: nodeport-${item?index + 1}
           </#list>
           </#if>
-          <#if zkfc_cluster_port_mappings??>
-          <#assign mappings = zkfc_cluster_port_mappings>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: clusterport-${item?index + 1}
@@ -83,11 +83,11 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if zkfc_requests_memory??>${zkfc_requests_memory}<#else>2Gi</#if>
-              cpu: <#if zkfc_requests_cpu??>${zkfc_requests_cpu}<#else>1</#if>
+              memory: <#if requests_memory??>${requests_memory}<#else>2Gi</#if>
+              cpu: <#if requests_cpu??>${requests_cpu}<#else>1</#if>
             limits:
-              memory: <#if zkfc_limits_memory??>${zkfc_limits_memory}<#else>4Gi</#if>
-              cpu: <#if zkfc_limits_cpu??>${zkfc_limits_cpu}<#else>2</#if>
+              memory: <#if limits_memory??>${limits_memory}<#else>4Gi</#if>
+              cpu: <#if limits_cpu??>${limits_cpu}<#else>2</#if>
           securityContext:
             privileged: true
           volumeMounts:

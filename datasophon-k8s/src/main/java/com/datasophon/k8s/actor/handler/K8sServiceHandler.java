@@ -1,5 +1,6 @@
 package com.datasophon.k8s.actor.handler;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
@@ -37,7 +38,6 @@ import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -138,145 +138,169 @@ public class K8sServiceHandler {
         return execResult;
     }
 
-    // 生成服务配置的核心方法
+    /**
+     * 生成服务配置的核心方法
+     * 
+     * @param configFileMap 配置文件映射
+     * @return 服务端口列表
+     */
     private ArrayList<ServicePort> generateSvcConfig(Map<Generators, List<ServiceConfig>> configFileMap) {
-        // 防御性校验
-        if (configFileMap == null || configFileMap.isEmpty()) {
-            logger.warn("Empty configFileMap received");
-            return new ArrayList<>();
-        }
-
-        // 获取指定配置生成器
-        Generators svcGenerator = configFileMap.keySet().stream()
-                .filter(g -> g != null && K8S_SVC_CONF.equals(g.getFilename()))
-                .findFirst()
-                .orElseGet(() -> {
-                    logger.warn("No {} configuration generator found", K8S_SVC_CONF);
-                    return null;
-                });
-
-        if (svcGenerator == null) {
-            return null;
-        }
-
-        // 获取关联配置项
-        List<ServiceConfig> svcConfigs = configFileMap.get(svcGenerator);
-        if (svcConfigs == null || svcConfigs.isEmpty()) {
-            logger.warn("No configurations found under {}", K8S_SVC_CONF);
-            return null;
-        }
-
+        // 初始化返回列表
         ArrayList<ServicePort> servicePorts = new ArrayList<>();
-        Gson gson = new Gson();
-        Type listType = new TypeToken<List<Map<String, String>>>() {
-        }.getType();
 
-        // 处理NodePort端口映射
-        ServiceConfig nodePortMappingConfig = svcConfigs.stream()
-                .filter(config -> K8S_NODEPORT_MAPPING.equals(config.getName()))
-                .findFirst()
-                .orElse(null);
-
-        if (nodePortMappingConfig != null && nodePortMappingConfig.getValue() != null) {
-            try {
-                List<Map<String, String>> portMappings = gson.fromJson(
-                        nodePortMappingConfig.getValue().toString(),
-                        listType);
-
-                int index = 0;
-                for (Map<String, String> mapping : portMappings) {
-                    for (Map.Entry<String, String> entry : mapping.entrySet()) {
-                        ServicePort servicePort = new ServicePort();
-                        int port = Integer.parseInt(entry.getKey());
-                        int nodePort = Integer.parseInt(entry.getValue());
-
-                        servicePort.setPort(port);
-                        servicePort.setTargetPort(new IntOrString(port));
-                        servicePort.setName("nodeport-" + index++);
-                        servicePort.setNodePort(nodePort);
-
-                        servicePorts.add(servicePort);
-                    }
-                }
-            } catch (Exception e) {
-                logger.error("Failed to parse node_port_mappings: {}", e.getMessage());
-            }
+        // 1. 获取配置项列表
+        List<ServiceConfig> svcConfigs = getSvcConfigs(configFileMap);
+        if (svcConfigs == null) {
+            return servicePorts; // 返回空列表
         }
 
-        // 处理ClusterIP端口映射
-        ServiceConfig clusterPortMappingConfig = svcConfigs.stream()
-                .filter(config -> K8S_CLUSTERIP_MAPPING.equals(config.getName()))
-                .findFirst()
-                .orElse(null);
+        // 2. 处理NodePort端口映射
+        processPortMappings(
+                svcConfigs,
+                serviceRoleName.toLowerCase() + "_" + K8S_NODEPORT_MAPPING,
+                servicePorts,
+                true // 是否为NodePort类型
+        );
 
-        if (clusterPortMappingConfig != null && clusterPortMappingConfig.getValue() != null) {
-            try {
-                List<Map<String, String>> portMappings = gson.fromJson(
-                        clusterPortMappingConfig.getValue().toString(),
-                        listType);
-
-                int index = 0;
-                for (Map<String, String> mapping : portMappings) {
-                    for (Map.Entry<String, String> entry : mapping.entrySet()) {
-                        ServicePort servicePort = new ServicePort();
-                        int port = Integer.parseInt(entry.getKey());
-
-                        servicePort.setPort(port);
-                        servicePort.setTargetPort(new IntOrString(port));
-                        servicePort.setName("clusterport-" + index++);
-
-                        servicePorts.add(servicePort);
-                    }
-                }
-            } catch (Exception e) {
-                logger.error("Failed to parse cluster_port_mappings: {}", e.getMessage());
-            }
-        }
+        // 3. 处理ClusterIP端口映射
+        processPortMappings(
+                svcConfigs,
+                serviceRoleName.toLowerCase() + "_" + K8S_CLUSTERIP_MAPPING,
+                servicePorts,
+                false // 不是NodePort类型
+        );
 
         return servicePorts;
     }
 
-    // 通用方法：获取并解析目标配置
-    public Map<Integer, Integer> getTargetValues(List<ServiceConfig> serviceConfigs, String targetKey) {
-        // 过滤出指定键的服务配置
-        Map<String, Object> targetConfig = serviceConfigs.stream()
-                .filter(config -> targetKey.equals(config.getName()))
-                .collect(Collectors.toMap(ServiceConfig::getName, ServiceConfig::getValue, (v1, v2) -> v1));
+    /**
+     * 获取服务配置项列表
+     * 
+     * @param configFileMap 配置文件映射
+     * @return 配置项列表，如果未找到则返回null
+     */
+    private List<ServiceConfig> getSvcConfigs(Map<Generators, List<ServiceConfig>> configFileMap) {
+        // 防御性校验
+        if (configFileMap == null || configFileMap.isEmpty()) {
+            logger.warn("Empty configFileMap received");
+            return null;
+        }
 
-        // 解析目标配置的值为一个 Integer -> Integer 映射
-        return parseTargetValues(targetConfig, targetKey);
+        // 查找服务配置生成器
+        Generators svcGenerator = null;
+        for (Generators generator : configFileMap.keySet()) {
+            if (generator != null && K8S_SVC_CONF.equals(generator.getFilename())) {
+                svcGenerator = generator;
+                break;
+            }
+        }
+
+        if (svcGenerator == null) {
+            logger.warn("No {} configuration generator found", K8S_SVC_CONF);
+            return null;
+        }
+
+        // 获取配置项列表
+        List<ServiceConfig> svcConfigs = configFileMap.get(svcGenerator);
+        if (CollUtil.isEmpty(svcConfigs)) {
+            logger.warn("No configurations found under {}", K8S_SVC_CONF);
+            return null;
+        }
+
+        return svcConfigs;
     }
 
-    // 解析目标配置中的值
-    private Map<Integer, Integer> parseTargetValues(Map<String, Object> targetConfig, String targetKey) {
+    /**
+     * 处理端口映射配置
+     * 
+     * @param svcConfigs   配置项列表
+     * @param configName   配置项名称
+     * @param servicePorts 结果集，解析的端口将添加到此列表
+     * @param isNodePort   是否为NodePort类型
+     */
+    private void processPortMappings(
+            List<ServiceConfig> svcConfigs,
+            String configName,
+            List<ServicePort> servicePorts,
+            boolean isNodePort) {
+
+        // 1. 查找指定配置
+        ServiceConfig mappingConfig = findServiceConfig(svcConfigs, configName);
+        if (mappingConfig == null || mappingConfig.getValue() == null) {
+            return;
+        }
+
+        // 2. 解析端口映射
+        List<Map<String, String>> portMappings = parsePortMappings(mappingConfig);
+        if (portMappings == null) {
+            return;
+        }
+
+        // 3. 创建ServicePort对象
+        int index = 0;
+        String portType = isNodePort ? "nodeport" : "clusterport";
+
+        for (Map<String, String> mapping : portMappings) {
+            for (Map.Entry<String, String> entry : mapping.entrySet()) {
+                try {
+                    // 创建端口对象
+                    ServicePort servicePort = new ServicePort();
+                    int port = Integer.parseInt(entry.getKey());
+
+                    servicePort.setPort(port);
+                    servicePort.setTargetPort(new IntOrString(port));
+                    servicePort.setName(portType + "-" + index++);
+
+                    // 对于NodePort类型，设置NodePort值
+                    if (isNodePort) {
+                        int nodePort = Integer.parseInt(entry.getValue());
+                        servicePort.setNodePort(nodePort);
+                    }
+
+                    // 添加到结果列表
+                    servicePorts.add(servicePort);
+                } catch (NumberFormatException e) {
+                    logger.error("Failed to parse port mapping [{}:{}]: {}",
+                            entry.getKey(), entry.getValue(), e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 在配置列表中查找指定名称的配置
+     * 
+     * @param configs    配置列表
+     * @param configName 要查找的配置名
+     * @return 找到的配置，未找到时返回null
+     */
+    private ServiceConfig findServiceConfig(List<ServiceConfig> configs, String configName) {
+        for (ServiceConfig config : configs) {
+            if (configName.equals(config.getName())) {
+                return config;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 解析端口映射配置
+     * 
+     * @param config 包含端口映射的配置项
+     * @return 解析后的端口映射列表，解析失败时返回null
+     */
+    private List<Map<String, String>> parsePortMappings(ServiceConfig config) {
         Gson gson = new Gson();
         Type listType = new TypeToken<List<Map<String, String>>>() {
         }.getType();
 
-        // 解析目标键的 JSON 数据
-        List<Map<String, String>> parsedList = gson.fromJson(targetConfig.get(targetKey).toString(), listType);
-
-        // 获取所有包含 serviceRoleFullName 的值并转换为 Integer -> Integer 映射
-        return parsedList.stream()
-                .filter(map -> map.containsKey(serviceRoleFullName))
-                .map(map -> map.get(serviceRoleFullName))
-                .map(this::parseKeyValue)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    // 解析一个 "key:value" 字符串为 Map.Entry<Integer, Integer>
-    private Map.Entry<Integer, Integer> parseKeyValue(String targetValue) {
-        String[] parts = targetValue.split(":");
-        if (parts.length == 2) {
-            Integer key = Integer.parseInt(parts[0]);
-            Integer value = Integer.parseInt(parts[1]);
-            return new AbstractMap.SimpleEntry<>(key, value);
-        } else if (parts.length == 1) {
-            Integer keyAndValue = Integer.parseInt(parts[0]);
-            return new AbstractMap.SimpleEntry<>(keyAndValue, keyAndValue);
+        try {
+            return gson.fromJson(config.getValue().toString(), listType);
+        } catch (Exception e) {
+            logger.error("Failed to parse port mappings for {}: {}",
+                    config.getName(), e.getMessage());
+            return null;
         }
-        return null;
     }
 
     private void handleNewSvc(ArrayList<ServicePort> servicePorts,
@@ -311,7 +335,7 @@ public class K8sServiceHandler {
         if (!basePorts.isEmpty()) {
             if (STATEFULSET.equals(kind)) {
                 createHeadlessService(basePorts, client);
-            } else if (DEPLOYMENT.equals(kind)) {
+            } else {
                 createClusterIPService(basePorts, client);
             }
         }
@@ -412,9 +436,9 @@ public class K8sServiceHandler {
     private void executeServiceCreation(KubernetesClient client, Service service) {
         try {
             client.services().inNamespace(DATASOPHON).createOrReplace(service);
-            logger.info("Service created/updated: " + service.getMetadata().getName());
+            logger.info("Service created/updated: {}", service.getMetadata().getName());
         } catch (KubernetesClientException e) {
-            logger.error("Error creating service " + service.getMetadata().getName() + ": " + e.getMessage());
+            logger.error("Error creating service {}: {}", service.getMetadata().getName(), e.getMessage());
         }
     }
 
@@ -467,7 +491,7 @@ public class K8sServiceHandler {
 
     private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
             Deployment existingDeployment) throws IOException {
-        Integer replicas = existingDeployment.getSpec().getReplicas() != null
+        int replicas = existingDeployment.getSpec().getReplicas() != null
                 ? existingDeployment.getSpec().getReplicas()
                 : 0;
         logger.info("当前 Deployment: {} Replicas: {}", serviceRoleFullName, replicas);
@@ -484,7 +508,7 @@ public class K8sServiceHandler {
 
     private void handleExistingStatefulSet(Map<String, Object> yamlData, KubernetesClient client,
             StatefulSet existingStatefulSet) throws IOException {
-        Integer replicas = existingStatefulSet.getSpec().getReplicas() != null
+        int replicas = existingStatefulSet.getSpec().getReplicas() != null
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
         logger.info("当前 StatefulSet: {} Replicas: {}", serviceRoleFullName, replicas);
@@ -508,7 +532,7 @@ public class K8sServiceHandler {
         String resourceName = metadata.get(0).getMetadata().getName();
         logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
 
-//        resource.waitUntilReady(10, TimeUnit.MINUTES);
+        // resource.waitUntilReady(10, TimeUnit.MINUTES);
 
         // 获取Pod列表（新增代码）
         List<Pod> pods = client.pods()

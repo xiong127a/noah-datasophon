@@ -208,7 +208,7 @@ public class K8sFreeMakerUtils {
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
-        configMap.getMetadata().setName(configMapName); // 设置 ConfigMap 名称
+        configMap.getMetadata().setName(StrUtil.toSymbolCase(configMapName,'-')); // 设置 ConfigMap 名称
         configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE); // 设置 ConfigMap 命名空间
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();

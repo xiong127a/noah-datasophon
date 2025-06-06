@@ -279,9 +279,8 @@ public class K8sYamlDeploymentHandler {
         data.put(Constant.ROLE_NODE_CNT, roleNodeCnt);
 
         if (CONFIG_CACHE.isEmpty()) {
-            loadConfigToCache(configFileMap);
+            loadConfigToCache(configFileMap, serviceRoleName);
         }
-
 
         // 获取 journalNodeDir 和 nameNodeDir
         populateDataWithConfig(configFileMap, "dfs.namenode.name.dir", "namenodeDir");
@@ -434,14 +433,30 @@ public class K8sYamlDeploymentHandler {
         data.put(targetDataKey, value);
     }
 
-    public void loadConfigToCache(Map<Generators, List<ServiceConfig>> configFileMap) {
-        configFileMap.values().stream().flatMap(List::stream).forEach(config -> {
-            String k = config.getName();
-            CONFIG_CACHE.put(k, config);
-            if (StrUtil.startWith(config.getConfigGroup(), "kubernetes.config.")) {
-                k8sConfigMap.put(config.getName(), config.getValue());
+    /**
+     * 加载配置到缓存并处理Kubernetes特定配置
+     * 
+     * @param configFileMap   配置文件映射
+     * @param serviceRoleName 服务角色名称
+     */
+    public void loadConfigToCache(Map<Generators, List<ServiceConfig>> configFileMap, String serviceRoleName) {
+        // 转换角色名为小写并添加下划线作为前缀
+        String rolePrefixPattern = serviceRoleName.toLowerCase() + "_";
+
+        for (List<ServiceConfig> configList : configFileMap.values()) {
+            for (ServiceConfig config : configList) {
+                // 所有配置都加入通用缓存
+                CONFIG_CACHE.put(config.getName(), config);
+
+                // 处理Kubernetes配置，条件更具体
+                if (StrUtil.startWith(config.getConfigGroup(), "kubernetes.config.") &&
+                        config.getName().startsWith(rolePrefixPattern)) {
+                    // 移除前缀后再存储
+                    String keyWithoutPrefix = config.getName().substring(rolePrefixPattern.length());
+                    k8sConfigMap.put(keyWithoutPrefix, config.getValue());
+                }
             }
-        });
+        }
     }
 
     public String generateConfigMapName(Generators generators) {

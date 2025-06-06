@@ -3,6 +3,7 @@ package com.datasophon.api.k8s.handler;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
@@ -24,6 +25,8 @@ public class K8sServiceConfigureHandler extends ServiceHandler {
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         // config
+
+        ServiceRoleInfo cloneByStream = ObjectUtil.cloneByStream(serviceRoleInfo);
         GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
         generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());
         generateServiceConfigCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
@@ -34,19 +37,18 @@ public class K8sServiceConfigureHandler extends ServiceHandler {
         }
         generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
         generateServiceConfigCommand.setHostName(serviceRoleInfo.getHostname());
-        ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         generateServiceConfigCommand.setKubeConfig(kubeConfig);
-        ActorRef actorRef =
-                ActorUtils.getLocalActor(K8sConfigureServiceActor.class, ActorUtils.getActorRefName(K8sConfigureServiceActor.class));
+        ActorRef actorRef = ActorUtils.getLocalActor(K8sConfigureServiceActor.class,
+                ActorUtils.getActorRefName(K8sConfigureServiceActor.class));
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> configureFuture = Patterns.ask(actorRef, generateServiceConfigCommand, timeout);
         try {
             ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
             if (Objects.nonNull(configResult) && configResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
-                    return getNext().handlerRequest(serviceRoleInfo);
+                    return getNext().handlerRequest(cloneByStream);
                 }
             }
             return configResult;

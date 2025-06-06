@@ -99,17 +99,17 @@ spec:
                   resource: limits.memory
           image: "${dockerImage}"
           imagePullPolicy: "Always"
-          <#if namenode_node_port_mappings?? || namenode_cluster_port_mappings??>
+          <#if node_port_mappings?? || cluster_port_mappings??>
           ports:
-          <#if namenode_node_port_mappings??>
-          <#assign mappings = namenode_node_port_mappings>
+          <#if node_port_mappings??>
+          <#assign mappings = node_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: nodeport-${item?index + 1}
           </#list>
           </#if>
-          <#if namenode_cluster_port_mappings??>
-          <#assign mappings = namenode_cluster_port_mappings>
+          <#if cluster_port_mappings??>
+          <#assign mappings = cluster_port_mappings>
           <#list mappings as item>
             - containerPort: ${(item?keys[0])}
               name: clusterport-${item?index + 1}
@@ -160,11 +160,11 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if namenode_requests_memory??>${namenode_requests_memory}<#else>2Gi</#if>
-              cpu: <#if namenode_requests_cpu??>${namenode_requests_cpu}<#else>1</#if>
+              memory: <#if requests_memory??>${requests_memory}<#else>2Gi</#if>
+              cpu: <#if requests_cpu??>${requests_cpu}<#else>1</#if>
             limits:
-              memory: <#if namenode_limits_memory??>${namenode_limits_memory}<#else>4Gi</#if>
-              cpu: <#if namenode_limits_cpu??>${namenode_limits_cpu}<#else>2</#if>
+              memory: <#if limits_memory??>${limits_memory}<#else>4Gi</#if>
+              cpu: <#if limits_cpu??>${limits_cpu}<#else>2</#if>
           securityContext:
             privileged: true
           volumeMounts:

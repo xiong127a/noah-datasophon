@@ -62,6 +62,7 @@ public class K8sServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setPackageName(serviceRoleInfo.getPackageName());
         installServiceRoleCommand.setHostName(serviceRoleInfo.getHostname());
         installServiceRoleCommand.setLogFile(serviceRoleInfo.getLogFile());
+        installServiceRoleCommand.setCofigFileMap(configFileMap);
 
         ActorRef actorRef =
                 ActorUtils.getLocalActor(K8sInstallServiceActor.class, ActorUtils.getActorRefName(K8sInstallServiceActor.class));
