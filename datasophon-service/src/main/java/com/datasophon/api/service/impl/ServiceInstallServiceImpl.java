@@ -886,7 +886,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     /**
      * Extracts the Kubernetes subgroup from a config group name
-     * E.g., from "kubernetes.config.persistentVolumeClaims.ZkServer" returns
+     * E.g., from "kubernetes.config.persistent-volume-claims.ZkServer" returns
      * "persistentVolumeClaims"
      */
     private String getKubernetesSubgroup(String configGroup) {
@@ -903,7 +903,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     /**
      * Extracts the role name from a kubernetes config group
-     * E.g., from "kubernetes.config.persistentVolumeClaims.ZkServer" returns
+     * E.g., from "kubernetes.config.persistent-volume-claims.ZkServer" returns
      * "ZkServer"
      */
     private String getKubernetesRole(String configGroup) {

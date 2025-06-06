@@ -1460,7 +1460,7 @@ export default {
           if (cleanedOriginalKey.startsWith('kubernetes.config.')) {
             const parts = cleanedOriginalKey.split('.');
             const baseRoleName = parts[parts.length - 1]; // Assumes format k8s.config.subgroup.Role
-            const k8sSubGroupName = parts.slice(0, -1).join('.'); // e.g., kubernetes.config.persistentVolumeClaims
+            const k8sSubGroupName = parts.slice(0, -1).join('.'); // e.g., kubernetes.config.persistent-volume-claims
             
             if (!kubernetesConfigsByBaseRole[baseRoleName]) {
               kubernetesConfigsByBaseRole[baseRoleName] = {};

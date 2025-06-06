@@ -349,7 +349,7 @@
         ]
       },
       {
-        "filename": "kubernetes.config.persistentVolumeClaims",
+        "filename": "kubernetes.config.persistent-volume-claims",
         "fileDescription": "HDFS Kubernetes存储配置，定义持久卷存储类和挂载路径",
         "configFormat": "properties",
         "configTargetRoles": "NameNode,DataNode,JournalNode,ZKFC,HttpFs",
@@ -1648,7 +1648,7 @@
       "hidden": true,
       "defaultValue": "nfs-client",
       "configCategory": "k8s",
-     "configGroup": "kubernetes.config.persistentVolumeClaims",
+     "configGroup": "kubernetes.config.persistent-volume-claims",
       "configLevel": "advanced"
     },
     {
@@ -1663,7 +1663,7 @@
       "hidden": true,
       "defaultValue": "/data",
       "configCategory": "k8s",
-      "configGroup": "kubernetes.config.persistentVolumeClaims",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
       "configLevel": "advanced"
     },
     {
@@ -1679,7 +1679,7 @@
       "unit": "Gi",
       "defaultValue": "20",
       "configCategory": "k8s",
-      "configGroup": "kubernetes.config.persistentVolumeClaims",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
       "configLevel": "advanced"
     },
     {

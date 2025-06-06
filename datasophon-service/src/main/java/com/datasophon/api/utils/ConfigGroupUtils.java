@@ -308,7 +308,7 @@ public class ConfigGroupUtils {
      * @return K8S配置类型（如persistentVolumeClaims或resources）
      */
     private static String extractK8sConfigType(String configGroup) {
-        // kubernetes.config.persistentVolumeClaims 或 kubernetes.config.resources 等
+        // kubernetes.config.persistent-volume-claims 或 kubernetes.config.resources 等
         String[] parts = configGroup.split("\\.");
         if (parts.length >= 3) {
             return parts[2]; // 返回第三部分作为配置类型
@@ -453,7 +453,7 @@ public class ConfigGroupUtils {
 
     /**
      * 从Kubernetes配置组名中提取角色名
-     * 例如从 "kubernetes.config.persistentVolumeClaims.DataNode" 提取 "DataNode"
+     * 例如从 "kubernetes.config.persistent-volume-claims.DataNode" 提取 "DataNode"
      * 
      * @param configGroup Kubernetes配置组名
      * @return 提取的角色名，如果无法提取则返回null
