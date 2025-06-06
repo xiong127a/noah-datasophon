@@ -1,13 +1,11 @@
 package com.datasophon.k8s.util;
 
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.resource.ClassPathResource;
 import com.datasophon.common.utils.IOUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -25,12 +23,24 @@ public class DockerImageUtils {
     private static final String IMAGE_PROPERTIES_PATH = "dockerImage.properties";
 
     static {
-        String[] propertyFiles = new String[]{IMAGE_PROPERTIES_PATH};
+        String[] propertyFiles = new String[] { IMAGE_PROPERTIES_PATH };
         for (String fileName : propertyFiles) {
             InputStream fis = null;
             try {
-                File file = FileUtil.file(fileName);
-                fis = IoUtil.toStream(file);
+                // 使用类加载器从类路径加载资源，而不是直接从文件系统加载
+                fis = DockerImageUtils.class.getClassLoader().getResourceAsStream(fileName);
+                if (fis == null) {
+                    logger.error("Could not load resource from classpath: {}", fileName);
+                    // 尝试使用Hutool的ClassPathResource作为备选方案
+                    ClassPathResource resource = new ClassPathResource(fileName);
+                    fis = resource.getStream();
+                }
+
+                if (fis == null) {
+                    logger.error("Resource not found: {}", fileName);
+                    throw new IOException("Cannot find resource: " + fileName);
+                }
+
                 properties.load(fis);
                 String imageRegistry = PropertyUtils.getString("IMAGE_REGISTRY");
                 // 遍历所有配置项并替换 $IMAGE_REGISTRY 占位符
@@ -39,12 +49,12 @@ public class DockerImageUtils {
                     if (value != null && value.contains("$IMAGE_REGISTRY")) {
                         // 替换镜像地址中的 $IMAGE_REGISTRY
                         String updatedValue = value.replace("$IMAGE_REGISTRY", imageRegistry);
-                        properties.setProperty(key, updatedValue);  // 更新值
+                        properties.setProperty(key, updatedValue); // 更新值
                         logger.info("Updated docker image for {}: {}", key, updatedValue);
                     }
                 }
             } catch (IOException e) {
-                logger.error(e.getMessage(), e);
+                logger.error("Error loading properties file {}: {}", fileName, e.getMessage(), e);
                 if (fis != null) {
                     IOUtils.closeQuietly(fis);
                 }
@@ -54,7 +64,6 @@ public class DockerImageUtils {
             }
         }
     }
-
 
     public static String getString(String key) {
         return properties.getProperty(key.trim());
