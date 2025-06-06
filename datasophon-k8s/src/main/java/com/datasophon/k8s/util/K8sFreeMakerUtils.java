@@ -121,28 +121,6 @@ public class K8sFreeMakerUtils {
     }
 
     /**
-     * 将数据写入模板并生成输出文件
-     *
-     * @param template   模板对象
-     * @param data       数据映射
-     * @param outputFile 输出文件路径
-     * @throws IOException       当写入文件过程中发生 I/O 错误时抛出
-     * @throws TemplateException 当模板处理过程中发生模板错误时抛出
-     */
-    public static void writeToTemplate(Template template, Map<String, Object> data, String outputFile, String hostname)
-            throws IOException, TemplateException {
-        // 使用 StringWriter 合并模板和数据
-        StringWriter stringWriter = new StringWriter();
-        template.process(data, stringWriter);
-
-        // 获取生成的内容
-        String generatedContent = stringWriter.toString();
-
-        // 将内容写入到远程系统
-        K8sMinaUtils.writeUtf8String(hostname, generatedContent, outputFile);
-    }
-
-    /**
      * 将数据写入模板并生成本地文件
      *
      * @param template   模板对象
@@ -196,7 +174,6 @@ public class K8sFreeMakerUtils {
      *
      * @param configMapName    ConfigMap 的名称
      * @param generatedContent 渲染后的配置内容
-     * @throws IOException 创建或更新ConfigMap过程中发生I/O错误时抛出
      */
     public static void createConfigMap(String configMapName, String generatedContent, String kubeConfig,
             String fileName, String serviceRoleFullName) {
@@ -208,7 +185,7 @@ public class K8sFreeMakerUtils {
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
-        configMap.getMetadata().setName(StrUtil.toSymbolCase(configMapName,'-')); // 设置 ConfigMap 名称
+        configMap.getMetadata().setName(configMapName); // 设置 ConfigMap 名称
         configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE); // 设置 ConfigMap 命名空间
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();
@@ -222,7 +199,8 @@ public class K8sFreeMakerUtils {
 
         // 创建新的 ConfigMap
         try {
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).createOrReplace();
+            // 使用 serverSideApply 替代 createOrReplace，相当于 kubectl apply
+            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).serverSideApply();
         } catch (Exception e) {
             log.error("Error creating ConfigMap: {}", e.getMessage());
             throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());
