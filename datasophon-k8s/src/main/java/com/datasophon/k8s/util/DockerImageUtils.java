@@ -1,10 +1,12 @@
 package com.datasophon.k8s.util;
 
-import cn.hutool.core.io.resource.ClassPathResource;
 import com.datasophon.common.utils.IOUtils;
 import com.datasophon.common.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,25 +22,47 @@ public class DockerImageUtils {
         throw new UnsupportedOperationException("Construct PropertyUtils");
     }
 
-    private static final String IMAGE_PROPERTIES_PATH = "dockerImage.properties";
+    private static final String IMAGE_PROPERTIES_PATH = "classpath:dockerImage.properties";
+
+    // 创建一个默认的ResourceLoader实例
+    private static final ResourceLoader resourceLoader = new DefaultResourceLoader();
 
     static {
+        loadProperties();
+    }
+
+    private static void loadProperties() {
         String[] propertyFiles = new String[] { IMAGE_PROPERTIES_PATH };
-        for (String fileName : propertyFiles) {
+        for (String resourcePath : propertyFiles) {
             InputStream fis = null;
             try {
-                // 使用类加载器从类路径加载资源，而不是直接从文件系统加载
-                fis = DockerImageUtils.class.getClassLoader().getResourceAsStream(fileName);
+                // 使用Spring的ResourceLoader加载资源
+                Resource resource = resourceLoader.getResource(resourcePath);
+                logger.info("Using Spring ResourceLoader to load: {}", resourcePath);
+
+                if (resource.exists()) {
+                    fis = resource.getInputStream();
+                }
+
+                // 如果通过Spring无法加载，回退到类加载器
                 if (fis == null) {
-                    logger.error("Could not load resource from classpath: {}", fileName);
-                    // 尝试使用Hutool的ClassPathResource作为备选方案
-                    ClassPathResource resource = new ClassPathResource(fileName);
-                    fis = resource.getStream();
+                    logger.warn("Could not load resource with Spring ResourceLoader: {}", resourcePath);
+                    // 尝试直接从类路径加载
+                    String fileName = resourcePath.replace("classpath:", "");
+                    fis = DockerImageUtils.class.getResourceAsStream("/" + fileName);
+
+                    if (fis == null) {
+                        fis = DockerImageUtils.class.getResourceAsStream(fileName);
+                    }
+
+                    if (fis == null) {
+                        fis = DockerImageUtils.class.getClassLoader().getResourceAsStream(fileName);
+                    }
                 }
 
                 if (fis == null) {
-                    logger.error("Resource not found: {}", fileName);
-                    throw new IOException("Cannot find resource: " + fileName);
+                    logger.error("Resource not found: {}", resourcePath);
+                    throw new IOException("Cannot find resource: " + resourcePath);
                 }
 
                 properties.load(fis);
@@ -54,11 +78,10 @@ public class DockerImageUtils {
                     }
                 }
             } catch (IOException e) {
-                logger.error("Error loading properties file {}: {}", fileName, e.getMessage(), e);
+                logger.error("Error loading properties file {}: {}", resourcePath, e.getMessage(), e);
                 if (fis != null) {
                     IOUtils.closeQuietly(fis);
                 }
-                System.exit(1);
             } finally {
                 IOUtils.closeQuietly(fis);
             }
@@ -73,5 +96,4 @@ public class DockerImageUtils {
         String val = properties.getProperty(key.trim());
         return val == null ? defaultVal : val;
     }
-
 }
