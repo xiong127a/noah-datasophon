@@ -16,10 +16,10 @@ spec:
         name: nfs-pvc
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: <#if storage_classes??>${storage_classes}<#else>standard</#if>
+        storageClassName: ${storage_classes}
         resources:
           requests:
-            storage: <#if storage??>${storage}<#else>10Gi</#if>
+            storage: ${storage}
   minReadySeconds: 5
   revisionHistoryLimit: 10
   podManagementPolicy: Parallel
@@ -55,7 +55,7 @@ spec:
               echo $((MY_ID + 1)) > ${dataDir}/myid
           volumeMounts:
             - name: nfs-pvc
-              mountPath: <#if mount_path??>${mount_path}<#else>/data</#if>
+              mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       affinity:
         podAntiAffinity:
@@ -119,16 +119,16 @@ spec:
           name: "${serviceRoleFullName}"
           resources:
             requests:
-              memory: <#if requests_memory??>${requests_memory}<#else>512Mi</#if>
-              cpu: <#if requests_cpu??>${requests_cpu}<#else>0.5</#if>
+              memory: ${requests_memory}
+              cpu: ${requests_cpu}
             limits:
-              memory: <#if limits_memory??>${limits_memory}<#else>1024Mi</#if>
-              cpu: <#if limits_cpu??>${limits_cpu}<#else>1</#if>
+              memory: ${limits_memory}
+              cpu: ${limits_cpu}
           securityContext:
             privileged: true
           volumeMounts:
             - name: nfs-pvc
-              mountPath: <#if mount_path??>${mount_path}<#else>/data</#if>
+              mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
