@@ -200,7 +200,7 @@ public class K8sFreeMakerUtils {
         // 创建新的 ConfigMap
         try {
             // 使用 serverSideApply 替代 createOrReplace，相当于 kubectl apply
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).serverSideApply();
+            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).createOrReplace();
         } catch (Exception e) {
             log.error("Error creating ConfigMap: {}", e.getMessage());
             throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());
