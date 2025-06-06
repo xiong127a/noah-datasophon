@@ -841,7 +841,10 @@
       "defaultValue": "${nn1}:8020",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "NameNode",
+      "serviceType": "ClusterIP",
+      "portNumber": "8020"
     },
     {
       "name": "dfs.namenode.rpc-address.${dfs.nameservices}.nn2",
@@ -856,7 +859,10 @@
       "defaultValue": "${nn2}:8020",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "NameNode", 
+      "serviceType": "ClusterIP",
+      "portNumber": "8020"
     },
     {
       "name": "dfs.namenode.http-address.${dfs.nameservices}.nn1",
@@ -871,7 +877,11 @@
       "defaultValue": "${nn1}:9870",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "NameNode",
+      "serviceType": "NodePort",
+      "portNumber": "9870",
+      "nodePort": "30870"
     },
     {
       "name": "dfs.namenode.http-address.${dfs.nameservices}.nn2",
@@ -886,7 +896,11 @@
       "defaultValue": "${nn2}:9870",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "NameNode",
+      "serviceType": "NodePort",
+      "portNumber": "9870",
+      "nodePort": "30871"
     },
     {
       "name": "dfs.namenode.shared.edits.dir",
@@ -901,7 +915,10 @@
       "defaultValue": "qjournal://${journalNode1}:8485;${journalNode2}:8485;${journalNode3}:8485/meta",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "JournalNode",
+      "serviceType": "ClusterIP",
+      "portNumber": "8485"
     },
     {
       "name": "dfs.ha.fencing.methods",
@@ -961,7 +978,10 @@
       "defaultValue": "0.0.0.0:1026",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "DataNode",
+      "serviceType": "ClusterIP",
+      "portNumber": "1026"
     },
     {
       "name": "dfs.datanode.http.address",
@@ -976,7 +996,10 @@
       "defaultValue": "0.0.0.0:1025",
       "configCategory": "file",
       "configGroup": "hdfs-site",
-      "configLevel": "advanced"
+      "configLevel": "advanced",
+      "bindRole": "DataNode",
+      "serviceType": "ClusterIP",
+      "portNumber": "1025"
     },
     {
       "name": "dfs.permissions.enabled",
@@ -1751,10 +1774,10 @@
       "configType": "k8s",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"9870": "30870"}],
+      "value": [],
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": [{"9870": "30870"}],
+      "defaultValue": [],
       "configCategory": "k8s",
       "configGroup": "kubernetes.config.services",
       "configLevel": "advanced"
@@ -1766,10 +1789,10 @@
       "configType": "k8s",
       "required": false,
       "type": "multipleWithKey",
-      "value": [{"8020": "8020"}],
+      "value": [],
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": [{"8020": "8020"}],
+      "defaultValue": [],
       "configCategory": "k8s",
       "configGroup": "kubernetes.config.services",
       "configLevel": "advanced"

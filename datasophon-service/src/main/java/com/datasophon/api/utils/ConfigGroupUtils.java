@@ -113,6 +113,9 @@ public class ConfigGroupUtils {
         List<ServiceConfig> nonK8sConfigs = new ArrayList<>();
         Map<String, List<ServiceConfig>> k8sConfigsByType = new HashMap<>();
 
+        // 3. 处理端口绑定相关的配置
+        Map<String, ServiceConfig> portConfigs = new HashMap<>(); // 存储端口配置，用于后续处理
+
         for (ServiceConfig config : list) {
             String configGroup = config.getConfigGroup();
 
@@ -123,6 +126,12 @@ public class ConfigGroupUtils {
                 // 添加到相应类型的列表
                 k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
             } else {
+                // 检查是否有端口绑定相关的配置
+                if (config.getBindRole() != null && config.getPortNumber() != null) {
+                    // 使用配置名称作为键，存储端口配置
+                    portConfigs.put(config.getName(), config);
+                }
+
                 // 非K8S配置，直接保留
                 nonK8sConfigs.add(config);
             }
@@ -162,10 +171,148 @@ public class ConfigGroupUtils {
             }
         }
 
+        // 4. 处理端口配置
+        if (!portConfigs.isEmpty()) {
+            processPortConfigs(portConfigs, processedConfigs);
+        }
+
         // 添加非K8S配置到结果列表
         processedConfigs.addAll(nonK8sConfigs);
 
         return processedConfigs;
+    }
+
+    /**
+     * 处理端口配置，将bindRole、serviceType、portNumber和nodePort信息应用到相应的配置中
+     * 
+     * @param portConfigs      包含端口信息的配置
+     * @param processedConfigs 处理后的配置列表
+     */
+    private static void processPortConfigs(Map<String, ServiceConfig> portConfigs,
+            List<ServiceConfig> processedConfigs) {
+        // 遍历所有已处理的配置
+        for (ServiceConfig config : processedConfigs) {
+            // 检查是否是kubernetes.config.services相关配置
+            if (config.getConfigGroup() != null &&
+                    config.getConfigGroup().startsWith("kubernetes.config.services")) {
+
+                String roleName = extractRoleFromK8sConfigGroup(config.getConfigGroup());
+                if (roleName == null) {
+                    continue;
+                }
+
+                // 获取配置名称
+                String configName = config.getName();
+                if (configName == null) {
+                    continue;
+                }
+
+                // 遍历所有端口配置
+                for (ServiceConfig portConfig : portConfigs.values()) {
+                    String bindRole = portConfig.getBindRole();
+                    String serviceName = portConfig.getServiceName(); // 获取服务名称
+
+                    if (bindRole == null || serviceName == null) {
+                        continue;
+                    }
+
+                    // 服务名称转小写
+                    String serviceNameLower = serviceName.toLowerCase();
+
+                    // 检查角色是否匹配
+                    String[] roles = bindRole.split(",");
+                    boolean roleMatched = false;
+                    for (String role : roles) {
+                        if (role.trim().equalsIgnoreCase(roleName)) {
+                            roleMatched = true;
+                            break;
+                        }
+                    }
+
+                    if (!roleMatched) {
+                        continue;
+                    }
+
+                    String portNumber = portConfig.getPortNumber();
+                    String serviceType = portConfig.getServiceType();
+                    String nodePort = portConfig.getNodePort();
+
+                    // 检查是否为NodePort类型的端口映射配置
+                    String nodePortMappingName = serviceNameLower + "_node_port_mappings";
+                    if (configName.contains(nodePortMappingName)) {
+                        if ("NodePort".equalsIgnoreCase(serviceType) && portNumber != null && nodePort != null) {
+                            // 创建或更新node_port_mappings的值
+                            updatePortMapping(config, portNumber, nodePort);
+                            logger.info("Updated {} for role {}: port {} -> nodePort {}",
+                                    nodePortMappingName, roleName, portNumber, nodePort);
+                        }
+                    }
+
+                    // 检查是否为ClusterIP类型的端口映射配置
+                    String clusterPortMappingName = serviceNameLower + "_cluster_port_mappings";
+                    if (configName.contains(clusterPortMappingName)) {
+                        if (portNumber != null) {
+                            // 创建或更新cluster_port_mappings的值
+                            updatePortMapping(config, portNumber, portNumber);
+                            logger.info("Updated {} for role {}: port {}",
+                                    clusterPortMappingName, roleName, portNumber);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 更新端口映射配置
+     * 
+     * @param config     配置对象
+     * @param port       端口号
+     * @param mappedPort 映射的端口号
+     */
+    private static void updatePortMapping(ServiceConfig config, String port, String mappedPort) {
+        try {
+            // 获取当前值
+            Object currentValue = config.getValue();
+            List<Map<String, String>> portMappings;
+
+            // 解析当前值
+            if (currentValue == null) {
+                portMappings = new ArrayList<>();
+            } else if (currentValue instanceof String) {
+                portMappings = JSONObject.parseObject((String) currentValue,
+                        new TypeReference<List<Map<String, String>>>() {
+                        });
+            } else if (currentValue instanceof List) {
+                portMappings = (List<Map<String, String>>) currentValue;
+            } else {
+                logger.warn("Unexpected port mapping value type: {}", currentValue.getClass().getName());
+                return;
+            }
+
+            // 检查是否已存在相同的端口映射
+            boolean found = false;
+            for (Map<String, String> mapping : portMappings) {
+                if (mapping.containsKey(port)) {
+                    mapping.put(port, mappedPort);
+                    found = true;
+                    break;
+                }
+            }
+
+            // 如果不存在，添加新的映射
+            if (!found) {
+                Map<String, String> newMapping = new HashMap<>();
+                newMapping.put(port, mappedPort);
+                portMappings.add(newMapping);
+            }
+
+            // 更新配置值
+            config.setValue(portMappings);
+
+        } catch (Exception e) {
+            logger.error("Failed to update port mapping: {}", e.getMessage(), e);
+        }
     }
 
     /**
@@ -817,6 +964,12 @@ public class ConfigGroupUtils {
         target.setDisplayName(source.getDisplayName());
         target.setHeightMultiple(source.getHeightMultiple());
         target.setServiceName(source.getServiceName());
+
+        // 复制端口绑定相关字段
+        target.setBindRole(source.getBindRole());
+        target.setServiceType(source.getServiceType());
+        target.setPortNumber(source.getPortNumber());
+        target.setNodePort(source.getNodePort());
 
         return target;
     }
