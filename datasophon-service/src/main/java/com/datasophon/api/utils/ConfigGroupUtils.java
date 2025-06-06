@@ -1,5 +1,6 @@
 package com.datasophon.api.utils;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -154,7 +155,7 @@ public class ConfigGroupUtils {
             for (String roleName : targetRoles) {
                 for (ServiceConfig config : configs) {
                     // 创建配置副本
-                    ServiceConfig copy = cloneServiceConfig(config);
+                    ServiceConfig copy = ObjectUtil.cloneByStream(config);
 
                     // 设置单一角色
                     copy.setConfigTargetRoles(roleName);
@@ -184,79 +185,52 @@ public class ConfigGroupUtils {
 
     /**
      * 处理端口配置，将bindRole、serviceType、portNumber和nodePort信息应用到相应的配置中
-     * 
+     *
      * @param portConfigs      包含端口信息的配置
      * @param processedConfigs 处理后的配置列表
      */
     private static void processPortConfigs(Map<String, ServiceConfig> portConfigs,
             List<ServiceConfig> processedConfigs) {
-        // 遍历所有已处理的配置
-        for (ServiceConfig config : processedConfigs) {
-            // 检查是否是kubernetes.config.services相关配置
-            if (config.getConfigGroup() != null &&
-                    config.getConfigGroup().startsWith("kubernetes.config.services")) {
+        // 遍历所有端口配置
+        for (ServiceConfig portConfig : portConfigs.values()) {
+            String bindRole = portConfig.getBindRole();
+            String portNumber = portConfig.getPortNumber();
+            String serviceType = portConfig.getServiceType();
+            String nodePort = portConfig.getNodePort();
 
-                String roleName = extractRoleFromK8sConfigGroup(config.getConfigGroup());
-                if (roleName == null) {
-                    continue;
-                }
+            // 跳过无效的配置
+            if (bindRole == null || portNumber == null) {
+                continue;
+            }
 
-                // 获取配置名称
-                String configName = config.getName();
-                if (configName == null) {
-                    continue;
-                }
+            // 遍历bindRole中的所有角色
+            for (String role : bindRole.split(",")) {
+                String roleName = role.trim().toLowerCase();
 
-                // 遍历所有端口配置
-                for (ServiceConfig portConfig : portConfigs.values()) {
-                    String bindRole = portConfig.getBindRole();
-                    String serviceName = portConfig.getServiceName(); // 获取服务名称
+                // 构建要查找的配置名称
+                String nodePortMappingName = roleName + "_node_port_mappings";
+                String clusterPortMappingName = roleName + "_cluster_port_mappings";
 
-                    if (bindRole == null || serviceName == null) {
+                // 直接查找和更新匹配的配置
+                for (ServiceConfig config : processedConfigs) {
+                    String configName = config.getName();
+                    if (configName == null) {
                         continue;
                     }
 
-                    // 服务名称转小写
-                    String serviceNameLower = serviceName.toLowerCase();
-
-                    // 检查角色是否匹配
-                    String[] roles = bindRole.split(",");
-                    boolean roleMatched = false;
-                    for (String role : roles) {
-                        if (role.trim().equalsIgnoreCase(roleName)) {
-                            roleMatched = true;
-                            break;
-                        }
+                    // 处理NodePort类型的端口映射
+                    if (configName.equals(nodePortMappingName) && "NodePort".equalsIgnoreCase(serviceType)
+                            && nodePort != null) {
+                        updatePortMapping(config, portNumber, nodePort);
+                        logger.info("Updated {} for role {}: port {} -> nodePort {}",
+                                nodePortMappingName, roleName, portNumber, nodePort);
                     }
 
-                    if (!roleMatched) {
-                        continue;
-                    }
-
-                    String portNumber = portConfig.getPortNumber();
-                    String serviceType = portConfig.getServiceType();
-                    String nodePort = portConfig.getNodePort();
-
-                    // 检查是否为NodePort类型的端口映射配置
-                    String nodePortMappingName = serviceNameLower + "_node_port_mappings";
-                    if (configName.contains(nodePortMappingName)) {
-                        if ("NodePort".equalsIgnoreCase(serviceType) && portNumber != null && nodePort != null) {
-                            // 创建或更新node_port_mappings的值
-                            updatePortMapping(config, portNumber, nodePort);
-                            logger.info("Updated {} for role {}: port {} -> nodePort {}",
-                                    nodePortMappingName, roleName, portNumber, nodePort);
-                        }
-                    }
-
-                    // 检查是否为ClusterIP类型的端口映射配置
-                    String clusterPortMappingName = serviceNameLower + "_cluster_port_mappings";
-                    if (configName.contains(clusterPortMappingName)) {
-                        if (portNumber != null) {
-                            // 创建或更新cluster_port_mappings的值
-                            updatePortMapping(config, portNumber, portNumber);
-                            logger.info("Updated {} for role {}: port {}",
-                                    clusterPortMappingName, roleName, portNumber);
-                        }
+                    // 处理ClusterIP类型的端口映射
+                    if (configName.equals(clusterPortMappingName)) {
+                        updatePortMapping(config, portNumber, portNumber);
+                        logger.info("Updated {} for role {}: port {}",
+                                clusterPortMappingName, roleName, portNumber);
                     }
                 }
             }
@@ -265,7 +239,7 @@ public class ConfigGroupUtils {
 
     /**
      * 更新端口映射配置
-     * 
+     *
      * @param config     配置对象
      * @param port       端口号
      * @param mappedPort 映射的端口号
@@ -294,6 +268,7 @@ public class ConfigGroupUtils {
             boolean found = false;
             for (Map<String, String> mapping : portMappings) {
                 if (mapping.containsKey(port)) {
+                    // 更新已存在的端口映射
                     mapping.put(port, mappedPort);
                     found = true;
                     break;
@@ -309,7 +284,6 @@ public class ConfigGroupUtils {
 
             // 更新配置值
             config.setValue(portMappings);
-
         } catch (Exception e) {
             logger.error("Failed to update port mapping: {}", e.getMessage(), e);
         }
@@ -364,10 +338,9 @@ public class ConfigGroupUtils {
                 String configTargetRoles = generator.getString("configTargetRoles");
 
                 // 检查是否有K8S相关的配置文件
-                if (filename != null && (filename.toLowerCase().endsWith(".k8s") ||
-                        filename.toLowerCase().startsWith("kubernetes.config."))) {
-                    Set<String> roles = new HashSet<>();
+                if (filename != null && filename.toLowerCase().startsWith("kubernetes.config.")) {
 
+                    Set<String> roles = new HashSet<>();
                     // 解析角色列表
                     if (StrUtil.isNotBlank(configTargetRoles)) {
                         for (String role : configTargetRoles.split(",")) {
@@ -601,7 +574,7 @@ public class ConfigGroupUtils {
     /**
      * 从Kubernetes配置组名中提取角色名
      * 例如从 "kubernetes.config.persistent-volume-claims.DataNode" 提取 "DataNode"
-     * 
+     *
      * @param configGroup Kubernetes配置组名
      * @return 提取的角色名，如果无法提取则返回null
      */
@@ -645,7 +618,7 @@ public class ConfigGroupUtils {
 
     /**
      * 解析配置JSON字符串为Map
-     * 
+     *
      * @param configFileJson 配置文件JSON字符串
      * @return 解析后的Map
      */
@@ -657,7 +630,7 @@ public class ConfigGroupUtils {
 
     /**
      * 从配置信息中收集角色名
-     * 
+     *
      * @param configMap 配置映射
      * @return 角色名集合
      */
@@ -673,7 +646,7 @@ public class ConfigGroupUtils {
 
     /**
      * 处理没有角色信息的原始配置
-     * 
+     *
      * @param resultMap   结果配置映射
      * @param originalMap 原始配置映射
      * @param clusterId   集群ID
@@ -697,7 +670,7 @@ public class ConfigGroupUtils {
 
     /**
      * 处理带有角色信息的配置
-     * 
+     *
      * @param resultMap   结果配置映射
      * @param originalMap 原始配置映射
      * @param roleNames   角色名集合
@@ -724,7 +697,7 @@ public class ConfigGroupUtils {
 
     /**
      * 分离Kubernetes和非Kubernetes配置
-     * 
+     *
      * @param originalMap      原始配置映射
      * @param k8sConfigsByType K8S配置映射（按类型分组）
      * @param nonK8sConfigs    非K8S配置映射
@@ -769,7 +742,7 @@ public class ConfigGroupUtils {
 
     /**
      * 处理Kubernetes配置
-     * 
+     *
      * @param resultMap        结果配置映射
      * @param originalMap      原始配置映射
      * @param k8sConfigsByType K8S配置映射（按类型分组）
@@ -800,7 +773,7 @@ public class ConfigGroupUtils {
 
     /**
      * 为每个角色创建配置副本
-     * 
+     *
      * @param configs       配置列表
      * @param k8sConfigType K8S配置类型
      * @param roleNames     角色名集合
@@ -816,13 +789,22 @@ public class ConfigGroupUtils {
         for (String roleName : roleNames) {
             for (ServiceConfig k8sConfig : configs) {
                 // 创建配置副本
-                ServiceConfig newConfig = cloneServiceConfig(k8sConfig);
+                ServiceConfig newConfig = ObjectUtil.cloneByStream(k8sConfig);
 
                 // 设置角色特定的configGroup
                 newConfig.setConfigGroup("kubernetes.config." + k8sConfigType + "." + roleName);
 
                 // 添加角色前缀到name
                 addRolePrefixToName(newConfig, roleName);
+
+                // 清空端口映射配置的值，这些值将由processPortConfigs方法重新设置
+                String configName = newConfig.getName();
+                if (configName != null &&
+                        (configName.endsWith("_node_port_mappings") || configName.endsWith("_cluster_port_mappings"))) {
+                    // 对于端口映射配置，创建一个空的列表作为初始值
+                    newConfig.setValue(new ArrayList<>());
+                    logger.debug("清空端口映射配置值: {}", configName);
+                }
 
                 allConfigs.add(newConfig);
             }
@@ -833,7 +815,7 @@ public class ConfigGroupUtils {
 
     /**
      * 查找并使用原始Generator对象
-     * 
+     *
      * @param resultMap     结果配置映射
      * @param originalMap   原始配置映射
      * @param k8sConfigType K8S配置类型
@@ -923,55 +905,6 @@ public class ConfigGroupUtils {
         }
 
         return resultMap;
-    }
-
-    /**
-     * 创建ServiceConfig的深拷贝
-     *
-     * @param source 源配置对象
-     * @return 克隆的配置对象
-     */
-    public static ServiceConfig cloneServiceConfig(ServiceConfig source) {
-        ServiceConfig target = new ServiceConfig();
-
-        // 复制基本字段
-        target.setName(source.getName());
-        target.setValue(source.getValue());
-        target.setLabel(source.getLabel());
-        target.setDescription(source.getDescription());
-        target.setRequired(source.isRequired());
-        target.setType(source.getType());
-        target.setConfigurableInWizard(source.isConfigurableInWizard());
-        target.setDefaultValue(source.getDefaultValue());
-        target.setMinValue(source.getMinValue());
-        target.setMaxValue(source.getMaxValue());
-        target.setUnit(source.getUnit());
-        target.setHidden(source.isHidden());
-        target.setSelectValue(source.getSelectValue());
-        target.setConfigType(source.getConfigType());
-        target.setConfigWithKerberos(source.isConfigWithKerberos());
-        target.setConfigWithRack(source.isConfigWithRack());
-        target.setConfigWithHA(source.isConfigWithHA());
-        target.setSeparator(source.getSeparator());
-        target.setOpen(source.getOpen());
-        target.setClose(source.getClose());
-        target.setConfigTargetRoles(source.getConfigTargetRoles());
-        target.setConfigCategory(source.getConfigCategory());
-        target.setConfigGroup(source.getConfigGroup());
-        target.setConfigLevel(source.getConfigLevel());
-        target.setTemplateName(source.getTemplateName());
-        target.setTemplateContent(source.getTemplateContent());
-        target.setDisplayName(source.getDisplayName());
-        target.setHeightMultiple(source.getHeightMultiple());
-        target.setServiceName(source.getServiceName());
-
-        // 复制端口绑定相关字段
-        target.setBindRole(source.getBindRole());
-        target.setServiceType(source.getServiceType());
-        target.setPortNumber(source.getPortNumber());
-        target.setNodePort(source.getNodePort());
-
-        return target;
     }
 
     /**
