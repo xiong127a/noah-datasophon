@@ -883,7 +883,7 @@ export default {
     },
     filteredVisibleGroups() {
       const groups = this.filteredTemplateData || {}; // Changed from this.nonKubernetesGroups
-      return Object.entries(groups)
+      const filteredGroups = Object.entries(groups)
         .filter(([groupName, group]) => {
           // 1. 处理新格式：同时包含常规配置和Kubernetes配置的角色分组
           if (Array.isArray(group) && group.length === 1 && group[0].hasKubernetesConfig) {
@@ -929,6 +929,24 @@ export default {
           acc[key] = value;
           return acc;
         }, {});
+      
+      // 对分组进行排序
+      const sortedGroups = {};
+      
+      // 获取所有分组键
+      const allKeys = Object.keys(filteredGroups);
+      
+      // 对分组键进行排序
+      const sortedKeys = this.sortConfigGroups(allKeys);
+      
+      // 按排序后的顺序构建结果
+      sortedKeys.forEach(key => {
+        if (filteredGroups[key]) {
+          sortedGroups[key] = filteredGroups[key];
+        }
+      });
+      
+      return sortedGroups;
     },
   },
   methods: {
