@@ -222,7 +222,7 @@ export default {
       },
       // 存储每个服务的配置组展开状态
       expandedKeys: {},
-      isAllExpanded: false,
+      isAllExpanded: true,
     };
   },
   watch: {
