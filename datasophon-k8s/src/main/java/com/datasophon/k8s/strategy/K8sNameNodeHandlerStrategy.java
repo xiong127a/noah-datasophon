@@ -72,66 +72,71 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
         final String ZOOKEEPER_SERVICE = "zookeeper";
         final String DATANODE_SERVICE = "hdfs-datanode";
 
+        // 当前服务角色名称
+        String serviceRoleName = "";
+        for (ServiceConfig config : list) {
+            if ("dfs.namenode.name.dir".equals(config.getName())) {
+                serviceRoleName = config.getConfigTargetRoles();
+                break;
+            }
+        }
+
         // 遍历所有配置
         for (ServiceConfig config : list) {
             String name = config.getName();
-            String value = config.getValue() != null ? config.getValue().toString() : null;
+            Object value = config.getValue();
 
-            if (value == null || name == null) {
-                continue;
-            }
-
-            // 处理NameNode RPC地址
-            if (name.contains("dfs.namenode.rpc-address")) {
-                if (name.contains(".nn1")) {
-                    config.setValue(NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + ":8020");
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                } else if (name.contains(".nn2")) {
-                    config.setValue(NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + ":8020");
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                }
-            }
-
-            // 处理NameNode HTTP地址
-            else if (name.contains("dfs.namenode.http-address")) {
-                if (name.contains(".nn1")) {
-                    config.setValue(NAMENODE_SERVICE + "-0." + NAMENODE_SERVICE + ":9870");
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                } else if (name.contains(".nn2")) {
-                    config.setValue(NAMENODE_SERVICE + "-1." + NAMENODE_SERVICE + ":9870");
-                    logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
-                }
-            }
-
-            // 处理JournalNode共享编辑日志目录
-            else if (name.equals("dfs.namenode.shared.edits.dir") && value.startsWith("qjournal://")) {
-                // 解析原始qjournal URL
-                String[] parts = value.split("://");
-                if (parts.length == 2) {
-                    String protocol = parts[0]; // qjournal
-                    String[] hostParts = parts[1].split("/");
-                    if (hostParts.length >= 2) {
-                        String hosts = hostParts[0]; // host1:8485;host2:8485;host3:8485
-                        String journalId = hostParts[1]; // meta
-
-                        // 构建新的服务地址列表
-                        StringBuilder newHosts = new StringBuilder();
-                        for (int i = 0; i < 3; i++) { // 假设3个JournalNode
-                            if (i > 0) {
-                                newHosts.append(";");
-                            }
-                            newHosts.append(JOURNALNODE_SERVICE).append("-").append(i)
-                                    .append(".").append(JOURNALNODE_SERVICE).append(":8485");
-                        }
-
-                        // 重建qjournal URL
-                        String newValue = protocol + "://" + newHosts.toString() + "/" + journalId;
-                        config.setValue(newValue);
-                        logger.info("更新配置 {}: {} -> {}", name, value, newValue);
+            // 处理NameNode HA相关配置
+            if (name.equals("dfs.namenode.rpc-address.nameservice1.nn1")) {
+                // NameNode1 RPC地址使用StatefulSet的0号Pod
+                StringBuilder newValue = new StringBuilder();
+                newValue.append(NAMENODE_SERVICE).append("-0.")
+                        .append(NAMENODE_SERVICE).append(":8020");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            } else if (name.equals("dfs.namenode.rpc-address.nameservice1.nn2")) {
+                // NameNode2 RPC地址使用StatefulSet的1号Pod
+                StringBuilder newValue = new StringBuilder();
+                newValue.append(NAMENODE_SERVICE).append("-1.")
+                        .append(NAMENODE_SERVICE).append(":8020");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            } else if (name.equals("dfs.namenode.http-address.nameservice1.nn1")) {
+                // NameNode1 HTTP地址
+                StringBuilder newValue = new StringBuilder();
+                newValue.append(NAMENODE_SERVICE).append("-0.")
+                        .append(NAMENODE_SERVICE).append(":9870");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            } else if (name.equals("dfs.namenode.http-address.nameservice1.nn2")) {
+                // NameNode2 HTTP地址
+                StringBuilder newValue = new StringBuilder();
+                newValue.append(NAMENODE_SERVICE).append("-1.")
+                        .append(NAMENODE_SERVICE).append(":9870");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            } else if (name.equals("dfs.journalnode.edits.dir")) {
+                // JournalNode数据目录
+                StringBuilder newValue = new StringBuilder();
+                newValue.append("/data/journalnode/");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            } else if (name.equals("dfs.namenode.shared.edits.dir")) {
+                // NameNode共享编辑目录
+                StringBuilder newValue = new StringBuilder();
+                // 构建形如：qjournal://hdfs-journalnode-0.hdfs-journalnode:8485;hdfs-journalnode-1.hdfs-journalnode:8485;hdfs-journalnode-2.hdfs-journalnode:8485/nameservice1
+                newValue.append("qjournal://");
+                for (int i = 0; i < 3; i++) { // 假设3个JournalNode节点
+                    if (i > 0) {
+                        newValue.append(";");
                     }
+                    newValue.append(JOURNALNODE_SERVICE).append("-").append(i)
+                            .append(".").append(JOURNALNODE_SERVICE).append(":8485");
                 }
+                newValue.append("/nameservice1");
+                config.setValue(newValue.toString());
+                logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
             }
-
             // 处理ZooKeeper地址 - ha.zookeeper.quorum
             else if (name.equals("ha.zookeeper.quorum")) {
                 // 构建ZooKeeper服务地址列表
@@ -146,7 +151,6 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 config.setValue(zkServers.toString());
                 logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
             }
-
             // 处理ZooKeeper地址 - hadoop.zk.address
             else if (name.equals("hadoop.zk.address")) {
                 // 构建ZooKeeper服务地址列表
@@ -161,17 +165,13 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 config.setValue(zkServers.toString());
                 logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
             }
-
             // 处理DataNode数据传输地址
             else if (name.equals("dfs.datanode.address")) {
-                // DataNode数据传输地址使用StatefulSet的服务名
                 StringBuilder newValue = new StringBuilder();
-                // 假设使用无状态的Deployment，使用服务名
                 newValue.append(DATANODE_SERVICE).append(":1026");
                 config.setValue(newValue.toString());
                 logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
             }
-
             // 处理DataNode HTTP地址
             else if (name.equals("dfs.datanode.http.address")) {
                 // DataNode HTTP地址使用StatefulSet的服务名
@@ -180,6 +180,26 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
                 newValue.append(DATANODE_SERVICE).append(":1025");
                 config.setValue(newValue.toString());
                 logger.info("更新配置 {}: {} -> {}", name, value, config.getValue());
+            }
+            // 处理dfs.ha.namenode.id配置
+            else if (name.equals("dfs.ha.namenode.id")) {
+                // 对于NameNode，保持原配置不变，因为在启动脚本中动态确定
+                // 对于ZKFC，在启动脚本中动态确定
+                if ("NameNode".equals(serviceRoleName)) {
+                    // 确保该配置存在，但不修改值，由启动脚本根据Pod索引决定
+                    if (value == null || String.valueOf(value).isEmpty()) {
+                        // 默认值，会在启动脚本中被替换
+                        config.setValue("to_be_determined_by_pod");
+                        logger.info("添加默认配置 {}: {}", name, config.getValue());
+                    }
+                } else if ("ZKFC".equals(serviceRoleName)) {
+                    // 确保该配置存在，但不修改值，由启动脚本根据Pod索引决定
+                    if (value == null || String.valueOf(value).isEmpty()) {
+                        // 默认值，会在启动脚本中被替换
+                        config.setValue("to_be_determined_by_pod");
+                        logger.info("添加默认配置 {}: {}", name, config.getValue());
+                    }
+                }
             }
         }
 
