@@ -900,7 +900,7 @@
       "bindRole": "NameNode",
       "serviceType": "NodePort",
       "portNumber": "9870",
-      "nodePort": "30871"
+      "nodePort": "30870"
     },
     {
       "name": "dfs.namenode.shared.edits.dir",
