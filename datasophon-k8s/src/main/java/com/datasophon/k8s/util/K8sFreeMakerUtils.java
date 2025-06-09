@@ -183,6 +183,39 @@ public class K8sFreeMakerUtils {
         }
         // 获取 Kubernetes 客户端
         KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
+
+        // 先检查是否存在同名ConfigMap，如果存在则删除
+        try {
+            ConfigMap existingConfigMap = client.configMaps()
+                    .inNamespace(Constant.K8S_NAMESPACE)
+                    .withName(configMapName)
+                    .get();
+
+            if (existingConfigMap != null) {
+                log.info("删除已存在的ConfigMap: {} 在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
+                boolean deleted = !client.configMaps()
+                        .inNamespace(Constant.K8S_NAMESPACE)
+                        .withName(configMapName)
+                        .delete()
+                        .isEmpty();
+
+                if (deleted) {
+                    log.info("成功删除ConfigMap: {}", configMapName);
+
+                    // 等待短暂时间确保删除操作完成
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    log.warn("无法删除ConfigMap: {}, 将尝试覆盖", configMapName);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("检查/删除ConfigMap时出错: {}, 将继续创建新的ConfigMap", e.getMessage());
+        }
+
         // 创建 ConfigMap 对象
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
@@ -207,13 +240,13 @@ public class K8sFreeMakerUtils {
 
         // 创建新的 ConfigMap
         try {
-            // 使用 serverSideApply 替代 createOrReplace，相当于 kubectl apply
-            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).resource(configMap).createOrReplace();
+            // 使用 createOrReplace 创建或替换ConfigMap
+            client.configMaps().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(configMap);
+            log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
         } catch (Exception e) {
-            log.error("Error creating ConfigMap: {}", e.getMessage());
-            throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());
+            log.error("创建ConfigMap时出错: {}", e.getMessage());
+            throw new RuntimeException("创建ConfigMap时出错: " + e.getMessage());
         }
-        log.info("ConfigMap {} created in namespace " + Constant.K8S_NAMESPACE + ".", configMapName);
     }
 
     // 获取或创建缓存客户端[8](@ref)
