@@ -101,44 +101,45 @@ public class ConfigGroupUtils {
             return list;
         }
 
-        // 1. 获取服务定义中的所有配置文件及其角色列表
-        Map<String, Set<String>> configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
+        // 1. 从配置中提取K8S配置
+        Map<String, ServiceConfig> portConfigs = new HashMap<>();
 
-        if (configFileToRolesMap.isEmpty()) {
-            logger.warn("无法获取服务 {} 的配置文件角色映射，将保持原始配置", serviceName);
-            return list;
-        }
-
-        // 2. 对配置进行分类
-        List<ServiceConfig> processedConfigs = new ArrayList<>();
-        List<ServiceConfig> nonK8sConfigs = new ArrayList<>();
+        // 当前K8S配置的集合
         Map<String, List<ServiceConfig>> k8sConfigsByType = new HashMap<>();
 
-        // 3. 处理端口绑定相关的配置
-        Map<String, ServiceConfig> portConfigs = new HashMap<>(); // 存储端口配置，用于后续处理
+        // 2. 从服务定义中获取配置文件到角色的映射
+        Map<String, Set<String>> configFileToRolesMap = getConfigFileRolesMap(frameCode, serviceName);
 
+        // 3. 分拣K8S配置和端口配置
+        List<ServiceConfig> processedConfigs = new ArrayList<>();
         for (ServiceConfig config : list) {
-            String configGroup = config.getConfigGroup();
-
-            if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
-                // 提取K8S配置类型（如persistentVolumeClaims或resources）
-                String k8sConfigType = extractK8sConfigType(configGroup);
-
-                // 添加到相应类型的列表
-                k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
-            } else {
-                // 检查是否有端口绑定相关的配置
-                if (config.getBindRole() != null && config.getPortNumber() != null) {
-                    // 使用配置名称作为键，存储端口配置
-                    portConfigs.put(config.getName(), config);
-                }
-
-                // 非K8S配置，直接保留
-                nonK8sConfigs.add(config);
+            // 提取端口配置
+            if (config.getConfigGroup() != null
+                    && config.getConfigGroup().startsWith("kubernetes.port.config")) {
+                portConfigs.put(config.getName(), config);
+                // 添加到处理后的列表
+                processedConfigs.add(config);
+                continue;
             }
+
+            // 提取K8S配置
+            if (config.getConfigGroup() != null
+                    && config.getConfigGroup().startsWith("kubernetes.config.")) {
+                // 提取K8S配置类型
+                String k8sConfigType = extractK8sConfigType(config.getConfigGroup());
+                k8sConfigsByType.computeIfAbsent(k8sConfigType, k -> new ArrayList<>()).add(config);
+                // 不要将K8S配置添加到结果列表，稍后处理
+                continue;
+            }
+
+            // 其他配置直接添加到结果列表
+            processedConfigs.add(config);
         }
 
-        // 3. 处理K8S配置
+        // 4. 处理端口映射配置
+        processPortConfigs(portConfigs, processedConfigs);
+
+        // 5. 处理K8S配置
         for (Map.Entry<String, List<ServiceConfig>> entry : k8sConfigsByType.entrySet()) {
             String k8sConfigType = entry.getKey();
             List<ServiceConfig> configs = entry.getValue();
@@ -158,60 +159,40 @@ public class ConfigGroupUtils {
                 Set<String> configRoles = new HashSet<>();
 
                 if (StrUtil.isNotBlank(configTargetRoles)) {
-                    // 使用配置自身定义的角色
+                    // 使用配置自身指定的角色
                     configRoles.addAll(parseRoleNames(configTargetRoles));
-                } else {
-                    // 从配置Group中提取角色
-                    String configGroup = config.getConfigGroup();
-                    if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
-                        // 尝试从配置组名中提取角色
-                        String extractedRole = extractRoleFromK8sConfigGroup(configGroup);
-                        if (extractedRole != null) {
-                            configRoles.add(extractedRole);
-                        } else {
-                            // 如果从配置组无法提取角色，使用类型级别的目标角色
-                            configRoles.addAll(targetRoles);
-                        }
-                    } else {
-                        // 其他情况，使用类型级别的目标角色
-                        configRoles.addAll(targetRoles);
+                } else if (config.getConfigGroup() != null) {
+                    // 从配置组提取角色
+                    String roleFromGroup = extractRoleFromK8sConfigGroup(config.getConfigGroup());
+                    if (roleFromGroup != null) {
+                        configRoles.add(roleFromGroup);
                     }
                 }
 
-                // 如果最终没有确定角色，使用通用角色
+                // 如果无法从配置中确定角色，则使用通用目标角色
                 if (configRoles.isEmpty()) {
-                    configRoles.add(GENERAL);
+                    configRoles.addAll(targetRoles);
                 }
 
-                // 为确定的每个角色创建一个配置副本
-                for (String roleName : configRoles) {
+                // 为每个角色创建配置副本
+                for (String role : configRoles) {
                     // 创建配置副本
                     ServiceConfig copy = ObjectUtil.cloneByStream(config);
 
                     // 设置单一角色
-                    copy.setConfigTargetRoles(roleName);
+                    copy.setConfigTargetRoles(role);
 
                     // 设置角色特定的configGroup
-                    copy.setConfigGroup("kubernetes.config." + k8sConfigType + "." + roleName);
+                    copy.setConfigGroup("kubernetes.config." + k8sConfigType + "." + role);
 
                     // 添加角色前缀到name
-                    addRolePrefixToName(copy, roleName);
+                    addRolePrefixToName(copy, role);
 
                     // 添加到处理后的配置列表
                     processedConfigs.add(copy);
-
-                    logger.debug("为角色 {} 创建K8S配置: {} (类型: {})", roleName, copy.getName(), k8sConfigType);
                 }
             }
         }
-
-        // 4. 处理端口配置
-        if (!portConfigs.isEmpty()) {
-            processPortConfigs(portConfigs, processedConfigs);
-        }
-
-        // 添加非K8S配置到结果列表
-        processedConfigs.addAll(nonK8sConfigs);
 
         return processedConfigs;
     }
@@ -479,7 +460,7 @@ public class ConfigGroupUtils {
         String configName = config.getName();
 
         // 将roleName转为小写并将驼峰转为下划线格式
-        String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+        String normRoleName = roleName.toLowerCase();
 
         // 检查是否已经有前缀
         if (!configName.startsWith(normRoleName + "_")) {
@@ -639,13 +620,44 @@ public class ConfigGroupUtils {
         // 2. 收集服务角色名
         Set<String> roleNames = collectRoleNames(originalConfigMap);
 
-        // 3. 根据角色名处理配置
+        // 3. 获取config_json中的配置列表
+        List<ServiceConfig> configJsonList = JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
+
+        // 4. 创建端口映射配置的映射，方便后续查找和更新
+        Map<String, ServiceConfig> portMappingConfigs = new HashMap<>();
+        for (ServiceConfig serviceConfig : configJsonList) {
+            String configName = serviceConfig.getName();
+            if (configName != null &&
+                    (configName.endsWith("_node_port_mappings") || configName.endsWith("_cluster_port_mappings"))) {
+                portMappingConfigs.put(configName, serviceConfig);
+            }
+        }
+
+        // 5. 根据角色名处理配置
         if (roleNames.isEmpty()) {
             // 无角色信息，直接处理原始配置
             processOriginalConfig(configFileMap, originalConfigMap, clusterId);
         } else {
             // 有角色信息，分别处理K8S和非K8S配置
             processConfigWithRoles(configFileMap, originalConfigMap, roleNames, clusterId);
+        }
+
+        // 6. 确保端口映射配置正确更新
+        for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
+            List<ServiceConfig> serviceConfigs = entry.getValue();
+            for (ServiceConfig serviceConfig : serviceConfigs) {
+                String configName = serviceConfig.getName();
+                if (configName != null &&
+                        (configName.endsWith("_node_port_mappings") || configName.endsWith("_cluster_port_mappings")) &&
+                        portMappingConfigs.containsKey(configName)) {
+
+                    ServiceConfig sourceConfig = portMappingConfigs.get(configName);
+                    Object originalValue = sourceConfig.getValue();
+                    if (originalValue != null) {
+                        serviceConfig.setValue(originalValue);
+                    }
+                }
+            }
         }
     }
 
@@ -817,7 +829,8 @@ public class ConfigGroupUtils {
             String k8sConfigType,
             Set<String> roleNames) {
 
-        List<ServiceConfig> allConfigs = new ArrayList<>();
+        // 预先计算结果列表的大小以避免多次扩容
+        List<ServiceConfig> allConfigs = new ArrayList<>(configs.size() * roleNames.size());
 
         for (String roleName : roleNames) {
             for (ServiceConfig k8sConfig : configs) {
@@ -830,15 +843,7 @@ public class ConfigGroupUtils {
                 // 添加角色前缀到name
                 addRolePrefixToName(newConfig, roleName);
 
-                // 清空端口映射配置的值，这些值将由processPortConfigs方法重新设置
-                String configName = newConfig.getName();
-                if (configName != null &&
-                        (configName.endsWith("_node_port_mappings") || configName.endsWith("_cluster_port_mappings"))) {
-                    // 对于端口映射配置，创建一个空的列表作为初始值
-                    newConfig.setValue(new ArrayList<>());
-                    logger.debug("清空端口映射配置值: {}", configName);
-                }
-
+                // 无需日志记录，直接添加到结果列表
                 allConfigs.add(newConfig);
             }
         }
@@ -956,7 +961,7 @@ public class ConfigGroupUtils {
         // 如果配置组是Kubernetes相关的，添加角色前缀
         if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
             // 将角色名转换为小写下划线格式，保持与ProcessUtils.generateConfigFileMap一致
-            String normRoleName = roleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
+            String normRoleName = roleName.toLowerCase();
             return normRoleName + "_" + configName;
         }
 

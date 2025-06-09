@@ -201,8 +201,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 String extractedRoleName = getKubernetesRole(serviceConfig.getConfigGroup());
                 if (extractedRoleName != null) {
                     // 将角色名转换为小写下划线格式，与ConfigGroupUtils.addRolePrefixForKubernetesConfig保持一致
-                    String normRoleName = extractedRoleName.toLowerCase().replaceAll("([a-z])([A-Z])", "$1_$2")
-                            .toLowerCase();
+                    String normRoleName = extractedRoleName.toLowerCase();
 
                     // 检查是否已经添加了前缀，只有未添加时才添加
                     if (!configName.startsWith(normRoleName + "_")) {
