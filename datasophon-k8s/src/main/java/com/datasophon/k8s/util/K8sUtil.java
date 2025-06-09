@@ -1,19 +1,14 @@
 package com.datasophon.k8s.util;
 
-import akka.protobuf.ByteString;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
-import cn.hutool.core.stream.StreamUtil;
-import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.VolumeMountDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.IOUtils;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-import com.datasophon.k8s.constants.Constant;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -24,14 +19,11 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
-import io.fabric8.kubernetes.client.dsl.ExecListener;
-import io.fabric8.kubernetes.client.dsl.Execable;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
 
-import java.io.*;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -212,13 +204,11 @@ public class K8sUtil {
 
         };
 
-        Watch watch = client.batch().v1().jobs()
+        // 使用 LogWatch 输出 Pod 的运行日志，直到 Job 完成
+        try (Watch watch = client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .withName(name)
-                .watch(watcher);
-
-        // 使用 LogWatch 输出 Pod 的运行日志，直到 Job 完成
-        try (LogWatch logWatch = client.pods()
+                .watch(watcher); LogWatch logWatch = client.pods()
                 .inNamespace(namespace)
                 .withName(podName)
                 .watchLog()) {
@@ -241,8 +231,6 @@ public class K8sUtil {
         } catch (InterruptedException | IOException e) {
             log.error(e.getMessage(), e);
             throw new InterruptedException();
-        } finally {
-            watch.close();
         }
 
         boolean flag = isJobEndSuccess.get();
