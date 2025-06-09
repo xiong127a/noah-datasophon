@@ -1,6 +1,7 @@
 package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
@@ -315,7 +316,7 @@ public class K8sServiceHandler {
 
         for (ServicePort originalPort : servicePorts) {
             // 创建基础服务端口副本
-            ServicePort basePort = cloneServicePort(originalPort);
+            ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
             basePort.setNodePort(null); // 基础服务不使用NodePort
 
             // 根据工作负载类型添加到对应集合
@@ -344,16 +345,6 @@ public class K8sServiceHandler {
         if (!nodePorts.isEmpty()) {
             createNodePortServices(nodePorts, client);
         }
-    }
-
-    // 深拷贝ServicePort对象
-    private ServicePort cloneServicePort(ServicePort original) {
-        ServicePort copy = new ServicePort();
-        copy.setName(original.getName());
-        copy.setPort(original.getPort());
-        copy.setTargetPort(original.getTargetPort());
-        copy.setNodePort(original.getNodePort());
-        return copy;
     }
 
     // 创建 Headless Service（StatefulSet）
