@@ -151,9 +151,40 @@ public class ConfigGroupUtils {
                 targetRoles.add(GENERAL);
             }
 
-            // 为每个角色创建每个配置的副本
-            for (String roleName : targetRoles) {
-                for (ServiceConfig config : configs) {
+            // 对每个配置进行处理，确定适合其的角色
+            for (ServiceConfig config : configs) {
+                // 检查配置自身是否已经指定了目标角色
+                String configTargetRoles = config.getConfigTargetRoles();
+                Set<String> configRoles = new HashSet<>();
+
+                if (StrUtil.isNotBlank(configTargetRoles)) {
+                    // 使用配置自身定义的角色
+                    configRoles.addAll(parseRoleNames(configTargetRoles));
+                } else {
+                    // 从配置Group中提取角色
+                    String configGroup = config.getConfigGroup();
+                    if (configGroup != null && configGroup.startsWith("kubernetes.config.")) {
+                        // 尝试从配置组名中提取角色
+                        String extractedRole = extractRoleFromK8sConfigGroup(configGroup);
+                        if (extractedRole != null) {
+                            configRoles.add(extractedRole);
+                        } else {
+                            // 如果从配置组无法提取角色，使用类型级别的目标角色
+                            configRoles.addAll(targetRoles);
+                        }
+                    } else {
+                        // 其他情况，使用类型级别的目标角色
+                        configRoles.addAll(targetRoles);
+                    }
+                }
+
+                // 如果最终没有确定角色，使用通用角色
+                if (configRoles.isEmpty()) {
+                    configRoles.add(GENERAL);
+                }
+
+                // 为确定的每个角色创建一个配置副本
+                for (String roleName : configRoles) {
                     // 创建配置副本
                     ServiceConfig copy = ObjectUtil.cloneByStream(config);
 
@@ -168,6 +199,8 @@ public class ConfigGroupUtils {
 
                     // 添加到处理后的配置列表
                     processedConfigs.add(copy);
+
+                    logger.debug("为角色 {} 创建K8S配置: {} (类型: {})", roleName, copy.getName(), k8sConfigType);
                 }
             }
         }
