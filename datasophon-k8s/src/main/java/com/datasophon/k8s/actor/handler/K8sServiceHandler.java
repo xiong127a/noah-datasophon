@@ -2,6 +2,7 @@ package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
@@ -39,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -382,6 +384,9 @@ public class K8sServiceHandler {
                 .withSpec(spec)
                 .build();
 
+        // 保存YAML文件到本地
+        saveServiceYaml(service, "headless");
+
         executeServiceCreation(client, service);
     }
 
@@ -402,6 +407,9 @@ public class K8sServiceHandler {
                 .endMetadata()
                 .withSpec(spec)
                 .build();
+
+        // 保存YAML文件到本地
+        saveServiceYaml(service, "clusterip");
 
         executeServiceCreation(client, service);
     }
@@ -443,6 +451,9 @@ public class K8sServiceHandler {
                     .endMetadata()
                     .withSpec(specBuilder.build())
                     .build();
+
+            // 保存YAML文件到本地
+            saveServiceYaml(service, "nodeport");
 
             executeServiceCreation(client, service);
         }
@@ -624,6 +635,32 @@ public class K8sServiceHandler {
         Integer currentCount = (Integer) CacheUtils.get(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         logger.info("当前{}: {}个，所需{}: {}个", serviceRoleFullName, currentCount, serviceRoleFullName, nodeCount);
         return currentCount.equals(nodeCount);
+    }
+
+    // 保存Service的YAML配置到本地文件
+    private void saveServiceYaml(Service service, String serviceType) {
+        try {
+            // 创建保存目录，使用Paths.get正确处理路径拼接
+            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "servers");
+            File dir = dirPath.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成文件名，使用Paths.get拼接路径
+            Path filePath = Paths.get(dirPath.toString(),
+                    service.getMetadata().getName() + "-" + serviceType + ".yaml");
+
+            // 使用K8s客户端序列化为YAML
+            String yamlContent = KubeUtil.getKubernetesYaml(service);
+
+            // 写入文件
+            Files.write(filePath, yamlContent.getBytes());
+
+            logger.info("保存Service YAML文件成功: {}", filePath);
+        } catch (Exception e) {
+            logger.error("保存Service YAML文件失败: {}", e.getMessage(), e);
+        }
     }
 
 }
