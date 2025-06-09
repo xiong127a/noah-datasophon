@@ -1,5 +1,6 @@
 package com.datasophon.api.utils;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONArray;
@@ -162,7 +163,7 @@ public class ConfigGroupUtils {
      * @return 处理后的配置列表
      */
     public static List<ServiceConfig> preprocessKubernetesConfigs(List<ServiceConfig> list, String frameCode,
-            String serviceName) {
+                                                                  String serviceName) {
         if (list == null || list.isEmpty()) {
             return list;
         }
@@ -270,7 +271,7 @@ public class ConfigGroupUtils {
      * @param processedConfigs 处理后的配置列表
      */
     private static void processPortConfigs(Map<String, ServiceConfig> portConfigs,
-            List<ServiceConfig> processedConfigs) {
+                                           List<ServiceConfig> processedConfigs) {
         // 遍历所有端口配置
         for (ServiceConfig portConfig : portConfigs.values()) {
             String bindRole = portConfig.getBindRole();
@@ -484,7 +485,7 @@ public class ConfigGroupUtils {
      * @return 目标角色集合
      */
     private static Set<String> getTargetRolesForConfigType(Map<String, Set<String>> configFileToRolesMap,
-            String configType) {
+                                                           String configType) {
         Set<String> result = new HashSet<>();
 
         // 完整的configGroup
@@ -550,7 +551,7 @@ public class ConfigGroupUtils {
      * @return 按配置组分组后的映射
      */
     public static Map<String, List<ServiceConfig>> groupByConfigTargetRoleOrCommon(String serviceName,
-            List<ServiceConfig> list) {
+                                                                                   List<ServiceConfig> list) {
         // 先处理所有配置项的模板内容
         if (list != null) {
             for (ServiceConfig config : list) {
@@ -696,7 +697,7 @@ public class ConfigGroupUtils {
      * @param clusterId     集群ID
      */
     public static void generateConfigFileMap(Map<Generators, List<ServiceConfig>> configFileMap,
-            ClusterServiceRoleGroupConfig config, Integer clusterId) {
+                                             ClusterServiceRoleGroupConfig config, Integer clusterId) {
 
         // 1. 解析配置文件JSON
         Map<JSONObject, JSONArray> originalConfigMap = parseConfigJson(config.getConfigFileJson());
@@ -713,6 +714,40 @@ public class ConfigGroupUtils {
             processConfigWithRoles(configFileMap, originalConfigMap, roleNames, clusterId);
         }
 
+        // 4. 从configJson获取配置值并应用到configFileMap
+        List<ServiceConfig> configs = JSONObject.parseArray(config.getConfigJson(), ServiceConfig.class);
+
+        if (CollUtil.isNotEmpty(configs)) {
+            logger.info("从configJson解析出 {} 个配置项", configs.size());
+
+            // 创建名称到配置的映射，便于快速查找
+            Map<String, ServiceConfig> configNameMap = new HashMap<>();
+            for (ServiceConfig config1 : configs) {
+                if (config1.getName() != null) {
+                    configNameMap.put(config1.getName(), config1);
+                }
+            }
+
+            // 遍历configFileMap并更新配置值
+            for (Map.Entry<Generators, List<ServiceConfig>> entry : configFileMap.entrySet()) {
+                List<ServiceConfig> serviceConfigs = entry.getValue();
+                if (serviceConfigs != null) {
+                    for (ServiceConfig serviceConfig : serviceConfigs) {
+                        String configName = serviceConfig.getName();
+                        if (configName != null && configNameMap.containsKey(configName)) {
+                            // 找到匹配的配置项，更新值
+                            ServiceConfig matchedConfig = configNameMap.get(configName);
+                            serviceConfig.setValue(matchedConfig.getValue());
+                            logger.debug("更新配置项 {}: 值={}", configName, matchedConfig.getValue());
+                        }
+                    }
+                }
+            }
+
+            logger.info("已完成configFileMap的配置值更新");
+        } else {
+            logger.warn("configJson中没有有效的配置项");
+        }
     }
 
     /**
