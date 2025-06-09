@@ -44,6 +44,22 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
+        - name: set-permissions
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting permissions for NameNode PVC mount path..."
+              chmod -R 777 ${mount_path}
+              echo "Permissions set successfully"
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+          volumeMounts:
+            - name: namenode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
         - name: namenode-format
           image: "${dockerImage}"
           env:
@@ -63,6 +79,22 @@ spec:
             - |
               if [ ! -d ${namenodeDir}/current ]; then
                 echo "format namenode";
+                
+                # 从Pod名称确定NameNode ID
+                POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+                
+                # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
+                if [ "$POD_INDEX" == "0" ]; then
+                  NAMENODE_ID="nn1"
+                else
+                  NAMENODE_ID="nn2"
+                fi
+                
+                echo "初始化NameNode ID设置为: $NAMENODE_ID"
+                
+                # 修改hdfs-site.xml添加正确的namenode ID
+                sed -i "s|<name>dfs.ha.namenode.id</name><value>.*</value>|<name>dfs.ha.namenode.id</name><value>$NAMENODE_ID</value>|" ${appHome}/etc/hadoop/hdfs-site.xml
+                
                 if ${enableKerberos}; then
                   echo "Kerberos is enabled. Running keystore setup...";
                   if [ ! -f /etc/security/keytab/keystore ]; then
@@ -155,6 +187,21 @@ spec:
             - "-c"
             - |
               HOSTNAME=$(hostname)
+              # 从Pod名称确定NameNode ID
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
+              if [ "$POD_INDEX" == "0" ]; then
+                NAMENODE_ID="nn1"
+              else
+                NAMENODE_ID="nn2"
+              fi
+              
+              echo "NameNode ID设置为: $NAMENODE_ID"
+              
+              # 修改hdfs-site.xml添加正确的namenode ID
+              sed -i "s|<name>dfs.ha.namenode.id</name><value>.*</value>|<name>dfs.ha.namenode.id</name><value>$NAMENODE_ID</value>|" ${appHome}/etc/hadoop/hdfs-site.xml
+              
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
                 if [ ! -f /etc/security/keytab/keystore ]; then

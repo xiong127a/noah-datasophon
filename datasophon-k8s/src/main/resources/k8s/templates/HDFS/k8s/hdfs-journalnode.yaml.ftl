@@ -48,6 +48,23 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: set-permissions
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting permissions for JournalNode PVC mount path..."
+              chmod -R 777 ${mount_path}
+              echo "Permissions set successfully"
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+          volumeMounts:
+            - name: journalnode-data
+              mountPath: ${mount_path}
+              subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
       containers:
         - env:
             - name: USER

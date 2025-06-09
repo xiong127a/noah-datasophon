@@ -76,7 +76,25 @@ spec:
           command:
             - "/bin/bash"
             - "-c"
-            - "${startCommand}"
+            - |
+              # 确定关联的NameNode ID
+              HOSTNAME=$(hostname)
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
+              if [ "$POD_INDEX" == "0" ]; then
+                NAMENODE_ID="nn1"
+              else
+                NAMENODE_ID="nn2"
+              fi
+              
+              echo "ZKFC 将监控 NameNode ID: $NAMENODE_ID"
+              
+              # 修改hdfs-site.xml添加正确的namenode ID
+              sed -i "s|<name>dfs.ha.namenode.id</name><value>.*</value>|<name>dfs.ha.namenode.id</name><value>$NAMENODE_ID</value>|" ${appHome}/etc/hadoop/hdfs-site.xml
+              
+              # 启动ZKFC
+              ${startCommand}
           readinessProbe:
             exec:
               command:
