@@ -51,6 +51,15 @@ spec:
       initContainers:
         - name: set-permissions
           image: "${dockerBusyboxImage}"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           command:
             - "/bin/sh"
             - "-c"
@@ -131,7 +140,7 @@ spec:
             tcpSocket:
               port: 8485
             failureThreshold: 3
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 5
