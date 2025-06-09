@@ -252,8 +252,8 @@
             <a-form-item v-for="(child, childIndex) in item.value" style="margin-bottom: 0px" :key="childIndex" :required="item.required && !item.name.endsWith('node_port_mappings') && !item.name.endsWith('cluster_port_mappings')" v-bind="childIndex === 0 ? labelCol : formItemLayoutWithOutLabel" :label="childIndex === 0 || item.value.length === 0  ? item.label : ''">
               <a-row type="flex" class="port-mapping-row" style="position: relative; margin-bottom: 16px; align-items: center; justify-content: space-between; width: 100%;">
                 <!-- 左侧输入框 -->
-                <a-col :span="10" class="port-input-left" style="display: flex; justify-content: flex-end; padding-right: 20px;">
-                  <div v-if="childIndex === 0" class="port-label-container">
+                <a-col :span="10" class="port-input-left" style="display: flex; flex-direction: column; justify-content: flex-end; padding-right: 20px;">
+                  <div v-if="childIndex === 0" class="port-label-wrapper">
                     <div class="port-label-left">
                       <template v-if="item.configType === 'custom'">配置名</template>
                       <template v-else-if="item.name.endsWith('node_port_mappings')">容器端口</template>
@@ -293,7 +293,7 @@
                 </a-col>
                 
                 <!-- 独立的箭头列 -->
-                <a-col :span="4" class="arrow-column">
+                <a-col :span="4" class="arrow-column" v-if="item.name.endsWith('node_port_mappings') || item.name.endsWith('cluster_port_mappings')">
                   <div class="enhanced-arrow-container" style="transform: translateX(-60px);">
                     <div class="enhanced-arrow-line">
                       <div class="enhanced-flow-effect"></div>
@@ -302,9 +302,13 @@
                   </div>
                 </a-col>
                 
+                <!-- 如果不是端口映射，则不显示箭头，但保持布局 -->
+                <a-col :span="4" class="arrow-column" v-else>
+                </a-col>
+                
                 <!-- 右侧输入框 -->
-                <a-col :span="10" class="port-input-right" style="display: flex; justify-content: flex-start; padding-left: 20px;">
-                  <div v-if="childIndex === 0" class="port-label-container">
+                <a-col :span="10" class="port-input-right" style="display: flex; flex-direction: column; justify-content: flex-start; padding-left: 20px;">
+                  <div v-if="childIndex === 0" class="port-label-wrapper">
                     <div class="port-label-right">
                       <template v-if="item.configType === 'custom'">配置值</template>
                       <template v-else-if="item.name.endsWith('node_port_mappings')">节点端口</template>
@@ -941,7 +945,26 @@ export default {
 
 .port-label-container {
   margin-bottom: 5px;
-  padding-left: 10px;
+  height: auto;
+  position: absolute;
+  top: -28px;  /* 增加与输入框的距离 */
+  width: 100%;
+}
+
+.port-label-container-left {
+  left: 0;
+  text-align: left;
+  padding-left: 0;
+}
+
+.port-label-container-right {
+  left: 0;
+  text-align: left;
+  padding-left: 0;
+}
+
+.port-label-left, .port-label-right {
+  display: inline-block;
 }
 
 .port-label-left {
@@ -1354,6 +1377,25 @@ export default {
   display: flex !important;
   align-items: center;
   justify-content: center;
+}
+
+.port-label-wrapper {
+  margin-bottom: 5px;
+  width: 100%;
+}
+
+.port-label-left {
+  color: #1890ff;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.port-label-right {
+  color: #52c41a;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
 }
 </style>
 
