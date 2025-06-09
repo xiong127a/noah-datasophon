@@ -32,6 +32,7 @@ import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
+import io.fabric8.kubernetes.api.model.ConfigMap;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -660,6 +661,32 @@ public class K8sServiceHandler {
             logger.info("保存Service YAML文件成功: {}", filePath);
         } catch (Exception e) {
             logger.error("保存Service YAML文件失败: {}", e.getMessage(), e);
+        }
+    }
+
+    // 保存ConfigMap的YAML配置到本地文件
+    public static void saveConfigMapYaml(ConfigMap configMap) {
+        try {
+            // 创建保存目录，使用Paths.get正确处理路径拼接
+            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "configmaps");
+            File dir = dirPath.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成文件名，使用Paths.get拼接路径
+            Path filePath = Paths.get(dirPath.toString(),
+                    configMap.getMetadata().getName() + ".yaml");
+
+            // 使用K8s客户端序列化为YAML
+            String yamlContent = KubeUtil.getKubernetesYaml(configMap);
+
+            // 写入文件
+            Files.write(filePath, yamlContent.getBytes());
+
+            LoggerFactory.getLogger(K8sServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
+        } catch (Exception e) {
+            LoggerFactory.getLogger(K8sServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
         }
     }
 

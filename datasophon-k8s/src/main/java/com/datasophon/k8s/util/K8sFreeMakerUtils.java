@@ -23,6 +23,7 @@ import com.datasophon.common.Constants;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.k8s.constants.Constant;
+import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.FileTemplateLoader;
 import freemarker.cache.MultiTemplateLoader;
@@ -189,6 +190,10 @@ public class K8sFreeMakerUtils {
         configMap.getMetadata().setNamespace(Constant.K8S_NAMESPACE); // 设置 ConfigMap 命名空间
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();
+            if (labels == null) {
+                labels = new HashMap<>();
+                configMap.getMetadata().setLabels(labels);
+            }
             labels.put("app", serviceRoleFullName);
         }
         if (generatedContent.contains("{{HOST}}")) {
@@ -196,6 +201,9 @@ public class K8sFreeMakerUtils {
         }
         // 将渲染后的内容加入到 ConfigMap 的 data 中
         configMap.setData(Collections.singletonMap(fileName, generatedContent));
+
+        // 保存ConfigMap YAML到本地
+        K8sServiceHandler.saveConfigMapYaml(configMap);
 
         // 创建新的 ConfigMap
         try {
@@ -206,7 +214,6 @@ public class K8sFreeMakerUtils {
             throw new RuntimeException("Error creating ConfigMap: " + e.getMessage());
         }
         log.info("ConfigMap {} created in namespace " + Constant.K8S_NAMESPACE + ".", configMapName);
-
     }
 
     // 获取或创建缓存客户端[8](@ref)
