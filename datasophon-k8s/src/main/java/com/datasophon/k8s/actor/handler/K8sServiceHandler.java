@@ -11,6 +11,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.KubeUtil;
+import org.apache.commons.lang.math.IntRange;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -225,6 +226,10 @@ public class K8sServiceHandler {
             List<ServicePort> servicePorts,
             boolean isNodePort) {
 
+        // 定义有效端口范围
+        final IntRange VALID_PORT_RANGE = new IntRange(1, 65535);
+        final IntRange VALID_NODEPORT_RANGE = new IntRange(30000, 32767);
+
         // 1. 查找指定配置
         ServiceConfig mappingConfig = findServiceConfig(svcConfigs, configName);
         if (mappingConfig == null || mappingConfig.getValue() == null) {
@@ -244,10 +249,18 @@ public class K8sServiceHandler {
         for (Map<String, String> mapping : portMappings) {
             for (Map.Entry<String, String> entry : mapping.entrySet()) {
                 try {
-                    // 创建端口对象
-                    ServicePort servicePort = new ServicePort();
+                    // 解析端口值
                     int port = Integer.parseInt(entry.getKey());
 
+                    // 验证端口范围
+                    if (!VALID_PORT_RANGE.containsInteger(port)) {
+                        logger.warn("Invalid port {} in configuration {}, skipping",
+                                port, configName);
+                        continue;
+                    }
+
+                    // 创建端口对象
+                    ServicePort servicePort = new ServicePort();
                     servicePort.setPort(port);
                     servicePort.setTargetPort(new IntOrString(port));
                     servicePort.setName(portType + "-" + index++);
@@ -255,7 +268,14 @@ public class K8sServiceHandler {
                     // 对于NodePort类型，设置NodePort值
                     if (isNodePort) {
                         int nodePort = Integer.parseInt(entry.getValue());
-                        servicePort.setNodePort(nodePort);
+
+                        // 验证NodePort范围
+                        if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
+                            logger.warn("Invalid NodePort {} in configuration {}, using random port",
+                                    nodePort, configName);
+                        } else {
+                            servicePort.setNodePort(nodePort);
+                        }
                     }
 
                     // 添加到结果列表
@@ -314,17 +334,15 @@ public class K8sServiceHandler {
         List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
         List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
 
+        // 使用Range来表示有效的端口范围
+
         for (ServicePort originalPort : servicePorts) {
             // 创建基础服务端口副本
             ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
             basePort.setNodePort(null); // 基础服务不使用NodePort
 
-            // 根据工作负载类型添加到对应集合
-            if (STATEFULSET.equals(kind)) {
-                basePorts.add(basePort);
-            } else if (DEPLOYMENT.equals(kind)) {
-                basePorts.add(basePort);
-            }
+            // 不管是StatefulSet还是Deployment，都添加到基础端口集合
+            basePorts.add(basePort);
 
             // 保留原始NodePort配置
             if (originalPort.getNodePort() != null) {
@@ -333,12 +351,10 @@ public class K8sServiceHandler {
         }
 
         // 创建基础服务
-        if (!basePorts.isEmpty()) {
-            if (STATEFULSET.equals(kind)) {
-                createHeadlessService(basePorts, client);
-            } else {
-                createClusterIPService(basePorts, client);
-            }
+        if (STATEFULSET.equals(kind)) {
+            createHeadlessService(basePorts, client);
+        } else {
+            createClusterIPService(basePorts, client);
         }
 
         // 创建独立NodePort服务
@@ -392,10 +408,19 @@ public class K8sServiceHandler {
 
     // 创建 NodePort Service（通用）
     private void createNodePortServices(List<ServicePort> ports, KubernetesClient client) {
+        // 定义NodePort的有效范围常量
+        final int MIN_NODEPORT = 30000;
+        final int MAX_NODEPORT = 32767;
+
+        // 创建NodePort有效范围对象
+        final IntRange VALID_NODEPORT_RANGE = new IntRange(MIN_NODEPORT, MAX_NODEPORT);
+
         for (ServicePort port : ports) {
             // 确保NodePort在有效范围（30000-32767）
             if (port.getNodePort() != null) {
-                if (port.getNodePort() < 30000 || port.getNodePort() > 32767) {
+                Integer nodePort = port.getNodePort();
+                // 使用Range检查端口是否在有效范围内
+                if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
                     logger.warn("Invalid NodePort {} for {}, using random port",
                             port.getNodePort(), serviceRoleFullName);
                     port.setNodePort(null);
