@@ -21,6 +21,7 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
@@ -56,6 +57,8 @@ import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.*;
 import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.ServiceState;
+import com.datasophon.k8s.strategy.K8sServiceRoleStrategy;
+import com.datasophon.k8s.strategy.K8sServiceRoleStrategyContext;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,6 +165,17 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ServiceRoleStrategy serviceRoleHandler = ServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
         if (Objects.nonNull(serviceRoleHandler)) {
             serviceRoleHandler.getConfig(clusterId, list);
+        }
+
+        ClusterInfoEntity clusterInfoEntity = SpringUtil.getBean(ClusterInfoService.class).getById(clusterId);
+        String depType = clusterInfoEntity.getDepType();
+        if (Constants.K8S_MODE.equals(depType)) {
+            // 获取Kubernetes服务角色处理类
+            K8sServiceRoleStrategy k8sServiceRoleStrategy =
+                    K8sServiceRoleStrategyContext.getServiceRoleHandler(serviceName);
+            if (Objects.nonNull(k8sServiceRoleStrategy)) {
+                k8sServiceRoleStrategy.getConfig(clusterId, list);
+            }
         }
 
         Map<String, List<ServiceConfig>> roleToConfigMap = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(serviceName,

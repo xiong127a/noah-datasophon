@@ -1,12 +1,14 @@
 package com.datasophon.k8s.strategy;
 
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 import com.datasophon.k8s.util.K8sMinaUtils;
 
 import java.io.IOException;
+import java.util.List;
 
 public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
 
@@ -52,4 +54,9 @@ public class K8sNameNodeHandlerStrategy extends K8sAbstractHandlerStrategy imple
         return serviceHandler.start(command);
     }
 
+
+    @Override
+    public void getConfig(Integer clusterId, List<ServiceConfig> list) {
+        System.out.println(1);
+    }
 }

@@ -41,7 +41,7 @@ public class K8sServiceRoleStrategyContext {
         map.put("SRCN", new K8sSRCNHandlerStrategy("STARROCKS", "SRCN"));
         map.put("SRFE", new K8sSRFEHandlerStrategy("STARROCKS", "SRFE"));
         map.put("SRFEObserver", new K8sSRFEObserverHandlerStrategy("STARROCKS", "SRFEObserver"));
-
+        map.put("HDFS", new K8sNameNodeHandlerStrategy("HDFS", "NameNode"));
         map.put("Storage", new K8sStorageHandlerStrategy("NEBULAGRAPH", "Storage"));
         map.put("TezServer", new K8sTezServerHandlerStrategy("TEZ", "TezServer"));
     }
