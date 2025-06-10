@@ -38,6 +38,42 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
       hostNetwork: false
+      initContainers:
+        - name: create-user
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Creating HDFS user if not exists..."
+              if ! id ${runAs} &>/dev/null; then
+                addgroup -g 1000 ${runAs}
+                adduser -u 1000 -G ${runAs} -h /home/${runAs} -D ${runAs}
+                echo "User ${runAs} created."
+              else
+                echo "User ${runAs} already exists."
+              fi
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+        - name: set-config-permissions
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Setting permissions for Hadoop config directory..."
+              chmod -R 777 ${appHome}/etc/hadoop/
+              echo "Permissions set successfully"
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
+          volumeMounts:
+            <#list volumeConfigMapSet as item>
+            - name: "${item.name}"
+              mountPath: "${item.value}"
+              subPath: "${item.fileName}"
+            </#list>
       containers:
         - env:
             - name: USER
@@ -99,10 +135,6 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
-            <#list volumePathSet as item>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -118,11 +150,6 @@ spec:
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
         </#list>
         - name: "timezone"
           hostPath:

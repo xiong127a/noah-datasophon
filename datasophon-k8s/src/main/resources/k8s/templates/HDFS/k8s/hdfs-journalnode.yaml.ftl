@@ -7,6 +7,7 @@ metadata:
   namespace: ${namespace}
 spec:
   serviceName: "${serviceRoleFullName}"
+  podManagementPolicy: Parallel
   replicas: ${roleNodeCnt}
   selector:
     matchLabels:
@@ -49,6 +50,23 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
+        - name: create-user
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Creating HDFS user if not exists..."
+              if ! id ${runAs} &>/dev/null; then
+                addgroup -g 1000 ${runAs}
+                adduser -u 1000 -G ${runAs} -h /home/${runAs} -D ${runAs}
+                echo "User ${runAs} created."
+              else
+                echo "User ${runAs} already exists."
+              fi
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
         - name: set-permissions
           image: "${dockerBusyboxImage}"
           env:
@@ -158,12 +176,6 @@ spec:
             - name: journalnode-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
-            <#list volumePathSet as item>
-            <#if !item.value?contains(journalnodeDir)>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#if>
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -179,13 +191,6 @@ spec:
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        <#if !item.value?contains(journalnodeDir)>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
-        </#if>
         </#list>
         - name: "timezone"
           hostPath:
