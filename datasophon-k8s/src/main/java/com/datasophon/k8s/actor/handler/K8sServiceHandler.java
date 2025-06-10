@@ -49,7 +49,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -236,6 +235,9 @@ public class K8sServiceHandler {
         final IntRange VALID_PORT_RANGE = new IntRange(1, 65535);
         final IntRange VALID_NODEPORT_RANGE = new IntRange(30000, 32767);
 
+        // 跟踪已处理的端口，避免添加重复端口
+        List<Integer> processedPorts = new ArrayList<>();
+
         // 1. 查找指定配置
         ServiceConfig mappingConfig = findServiceConfig(svcConfigs, configName);
         if (mappingConfig == null || mappingConfig.getValue() == null) {
@@ -252,11 +254,6 @@ public class K8sServiceHandler {
         int index = 0;
         String portType = isNodePort ? "nodeport" : "clusterport";
 
-        // 获取已存在的端口，用于避免重复
-        Set<Integer> existingPorts = servicePorts.stream()
-                .map(ServicePort::getPort)
-                .collect(Collectors.toSet());
-
         for (Map<String, String> mapping : portMappings) {
             for (Map.Entry<String, String> entry : mapping.entrySet()) {
                 try {
@@ -268,6 +265,18 @@ public class K8sServiceHandler {
                         logger.warn("Invalid port {} in configuration {}, skipping",
                                 port, configName);
                         continue;
+                    }
+
+                    // 如果是NodePort类型，我们允许重复的端口，因为它们会映射到不同的NodePort
+                    // 如果是ClusterIP类型，则需要检查是否已经处理过相同的端口
+                    if (!isNodePort && processedPorts.contains(port)) {
+                        logger.info("跳过重复的ClusterIP端口配置: {}", port);
+                        continue;
+                    }
+
+                    // 记录已处理的端口
+                    if (!isNodePort) {
+                        processedPorts.add(port);
                     }
 
                     // 创建端口对象
@@ -286,20 +295,11 @@ public class K8sServiceHandler {
                                     nodePort, configName);
                         } else {
                             servicePort.setNodePort(nodePort);
-                            logger.info("Adding NodePort configuration: port={}, nodePort={}", port, nodePort);
-                        }
-                    } else {
-                        // 如果不是NodePort类型，检查该端口是否已经配置为NodePort
-                        // 如果是，则跳过，因为NodePort会自动创建对应的ClusterIP
-                        if (existingPorts.contains(port)) {
-                            logger.info("Skipping ClusterIP port {} as it's already configured as NodePort", port);
-                            continue;
                         }
                     }
 
                     // 添加到结果列表
                     servicePorts.add(servicePort);
-                    existingPorts.add(port); // 记录已处理的端口
                 } catch (NumberFormatException e) {
                     logger.error("Failed to parse port mapping [{}:{}]: {}",
                             entry.getKey(), entry.getValue(), e.getMessage());
@@ -354,29 +354,38 @@ public class K8sServiceHandler {
         List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
         List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
 
-        // 处理所有服务端口，避免端口冲突
+        // 跟踪已添加的ClusterIP端口，防止重复
+        List<Integer> addedClusterPorts = new ArrayList<>();
+
+        // 使用Range来表示有效的端口范围
+
         for (ServicePort originalPort : servicePorts) {
-            if (originalPort.getNodePort() != null) {
-                // 如果定义了NodePort，只添加到NodePort列表
-                // K8S会自动为NodePort服务创建相应的ClusterIP服务
-                nodePorts.add(originalPort);
-                logger.info("Port {} will be created as NodePort service with nodePort={}",
-                        originalPort.getPort(), originalPort.getNodePort());
-            } else {
-                // 只有未定义NodePort的端口才添加到基础服务
+            // 检查是否已经添加过相同的ClusterIP端口
+            if (!addedClusterPorts.contains(originalPort.getPort())) {
+                // 创建基础服务端口副本
                 ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
+                basePort.setNodePort(null); // 基础服务不使用NodePort
+
+                // 不管是StatefulSet还是Deployment，都添加到基础端口集合
                 basePorts.add(basePort);
-                logger.info("Port {} will be added to the base service", originalPort.getPort());
+
+                // 记录已添加的端口
+                addedClusterPorts.add(originalPort.getPort());
+            } else {
+                logger.info("跳过重复的ClusterIP端口: {}", originalPort.getPort());
+            }
+
+            // 保留原始NodePort配置
+            if (originalPort.getNodePort() != null) {
+                nodePorts.add(originalPort);
             }
         }
 
-        // 创建基础服务 (只包含没有NodePort配置的端口)
-        if (!basePorts.isEmpty()) {
-            if (STATEFULSET.equals(kind)) {
-                createHeadlessService(basePorts, client);
-            } else {
-                createClusterIPService(basePorts, client);
-            }
+        // 创建基础服务
+        if (STATEFULSET.equals(kind)) {
+            createHeadlessService(basePorts, client);
+        } else {
+            createClusterIPService(basePorts, client);
         }
 
         // 创建独立NodePort服务
@@ -443,15 +452,28 @@ public class K8sServiceHandler {
         // 创建NodePort有效范围对象
         final IntRange VALID_NODEPORT_RANGE = new IntRange(MIN_NODEPORT, MAX_NODEPORT);
 
+        // 跟踪已添加的NodePort端口，防止重复
+        List<Integer> addedNodePorts = new ArrayList<>();
+
         for (ServicePort port : ports) {
             // 确保NodePort在有效范围（30000-32767）
             if (port.getNodePort() != null) {
                 Integer nodePort = port.getNodePort();
+
+                // 检查是否已经添加过相同的NodePort
+                if (addedNodePorts.contains(nodePort)) {
+                    logger.info("跳过重复的NodePort: {}", nodePort);
+                    continue;
+                }
+
                 // 使用Range检查端口是否在有效范围内
                 if (!VALID_NODEPORT_RANGE.containsInteger(nodePort)) {
                     logger.warn("Invalid NodePort {} for {}, using random port",
                             port.getNodePort(), serviceRoleFullName);
                     port.setNodePort(null);
+                } else {
+                    // 记录已添加的NodePort
+                    addedNodePorts.add(nodePort);
                 }
             }
             ServiceSpecBuilder specBuilder = new ServiceSpecBuilder()
@@ -579,7 +601,7 @@ public class K8sServiceHandler {
         String resourceName = metadata.get(0).getMetadata().getName();
         logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
 
-         resource.waitUntilReady(10, TimeUnit.MINUTES);
+        resource.waitUntilReady(10, TimeUnit.MINUTES);
 
         // 获取Pod列表（新增代码）
         List<Pod> pods = client.pods()
@@ -661,7 +683,8 @@ public class K8sServiceHandler {
     private void saveServiceYaml(Service service, String serviceType) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH,Constants.INSTALL_PATH), "k8sDep", "servers");
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "k8sDep",
+                    "servers");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
                 dir.mkdirs();
@@ -687,7 +710,8 @@ public class K8sServiceHandler {
     public static void saveConfigMapYaml(ConfigMap configMap) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH,Constants.INSTALL_PATH), "k8sDep", "configmaps");
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH, Constants.INSTALL_PATH), "k8sDep",
+                    "configmaps");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
                 dir.mkdirs();
