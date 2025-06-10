@@ -17,16 +17,12 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
-import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.fabric8.kubernetes.client.dsl.ScalableResource;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -420,24 +416,55 @@ public class K8sUtil {
         }
     }
 
-    static class SimpleListener implements ExecListener {
-
-        @Override
-        public void onOpen() {
-            log.info("Connection opened");
-        }
-
-        @Override
-        public void onFailure(Throwable t, Response response) {
-            log.error("Exec command failed: " + t.getMessage());
-        }
-
-        @Override
-        public void onClose(int code, String reason) {
-            log.info("Connection closed with exit code: " + code + ", reason: " + reason);
-        }
-
-
+    /**
+     * 获取可伸缩资源（StatefulSet）
+     * @param client Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @return 可伸缩资源对象
+     */
+    public static ScalableResource<?> getScalableResource(KubernetesClient client,
+                                                          String namespace,
+                                                          String statefulSetName) {
+        return client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(statefulSetName);
     }
 
+    /**
+     * 统一伸缩 StatefulSet 方法
+     * @param client Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @param replicas 目标副本数
+     */
+    public static void scaleStatefulSet(KubernetesClient client,
+                                        String namespace,
+                                        String statefulSetName,
+                                        int replicas) {
+        getScalableResource(client, namespace, statefulSetName).scale(replicas);
+    }
+
+    /**
+     * 统一伸缩 StatefulSet 方法（增加定时伸缩策略参数）
+     * @param kubeConfig Kubernetes客户端
+     * @param namespace 命名空间
+     * @param statefulSetName StatefulSet名称
+     * @param replicas 目标副本数
+     * @param schedulePolicy 定时策略描述（新增参数）
+     */
+    public static void scaleStatefulSet(String kubeConfig,
+                                        String namespace,
+                                        String statefulSetName,
+                                        int replicas,
+                                        String schedulePolicy) {
+        try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig)) {
+            ScalableResource<?> resource = getScalableResource(client, namespace, statefulSetName);
+            if (resource != null) {
+                log.info("Scaling {} to {} replicas with policy: {}", statefulSetName, replicas, schedulePolicy);
+                resource.scale(replicas);
+            }
+        }
+
+    }
 }
