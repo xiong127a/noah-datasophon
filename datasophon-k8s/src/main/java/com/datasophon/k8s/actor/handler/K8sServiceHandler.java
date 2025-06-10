@@ -2,6 +2,7 @@ package com.datasophon.k8s.actor.handler;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.K8sServiceRoleOperateCommand;
@@ -660,7 +661,7 @@ public class K8sServiceHandler {
     private void saveServiceYaml(Service service, String serviceType) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "servers");
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH,Constants.INSTALL_PATH), "k8sDep", "servers");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
                 dir.mkdirs();
@@ -686,7 +687,7 @@ public class K8sServiceHandler {
     public static void saveConfigMapYaml(ConfigMap configMap) {
         try {
             // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "configmaps");
+            Path dirPath = Paths.get(StrUtil.blankToDefault(Constants.YAML_PATH,Constants.INSTALL_PATH), "k8sDep", "configmaps");
             File dir = dirPath.toFile();
             if (!dir.exists()) {
                 dir.mkdirs();

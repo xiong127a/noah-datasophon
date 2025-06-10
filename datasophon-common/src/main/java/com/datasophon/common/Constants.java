@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 public final class Constants {
 
         public static final String INSTALL_PATH = PropertyUtils.getString("install.path");
+        public static final String YAML_PATH = PropertyUtils.getString("yaml.path");
         public static final String DATA = "data";
         public static final String INSTALL_TYPE = "install_type";
         public static final String TOTAL = "total";
