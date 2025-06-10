@@ -44,6 +44,23 @@ spec:
       hostPID: false
       hostNetwork: false
       initContainers:
+        - name: create-user
+          image: "${dockerBusyboxImage}"
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "Creating HDFS user if not exists..."
+              if ! id ${runAs} &>/dev/null; then
+                addgroup -g 1000 ${runAs}
+                adduser -u 1000 -G ${runAs} -h /home/${runAs} -D ${runAs}
+                echo "User ${runAs} created."
+              else
+                echo "User ${runAs} already exists."
+              fi
+          securityContext:
+            runAsUser: 0  # 以root用户运行
+            privileged: true
         - name: set-permissions
           image: "${dockerBusyboxImage}"
           env:
@@ -101,8 +118,8 @@ spec:
                 
                 echo "初始化NameNode ID设置为: $NAMENODE_ID"
                 
-                # 修改hdfs-site.xml添加正确的namenode ID
-                sed -i "s|<name>dfs.ha.namenode.id</name><value>.*</value>|<name>dfs.ha.namenode.id</name><value>$NAMENODE_ID</value>|" ${appHome}/etc/hadoop/hdfs-site.xml
+                # 通过环境变量设置NameNode ID，这将覆盖配置文件中的值
+                export HADOOP_OPTS="$HADOOP_OPTS -Ddfs.ha.namenode.id=$NAMENODE_ID"
                 
                 if ${enableKerberos}; then
                   echo "Kerberos is enabled. Running keystore setup...";
@@ -143,12 +160,6 @@ spec:
             - name: namenode-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
-            <#list volumePathSet as item>
-            <#if !item.value?contains(namenodeDir)>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#if>
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -208,8 +219,8 @@ spec:
               
               echo "NameNode ID设置为: $NAMENODE_ID"
               
-              # 修改hdfs-site.xml添加正确的namenode ID
-              sed -i "s|<name>dfs.ha.namenode.id</name><value>.*</value>|<name>dfs.ha.namenode.id</name><value>$NAMENODE_ID</value>|" ${appHome}/etc/hadoop/hdfs-site.xml
+              # 通过环境变量设置NameNode ID，这将覆盖配置文件中的值
+              export HADOOP_OPTS="$HADOOP_OPTS -Ddfs.ha.namenode.id=$NAMENODE_ID"
               
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
@@ -261,12 +272,6 @@ spec:
             - name: namenode-data
               mountPath: ${mount_path}
               subPathExpr: $(POD_NAMESPACE)/$(POD_NAME)
-            <#list volumePathSet as item>
-            <#if !item.value?contains(namenodeDir)>
-            - name: "${item.name}"
-              mountPath: "${item.value}"
-            </#if>
-            </#list>
             <#list volumeConfigMapSet as item>
             - name: "${item.name}"
               mountPath: "${item.value}"
@@ -282,13 +287,6 @@ spec:
         - name: "${item.name}"
           configMap:
             name: "${item.name}"
-        </#list>
-        <#list volumePathSet as item>
-        <#if !item.value?contains(namenodeDir)>
-        - name: "${item.name}"
-          hostPath:
-            path: "${item.value}"
-        </#if>
         </#list>
         - name: "timezone"
           hostPath:
