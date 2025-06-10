@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.datasophon.common.Constants.DATASOPHON;
@@ -249,6 +250,11 @@ public class K8sServiceHandler {
         int index = 0;
         String portType = isNodePort ? "nodeport" : "clusterport";
 
+        // 获取已存在的端口，用于避免重复
+        Set<Integer> existingPorts = servicePorts.stream()
+                .map(ServicePort::getPort)
+                .collect(Collectors.toSet());
+
         for (Map<String, String> mapping : portMappings) {
             for (Map.Entry<String, String> entry : mapping.entrySet()) {
                 try {
@@ -278,11 +284,20 @@ public class K8sServiceHandler {
                                     nodePort, configName);
                         } else {
                             servicePort.setNodePort(nodePort);
+                            logger.info("Adding NodePort configuration: port={}, nodePort={}", port, nodePort);
+                        }
+                    } else {
+                        // 如果不是NodePort类型，检查该端口是否已经配置为NodePort
+                        // 如果是，则跳过，因为NodePort会自动创建对应的ClusterIP
+                        if (existingPorts.contains(port)) {
+                            logger.info("Skipping ClusterIP port {} as it's already configured as NodePort", port);
+                            continue;
                         }
                     }
 
                     // 添加到结果列表
                     servicePorts.add(servicePort);
+                    existingPorts.add(port); // 记录已处理的端口
                 } catch (NumberFormatException e) {
                     logger.error("Failed to parse port mapping [{}:{}]: {}",
                             entry.getKey(), entry.getValue(), e.getMessage());
@@ -337,27 +352,29 @@ public class K8sServiceHandler {
         List<ServicePort> basePorts = new ArrayList<>(); // 基础服务端口（Headless/ClusterIP）
         List<ServicePort> nodePorts = new ArrayList<>(); // NodePort服务端口
 
-        // 使用Range来表示有效的端口范围
-
+        // 处理所有服务端口，避免端口冲突
         for (ServicePort originalPort : servicePorts) {
-            // 创建基础服务端口副本
-            ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
-            basePort.setNodePort(null); // 基础服务不使用NodePort
-
-            // 不管是StatefulSet还是Deployment，都添加到基础端口集合
-            basePorts.add(basePort);
-
-            // 保留原始NodePort配置
             if (originalPort.getNodePort() != null) {
+                // 如果定义了NodePort，只添加到NodePort列表
+                // K8S会自动为NodePort服务创建相应的ClusterIP服务
                 nodePorts.add(originalPort);
+                logger.info("Port {} will be created as NodePort service with nodePort={}",
+                        originalPort.getPort(), originalPort.getNodePort());
+            } else {
+                // 只有未定义NodePort的端口才添加到基础服务
+                ServicePort basePort = ObjectUtil.cloneByStream(originalPort);
+                basePorts.add(basePort);
+                logger.info("Port {} will be added to the base service", originalPort.getPort());
             }
         }
 
-        // 创建基础服务
-        if (STATEFULSET.equals(kind)) {
-            createHeadlessService(basePorts, client);
-        } else {
-            createClusterIPService(basePorts, client);
+        // 创建基础服务 (只包含没有NodePort配置的端口)
+        if (!basePorts.isEmpty()) {
+            if (STATEFULSET.equals(kind)) {
+                createHeadlessService(basePorts, client);
+            } else {
+                createClusterIPService(basePorts, client);
+            }
         }
 
         // 创建独立NodePort服务
