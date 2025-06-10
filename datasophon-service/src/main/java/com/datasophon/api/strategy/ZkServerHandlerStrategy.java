@@ -17,6 +17,7 @@
 
 package com.datasophon.api.strategy;
 
+import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterInfoService;
@@ -35,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
-import cn.hutool.core.collection.CollUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,9 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.utils.HostUtils.generateHosts;
 
 public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -145,11 +142,7 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                 if (Objects.nonNull(hostMap)) {
                         List<String> zkServers = hostMap.get("ZkServer");
 
-                        String depMode = getDepMode(clusterId);
 
-                        if (!Constants.PVM_MODE.equals(depMode)) {
-                                zkServers = generateHosts(zkServers, "zookeeper-zkserver");
-                        }
 
                         Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
 
@@ -183,27 +176,6 @@ public class ZkServerHandlerStrategy extends ServiceHandlerAbstract implements S
                                 CacheUtils.put("zkserver_" + server, myid);
                                 myid++;
                         }
-                        /*
-                         * ServiceConfig clusterIp = map.get(K8S_CLUSTER_IP);
-                         * ArrayList<Map<String, String>> clusterIpLists = new ArrayList<>();
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2181");
-                         * }});
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2888");
-                         * }});
-                         * clusterIpLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "3888");
-                         * }});
-                         * clusterIp.setValue(clusterIpLists);
-                         * ServiceConfig targetPort = map.get(K8S_NODE_PORT);
-                         *
-                         * ArrayList<Map<String, String>> targetPortLists = new ArrayList<>();
-                         * targetPortLists.add(new HashMap<String, String>() {{
-                         * put("zookeeper-zkserver", "2181:32181");
-                         * }});
-                         * targetPort.setValue(targetPortLists);
-                         */
                 }
         }
 
