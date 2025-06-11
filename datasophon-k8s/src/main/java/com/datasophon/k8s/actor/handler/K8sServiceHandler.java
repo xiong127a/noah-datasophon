@@ -11,6 +11,7 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
+import com.datasophon.k8s.util.ColorLogUtils;
 import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.KubeUtil;
 import com.google.gson.Gson;
@@ -504,10 +505,19 @@ public class K8sServiceHandler {
     // 统一执行服务操作
     private void executeServiceCreation(KubernetesClient client, Service service) {
         try {
-            client.services().inNamespace(DATASOPHON).createOrReplace(service);
-            logger.info("Service created/updated: {}", service.getMetadata().getName());
-        } catch (KubernetesClientException e) {
-            logger.error("Error creating service {}: {}", service.getMetadata().getName(), e.getMessage());
+            // 创建Service
+            client.services().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(service);
+            logger.info("创建Service成功: {}", service.getMetadata().getName());
+
+            // 添加彩色日志输出
+            ColorLogUtils.printResourceCreated("Service", service.getMetadata().getName(), Constant.K8S_NAMESPACE);
+
+            // 保存Service的YAML文件
+            String serviceType = service.getSpec().getType();
+            saveServiceYaml(service, serviceType);
+        } catch (Exception e) {
+            logger.error("创建Service失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("创建Service " + service.getMetadata().getName() + " 失败: " + e.getMessage());
         }
     }
 
@@ -572,6 +582,9 @@ public class K8sServiceHandler {
             client.load(updatedYamlInputStream)
                     .inNamespace(Constant.K8S_NAMESPACE)
                     .createOrReplace();
+
+            // 添加彩色日志
+            ColorLogUtils.printResourceUpdated("Deployment", serviceRoleFullName, Constant.K8S_NAMESPACE);
         }
     }
 
@@ -589,6 +602,9 @@ public class K8sServiceHandler {
             client.load(updatedYamlInputStream)
                     .inNamespace(Constant.K8S_NAMESPACE)
                     .createOrReplace();
+
+            // 添加彩色日志
+            ColorLogUtils.printResourceUpdated("StatefulSet", serviceRoleFullName, Constant.K8S_NAMESPACE);
         }
     }
 
@@ -599,7 +615,11 @@ public class K8sServiceHandler {
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         List<HasMetadata> metadata = client.load(yamlInputStream).inNamespace(Constant.K8S_NAMESPACE).create();
         String resourceName = metadata.get(0).getMetadata().getName();
+        String resourceKind = metadata.get(0).getKind();
         logger.info("在k8s上启动资源: {} ,使用本地资源文件: {}", resourceName, CommonUtil.k8sYamlFilePath(serviceRoleFullName));
+
+        // 添加彩色日志
+        ColorLogUtils.printResourceCreated(resourceKind, resourceName, Constant.K8S_NAMESPACE);
 
         resource.waitUntilReady(10, TimeUnit.MINUTES);
 

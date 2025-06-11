@@ -243,8 +243,12 @@ public class K8sFreeMakerUtils {
             // 使用 createOrReplace 创建或替换ConfigMap
             client.configMaps().inNamespace(Constant.K8S_NAMESPACE).createOrReplace(configMap);
             log.info("ConfigMap {} 已成功创建在命名空间 {}", configMapName, Constant.K8S_NAMESPACE);
+
+            // 添加彩色日志输出
+            ColorLogUtils.printResourceCreated("ConfigMap", configMapName, Constant.K8S_NAMESPACE);
         } catch (Exception e) {
             log.error("创建ConfigMap时出错: {}", e.getMessage());
+            ColorLogUtils.printError("创建ConfigMap " + configMapName + " 失败：" + e.getMessage());
             throw new RuntimeException("创建ConfigMap时出错: " + e.getMessage());
         }
     }

@@ -393,6 +393,9 @@ public class K8sUtil {
         client.batch().v1().jobs()
                 .inNamespace(namespace)
                 .resource(job).create();
+
+        // 添加彩色日志输出
+        ColorLogUtils.printResourceCreated("Job", name, namespace);
     }
 
     /**
@@ -623,12 +626,14 @@ public class K8sUtil {
 
         // 提交Job
         client.batch().v1().jobs().inNamespace(namespace).resource(job).create();
-        log.debug("创建Job成功: " + name);
+
+        // 添加彩色日志输出
+        ColorLogUtils.printResourceCreated("Job", name, namespace);
     }
 
     /**
      * 保存Job的YAML配置到本地文件
-     *
+     * 
      * @param job 要保存的Job对象
      */
     public static void saveJobYaml(Job job) {
@@ -652,8 +657,12 @@ public class K8sUtil {
             Files.write(filePath, yamlContent.getBytes());
 
             log.info("保存Job YAML文件成功: {}", filePath);
+
+            // 添加彩色日志输出
+            ColorLogUtils.printResourceCreated("JobYaml", job.getMetadata().getName(), "local");
         } catch (Exception e) {
             log.error("保存Job YAML文件失败: {}", e.getMessage(), e);
+            ColorLogUtils.printError("保存Job YAML文件失败: " + e.getMessage());
         }
     }
 
@@ -887,6 +896,9 @@ public class K8sUtil {
 
         // 提交Job
         client.batch().v1().jobs().inNamespace(namespace).create(job);
+
+        // 添加彩色日志输出
+        ColorLogUtils.printResourceCreated("Job", name, namespace);
     }
 
 }
