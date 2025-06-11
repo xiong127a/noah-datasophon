@@ -225,125 +225,97 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: HADOOP_OPTS
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-                  # 这个值会在容器启动命令中被覆盖，这里只是为了创建环境变量
-            - name: HDFS_NAMENODE_OPTS
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-                  # 这个值会在容器启动命令中被覆盖，这里只是为了创建环境变量
           args:
             - "/bin/bash"
             - "-c"
             - |
-              if [ ! -d ${namenodeDir}/current ]; then
-                echo "format namenode";
-                
-                # 从Pod名称确定NameNode ID
-                POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
-                
-                # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
-                if [ "$POD_INDEX" == "0" ]; then
-                  NAMENODE_ID="nn1"
-                else
-                  NAMENODE_ID="nn2"
+              # 从Pod名称确定NameNode ID和角色
+              POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
+              
+              # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
+              if [ "$POD_INDEX" == "0" ]; then
+                NAMENODE_ID="nn1"
+                NAMENODE_ROLE="active"
+              else
+                NAMENODE_ID="nn2"
+                NAMENODE_ROLE="standby"
+              fi
+              
+              echo "NameNode ID: $NAMENODE_ID, 角色: $NAMENODE_ROLE"
+              
+              if ${enableKerberos}; then
+                echo "Kerberos is enabled. Running keystore setup...";
+                if [ ! -f /etc/security/keytab/keystore ]; then
+                  HOSTNAME=$(hostname)
+                  cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
                 fi
-                
-                echo "初始化NameNode ID设置为: $NAMENODE_ID"
-                
-                # 通过环境变量设置NameNode ID，这将覆盖配置文件中的值
-                export HDFS_NAMENODE_OPTS="-Ddfs.ha.namenode.id=$NAMENODE_ID"
-                export HADOOP_OPTS="-Ddfs.ha.namenode.id=$NAMENODE_ID"
-                
-                # 将环境变量写入到系统环境变量中
-                echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" > /etc/profile.d/hadoop_env.sh
-                echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /etc/profile.d/hadoop_env.sh
-                chmod +x /etc/profile.d/hadoop_env.sh
-                
-                # 将环境变量写入到用户的.bash_profile中
-                echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" > /home/${runAs}/.bash_profile
-                echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAs}/.bash_profile
-                chown ${runAs}:${runAs} /home/${runAs}/.bash_profile
-                chmod 644 /home/${runAs}/.bash_profile
-                
-                if ${enableKerberos}; then
-                  echo "Kerberos is enabled. Running keystore setup...";
-                  if [ ! -f /etc/security/keytab/keystore ]; then
-                    HOSTNAME=$(hostname)
-                    cd /opt/datasophon/script && sh keystore.sh $HOSTNAME
-                  fi
-                  if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
-                    echo "ssl-client.xml not found. Copying from template...";
-                    cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
-                  fi
-                  if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
-                    echo "ssl-server.xml not found. Copying from template...";
-                    cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
-                  fi
-                else
-                  echo "Kerberos is not enabled. Skipping Kerberos setup.";
+                if [ ! -f ${appHome}/etc/hadoop/ssl-client.xml ]; then
+                  echo "ssl-client.xml not found. Copying from template...";
+                  cp ${appHome}/etc/hadoop/ssl-client.xml.template ${appHome}/etc/hadoop/ssl-client.xml
                 fi
-                if ${enableRangerPlugin}; then
-                  echo "Ranger plugin is enabled. Performing Ranger setup...";
-                  cd ${appHome}/ranger-hdfs-plugin && \
-                  sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
-                else
-                  echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+                if [ ! -f ${appHome}/etc/hadoop/ssl-server.xml ]; then
+                  echo "ssl-server.xml not found. Copying from template...";
+                  cp ${appHome}/etc/hadoop/ssl-server.xml.template ${appHome}/etc/hadoop/ssl-server.xml
                 fi
-                sleep $((RANDOM % 10))
-                
-                # 在格式化之前检查数据目录权限
-                echo "========== 格式化前检查 =========="
-                echo "当前用户: $(id)"
-                echo "数据目录权限: $(ls -ld ${namenodeDir})"
-                echo "可创建文件测试:"
-                touch ${namenodeDir}/test_write_permission && echo "✓ 写入测试成功" || echo "✗ 写入测试失败"
-                rm -f ${namenodeDir}/test_write_permission
-                
-                # 确保以hdfs用户运行NameNode格式化命令
-                chown -R ${runAs}:${runAs} ${namenodeDir}
-                chmod -R 755 ${namenodeDir}
-                
-                if [ -d ${journalnodeDir}/meta ]; then
-                  echo "Standby"
+              else
+                echo "Kerberos is not enabled. Skipping Kerberos setup.";
+              fi
+              if ${enableRangerPlugin}; then
+                echo "Ranger plugin is enabled. Performing Ranger setup...";
+                cd ${appHome}/ranger-hdfs-plugin && \
+                sh ${appHome}/ranger-hdfs-plugin/enable-hdfs-plugin.sh
+              else
+                echo "Ranger plugin is not enabled. Skipping Ranger setup.";
+              fi
+              
+              # 在格式化之前检查数据目录权限
+              echo "========== 格式化前检查 =========="
+              echo "当前用户: $(id)"
+              echo "数据目录权限: $(ls -ld ${namenodeDir})"
+              echo "可创建文件测试:"
+              su - ${runAs} -c "touch ${namenodeDir}/test_write_permission && echo \"✓ 写入测试成功\" || echo \"✗ 写入测试失败\""
+              su - ${runAs} -c "rm -f ${namenodeDir}/test_write_permission"
+              
+              # 确保以hdfs用户运行NameNode格式化命令
+              
+              # 根据角色和目录状态执行不同操作
+              if [ "$NAMENODE_ROLE" == "active" ]; then
+                # 第一个NameNode (active)
+                if [ ! -d ${namenodeDir}/current ]; then
+                  echo "格式化主NameNode (nn1)..."
                   set -x  # 启用命令跟踪，便于调试
-                  # 直接执行命令
-                  echo "执行bootstrapStandby命令..."
-                  echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby
+                  # 使用${runAs}用户执行格式化命令
+                  su - ${runAs} -c "echo Y | ${appHome}/bin/hdfs namenode -format smhadoop"
+                  FORMAT_RESULT=$?
+                  echo "format结果: $FORMAT_RESULT"
+                  set +x  # 关闭命令跟踪
+                else
+                  echo "主NameNode (nn1) 已格式化，跳过格式化步骤"
+                fi
+              else
+                # 其他NameNode (standby)
+                if [ ! -d ${namenodeDir}/current ]; then
+                  echo "同步备用NameNode (nn2) 元数据..."
+                  set -x  # 启用命令跟踪，便于调试
+                  # 使用${runAs}用户执行bootstrapStandby命令
+                  su - ${runAs} -c "echo Y | ${appHome}/bin/hdfs namenode -bootstrapStandby"
                   BOOTSTRAP_RESULT=$?
                   echo "bootstrapStandby结果: $BOOTSTRAP_RESULT"
                   set +x  # 关闭命令跟踪
                 else
-                  echo "active"
-                  set -x  # 启用命令跟踪，便于调试
-                  # 直接执行命令
-                  echo "执行format命令..."
-                  echo Y | ${appHome}/bin/hdfs namenode -format smhadoop
-                  FORMAT_RESULT=$?
-                  echo "format结果: $FORMAT_RESULT"
-                  set +x  # 关闭命令跟踪
+                  echo "备用NameNode (nn2) 已同步，跳过同步步骤"
                 fi
-                
-                # 格式化后检查
-                echo "========== 格式化后检查 =========="
-                echo "数据目录内容:"
-                ls -la ${namenodeDir}/
-                if [ -d ${namenodeDir}/current ]; then
-                  echo "current目录创建成功，内容:"
-                  ls -la ${namenodeDir}/current/
-                else
-                  echo "警告: current目录未创建"
-                fi
+              fi
+              
+              # 格式化后检查
+              echo "========== 格式化/同步后检查 =========="
+              echo "数据目录内容:"
+              su - ${runAs} -c "ls -la ${namenodeDir}/"
+              if [ -d ${namenodeDir}/current ]; then
+                echo "current目录创建成功，内容:"
+                su - ${runAs} -c "ls -la ${namenodeDir}/current/"
               else
-                echo "formatted......."
-                # 显示现有数据目录结构
-                echo "已格式化的数据目录结构:"
-                ls -la ${namenodeDir}/
-                echo "current目录内容:"
-                ls -la ${namenodeDir}/current/
+                echo "警告: current目录未创建"
               fi
           volumeMounts:
             - name: namenode-data
@@ -372,16 +344,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: HADOOP_OPTS
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-                  # 这个值会在容器启动命令中被覆盖，这里只是为了创建环境变量
-            - name: HDFS_NAMENODE_OPTS
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-                  # 这个值会在容器启动命令中被覆盖，这里只是为了创建环境变量
           image: "${dockerImage}"
           imagePullPolicy: "Always"
           <#if node_port_mappings?? || cluster_port_mappings??>
@@ -406,32 +368,19 @@ spec:
             - "-c"
             - |
               HOSTNAME=$(hostname)
-              # 从Pod名称确定NameNode ID
+              # 从Pod名称确定NameNode ID，仅用于日志记录
               POD_INDEX=$(echo $POD_NAME | awk -F'-' '{print $NF}')
               
               # 根据Pod索引确定NameNode ID (0对应nn1，1对应nn2)
               if [ "$POD_INDEX" == "0" ]; then
                 NAMENODE_ID="nn1"
+                NAMENODE_ROLE="active"
               else
                 NAMENODE_ID="nn2"
+                NAMENODE_ROLE="standby"
               fi
               
-              echo "NameNode ID设置为: $NAMENODE_ID"
-              
-              # 通过环境变量设置NameNode ID，这将覆盖配置文件中的值
-              export HDFS_NAMENODE_OPTS="-Ddfs.ha.namenode.id=$NAMENODE_ID"
-              export HADOOP_OPTS="-Ddfs.ha.namenode.id=$NAMENODE_ID"
-              
-              # 将环境变量写入到系统环境变量中
-              echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" > /etc/profile.d/hadoop_env.sh
-              echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /etc/profile.d/hadoop_env.sh
-              chmod +x /etc/profile.d/hadoop_env.sh
-              
-              # 将环境变量写入到用户的.bash_profile中
-              echo "export HDFS_NAMENODE_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" > /home/${runAs}/.bash_profile
-              echo "export HADOOP_OPTS=\"-Ddfs.ha.namenode.id=$NAMENODE_ID\"" >> /home/${runAs}/.bash_profile
-              chown ${runAs}:${runAs} /home/${runAs}/.bash_profile
-              chmod 644 /home/${runAs}/.bash_profile
+              echo "NameNode ID: $NAMENODE_ID, 角色: $NAMENODE_ROLE"
               
               if ${enableKerberos}; then
                 echo "Kerberos is enabled. Running keystore setup...";
