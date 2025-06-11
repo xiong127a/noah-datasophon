@@ -287,6 +287,8 @@ public class K8sYamlDeploymentHandler {
 
         populateDataWithConfig(configFileMap, "dfs.journalnode.edits.dir", "journalnodeDir");
 
+        populateDataWithConfig(configFileMap, "dfs.namenode.shared.edits.dir", "dfs_namenode_shared_edits_dir");
+
         populateDataWithConfig(configFileMap, "dataDir", "dataDir");
 
         data.putAll(k8sConfigMap);
