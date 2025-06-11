@@ -152,7 +152,7 @@ public class HostUtils {
         return false;
     }
 
-    public static List<String> generateHosts(List<String> host, String serviceRoleFullName) {
-        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i).collect(Collectors.toList());
+    public static List<String> generateDnsName(List<String> host, String serviceRoleFullName) {
+        return IntStream.range(0, host.size()).mapToObj(i -> serviceRoleFullName + "-" + i + "." + serviceRoleFullName + "." + DATASOPHON+".svc.cluster.local").collect(Collectors.toList());
     }
 }

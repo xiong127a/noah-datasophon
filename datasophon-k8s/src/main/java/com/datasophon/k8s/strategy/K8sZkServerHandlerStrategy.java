@@ -5,6 +5,7 @@ import com.datasophon.common.command.K8sServiceRoleOperateCommand;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.actor.handler.K8sServiceHandler;
+import com.datasophon.k8s.util.CommonUtil;
 import com.datasophon.k8s.util.K8sKerberosUtils;
 
 import java.io.IOException;
@@ -18,6 +19,7 @@ public class K8sZkServerHandlerStrategy extends K8sAbstractHandlerStrategy imple
 
     @Override
     public ExecResult handler(K8sServiceRoleOperateCommand command) throws IOException {
+
         ExecResult startResult = new ExecResult();
         K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
                 command.getServiceRoleName());
@@ -43,7 +45,7 @@ public class K8sZkServerHandlerStrategy extends K8sAbstractHandlerStrategy imple
         }
 
         // 定义ZK服务名
-        final String ZK_SERVICE_NAME = "zookeeper-zkserver";
+        final String ZK_SERVICE_NAME = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
 
         // 简单遍历找到server.开头的配置并修改
         for (ServiceConfig config : list) {

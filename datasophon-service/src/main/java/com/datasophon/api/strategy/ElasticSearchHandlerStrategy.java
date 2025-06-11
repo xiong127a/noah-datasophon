@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.datasophon.api.utils.ProcessUtils.getDepMode;
-import static com.datasophon.common.utils.HostUtils.generateHosts;
+import static com.datasophon.common.utils.HostUtils.generateDnsName;
 
 public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -43,7 +43,7 @@ public class ElasticSearchHandlerStrategy extends ServiceHandlerAbstract impleme
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
         String depMode = getDepMode(clusterId);
         if (!Constants.PVM_MODE.equals(depMode)) {
-            hosts = generateHosts(hosts, "elasticsearch-elasticsearch");
+            hosts = generateDnsName(hosts, "elasticsearch-elasticsearch");
         }
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${initMasterNodes}",
                                 String.join(",", hosts));
