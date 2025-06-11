@@ -9,12 +9,24 @@ import com.datasophon.k8s.actor.handler.K8sServiceHandler;
 import com.datasophon.k8s.util.DockerImageUtils;
 import com.datasophon.k8s.util.K8sUtil;
 import com.datasophon.k8s.util.KubeUtil;
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implements K8sServiceRoleStrategy {
+        private static final Logger logger = LoggerFactory.getLogger(K8sZKFCHandlerStrategy.class);
 
         public K8sZKFCHandlerStrategy(String serviceName, String serviceRoleName) {
                 super(serviceName, serviceRoleName);
@@ -22,6 +34,7 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
         @Override
         public ExecResult handler(K8sServiceRoleOperateCommand command) {
+
                 ExecResult startResult = new ExecResult();
                 K8sServiceHandler serviceHandler = new K8sServiceHandler(command.getServiceName(),
                                 command.getServiceRoleName());
@@ -37,6 +50,100 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                         try (KubernetesClient kubeClient = KubeUtil.getKubeClientByConfig(command.getKubeConfig())) {
                                 logger.info("Running ZKFC format job with ConfigMap mounts");
 
+                                // 从Kubernetes ConfigMap读取配置
+                                Map<String, String> envVars = new HashMap<>();
+                                String namespace = Constants.DATASOPHON; // 使用默认命名空间
+
+                                try {
+                                        // 获取namenode-core-site-xml ConfigMap
+                                        ConfigMap coreSiteConfigMap = kubeClient.configMaps()
+                                                        .inNamespace(namespace)
+                                                        .withName("namenode-core-site-xml")
+                                                        .get();
+
+                                        if (coreSiteConfigMap != null && coreSiteConfigMap.getData() != null) {
+                                                // 获取core-site.xml内容
+                                                String coreSiteXml = coreSiteConfigMap.getData().get("core-site.xml");
+                                                if (coreSiteXml != null && !coreSiteXml.isEmpty()) {
+                                                        logger.info("成功从ConfigMap获取core-site.xml内容");
+
+                                                        // 解析XML获取ZooKeeper地址
+                                                        String zkQuorum = getPropertyFromXmlString(coreSiteXml,
+                                                                        "ha.zookeeper.quorum");
+                                                        if (zkQuorum != null && !zkQuorum.isEmpty()) {
+                                                                envVars.put("ZOOKEEPER_SERVERS", zkQuorum);
+                                                                logger.info("从ConfigMap中找到ZooKeeper地址: {}", zkQuorum);
+                                                        } else {
+                                                                logger.warn("在core-site.xml中未找到ZooKeeper地址");
+                                                        }
+
+                                                        // 尝试从core-site.xml获取默认FS
+                                                        String defaultFs = getPropertyFromXmlString(coreSiteXml,
+                                                                        "fs.defaultFS");
+                                                        if (defaultFs != null && defaultFs.startsWith("hdfs://")) {
+                                                                String nnAddress = defaultFs.substring(7);
+                                                                // 如果是服务名而不是具体地址，需要进一步处理
+                                                                if (!nnAddress.contains(":")) {
+                                                                        logger.info("发现服务名形式的fs.defaultFS: {}",
+                                                                                        nnAddress);
+                                                                } else {
+                                                                        envVars.put("NAMENODE_ADDRESSES", nnAddress);
+                                                                        logger.info("从core-site.xml中的fs.defaultFS找到NameNode地址: {}",
+                                                                                        nnAddress);
+                                                                }
+                                                        }
+                                                } else {
+                                                        logger.warn("ConfigMap中未找到core-site.xml内容");
+                                                }
+                                        } else {
+                                                logger.warn("未找到namenode-core-site-xml ConfigMap");
+                                        }
+
+                                        // 获取namenode-hdfs-site-xml ConfigMap
+                                        ConfigMap hdfsSiteConfigMap = kubeClient.configMaps()
+                                                        .inNamespace(namespace)
+                                                        .withName("namenode-hdfs-site-xml")
+                                                        .get();
+
+                                        if (hdfsSiteConfigMap != null && hdfsSiteConfigMap.getData() != null) {
+                                                // 获取hdfs-site.xml内容
+                                                String hdfsSiteXml = hdfsSiteConfigMap.getData().get("hdfs-site.xml");
+                                                if (hdfsSiteXml != null && !hdfsSiteXml.isEmpty()) {
+                                                        logger.info("成功从ConfigMap获取hdfs-site.xml内容");
+
+                                                        // 解析XML获取NameNode地址
+                                                        List<String> nnAddresses = getNameNodeAddressesFromXml(
+                                                                        hdfsSiteXml);
+                                                        if (!nnAddresses.isEmpty()) {
+                                                                envVars.put("NAMENODE_ADDRESSES",
+                                                                                String.join(",", nnAddresses));
+                                                                logger.info("从hdfs-site.xml中找到NameNode地址: {}",
+                                                                                String.join(",", nnAddresses));
+                                                        } else {
+                                                                logger.warn("在hdfs-site.xml中未找到NameNode地址配置");
+                                                        }
+                                                } else {
+                                                        logger.warn("ConfigMap中未找到hdfs-site.xml内容");
+                                                }
+                                        } else {
+                                                logger.warn("未找到namenode-hdfs-site-xml ConfigMap");
+                                        }
+
+                                } catch (Exception e) {
+                                        logger.error("解析ConfigMap时出错: {}", e.getMessage(), e);
+                                        // 继续执行，让容器内脚本尝试自行处理
+                                }
+
+                                // 输出获取到的环境变量
+                                if (!envVars.isEmpty()) {
+                                        logger.info("获取到的环境变量:");
+                                        for (Map.Entry<String, String> entry : envVars.entrySet()) {
+                                                logger.info("  {} = {}", entry.getKey(), entry.getValue());
+                                        }
+                                } else {
+                                        logger.warn("未从ConfigMap中获取到任何环境变量");
+                                }
+
                                 // 添加检查ZooKeeper和NameNode就绪状态的初始化容器
                                 List<String> initContainers = new ArrayList<>();
                                 List<String> initContainerNames = new ArrayList<>();
@@ -49,8 +156,8 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                 initContainers.add(createNameNodeReadinessCheck(workPath, command.getServiceName()));
                                 initContainerNames.add("namenode-readiness-check");
 
-                                K8sUtil.runJobWithInitContainers(
-                                                Constants.DATASOPHON,
+                                K8sUtil.runJobWithInitContainersAndEnv(
+                                                namespace,
                                                 "zkfc-format",
                                                 kubeClient,
                                                 volumeMounts,
@@ -59,7 +166,8 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
                                                 command.getHostname(),
                                                 initContainers,
                                                 initContainerNames,
-                                                DockerImageUtils.getString("BUSYBOX"));
+                                                DockerImageUtils.getString("BUSYBOX"),
+                                                envVars);
                                 logger.info("zkfc format success");
                                 startResult.setExecResult(true);
                         } catch (Exception e) {
@@ -71,6 +179,84 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
 
                 startResult = serviceHandler.start(command);
                 return startResult;
+        }
+
+        /**
+         * 从XML字符串中获取指定属性的值
+         * 
+         * @param xmlContent   XML内容字符串
+         * @param propertyName 属性名
+         * @return 属性值，如果不存在则返回null
+         */
+        private String getPropertyFromXmlString(String xmlContent, String propertyName) {
+                try {
+                        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                        // 禁用外部实体引用，防止XXE攻击
+                        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+                        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+                        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
+                        DocumentBuilder builder = factory.newDocumentBuilder();
+                        Document doc = builder.parse(new ByteArrayInputStream(xmlContent.getBytes()));
+                        doc.getDocumentElement().normalize();
+
+                        NodeList propertyList = doc.getElementsByTagName("property");
+                        for (int i = 0; i < propertyList.getLength(); i++) {
+                                Element property = (Element) propertyList.item(i);
+                                NodeList nameNodes = property.getElementsByTagName("name");
+                                if (nameNodes.getLength() > 0) {
+                                        String name = nameNodes.item(0).getTextContent();
+                                        if (propertyName.equals(name)) {
+                                                NodeList valueNodes = property.getElementsByTagName("value");
+                                                if (valueNodes.getLength() > 0) {
+                                                        return valueNodes.item(0).getTextContent();
+                                                }
+                                        }
+                                }
+                        }
+                } catch (Exception e) {
+                        logger.error("解析XML字符串时出错: {}", e.getMessage(), e);
+                }
+                return null;
+        }
+
+        /**
+         * 从hdfs-site.xml字符串中获取NameNode地址列表
+         * 
+         * @param xmlContent hdfs-site.xml内容字符串
+         * @return NameNode地址列表
+         */
+        private List<String> getNameNodeAddressesFromXml(String xmlContent) {
+                List<String> addresses = new ArrayList<>();
+                try {
+                        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                        // 禁用外部实体引用，防止XXE攻击
+                        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+                        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+                        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+
+                        DocumentBuilder builder = factory.newDocumentBuilder();
+                        Document doc = builder.parse(new ByteArrayInputStream(xmlContent.getBytes()));
+                        doc.getDocumentElement().normalize();
+
+                        NodeList propertyList = doc.getElementsByTagName("property");
+                        for (int i = 0; i < propertyList.getLength(); i++) {
+                                Element property = (Element) propertyList.item(i);
+                                NodeList nameNodes = property.getElementsByTagName("name");
+                                if (nameNodes.getLength() > 0) {
+                                        String name = nameNodes.item(0).getTextContent();
+                                        if (name.startsWith("dfs.namenode.rpc-address.")) {
+                                                NodeList valueNodes = property.getElementsByTagName("value");
+                                                if (valueNodes.getLength() > 0) {
+                                                        addresses.add(valueNodes.item(0).getTextContent());
+                                                }
+                                        }
+                                }
+                        }
+                } catch (Exception e) {
+                        logger.error("解析hdfs-site.xml字符串时出错: {}", e.getMessage(), e);
+                }
+                return addresses;
         }
 
         /**
@@ -129,22 +315,27 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
         private String createZkReadinessCheck(String workPath) {
                 return String.join("\n",
                                 "echo \"正在检查ZooKeeper集群就绪状态...\"",
-                                "# 使用BusyBox兼容的命令提取ZooKeeper配置",
-                                "ZOOKEEPER_SERVERS=$(grep \"ha.zookeeper.quorum\" " + workPath
-                                                + "/etc/hadoop/core-site.xml | sed -n 's/.*<value>\\(.*\\)<\\/value>.*/\\1/p' | tr ',' ' ')",
-                                "if [ -z \"$ZOOKEEPER_SERVERS\" ]; then",
-                                "  echo \"错误: 无法从配置中获取ZooKeeper服务器列表\"",
+                                "# 使用环境变量中的ZooKeeper服务器列表",
+                                "if [ -n \"$ZOOKEEPER_SERVERS\" ]; then",
+                                "  echo \"使用环境变量中的ZooKeeper服务器列表: $ZOOKEEPER_SERVERS\"",
+                                "  ZK_SERVERS=$ZOOKEEPER_SERVERS",
+                                "else",
+                                "  echo \"错误: 环境变量ZOOKEEPER_SERVERS未设置\"",
                                 "  exit 1",
                                 "fi",
-                                "echo \"检测到的ZooKeeper服务器: $ZOOKEEPER_SERVERS\"",
-                                "for ZK_SERVER in $ZOOKEEPER_SERVERS; do",
+                                "",
+                                "echo \"检测到的ZooKeeper服务器: $ZK_SERVERS\"",
+                                "# 将逗号分隔的列表转换为空格分隔",
+                                "ZK_SERVERS=$(echo $ZK_SERVERS | tr ',' ' ')",
+                                "",
+                                "for ZK_SERVER in $ZK_SERVERS; do",
                                 "  ZK_HOST=$(echo $ZK_SERVER | cut -d':' -f1)",
-                                "  ZK_PORT=$(echo $ZK_SERVER | cut -d':' -f2)",
+                                "  ZK_PORT=$(echo $ZK_SERVER | cut -d':' -f2 || echo \"2181\")",
                                 "  echo \"正在检查ZooKeeper服务器: $ZK_HOST:$ZK_PORT\"",
                                 "  RETRIES=0",
                                 "  MAX_RETRIES=60",
                                 "  while [ $RETRIES -lt $MAX_RETRIES ]; do",
-                                "    if echo ruok | nc $ZK_HOST $ZK_PORT 2>/dev/null | grep -q imok; then",
+                                "    if nc -z $ZK_HOST $ZK_PORT; then",
                                 "      echo \"ZooKeeper服务器 $ZK_HOST:$ZK_PORT 已就绪\"",
                                 "      break",
                                 "    else",
@@ -171,23 +362,13 @@ public class K8sZKFCHandlerStrategy extends K8sAbstractHandlerStrategy implement
         private String createNameNodeReadinessCheck(String workPath, String serviceName) {
                 return String.join("\n",
                                 "echo \"正在检查NameNode就绪状态...\"",
-                                "# 从hdfs-site.xml获取NameNode地址(使用BusyBox兼容方式)",
-                                "NN_ENDPOINTS=$(grep \"dfs.namenode.rpc-address\" " + workPath
-                                                + "/etc/hadoop/hdfs-site.xml | sed -n 's/.*<value>\\(.*\\)<\\/value>.*/\\1/p' | head -1)",
-                                "if [ -z \"$NN_ENDPOINTS\" ]; then",
-                                "  echo \"警告: 无法从hdfs-site.xml获取NameNode地址，将使用默认检测方式\"",
-                                "  # 尝试从core-site.xml获取fs.defaultFS",
-                                "  DEFAULT_FS=$(grep \"fs.defaultFS\" " + workPath
-                                                + "/etc/hadoop/core-site.xml | sed -n 's/.*<value>\\(.*\\)<\\/value>.*/\\1/p')",
-                                "  if [ -n \"$DEFAULT_FS\" ]; then",
-                                "    # 提取hdfs://后面的主机:端口部分",
-                                "    NN_ENDPOINTS=$(echo $DEFAULT_FS | sed 's|hdfs://\\(.*\\)|\\1|')",
-                                "    echo \"从core-site.xml获取到NameNode地址: $NN_ENDPOINTS\"",
-                                "  else",
-                                "    echo \"警告: 无法获取NameNode地址，将使用节点选择器中指定的主机\"",
-                                "    # 使用当前主机作为NameNode",
-                                "    NN_ENDPOINTS=\"$(hostname):8020\"",
-                                "  fi",
+                                "# 使用环境变量中的NameNode地址",
+                                "if [ -n \"$NAMENODE_ADDRESSES\" ]; then",
+                                "  echo \"使用环境变量中的NameNode地址: $NAMENODE_ADDRESSES\"",
+                                "  NN_ENDPOINTS=$(echo $NAMENODE_ADDRESSES | tr ',' ' ')",
+                                "else",
+                                "  echo \"错误: 环境变量NAMENODE_ADDRESSES未设置\"",
+                                "  exit 1",
                                 "fi",
                                 "",
                                 "echo \"检测到的NameNode端点: $NN_ENDPOINTS\"",
