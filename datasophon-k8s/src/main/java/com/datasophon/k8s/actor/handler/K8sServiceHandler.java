@@ -11,6 +11,7 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.k8s.constants.Constant;
 import com.datasophon.k8s.util.CommonUtil;
+import com.datasophon.k8s.util.K8sMinaUtils;
 import com.datasophon.k8s.util.KubeUtil;
 import org.apache.commons.lang.math.IntRange;
 import com.google.gson.Gson;
@@ -58,6 +59,7 @@ import static com.datasophon.common.Constants.K8S_NODEPORT_MAPPING;
 import static com.datasophon.common.Constants.K8S_NODE_PORT;
 import static com.datasophon.common.Constants.K8S_SVC_CONF;
 import static com.datasophon.common.Constants.STATEFULSET;
+import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 @Data
 public class K8sServiceHandler {
@@ -74,6 +76,32 @@ public class K8sServiceHandler {
         this.serviceRoleFullName = CommonUtil.generateServiceRoleFullName(serviceName, serviceRoleName);
         String loggerName = String.format("%s-%s-%s", Constant.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
+    }
+
+    // 保存ConfigMap的YAML配置到本地文件
+    public static void saveConfigMapYaml(ConfigMap configMap) {
+        try {
+            // 创建保存目录，使用Paths.get正确处理路径拼接
+            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "configmaps");
+            File dir = dirPath.toFile();
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成文件名，使用Paths.get拼接路径
+            Path filePath = Paths.get(dirPath.toString(),
+                    configMap.getMetadata().getName() + ".yaml");
+
+            // 使用K8s客户端序列化为YAML
+            String yamlContent = KubeUtil.getKubernetesYaml(configMap);
+
+            // 写入文件
+            Files.write(filePath, yamlContent.getBytes());
+
+            LoggerFactory.getLogger(K8sServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
+        } catch (Exception e) {
+            LoggerFactory.getLogger(K8sServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
+        }
     }
 
     // 更新指定字段的值
@@ -117,8 +145,14 @@ public class K8sServiceHandler {
         execResult.setExecResult(true);
         Map<Generators, List<ServiceConfig>> configFileMap = command.getConfigFileMap();
         String yamlFile = CommonUtil.k8sYamlFilePath(serviceRoleFullName);
+        if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("flinkoperator")) {
+            String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl apply -f " + yamlFile);
+            execResult.setExecResult(!s.equals(Constants.FAILED));
+            logger.info("start operator: {}", s);
+            return execResult;
+        }
         try (KubernetesClient client = KubeUtil.getKubeClientByConfig(command.getKubeConfig());
-                InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
+             InputStream yamlInputStream = Files.newInputStream(Paths.get(yamlFile))) {
 
             Map<String, Object> yamlData = loadYamlData(yamlFile);
             String kind = (String) yamlData.get("kind");
@@ -145,7 +179,7 @@ public class K8sServiceHandler {
 
     /**
      * 生成服务配置的核心方法
-     * 
+     *
      * @param configFileMap 配置文件映射
      * @return 服务端口列表
      */
@@ -180,7 +214,7 @@ public class K8sServiceHandler {
 
     /**
      * 获取服务配置项列表
-     * 
+     *
      * @param configFileMap 配置文件映射
      * @return 配置项列表，如果未找到则返回null
      */
@@ -217,7 +251,7 @@ public class K8sServiceHandler {
 
     /**
      * 处理端口映射配置
-     * 
+     *
      * @param svcConfigs   配置项列表
      * @param configName   配置项名称
      * @param servicePorts 结果集，解析的端口将添加到此列表
@@ -293,7 +327,7 @@ public class K8sServiceHandler {
 
     /**
      * 在配置列表中查找指定名称的配置
-     * 
+     *
      * @param configs    配置列表
      * @param configName 要查找的配置名
      * @return 找到的配置，未找到时返回null
@@ -309,7 +343,7 @@ public class K8sServiceHandler {
 
     /**
      * 解析端口映射配置
-     * 
+     *
      * @param config 包含端口映射的配置项
      * @return 解析后的端口映射列表，解析失败时返回null
      */
@@ -328,8 +362,8 @@ public class K8sServiceHandler {
     }
 
     private void handleNewSvc(ArrayList<ServicePort> servicePorts,
-            String kind,
-            KubernetesClient client) {
+                              String kind,
+                              KubernetesClient client) {
         if (servicePorts == null || servicePorts.isEmpty()) {
             return;
         }
@@ -480,7 +514,7 @@ public class K8sServiceHandler {
     }
 
     private void handleDeployment(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+                                  Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().deployments()
                 .inNamespace(Constant.K8S_NAMESPACE)
                 .withName(serviceRoleFullName), DEPLOYMENT, configFileMap);
@@ -488,16 +522,16 @@ public class K8sServiceHandler {
     }
 
     private void handleStatefulSet(KubernetesClient client, Map<String, Object> yamlData, InputStream yamlInputStream,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+                                   Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         handleResource(client, yamlData, yamlInputStream, client.apps().statefulSets()
                 .inNamespace(Constant.K8S_NAMESPACE)
                 .withName(serviceRoleFullName), STATEFULSET, configFileMap);
     }
 
     private <T extends HasMetadata> void handleResource(KubernetesClient client, Map<String, Object> yamlData,
-            InputStream yamlInputStream,
-            RollableScalableResource<T> resource, String resourceKind,
-            Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
+                                                        InputStream yamlInputStream,
+                                                        RollableScalableResource<T> resource, String resourceKind,
+                                                        Map<Generators, List<ServiceConfig>> configFileMap) throws Exception {
         T existingResource = resource.get();
         boolean isExistingResource = existingResource != null;
 
@@ -518,7 +552,7 @@ public class K8sServiceHandler {
     }
 
     private void handleExistingDeployment(Map<String, Object> yamlData, KubernetesClient client,
-            Deployment existingDeployment) throws IOException {
+                                          Deployment existingDeployment) throws IOException {
         int replicas = existingDeployment.getSpec().getReplicas() != null
                 ? existingDeployment.getSpec().getReplicas()
                 : 0;
@@ -535,7 +569,7 @@ public class K8sServiceHandler {
     }
 
     private void handleExistingStatefulSet(Map<String, Object> yamlData, KubernetesClient client,
-            StatefulSet existingStatefulSet) throws IOException {
+                                           StatefulSet existingStatefulSet) throws IOException {
         int replicas = existingStatefulSet.getSpec().getReplicas() != null
                 ? existingStatefulSet.getSpec().getReplicas()
                 : 0;
@@ -552,7 +586,7 @@ public class K8sServiceHandler {
     }
 
     private <T extends HasMetadata> void handleNewResource(KubernetesClient client, InputStream yamlInputStream,
-            RollableScalableResource<T> resource) {
+                                                           RollableScalableResource<T> resource) {
 
         logger.info("CURRENT_NODE_CNT置空: {}", serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
         CacheUtils.removeKey(serviceRoleFullName + "_" + Constant.CURRENT_NODE_CNT);
@@ -602,8 +636,14 @@ public class K8sServiceHandler {
             return execResult;
         } else {
             logger.info("在k8s上停止deployment ,使用本地资源文件: {}", yamlFile);
+            if (Files.exists(Paths.get(yamlFile)) && yamlFile.toLowerCase().contains("flinkoperator")) {
+                String s = K8sMinaUtils.execCmdWithResult(GetMasterHost().get(0), "kubectl delete -f " + yamlFile);
+                logger.info("stop operator: {}", s);
+                execResult.setExecResult(true);
+                return execResult;
+            }
             try (KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
-                    FileInputStream fis = new FileInputStream(yamlFileObj)) {
+                 FileInputStream fis = new FileInputStream(yamlFileObj)) {
                 client.load(fis)
                         .inNamespace(Constant.K8S_NAMESPACE)
                         .delete();
@@ -661,32 +701,6 @@ public class K8sServiceHandler {
             logger.info("保存Service YAML文件成功: {}", filePath);
         } catch (Exception e) {
             logger.error("保存Service YAML文件失败: {}", e.getMessage(), e);
-        }
-    }
-
-    // 保存ConfigMap的YAML配置到本地文件
-    public static void saveConfigMapYaml(ConfigMap configMap) {
-        try {
-            // 创建保存目录，使用Paths.get正确处理路径拼接
-            Path dirPath = Paths.get(Constants.INSTALL_PATH, "k8sDep", "configmaps");
-            File dir = dirPath.toFile();
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-
-            // 生成文件名，使用Paths.get拼接路径
-            Path filePath = Paths.get(dirPath.toString(),
-                    configMap.getMetadata().getName() + ".yaml");
-
-            // 使用K8s客户端序列化为YAML
-            String yamlContent = KubeUtil.getKubernetesYaml(configMap);
-
-            // 写入文件
-            Files.write(filePath, yamlContent.getBytes());
-
-            LoggerFactory.getLogger(K8sServiceHandler.class).info("保存ConfigMap YAML文件成功: {}", filePath);
-        } catch (Exception e) {
-            LoggerFactory.getLogger(K8sServiceHandler.class).error("保存ConfigMap YAML文件失败: {}", e.getMessage(), e);
         }
     }
 
